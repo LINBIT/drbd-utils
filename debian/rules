@@ -1,0 +1,106 @@
+#!/usr/bin/make -f
+# Sample debian/rules that uses debhelper. 
+# GNU copyright 1997 by Joey Hess.
+#
+# This version is for a hypothetical package that builds an
+# architecture-dependant package, as well as an architecture-independent
+# package.
+
+# Uncomment this to turn on verbose mode. 
+#export DH_VERBOSE=1
+
+ifneq (,$(findstring debug,$(DEB_BUILD_OPTIONS)))
+	CFLAGS += -g
+endif
+ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
+	INSTALL_PROGRAM += -s
+endif
+
+build-arch-stamp:
+	dh_testdir
+
+	cd user && $(MAKE)
+	cd documentation && $(MAKE)
+	cd scripts && $(MAKE)
+	touch build-stamp
+
+build-arch: build-arch-stamp
+	dh_testdir -a
+	dh_testroot -a
+	dh_clean -a -k
+	dh_installdirs -a
+	dh_install -a
+
+clean:
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp 
+	cd user && $(MAKE) clean
+	cd documentation && $(MAKE) clean
+	cd scripts && $(MAKE) clean
+	dh_clean
+
+build-indep: 
+	dh_testdir -i
+	dh_testroot -i
+	dh_clean -i -k
+	dh_installdirs -i
+	dh_install -i
+#	cp debian/rules.MODULE debian/drbd-source/usr/src/modules/drbd/debian/rules
+	for file in debian/*.MODULE; do \
+		cp $$file debian/drbd-source/usr/src/modules/drbd/$${file%%.MODULE}; \
+	done
+	cp debian/changelog debian/drbd-source/usr/src/modules/drbd/debian
+	# touch debian/control file so debian/rules clean works the first time
+	touch debian/drbd-source/usr/src/modules/drbd/debian/control
+	cp -a drbd/* debian/drbd-source/usr/src/modules/drbd/drbd
+	cp Makefile debian/drbd-source/usr/src/modules/drbd
+#	cp Makefile.vars debian/drbd-source/usr/src/modules/drbd
+	cp drbd_config.h debian/drbd-source/usr/src/modules/drbd
+	cd debian/drbd-source/usr/src; \
+	chmod 0775 modules/drbd/debian/rules; \
+	tar pzfvc drbd.tar.gz modules; \
+	rm -rf modules/
+
+binary-indep:build-indep
+	dh_testdir -i
+	dh_testroot -i
+
+	dh_installdocs -i
+	dh_installman -i
+	dh_installchangelogs -i ChangeLog
+#	dh_installdebconf -i
+#	dh_installmodules -i
+	dh_strip -i
+	dh_link -i
+	dh_compress -i
+	dh_fixperms -i
+	dh_installdeb -i
+	dh_shlibdeps -i
+	dh_gencontrol -i
+	dh_md5sums -i
+	dh_builddeb -i
+
+
+binary-arch: build-arch
+	dh_testdir -a
+	dh_testroot -a
+
+	dh_installdocs -a
+	dh_installman -a
+	dh_installchangelogs -a ChangeLog
+#	dh_installdebconf -a
+#	dh_installmodules -a
+	dh_strip -a
+	dh_link -a
+	dh_compress -a
+	dh_fixperms -a
+	dh_installdeb -a
+	dh_shlibdeps -a
+	dh_gencontrol -a
+	dh_md5sums -a
+	dh_builddeb -a
+
+binary: binary-indep binary-arch
+
+.PHONY: build clean binary-indep binary-arch binary install
