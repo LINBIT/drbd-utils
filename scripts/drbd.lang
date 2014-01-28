@@ -1,0 +1,93 @@
+Description="DRBD configuration"
+
+-- Include IPv4 and IPv6 as "numbers"
+Digits=[[ [0-9.:]+[kmgtKMGTs]? ]]
+--Digits=[[ (?<![.0-9])\d+(?![.0-9])[kmgtKMGTs]? ]]
+-- Digits=[[ ((([\da-f]{1,4})?::?)+[\da-f]{1,4}|\s\d+\.\d+\.\d+\.\d+|\d+[kmgtKMGTs]?) ]]
+--    Digits=[[ ((([\da-f]{1,4})?::?)+[\da-f]{1,4}|\s\d+\.\d+\.\d+\.\d+|/dev/[^\s;]+) ]]
+
+Identifiers=[[ [a-z][\w-]+ ]]
+
+Keywords={
+	-- important keywords
+	-- strange - [abc] doesn't work
+	{ Id=1,
+		List={
+			"resource", "on", "stacked-on-top-of", "protocol", 
+			"net", "syncer", "proxy", "volume", "a", "b", "c", 
+			"common", "startup", "include", "handlers",  
+			"disk", "meta-disk", "device", "flexible-meta-disk", 
+		},
+	},
+	-- "harmless"
+	{ Id=2,
+		List={ 
+			"address", "global", "inside", 
+			"outside", "minor", 
+			"options", "read-balancing", "on-io-error", 
+			"use-bmbv", "max-bio-bvecs", "fencing", 
+			"sndbuf-size", "rcvbuf-size", "internal", 
+			"ping-timeout", "plugin", "zlib", "lzma", 
+			"memlimit", "connect-int", "c-plan-ahead", 
+			"c-delay-target", "c-fill-target", "c-max-rate", 
+			"c-min-rate", "usage-count", "minor-count", 
+			"disable-ip-verification", "dialog-refresh", 
+			"_this_host", "_remote_host", "size", 
+			"disk-timeout", "timeout", "ko-count", "ping-int", 
+			"max-buffers", "cram-hmac-alg", "shared-secret", 
+			"max-epoch-size", "rr-conflict", 
+			"unplug-watermark", "data-integrity-alg", 
+			"on-congestion", "congestion-fill", 
+			"congestion-extents", "always-asbp", "rate", 
+			"resync-rate", "resync-after", "after", 
+			"verify-alg", "csums-alg", "al-extents", 
+			"al-updates", "cpu-mask", "use-rle", 
+			"delay-probe-volume", "delay-probe-interval", 
+			"throttle-threshold", "hold-off-threshold", 
+			"wfc-timeout", "degr-wfc-timeout", 
+			"outdated-wfc-timeout", "stacked-timeouts", 
+			"wait-after-sb", "pri-on-incon-degr", 
+			"pri-lost-after-sb", "pri-lost", 
+			"initial-split-brain", "split-brain", 
+			"outdate-peer", "fence-peer", "local-io-error", 
+			"before-resync-target", "before-resync-source", 
+			"after-resync-target", "read-loops", 
+			"compression", "bwlimit", "out-of-sync", 
+			"no-disk-barrier", 
+			"no-disk-flushes", 
+			"no-md-flushes", 
+			"no-tcp-cork", 
+			"disk-barrier", 
+			"disk-flushes", 
+			"md-flushes", 
+			"tcp-cork", 
+		} ,
+	},
+	-- "harmful"
+	{ Id=3,
+		List={
+			"skip", "after-sb-[012]pri", 
+			"on-no-data-accessible", "allow-two-primaries", 
+			"become-primary-on",
+		},
+		Regex=[[ ((no-)?disk-drain) ]],
+	},
+	-- paths
+	{ Id=4,
+		Regex=[[ /dev/[^\s;]+|ipv4|ipv6|ssocks|sdp ]]
+	},
+}
+
+Strings={
+	Delimiter=[["]],
+}
+
+IgnoreCase=true
+
+Comments={
+	{ Block=false,
+		Delimiter= { [[#]] },
+	},
+}
+
+Operators=[[ [{}=;] ]]
