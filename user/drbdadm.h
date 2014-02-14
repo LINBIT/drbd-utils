@@ -2,7 +2,6 @@
 #define DRBDADM_H
 
 #include <stdbool.h>
-#include <linux/drbd_config.h>
 #include <sys/utsname.h>
 #include <sys/types.h>
 #include <net/if.h>
@@ -11,6 +10,9 @@
 #include <stdarg.h>
 
 #include "config.h"
+
+#define API_VERSION 1
+const char *drbd_buildtag(void);
 
 #define E_SYNTAX	  2
 #define E_USAGE		  3

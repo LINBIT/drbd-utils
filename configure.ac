@@ -7,7 +7,7 @@ dnl Minimum autoconf version we require
 AC_PREREQ(2.53)
 
 dnl What we are, our version, who to bug in case of problems
-AC_INIT(DRBD, 9.0.0pre8, [drbd-dev@lists.linbit.com])
+AC_INIT(DRBD-UTILS, 8.9.0rc1, [drbd-dev@lists.linbit.com])
 
 dnl Sanitize $prefix. Autoconf does this by itself, but so late in the
 dnl generated configure script that the expansion does not occur until
@@ -43,7 +43,6 @@ dnl "--with-<foo>" options (all except km enabled by default, pass --without-<fo
 WITH_UTILS=yes
 WITH_LEGACY_UTILS=yes
 WITH_LEGACY_UTILS_84=yes
-WITH_KM=no
 WITH_UDEV=yes
 WITH_XEN=yes
 WITH_PACEMAKER=yes
@@ -62,10 +61,6 @@ AC_ARG_WITH([legacy_utils_84],
 	[AS_HELP_STRING([--without-legacy-utils-8.4],
 			[Do not include legacy 8.4 drbdsetup/drbdadm])],
 	[WITH_LEGACY_UTILS_84=$withval])
-AC_ARG_WITH([km],
-	[AS_HELP_STRING([--with-km],
-			[Enable kernel module])],
-	[WITH_KM=$withval])
 AC_ARG_WITH([udev],
 	[AS_HELP_STRING([--with-udev],
 			[Enable udev integration])],
@@ -104,17 +99,22 @@ AC_ARG_ENABLE([spec],
 	[SPECMODE=$enableval],
 	[SPECMODE=""])
 
+AC_ARG_VAR([DRBD_DRIVER_SRC_DIR],
+	[AS_HELP_STRING([DRBD_DRIVER_SRC_DIR],
+			[Directory where the drbd driver source is])])
+
+
+#Make in an absolute path
+DRBD_DRIVER_SRC_DIR=$(readlink -f $DRBD_DRIVER_SRC_DIR)
 
 AC_SUBST(WITH_UTILS)
 AC_SUBST(WITH_LEGACY_UTILS)
 AC_SUBST(WITH_LEGACY_UTILS_84)
-AC_SUBST(WITH_KM)
 AC_SUBST(WITH_UDEV)
 AC_SUBST(WITH_XEN)
 AC_SUBST(WITH_PACEMAKER)
 AC_SUBST(WITH_RGMANAGER)
 AC_SUBST(WITH_BASHCOMPLETION)
-
 
 dnl Checks for programs
 AC_PROG_CC
@@ -134,9 +134,6 @@ if test -z "$CC"; then
    if test "$WITH_UTILS" = "yes"; then
       AC_MSG_ERROR([Cannot build utils without a C compiler, either install a compiler or pass the --without-utils option.])
    fi 
-   if test "$WITH_KM" = "yes"; then
-      AC_MSG_ERROR([Cannot build kernel module without a C compiler, either install a compiler or pass the --without-km option.])
-   fi
 fi
 
 if test -z $FLEX; then
@@ -177,9 +174,7 @@ dnl Checks for system services
 BASH_COMPLETION_SUFFIX=""
 UDEV_RULE_SUFFIX=""
 RPM_DIST_TAG=""
-RPM_CONFLICTS_KM=""
 RPM_BUILDREQ_DEFAULT="gcc flex glibc-devel make"
-RPM_BUILDREQ_KM=""
 RPM_SUBPACKAGE_NOARCH=""
 RPM_REQ_PACEMAKER=""
 RPM_REQ_HEARTBEAT=""
@@ -202,12 +197,10 @@ case "$DISTRO" in
      redhat)
 	test -z $INITDIR && INITDIR="$sysconfdir/rc.d/init.d"
 	RPM_DIST_TAG="%{?dist}"
-	RPM_CONFLICTS_KM="drbd-kmod <= %{version}_3"
 	dnl Fedora/Red Hat packaging guidelines mandate that packages
 	dnl belonging to the "minimal build system" should not be
 	dnl listed in BuildRequires
 	RPM_BUILDREQ_DEFAULT="flex"
-	RPM_BUILDREQ_KM="kernel-devel"
 	RPM_REQ_CHKCONFIG_POST="Requires(post): chkconfig"
 	RPM_REQ_CHKCONFIG_PREUN="Requires(preun): chkconfig"
 	AC_MSG_NOTICE([configured for Red Hat (includes Fedora, RHEL, CentOS).])
@@ -231,8 +224,6 @@ case "$DISTRO" in
         ;;
      suse)
 	BASH_COMPLETION_SUFFIX=".sh"
-	RPM_CONFLICTS_KM="km_drbd, drbd-kmp <= %{version}_3"
-	RPM_BUILDREQ_KM="kernel-syms"
 	# RPM_REQ_CHKCONFIG_POST="" chkconfig is part of aaa_base on suse
 	# RPM_REQ_CHKCONFIG_PREUN="" chkconfig is part of aaa_base on suse
 	AC_MSG_NOTICE([configured for SUSE (includes openSUSE, SLES).])
@@ -276,9 +267,7 @@ AC_SUBST(INITDIR)
 AC_SUBST(BASH_COMPLETION_SUFFIX)
 AC_SUBST(UDEV_RULE_SUFFIX)
 AC_SUBST(RPM_DIST_TAG)
-AC_SUBST(RPM_CONFLICTS_KM)
 AC_SUBST(RPM_BUILDREQ_DEFAULT)
-AC_SUBST(RPM_BUILDREQ_KM)
 AC_SUBST(RPM_SUBPACKAGE_NOARCH)
 AC_SUBST(RPM_REQ_PACEMAKER)
 AC_SUBST(RPM_REQ_HEARTBEAT)
@@ -321,9 +310,6 @@ if test -z $SPECMODE; then
 else
    if test "$WITH_UTILS" = "yes"; then
      AC_CONFIG_FILES(drbd.spec)
-   fi
-   if test "$WITH_KM" = "yes"; then
-     AC_CONFIG_FILES(drbd-km.spec drbd-kernel.spec)
    fi
 fi
 

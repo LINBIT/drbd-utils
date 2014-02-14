@@ -282,7 +282,7 @@ static int make_get_request(char *uri) {
 	uname(&nodeinfo);
 	req_buf = ssprintf("GET %s HTTP/1.0\r\n"
 			   "Host: "HTTP_HOST"\r\n"
-			   "User-Agent: drbdadm/"REL_VERSION" (%s; %s; %s; %s)\r\n"
+			   "User-Agent: drbdadm/"PACKAGE_VERSION" (%s; %s; %s; %s)\r\n"
 			   "\r\n",
 			   uri,
 			   nodeinfo.sysname, nodeinfo.release,
@@ -410,7 +410,7 @@ void uc_node(enum usage_count_type type)
 "* If you wish to opt out entirely, simply enter 'no'.\n"
 "* To count this node without comment, just press [RETURN]\n",
 			update ? "an update" : "a new installation",
-			REL_VERSION,ni.node_uuid, vcs_to_str(&ni.rev));
+			PACKAGE_VERSION,ni.node_uuid, vcs_to_str(&ni.rev));
 		r = fgets(answer, ANSWER_SIZE, stdin);
 		if(r && !strcmp(answer,"no\n")) send = 0;
 		url_encode(answer,n_comment);

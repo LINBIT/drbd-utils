@@ -45,12 +45,12 @@ WITH_PACEMAKER = @WITH_PACEMAKER@
 WITH_HEARTBEAT = @WITH_HEARTBEAT@
 WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
+DRBD_DRIVER_SRC_DIR = @DRBD_DRIVER_SRC_DIR@
 
 # variables meant to be overridden from the make command line
 DESTDIR ?= /
 
-#CFLAGS += -Wall -I. -I.. -I../../drbd -I../../drbd/compat
-CFLAGS += -Wall -I. -I..
+CFLAGS += -Wall -I. -I.. -I$(DRBD_DRIVER_SRC_DIR)/drbd -I$(DRBD_DRIVER_SRC_DIR)/drbd/compat
 
 GENETLINK_H := /usr/include/linux/genetlink.h
 
@@ -71,7 +71,7 @@ else
 tools:
 endif
 
-drbd_buildtag.c: ../../drbd/drbd_buildtag.c
+drbd_buildtag.c: ../drbd_buildtag.c
 	cp $^ $@
 
 drbdadm-84: $(drbdadm-obj)
@@ -116,14 +116,16 @@ spell:
 	done
 
 ###dependencies
-drbdset.o:     drbdtool_common.h ../../drbd/linux/drbd_limits.h
-drbdsetup.o:       ../../drbd/linux/drbd_genl.h ../../drbd/linux/drbd.h
-drbdsetup.o:       ../../drbd/linux/genl_magic_struct.h ../../drbd/linux/genl_magic_func.h
+drbdset.o:     drbdtool_common.h $(DRBD_DRIVER_SRC_DIR)/drbd/linux/drbd_limits.h
+drbdsetup.o:       $(DRBD_DRIVER_SRC_DIR)/drbd/linux/drbd_genl.h
+drbdsetup.o:       $(DRBD_DRIVER_SRC_DIR)/drbd/linux/drbd.h
+drbdsetup.o:       $(DRBD_DRIVER_SRC_DIR)/drbd/linux/genl_magic_struct.h
+drbdsetup.o:       $(DRBD_DRIVER_SRC_DIR)/drbd/linux/genl_magic_func.h
 drbdsetup.o:       ../libgenl.h config_flags.h
 drbdtool_common.o: drbdtool_common.h
 drbdadm_main.o:    drbdtool_common.h drbdadm.h
 drbdadm_adjust.o:  drbdtool_common.h drbdadm.h
-drbdadm_parser.o:  drbdtool_common.h drbdadm.h ../../drbd/linux/drbd_limits.h
+drbdadm_parser.o:  drbdtool_common.h drbdadm.h $(DRBD_DRIVER_SRC_DIR)/drbd/linux/drbd_limits.h
 drbdadm_scanner.o: drbdtool_common.h drbdadm.h               drbdadm_parser.h
-drbdsetup.o:       drbdtool_common.h           ../../drbd/linux/drbd_limits.h
+drbdsetup.o:       drbdtool_common.h           $(DRBD_DRIVER_SRC_DIR)/drbd/linux/drbd_limits.h
 drbdadm_usage_cnt.o: drbdtool_common.h drbdadm.h drbd_endian.h

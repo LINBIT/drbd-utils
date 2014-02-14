@@ -44,11 +44,12 @@ WITH_XEN = @WITH_XEN@
 WITH_PACEMAKER = @WITH_PACEMAKER@
 WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
+DRBD_DRIVER_SRC_DIR = @DRBD_DRIVER_SRC_DIR@
 
 # variables meant to be overridden from the make command line
 DESTDIR ?= /
 
-CFLAGS += -Wall -I. -I../../drbd -I../../drbd/compat
+CFLAGS += -Wall -I. -I$(DRBD_DRIVER_SRC_DIR)/drbd -I$(DRBD_DRIVER_SRC_DIR)/drbd/compat
 
 drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_main.o \
 	      drbdadm_adjust.o drbdtool_common.o drbdadm_usage_cnt.o \
@@ -65,7 +66,7 @@ else
 tools:
 endif
 
-drbd_buildtag.c: ../../drbd/drbd_buildtag.c
+drbd_buildtag.c: ../drbd_buildtag.c
 	cp $< $@
 
 drbd_endian.h: ../drbd_endian.h

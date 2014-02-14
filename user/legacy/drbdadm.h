@@ -9,6 +9,7 @@
 #include <stdarg.h>
 
 #include "config.h"
+const char *drbd_buildtag(void);
 
 #define E_syntax	  2
 #define E_usage		  3

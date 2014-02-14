@@ -39,17 +39,21 @@ LN_S = @LN_S@
 WITH_UTILS = @WITH_UTILS@
 WITH_LEGACY_UTILS = @WITH_LEGACY_UTILS@
 WITH_LEGACY_UTILS_84 = @WITH_LEGACY_UTILS_84@
-WITH_KM = @WITH_KM@
 WITH_UDEV = @WITH_UDEV@
 WITH_XEN = @WITH_XEN@
 WITH_PACEMAKER = @WITH_PACEMAKER@
 WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
+DRBD_DRIVER_SRC_DIR = @DRBD_DRIVER_SRC_DIR@
+
+# for some reason some of the commands below only work correctly in bash,
+# and not in e.g. dash. I'm too lazy to fix it to be compatible.
+SHELL=/bin/bash
 
 # variables meant to be overridden from the make command line
 DESTDIR ?= /
 
-CFLAGS += -Wall -I../drbd -I../drbd/compat
+CFLAGS += -Wall -I$(DRBD_DRIVER_SRC_DIR)/drbd -I$(DRBD_DRIVER_SRC_DIR)/drbd/compat
 
 GENETLINK_H := /usr/include/linux/genetlink.h
 libgenl.o: CFLAGS += $(shell for w in CTRL_ATTR_VERSION CTRL_ATTR_HDRSIZE CTRL_ATTR_MCAST_GROUPS; do grep -qw $$w $(GENETLINK_H) && echo -DHAVE_$$w; done)
@@ -73,13 +77,36 @@ else
 tools:
 endif
 
-drbd_buildtag.c: ../drbd/drbd_buildtag.c
+.PHONY: drbd_buildtag.c
+
+  drbd_buildtag.c:
+	@set -e; exec > $@.new;							\
+	echo -e "/* automatically generated. DO NOT EDIT. */";			\
+	echo -e "#include <linux/drbd.h>";					\
+	echo -e "const char *drbd_buildtag(void)\n{";				\
+	if test -e ../.git && GITHEAD=$$(git rev-parse HEAD); then		\
+		GITDIFF=$$(cd .. && git diff --name-only HEAD |			\
+			tr -s '\t\n' '  ' |					\
+			sed -e 's/^/ /;s/ *$$//');				\
+		echo -e "\treturn \"GIT-hash: $$GITHEAD$$GITDIFF\"";		\
+	elif ! test -e $@ ; then						\
+		echo >&2 "$@ not found.";					\
+		test -e ../.git &&						\
+		>&2 printf "%s\n"						\
+			"git did not work, but this looks like a git checkout?"	\
+			"Install git and try again." ||				\
+		echo >&2 "Your DRBD source tree is broken. Unpack again.";	\
+		exit 1;								\
+	else									\
+		grep return $@ ;						\
+	fi ;									\
+	echo -e "\t\t\" build by $$USER@$$HOSTNAME, `date "+%F %T"`\";\n}";	\
+	mv --force $@.new $@
+
+drbd_strings.h: $(DRBD_DRIVER_SRC_DIR)/drbd/drbd_strings.h
 	cp $^ $@
 
-drbd_strings.h: ../drbd/drbd_strings.h
-	cp $^ $@
-
-drbd_strings.c: ../drbd/drbd_strings.c
+drbd_strings.c: $(DRBD_DRIVER_SRC_DIR)/drbd/drbd_strings.c
 	cp $^ $@
 
 drbdadm: $(drbdadm-obj)
@@ -158,17 +185,19 @@ spell:
 	done
 
 ###dependencies
-drbdset.o:     drbdtool_common.h ../drbd/linux/drbd_limits.h
-drbdsetup.o:       ../drbd/linux/drbd_genl.h ../drbd/linux/drbd.h drbd_strings.h
-drbdsetup.o:       ../drbd/linux/genl_magic_struct.h ../drbd/linux/genl_magic_func.h
+drbdset.o:     drbdtool_common.h $(DRBD_DRIVER_SRC_DIR)/drbd/linux/drbd_limits.h
+drbdsetup.o:       $(DRBD_DRIVER_SRC_DIR)/drbd/linux/drbd_genl.h
+drbdsetup.o:	   $(DRBD_DRIVER_SRC_DIR)/drbd/linux/drbd.h drbd_strings.h
+drbdsetup.o:       $(DRBD_DRIVER_SRC_DIR)/drbd/linux/genl_magic_struct.h
+drbdsetup.o:       $(DRBD_DRIVER_SRC_DIR)/drbd/linux/genl_magic_func.h
 drbdsetup.o:       libgenl.h config_flags.h
 libgenl.o:       libgenl.h
 drbdtool_common.o: drbdtool_common.h
 drbdadm_main.o:    drbdtool_common.h drbdadm.h drbdadm_dump.h
 drbdadm_adjust.o:  drbdtool_common.h drbdadm.h
-drbdadm_parser.o:  drbdtool_common.h drbdadm.h ../drbd/linux/drbd_limits.h
+drbdadm_parser.o:  drbdtool_common.h drbdadm.h $(DRBD_DRIVER_SRC_DIR)/drbd/linux/drbd_limits.h
 drbdadm_scanner.o: drbdtool_common.h drbdadm.h               drbdadm_parser.h
-drbdsetup.o:       drbdtool_common.h           ../drbd/linux/drbd_limits.h
+drbdsetup.o:       drbdtool_common.h $(DRBD_DRIVER_SRC_DIR)/drbd/linux/drbd_limits.h
 drbdmeta.o:        drbdtool_common.h drbd_endian.h
 drbdadm_usage_cnt.o: drbdtool_common.h drbdadm.h drbd_endian.h
 drbd_strings.o:    drbd_strings.c drbd_strings.h
