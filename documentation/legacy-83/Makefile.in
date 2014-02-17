@@ -36,19 +36,25 @@ XSLTPROC = @XSLTPROC@
 
 # features enabled or disabled by configure
 WITH_UTILS = @WITH_UTILS@
-WITH_LEGACY_UTILS = @WITH_LEGACY_UTILS@
-WITH_LEGACY_UTILS_84 = @WITH_LEGACY_UTILS_84@
+WITH_KM = @WITH_KM@
 WITH_UDEV = @WITH_UDEV@
 WITH_XEN = @WITH_XEN@
 WITH_PACEMAKER = @WITH_PACEMAKER@
+WITH_HEARTBEAT = @WITH_HEARTBEAT@
 WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 
 # variables meant to be overridden from the make command line
 DESTDIR ?= /
 
+# Needed for pattern substitution
+SHELL=/bin/bash
+
 ifeq ($(WITH_UTILS),yes)
 MANPAGES       := drbdsetup.8 drbd.conf.5 drbd.8 drbdadm.8 drbdmeta.8
+endif
+ifeq ($(WITH_HEARTBEAT),yes)
+MANPAGES += drbddisk.8
 endif
 SOURCES        := $(wildcard *.xml)
 
@@ -58,23 +64,9 @@ HTML_STYLESHEET ?= $(STYLESHEET_PREFIX)/xhtml/docbook.xsl
 FO_STYLESHEET ?= $(STYLESHEET_PREFIX)/fo/docbook.xsl
 
 XSLTPROC_OPTIONS ?= --xinclude
-XSLTPROC_OPTIONS += --stringparam variablelist.term.break.after 1
-#XSLTPROC_OPTIONS += --stringparam variablelist.term.separator ""
 XSLTPROC_MANPAGES_OPTIONS ?= $(XSLTPROC_OPTIONS)
 XSLTPROC_HTML_OPTIONS ?= $(XSLTPROC_OPTIONS)
 XSLTPROC_FO_OPTIONS ?= $(XSLTPROC_OPTIONS)
-
-DRBDSETUP_CMDS = new-resource new-minor del-resource del-minor
-DRBDSETUP_CMDS += attach connect disk-options net-options resource-options
-DRBDSETUP_CMDS += disconnect detach primary secondary verify invalidate invalidate-remote
-DRBDSETUP_CMDS += down role cstate dstate
-DRBDSETUP_CMDS += resize check-resize pause-sync resume-sync
-DRBDSETUP_CMDS += outdate show-gi get-gi show events
-DRBDSETUP_CMDS += status suspend-io resume-io new-current-uuid
-DRBDSETUP_CMDS += wait-connect-volume wait-connect-connection wait-connect-resource
-DRBDSETUP_CMDS += wait-sync-volume wait-sync-connection wait-sync-resource
-DRBDSETUP_CMDS += forget-peer
-
 
 all:
 	@echo "To (re)make the documentation: make doc"
@@ -83,16 +75,8 @@ clean:
 	@echo "To clean the documentation: make doc-clean"
 
 doc:	man
-ifeq ($(WITH_LEGACY_UTILS),yes)
-	$(MAKE) -C legacy-83 doc
-endif
-ifeq ($(WITH_LEGACY_UTILS_84),yes)
-	$(MAKE) -C legacy-84 doc
-endif
 
 doc-clean: distclean
-	$(MAKE) -C legacy-83 doc-clean
-	$(MAKE) -C legacy-84 doc-clean
 
 
 ####### Implicit rules
@@ -120,28 +104,9 @@ ifeq ($(WITH_UTILS),yes)
 	$(FO_STYLESHEET) $<
 endif
 
-../user/drbdsetup:
-	(cd ../user; make drbdsetup)
-
-drbdsetup_xml-help_%.xml: ../user/drbdsetup
-	../user/drbdsetup xml-help $* > $@
-
-drbdsetup_%.xml: drbdsetup_xml-help_%.xml xml-usage-to-docbook.xsl
-	$(XSLTPROC) -o $@ xml-usage-to-docbook.xsl $<
-
-drbd.conf.xml: drbd.conf.xml.in drbd.conf.xsl drbdsetup-options.xml
-	$(XSLTPROC) -o $@ drbd.conf.xsl $<
-
-drbdsetup.xml: drbdsetup.xml.in drbdsetup.xsl drbdsetup-options.xml
-	$(XSLTPROC) -o $@ drbdsetup.xsl $<
-
 distclean:
 	rm -f *.[58] manpage.links manpage.refs *~ manpage.log
 	rm -f *.ps.gz *.pdf *.ps *.html pod2htm*
-	rm -f drbdsetup_*.xml
-	rm -f drbd.conf.xml drbdsetup.xml
-
-.PRECIOUS: drbd.conf.xml drbdsetup.xml
 
 #######
 
@@ -153,13 +118,14 @@ install:
 	done ; $$ok
 	set -e; for f in $(MANPAGES) ; do \
 		s=$${f##*.}; \
-		install -v -D -m 644 $$f $(DESTDIR)$(mandir)/man$$s/$$f ; \
+	        t=$${f/./_83.}; \
+		install -v -D -m 644 $$f $(DESTDIR)$(mandir)/man$$s/$$t ; \
 	done
 
 uninstall:
 	@ set -e; for f in $(MANPAGES) ; do \
 		s=$${f##*.}; \
-		rm -vf $(DESTDIR)$(mandir)/man$$s/$$f ; \
+		rm -v $(DESTDIR)$(mandir)/man$$s/$$f ; \
 	done
 
 html:	$(SOURCES:.xml=.html)
@@ -168,4 +134,5 @@ pdf:	$(SOURCES:.xml=.pdf)
 
 ps:	$(SOURCES:.xml=.ps)
 
-drbdsetup.8: drbdsetup.xml $(patsubst %,drbdsetup_%.xml,$(DRBDSETUP_CMDS))
+
+
