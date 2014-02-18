@@ -162,5 +162,6 @@ extern int version_code_kernel(void);
 extern int version_code_userland(void);
 extern int version_equal(const struct version *rev1, const struct version *rev2);
 extern void add_lib_drbd_to_path(void);
+extern uint32_t crc32c(uint32_t crc, const uint8_t *data, unsigned int length);
 
 #endif

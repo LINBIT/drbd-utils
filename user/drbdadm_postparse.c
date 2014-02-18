@@ -122,19 +122,6 @@ static struct d_host_info *find_host_info_by_address(struct d_resource* res, str
 	return NULL;
 }
 
-static int hash_str(char *str)
-{
-	int rv = 0;
-	char c;
-
-	do {
-		c = *str++;
-		rv += c;
-	} while (c);
-
-	return rv;
-}
-
 static void set_host_info_in_host_address_pairs(struct d_resource *res, struct connection *con)
 {
 	struct hname_address *ha;
@@ -149,7 +136,9 @@ static void set_host_info_in_host_address_pairs(struct d_resource *res, struct c
 				fprintf(stderr, "LOGIC BUG in set_host_info_in_host_address_pairs()\n");
 				exit(20);
 			}
-			addr_hash[i] = hash_str(host_info->address.addr);
+			addr_hash[i] = crc32c(0x1a656f21,
+					host_info->address.addr,
+					strlen(host_info->address.addr));
 			host_info_array[i++] = host_info;
 		} else if (ha->by_address) {
 			host_info = find_host_info_by_address(res, &ha->address);
