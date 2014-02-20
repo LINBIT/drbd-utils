@@ -330,7 +330,7 @@
 	  <indexterm significance="normal">
 	    <primary>drbdsetup</primary>
 
-	    <secondary>events</secondary>
+	    <secondary>events2</secondary>
 	  </indexterm>
 
 	  <para>Show the current state of all configured DRBD objects, followed
