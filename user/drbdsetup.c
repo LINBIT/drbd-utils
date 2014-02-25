@@ -2831,7 +2831,7 @@ static struct peer_devices_list *list_peer_devices(char *resource_name)
 		.show_function = remember_peer_device,
 		.missing_ok = false,
 	};
-	struct peer_devices_list *list, **tail = &list;
+	struct peer_devices_list *list = NULL, **tail = &list;
 	char *old_objname = objname;
 	unsigned old_minor = minor;
 	int old_my_addr_len = global_ctx.ctx_my_addr_len;
