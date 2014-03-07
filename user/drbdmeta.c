@@ -55,6 +55,7 @@
 
 #include "drbd_endian.h"
 #include "drbdtool_common.h"
+#include "drbd_strings.h"
 
 #include "drbdmeta_parser.h"
 
@@ -4762,24 +4763,11 @@ int parse_format(struct format *cfg, char **argv, int argc, int *ai)
 
 static enum drbd_disk_state drbd_str_disk(const char *str)
 {
-	static const char *drbd_disk_s_names[] = {
-		[D_DISKLESS]     = "Diskless",
-		[D_ATTACHING]    = "Attaching",
-		[D_FAILED]       = "Failed",
-		[D_NEGOTIATING]  = "Negotiating",
-		[D_INCONSISTENT] = "Inconsistent",
-		[D_OUTDATED]     = "Outdated",
-		[D_UNKNOWN]      = "DUnknown",
-		[D_CONSISTENT]   = "Consistent",
-		[D_UP_TO_DATE]   = "UpToDate",
-	};
+	int n;
 
-	enum drbd_disk_state disk_state;
-
-	for (disk_state = 0; disk_state < ARRAY_SIZE(drbd_disk_s_names); disk_state++) {
-		if (!strcmp(str, drbd_disk_s_names[disk_state]))
-			return disk_state;
-	}
+	for (n = 0; drbd_disk_s_names[n]; n++)
+		if (!strcmp(str, drbd_disk_s_names[n]))
+			return (enum drbd_disk_state)n;
 
 	fprintf(stderr, "Unexpected output from drbdsetup >%s<\n", str);
 	exit(20);

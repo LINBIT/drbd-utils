@@ -67,7 +67,8 @@ drbdsetup-obj = libgenl.o registry.o drbdsetup.o drbdtool_common.o \
 		drbd_buildtag.o drbd_strings.o config_flags.o drbd_nla.o \
 		wrap_printf.o drbdsetup_colors.o
 
-drbdmeta-obj = drbdmeta.o drbdmeta_scanner.o drbdtool_common.o drbd_buildtag.o
+drbdmeta-obj = drbdmeta.o drbdmeta_scanner.o drbdtool_common.o drbd_buildtag.o \
+	       drbd_strings.o
 
 all: tools
 
