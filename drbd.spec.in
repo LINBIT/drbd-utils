@@ -114,7 +114,7 @@ This packages includes the DRBD administration tools.
 /lib/drbd/drbdsetup-84
 /lib/drbd/drbdadm-84
 %endif
-%{_initddir}/%{name}
+%{_initddir}/drbd
 %{_sbindir}/drbd-overview
 %dir %{_prefix}/lib/%{name}
 %{_prefix}/lib/%{name}/outdate-peer.sh
@@ -131,7 +131,6 @@ This packages includes the DRBD administration tools.
 %{_prefix}/lib/%{name}/notify.sh
 
 %defattr(-,root,root,-)
-%dir %{_var}/lib/%{name}
 %config(noreplace) %{_sysconfdir}/drbd.conf
 %dir %{_sysconfdir}/drbd.d
 %config(noreplace) %{_sysconfdir}/drbd.d/global_common.conf
@@ -279,6 +278,7 @@ management utility.
     %{?_without_legacy_utils_84} \
     --with-initdir=%{_initddir}
 make %{?_smp_mflags}
+make doc
 
 %install
 rm -rf %{buildroot}
@@ -314,6 +314,9 @@ if [ $1 -eq 0 ]; then
 fi
 
 %changelog
+* Fri Mar  7 2014 Philipp Reisner <phil@linbit.com> - 8.9.0rc1-1
+- New upstream release.
+
 * Thu Feb  6 2014 Philipp Reisner <phil@linbit.com> - 9.0.0pre8-1
 - New upstream release.
 

@@ -58,7 +58,7 @@ REL_VERSION := $(REL_VERSION)-$(shell $(GIT) rev-parse HEAD)
 endif
 
 DIST_VERSION := $(REL_VERSION)
-FDIST_VERSION := $(shell test -e .filelist && sed -ne 's,^drbd-\([^/]*\)/.*,\1,p;q' < .filelist)
+FDIST_VERSION := $(shell test -e .filelist && sed -ne 's,^drbd-utils-\([^/]*\)/.*,\1,p;q' < .filelist)
 ifeq ($(FDIST_VERSION),)
 FDIST_VERSION := $(DIST_VERSION)
 endif
@@ -114,7 +114,7 @@ check_changelogs_up2date:
 	then \
 	   echo -e "\n\tChangeLog needs update"; \
 	   up2date=false; fi ; \
-	if ! grep "^AC_INIT(DRBD, $$dver_re" >/dev/null 2>&1 configure.ac; \
+	if ! grep "^AC_INIT(DRBD-UTILS, $$dver_re" >/dev/null 2>&1 configure.ac; \
 	then \
 	   echo -e "\n\tconfigure.ac needs update"; \
 	   up2date=false; fi ; \
@@ -128,21 +128,17 @@ check_changelogs_up2date:
 # however it is NOT updated when you just do a make in user/ or drbd/ ...
 #
 # update of drbd_buildtag.c is forced:
-.PHONY: drbd/drbd_buildtag.c
-drbd/drbd_buildtag.c:
-	$(MAKE) -C user drbd_buildtag.c
-
-# update of .filelist is forced:
-.PHONY: .filelist
+PNAME	:= drbd-utils
+.PHONY: user/drbd_buildtag.c
 .filelist:
-	@$(GIT) ls-files | sed '$(if $(PRESERVE_DEBIAN),,/^debian/d);s#^#drbd-$(DIST_VERSION)/#' > .filelist
+	@$(GIT) ls-files | sed '$(if $(PRESERVE_DEBIAN),,/^debian/d);s#^#$(PNAME)-$(DIST_VERSION)/#' | grep -v "gitignore" > .filelist
 	@[ -s .filelist ] # assert there is something in .filelist now
 	@find documentation -name "[^.]*.[58]" -o -name "*.html" | \
-	sed "s/^/drbd-$(DIST_VERSION)\//"              >> .filelist ; \
-	echo drbd-$(DIST_VERSION)/user/drbd_buildtag.c >> .filelist ; \
-	echo drbd-$(DIST_VERSION)/.filelist            >> .filelist ; \
-	echo drbd-$(DIST_VERSION)/configure            >> .filelist ; \
-	echo drbd-$(DIST_VERSION)/user/config.h.in     >> .filelist ; \
+	sed "s/^/$(PNAME)-$(DIST_VERSION)\//"              >> .filelist ; \
+	echo $(PNAME)-$(DIST_VERSION)/user/drbd_buildtag.c >> .filelist ; \
+	echo $(PNAME)-$(DIST_VERSION)/.filelist            >> .filelist ; \
+	echo $(PNAME)-$(DIST_VERSION)/configure            >> .filelist ; \
+	echo $(PNAME)-$(DIST_VERSION)/user/config.h.in     >> .filelist ; \
 	echo "./.filelist updated."
 
 # tgz will no longer automatically update .filelist,
@@ -181,7 +177,7 @@ configure: configure.ac
 tarball: check_all_committed distclean doc configure .filelist
 	$(MAKE) tgz
 
-all module tools doc .filelist: drbd/drbd_buildtag.c
+all module tools doc .filelist: user/drbd_buildtag.c
 
 
 ifdef RPMBUILD

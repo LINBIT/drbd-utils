@@ -323,7 +323,7 @@
       </varlistentry>
 
       <varlistentry>
-	<xi:include href="drbdsetup_events.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<xi:include href="drbdsetup_events2.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
 	<!-- Show the current state and all state changes of all resources. -->
 
 	<listitem>

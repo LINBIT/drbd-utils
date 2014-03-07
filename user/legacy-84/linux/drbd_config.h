@@ -1,1 +1,1 @@
-../../../drbd/linux/drbd_config.h
+../../legacy/linux/drbd_config.h

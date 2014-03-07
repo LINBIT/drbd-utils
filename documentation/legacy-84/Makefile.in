@@ -116,7 +116,7 @@ ifeq ($(WITH_UTILS),yes)
 endif
 
 ../../user/legacy-84/drbdsetup-84:
-	(cd ../../user; make drbdsetup-84)
+	make drbdsetup-84 -C ../../user/legacy-84/
 
 drbdsetup_xml-help_%.xml: ../../user/legacy-84/drbdsetup-84
 	../../user/legacy-84/drbdsetup-84 xml-help $* > $@
