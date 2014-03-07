@@ -188,7 +188,7 @@ sub shorten_list {
 }
 
 sub slurp_drbdsetup() {
-	unless (open(DS,"drbdsetup events --now --statistics |")) {
+	unless (open(DS,"drbdsetup events2 --now --statistics |")) {
 		print "drbdsetup not started\n";
 		exit 0;
 	}
@@ -196,7 +196,7 @@ sub slurp_drbdsetup() {
 	my($continued, %peers, $my_role, %vol_minor, %hosts);
     while (<DS>) {
         chomp;
-        next unless s/^\d+(\*)? exists //;
+        next unless s/^exists //;
         $continued = $1;
         s/^([\w.-]+) name:([\w.-]+) //;
         my $what = $1;
