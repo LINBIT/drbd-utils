@@ -239,7 +239,7 @@ enum drbd_disk_state {
 	D_DISKLESS,
 	D_ATTACHING,      /* In the process of reading the meta-data */
 	D_FAILED,         /* Becomes D_DISKLESS as soon as we told it the peer */
-			/* when >= D_FAILED it is legal to access mdev->bc */
+			  /* when >= D_FAILED it is legal to access mdev->ldev */
 	D_NEGOTIATING,    /* Late attaching state, we need to talk to the peer */
 	D_INCONSISTENT,
 	D_OUTDATED,
@@ -317,14 +317,9 @@ enum drbd_state_rv {
 	SS_IN_TRANSIENT_STATE = -18,  /* Retry after the next state change */
 	SS_CONCURRENT_ST_CHG = -19,   /* Concurrent cluster side state change! */
 	SS_O_VOL_PEER_PRI = -20,
-	SS_AFTER_LAST_ERROR = -21,    /* Keep this at bottom */
+	SS_OUTDATE_WO_CONN = -21,
+	SS_AFTER_LAST_ERROR = -22,    /* Keep this at bottom */
 };
-
-/* from drbd_strings.c */
-extern const char *drbd_conn_str(enum drbd_conns);
-extern const char *drbd_role_str(enum drbd_role);
-extern const char *drbd_disk_str(enum drbd_disk_state);
-extern const char *drbd_set_st_err_str(enum drbd_state_rv);
 
 #define SHARED_SECRET_MAX 64
 
@@ -374,5 +369,7 @@ enum drbd_timeout_flag {
 #define DRBD_MD_INDEX_INTERNAL -1
 #define DRBD_MD_INDEX_FLEX_EXT -2
 #define DRBD_MD_INDEX_FLEX_INT -3
+
+#define DRBD_CPU_MASK_SIZE 32
 
 #endif

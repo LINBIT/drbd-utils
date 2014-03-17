@@ -99,42 +99,6 @@ AC_ARG_ENABLE([spec],
 	[SPECMODE=$enableval],
 	[SPECMODE=""])
 
-AC_ARG_VAR([DRBD_DRIVER_SRC_DIR],
-	[AS_HELP_STRING([DRBD_DRIVER_SRC_DIR],
-			[Directory where the drbd driver source is])])
-
-if test -z "$DRBD_DRIVER_SRC_DIR" ; then
-	#filename:       /lib/modules/2.6.32-358.6.2.el6.x86_64/weak-updates/drbd/drbd.ko
-	mod=`modinfo drbd | grep "^filename:" | head -1 | cut -d/ -f2-`
-	if test -n "$mod" ; then
-		dir=`strings "/$mod" | sed -rne 's,(/.*/)drbd/drbd_(int.h|bitmap.c|interval.c|main.c|nl.c|receiver.c|req.c|state.c|sender.c)$,\1,p' | head -1`
-		# there are more files used, only test one.
-		if test -r "$dir/drbd/linux/drbd_genl.h" ; then
-			echo ""
-			echo "--- No DRBD_DRIVER_SRC_DIR directory given."
-			echo "--- Autodetected to '$dir'."
-			echo ""
-			DRBD_DRIVER_SRC_DIR="$dir"
-		fi
-	fi
-fi # 2>/dev/null
-
-if test -z "$DRBD_DRIVER_SRC_DIR" ; then
-	echo "No DRBD_DRIVER_SRC_DIR given."
-	echo "Cannot proceed."
-	exit 1
-fi >&2
-
-if ! test -r "$DRBD_DRIVER_SRC_DIR/drbd/linux/drbd_genl.h" ; then
-	echo "DRBD_DRIVER_SRC_DIR seems to be wrong."
-	echo "Please try again."
-	exit 1
-fi >&2
-
-
-#Make in an absolute path
-DRBD_DRIVER_SRC_DIR=$(readlink -f "$DRBD_DRIVER_SRC_DIR")
-
 AC_SUBST(WITH_UTILS)
 AC_SUBST(WITH_LEGACY_UTILS)
 AC_SUBST(WITH_LEGACY_UTILS_84)
@@ -334,7 +298,7 @@ fi
 dnl The configuration files we create (from their .in template)
 if test -z $SPECMODE; then
    AC_CONFIG_FILES(Makefile user/Makefile user/legacy/Makefile user/legacy-84/Makefile scripts/Makefile documentation/Makefile documentation/legacy-83/Makefile documentation/legacy-84/Makefile)
-   AC_CONFIG_HEADERS(user/config.h user/legacy/config.h)
+   AC_CONFIG_HEADERS(user/config.h)
 else
    if test "$WITH_UTILS" = "yes"; then
      AC_CONFIG_FILES(drbd.spec)

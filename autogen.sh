@@ -11,5 +11,5 @@ suggested configure parameters:
 # prepare for rpmbuild, only generate spec files
 ./configure --enable-spec
 # or prepare for direct build
-./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc DRBD_DRIVER_SRC_DIR=../drbd09
+./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc
 "

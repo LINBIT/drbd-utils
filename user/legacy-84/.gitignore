@@ -1,7 +1,5 @@
 /Makefile
 /drbd_buildtag.c
-/drbd_endian.h
+/drbdadm-84
 /drbdadm_scanner.c
-/drbdadm-83
-/drbdsetup-83
-
+/drbdsetup-84

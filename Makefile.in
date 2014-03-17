@@ -124,12 +124,7 @@ check_changelogs_up2date:
 	   : do not fail the build because of outdated debian/changelog ; fi ; \
 	$$up2date
 
-# XXX this is newly created whenever the toplevel makefile does something.
-# however it is NOT updated when you just do a make in user/ or drbd/ ...
-#
-# update of drbd_buildtag.c is forced:
 PNAME	:= drbd-utils
-.PHONY: user/drbd_buildtag.c
 .filelist:
 	@$(GIT) ls-files | sed '$(if $(PRESERVE_DEBIAN),,/^debian/d);s#^#$(PNAME)-$(DIST_VERSION)/#' | grep -v "gitignore" > .filelist
 	@[ -s .filelist ] # assert there is something in .filelist now
@@ -177,7 +172,7 @@ configure: configure.ac
 tarball: check_all_committed distclean doc configure .filelist
 	$(MAKE) tgz
 
-all module tools doc .filelist: user/drbd_buildtag.c
+all module tools doc .filelist:
 
 
 ifdef RPMBUILD
