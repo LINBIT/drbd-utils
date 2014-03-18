@@ -137,7 +137,7 @@ static void set_host_info_in_host_address_pairs(struct d_resource *res, struct c
 				exit(20);
 			}
 			addr_hash[i] = crc32c(0x1a656f21,
-					host_info->address.addr,
+					(void *)host_info->address.addr,
 					strlen(host_info->address.addr));
 			host_info_array[i++] = host_info;
 		} else if (ha->by_address) {
