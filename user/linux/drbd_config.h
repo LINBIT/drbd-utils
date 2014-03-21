@@ -22,19 +22,6 @@
 
 extern const char *drbd_buildtag(void);
 
-/* Necessary to build the external module against >= Linux-2.6.33 */
-#ifdef REL_VERSION
-#undef REL_VERSION
-#undef API_VERSION
-#undef PRO_VERSION_MIN
-#undef PRO_VERSION_MAX
-#endif
-
-/* End of external module for 2.6.33 stuff */
-
-#define REL_VERSION "9.0.0pre9"
 #define API_VERSION 1
-#define PRO_VERSION_MIN 86
-#define PRO_VERSION_MAX 110
 
 #endif

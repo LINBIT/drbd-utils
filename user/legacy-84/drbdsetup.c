@@ -2377,7 +2377,7 @@ static void print_usage_and_exit(const char* addinfo)
 	       "'drbdsetup help cmd'.\n"
 	       "\n");
 	/*
-	printf("\n\nVersion: "REL_VERSION" (api:%d)\n%s\n",
+	printf("\n\nVersion: "PACKAGE_VERSION" (api:%d)\n%s\n",
 	       API_VERSION, drbd_buildtag());
 	*/
 	if (addinfo)

@@ -203,7 +203,7 @@ static void vcs_get_current(void)
 		free(version_txt);
 	} else {
 		vcs_from_str(&current_vcs_rel, drbd_buildtag());
-		vcs_ver_from_str(&current_vcs_rel, REL_VERSION);
+		vcs_ver_from_str(&current_vcs_rel, PACKAGE_VERSION);
 	}
 }
 
@@ -211,7 +211,7 @@ static void vcs_get_userland(void)
 {
 	if (userland_version.version_code)
 		return;
-	vcs_ver_from_str(&userland_version, REL_VERSION);
+	vcs_ver_from_str(&userland_version, PACKAGE_VERSION);
 }
 
 int version_code_kernel(void)
@@ -250,7 +250,7 @@ void warn_on_version_mismatch(void)
 	/* get the kernel module version from /proc/drbd */
 	vcs_get_current();
 
-	/* get the userland version from REL_VERSION */
+	/* get the userland version from PACKAGE_VERSION */
 	vcs_get_userland();
 
 	cmp = vcs_ver_cmp(&userland_version, &current_vcs_rel);
@@ -460,7 +460,7 @@ static int make_get_request(char *uri) {
 	ssprintf(req_buf,
 		"GET %s HTTP/1.0\r\n"
 		"Host: "HTTP_HOST"\r\n"
-		"User-Agent: drbdadm/"REL_VERSION" (%s; %s; %s; %s)\r\n"
+		"User-Agent: drbdadm/"PACKAGE_VERSION" (%s; %s; %s; %s)\r\n"
 		"\r\n",
 		uri,
 		nodeinfo.sysname, nodeinfo.release,
@@ -589,7 +589,7 @@ void uc_node(enum usage_count_type type)
 "* If you wish to opt out entirely, simply enter 'no'.\n"
 "* To count this node without comment, just press [RETURN]\n",
 			update ? "an update" : "a new installation",
-			REL_VERSION,ni.node_uuid, vcs_to_str(&ni.rev));
+			PACKAGE_VERSION,ni.node_uuid, vcs_to_str(&ni.rev));
 		r = fgets(answer, ANSWER_SIZE, stdin);
 		if(r && !strcmp(answer,"no\n")) send = 0;
 		url_encode(answer,n_comment);

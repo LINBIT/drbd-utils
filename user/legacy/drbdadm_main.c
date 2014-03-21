@@ -1572,7 +1572,7 @@ int adm_status_xml(struct d_resource *res, const char *cmd)
 
 	if (!dry_run) {
 		printf("<drbd-status version=\"%s\" api=\"%u\">\n",
-		       REL_VERSION, API_VERSION);
+		       PACKAGE_VERSION, API_VERSION);
 		printf("<resources config_file=\"%s\">\n", config_save);
 	}
 
@@ -1596,7 +1596,7 @@ int sh_status(struct d_resource *res, const char *cmd)
 
 	if (!dry_run) {
 		printf("_drbd_version=%s\n_drbd_api=%u\n",
-		       shell_escape(REL_VERSION), API_VERSION);
+		       shell_escape(PACKAGE_VERSION), API_VERSION);
 		printf("_config_file=%s\n\n", shell_escape(config_save));
 	}
 
@@ -2491,7 +2491,7 @@ void print_usage_and_exit(const char *addinfo)
 
 	print_cmds(1);
 
-	printf("\nVersion: " REL_VERSION " (api:%d)\n%s\n",
+	printf("\nVersion: " PACKAGE_VERSION " (api:%d)\n%s\n",
 	       API_VERSION, drbd_buildtag());
 
 	if (addinfo)
@@ -3107,7 +3107,7 @@ int parse_options(int argc, char **argv)
 			printf("DRBDADM_API_VERSION=%u\n", API_VERSION);
 			printf("DRBD_KERNEL_VERSION_CODE=0x%06x\n", version_code_kernel());
 			printf("DRBDADM_VERSION_CODE=0x%06x\n", version_code_userland());
-			printf("DRBDADM_VERSION=%s\n", shell_escape(REL_VERSION));
+			printf("DRBDADM_VERSION=%s\n", shell_escape(PACKAGE_VERSION));
 			exit(0);
 			break;
 		case 'P':
