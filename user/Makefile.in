@@ -37,6 +37,11 @@ CFLAGS = @CFLAGS@
 LDFLAGS = @LDFLAGS@
 LN_S = @LN_S@
 
+DRBD_LIB_DIR = @DRBD_LIB_DIR@
+DRBD_RUN_DIR = @DRBD_RUN_DIR@
+DRBD_LOCK_DIR = @DRBD_LOCK_DIR@
+DRBD_CONFIG_DIR = @DRBD_CONFIG_DIR@
+
 # features enabled or disabled by configure
 WITH_UTILS = @WITH_UTILS@
 WITH_LEGACY_UTILS = @WITH_LEGACY_UTILS@
@@ -165,6 +170,7 @@ ifeq ($(WITH_UTILS),yes)
 		ln -sf $(sbindir)/drbdmeta $(DESTDIR)/sbin ;		\
 		ln -sf $(sbindir)/drbdadm $(DESTDIR)/sbin ;		\
 	fi
+	install -d $(DESTDIR)$(DRBD_LIB_DIR)
 	$(MAKE) -C legacy install
 	$(MAKE) -C legacy-84 install
 endif
