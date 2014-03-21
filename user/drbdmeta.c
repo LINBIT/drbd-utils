@@ -4765,8 +4765,9 @@ static enum drbd_disk_state drbd_str_disk(const char *str)
 {
 	int n;
 
-	for (n = 0; drbd_disk_s_names[n]; n++)
-		if (!strcmp(str, drbd_disk_s_names[n]))
+	for (n = 0; n < drbd_disk_state_names.size; n++)
+		if (drbd_disk_state_names.names[n] &&
+		    !strcmp(str, drbd_disk_state_names.names[n]))
 			return (enum drbd_disk_state)n;
 
 	fprintf(stderr, "Unexpected output from drbdsetup >%s<\n", str);
