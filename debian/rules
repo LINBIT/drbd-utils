@@ -7,17 +7,14 @@
 # build-arch and build-indep targets  by Bill Allombert 2001
 
 # Uncomment this to turn on verbose mode.
-# export DH_VERBOSE=1
+export DH_VERBOSE=1
 
 include /usr/share/dpatch/dpatch.make
 
 # This has to be exported to make some magic below work.
 export DH_OPTIONS
 
-PACKAGE=drbd8-module
-MA_DIR ?= /usr/share/modass
--include $(MA_DIR)/include/generic.make
--include $(MA_DIR)/include/common-rules.make
+PACKAGE=drbd-utils
 
 CFLAGS = -Wall -g
 
@@ -30,32 +27,6 @@ ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
 	INSTALL_PROGRAM += -s
 endif
 
-kdist_clean: unpatch
-	dh_clean
-	-$(MAKE) -C drbd clean
-
-# prep-deb-files rewrites the debian/ files as needed. See RATIONALE for
-# details
-kdist_config: prep-deb-files
-# ... additional kernel specific things to configure...
-
-kdist_configure: kdist_config
-
-binary-modules: prep-deb-files
-	dh_testdir
-	dh_testroot
-	dh_clean -k
-	$(MAKE) -C drbd KERNEL_SOURCES=$(KSRC) MODVERSIONS=detect KERNEL=linux-$(KVERS) KDIR=$(KSRC)
-	install -m644 -b -D drbd/drbd.ko $(CURDIR)/debian/$(PKGNAME)/lib/modules/$(KVERS)/updates/drbd.ko
-	dh_installdocs
-	dh_installchangelogs
-	dh_compress
-	dh_fixperms
-	dh_installdeb
-	dh_gencontrol -- -v$(VERSION)
-	dh_md5sums
-	dh_builddeb --destdir=$(DEB_DESTDIR)
-
 #Architecture
 build: patch build-arch build-indep
 
@@ -65,7 +36,7 @@ build-arch-stamp:
 #	build this first, so user/drbd_buildtag.c does not use the stale thing from the tgz
 	[ -f configure ] || ( autoheader && autoconf )
 	./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc
-	$(MAKE) drbd/drbd_buildtag.c
+	$(MAKE) -C user drbd_buildtag.c
 	$(MAKE) -C user
 	$(MAKE) -C scripts
 	$(MAKE) -C documentation doc
@@ -80,43 +51,23 @@ clean: unpatch
 	dh_testroot
 	rm -f build-arch-stamp build-indep-stamp #CONFIGURE-STAMP#
 #	remove these files from upstream tgz
-	rm -f debian/drbd8.*
-	rm -f debian/drbd8-source.dirs
-	rm -f debian/kernel-patch-wup.kpatches debian/kernel-patch-wup.README.Debian debian/kernel-export-wup.patch
+	rm -f debian/drbd.*
+	rm -f debian/drbd-source.dirs
 	-$(MAKE) -C user clean
 	-$(MAKE) -C scripts clean
 	-$(MAKE) -C documentation clean
-	-$(MAKE) -C drbd clean
 	dh_clean
 
-install: install-arch install-indep
-install-indep:
-	dh_testdir
-	dh_testroot
-	dh_clean -k -i
-	dh_installdirs -i
-	cp -a drbd/* debian/$(PACKAGE)-source/usr/src/modules/drbd/drbd
-	cp Makefile debian/$(PACKAGE)-source/usr/src/modules/drbd
-	cp drbd/linux/drbd_config.h debian/$(PACKAGE)-source/usr/src/modules/drbd
-	mkdir debian/$(PACKAGE)-source/usr/src/modules/drbd/scripts/
-
-#	 install debian/ files
-	cd debian ; cp changelog control compat *.modules.in rules copyright $(PACKAGE)-source/usr/src/modules/drbd/debian
-
-#	 tar the stuff
-	cd debian/$(PACKAGE)-source/usr/src/ ; tar pzfvc drbd8.tar.gz modules ; rm -rf modules
-
-	install -m 755 $(CURDIR)/debian/modass.drbd8-module-source $(CURDIR)/debian/$(PACKAGE)-source/usr/share/modass/overrides/drbd8-module-source
-	dh_install -i
+install: install-arch 
 
 install-arch:
 	dh_testdir
 	dh_testroot
 	dh_clean -k -s
 	dh_installdirs -s
-	$(MAKE) DESTDIR=$(CURDIR)/debian/drbd8-utils/ -C user install
-	$(MAKE) DESTDIR=$(CURDIR)/debian/drbd8-utils/ -C scripts install
-	$(MAKE) DESTDIR=$(CURDIR)/debian/drbd8-utils/ -C documentation install
+	$(MAKE) DESTDIR=$(CURDIR)/debian/drbd-utils/ -C user install
+	$(MAKE) DESTDIR=$(CURDIR)/debian/drbd-utils/ -C scripts install
+	$(MAKE) DESTDIR=$(CURDIR)/debian/drbd-utils/ -C documentation install
 
 	dh_install -s
 # Must not depend on anything. This is to be called by

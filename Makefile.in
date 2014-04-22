@@ -114,7 +114,7 @@ check_changelogs_up2date:
 	then \
 	   echo -e "\n\tChangeLog needs update"; \
 	   up2date=false; fi ; \
-	if ! grep "^AC_INIT(DRBD-UTILS, $$dver_re" >/dev/null 2>&1 configure.ac; \
+	if ! grep "^AC_INIT(DRBD, $$dver_re" >/dev/null 2>&1 configure.ac; \
 	then \
 	   echo -e "\n\tconfigure.ac needs update"; \
 	   up2date=false; fi ; \

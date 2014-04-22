@@ -27,38 +27,38 @@
 %global _without_xen --without-xen
 %endif
 
-Name: @PACKAGE_TARNAME@
+Name: drbd
 Summary: DRBD driver for Linux
 Version: @PACKAGE_VERSION@
 Release: 1@RPM_DIST_TAG@
-Source: http://oss.linbit.com/%{name}/8.3/%{name}-%{version}.tar.gz
+Source: http://oss.linbit.com/drbd/8.3/drbd-%{version}.tar.gz
 License: GPLv2+
 ExclusiveOS: linux
 Group: System Environment/Kernel
 URL: http://www.drbd.org/
-BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
+BuildRoot: %(mktemp -ud %{_tmppath}/drbd-%{version}-%{release}-XXXXXX)
 BuildRequires: @RPM_BUILDREQ_DEFAULT@
-Requires: %{name}-utils = %{version}
+Requires: drbd-utils = %{version}
 %ifarch %{ix86} x86_64
 %if %{with xen}
-Requires: %{name}-xen = %{version}
+Requires: drbd-xen = %{version}
 %endif
 %endif
 %if %{with udev}
-Requires: %{name}-udev = %{version}
+Requires: drbd-udev = %{version}
 BuildRequires: udev
 %endif
 %if %{with pacemaker}
-Requires: %{name}-pacemaker = %{version}
+Requires: drbd-pacemaker = %{version}
 %endif
 ## %if %{with rgmanager}
 ## ## No.
 ## ## We don't want to annoy the majority of our userbase on pacemaker
 ## ## by pulling in the full rgmanager stack via drbd-rgmanager as well.
-## Requires: %{name}-rgmanager = %{version}
+## Requires: drbd-rgmanager = %{version}
 ## %endif
 %if %{with bashcompletion}
-Requires: %{name}-bash-completion = %{version}
+Requires: drbd-bash-completion = %{version}
 %endif
 
 %description
@@ -116,19 +116,19 @@ This packages includes the DRBD administration tools.
 %endif
 %{_initddir}/drbd
 %{_sbindir}/drbd-overview
-%dir %{_prefix}/lib/%{name}
-%{_prefix}/lib/%{name}/outdate-peer.sh
-%{_prefix}/lib/%{name}/snapshot-resync-target-lvm.sh
-%{_prefix}/lib/%{name}/unsnapshot-resync-target-lvm.sh
-%{_prefix}/lib/%{name}/notify-out-of-sync.sh
-%{_prefix}/lib/%{name}/notify-split-brain.sh
-%{_prefix}/lib/%{name}/notify-emergency-reboot.sh
-%{_prefix}/lib/%{name}/notify-emergency-shutdown.sh
-%{_prefix}/lib/%{name}/notify-io-error.sh
-%{_prefix}/lib/%{name}/notify-pri-lost-after-sb.sh
-%{_prefix}/lib/%{name}/notify-pri-lost.sh
-%{_prefix}/lib/%{name}/notify-pri-on-incon-degr.sh
-%{_prefix}/lib/%{name}/notify.sh
+%dir %{_prefix}/lib/drbd
+%{_prefix}/lib/drbd/outdate-peer.sh
+%{_prefix}/lib/drbd/snapshot-resync-target-lvm.sh
+%{_prefix}/lib/drbd/unsnapshot-resync-target-lvm.sh
+%{_prefix}/lib/drbd/notify-out-of-sync.sh
+%{_prefix}/lib/drbd/notify-split-brain.sh
+%{_prefix}/lib/drbd/notify-emergency-reboot.sh
+%{_prefix}/lib/drbd/notify-emergency-shutdown.sh
+%{_prefix}/lib/drbd/notify-io-error.sh
+%{_prefix}/lib/drbd/notify-pri-lost-after-sb.sh
+%{_prefix}/lib/drbd/notify-pri-lost.sh
+%{_prefix}/lib/drbd/notify-pri-on-incon-degr.sh
+%{_prefix}/lib/drbd/notify.sh
 
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/drbd.conf
@@ -149,7 +149,7 @@ This packages includes the DRBD administration tools.
 %package xen
 Summary: Xen block device management script for DRBD
 Group: System Environment/Kernel
-Requires: %{name}-utils = %{version}-%{release}
+Requires: drbd-utils = %{version}-%{release}
 @RPM_REQ_XEN@
 @RPM_SUBPACKAGE_NOARCH@
 
@@ -167,7 +167,7 @@ promoting and demoting DRBD resources as necessary.
 %package udev
 Summary: udev integration scripts for DRBD
 Group: System Environment/Kernel
-Requires: %{name}-utils = %{version}-%{release}, udev
+Requires: drbd-utils = %{version}-%{release}, udev
 @RPM_SUBPACKAGE_NOARCH@
 
 %description udev
@@ -183,7 +183,7 @@ DRBD devices in /dev/drbd/by-res and /dev/drbd/by-disk.
 %package pacemaker
 Summary: Pacemaker resource agent for DRBD
 Group: System Environment/Base
-Requires: %{name}-utils = %{version}-%{release}
+Requires: drbd-utils = %{version}-%{release}
 @RPM_REQ_PACEMAKER@
 License: GPLv2
 @RPM_SUBPACKAGE_NOARCH@
@@ -194,9 +194,9 @@ Pacemaker High Availability cluster manager.
 
 %files pacemaker
 %defattr(755,root,root,-)
-%{_prefix}/lib/%{name}/crm-fence-peer.sh
-%{_prefix}/lib/%{name}/crm-unfence-peer.sh
-%{_prefix}/lib/%{name}/stonith_admin-fence-peer.sh
+%{_prefix}/lib/drbd/crm-fence-peer.sh
+%{_prefix}/lib/drbd/crm-unfence-peer.sh
+%{_prefix}/lib/drbd/stonith_admin-fence-peer.sh
 %{_prefix}/lib/ocf/resource.d/linbit/drbd
 %endif # with pacemaker
 
@@ -225,7 +225,7 @@ Pacemaker High Availability cluster manager.
 %package rgmanager
 Summary: Red Hat Cluster Suite agent for DRBD
 Group: System Environment/Base
-Requires: %{name}-utils = %{version}-%{release}
+Requires: drbd-utils = %{version}-%{release}
 @RPM_SUBPACKAGE_NOARCH@
 
 %description rgmanager
@@ -238,7 +238,7 @@ in the Cluster distribution.
 %files rgmanager
 %defattr(755,root,root,-)
 %{_datadir}/cluster/drbd.sh
-%{_prefix}/lib/%{name}/rhcs_fence
+%{_prefix}/lib/drbd/rhcs_fence
 
 %defattr(-,root,root,-)
 %{_datadir}/cluster/drbd.metadata
@@ -248,7 +248,7 @@ in the Cluster distribution.
 %package bash-completion
 Summary: Programmable bash completion support for drbdadm
 Group: System Environment/Base
-Requires: %{name}-utils = %{version}-%{release}
+Requires: drbd-utils = %{version}-%{release}
 @RPM_REQ_BASH_COMPLETION@
 @RPM_SUBPACKAGE_NOARCH@
 

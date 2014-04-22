@@ -86,7 +86,7 @@ endif
 
 .PHONY: drbd_buildtag.c
 
-  drbd_buildtag.c:
+drbd_buildtag.c:
 	@set -e; exec > $@.new;							\
 	echo -e "/* automatically generated. DO NOT EDIT. */";			\
 	echo -e "#include <linux/drbd.h>";					\
