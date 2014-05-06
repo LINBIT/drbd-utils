@@ -410,7 +410,7 @@ extern char* drbd_proxy_ctl;
 extern char* drbdadm_83;
 extern char* drbdadm_84;
 extern char ss_buffer[1024];
-extern const char *canonname;
+extern const char *hostname;
 extern struct names backend_options;
 
 /* ssprintf() places the result of the printf in the current stack

@@ -3101,7 +3101,7 @@ void print_dump_header()
 
 	strftime(time_str, sizeof(time_str), "%F %T %z [%s]", localtime(&t));
 	printf("# DRBD meta data dump\n# %s\n# %s>",
-		time_str, canonical_hostname());
+		time_str, get_hostname());
 
 	for (i=0; i < global_argc; i++)
 		printf(" %s",global_argv[i]);

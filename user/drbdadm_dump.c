@@ -545,7 +545,7 @@ int adm_dump(const struct cfg_ctx *ctx)
 	}
 
 	printI("# resource %s on %s: %s, %s\n",
-	       esc(res->name), canonname,
+	       esc(res->name), hostname,
 	       res->ignore ? "ignored" : "not ignored",
 	       res->stacked ? "stacked" : "not stacked");
 	printI("# defined at %s:%u\n", res->config_file, res->start_line);
