@@ -85,8 +85,6 @@ enum drbd_packet {
 	P_TWOPC_COMMIT        = 0x39, /* data sock: commit state change */
 	P_TWOPC_RETRY         = 0x40, /* meta sock: retry two-phase commit */
 
-	P_PRI_REACHABLE       = 0x41, /* The set of reachable primaries got smaller */
-
 	P_MAY_IGNORE	      = 0x100, /* Flag to test if (cmd > P_MAY_IGNORE) ... */
 
 	/* special command ids for handshake */
@@ -261,6 +259,8 @@ struct p_protocol {
 #define UUID_FLAG_SKIP_INITIAL_SYNC 8
 #define UUID_FLAG_NEW_DATAGEN 16
 #define UUID_FLAG_STABLE 32
+#define UUID_FLAG_GOT_STABLE 64 /* send UUIDs */
+#define UUID_FLAG_RESYNC 128    /* compare UUIDs and eventually start resync */
 
 struct p_uuids {
 	uint64_t current_uuid;
@@ -274,7 +274,7 @@ struct p_uuids110 {
 	uint64_t current_uuid;
 	uint64_t dirty_bits;
 	uint64_t uuid_flags;
-	uint64_t offline_mask;
+	uint64_t weak_nodes;
 	uint64_t bitmap_uuids_mask; /* non zero bitmap UUIDS for these nodes */
 	uint64_t other_uuids[0]; /* the first hweight(bitmap_uuids_mask) slots carry bitmap uuids.
 				    The node with the lowest node_id first.
@@ -386,10 +386,6 @@ struct p_peer_block_desc {
 struct p_peer_dagtag {
 	uint64_t dagtag;
 	uint32_t node_id;
-} __packed;
-
-struct p_pri_reachable {
-	uint64_t primary_mask;
 } __packed;
 
 /*
