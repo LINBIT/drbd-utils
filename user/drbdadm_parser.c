@@ -87,16 +87,6 @@ char *_names_to_str(char* buffer, struct names *names)
 	return _names_to_str_c(buffer, names, ' ');
 }
 
-static const char *after_shortname(const char *hostname)
-{
-	while (*hostname != '.') {
-		if (*hostname == 0)
-			break;
-		hostname++;
-	}
-	return hostname;
-}
-
 /*
  * Determine if two hostnames are either fully qualified and equal,
  * or one or both do not contain a domain name and the host names
@@ -104,8 +94,8 @@ static const char *after_shortname(const char *hostname)
  */
 bool hostnames_equal(const char *a, const char *b)
 {
-	const char *domain_a = after_shortname(a);
-	const char *domain_b = after_shortname(b);
+	const char *domain_a = strchrnul(a, '.');
+	const char *domain_b = strchrnul(b, '.');
 
 	if (*domain_a && *domain_b) {
 		/* Both hostnames contain a domain part. */
