@@ -193,72 +193,67 @@ sub slurp_drbdsetup() {
 		exit 0;
 	}
 
-	my($continued, %peers, $my_role, %vol_minor, %hosts);
+    my(%later, $my_role);
     while (<DS>) {
         chomp;
         next unless s/^exists //;
-        $continued = $1;
+        last if /^-$/; # EOD
         s/^([\w.-]+) name:([\w.-]+) //;
         my $what = $1;
         my $res = $2;
+        my %f = map { split(/:/, $_, 2); } split(/ +/, $_);
 
         if ($what eq "resource" &&
-                /^role:(\w+)/) { 
-            $my_role = $1;
-            $peers{states}{$HOSTNAME} = $my_role;
+                ($my_role = $f{'role'})) {
+            $later{$res}{peers}{states}{$HOSTNAME} = $my_role;
             # local node is always connected
-            $peers{conns}{$HOSTNAME} = "Connected";
-        } elsif ($what eq "connection" &&
-                m/^conn-name:(\S+) /) { 
-            my $p = $1;
-            my ($cs) = m/ connection:(\w+)/;
-            my ($r)  = m/ role:(\w+)/;
+            $later{$res}{peers}{conns}{$HOSTNAME} = "Connected";
+        } elsif ($what eq "connection") {
+            my $p = $f{'conn-name'};
+            my $cs= $f{'connection'};
+            my $r = $f{'role'};
 # Increase difference between "Connecting" and "Connected"
             $cs =~ s/^Connecting/'ing/;
-            $peers{states}{$p} = $r;
-            $peers{conns}{$p}  = $cs;
-            $hosts{$p}++;
+            $later{$res}{peers}{states}{$p} = $r;
+            $later{$res}{peers}{conns}{$p}  = $cs;
+            $later{$res}{hosts}{$p}++;
         } elsif ($what eq "device") {
-            my %kv = map { split(/:/); } split(/ /);
-            my $minor = $kv{minor};
-            my $vol = $kv{volume};
-            $vol_minor{$vol} = $minor;
-            $peers{dstates}{$HOSTNAME}  = $kv{disk};
+            my $minor = $f{minor};
+            my $vol = $f{volume};
+            $later{$res}{vol_minor}{$vol} = $minor;
+            $later{$res}{peers}{dstates}{$HOSTNAME}  = $f{disk};
         } elsif ($what eq "peer-device") {
-            my %kv = map { split(/:/); } split(/ /);
-            my $p = $kv{"conn-name"};
-            $peers{dstates}{$p} = $kv{"peer-disk"};
+            my $p = $f{"conn-name"};
+            $later{$res}{peers}{dstates}{$p} = $f{"peer-disk"};
         } else {
             warn("unknown key $what\n");
         }
+    }
 
 
-        if (!$continued) {
-            my @h = sort keys %hosts;
-            my @h_incl = ($HOSTNAME, @h);
+    for my $res (keys %later) {
+        my @h = sort keys %{$later{$res}{hosts}};
+        my @h_incl = ($HOSTNAME, @h);
+        my $vol_minor = $later{$res}{vol_minor};
+        my $peers = $later{$res}{peers};
 
-            for my $vol (keys %vol_minor) {
-                my $minor = $vol_minor{$vol};
+        for my $vol (keys %$vol_minor) {
+            my $minor = $vol_minor->{$vol};
 
-                my $name = length($vol) ? "$res/$vol" : $res;
+            my $name = length($vol) ? "$res/$vol" : $res;
 # create hash
-                $drbd{$minor}{name} = $name;
-                my $v = $drbd{$minor};
+            $drbd{$minor}{name} = $name;
+            my $v = $drbd{$minor};
 
 
 # role with local=first
-                $v->{role} = join("/", $my_role,
-                        shorten_list(\@h, $peers{states}));
+            $v->{role} = join("/", $my_role,
+                    shorten_list(\@h, $peers->{states}));
 # role with all mixed together
-                $v->{role} = shorten_list(\@h_incl, $peers{states});
+            $v->{role} = shorten_list(\@h_incl, $peers->{states});
 
-                $v->{dstate} = shorten_list(\@h_incl, $peers{dstates});
-                $v->{conn} = shorten_list(\@h_incl, $peers{conns});
-            }
-
-            %vol_minor = ();
-            %peers = ();
-            %hosts = ();
+            $v->{dstate} = shorten_list(\@h_incl, $peers->{dstates});
+            $v->{conn} = shorten_list(\@h_incl, $peers->{conns});
         }
     }
 
