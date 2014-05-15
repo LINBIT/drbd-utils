@@ -31,12 +31,12 @@ Name: drbd
 Summary: DRBD driver for Linux
 Version: @PACKAGE_VERSION@
 Release: 1@RPM_DIST_TAG@
-Source: http://oss.linbit.com/drbd/8.3/drbd-%{version}.tar.gz
+Source: http://oss.linbit.com/drbd/drbd-utils-%{version}.tar.gz
 License: GPLv2+
 ExclusiveOS: linux
 Group: System Environment/Kernel
 URL: http://www.drbd.org/
-BuildRoot: %(mktemp -ud %{_tmppath}/drbd-%{version}-%{release}-XXXXXX)
+BuildRoot: %(mktemp -ud %{_tmppath}/drbd-utils-%{version}-%{release}-XXXXXX)
 BuildRequires: @RPM_BUILDREQ_DEFAULT@
 Requires: drbd-utils = %{version}
 %ifarch %{ix86} x86_64
@@ -263,7 +263,7 @@ management utility.
 
 
 %prep
-%setup -q
+%setup -q -n drbd-utils-%{version}
 
 %build
 %configure \
