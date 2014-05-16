@@ -964,10 +964,18 @@ static void parse_version(struct version *rel, const char *text)
 
 const struct version *drbd_driver_version(enum driver_version_policy fallback)
 {
-	char* version_txt;
+	char *version_txt;
+	char *drbd_driver_version_override;
 
 	if (__drbd_driver_version.version_code)
 		return &__drbd_driver_version;
+
+	drbd_driver_version_override = getenv("DRBD_DRIVER_VERSION_OVERRIDE");
+	if (drbd_driver_version_override) {
+		version_from_str(&__drbd_driver_version, drbd_driver_version_override);
+		if (__drbd_driver_version.version_code)
+			return &__drbd_driver_version;
+	}
 
 	version_txt = slurp_proc_drbd();
 	if (version_txt) {
