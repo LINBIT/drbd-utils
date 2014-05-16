@@ -425,6 +425,7 @@ struct adm_cmd cmds[] = {
 
 	{"new-resource", adm_new_resource, DRBD_acf2_sh_resname},
 	{"sh-new-minor", adm_new_minor, DRBD_acf4_advanced},
+	{"new-minor", adm_new_minor, DRBD_acf4_advanced},	/* alias for sh-new-minor */
 
 	{"before-resync-target", adm_khelper, DRBD_acf3_handler},
 	{"after-resync-target", adm_khelper, DRBD_acf3_handler},
