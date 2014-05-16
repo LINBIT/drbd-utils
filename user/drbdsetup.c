@@ -3806,10 +3806,6 @@ int main(int argc, char **argv)
 	if (argc < 2)
 		print_usage_and_exit(0);
 
-	cmd = find_cmd_by_name(argv[1]);
-	if (!cmd)
-		print_usage_and_exit("invalid command");
-
 	if (!modprobe_drbd()) {
 		if (!strcmp(argv[1], "down") ||
 		    !strcmp(argv[1], "secondary") ||
@@ -3820,6 +3816,10 @@ int main(int argc, char **argv)
 	}
 
 	maybe_exec_legacy_drbdsetup(argv);
+
+	cmd = find_cmd_by_name(argv[1]);
+	if (!cmd)
+		print_usage_and_exit("invalid command");
 
 	if (cmd->continuous_poll)
 		drbd_genl_family.nl_groups = -1;
