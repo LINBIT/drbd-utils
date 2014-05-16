@@ -8,6 +8,8 @@ AC_PREREQ(2.53)
 
 dnl What we are, our version, who to bug in case of problems
 AC_INIT(DRBD, 8.9.0rc1, [drbd-dev@lists.linbit.com])
+PACKAGE_VERSION_EQUIVALENT_84=8.4.5
+AC_SUBST(PACKAGE_VERSION_EQUIVALENT_84)
 
 dnl Sanitize $prefix. Autoconf does this by itself, but so late in the
 dnl generated configure script that the expansion does not occur until

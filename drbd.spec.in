@@ -79,6 +79,9 @@ This is a virtual package, installing the full DRBD userland suite.
 %package utils
 Summary: Management utilities for DRBD
 Group: System Environment/Kernel
+%if %{with legacy_utils_84}
+Provides: drbd-utils = @PACKAGE_VERSION_EQUIVALENT_84@
+%endif
 # We used to have one monolithic userland package.
 # Since all other packages require drbd-utils,
 # it should be sufficient to add the conflict here.
