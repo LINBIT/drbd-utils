@@ -974,6 +974,17 @@ const struct version *drbd_driver_version(enum driver_version_policy fallback)
 		parse_version(&__drbd_driver_version, version_txt);
 		free(version_txt);
 		return &__drbd_driver_version;
+	} else {
+		FILE *in = popen("modinfo -F version drbd", "r");
+		if (in) {
+			char buf[32];
+			int c = fscanf(in, "%30s", buf);
+			pclose(in);
+			if (c == 1) {
+				version_from_str(&__drbd_driver_version, buf);
+				return &__drbd_driver_version;
+			}
+		}
 	}
 
 	if (fallback == FALLBACK_TO_UTILS)
