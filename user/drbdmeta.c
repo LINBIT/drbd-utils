@@ -4763,12 +4763,22 @@ int parse_format(struct format *cfg, char **argv, int argc, int *ai)
 
 static enum drbd_disk_state drbd_str_disk(const char *str)
 {
+	/* drbd 8.4 and earlier provide "Local/Remote"
+	 * drbd 9. only "Local". */
+	const char *slash = strchr(str, '/');
+	const char *tmp;
 	int n;
 
-	for (n = 0; n < drbd_disk_state_names.size; n++)
+	if (slash)
+		tmp = strndupa(str, slash - str);
+	else
+		tmp = str;
+
+	for (n = 0; n < drbd_disk_state_names.size; n++) {
 		if (drbd_disk_state_names.names[n] &&
-		    !strcmp(str, drbd_disk_state_names.names[n]))
+		    !strcmp(tmp, drbd_disk_state_names.names[n]))
 			return (enum drbd_disk_state)n;
+	}
 	if (!strcmp(str, "Unconfigured"))
 		return D_DISKLESS;
 
