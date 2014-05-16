@@ -4769,6 +4769,8 @@ static enum drbd_disk_state drbd_str_disk(const char *str)
 		if (drbd_disk_state_names.names[n] &&
 		    !strcmp(str, drbd_disk_state_names.names[n]))
 			return (enum drbd_disk_state)n;
+	if (!strcmp(str, "Unconfigured"))
+		return D_DISKLESS;
 
 	fprintf(stderr, "Unexpected output from drbdsetup >%s<\n", str);
 	exit(20);
