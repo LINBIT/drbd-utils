@@ -5088,6 +5088,14 @@ int main(int argc, char **argv)
 		exit(10);
 	}
 
+	/* Hope this is sufficcient for backward compat */
+	if (!is_v09(cfg) && command->node_id_required) {
+		if (option_node_id == -1)
+			option_node_id = 0;
+		else if (option_node_id != 0)
+			fprintf(stderr, "Not v09, implicitly set --node-id = 0\n");
+	}
+
 	if (option_node_id == -1 && command->node_id_required) {
 		fprintf(stderr, "The %s command requires the --node-id option\n",
 			command->name);
