@@ -166,6 +166,13 @@ if test $UDEVADM = false && test $UDEVINFO = false; then
    fi
 fi
 
+dnl special header checks
+
+AC_LANG(C)
+AC_COMPILE_IFELSE([AC_LANG_SOURCE[
+#include <linux/genetlink.h>
+static unsigned int dummy = CTRL_CMD_DELMCAST_GRP;
+]], [AC_DEFINE([HAVE_CTRL_CMD_DELMCAST_GRP],1,[Does genetlink provide CTRL_CMD_DELMCAST_GRP already])])
 
 dnl Checks for system services
 

@@ -1638,6 +1638,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				continue;
 			}
 			if (nlh->nlmsg_type == GENL_ID_CTRL) {
+#ifdef HAVE_CTRL_CMD_DELMCAST_GRP
 				if (info.genlhdr->cmd == CTRL_CMD_DELMCAST_GRP) {
 					struct nlattr *nla =
 						nlmsg_find_attr(nlh, GENL_HDRLEN, CTRL_ATTR_FAMILY_ID);
@@ -1647,6 +1648,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 						goto out2;
 					}
 				}
+#endif
 				/* Ignore other generic netlink control messages. */
 				continue;
 			}
