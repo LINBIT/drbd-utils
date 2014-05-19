@@ -79,8 +79,18 @@ This is a virtual package, installing the full DRBD userland suite.
 %package utils
 Summary: Management utilities for DRBD
 Group: System Environment/Kernel
+# Our kernel modules "require" specific drbd-utils versions, not ranges.
+# Which was natural as long as userland and module shared the same repo
+# and source tarball, and would be build together.
+#
+# Now we split the userland part, we "provide" a list of versions here,
+# to be able to use this package with existing module packages.
+#
+# which 9.0 version equivalent this package provides
+@SPEC_PROVIDES_DRBD_UTILS_90@
 %if %{with legacy_utils_84}
-Provides: drbd-utils = @PACKAGE_VERSION_EQUIVALENT_84@
+# which 8.4 version equivalent this package provides
+@SPEC_PROVIDES_DRBD_UTILS_84@
 %endif
 # We used to have one monolithic userland package.
 # Since all other packages require drbd-utils,
