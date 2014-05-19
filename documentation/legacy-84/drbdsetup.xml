@@ -498,15 +498,39 @@
           <term><option>-t</option>,
 	  <option>--disk-timeout <replaceable>disk_timeout</replaceable></option></term>
           <listitem>
-            <para>	      If the driver of the <replaceable>lower_device</replaceable>
-	      does not finish an IO request within <replaceable>disk_timeout</replaceable>,
-	      DRBD considers the disk as failed. If DRBD is connected to a remote host,
-	      it will reissue local pending IO requests to the peer, and ship all new
-	      IO requests to the peer only. The disk state advances to diskless, as soon
-	      as the backing block device has finished all IO requests.</para>
-	      <para>      The default value of is 0, which means that no timeout is enforced.
-	      The default unit is 100ms. This option is available since 8.3.12.
-	      </para>
+      <para>If the lower-level device on which a DRBD device stores its data does
+      not finish an I/O request within the defined
+      <option>disk-timeout</option>, DRBD treats this as a failure. The
+      lower-level device is detached, and the device's disk state advances to
+      Diskless.  If DRBD is connected to one or more peers, the failed request
+      is passed on to one of them.</para>
+
+      <para>This option is <emphasis>dangerous and may lead to kernel panic!</emphasis></para>
+
+      <para>"Aborting" requests, or force-detaching the disk, is intended for
+      completely blocked/hung local backing devices which do no longer
+      complete requests at all, not even do error completions.  In this
+      situation, usually a hard-reset and failover is the only way out.</para>
+
+      <para>By "aborting", basically faking a local error-completion,
+      we allow for a more graceful swichover by cleanly migrating services.
+      Still the affected node has to be rebooted "soon".</para>
+      <para>By completing these requests, we allow the upper layers to re-use
+      the associated data pages.</para>
+
+      <para>If later the local backing device "recovers", and now DMAs some data
+      from disk into the original request pages, in the best case it will
+      just put random data into unused pages; but typically it will corrupt
+      meanwhile completely unrelated data, causing all sorts of damage.</para>
+
+      <para>Which means delayed successful completion,
+      especially for READ requests, is a reason to panic().
+      We assume that a delayed *error* completion is OK,
+      though we still will complain noisily about it.</para>
+      <para>The default value of
+      <option>disk-timeout</option> is 0, which stands for an infinite timeout.
+      Timeouts are specified in units of 0.1 seconds. This option is available
+      since DRBD 8.3.12.</para>
           </listitem>
         </varlistentry>
 
