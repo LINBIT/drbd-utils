@@ -5,7 +5,9 @@
 #include <sys/utsname.h>
 #include <sys/types.h>
 #include <net/if.h>
-#include <sys/queue.h>
+/* We carry a copy of <sys/queue.h> around,
+ * some older versions of it don't have the STAILQ_* variants */
+#include "sys_queue.h"
 #include <stdint.h>
 #include <stdarg.h>
 
