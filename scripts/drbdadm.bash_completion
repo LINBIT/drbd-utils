@@ -79,7 +79,7 @@ __drbdadm_subcmd_options() {
 }
 
 _drbdadm() {
-	local DRBDADM=${COMP_WORDS[0]}
+	local DRBDADM="env DRBD_DONT_WARN_ON_VERSION_MISMATCH=1 ${COMP_WORDS[0]}"
 	local drbdadm_command_list=' attach disk-options detach connect net-options disconnect up resource-options down primary secondary invalidate invalidate-remote outdate verify pause-sync resume-sync resize adjust wait-connect role cstate dstate dump wait-connect wait-con-int create-md dump-md wipe-md get-gi show-gi help apply-al hidden-commands '
 
 	# Redefine the drbdadm we use in __drbdadm_all_resources and
