@@ -117,7 +117,7 @@ struct option admopt[] = {
 	{0, 0, 0, 0}
 };
 
-extern int my_parse();
+extern void my_parse();
 extern int yydebug;
 extern FILE *yyin;
 

@@ -83,7 +83,7 @@ struct option general_admopt[] = {
 };
 struct option *admopt = general_admopt;
 
-extern int my_parse();
+extern void my_parse();
 extern int yydebug;
 extern FILE *yyin;
 
