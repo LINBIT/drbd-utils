@@ -2308,15 +2308,15 @@ static void print_command_usage(struct drbd_cmd *cm, enum usage_type ut)
 
 				wrap_printf(4, " {");
 				if (ctx & CTX_RESOURCE) {
-					wrap_printf(4, "|resource" + first);
+					wrap_printf(4, "%s", "|resource" + first);
 					first = false;
 				}
 				if (ctx & CTX_MINOR) {
-					wrap_printf(4, "|minor" + first);
+					wrap_printf(4, "%s", "|minor" + first);
 					first = false;
 				}
 				if (ctx & CTX_ALL) {
-					wrap_printf(4, "|all" + first);
+					wrap_printf(4, "%s", "|all" + first);
 					first = false;
 				}
 				wrap_printf(4, "}");
