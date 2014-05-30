@@ -143,7 +143,6 @@ int is_drbd_top;
 enum { NORMAL, STACKED, IGNORED, __N_RESOURCE_TYPES };
 int nr_resources[__N_RESOURCE_TYPES];
 int nr_volumes[__N_RESOURCE_TYPES];
-int highest_minor;
 int number_of_minors = 0;
 int config_from_stdin = 0;
 int config_valid = 1;
@@ -3022,13 +3021,11 @@ void assign_default_config_file(void)
 	}
 }
 
-void count_resources_or_die(void)
+void count_resources(void)
 {
-	int m, mc = global_options.minor_count;
 	struct d_resource *res;
 	struct d_volume *vol;
 
-	highest_minor = 0;
 	number_of_minors = 0;
 	for_each_resource(res, &config) {
 		if (res->ignore) {
@@ -3043,27 +3040,12 @@ void count_resources_or_die(void)
 
 		for_each_volume(vol, &res->me->volumes) {
 			number_of_minors++;
-			m = vol->device_minor;
-			if (m > highest_minor)
-				highest_minor = m;
 			if (res->stacked)
 				nr_volumes[STACKED]++;
 			/* res->ignored won't come here */
 			else
 				nr_volumes[NORMAL]++;
 		}
-	}
-
-	// Just for the case that minor_of_res() returned 0 for all devices.
-	if (nr_volumes[NORMAL]+nr_volumes[STACKED] > (highest_minor + 1))
-		highest_minor = nr_volumes[NORMAL] + nr_volumes[STACKED] -1;
-
-	if (mc && mc < (highest_minor + 1)) {
-		fprintf(stderr,
-			"The highest minor you have in your config is %d"
-			"but a minor_count of %d in your config!\n",
-			highest_minor, mc);
-		exit(E_USAGE);
 	}
 }
 
@@ -3200,7 +3182,7 @@ int main(int argc, char **argv)
 	if (dry_run || config_from_stdin)
 		do_register = 0;
 
-	count_resources_or_die();
+	count_resources();
 
 	if (cmd->uc_dialog)
 		uc_node(global_options.usage_count);
