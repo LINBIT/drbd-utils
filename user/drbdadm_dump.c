@@ -238,6 +238,10 @@ static void dump_volume(int has_lower, struct d_volume *vol)
 		++indent;
 	}
 
+	/* Handle volume of '_remote_host' */
+	if (!vol->device && !vol->disk && !vol->meta_disk && !vol->meta_index)
+		goto out;
+
 	dump_options("disk", &vol->disk_options);
 
 	if (vol->parsed_device || verbose) {
@@ -261,6 +265,7 @@ static void dump_volume(int has_lower, struct d_volume *vol)
 	}
 
 	if (!vol->implicit) {
+	out:
 		--indent;
 		printI("}\n");
 	}
