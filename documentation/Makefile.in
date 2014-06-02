@@ -46,6 +46,7 @@ WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 
 # variables meant to be overridden from the make command line
 DESTDIR ?= /
+CREATE_MAN_LINK ?= yes
 
 ifeq ($(WITH_UTILS),yes)
 MANPAGES       := drbdsetup.8 drbd.conf.5 drbd.8 drbdadm.8 drbdmeta.8
@@ -88,6 +89,12 @@ ifeq ($(WITH_LEGACY_UTILS),yes)
 endif
 ifeq ($(WITH_LEGACY_UTILS_84),yes)
 	$(MAKE) -C legacy-84 doc
+endif
+
+ifeq ($(WITH_LEGACY_UTILS_84),yes)
+MAN_LINK=8.4
+else
+MAN_LINK=9.0
 endif
 
 doc-clean: distclean
@@ -153,14 +160,33 @@ install:
 	done ; $$ok
 	set -e; for f in $(MANPAGES) ; do \
 		s=$${f##*.}; \
-		install -v -D -m 644 $$f $(DESTDIR)$(mandir)/man$$s/$$f ; \
+		b=$${f%.[0-9]}; \
+		install -v -D -m 644 $$f $(DESTDIR)$(mandir)/man$$s/$$b-9.0.$$s ; \
+		if [ "$(CREATE_MAN_LINK)" = "yes" ]; then \
+			ln -s $$b-$(MAN_LINK).$$s $(DESTDIR)$(mandir)/man$$s/$$f ; \
+		fi \
 	done
+ifeq ($(WITH_LEGACY_UTILS),yes)
+	$(MAKE) -C legacy-83 install
+endif
+ifeq ($(WITH_LEGACY_UTILS_84),yes)
+	$(MAKE) -C legacy-84 install
+endif
 
 uninstall:
 	@ set -e; for f in $(MANPAGES) ; do \
 		s=$${f##*.}; \
+		b=$${f%.[0-9]}; \
+		rm -vf $(DESTDIR)$(mandir)/man$$s/$$b-9.0.$$s ; \
 		rm -vf $(DESTDIR)$(mandir)/man$$s/$$f ; \
 	done
+ifeq ($(WITH_LEGACY_UTILS),yes)
+	$(MAKE) -C legacy-83 uninstall
+endif
+ifeq ($(WITH_LEGACY_UTILS_84),yes)
+	$(MAKE) -C legacy-84 uninstall
+endif
+
 
 html:	$(SOURCES:.xml=.html)
 

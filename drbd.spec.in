@@ -147,11 +147,11 @@ This packages includes the DRBD administration tools.
 %config(noreplace) %{_sysconfdir}/drbd.conf
 %dir %{_sysconfdir}/drbd.d
 %config(noreplace) %{_sysconfdir}/drbd.d/global_common.conf
-%{_mandir}/man8/drbd.8.*
-%{_mandir}/man8/drbdsetup.8.*
-%{_mandir}/man8/drbdadm.8.*
-%{_mandir}/man5/drbd.conf.5.*
-%{_mandir}/man8/drbdmeta.8.*
+%{_mandir}/man8/drbd-*
+%{_mandir}/man8/drbdsetup-*
+%{_mandir}/man8/drbdadm-*
+%{_mandir}/man5/drbd.conf-*
+%{_mandir}/man8/drbdmeta-*
 %doc scripts/drbd.conf.example
 %doc COPYING
 %doc ChangeLog
@@ -295,7 +295,7 @@ make doc
 
 %install
 rm -rf %{buildroot}
-make install DESTDIR=%{buildroot}
+make install DESTDIR=%{buildroot} CREATE_MAN_LINK=no
 
 %if %{with sbinsymlinks}
 # Don't do this if you are already on a /sbin -=> /usr/sbin distro
@@ -314,6 +314,10 @@ rm -rf %{buildroot}
 
 %post utils
 chkconfig --add drbd
+for f in drbd drbdadm drbdmeta drbdsetup; do
+    ln -s $f-8.4.8.gz %{_mandir}/man8/$f.8.gz
+done
+ln -s drbd.conf-8.4.5.gz %{_mandir}/man5/drbd.conf.5.gz
 %if %{without udev}
 for i in `seq 0 15` ; do
     test -b /dev/drbd$i || mknod -m 0660 /dev/drbd$i b 147 $i;
@@ -321,6 +325,10 @@ done
 %endif #without udev
 
 %preun utils
+for f in drbd drbdadm drbdmeta drbdsetup; do
+    rm %{_mandir}/man8/$f.8.gz
+done
+rm %{_mandir}/man5/drbd.conf.5.gz
 if [ $1 -eq 0 ]; then
         %{_initrddir}/drbd stop >/dev/null 2>&1
         /sbin/chkconfig --del drbd

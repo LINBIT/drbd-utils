@@ -4,6 +4,12 @@ case $1 in purge|remove|deconfigure)
 	update-rc.d drbd remove >/dev/null
 	# remove compat symlinks installed by .postinst
 	rm -f /sbin/drbdsetup /sbin/drbdmeta /sbin/drbdadm
+
+	# remove man page links
+	for f in drbd drbdadm drbdmeta drbdsetup; do
+		rm -f /usr/share/man/man8/$f.8.gz
+	done
+	rm -f /usr/share/man/man5/drbd.conf.5.gz
 	;;
 esac
 

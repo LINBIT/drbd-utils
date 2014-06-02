@@ -24,4 +24,10 @@ if ! test /sbin -ef /usr/sbin; then
 	ln -sf /usr/sbin/drbdadm /sbin/
 fi
 
+# The 8.4 documentation is the default documentation
+for f in drbd drbdadm drbdmeta drbdsetup; do
+	ln -s $f-8.4.8.gz /usr/share/man/man8/$f.8.gz
+done
+ln -s drbd.conf-8.4.5.gz /usr/share/man/man5/drbd.conf.5.gz
+
 #DEBHELPER#

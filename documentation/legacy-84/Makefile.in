@@ -139,14 +139,15 @@ install:
 	done ; $$ok
 	set -e; for f in $(MANPAGES) ; do \
 		s=$${f##*.}; \
-	        t=$${f/./_84.}; \
-		install -v -D -m 644 $$f $(DESTDIR)$(mandir)/man$$s/$$t ; \
+		b=$${f%.[0-9]}; \
+		install -v -D -m 644 $$f $(DESTDIR)$(mandir)/man$$s/$$b-8.4.$$s ; \
 	done
 
 uninstall:
 	@ set -e; for f in $(MANPAGES) ; do \
 		s=$${f##*.}; \
-		rm -vf $(DESTDIR)$(mandir)/man$$s/$$f ; \
+		b=$${f%.[0-9]}; \
+		rm -vf $(DESTDIR)$(mandir)/man$$s/$$b-8.4.$$s ; \
 	done
 
 html:	$(SOURCES:.xml=.html)

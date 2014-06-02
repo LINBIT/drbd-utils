@@ -58,7 +58,7 @@ clean: unpatch
 	-$(MAKE) -C documentation clean
 	dh_clean
 
-install: install-arch 
+install: install-arch
 
 install-arch:
 	dh_testdir
@@ -67,7 +67,7 @@ install-arch:
 	dh_installdirs -s
 	$(MAKE) DESTDIR=$(CURDIR)/debian/drbd-utils/ -C user install
 	$(MAKE) DESTDIR=$(CURDIR)/debian/drbd-utils/ -C scripts install
-	$(MAKE) DESTDIR=$(CURDIR)/debian/drbd-utils/ -C documentation install
+	$(MAKE) DESTDIR=$(CURDIR)/debian/drbd-utils/ CREATE_MAN_LINK=no -C documentation install
 
 	dh_install -s
 # Must not depend on anything. This is to be called by
