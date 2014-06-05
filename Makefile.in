@@ -32,7 +32,6 @@ RPMBUILD = @RPMBUILD@
 SED = @SED@
 
 # features enabled or disabled by configure
-WITH_UTILS = @WITH_UTILS@
 WITH_UDEV = @WITH_UDEV@
 WITH_XEN = @WITH_XEN@
 WITH_PACEMAKER = @WITH_PACEMAKER@
@@ -67,10 +66,8 @@ all: tools
 
 .PHONY: tools
 tools:
-ifeq ($(WITH_UTILS),yes)
 	@ set -e; for i in $(patsubst drbd,,$(SUBDIRS)); do $(MAKE) -C $$i ; done
 	@ echo -e "\n\tUserland tools build was successful."
-endif
 
 doc:
 	$(MAKE) -C documentation doc

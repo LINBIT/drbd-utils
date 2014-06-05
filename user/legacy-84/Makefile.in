@@ -36,7 +36,6 @@ LDFLAGS = @LDFLAGS@
 LN_S = @LN_S@
 
 # features enabled or disabled by configure
-WITH_UTILS = @WITH_UTILS@
 WITH_LEGACY_UTILS_84 = @WITH_LEGACY_UTILS_84@
 WITH_KM = @WITH_KM@
 WITH_UDEV = @WITH_UDEV@
@@ -91,7 +90,6 @@ clean:
 distclean: clean
 
 install:
-ifeq ($(WITH_UTILS),yes)
 ifeq ($(WITH_LEGACY_UTILS_84),yes)
 	install -d $(DESTDIR)$(localstatedir)/lib/drbd
 	install -d $(DESTDIR)$(localstatedir)/lock
@@ -102,7 +100,6 @@ ifeq ($(WITH_LEGACY_UTILS_84),yes)
 		install -m 755 drbdsetup-84 $(DESTDIR)/lib/drbd/ ;		\
 		install -m 755 drbdadm-84 $(DESTDIR)/lib/drbd/ ; 		\
 	fi
-endif
 endif
 
 uninstall:

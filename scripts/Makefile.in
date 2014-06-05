@@ -38,7 +38,6 @@ LIBDIR = @prefix@/lib/@PACKAGE_TARNAME@
 LN_S = @LN_S@
 
 # features enabled or disabled by configure
-WITH_UTILS = @WITH_UTILS@
 WITH_KM = @WITH_KM@
 WITH_UDEV = @WITH_UDEV@
 WITH_XEN = @WITH_XEN@
@@ -54,7 +53,6 @@ all:
 install: install-utils install-udev install-xen install-pacemaker install-rgmanager install-bashcompletion
 
 install-utils:
-ifeq ($(WITH_UTILS),yes)
 	install -d $(DESTDIR)$(INITDIR)
 	install -m 755 drbd $(DESTDIR)$(INITDIR)/
 	@ if [ ! -e $(DESTDIR)$(sysconfdir)/drbd.conf ]; then \
@@ -84,7 +82,6 @@ ifeq ($(DISTRO),debian)
 	@ echo "Don't forget to run update-rc.d"
 else
 	@ echo "Don't forget to run chkconfig"
-endif
 endif
 
 # Do not use $(prefix) for the resource agent. The OCF standard

@@ -43,7 +43,6 @@ DRBD_LOCK_DIR = @DRBD_LOCK_DIR@
 DRBD_CONFIG_DIR = @DRBD_CONFIG_DIR@
 
 # features enabled or disabled by configure
-WITH_UTILS = @WITH_UTILS@
 WITH_LEGACY_UTILS = @WITH_LEGACY_UTILS@
 WITH_LEGACY_UTILS_84 = @WITH_LEGACY_UTILS_84@
 WITH_UDEV = @WITH_UDEV@
@@ -78,11 +77,7 @@ drbdmeta-obj = drbdmeta.o drbdmeta_scanner.o drbdtool_common.o drbd_buildtag.o \
 
 all: tools
 
-ifeq ($(WITH_UTILS),yes)
 tools: drbdadm drbdmeta drbdsetup legacy-tools legacy-tools-84
-else
-tools:
-endif
 
 .PHONY: drbd_buildtag.c
 
@@ -151,7 +146,6 @@ clean:
 distclean: clean
 
 install:
-ifeq ($(WITH_UTILS),yes)
 	install -d $(DESTDIR)$(sbindir)
 	install -d $(DESTDIR)$(localstatedir)/lib/drbd
 	install -d $(DESTDIR)$(localstatedir)/lock
@@ -173,7 +167,6 @@ ifeq ($(WITH_UTILS),yes)
 	install -d $(DESTDIR)$(DRBD_LIB_DIR)
 	$(MAKE) -C legacy install
 	$(MAKE) -C legacy-84 install
-endif
 
 uninstall:
 	rm -f $(DESTDIR)$(sbindir)/{drbdsetup,drbdadm,drbdmeta}

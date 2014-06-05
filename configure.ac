@@ -45,8 +45,7 @@ infodir="`eval echo ${infodir}`"
 mandir="`eval echo ${mandir}`"
 docdir="`eval echo ${docdir}`"
 
-dnl "--with-<foo>" options (all except km enabled by default, pass --without-<foo> to disable)
-WITH_UTILS=yes
+dnl "--with-<foo>" options (all except legacy and rgm enabled by default, pass --without-<foo> to disable)
 WITH_LEGACY_UTILS=yes
 WITH_LEGACY_UTILS_84=yes
 WITH_UDEV=yes
@@ -55,16 +54,12 @@ WITH_PACEMAKER=yes
 WITH_RGMANAGER=no
 WITH_BASHCOMPLETION=yes
 WITH_NOARCH_SUBPACKAGES=no
-AC_ARG_WITH([utils],
-	[AS_HELP_STRING([--with-utils],
-			[Enable management utilities])],
-	[WITH_UTILS=$withval])
 AC_ARG_WITH([legacy_utils],
-	[AS_HELP_STRING([--without-legacy_utils],
+	[AS_HELP_STRING([--without-legacy-utils],
 			[Do not include legacy <= 8.3 drbdsetup/drbdadm])],
 	[WITH_LEGACY_UTILS=$withval])
 AC_ARG_WITH([legacy_utils_84],
-	[AS_HELP_STRING([--without-legacy-utils-8.4],
+	[AS_HELP_STRING([--without-legacy-utils-84],
 			[Do not include legacy 8.4 drbdsetup/drbdadm])],
 	[WITH_LEGACY_UTILS_84=$withval])
 AC_ARG_WITH([udev],
@@ -129,15 +124,11 @@ AC_PATH_PROG(UDEVADM, udevadm, [false], [/sbin$PATH_SEPARATOR$PATH])
 AC_PATH_PROG(UDEVINFO, udevinfo, [false], [/sbin$PATH_SEPARATOR$PATH])
 
 if test -z "$CC"; then
-   if test "$WITH_UTILS" = "yes"; then
-      AC_MSG_ERROR([Cannot build utils without a C compiler, either install a compiler or pass the --without-utils option.])
-   fi 
+   AC_MSG_ERROR([Cannot build utils without a C compiler.])
 fi
 
 if test -z $FLEX; then
-   if test "$WITH_UTILS" = "yes"; then
-     AC_MSG_ERROR([Cannot build utils without flex, either install flex or pass the --without-utils option.])
-   fi
+   AC_MSG_ERROR([Cannot build utils without flex.])
 fi
 
 if test -z $RPMBUILD; then
@@ -317,9 +308,7 @@ if test -z $SPECMODE; then
    AC_CONFIG_FILES(Makefile user/Makefile user/legacy/Makefile user/legacy-84/Makefile scripts/Makefile documentation/Makefile documentation/legacy-83/Makefile documentation/legacy-84/Makefile)
    AC_CONFIG_HEADERS(user/config.h)
 else
-   if test "$WITH_UTILS" = "yes"; then
-     AC_CONFIG_FILES(drbd.spec)
-   fi
+   AC_CONFIG_FILES(drbd.spec)
 fi
 
 dnl output

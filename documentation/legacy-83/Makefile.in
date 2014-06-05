@@ -35,7 +35,6 @@ CFLAGS = @CFLAGS@
 XSLTPROC = @XSLTPROC@
 
 # features enabled or disabled by configure
-WITH_UTILS = @WITH_UTILS@
 WITH_KM = @WITH_KM@
 WITH_UDEV = @WITH_UDEV@
 WITH_XEN = @WITH_XEN@
@@ -50,9 +49,7 @@ DESTDIR ?= /
 # Needed for pattern substitution
 SHELL=/bin/bash
 
-ifeq ($(WITH_UTILS),yes)
 MANPAGES       := drbdsetup.8 drbd.conf.5 drbd.8 drbdadm.8 drbdmeta.8
-endif
 ifeq ($(WITH_HEARTBEAT),yes)
 MANPAGES += drbddisk.8
 endif
@@ -84,25 +81,19 @@ doc-clean: distclean
 .SUFFIXES: .sgml .5 .8 .html .pdf .ps
 
 %.5 %.8: %.xml
-ifeq ($(WITH_UTILS),yes)
 	$(XSLTPROC) \
 	$(XSLTPROC_MANPAGES_OPTIONS) \
 	$(MANPAGES_STYLESHEET) $<
-endif
 
 %.html: %.xml
-ifeq ($(WITH_UTILS),yes)
 	$(XSLTPROC) -o $@ \
 	$(XSLTPROC_HTML_OPTIONS) \
 	$(HTML_STYLESHEET) $<
-endif
 
 %.fo: %.xml
-ifeq ($(WITH_UTILS),yes)
 	$(XSLTPROC) -o $@ \
 	$(XSLTPROC_FO_OPTIONS) \
 	$(FO_STYLESHEET) $<
-endif
 
 distclean:
 	rm -f *.[58] manpage.links manpage.refs *~ manpage.log
