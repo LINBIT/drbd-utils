@@ -4446,6 +4446,7 @@ void check_external_md_flavours(struct format * cfg) {
  */
 int v08_move_internal_md_after_resize(struct format *cfg)
 {
+	struct md_cpu md_old;
 	off_t old_offset;
 	off_t old_bm_offset;
 	off_t cur_offset;
@@ -4458,14 +4459,27 @@ int v08_move_internal_md_after_resize(struct format *cfg)
 
 	/* we just read it in v08_check_for_resize().
 	 * no need to do it again, but ASSERT this. */
+	md_old = cfg->md;
+	ASSERT(is_valid_md(DRBD_V08, &md_old, DRBD_MD_INDEX_FLEX_INT, cfg->lk_bd.bd_size));
 	old_offset = v07_style_md_get_byte_offset(DRBD_MD_INDEX_FLEX_INT, cfg->lk_bd.bd_size);
-	/*
-	PREAD(cfg->md_fd, on_disk_buffer, 4096, old_offset);
-	md_disk_08_to_cpu(&md_08, (struct md_on_disk_08*)on_disk_buffer);
-	*/
-	ASSERT(is_valid_md(DRBD_V08, &cfg->md, DRBD_MD_INDEX_FLEX_INT, cfg->lk_bd.bd_size));
+
+	/* fix AL and bitmap offsets, populate byte offsets for the new location */
+	re_initialize_md_offsets(cfg);
 
 	fprintf(stderr, "Moving the internal meta data to its proper location\n");
+
+	if (verbose >= 2) {
+		fprintf(stderr,"old md_offset: "U64"\n", old_offset);
+		fprintf(stderr,"old al_offset: %llu (%d)\n", old_offset + md_old.al_offset * 512LL, md_old.al_offset);
+		fprintf(stderr,"old bm_offset: %llu (%d)\n", old_offset + md_old.bm_offset * 512LL, md_old.bm_offset);
+
+		fprintf(stderr,"new md_offset: "U64"\n", cfg->md_offset);
+		fprintf(stderr,"new al_offset: "U64" (%d)\n", cfg->al_offset, cfg->md.al_offset);
+		fprintf(stderr,"new bm_offset: "U64" (%d)\n", cfg->bm_offset, cfg->md.bm_offset);
+
+		fprintf(stderr,"md_size_sect: "U32"\n", cfg->md.md_size_sect);
+		fprintf(stderr,"max_usable_sect: "U64"\n", cfg->max_usable_sect);
+	}
 
 	/* FIXME
 	 * If the new meta data area overlaps the old "super block",
@@ -4475,7 +4489,7 @@ int v08_move_internal_md_after_resize(struct format *cfg)
 	 */
 
 	/* move activity log, fixed size immediately preceeding the "super block". */
-	cur_offset = old_offset + cfg->md.al_offset * 512LL;
+	cur_offset = old_offset + md_old.al_offset * 512LL;
 	PREAD(cfg, on_disk_buffer, old_offset - cur_offset, cur_offset);
 	PWRITE(cfg, on_disk_buffer, old_offset - cur_offset, cfg->al_offset);
 
@@ -4902,6 +4916,7 @@ int meta_chk_offline_resize(struct format *cfg, char **argv, int argc)
 		fprintf(stderr, "no suitable meta data found :(\n");
 		return -1; /* sorry :( */
 	}
+	/* VALID_MD_FOUND_AT_LAST_KNOWN_LOCATION */
 
 	ASSERT(format_version(cfg) >= DRBD_V08);
 	ASSERT(cfg->md_index == DRBD_MD_INDEX_FLEX_INT);
