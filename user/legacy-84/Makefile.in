@@ -53,11 +53,11 @@ GENETLINK_H := /usr/include/linux/genetlink.h
 
 drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_main.o \
 	      drbdadm_adjust.o drbdtool_common.o drbdadm_usage_cnt.o \
-	      drbd_buildtag.o registry.o config_flags.o ../libgenl.o \
+	      ../drbd_buildtag.o registry.o config_flags.o ../libgenl.o \
 	      drbd_nla.o
 
 drbdsetup-obj = ../libgenl.o registry.o drbdsetup.o drbdtool_common.o \
-		drbd_buildtag.o drbd_strings.o config_flags.o drbd_nla.o \
+		../drbd_buildtag.o drbd_strings.o config_flags.o drbd_nla.o \
 		wrap_printf.o
 
 all: tools
@@ -67,9 +67,6 @@ tools: drbdadm-84 drbdsetup-84
 else
 tools:
 endif
-
-drbd_buildtag.c: ../drbd_buildtag.c
-	cp $^ $@
 
 drbdadm-84: $(drbdadm-obj)
 	$(LINK.c) $(LDFLAGS) -o $@ $^
@@ -83,7 +80,6 @@ drbdsetup-84: $(drbdsetup-obj)
 clean:
 	rm -f drbdadm_scanner.c
 	rm -f drbdsetup-84 drbdadm-84 *.o
-	rm -f drbd_buildtag.c
 	rm -f *~
 
 distclean: clean
@@ -123,4 +119,4 @@ drbdadm_adjust.o:  drbdtool_common.h drbdadm.h
 drbdadm_parser.o:  drbdtool_common.h drbdadm.h linux/drbd_limits.h
 drbdadm_scanner.o: drbdtool_common.h drbdadm.h               drbdadm_parser.h
 drbdsetup.o:       drbdtool_common.h           linux/drbd_limits.h
-drbdadm_usage_cnt.o: drbdtool_common.h drbdadm.h drbd_endian.h
+drbdadm_usage_cnt.o: drbdtool_common.h drbdadm.h ../drbd_endian.h

@@ -120,18 +120,20 @@ drbdsetup: $(drbdsetup-obj)
 drbdmeta: $(drbdmeta-obj)
 	$(LINK.c) $(LDFLAGS) -o $@ $^
 
-legacy-tools:
+legacy-tools: | drbd_buildtag.o
 ifeq ($(WITH_83_SUPPORT),yes)
 	$(MAKE) -C legacy
 	ln -f -s legacy/drbdadm-83
 	ln -f -s legacy/drbdsetup-83
 endif
 
-legacy-tools-84:
 ifeq ($(WITH_84_SUPPORT),yes)
+legacy-tools-84: libgenl.o | drbd_buildtag.o
 	$(MAKE) -C legacy-84
 	ln -f -s legacy-84/drbdadm-84
 	ln -f -s legacy-84/drbdsetup-84
+else
+legacy-tools-84:
 endif
 
 clean:
