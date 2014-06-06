@@ -1592,7 +1592,7 @@ void re_initialize_md_offsets(struct format *cfg)
 	if (cfg->md.max_peers == 0)
 		cfg->md.max_peers = 1;
 
-	if (is_v09(cfg))
+	if (format_version(cfg) >= DRBD_V08)
 		al_size_sect = cfg->md.al_stripes * cfg->md.al_stripe_size_4k * 8;
 	else
 		al_size_sect = MD_AL_MAX_SECT_07;
