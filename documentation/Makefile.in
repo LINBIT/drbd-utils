@@ -35,8 +35,8 @@ CFLAGS = @CFLAGS@
 XSLTPROC = @XSLTPROC@
 
 # features enabled or disabled by configure
-WITH_LEGACY_UTILS = @WITH_LEGACY_UTILS@
-WITH_LEGACY_UTILS_84 = @WITH_LEGACY_UTILS_84@
+WITH_83_SUPPORT = @WITH_83_SUPPORT@
+WITH_84_SUPPORT = @WITH_84_SUPPORT@
 WITH_UDEV = @WITH_UDEV@
 WITH_XEN = @WITH_XEN@
 WITH_PACEMAKER = @WITH_PACEMAKER@
@@ -81,14 +81,14 @@ clean:
 	@echo "To clean the documentation: make doc-clean"
 
 doc:	man
-ifeq ($(WITH_LEGACY_UTILS),yes)
+ifeq ($(WITH_83_SUPPORT),yes)
 	$(MAKE) -C legacy-83 doc
 endif
-ifeq ($(WITH_LEGACY_UTILS_84),yes)
+ifeq ($(WITH_84_SUPPORT),yes)
 	$(MAKE) -C legacy-84 doc
 endif
 
-ifeq ($(WITH_LEGACY_UTILS_84),yes)
+ifeq ($(WITH_84_SUPPORT),yes)
 MAN_LINK=8.4
 else
 MAN_LINK=9.0
@@ -157,10 +157,10 @@ install:
 			ln -s $$b-$(MAN_LINK).$$s $(DESTDIR)$(mandir)/man$$s/$$f ; \
 		fi \
 	done
-ifeq ($(WITH_LEGACY_UTILS),yes)
+ifeq ($(WITH_83_SUPPORT),yes)
 	$(MAKE) -C legacy-83 install
 endif
-ifeq ($(WITH_LEGACY_UTILS_84),yes)
+ifeq ($(WITH_84_SUPPORT),yes)
 	$(MAKE) -C legacy-84 install
 endif
 
@@ -171,10 +171,10 @@ uninstall:
 		rm -vf $(DESTDIR)$(mandir)/man$$s/$$b-9.0.$$s ; \
 		rm -vf $(DESTDIR)$(mandir)/man$$s/$$f ; \
 	done
-ifeq ($(WITH_LEGACY_UTILS),yes)
+ifeq ($(WITH_83_SUPPORT),yes)
 	$(MAKE) -C legacy-83 uninstall
 endif
-ifeq ($(WITH_LEGACY_UTILS_84),yes)
+ifeq ($(WITH_84_SUPPORT),yes)
 	$(MAKE) -C legacy-84 uninstall
 endif
 

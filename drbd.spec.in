@@ -280,8 +280,6 @@ management utility.
 
 %build
 %configure \
-    --with-utils \
-    --without-km \
     %{?_without_udev} \
     %{?_without_xen} \
     %{?_without_pacemaker} \

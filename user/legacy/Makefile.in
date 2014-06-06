@@ -36,8 +36,7 @@ LDFLAGS = @LDFLAGS@
 LN_S = @LN_S@
 
 # features enabled or disabled by configure
-WITH_LEGACY_UTILS = @WITH_LEGACY_UTILS@
-WITH_KM = @WITH_KM@
+WITH_83_SUPPORT = @WITH_83_SUPPORT@
 WITH_UDEV = @WITH_UDEV@
 WITH_XEN = @WITH_XEN@
 WITH_PACEMAKER = @WITH_PACEMAKER@
@@ -58,7 +57,7 @@ drbdsetup-obj = drbdsetup.o drbdtool_common.o drbd_buildtag.o \
 
 all: tools
 
-ifeq ($(WITH_LEGACY_UTILS),yes)
+ifeq ($(WITH_83_SUPPORT),yes)
 tools: drbdadm-83 drbdsetup-83
 else
 tools:
@@ -90,7 +89,7 @@ clean:
 distclean: clean
 
 install:
-ifeq ($(WITH_LEGACY_UTILS),yes)
+ifeq ($(WITH_83_SUPPORT),yes)
 	install -d $(DESTDIR)$(localstatedir)/lib/drbd
 	install -d $(DESTDIR)$(localstatedir)/lock
 	install -d $(DESTDIR)/lib/drbd/

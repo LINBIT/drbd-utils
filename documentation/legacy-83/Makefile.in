@@ -35,7 +35,6 @@ CFLAGS = @CFLAGS@
 XSLTPROC = @XSLTPROC@
 
 # features enabled or disabled by configure
-WITH_KM = @WITH_KM@
 WITH_UDEV = @WITH_UDEV@
 WITH_XEN = @WITH_XEN@
 WITH_PACEMAKER = @WITH_PACEMAKER@

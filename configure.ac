@@ -46,22 +46,22 @@ mandir="`eval echo ${mandir}`"
 docdir="`eval echo ${docdir}`"
 
 dnl "--with-<foo>" options (all except legacy and rgm enabled by default, pass --without-<foo> to disable)
-WITH_LEGACY_UTILS=yes
-WITH_LEGACY_UTILS_84=yes
+WITH_83_SUPPORT=yes
+WITH_84_SUPPORT=yes
 WITH_UDEV=yes
 WITH_XEN=yes
 WITH_PACEMAKER=yes
 WITH_RGMANAGER=no
 WITH_BASHCOMPLETION=yes
 WITH_NOARCH_SUBPACKAGES=no
-AC_ARG_WITH([legacy_utils],
-	[AS_HELP_STRING([--without-legacy-utils],
-			[Do not include legacy <= 8.3 drbdsetup/drbdadm])],
-	[WITH_LEGACY_UTILS=$withval])
-AC_ARG_WITH([legacy_utils_84],
-	[AS_HELP_STRING([--without-legacy-utils-84],
-			[Do not include legacy 8.4 drbdsetup/drbdadm])],
-	[WITH_LEGACY_UTILS_84=$withval])
+AC_ARG_WITH([83-support],
+	[AS_HELP_STRING([--without-83-support],
+			[Do not include support for drbd driver/module <= 8.3])],
+	[WITH_83_SUPPORT=$withval])
+AC_ARG_WITH([84-support],
+	[AS_HELP_STRING([--without-84-support],
+			[Do not include support for drbd driver/module 8.4])],
+	[WITH_84_SUPPORT=$withval])
 AC_ARG_WITH([udev],
 	[AS_HELP_STRING([--with-udev],
 			[Enable udev integration])],
@@ -101,8 +101,8 @@ AC_ARG_ENABLE([spec],
 	[SPECMODE=""])
 
 AC_SUBST(WITH_UTILS)
-AC_SUBST(WITH_LEGACY_UTILS)
-AC_SUBST(WITH_LEGACY_UTILS_84)
+AC_SUBST(WITH_83_SUPPORT)
+AC_SUBST(WITH_84_SUPPORT)
 AC_SUBST(WITH_UDEV)
 AC_SUBST(WITH_XEN)
 AC_SUBST(WITH_PACEMAKER)
@@ -295,11 +295,11 @@ AC_DEFINE_UNQUOTED(DRBD_RUN_DIR, ["$DRBD_RUN_DIR"])
 AC_DEFINE_UNQUOTED(DRBD_LOCK_DIR, ["$DRBD_LOCK_DIR"])
 AC_DEFINE_UNQUOTED(DRBD_CONFIG_DIR, ["$DRBD_CONFIG_DIR"])
 
-if test "$WITH_LEGACY_UTILS" = "yes"; then
+if test "$WITH_83_SUPPORT" = "yes"; then
    AC_DEFINE(DRBD_LEGACY_83, [1])
 fi
 
-if test "$WITH_LEGACY_UTILS_84" = "yes"; then
+if test "$WITH_84_SUPPORT" = "yes"; then
    AC_DEFINE(DRBD_LEGACY_84, [1])
 fi
 

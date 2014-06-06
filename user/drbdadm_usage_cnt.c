@@ -92,7 +92,7 @@ void maybe_exec_legacy_drbdadm(char **argv)
 #else
 		fprintf(stderr, "This drbdadm was build without support for legacy\n"
 			"drbd kernel code (8.4). Consider to rebuild your user land\n"
-			"tools with and do not give --without-legacy-utils-8.4 on the\n"
+			"tools with and do not give --without-83-support-8.4 on the\n"
 			"commandline\n");
 #endif
 		exit(E_EXEC_ERROR);

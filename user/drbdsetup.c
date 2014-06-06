@@ -3729,7 +3729,7 @@ static void maybe_exec_legacy_drbdsetup(char **argv)
 		fprintf(stderr, "execvp() failed to exec %s: %m\n", drbdsetup_83);
 #else
 		fprintf(stderr, "This drbdsetup was not built with support for legacy drbd-8.3\n"
-			"Eventually rebuild with ./configure --with-legacy-connector\n");
+			"Eventually rebuild with ./configure --without-83-support\n");
 
 #endif
 		exit(20);
@@ -3745,7 +3745,7 @@ static void maybe_exec_legacy_drbdsetup(char **argv)
 #else
 		fprintf(stderr, "This drbdsetup was build without support for legacy\n"
 			"drbd kernel code (8.4). Consider to rebuild your user land\n"
-			"tools with and do not give --without-legacy-utils-8.4 on the\n"
+			"tools with and do not give --without-84-support on the\n"
 			"commandline\n");
 #endif
 		exit(20);

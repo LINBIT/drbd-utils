@@ -76,9 +76,6 @@ doc-clean:
 	$(MAKE) -C documentation doc-clean
 
 install: install-tools
-ifeq ($(WITH_KM),yes)
-	$(MAKE) -C install
-endif
 
 install-tools:
 	@ set -e; for i in $(patsubst drbd,,$(SUBDIRS)); do $(MAKE) -C $$i install; done

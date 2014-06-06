@@ -43,8 +43,8 @@ DRBD_LOCK_DIR = @DRBD_LOCK_DIR@
 DRBD_CONFIG_DIR = @DRBD_CONFIG_DIR@
 
 # features enabled or disabled by configure
-WITH_LEGACY_UTILS = @WITH_LEGACY_UTILS@
-WITH_LEGACY_UTILS_84 = @WITH_LEGACY_UTILS_84@
+WITH_83_SUPPORT = @WITH_83_SUPPORT@
+WITH_84_SUPPORT = @WITH_84_SUPPORT@
 WITH_UDEV = @WITH_UDEV@
 WITH_XEN = @WITH_XEN@
 WITH_PACEMAKER = @WITH_PACEMAKER@
@@ -121,14 +121,14 @@ drbdmeta: $(drbdmeta-obj)
 	$(LINK.c) $(LDFLAGS) -o $@ $^
 
 legacy-tools:
-ifeq ($(WITH_LEGACY_UTILS),yes)
+ifeq ($(WITH_83_SUPPORT),yes)
 	$(MAKE) -C legacy
 	ln -f -s legacy/drbdadm-83
 	ln -f -s legacy/drbdsetup-83
 endif
 
 legacy-tools-84:
-ifeq ($(WITH_LEGACY_UTILS_84),yes)
+ifeq ($(WITH_84_SUPPORT),yes)
 	$(MAKE) -C legacy-84
 	ln -f -s legacy-84/drbdadm-84
 	ln -f -s legacy-84/drbdsetup-84

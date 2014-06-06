@@ -38,7 +38,6 @@ LIBDIR = @prefix@/lib/@PACKAGE_TARNAME@
 LN_S = @LN_S@
 
 # features enabled or disabled by configure
-WITH_KM = @WITH_KM@
 WITH_UDEV = @WITH_UDEV@
 WITH_XEN = @WITH_XEN@
 WITH_PACEMAKER = @WITH_PACEMAKER@
