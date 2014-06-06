@@ -1592,11 +1592,7 @@ void re_initialize_md_offsets(struct format *cfg)
 	if (cfg->md.max_peers == 0)
 		cfg->md.max_peers = 1;
 
-	if (format_version(cfg) >= DRBD_V08)
-		al_size_sect = cfg->md.al_stripes * cfg->md.al_stripe_size_4k * 8;
-	else
-		al_size_sect = MD_AL_MAX_SECT_07;
-
+	al_size_sect = cfg->md.al_stripes * cfg->md.al_stripe_size_4k * 8;
 	switch(cfg->md_index) {
 	default:
 		cfg->md.md_size_sect = MD_RESERVED_SECT_07;
@@ -2730,6 +2726,10 @@ int v07_md_initialize(struct format *cfg, int do_disk_writes,
 	cfg->md.gc[ArbitraryCnt] = 1;
 	cfg->md.max_peers = 1;
 	cfg->md.magic = DRBD_MD_MAGIC_07;
+	/* No striping in v07!
+	 * But some parts of the common code expect these members to be properly initialized. */
+	cfg->md.al_stripes = 1;
+	cfg->md.al_stripe_size_4k = 8;
 
 	return md_initialize_common(cfg, do_disk_writes);
 }
@@ -4284,8 +4284,9 @@ void check_internal_md_flavours(struct format * cfg) {
 		fixed ? (long long unsigned)fixed_offset : (long long unsigned)flex_offset);
 
 	if (format_version(cfg) == have) {
-		if (cfg->md.al_stripes != option_al_stripes
-		||  cfg->md.al_stripe_size_4k != option_al_stripe_size_4k) {
+		if (have != DRBD_V07
+		&& (cfg->md.al_stripes != option_al_stripes
+		||  cfg->md.al_stripe_size_4k != option_al_stripe_size_4k)) {
 			if (confirmed("Do you want to change the activity log stripe settings *only*?")) {
 				fprintf(stderr,
 					"Sorry, not yet fully implemented\n"
