@@ -323,6 +323,7 @@ struct format {
 	 * we want to wipe the old meta data block _after_ convertion. */
 	uint64_t wipe_fixed;
 	uint64_t wipe_flex;
+	uint64_t wipe_resize;
 
 	/* convenience */
 	uint64_t bd_size; /* size of block device for internal meta data */
@@ -1116,11 +1117,56 @@ void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, con
 		fprintf_hex(stderr, offset, buf, count);
 }
 
+#define min(x,y) ((x) < (y) ? (x) : (y))
+#define min3(x,y,z) (min(min(x,y),z))
+
+void validate_offsets_or_die(struct format *cfg, size_t count, off_t offset, const char* tag)
+{
+	off_t al_offset = cfg->md_offset + cfg->md.al_offset * 512LL;
+	off_t bm_offset = cfg->md_offset + cfg->md.bm_offset * 512LL;
+	off_t min_offset;
+	off_t max_offset;
+
+	if (al_offset != cfg->al_offset)
+		fprintf(stderr, "%s: ambiguous al_offset: "U64" vs %llu\n",
+			tag, cfg->al_offset, (unsigned long long)al_offset);
+	if (bm_offset != cfg->bm_offset)
+		fprintf(stderr, "%s: ambiguous bm_offset: "U64" vs %llu\n",
+			tag, cfg->bm_offset, (unsigned long long)bm_offset);
+	min_offset = min3(cfg->md_offset, al_offset, bm_offset);
+	max_offset = min_offset + cfg->md.md_size_sect * 512LL;
+	if (min_offset < 0)
+		fprintf(stderr, "%s: negative minimum offset: %lld\n", tag, (long long)min_offset);
+
+	/* If we wipe some old meta data block,
+	 * that hopefully falls outside the range of the current meta data.
+	 * Skip the range check below.  */
+	if (offset != 0
+	&&  (offset == cfg->wipe_fixed
+	   ||offset == cfg->wipe_flex
+	   ||offset == cfg->wipe_resize))
+			return;
+
+	if (offset < min_offset || (offset + count) > max_offset) {
+		fprintf(stderr, "%s: offset+count ("U64"+%zu) not in meta data area range ["U64"; "U64"], aborted\n",
+			tag, offset, count, min_offset, max_offset);
+		if (ignore_sanity_checks) {
+			fprintf(stderr, "Ignored due to --ignore-sanity-checks\n");
+		} else {
+			fprintf(stderr, "If you want to force this, tell me to --ignore-sanity-checks\n");
+			exit(10);
+		}
+	}
+}
+
 static unsigned n_writes = 0;
 void pwrite_or_die(struct format *cfg, const void *buf, size_t count, off_t offset, const char* tag)
 {
 	int fd = cfg->md_fd;
 	ssize_t c;
+
+	validate_offsets_or_die(cfg, count, offset, tag);
+
 	++n_writes;
 	if (dry_run) {
 		fprintf(stderr, " %-26s: pwrite(%u, ...,%6lu,%12llu) SKIPPED DUE TO DRY-RUN\n",
@@ -1530,7 +1576,6 @@ int v06_md_initialize(struct format *cfg,
 
 static uint64_t max_usable_sectors(struct format *cfg)
 {
-#define min(x,y) ((x) < (y) ? (x) : (y))
 	/* We currently have two possible layouts:
 	 * external:
 	 *   |----------- md_size_sect ------------------|
@@ -1555,9 +1600,9 @@ static uint64_t max_usable_sectors(struct format *cfg)
 		/* for internal meta data, the available storage is limitted by
 		 * the first meta data sector, even if the available bitmap
 		 * space would support more. */
-		return	min( cfg->md_offset,
-			min( cfg->al_offset,
-			     cfg->bm_offset )) >> 9;
+		return	min3(cfg->md_offset,
+			     cfg->al_offset,
+			     cfg->bm_offset ) >> 9;
 	} else {
 		/* For external meta data,
 		 * we are limited by available on-disk bitmap space.
@@ -4466,6 +4511,7 @@ int v08_move_internal_md_after_resize(struct format *cfg)
 
 	if (!err && old_offset < cfg->bm_offset) {
 		/* wipe out previous meta data block, it has been superseded. */
+		cfg->wipe_resize = old_offset;
 		memset(on_disk_buffer, 0, 4096);
 		PWRITE(cfg, on_disk_buffer, 4096, old_offset);
 	}
