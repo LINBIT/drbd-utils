@@ -1084,12 +1084,13 @@ struct meta_cmd cmds[] = {
  * generic helpers
  */
 
-#define PREAD(a,b,c,d) pread_or_die((a),(b),(c),(d), __func__ )
-#define PWRITE(a,b,c,d) pwrite_or_die((a),(b),(c),(d), __func__ )
+#define PREAD(cfg,b,c,d) pread_or_die((cfg),(b),(c),(d), __func__ )
+#define PWRITE(cfg,b,c,d) pwrite_or_die((cfg),(b),(c),(d), __func__ )
 /* Do we want to exit() right here,
  * or do we want to duplicate the error handling everywhere? */
-void pread_or_die(int fd, void *buf, size_t count, off_t offset, const char* tag)
+void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, const char* tag)
 {
+	int fd = cfg->md_fd;
 	ssize_t c = pread(fd, buf, count, offset);
 	if (verbose >= 2) {
 		fflush(stdout);
@@ -1116,8 +1117,9 @@ void pread_or_die(int fd, void *buf, size_t count, off_t offset, const char* tag
 }
 
 static unsigned n_writes = 0;
-void pwrite_or_die(int fd, const void *buf, size_t count, off_t offset, const char* tag)
+void pwrite_or_die(struct format *cfg, const void *buf, size_t count, off_t offset, const char* tag)
 {
+	int fd = cfg->md_fd;
 	ssize_t c;
 	++n_writes;
 	if (dry_run) {
@@ -1150,7 +1152,7 @@ void pwrite_or_die(int fd, const void *buf, size_t count, off_t offset, const ch
 	}
 }
 
-size_t pwrite_with_limit_or_die(int fd, const void *buf, size_t count, off_t offset, off_t limit, const char* tag)
+size_t pwrite_with_limit_or_die(struct format *cfg, const void *buf, size_t count, off_t offset, off_t limit, const char* tag)
 {
 	if (offset >= limit) {
 		fprintf(stderr,"confused in %s: offset (%llu) > limit (%llu)\n",
@@ -1163,7 +1165,7 @@ size_t pwrite_with_limit_or_die(int fd, const void *buf, size_t count, off_t off
 				(unsigned long)(limit -offset));
 		count = limit - offset;
 	}
-	pwrite_or_die(fd, buf, count, offset, tag);
+	pwrite_or_die(cfg, buf, count, offset, tag);
 	return count;
 }
 
@@ -1426,8 +1428,7 @@ int m_invalidate_v9_uuid(struct md_cpu *md)
 
 int v06_md_disk_to_cpu(struct format *cfg)
 {
-	PREAD(cfg->md_fd, on_disk_buffer,
-		sizeof(struct md_on_disk_06), cfg->md_offset);
+	PREAD(cfg, on_disk_buffer, sizeof(struct md_on_disk_06), cfg->md_offset);
 	md_disk_06_to_cpu(&cfg->md, (struct md_on_disk_06*)on_disk_buffer);
 	return v06_validate_md(cfg);
 }
@@ -1437,8 +1438,7 @@ int v06_md_cpu_to_disk(struct format *cfg)
 	if (v06_validate_md(cfg))
 		return -1;
 	md_cpu_to_disk_06(on_disk_buffer, &cfg->md);
-	PWRITE(cfg->md_fd, on_disk_buffer,
-		sizeof(struct md_on_disk_06), cfg->md_offset);
+	PWRITE(cfg, on_disk_buffer, sizeof(struct md_on_disk_06), cfg->md_offset);
 	return 0;
 }
 
@@ -1669,7 +1669,7 @@ void initialize_al(struct format *cfg)
 			al->crc32c.be = crc_be;
 		}
 	}
-	pwrite_or_die(cfg->md_fd, on_disk_buffer, al_size, cfg->al_offset,
+	pwrite_or_die(cfg, on_disk_buffer, al_size, cfg->al_offset,
 		"md_initialize_common:AL");
 }
 
@@ -1717,7 +1717,7 @@ int md_initialize_common(struct format *cfg, int do_disk_writes)
 		memset(on_disk_buffer, 0xff, buffer_size);
 		while (i) {
 			chunk = buffer_size < i ? buffer_size : i;
-			pwrite_or_die(cfg->md_fd, on_disk_buffer,
+			pwrite_or_die(cfg, on_disk_buffer,
 				chunk, bm_on_disk_off,
 				"md_initialize_common:BM");
 			bm_on_disk_off += chunk;
@@ -1864,8 +1864,7 @@ void printf_al(struct format *cfg)
 		if (chunk > buffer_size)
 			chunk = buffer_size;
 		ASSERT(chunk);
-		pread_or_die(cfg->md_fd, on_disk_buffer,
-			chunk, al_on_disk_off, "printf_al");
+		pread_or_die(cfg, on_disk_buffer, chunk, al_on_disk_off, "printf_al");
 		al_on_disk_off += chunk;
 		al_size -= chunk;
 		N = chunk/4096;
@@ -2207,7 +2206,7 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 		if (i == 0 ||
 		    bm_pos + extents_size >= bm_on_disk_pos + chunk) {
 			if (i != 0)
-				pwrite_or_die(cfg->md_fd, on_disk_buffer, chunk,
+				pwrite_or_die(cfg, on_disk_buffer, chunk,
 						bm_on_disk_off + bm_on_disk_pos,
 						"apply_al");
 
@@ -2217,7 +2216,7 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 			chunk = bm_bytes - bm_on_disk_pos;
 			if (chunk > buffer_size)
 				chunk = buffer_size;
-			pread_or_die(cfg->md_fd, on_disk_buffer, chunk,
+			pread_or_die(cfg, on_disk_buffer, chunk,
 					bm_on_disk_off + bm_on_disk_pos,
 					"apply_al");
 		}
@@ -2234,7 +2233,7 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 	}
 	/* we still need to write out the buffer of the last iteration */
 	if (i != 0) {
-		pwrite_or_die(cfg->md_fd, on_disk_buffer, chunk,
+		pwrite_or_die(cfg, on_disk_buffer, chunk,
 				bm_on_disk_off + bm_on_disk_pos,
 				"apply_al");
 		fprintf(stderr, "Marked additional %s as out-of-sync based on AL.\n",
@@ -2291,7 +2290,7 @@ int meta_apply_al(struct format *cfg, char **argv __attribute((unused)), int arg
 
 	/* read in first chunk (which is actually the whole AL
 	 * for old fixed size 32k activity log */
-	pread_or_die(cfg->md_fd, on_disk_buffer,
+	pread_or_die(cfg, on_disk_buffer,
 		al_size < buffer_size ? al_size : buffer_size,
 		cfg->al_offset, "apply_al");
 
@@ -2453,7 +2452,7 @@ static void fprintf_bm(FILE *f, struct format *cfg, int peer_nr, const char* ind
 			if (chunk > buffer_size)
 				chunk = buffer_size;
 			ASSERT(chunk);
-			pread_or_die(cfg->md_fd, on_disk_buffer,
+			pread_or_die(cfg, on_disk_buffer,
 				chunk, bm_on_disk_off, "fprintf_bm");
 			bm_on_disk_off += chunk;
 
@@ -2659,8 +2658,7 @@ int v07_md_disk_to_cpu(struct format *cfg)
 {
 	struct md_cpu md;
 	int ok;
-	PREAD(cfg->md_fd, on_disk_buffer,
-		sizeof(struct md_on_disk_07), cfg->md_offset);
+	PREAD(cfg, on_disk_buffer, sizeof(struct md_on_disk_07), cfg->md_offset);
 	md_disk_07_to_cpu(&md, (struct md_on_disk_07*)on_disk_buffer);
 	ok = is_valid_md(DRBD_V07, &md, cfg->md_index, cfg->bd_size);
 	if (ok)
@@ -2673,8 +2671,7 @@ int v07_md_cpu_to_disk(struct format *cfg)
 	if (!is_valid_md(DRBD_V07, &cfg->md, cfg->md_index, cfg->bd_size))
 		return -1;
 	md_cpu_to_disk_07(on_disk_buffer, &cfg->md);
-	PWRITE(cfg->md_fd, on_disk_buffer,
-		sizeof(struct md_on_disk_07), cfg->md_offset);
+	PWRITE(cfg, on_disk_buffer, sizeof(struct md_on_disk_07), cfg->md_offset);
 	return 0;
 }
 
@@ -2784,7 +2781,7 @@ void v08_check_for_resize(struct format *cfg)
 	/* actually check that offset, if it is accessible. */
 	/* If someone shrunk that device, I won't be able to read it! */
 	if (flex_offset < cfg->bd_size) {
-		PREAD(cfg->md_fd, on_disk_buffer, 4096, flex_offset);
+		PREAD(cfg, on_disk_buffer, 4096, flex_offset);
 		md_disk_08_to_cpu(&md_08, (struct md_on_disk_08*)on_disk_buffer);
 		found = is_valid_md(DRBD_V08, &md_08, DRBD_MD_INDEX_FLEX_INT, cfg->lk_bd.bd_size);
 	}
@@ -2840,8 +2837,7 @@ int v08_md_disk_to_cpu(struct format *cfg)
 {
 	struct md_cpu md;
 	int ok;
-	PREAD(cfg->md_fd, on_disk_buffer,
-		sizeof(struct md_on_disk_08), cfg->md_offset);
+	PREAD(cfg, on_disk_buffer, sizeof(struct md_on_disk_08), cfg->md_offset);
 	md_disk_08_to_cpu(&md, (struct md_on_disk_08*)on_disk_buffer);
 	ok = is_valid_md(DRBD_V08, &md, cfg->md_index, cfg->bd_size);
 	if (ok)
@@ -2856,8 +2852,7 @@ int v08_md_cpu_to_disk(struct format *cfg)
 	if (!is_valid_md(DRBD_V08, &cfg->md, cfg->md_index, cfg->bd_size))
 		return -1;
 	md_cpu_to_disk_08((struct md_on_disk_08 *)on_disk_buffer, &cfg->md);
-	PWRITE(cfg->md_fd, on_disk_buffer,
-		sizeof(struct md_on_disk_08), cfg->md_offset);
+	PWRITE(cfg, on_disk_buffer, sizeof(struct md_on_disk_08), cfg->md_offset);
 	cfg->update_lk_bdev = 1;
 	return 0;
 }
@@ -2907,8 +2902,7 @@ int v09_md_disk_to_cpu(struct format *cfg)
 {
 	struct md_cpu md;
 	int ok;
-	PREAD(cfg->md_fd, on_disk_buffer,
-		sizeof(struct md_on_disk_09), cfg->md_offset);
+	PREAD(cfg, on_disk_buffer, sizeof(struct md_on_disk_09), cfg->md_offset);
 	md_disk_09_to_cpu(&md, (struct md_on_disk_09*)on_disk_buffer);
 	ok = is_valid_md(DRBD_V09, &md, cfg->md_index, cfg->bd_size);
 	if (ok)
@@ -2923,8 +2917,7 @@ int v09_md_cpu_to_disk(struct format *cfg)
 	if (!is_valid_md(DRBD_V09, &cfg->md, cfg->md_index, cfg->bd_size))
 		return -1;
 	md_cpu_to_disk_09((struct md_on_disk_09 *)on_disk_buffer, &cfg->md);
-	PWRITE(cfg->md_fd, on_disk_buffer,
-		sizeof(struct md_on_disk_09), cfg->md_offset);
+	PWRITE(cfg, on_disk_buffer, sizeof(struct md_on_disk_09), cfg->md_offset);
 	cfg->update_lk_bdev = 1;
 	return 0;
 }
@@ -3488,7 +3481,7 @@ void parse_bitmap(struct format *cfg, int parse_only)
 				if (c > s)
 					c = s;
 			} else
-				c = pwrite_with_limit_or_die(cfg->md_fd, on_disk_buffer,
+				c = pwrite_with_limit_or_die(cfg, on_disk_buffer,
 				      s, cfg->bm_offset + window * buffer_size,
 				      bm_max_on_disk_off,
 				      "meta_restore_md");
@@ -4093,7 +4086,7 @@ void check_for_existing_data(struct format *cfg)
 	uint64_t fs_kB;
 	uint64_t max_usable_kB;
 
-	PREAD(cfg->md_fd, on_disk_buffer, SO_MUCH, 0);
+	PREAD(cfg, on_disk_buffer, SO_MUCH, 0);
 
 	for (i = 0; i < SO_MUCH/sizeof(long); i++) {
 		if (((long*)(on_disk_buffer))[i] != 0LU) break;
@@ -4252,7 +4245,7 @@ void check_internal_md_flavours(struct format * cfg) {
 	if (0 <= fixed_offset && fixed_offset < (off_t)cfg->bd_size - 4096) {
 		struct md_cpu md_test;
 		/* ... v07 fixed-size internal meta data? */
-		PREAD(cfg->md_fd, on_disk_buffer, 4096, fixed_offset);
+		PREAD(cfg, on_disk_buffer, 4096, fixed_offset);
 
 		md_disk_07_to_cpu(&md_test,
 			(struct md_on_disk_07*)on_disk_buffer);
@@ -4264,7 +4257,7 @@ void check_internal_md_flavours(struct format * cfg) {
 	}
 
 	if (have == DRBD_UNKNOWN) {
-		PREAD(cfg->md_fd, on_disk_buffer, 4096, flex_offset);
+		PREAD(cfg, on_disk_buffer, 4096, flex_offset);
 		have = detect_md(&md_now, cfg->bd_size);
 	}
 
@@ -4348,10 +4341,10 @@ void wipe_after_convert(struct format *cfg)
 {
 	memset(on_disk_buffer, 0x00, 4096);
 	if (cfg->wipe_fixed)
-		pwrite_or_die(cfg->md_fd, on_disk_buffer, 4096, cfg->wipe_fixed,
+		pwrite_or_die(cfg, on_disk_buffer, 4096, cfg->wipe_fixed,
 			"wipe fixed-size v07 internal md");
 	if (cfg->wipe_flex)
-		pwrite_or_die(cfg->md_fd, on_disk_buffer, 4096, cfg->wipe_flex,
+		pwrite_or_die(cfg, on_disk_buffer, 4096, cfg->wipe_flex,
 			"wipe flexible-size internal md");
 }
 
@@ -4373,7 +4366,7 @@ void check_external_md_flavours(struct format * cfg) {
 		return;
 	}
 
-	PREAD(cfg->md_fd, on_disk_buffer, 4096, cfg->md_offset);
+	PREAD(cfg, on_disk_buffer, 4096, cfg->md_offset);
 	have = detect_md(&md_now, cfg->bd_size);
 
 	if (have == DRBD_UNKNOWN)
@@ -4438,8 +4431,8 @@ int v08_move_internal_md_after_resize(struct format *cfg)
 
 	/* move activity log, fixed size immediately preceeding the "super block". */
 	cur_offset = old_offset + cfg->md.al_offset * 512LL;
-	PREAD(cfg->md_fd, on_disk_buffer, old_offset - cur_offset, cur_offset);
-	PWRITE(cfg->md_fd, on_disk_buffer, old_offset - cur_offset, cfg->al_offset);
+	PREAD(cfg, on_disk_buffer, old_offset - cur_offset, cur_offset);
+	PWRITE(cfg, on_disk_buffer, old_offset - cur_offset, cfg->al_offset);
 
 	/* The AL was of fixed size.
 	 * Bitmap is of flexible size, new bitmap is likely larger.
@@ -4451,16 +4444,16 @@ int v08_move_internal_md_after_resize(struct format *cfg)
 	/* move bitmap, in chunks, peel off from the end. */
 	cur_offset = old_offset + cfg->md.al_offset * 512LL - buffer_size;
 	while (cur_offset > old_bm_offset) {
-		PREAD(cfg->md_fd, on_disk_buffer, buffer_size, cur_offset);
-		PWRITE(cfg->md_fd, on_disk_buffer, buffer_size,
+		PREAD(cfg, on_disk_buffer, buffer_size, cur_offset);
+		PWRITE(cfg, on_disk_buffer, buffer_size,
 				cfg->bm_offset + (cur_offset - old_bm_offset));
 		cur_offset -= buffer_size;
 	}
 
 	/* Adjust for last, possibly partial buffer. */
 	last_chunk_size = buffer_size - (old_bm_offset - cur_offset);
-	PREAD(cfg->md_fd, on_disk_buffer, last_chunk_size, old_bm_offset);
-	PWRITE(cfg->md_fd, on_disk_buffer, last_chunk_size, cfg->bm_offset);
+	PREAD(cfg, on_disk_buffer, last_chunk_size, old_bm_offset);
+	PWRITE(cfg, on_disk_buffer, last_chunk_size, cfg->bm_offset);
 
 	/* fix bitmap offset in meta data,
 	 * and rewrite the "super block" */
@@ -4474,7 +4467,7 @@ int v08_move_internal_md_after_resize(struct format *cfg)
 	if (!err && old_offset < cfg->bm_offset) {
 		/* wipe out previous meta data block, it has been superseded. */
 		memset(on_disk_buffer, 0, 4096);
-		PWRITE(cfg->md_fd, on_disk_buffer, 4096, old_offset);
+		PWRITE(cfg, on_disk_buffer, 4096, old_offset);
 	}
 
 	err = cfg->ops->close(cfg) || err;
@@ -4608,7 +4601,7 @@ int meta_wipe_md(struct format *cfg, char **argv __attribute((unused)), int argc
 
 	printf("Wiping meta data...\n");
 	memset(on_disk_buffer, 0, 4096);
-	PWRITE(cfg->md_fd, on_disk_buffer, 4096, cfg->md_offset);
+	PWRITE(cfg, on_disk_buffer, 4096, cfg->md_offset);
 
 	err = cfg->ops->close(cfg);
 	if (err)
