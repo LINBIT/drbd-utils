@@ -133,7 +133,7 @@ static int confirmed(const char *text)
 	    printf("[need to type '%s' to confirm] ", yes);
 	    ok = getline(&answer,&n,stdin) == N &&
 		strncmp(answer,yes,N-1) == 0;
-	    if (answer) free(answer);
+	    free(answer);
 	    printf("\n");
 	}
 	return ok;

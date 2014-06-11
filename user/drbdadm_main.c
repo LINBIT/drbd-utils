@@ -915,8 +915,7 @@ static void free_config()
 		free_options(&common->handlers);
 		free(common);
 	}
-	if (ifreq_list)
-		free(ifreq_list);
+	free(ifreq_list);
 }
 
 static void find_drbdcmd(char **cmd, char **pathes)
