@@ -2534,10 +2534,9 @@ static int remember_resource(struct drbd_cmd *cmd, struct genl_info *info, void 
 
 	drbd_cfg_context_from_attrs(&cfg, info);
 	if (cfg.ctx_resource_name) {
-		struct resources_list *r = malloc(sizeof(*r));
+		struct resources_list *r = calloc(1, sizeof(*r));
 		struct nlattr *res_opts = global_attrs[DRBD_NLA_RESOURCE_OPTS];
 
-		memset(r, 0, sizeof(*r));
 		r->name = strdup(cfg.ctx_resource_name);
 		if (res_opts) {
 			int size = nla_total_size(nla_len(res_opts));
@@ -2639,9 +2638,8 @@ static int remember_device(struct drbd_cmd *cm, struct genl_info *info, void *u_
 	drbd_cfg_context_from_attrs(&ctx, info);
 
 	if (ctx.ctx_volume != -1U) {
-		struct devices_list *d = malloc(sizeof(*d));
+		struct devices_list *d = calloc(1, sizeof(*d));
 
-		memset(d, 0, sizeof(*d));
 		d->minor =  ((struct drbd_genlmsghdr*)(info->userhdr))->minor;
 		d->ctx = ctx;
 		disk_conf_from_attrs(&d->disk_conf, info);
@@ -2707,10 +2705,9 @@ static int remember_connection(struct drbd_cmd *cmd, struct genl_info *info, voi
 
 	drbd_cfg_context_from_attrs(&ctx, info);
 	if (ctx.ctx_resource_name) {
-		struct connections_list *c = malloc(sizeof(*c));
+		struct connections_list *c = calloc(1, sizeof(*c));
 		struct nlattr *net_conf = global_attrs[DRBD_NLA_NET_CONF];
 
-		memset(c, 0, sizeof(*c));
 		c->ctx = ctx;
 		if (net_conf) {
 			int size = nla_total_size(nla_len(net_conf));
@@ -2810,9 +2807,8 @@ static int remember_peer_device(struct drbd_cmd *cmd, struct genl_info *info, vo
 
 	drbd_cfg_context_from_attrs(&ctx, info);
 	if (ctx.ctx_resource_name) {
-		struct peer_devices_list *p = malloc(sizeof(*p));
+		struct peer_devices_list *p = calloc(1, sizeof(*p));
 
-		memset(p, 0, sizeof(*p));
 		p->ctx = ctx;
 		peer_device_info_from_attrs(&p->info, info);
 		memset(&p->statistics, -1, sizeof(p->statistics));
@@ -3145,8 +3141,8 @@ static void *update_info(char **key, void *value, size_t size)
 	}, *found = NULL;
 
 	if (!known_objects) {
-		known_objects = malloc(sizeof(*known_objects));
-		memset(known_objects, 0, sizeof(*known_objects));
+		known_objects = calloc(1, sizeof(*known_objects));
+
 		if (!known_objects || !hcreate_r(64, known_objects))
 			goto fail;
 	}
