@@ -154,7 +154,7 @@ install:
 		b=$${f%.[0-9]}; \
 		install -v -D -m 644 $$f $(DESTDIR)$(mandir)/man$$s/$$b-9.0.$$s ; \
 		if [ "$(CREATE_MAN_LINK)" = "yes" ]; then \
-			ln -s $$b-$(MAN_LINK).$$s $(DESTDIR)$(mandir)/man$$s/$$f ; \
+			ln -sf $$b-$(MAN_LINK).$$s $(DESTDIR)$(mandir)/man$$s/$$f ; \
 		fi \
 	done
 ifeq ($(WITH_83_SUPPORT),yes)
