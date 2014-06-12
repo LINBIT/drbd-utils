@@ -1148,6 +1148,11 @@ static int sh_udev(struct cfg_ctx *ctx)
 	else
 		printf("DISK=%s\n", vol->disk);
 
+	if (vol->implicit)
+		printf("SYMLINK=drbd/by-res/%s\n", res->name);
+	else
+		printf("SYMLINK=drbd/by-res/%s/%u\n", res->name, vol->vnr);
+
 	return 0;
 }
 
