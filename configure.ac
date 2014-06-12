@@ -305,7 +305,7 @@ fi
 
 dnl The configuration files we create (from their .in template)
 if test -z $SPECMODE; then
-   AC_CONFIG_FILES(Makefile user/Makefile user/legacy/Makefile user/legacy-84/Makefile scripts/Makefile documentation/Makefile documentation/legacy-83/Makefile documentation/legacy-84/Makefile)
+   AC_CONFIG_FILES(Makefile user/Makefile user/legacy/Makefile user/legacy-84/Makefile scripts/Makefile documentation/Makefile documentation/legacy-83/Makefile documentation/legacy-84/Makefile scripts/drbd.rules)
    AC_CONFIG_HEADERS(user/config.h)
 else
    AC_CONFIG_FILES(drbd.spec)
