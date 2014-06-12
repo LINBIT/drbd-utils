@@ -1036,12 +1036,19 @@ void add_lib_drbd_to_path(void)
 {
 	char *new_path = NULL;
 	char *old_path = getenv("PATH");
+	static const char lib_drbd[]="/lib/drbd";
 
-	m_asprintf(&new_path, "%s%s%s",
-			old_path,
-			old_path ? ":" : "",
-			"/lib/drbd");
-	setenv("PATH", new_path, 1);
+	if (!old_path)
+		setenv("PATH", lib_drbd, 1);
+	else {
+		m_asprintf(&new_path, "%s%s%s",
+				old_path,
+				(*old_path &&
+				 old_path[strlen(old_path) -1] != ':')
+				? ":" : "",
+				lib_drbd);
+		setenv("PATH", new_path, 1);
+	}
 }
 
 /* from linux/crypto/crc32.c */
