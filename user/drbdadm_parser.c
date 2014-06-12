@@ -1836,6 +1836,8 @@ void include_stmt(char *str)
 		fprintf(stderr, "fchdir() failed: %m\n");
 		exit(E_USAGE);
 	}
+
+	close(cwd_fd);
 }
 
 void my_parse(void)
