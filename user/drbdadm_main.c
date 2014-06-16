@@ -2590,7 +2590,7 @@ char *canonify_path(char *path)
 
 	if (last_slash) {
 		*last_slash++ = '\0';
-		cwd_fd = open(".", O_RDONLY);
+		cwd_fd = open(".", O_RDONLY | O_CLOEXEC);
 		if (cwd_fd < 0) {
 			fprintf(stderr, "open(\".\") failed: %m\n");
 			exit(E_USAGE);
@@ -2620,6 +2620,7 @@ char *canonify_path(char *path)
 			fprintf(stderr, "fchdir() failed: %m\n");
 			exit(E_USAGE);
 		}
+		close(cwd_fd);
 	}
 
 	return abs_path;

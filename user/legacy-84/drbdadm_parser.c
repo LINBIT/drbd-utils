@@ -2087,7 +2087,7 @@ void include_stmt(char *str)
 
 	/* in order to allow relative paths in include statements we change
 	   directory to the location of the current configuration file. */
-	cwd_fd = open(".", O_RDONLY);
+	cwd_fd = open(".", O_RDONLY | O_CLOEXEC);
 	if (cwd_fd < 0) {
 		fprintf(stderr, "open(\".\") failed: %m\n");
 		exit(E_usage);
@@ -2134,6 +2134,8 @@ void include_stmt(char *str)
 		fprintf(stderr, "fchdir() failed: %m\n");
 		exit(E_usage);
 	}
+
+	close(cwd_fd);
 }
 
 void my_parse(void)
