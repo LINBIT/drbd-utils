@@ -234,7 +234,8 @@ struct drbd_cmd {
 // other functions
 static int get_af_ssocks(int warn);
 static void print_command_usage(struct drbd_cmd *cm, enum usage_type);
-static void print_usage_and_exit(const char* addinfo);
+static void print_usage_and_exit(const char* addinfo)
+		__attribute__ ((noreturn));
 
 // command functions
 static int generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv);

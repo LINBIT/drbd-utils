@@ -2065,7 +2065,9 @@ int gets_timeout(pid_t * pids, char *s, int size, int timeout)
 		}
 	} while (pr == -1);
 
-	if (pr == 1) {		// Input available.
+	if (pr == 1 && s) {		// Input available and s not NULL.
+      /* TODO: what should happen if s == NULL? is this correct?
+       * at least we check here and do not nullptr deref */
 		rr = read(fileno(stdin), s, size - 1);
 		if (rr == -1) {
 			perror("read");
