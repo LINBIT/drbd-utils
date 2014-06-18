@@ -2468,7 +2468,7 @@ static void fprintf_bm(FILE *f, struct format *cfg, int peer_nr, const char* ind
 	off_t bm_on_disk_off = cfg->bm_offset;
 	le_u32 const *bm = on_disk_buffer;
 	le_u32 cw; /* current word for rl encoding */
-	le_u32 lw; /* low word for 64 bit output */
+	le_u32 lw = {0}; /* low word for 64 bit output */
 	const unsigned int n = cfg->bm_bytes/sizeof(*bm);
 	unsigned int max_peers = cfg->md.max_peers;
 	unsigned int count = 0;

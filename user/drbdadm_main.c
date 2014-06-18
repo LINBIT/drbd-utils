@@ -982,12 +982,13 @@ void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd
 	if (adjust_with_progress && !(flags & RETURN_STDERR_FD))
 		flags |= SUPRESS_STDERR;
 
-	if (flags & (RETURN_STDOUT_FD | RETURN_STDERR_FD)) {
-		if (pipe(pipe_fds) < 0) {
-			perror("pipe");
-			fprintf(stderr, "Error in pipe, giving up.\n");
-			exit(E_EXEC_ERROR);
-		}
+	/* create the pipe in any case:
+	 * it helps the analyzer and later we have:
+	 * '*fd = pipe_fds[0];' */
+	if (pipe(pipe_fds) < 0) {
+		perror("pipe");
+		fprintf(stderr, "Error in pipe, giving up.\n");
+		exit(E_EXEC_ERROR);
 	}
 
 	pid = fork();
