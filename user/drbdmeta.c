@@ -4901,7 +4901,8 @@ int meta_chk_offline_resize(struct format *cfg, char **argv, int argc)
 		       (unsigned long long)cfg->md_offset, cfg->md_device_name);
 		*/
 		/* create, delete or update the last known info */
-		err = lk_bdev_load(cfg->minor, &cfg->lk_bd);
+		if (lk_bdev_load(cfg->minor, &cfg->lk_bd) < 0)
+				return -1;
 		if (cfg->md_index != DRBD_MD_INDEX_FLEX_INT)
 			lk_bdev_delete(cfg->minor);
 		else if (cfg->lk_bd.bd_size != cfg->bd_size ||

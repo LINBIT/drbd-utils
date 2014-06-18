@@ -797,7 +797,6 @@ void fprintf_hex(FILE *fp, off_t file_offset, const void *buf, unsigned len)
 		       );
 	}
 	if (skipped) {
-		skipped = 0;
 		fprintf(fp, "*\n");
 	}
 	if (o < len) {

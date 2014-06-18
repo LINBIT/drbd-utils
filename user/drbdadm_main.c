@@ -1377,7 +1377,7 @@ static int __adm_drbdsetup_silent(const struct cfg_ctx *ctx)
 		}
 
 		close(fd);
-		rr = waitpid(pid, &status, 0);
+		(void) waitpid(pid, &status, 0);
 		alarm(0);
 
 		if (WIFEXITED(status))
@@ -1391,7 +1391,7 @@ static int __adm_drbdsetup_silent(const struct cfg_ctx *ctx)
 	 *  11: some unspecific state change error. (ignore for invalidate)
 	 *  17: SS_NO_UP_TO_DATE_DISK */
 	if ((strcmp(ctx->cmd->name, "invalidate") && rv == 11) || rv == 17)
-		rr = write(fileno(stderr), buffer, s);
+		(void) write(fileno(stderr), buffer, s);
 
 	return rv;
 }
@@ -3274,7 +3274,7 @@ int main(int argc, char **argv)
 					fprintf(stderr,
 						"'%s' ignored, since this host (%s) is not mentioned with an 'on' keyword.\n",
 						ctx.res->name, hostname);
-					rv = E_USAGE;
+					/* rv = E_USAGE; rc in for scope and (re)set at beginning */
 					continue;
 				}
 				if (is_drbd_top != ctx.res->stacked && !is_dump) {
@@ -3284,13 +3284,13 @@ int main(int argc, char **argv)
 						ctx.res->stacked ? "stacked" : "normal",
 						is_drbd_top ? "stacked" :
 						"normal");
-					rv = E_USAGE;
+					/* rv = E_USAGE; rc in for scope and (re)set at beginning */
 					continue;
 				}
 				verify_ips(ctx.res);
 				if (!is_dump && !config_valid)
 					exit(E_CONFIG_INVALID);
-				rv = call_cmd(cmd, &ctx, EXIT_ON_FAIL);	/* does exit for rv >= 20! */
+				(void) call_cmd(cmd, &ctx, EXIT_ON_FAIL);	/* does exit for rv >= 20! */
 			}
 		}
 	} else {		// Commands which do not need a resource name
