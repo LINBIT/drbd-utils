@@ -1006,7 +1006,8 @@ void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd
 		}
 		if (flags & SUPRESS_STDERR)
 			fclose(stderr);
-		execvp(argv[0], argv);
+		if (argv[0])
+			execvp(argv[0], argv);
 		fprintf(stderr, "Can not exec\n");
 		exit(E_EXEC_ERROR);
 	}
