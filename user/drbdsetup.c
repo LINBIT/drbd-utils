@@ -1062,7 +1062,7 @@ int drbd_tla_parse(struct nlmsghdr *nlh)
 
 static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 {
-	struct drbd_argument *ad = cm->drbd_args;
+	struct drbd_argument *ad;
 	struct nlattr *nla;
 	struct option *lo;
 	int c, i;
