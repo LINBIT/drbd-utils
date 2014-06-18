@@ -1847,6 +1847,8 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		iov.iov_base = malloc(iov.iov_len);
 		smsg = msg_new(DEFAULT_MSG_SIZE);
 		if (!smsg || !iov.iov_base) {
+			msg_free(smsg);
+			free(iov.iov_base);
 			fprintf(stderr, "could not allocate netlink messages\n");
 			return 20;
 		}
@@ -3402,9 +3404,9 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 		break;
 	}
 	printf("\n");
-	free(key);
 
 out:
+	free(key);
 	fflush(stdout);
 	if (opt_now && info->genlhdr->cmd == DRBD_INITIAL_STATE_DONE)
 		return -1;

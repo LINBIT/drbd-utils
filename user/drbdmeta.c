@@ -2116,6 +2116,7 @@ int replay_al_84(struct format *cfg, uint32_t *hot_extent)
 		/* not even one transaction was valid.
 		 * Has this ever been initialized correctly? */
 		fprintf(stderr, "No usable activity log found. Do you need to create-md?\n");
+		free(al_cpu);
 		return -ENODATA;
 	}
 
