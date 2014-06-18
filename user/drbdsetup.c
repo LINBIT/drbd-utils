@@ -3126,8 +3126,8 @@ static int event_key(char *key, int size, const char *name, unsigned minor,
 		if (ret < 0)
 			return ret;
 		pos += ret;
-		if (size)
-			size -= ret;
+		/* if (size) */
+		/* 	size -= ret; */
 	}
 	return pos;
 }

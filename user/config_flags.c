@@ -104,7 +104,8 @@ static int enum_usage(struct field_def *field, char *str, int size)
 	}
 	assert (sep != '{');
 	l = snprintf(str+len, size, "}]");
-	len += l; size -= l;
+	len += l;
+   /* size -= l; */
 	return len;
 }
 
