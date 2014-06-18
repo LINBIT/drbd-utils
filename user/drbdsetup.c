@@ -2811,6 +2811,9 @@ static int remember_peer_device(struct drbd_cmd *cmd, struct genl_info *info, vo
 	if (ctx.ctx_resource_name) {
 		struct peer_devices_list *p = calloc(1, sizeof(*p));
 
+		if (!p)
+			exit(20);
+
 		p->ctx = ctx;
 		peer_device_info_from_attrs(&p->info, info);
 		memset(&p->statistics, -1, sizeof(p->statistics));
@@ -3420,6 +3423,9 @@ fail:
 void peer_devices_append(struct peer_devices_list *peer_devices, struct genl_info *info)
 {
 	struct peer_devices_list *peer_device, **tail;
+
+	if (!peer_devices)
+		return;
 
 	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next)
 		tail = &peer_device->next;
