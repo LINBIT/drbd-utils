@@ -86,10 +86,6 @@ install-tools:
 	rm -rf dist
 
 
-EXTRA_CLEAN += Makefile user/Makefile user/legacy/Makefile user/legacy-84/Makefile scripts/Makefile 
-EXTRA_CLEAN += documentation/Makefile documentation/legacy-83/Makefile documentation/legacy-84/Makefile
-EXTRA_CLEAN += user/config.h drbd.spec
-EXTRA_CLEAN += configure
 distclean:
 	@ set -e; for i in $(SUBDIRS); do $(MAKE) -C $$i distclean; done
 	rm -f *~ .filelist
@@ -97,6 +93,12 @@ distclean:
 	rm -rf autom4te.cache
 	rm -f config.log
 	rm -f config.status
+
+EXTRA_CLEAN += Makefile user/Makefile user/legacy/Makefile user/legacy-84/Makefile scripts/Makefile 
+EXTRA_CLEAN += documentation/Makefile documentation/legacy-83/Makefile documentation/legacy-84/Makefile
+EXTRA_CLEAN += user/config.h drbd.spec
+EXTRA_CLEAN += configure
+extra-clean: distclean
 	rm -f $(EXTRA_CLEAN)
 
 uninstall:
