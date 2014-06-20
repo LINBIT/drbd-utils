@@ -139,7 +139,8 @@ endif
 clean:
 	rm -f drbdadm_scanner.c drbdmeta_scanner.c
 	rm -f drbdsetup drbdadm drbdmeta *.o
-	rm -f drbd_buildtag.c drbd_strings.c drbd_strings.h
+	! test -e ../.git || rm -f drbd_buildtag.c
+	rm -f drbd_strings.c drbd_strings.h
 	rm -f drbdadm-83 drbdsetup-83 drbdadm-84 drbdsetup-84
 	rm -f *~
 	$(MAKE) -C legacy clean
