@@ -2729,8 +2729,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 
 	STAILQ_INIT(&backend_options_check);
 	*cmd = NULL;
-	*resource_names = malloc(sizeof(char **));
-	(*resource_names)[0] = NULL;
+	*resource_names = calloc(argc + 1, sizeof(char *));
 
 	opterr = 1;
 	optind = 0;
@@ -2862,14 +2861,10 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 	for (; optind < argc; optind++) {
 		optarg = argv[optind];
 		if (*cmd) {
-			int n;
-			for (n = 0; (*resource_names)[n]; n++)
-				/* do nothing */ ;
-			*resource_names = realloc(*resource_names,
-						  (n + 2) * sizeof(char **));
-			(*resource_names)[n++] = optarg;
-			(*resource_names)[n] = NULL;
-		} else if (!strcmp(optarg, "help"))
+			static int last_idx = 0;
+			(*resource_names)[last_idx++] = optarg;
+		}
+		else if (!strcmp(optarg, "help"))
 			help = true;
 		else {
 			*cmd = find_cmd(optarg);
