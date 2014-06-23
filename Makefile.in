@@ -80,7 +80,7 @@ install: install-tools
 install-tools:
 	@ set -e; for i in $(patsubst drbd,,$(SUBDIRS)); do $(MAKE) -C $$i install; done
 
-clean:
+.NOTPARALLEL clean:
 	@ set -e; for i in $(SUBDIRS); do $(MAKE) -C $$i clean; done
 	rm -f *~
 	rm -rf dist
