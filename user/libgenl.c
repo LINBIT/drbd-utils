@@ -96,18 +96,20 @@ static int do_send(int fd, const void *buf, int len)
 int genl_send(struct genl_sock *s, struct msg_buff *msg)
 {
 	struct nlmsghdr *n = (struct nlmsghdr *)msg->data;
-	struct genlmsghdr *g;
 
 	n->nlmsg_len = msg->tail - msg->data;
 	n->nlmsg_flags |= NLM_F_REQUEST;
 	n->nlmsg_seq = s->s_seq_expect = s->s_seq_next++;
 	n->nlmsg_pid = s->s_local.nl_pid;
 
-	g = nlmsg_data(n);
+#define LOCAL_DEBUG_LEVEL 3
+#if LOCAL_DEBUG_LEVEL <= DEBUG_LEVEL
+	struct genlmsghdr *g = nlmsg_data(n);
 
-	dbg(3, "sending %smessage, pid:%u seq:%u, g.cmd/version:%u/%u",
+	dbg(LOCAL_DEBUG_LEVEL, "sending %smessage, pid:%u seq:%u, g.cmd/version:%u/%u",
 			n->nlmsg_type == GENL_ID_CTRL ? "ctrl " : "",
 			n->nlmsg_pid, n->nlmsg_seq, g->cmd, g->version);
+#endif
 
 	return do_send(s->s_fd, msg->data, n->nlmsg_len);
 }
