@@ -257,6 +257,28 @@ in the Cluster distribution.
 %{_datadir}/cluster/drbd.metadata
 %endif # with rgmanager
 
+%if %{with heartbeat}
+%package heartbeat
+Summary: Heartbeat resource agent for DRBD
+Group: System Environment/Base
+Requires: %{name}-utils = %{version}-%{release}
+@RPM_REQ_HEARTBEAT@
+License: GPLv2
+@RPM_SUBPACKAGE_NOARCH@
+
+%description heartbeat
+This package contains the DRBD resource agents for the Heartbeat cluster
+resource manager (in v1 compatibility mode).
+
+%files heartbeat
+%defattr(755,root,root,-)
+%{_sysconfdir}/ha.d/resource.d/drbddisk
+%{_sysconfdir}/ha.d/resource.d/drbdupper
+
+%defattr(-,root,root,-)
+%{_mandir}/man8/drbddisk.8.*
+%endif # with heartbeat
+
 %if %{with bashcompletion}
 %package bash-completion
 Summary: Programmable bash completion support for drbdadm
