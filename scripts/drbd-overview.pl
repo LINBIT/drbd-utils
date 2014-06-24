@@ -130,14 +130,14 @@ sub slurp_proc_drbd_or_exit() {
 }
 
 sub abbreviate {
-	my($_, $max) = @_;
+	my($w, $max) = @_;
 
 	$max //= 15;
 
 # keep UPPERCase and a few lowercase characters.
-	1 while length($_) > $max && s/([a-z]+)[a-z]/$1/g;
+	1 while length($w) > $max && $w =~ s/([a-z]+)[a-z]/$1/g;
 
-	return substr($_, 0, $max);
+	return substr($w, 0, $max);
 }
 
 # taking a sorted list of keys and a hash, produce a short output.
