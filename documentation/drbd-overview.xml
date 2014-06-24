@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
+<refentry id="re-drbd-overview">
+  <refnamediv>
+    <refname>drbd-overview</refname>
+    <refpurpose>Overview of all configured DRBD resources</refpurpose>
+  </refnamediv>
+  <refentryinfo>
+    <productname>DRBD</productname>
+    <productnumber>9.0.0</productnumber>
+    <date>24 June 2014</date>
+  </refentryinfo>
+  <refmeta>
+    <refentrytitle>drbd-overview</refentrytitle>
+    <manvolnum>8</manvolnum>
+    <refmiscinfo class="manual">System Administration</refmiscinfo>
+  </refmeta>
+  <refsynopsisdiv>
+    <cmdsynopsis sepchar=" ">
+      <command moreinfo="none">drbd-overview</command>
+    </cmdsynopsis>
+  </refsynopsisdiv>
+  <refsect1>
+    <title>Description</title>
+    <para>
+drbd-overview offers an overview of the state of all configured DRBD resources.
+It provides information about the connection status of each DRBD resource. It
+will also use auxiliary information provided by
+<citerefentry><refentrytitle>df</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
+<citerefentry><refentrytitle>lvm</refentrytitle><manvolnum>8</manvolnum></citerefentry>,
+<citerefentry><refentrytitle>xm</refentrytitle><manvolnum>1</manvolnum></citerefentry> and
+<citerefentry><refentrytitle>virsh</refentrytitle><manvolnum>1</manvolnum></citerefentry>
+for DRBD resources used as mounted filesystems, LVM physical volumes, Xen
+domain backing disks and libvirt instance disks respectively.
+    </para>
+  </refsect1>
+  <refsect1>
+    <title>Author</title>
+    <simpara>Written by Philipp Reisner <email>philipp.reisner@linbit.com</email>
+            and Lars Ellenberg <email>lars.ellenberg@linbit.com</email>.
+	    Initial man-page contributed by Apollon Oikonomopoulos <email>apoikos@gmail.com</email>.
+    </simpara>
+  </refsect1>
+  <refsect1>
+    <title>Reporting Bugs</title>
+    <simpara>Report bugs to <email>drbd-user@lists.linbit.com</email>.
+  </simpara>
+  </refsect1>
+  <refsect1>
+    <title>Copyright</title>
+    <simpara>Copyright 2008-2014 LINBIT Information Technologies,
+Philipp Reisner, Lars Ellenberg. This  is  free software;
+see the source for copying conditions.  There is NO warranty;
+not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  </simpara>
+  </refsect1>
+  <refsect1>
+    <title>See Also</title>
+    <para>
+      <citerefentry><refentrytitle>drbd.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
+      <citerefentry><refentrytitle>drbdsetup</refentrytitle><manvolnum>8</manvolnum></citerefentry>,
+      <citerefentry><refentrytitle>drbdadm</refentrytitle><manvolnum>8</manvolnum></citerefentry>,
+      <ulink url="http://www.drbd.org/"><citetitle>DRBD Homepage</citetitle></ulink>
+    </para>
+  </refsect1>
+</refentry>

@@ -48,6 +48,7 @@ DESTDIR ?= /
 CREATE_MAN_LINK ?= yes
 
 MANPAGES       := drbdsetup.8 drbd.conf.5 drbd.8 drbdadm.8 drbdmeta.8
+MANPAGES       += drbd-overview.8
 SOURCES        := $(wildcard *.xml)
 
 STYLESHEET_PREFIX ?= http://docbook.sourceforge.net/release/xsl/current
