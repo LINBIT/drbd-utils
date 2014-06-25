@@ -1740,7 +1740,8 @@ out2:
 	msg_free(smsg);
 
 out:
-	err = check_error(err, desc);
+	if (!err)
+		err = check_error(rv, desc);
 	free(iov.iov_base);
 	return err;
 }
