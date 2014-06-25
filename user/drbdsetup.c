@@ -1477,7 +1477,8 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 	struct msg_buff *smsg;
 	struct iovec iov;
 	int timeout_ms, flags;
-	int err = NO_ERROR;
+	int rv = NO_ERROR;
+	int err = 0;
 
 	/* pre allocate request message and reply buffer */
 	iov.iov_len = DEFAULT_MSG_SIZE;
@@ -1485,7 +1486,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 	smsg = msg_new(DEFAULT_MSG_SIZE);
 	if (!smsg || !iov.iov_base) {
 		desc = "could not allocate netlink messages";
-		err = OTHER_ERROR;
+		rv = OTHER_ERROR;
 		goto out;
 	}
 
@@ -1493,7 +1494,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 		if (genl_join_mc_group(drbd_sock, "events") &&
 		    !kernel_older_than(2, 6, 23)) {
 			desc = "unable to join drbd events multicast group";
-			err = OTHER_ERROR;
+			rv = OTHER_ERROR;
 			goto out2;
 		}
 	}
@@ -1514,7 +1515,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 
 	if (genl_send(drbd_sock, smsg)) {
 		desc = "error sending config command";
-		err = OTHER_ERROR;
+		rv = OTHER_ERROR;
 		goto out2;
 	}
 
@@ -1665,7 +1666,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				 */
 				desc = "reply did not validate - "
 					"do you need to upgrade your userland tools?";
-				err = OTHER_ERROR;
+				rv = OTHER_ERROR;
 				goto out2;
 			}
 			if (cm->continuous_poll) {
@@ -1716,10 +1717,10 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 					}
 				}
 			}
-			err = dh->ret_code;
-			if (err == ERR_MINOR_INVALID && cm->missing_ok)
-				err = NO_ERROR;
-			if (err != NO_ERROR)
+			rv = dh->ret_code;
+			if (rv == ERR_MINOR_INVALID && cm->missing_ok)
+				rv = NO_ERROR;
+			if (rv != NO_ERROR)
 				goto out2;
 			err = cm->show_function(cm, &info, u_ptr);
 			if (err) {
