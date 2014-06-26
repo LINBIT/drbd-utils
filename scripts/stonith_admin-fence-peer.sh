@@ -30,7 +30,7 @@ if [ -z "$DRBD_PEERS" ]; then
 fi
 
 for p in $DRBD_PEERS; do
-  stonith_admin --fence $p
+  stonith_admin --tag drbd --fence $p
   rc=$?
   if [ $rc -eq 0 ]; then
     log "stonith_admin successfully fenced peer $p."
