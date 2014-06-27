@@ -120,8 +120,8 @@ endif
 
 install-udev:
 ifeq ($(WITH_UDEV),yes)
-	mkdir -p $(DESTDIR)$(sysconfdir)/udev/rules.d
-	install -m 644 drbd.rules $(DESTDIR)$(sysconfdir)/udev/rules.d/65-drbd.rules$(UDEV_RULE_SUFFIX)
+	mkdir -p $(DESTDIR)/lib/udev/rules.d
+	install -m 644 drbd.rules $(DESTDIR)/lib/udev/rules.d/65-drbd.rules$(UDEV_RULE_SUFFIX)
 endif
 
 install-bashcompletion:
