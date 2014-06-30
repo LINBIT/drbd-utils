@@ -190,8 +190,8 @@ case "$1" in
 			*) echo "$M" >&2 ;;
 			esac
 		done
-		for res in $(drbdsetup all show | sed -ne 's/^resource \(.*\) {$/\1/p'); do
-			drbdsetup "$res" down
+		for res in $($DRBDSETUP show all | sed -ne 's/^resource \(.*\) {$/\1/p'); do
+			$DRBDSETUP down "$res"
 		done
 		_udev_settle &> /dev/null
 		$RMMOD drbd && break
