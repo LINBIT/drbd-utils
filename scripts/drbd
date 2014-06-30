@@ -129,6 +129,15 @@ _udev_settle()
 	fi
 }
 
+run_hook()
+{
+	n="hook_$1"
+	if t=$(type -t "$n") && [[ "$t" == "function" ]] ; then
+		shift
+		"$n" "$@"
+	fi
+}
+
 case "$1" in
     start)
 	# Just in case drbdadm want to display any errors in the configuration
@@ -162,7 +171,9 @@ case "$1" in
 	done
 
 	[ -d /var/lock/subsys ] && touch /var/lock/subsys/drbd	# for RedHat
+	run_hook start_before-wait
 	$DRBDADM wait-con-int # User interruptible version of wait-connect all
+	run_hook start
 
 	# Become primary if configured
 	# Currently, this is necessary for drbd8
@@ -197,6 +208,7 @@ case "$1" in
 		$RMMOD drbd && break
 	    fi
 	done
+	run_hook stop
 	[ -f /var/lock/subsys/drbd ] && rm /var/lock/subsys/drbd
 	log_end_msg 0
 	;;
@@ -217,6 +229,7 @@ case "$1" in
 	[[ $? = 127 ]] && exit 5 # LSB for "not installed"
 	log_daemon_msg  "Reloading DRBD configuration"
 	$DRBDADM adjust all
+	run_hook reload
 	log_end_msg 0
 	;;
     restart|force-reload)
