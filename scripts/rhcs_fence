@@ -2,8 +2,8 @@
 #
 # Author:   Digimer (digimer@alteeve.com)
 #           Alteeve's Niche! - https://alteeve.com/w/
-# Version:  0.2.6
-# Released: 2013-03-13
+# Date:     2013-12-02
+# Version:  0.2.7
 # License:  GPL v2+
 # 
 # This program ties Linbit's DRBD into Red Hat's RHCS's fence daemon via the 
@@ -61,7 +61,8 @@ my $conf={
 	env	=>	{
 		# The resource triggering the fence.
 		'DRBD_RESOURCE'		=>	$ENV{DRBD_RESOURCE},
-		# The resource minor number.
+		# The resource minor number, or, in the case of volumes, 
+		# numbers.
 		'DRBD_MINOR'		=>	$ENV{DRBD_MINOR},
 		# The peer(s) hostname(s), space separated.
 		'DRBD_PEERS'		=>	$ENV{DRBD_PEERS},
@@ -339,6 +340,8 @@ sub get_target
 		if ( not exists $conf->{nodes}{$remote_node} )
 		{
 			if ($conf->{sys}{debug}) { to_log($conf, 1, __LINE__, "I didn't see the other node: [$conf->{env}{DRBD_PEERS} ($remote_node)] in cman's node list. I can't fence this node."); }
+			print "I didn't see the other node: [$conf->{env}{DRBD_PEERS} ($remote_node)] in cman's node list. I can't fence this node.\n";
+			print "Does the hostname in cluster.conf match the host names used in the DRBD resource files?\n";
 		}
 		# Update the peer.
 		$conf->{env}{DRBD_PEERS}=$remote_node;
@@ -409,6 +412,9 @@ sub get_local_resource_state
 		to_log($conf, 1, __LINE__, "Resource minor number not defined! Unable to proceed.");
 	}
 	
+	# minor can be a space delimited list. Assume it's always a list and iterate over it
+	my @minor=split / /, $minor;
+	
 	if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: minor: [$minor]"); }
 	$sc=IO::Handle->new();
 	$shell_call="</proc/drbd";
@@ -420,22 +426,37 @@ sub get_local_resource_state
 		$line=$_;
 		if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: output: $line"); }
 		$line=~s/^\s+//;
-		if ($line=~/^$minor: .*? ds:(.*?)\//)
+		foreach $minor (@minor)
 		{
-			$state=$1;
-			if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: read state of minor: [$minor] as: [$state]"); }
-			$conf->{sys}{local_res_uptodate}=$state eq "UpToDate" ? 1 : 0;
-			if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: sys::local_res_uptodate: [$conf->{sys}{local_res_uptodate}]"); }
+			if ($line=~/^$minor: .*? ds:(.*?)\//)
+			{
+				$state=$1;
+				if ($conf->{sys}{debug})
+				{
+					to_log($conf, 0, __LINE__, "DEBUG: read state of minor: [$minor] as: [$state]");
+				}
+				$conf->{sys}{local_res_uptodate}=$state eq "UpToDate" ? 1 : 0;
+				if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: sys::local_res_uptodate: [$conf->{sys}{local_res_uptodate}]"); }
+			}
 		}
+		# If one or more minors out not UpToDate bail
+		last if ($conf->{sys}{local_res_uptodate} eq 0);
+# 		if ($line=~/^$minor: .*? ds:(.*?)\//)
+# 		{
+# 			$state=$1;
+# 			if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: read state of minor: [$minor] as: [$state]"); }
+# 			$conf->{sys}{local_res_uptodate}=$state eq "UpToDate" ? 1 : 0;
+# 			if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: sys::local_res_uptodate: [$conf->{sys}{local_res_uptodate}]"); }
+# 		}
 	}
 	$sc->close();
 	$sc_exit=$?;
-	if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: Attempt to collect UpToDate information device with minor: [$minor] exited with: [$sc_exit]"); }
+	if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: Attempt to collect UpToDate information device with minor: [@minor] exited with: [$sc_exit]"); }
 	
 	if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: UpToDate: [$conf->{sys}{local_res_uptodate}]"); }
 	if (not $conf->{sys}{local_res_uptodate})
 	{
-		to_log($conf, 1, __LINE__, "Local resource: [$conf->{env}{DRBD_RESOURCE}], minor: [$minor] is NOT 'UpToDate', will not fence peer.");
+		to_log($conf, 1, __LINE__, "Local resource: [$conf->{env}{DRBD_RESOURCE}], minor: [@minor] is NOT 'UpToDate', will not fence peer.");
 	}
 	
 	return(0);
