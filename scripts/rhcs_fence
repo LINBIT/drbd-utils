@@ -5,13 +5,13 @@
 # Date:     2013-12-02
 # Version:  0.2.7
 # License:  GPL v2+
-# 
-# This program ties Linbit's DRBD into Red Hat's RHCS's fence daemon via the 
+#
+# This program ties Linbit's DRBD into Red Hat's RHCS's fence daemon via the
 # 'fence_node' shell call.
 #
 # This script was modeled heavily on Lon Hohberger <lhh[a]redhat.com>'s
 # obliterate-peer.sh script.
-# 
+#
 # Exit Codes (as per; http://osdir.com/ml/linux.kernel.drbd.devel/2006-11/msg00005.html)
 # - 3 -> peer is inconsistent
 # - 4 -> peer is outdated (this handler outdated it) [ resource fencing ]
@@ -24,7 +24,7 @@
 # - 255 = End of program hit... should never happen.
 #
 # Features
-# - Clusters > 2 nodes supported, provided 
+# - Clusters > 2 nodes supported, provided
 
 
 use strict;
@@ -46,7 +46,7 @@ my $conf={
 		debug			=>	0,
 		# Set 'local_delay' to the number of seconds to wait before
 		# fencing the other node. If left to '0', Node with ID = 1 will
-		# have no delay and all other nodes will wait: 
+		# have no delay and all other nodes will wait:
 		# ((node ID * 2) + 5) seconds.
 		local_delay		=>	0,
 		# Local host name.
@@ -61,7 +61,7 @@ my $conf={
 	env	=>	{
 		# The resource triggering the fence.
 		'DRBD_RESOURCE'		=>	$ENV{DRBD_RESOURCE},
-		# The resource minor number, or, in the case of volumes, 
+		# The resource minor number, or, in the case of volumes,
 		# numbers.
 		'DRBD_MINOR'		=>	$ENV{DRBD_MINOR},
 		# The peer(s) hostname(s), space separated.
@@ -114,11 +114,11 @@ exit(255);
 sub find_executables
 {
 	my ($conf)=@_;
-	
+
 	# Variables.
 	my $check="";
 	my $bad=0;
-	
+
 	# Log entries can only happen if I've found 'logger', so an extra check
 	# will be made on 'to_log' calls.
 	my @dirs=split/:/, $ENV{PATH};
@@ -158,7 +158,7 @@ sub find_executables
 			if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: Found!"); }
 			next;
 		}
-		
+
 		# Make sure it exists now.
 		if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: Checking again if: [$exe] is at: [$conf->{path}{$exe}]."); }
 		if ( not -e $conf->{path}{$exe} )
@@ -175,7 +175,7 @@ sub find_executables
 		}
 	}
 	if ($bad) { nice_exit($conf, 1); }
-	
+
 	return(0);
 }
 
@@ -184,35 +184,35 @@ sub find_executables
 sub sleep_a_bit
 {
 	my ($conf)=@_;
-	
+
 	# Variables
 	my $i_am=$conf->{sys}{this_node};
 	my $my_id=$conf->{nodes}{$i_am}{id};
 	my $delay=$my_id;
-	
+
 	if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: I am: [$i_am] and my id is: [$my_id]"); }
-	
+
 	# I don't want to fail because I don't have an ID number.
 	if (not $my_id)
 	{
 		$my_id=int(rand(10));
 	}
-	
+
 	# Calculate the delay.
 	$delay=(($my_id * 2) + 5);
-	
+
 	# But never wait more than 30 seconds.
 	if ($delay > 30)
 	{
 		$delay=30;
 	}
-	
+
 	# A user value trumps all.
 	if ($conf->{sys}{local_delay})
 	{
 		$delay=$conf->{sys}{local_delay};
 	}
-	
+
 	# Don't wait if this is node ID 1 unless the user has defined a delay.
 	if (($my_id > 1) or ($conf->{sys}{local_delay}))
 	{
@@ -224,7 +224,7 @@ sub sleep_a_bit
 	{
 		if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "I am the first node, so I won't delay."); }
 	}
-	
+
 	return(0);
 }
 
@@ -232,17 +232,17 @@ sub sleep_a_bit
 sub kill_target
 {
 	my ($conf)=@_;
-	
+
 	# Variables
 	my $remote_node=$conf->{env}{DRBD_PEERS};
 	my $sc="";
 	my $shell_call="";
 	my $line="";
 	my $sc_exit="";
-	
+
 	# Hug it and squeeze it and call it George.
 	if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "Fencing target: [$remote_node]..."); }
-	
+
 	$sc=IO::Handle->new();
 	$shell_call="$conf->{path}{fence_node} -v $remote_node";
 	if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: shell call: [$shell_call]"); }
@@ -277,7 +277,7 @@ sub kill_target
 		if ($conf->{sys}{debug}) { to_log($conf, 7, __LINE__, "Fencing of: [$remote_node] succeeded!"); }
 		nice_exit($conf, 7);
 	}
-	
+
 	# This should not be reachable.
 	return(0);
 }
@@ -286,14 +286,14 @@ sub kill_target
 sub eject_target
 {
 	my ($conf)=@_;
-	
+
 	# Variables;
 	my $remote_node="";
 	my $sc="";
 	my $sc_exit="";
 	my $shell_call="";
 	my $line="";
-	
+
 	### I don't know if I really want to use/keep this.
 	# If the node is still a cluster member, kick it out.
 	$remote_node=$conf->{env}{DRBD_PEERS};
@@ -320,7 +320,7 @@ sub eject_target
 	{
 		if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "Target node: [$remote_node] is *not* a cluster member (state: [$conf->{nodes}{$remote_node}{member}]). Not ejecting."); }
 	}
-	
+
 	return(0);
 }
 
@@ -328,10 +328,10 @@ sub eject_target
 sub get_target
 {
 	my ($conf)=@_;
-	
+
 	# Variables
 	my $remote_node=$conf->{env}{DRBD_PEERS};
-	
+
 	# Make sure I know my target.
 	if ( not exists $conf->{nodes}{$remote_node} )
 	{
@@ -347,7 +347,7 @@ sub get_target
 		$conf->{env}{DRBD_PEERS}=$remote_node;
 	}
 	if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "I have identified my target: [$remote_node]"); }
-	
+
 	return(0);
 }
 
@@ -356,7 +356,7 @@ sub get_target
 sub get_info_on_other_nodes
 {
 	my ($conf)=@_;
-	
+
 	# Variables
 	my $node_count=0;
 	my $sc="";
@@ -367,7 +367,7 @@ sub get_info_on_other_nodes
 	my $node_name="";
 	my $member="";
 	my $address="";
-	
+
 	$sc=IO::Handle->new();
 	$shell_call="$conf->{path}{cman_tool} -a -F id,name,type,addr nodes";
 	if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: shell call: [$shell_call]"); }
@@ -378,7 +378,7 @@ sub get_info_on_other_nodes
 		$line=$_;
 		($node_id, $node_name, $member, $address)=(split/ /, $line);
 		if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: id: [$node_id], name: [$node_name], member: [$member], address: [$address]"); }
-		
+
 		$conf->{nodes}{$node_name}{member}=$member;
 		$conf->{nodes}{$node_name}{id}=$node_id;
 		$conf->{nodes}{$node_name}{address}=$address;
@@ -388,7 +388,7 @@ sub get_info_on_other_nodes
 	$sc->close();
 	$sc_exit=$?;
 	if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: Attempt to gather cluster member information exited with: [$sc_exit]"); }
-	
+
 	return(0);
 }
 
@@ -396,7 +396,7 @@ sub get_info_on_other_nodes
 sub get_local_resource_state
 {
 	my ($conf)=@_;
-	
+
 	# Variables
 	my $minor=$conf->{env}{DRBD_MINOR};
 	my $sc="";
@@ -404,17 +404,17 @@ sub get_local_resource_state
 	my $sc_exit="";
 	my $line="";
 	my $state="";
-	
+
 	# Minor may well be '0', so I need to check for an empty string here.
 	if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: Checking the state of resource with minor number: [$conf->{env}{DRBD_MINOR}]"); }
 	if ($conf->{env}{DRBD_MINOR} eq "")
 	{
 		to_log($conf, 1, __LINE__, "Resource minor number not defined! Unable to proceed.");
 	}
-	
+
 	# minor can be a space delimited list. Assume it's always a list and iterate over it
 	my @minor=split / /, $minor;
-	
+
 	if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: minor: [$minor]"); }
 	$sc=IO::Handle->new();
 	$shell_call="</proc/drbd";
@@ -452,13 +452,13 @@ sub get_local_resource_state
 	$sc->close();
 	$sc_exit=$?;
 	if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: Attempt to collect UpToDate information device with minor: [@minor] exited with: [$sc_exit]"); }
-	
+
 	if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: UpToDate: [$conf->{sys}{local_res_uptodate}]"); }
 	if (not $conf->{sys}{local_res_uptodate})
 	{
 		to_log($conf, 1, __LINE__, "Local resource: [$conf->{env}{DRBD_RESOURCE}], minor: [@minor] is NOT 'UpToDate', will not fence peer.");
 	}
-	
+
 	return(0);
 }
 
@@ -466,13 +466,13 @@ sub get_local_resource_state
 sub get_local_node_name
 {
 	my ($conf)=@_;
-	
+
 	# Variables
 	my $sc="";
 	my $shell_call="";
 	my $sc_exit="";
 	my $line="";
-	
+
 	$sc=IO::Handle->new();
 	$shell_call="$conf->{path}{cman_tool} status";
 	if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: shell call: [$shell_call]"); }
@@ -491,13 +491,13 @@ sub get_local_node_name
 	$sc->close();
 	$sc_exit=$?;
 	if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: Attempt to get local node name via 'cman_tool status' exited with: [$sc_exit]"); }
-	
+
 	if ($conf->{sys}{debug}) { to_log($conf, 0, __LINE__, "DEBUG: I am: [$conf->{sys}{this_node}]"); }
 	if (not $conf->{sys}{this_node})
 	{
 		to_log($conf, 1, __LINE__, "Unable to find local node name.");
 	}
-	
+
 	return(0);
 }
 
@@ -505,17 +505,17 @@ sub get_local_node_name
 sub to_log
 {
 	my ($conf, $exit, $line_num, $message)=@_;
-	
+
 	# Variables
 	my $sc="";
 	my $shell_call="";
 	my $sc_exit="";
 	my $line="";
 	my $now=localtime;
-	
+
 	# I want the line number in DEBUG mode.
 	if ($conf->{sys}{debug}) { $message="$line_num; $message"; }
-	
+
 	if (not $conf->{handle}{'log'})
 	{
 		### Logging in here causes deep recursion, so don't.
@@ -535,22 +535,22 @@ sub to_log
 		}
 		$sc->close();
 		$sc_exit=$?;
-		
+
 		# Open a (hot) handle to syslog.
 		$conf->{handle}{'log'}=IO::Handle->new();
 		open ($conf->{handle}{'log'}, ">>/var/log/messages") || die "Failed to append to syslog; $!\n";
 		$conf->{handle}{'log'}->autoflush(1);
 	}
-	
+
 	# Setup the time and then the string.
 	$now=~s/^.\w+ (.*?) \d+$/$1/;
 	print {$conf->{handle}{'log'}} "$now $conf->{sys}{host_name} $THIS_FILE: $message\n";
-	
+
 	if ($exit)
 	{
 		nice_exit($conf, $exit);
 	}
-	
+
 	return(0);
 }
 
@@ -558,11 +558,11 @@ sub to_log
 sub nice_exit
 {
 	my ($conf, $code)=@_;
-	
+
 	if ($conf->{handle}{'log'})
 	{
 		$conf->{handle}{'log'}->close();
 	}
-	
+
 	exit ($code);
 }
