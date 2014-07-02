@@ -1,15 +1,17 @@
 # This file contains the rules to create named DRBD devices.
 
-# DO NOT WRAP THIS LINE
-#
-# old udev does not understand some of it,
-# and would end up skipping only some lines, not the full rule.
-# which can cause all sort of trouble with strange-named device nodes
-# for completely unrelated devices,
-# resulting in unusable network lookback, etc.
-#
-# in case this is "accidentally" installed on a system with old udev,
-# having it as one single line avoids those problems.
-#
-# DO NOT WRAP THIS LINE
-SUBSYSTEM=="block", KERNEL=="drbd*", IMPORT{program}="@sbindir@/drbdadm sh-udev minor-%m", NAME="$env{DEVICE}", SYMLINK="$env{SYMLINK}"
+SUBSYSTEM!="block", GOTO="drbd_end"
+KERNEL!="drbd*", GOTO="drbd_end"
+
+IMPORT{program}="@sbindir@/drbdadm sh-udev minor-%m"
+
+NAME=="", ENV{DEVICE}!="", NAME="$env{DEVICE}"
+
+# Use symlink from the environment if available
+ENV{SYMLINK}!="", SYMLINK="$env{SYMLINK}", GOTO="drbd_end"
+
+# Legacy rules for DRBD 8.3 & 8.4
+ENV{DISK}!="", SYMLINK+="drbd/by-disk/$env{DISK}"
+ENV{RESOURCE}!="", SYMLINK+="drbd/by-res/$env{RESOURCE}"
+
+LABEL="drbd_end"
