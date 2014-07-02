@@ -164,6 +164,10 @@ case "$1" in
 	[ -d /var/lock/subsys ] && touch /var/lock/subsys/drbd	# for RedHat
 	$DRBDADM wait-con-int # User interruptible version of wait-connect all
 
+	# Become primary if configured
+	# Currently, this is necessary for drbd8
+	# drbd9 supports automatic promote and removes the "sh-b-pri" command.
+	$DRBDADM sh-b-pri all || true
 	log_end_msg 0
 	;;
     stop)
