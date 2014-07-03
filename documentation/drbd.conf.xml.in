@@ -687,6 +687,7 @@ resource
         <pick_drbdsetup_option name="connect-int"/>
         <pick_drbdsetup_option name="cram-hmac-alg"/>
         <pick_drbdsetup_option name="csums-alg"/>
+        <pick_drbdsetup_option name="csums-after-crash-only"/>
         <pick_drbdsetup_option name="data-integrity-alg"/>
         <pick_drbdsetup_option name="ko-count"/>
         <pick_drbdsetup_option name="max-buffers"/>
