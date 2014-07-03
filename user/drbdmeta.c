@@ -2584,7 +2584,7 @@ static void clip_effective_size_and_bm_bytes(struct format *cfg)
 int v07_style_md_open(struct format *cfg)
 {
 	struct stat sb;
-	unsigned long hard_sect_size = 0;
+	unsigned int hard_sect_size = 0;
 	int ioctl_err;
 	int open_flags = O_RDWR | O_DIRECT;
 
