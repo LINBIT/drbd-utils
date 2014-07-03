@@ -48,10 +48,6 @@ do {							\
         type __min2 = (y);                      \
         __min1 < __min2 ? __min1: __min2; })
 
-#ifndef __unused
-#define __unused __attribute((unused))
-#endif
-
 #ifndef __read_mostly
 #define __read_mostly
 #endif
