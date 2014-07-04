@@ -695,6 +695,7 @@ resource
         <pick_drbdsetup_option name="on-congestion"/>
         <pick_drbdsetup_option name="ping-int"/>
         <pick_drbdsetup_option name="ping-timeout"/>
+        <pick_drbdsetup_option name="socket-check-timeout"/>
         <pick_drbdsetup_option name="protocol"/>
         <pick_drbdsetup_option name="rcvbuf-size"/>
         <pick_drbdsetup_option name="rr-conflict"/>
