@@ -828,8 +828,6 @@ resource
       <variablelist>
         <varlistentry>
           <term><option>device /dev/drbd<replaceable>minor-number</replaceable></option></term>
-          <term><option>device <replaceable><optional>name</optional></replaceable> <optional>minor
-                <replaceable>minor-number</replaceable></optional></option></term>
 
           <listitem>
             <para><indexterm significance="normal">
@@ -839,14 +837,8 @@ resource
               </indexterm> Define the device name and minor number of a
               replicated block device.  This is the device that applications
               are supposed to access; in most cases, the device is not used
-	      directly, but as a file system.  This parameter is
-	      required.</para>
-
-            <para>The first form of this parameter assumes the standard
-              device naming convention.  The second form supports arbitrary
-              device names: if the device name is omitted, the standard device
-              naming convention is used; if the minor number is omitted, one of
-              the available minor numbers is used.</para>
+              directly, but as a file system. This parameter is required and
+              the standard device naming convention is assumed.</para>
 
             <para>In addition to this device, udev will create
               <option>/dev/drbd/by-res/<replaceable>resource</replaceable>/<replaceable>volume</replaceable></option>
