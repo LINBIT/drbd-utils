@@ -75,9 +75,7 @@ void maybe_exec_legacy_drbdadm(char **argv)
 		execvp(drbdadm_83, argv);
 		fprintf(stderr, "execvp() failed to exec %s: %m\n", drbdadm_83);
 #else
-		fprintf(stderr, "This drbdadm was build without support for legacy\n"
-			"drbd kernel code (8.3). Consider to rebuild your user land\n"
-			"tools with ./configure --with-legacy-connector\n");
+		config_help_legacy("drbdadm", driver_version);
 #endif
 		exit(E_EXEC_ERROR);
 	}
@@ -90,10 +88,7 @@ void maybe_exec_legacy_drbdadm(char **argv)
 		execvp(drbdadm_84, argv);
 		fprintf(stderr, "execvp() failed to exec %s: %m\n", drbdadm_84);
 #else
-		fprintf(stderr, "This drbdadm was build without support for legacy\n"
-			"drbd kernel code (8.4). Consider to rebuild your user land\n"
-			"tools with and do not give --without-83-support-8.4 on the\n"
-			"commandline\n");
+		config_help_legacy("drbdadm", driver_version);
 #endif
 		exit(E_EXEC_ERROR);
 	}

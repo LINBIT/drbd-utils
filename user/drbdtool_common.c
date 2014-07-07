@@ -1030,6 +1030,17 @@ int version_equal(const struct version *rev1, const struct version *rev2)
 		return !memcmp(rev1->git_hash,rev2->git_hash,GIT_HASH_BYTE);
 	}
 }
+void config_help_legacy(const char * const tool,
+		const struct version * const driver_version)
+{
+	fprintf(stderr,
+			"This %s was build without support for legacy\n"
+			"drbd kernel code (%d.%d). Consider to rebuild your user land\n"
+			"tools and do not give --without-%d%d-support on the\n"
+			"commandline\n", tool, driver_version->version.major,
+			driver_version->version.minor, driver_version->version.major,
+			driver_version->version.minor);
+}
 
 void add_lib_drbd_to_path(void)
 {

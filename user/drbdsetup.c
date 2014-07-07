@@ -3734,8 +3734,7 @@ static void maybe_exec_legacy_drbdsetup(char **argv)
 		execvp(drbdsetup_83, argv);
 		fprintf(stderr, "execvp() failed to exec %s: %m\n", drbdsetup_83);
 #else
-		fprintf(stderr, "This drbdsetup was not built with support for legacy drbd-8.3\n"
-			"Eventually rebuild with ./configure --without-83-support\n");
+		config_help_legacy("drbdsetup", driver_version);
 
 #endif
 		exit(20);
@@ -3749,10 +3748,7 @@ static void maybe_exec_legacy_drbdsetup(char **argv)
 		execvp(drbdsetup_84, argv);
 		fprintf(stderr, "execvp() failed to exec %s: %m\n", drbdsetup_84);
 #else
-		fprintf(stderr, "This drbdsetup was build without support for legacy\n"
-			"drbd kernel code (8.4). Consider to rebuild your user land\n"
-			"tools with and do not give --without-84-support on the\n"
-			"commandline\n");
+		config_help_legacy("drbdsetup", driver_version);
 #endif
 		exit(20);
 	}
