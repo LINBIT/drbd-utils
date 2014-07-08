@@ -1359,8 +1359,11 @@ static int adm_drbdsetup(const struct cfg_ctx *ctx)
 static int __adm_drbdsetup_silent(const struct cfg_ctx *ctx)
 {
 	char buffer[4096];
-	int fd, status, rv = 0, rr, s = 0;
+	int fd, status, rv = 0;
 	pid_t pid;
+	ssize_t rr;
+	ssize_t rw __attribute((unused));
+	size_t s = 0;
 
 	__adm_drbdsetup(ctx, SLEEPS_SHORT | RETURN_STDERR_FD, &pid, &fd, NULL);
 
@@ -1392,7 +1395,7 @@ static int __adm_drbdsetup_silent(const struct cfg_ctx *ctx)
 	 *  11: some unspecific state change error. (ignore for invalidate)
 	 *  17: SS_NO_UP_TO_DATE_DISK */
 	if ((strcmp(ctx->cmd->name, "invalidate") && rv == 11) || rv == 17)
-		(void) write(fileno(stderr), buffer, s);
+		rw = write(fileno(stderr), buffer, s);
 
 	return rv;
 }

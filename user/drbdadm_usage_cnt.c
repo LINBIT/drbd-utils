@@ -431,7 +431,8 @@ void uc_node(enum usage_count_type type)
 "to ask you for confirmation as long as 'usage-count' is at its default\n"
 "value of 'ask'.\n\n"
 "Just press [RETURN] to continue: ");
-			(void) fgets(answer, 9, stdin);
+			if (fgets(answer, 9, stdin) == NULL)
+				fprintf(stderr, "Could not read answer\n");
 		}
 	}
 }
