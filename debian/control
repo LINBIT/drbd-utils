@@ -3,26 +3,32 @@ Section: admin
 Priority: extra
 Maintainer: DRBD dev <drbd-dev@lists.linbit.com>
 Uploaders: Philipp Reisner <philipp.reisner@linbit.com>, Lars Ellenberg <lars.ellenberg@linbit.com>
-Build-Depends: debhelper (>= 4), debconf-utils, docbook-xml, docbook-xsl, dpatch, flex, xsltproc
-Standards-Version: 3.6.2.1
+Build-Depends: debhelper (>= 7), flex, xsltproc, docbook-xsl
+Standards-Version: 3.9.5
+Homepage: http://www.drbd.org/
+Vcs-Browser: http://git.linbit.com/drbd-utils.git/
+Vcs-Git: git://git.linbit.com/drbd-utils.git/
 
 Package: drbd-utils
-Architecture: any
-Section: admin
-Depends: debconf | debconf-2.0, ${shlibs:Depends}
-Conflicts: drbd8-utils
-Provides: drbd8-utils, drbd-utils (=9.0.0pre9-1)
-Replaces: drbd8-utils, drbd
+Architecture: linux-any
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}
+Breaks: drbd8-utils (<< 2:8.9.0)
+Replaces: drbd8-utils (<< 2:8.9.0)
 Suggests: heartbeat
-Description: RAID 1 over tcp/ip for Linux utilities
+Recommends: heirloom-mailx|mailx
+Description: RAID 1 over TCP/IP for Linux (user utilities)
  DRBD is a block device which is designed to build high availability
  clusters by providing a virtual shared device which keeps disks in
  nodes synchronised using TCP/IP. This simulates RAID 1 but avoiding
  the use of uncommon hardware (shared SCSI buses or Fibre Channel).
  It is currently limited to fail-over HA clusters.
  .
- This package contains the programs that will control the DRBD kernel
- module provided in drbd-source. You will need a clustering service
- (such as heartbeat) to fully implement it.
- .
- Homepage: http://www.drbd.org
+ This package contains the programs that will control the drbd kernel
+ module provided in the Linux kernel or external drbd module source.
+
+Package: drbd8-utils
+# build process will override epoch to 2:
+Architecture: linux-any
+Depends: drbd-utils (>= 8.9.0), ${misc:Depends}
+Description: transitional dummy package
+ This is a transitional dummy package for drbd-utils. It can be removed safely.

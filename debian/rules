@@ -1,103 +1,39 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
-# Sample debian/rules that uses debhelper.
-# GNU copyright 1997 to 1999 by Joey Hess.
-#
-# Modified to make a template file for a multi-binary package with separated
-# build-arch and build-indep targets  by Bill Allombert 2001
-
 # Uncomment this to turn on verbose mode.
-export DH_VERBOSE=1
+# export DH_VERBOSE=1
 
-include /usr/share/dpatch/dpatch.make
+PKG_VERSION=$(shell dpkg-parsechangelog | awk '/^Version:/ { print $$2 }')
 
-# This has to be exported to make some magic below work.
-export DH_OPTIONS
+%:
+	dh $@ --with systemd
 
-PACKAGE=drbd-utils
+override_dh_auto_clean:
+	dh_auto_clean
+	rm -f debian/drbd-utils.drbd.init
 
-CFLAGS = -Wall -g
+override_dh_auto_configure:
+	./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc \
+		--sbindir=/usr/sbin --with-udev --with-xen \
+		--with-pacemaker --with-rgmanager --with-bashcompletion
 
-ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
-	CFLAGS += -O0
-else
-	CFLAGS += -O2
-endif
-ifeq (,$(findstring nostrip,$(DEB_BUILD_OPTIONS)))
-	INSTALL_PROGRAM += -s
-endif
+override_dh_auto_install:
+	dh_auto_install --destdir debian/drbd-utils
 
-#Architecture
-build: patch build-arch build-indep
+override_dh_install:
+	dh_install --fail-missing
 
-build-arch: build-arch-stamp
-build-arch-stamp:
-	dh_testdir
-#	build this first, so user/drbd_buildtag.c does not use the stale thing from the tgz
-	[ -f configure ] || ( autoheader && autoconf )
-	./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc
-	$(MAKE) -C user drbd_buildtag.c
-	$(MAKE) -C user
-	$(MAKE) -C scripts
-	$(MAKE) -C documentation doc
-	touch build-arch-stamp
+	# Place the initscript where dh_installinit can find it
+	mv $(CURDIR)/debian/drbd-utils/etc/init.d/drbd $(CURDIR)/debian/drbd-utils.drbd.init
 
-build-indep: build-indep-stamp
-build-indep-stamp:
-	touch build-indep-stamp
+override_dh_installinit:
+	dh_installinit --name=drbd --no-start
 
-clean: unpatch
-	dh_testdir
-	dh_testroot
-	rm -f build-arch-stamp build-indep-stamp #CONFIGURE-STAMP#
-#	remove these files from upstream tgz
-	rm -f debian/drbd.*
-	rm -f debian/drbd-source.dirs
-	-$(MAKE) -C user clean
-	-$(MAKE) -C scripts clean
-	-$(MAKE) -C documentation clean
-	dh_clean
+override_dh_gencontrol:
+	dh_gencontrol -Ndrbd8-utils
+	# Add the previous epoch to drbd8-utils
+	dh_gencontrol -pdrbd8-utils -- -v2:$(PKG_VERSION)
 
-install: install-arch
-
-install-arch:
-	dh_testdir
-	dh_testroot
-	dh_clean -k -s
-	dh_installdirs -s
-	$(MAKE) DESTDIR=$(CURDIR)/debian/drbd-utils/ -C user install
-	$(MAKE) DESTDIR=$(CURDIR)/debian/drbd-utils/ -C scripts install
-	$(MAKE) DESTDIR=$(CURDIR)/debian/drbd-utils/ CREATE_MAN_LINK=no -C documentation install
-
-	dh_install -s
-# Must not depend on anything. This is to be called by
-# binary-arch/binary-indep
-# in another 'make' thread.
-binary-common:
-	dh_testdir
-	dh_testroot
-	dh_installchangelogs ChangeLog
-	dh_installdocs
-	dh_installexamples
-#	dh_installinit
-	dh_installman
-	dh_link
-	dh_strip
-	dh_compress
-	dh_fixperms
-	dh_makeshlibs
-	dh_installdeb
-	dh_shlibdeps
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
-# Build architecture independant packages using the common target.
-binary-indep: build-indep install-indep
-	$(MAKE) -f debian/rules DH_OPTIONS=-i binary-common
-
-# Build architecture dependant packages using the common target.
-binary-arch: build-arch install-arch
-	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
-
-binary: binary-arch binary-indep
-.PHONY: build clean binary-indep binary-arch binary install install-indep install-arch patch unpatch
+.PHONY: override_dh_auto_configure override_dh_install \
+	override_dh_auto_clean override_dh_installinit \
+	override_dh_gencontrol override_dh_auto_install

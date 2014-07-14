@@ -1,10 +1,38 @@
-drbd for Debian
----------------
+Upgrading to DRBD 8.4
+=====================
 
-To make sure the default installation of drbd is non-interactive, I
-have set the default value of the inittimeout parameter to be a
-negative number.  This may not be what you would like for a production
-setup.  See the drbd.conf man page and pay special attention to the
-inittimeout, skip-wait, and load-only options.
+Linux kernel versions after 3.8 include DRBD 8.4, a new minor release with
+significant changes both in configuration and operation. An overview of the
+most important changes can be found at:
 
- -- David Krovich <dkrovich@csee.wvu.edu>, Tue May 25 12:47:11 2004
+        http://www.drbd.org/users-guide-8.4/ap-recent-changes.html
+
+Configuration file changes
+--------------------------
+
+A number of changes in the configuration file format are present in 8.4. They
+are outlined at:
+
+      http://www.drbd.org/users-guide-8.4/s-recent-changes-config.html
+
+If you are upgrading from 8.3, please upgrade your configuration files to the
+new format. Unfortunately, due to the way backwards compatility is provided
+upstream, these options will not be understood by drbdadm if you boot a kernel
+with DRBD 8.3 (kernel versions before 3.8), so you will have to revert your
+changes if you want to use older kernels.
+
+Downgrading to DRBD 8.3
+------------------------
+
+A device that has been attached or created using DRBD 8.4 will not work
+automatically under DRBD 8.3, due to changes in device metadata. In order to
+make your devices work with DRBD 8.3, you will have to do the following
+*before* booting the old kernel, to ensure that the metadata is clean:
+
+  drbdadm down all
+  drbdadm apply-al all
+
+More information can be found at:
+
+       http://www.drbd.org/users-guide-8.4/s-downgrading-drbd84.html
+
