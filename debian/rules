@@ -4,9 +4,10 @@
 # export DH_VERBOSE=1
 
 PKG_VERSION=$(shell dpkg-parsechangelog | awk '/^Version:/ { print $$2 }')
+WITH_SYSTEMD=$(shell dh --list 2>/dev/null | sed -ne 's/^systemd$$/--with systemd/p')
 
 %:
-	dh $@ --with systemd
+	dh $@ $(WITH_SYSTEMD)
 
 override_dh_auto_clean:
 	dh_auto_clean
