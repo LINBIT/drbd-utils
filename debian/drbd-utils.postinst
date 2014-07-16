@@ -1,33 +1,20 @@
 #!/bin/sh
 
-if [ -x "/etc/init.d/drbd" ]; then
-	update-rc.d drbd defaults 70 8 >/dev/null
-fi
-
-# Make sure /dev/nb[0-7] devices exist
-# cd /dev; for a in `seq 0 7`; do MAKEDEV nb$a; done
-
-if [ -d /lib/udev/rules.d ]; then
-	echo "Udev found. Not creating device nodes."
-else
-	for i in `seq 0 15` ; do
-		test -b /dev/drbd$i || mknod -m 0660 /dev/drbd$i b 147 $i;
-	done
-fi
+# dh_installinit automatically adds update-rc.d calls
+# all supported systems use udev nowadays
 
 # compat: we used to live in /sbin/
 # there may be many hardcoded /sbin/drbd* out there,
 # including variants of our own scripts.
+# Unless /sbin is a symlink to /usr/sbin anyways.
 if ! test /sbin -ef /usr/sbin; then
 	ln -sf /usr/sbin/drbdsetup /sbin/
 	ln -sf /usr/sbin/drbdmeta /sbin/
 	ln -sf /usr/sbin/drbdadm /sbin/
 fi
 
-# The 8.4 documentation is the default documentation
-for f in drbd drbdadm drbdmeta drbdsetup; do
-	ln -s $f-8.4.8.gz /usr/share/man/man8/$f.8.gz
-done
-ln -s drbd.conf-8.4.5.gz /usr/share/man/man5/drbd.conf.5.gz
+# man page symlinks are created by "install" already.
+# MAYBE: use "update-alternatives" instead,
+# to be able to change between DRBD 8.4 and 9.0 versions.
 
 #DEBHELPER#
