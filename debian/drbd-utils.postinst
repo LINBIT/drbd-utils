@@ -3,6 +3,18 @@
 # dh_installinit automatically adds update-rc.d calls
 # all supported systems use udev nowadays
 
+. /usr/share/debconf/confmodule
+
+db_get drbd-utils/manpages
+MANVERSION=$RET
+db_stop
+
+# man pages
+for f in drbd drbdadm drbdmeta drbdsetup; do
+	ln -sf $f-$MANVERSION.8.gz /usr/share/man/man8/$f.8.gz
+done
+ln -sf drbd.conf-$MANVERSION.5.gz /usr/share/man/man5/drbd.conf.5.gz
+
 # compat: we used to live in /sbin/
 # there may be many hardcoded /sbin/drbd* out there,
 # including variants of our own scripts.
@@ -12,9 +24,5 @@ if ! test /sbin -ef /usr/sbin; then
 	ln -sf /usr/sbin/drbdmeta /sbin/
 	ln -sf /usr/sbin/drbdadm /sbin/
 fi
-
-# man page symlinks are created by "install" already.
-# MAYBE: use "update-alternatives" instead,
-# to be able to change between DRBD 8.4 and 9.0 versions.
 
 #DEBHELPER#

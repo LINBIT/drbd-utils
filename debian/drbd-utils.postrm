@@ -1,5 +1,7 @@
 #!/bin/sh
 
+. /usr/share/debconf/confmodule
+
 case $1 in purge|remove|deconfigure)
 	update-rc.d drbd remove >/dev/null
 	# remove compat symlinks installed by .postinst
@@ -10,6 +12,7 @@ case $1 in purge|remove|deconfigure)
 		rm -f /usr/share/man/man8/$f.8.gz
 	done
 	rm -f /usr/share/man/man5/drbd.conf.5.gz
+	db_purge
 	;;
 esac
 
