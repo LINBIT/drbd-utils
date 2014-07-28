@@ -73,6 +73,7 @@ common			{ DP; return TK_COMMON;			}
 options			{ DP; return TK_OPTIONS;		}
 outside			{ DP; return TK_OUTSIDE;		}
 address			{ DP; return TK_ADDRESS;		}
+alternate-link-address  { DP; return TK_ALT_ADDRESS;		}
 startup			{ DP; return TK_STARTUP;		}
 include			{ DP; return TK_INCLUDE;		}
 handlers		{ DP; return TK_HANDLER;		}

@@ -2,9 +2,15 @@
 #include <string.h>
 #include <assert.h>
 
+#include <netdb.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
 
 #include "libgenl.h"
 #include <linux/drbd.h>
@@ -15,6 +21,11 @@
 #include <linux/genl_magic_func.h>
 #include "drbdtool_common.h"
 #include "config_flags.h"
+
+#ifndef AF_INET_SDP
+#define AF_INET_SDP 27
+#define PF_INET_SDP AF_INET_SDP
+#endif
 
 #ifndef ARRAY_SIZE
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -421,6 +432,282 @@ const char *double_quote_string(const char *str)
 	return buffer;
 }
 
+/* ---------------------------------------------------------------------------------------------- */
+static bool address_is_default(struct field_def *field, const char *value)
+{
+	return true;
+}
+
+static bool address_is_equal(struct field_def *field, const char *a, const char *b)
+{
+	return !strcmp(a, b);
+}
+
+/* It will only print the WARNING if the warn flag is set
+   with the _first_ call! */
+#define PROC_NET_AF_SCI_FAMILY "/proc/net/af_sci/family"
+#define PROC_NET_AF_SSOCKS_FAMILY "/proc/net/af_ssocks/family"
+
+int get_af_ssocks(int warn_and_use_default)
+{
+	char buf[16];
+	int c, fd;
+	static int af = -1;
+
+	if (af > 0)
+		return af;
+
+	fd = open(PROC_NET_AF_SSOCKS_FAMILY, O_RDONLY);
+
+	if (fd < 0)
+		fd = open(PROC_NET_AF_SCI_FAMILY, O_RDONLY);
+
+	if (fd < 0) {
+		if (warn_and_use_default) {
+			fprintf(stderr, "open(" PROC_NET_AF_SSOCKS_FAMILY ") "
+				"failed: %m\n WARNING: assuming AF_SSOCKS = 27. "
+				"Socket creation may fail.\n");
+			af = 27;
+		}
+		return af;
+	}
+	c = read(fd, buf, sizeof(buf)-1);
+	if (c > 0) {
+		buf[c] = 0;
+		if (buf[c-1] == '\n')
+			buf[c-1] = 0;
+		af = m_strtoll(buf,1);
+	} else {
+		if (warn_and_use_default) {
+			fprintf(stderr, "read(" PROC_NET_AF_SSOCKS_FAMILY ") "
+				"failed: %m\n WARNING: assuming AF_SSOCKS = 27. "
+				"Socket creation may fail.\n");
+			af = 27;
+		}
+	}
+	close(fd);
+	return af;
+}
+
+static char *af_to_str(int af)
+{
+	if (af == AF_INET)
+		return "ipv4";
+	else if (af == AF_INET6)
+		return "ipv6";
+	/* AF_SSOCKS typically is 27, the same as AF_INET_SDP.
+	 * But with warn_and_use_default = 0, it will stay at -1 if not available.
+	 * Just keep the test on ssocks before the one on SDP (which is hard-coded),
+	 * and all should be fine.  */
+	else if (af == get_af_ssocks(0))
+		return "ssocks";
+	else if (af == AF_INET_SDP)
+		return "sdp";
+	else return "unknown";
+}
+
+void sprint_address(char *buffer, void *address, int addr_len)
+{
+	union {
+		struct sockaddr     addr;
+		struct sockaddr_in  addr4;
+		struct sockaddr_in6 addr6;
+	} a;
+
+	memset(&a, 0, sizeof(a));
+	memcpy(&a.addr, address, addr_len);
+
+	if (a.addr.sa_family == AF_INET
+	|| a.addr.sa_family == get_af_ssocks(0)
+	|| a.addr.sa_family == AF_INET_SDP) {
+		sprintf(buffer, "%s %s:%d",
+		       af_to_str(a.addr4.sin_family),
+		       inet_ntoa(a.addr4.sin_addr),
+		       ntohs(a.addr4.sin_port));
+	} else if (a.addr.sa_family == AF_INET6) {
+		sprintf(buffer, "%s [%s]:%d",
+		       af_to_str(a.addr6.sin6_family),
+		       inet_ntop(a.addr6.sin6_family, &a.addr6.sin6_addr, buffer, INET6_ADDRSTRLEN),
+		       ntohs(a.addr6.sin6_port));
+	} else {
+		sprintf(buffer, "[unknown af=%d, len=%d]", a.addr.sa_family, addr_len);
+	}
+}
+
+static const char *get_address(struct context_def *ctx, struct field_def *field, struct nlattr *nla)
+{
+	static char buffer[INET6_ADDRSTRLEN];
+
+	sprint_address(buffer, nla_data(nla), nla_len(nla));
+
+	return buffer;
+}
+
+static void resolv6(char *name, struct sockaddr_in6 *addr)
+{
+	struct addrinfo hints, *res, *tmp;
+	int err;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET6;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+
+	err = getaddrinfo(name, 0, &hints, &res);
+	if (err) {
+		fprintf(stderr, "getaddrinfo %s: %s\n", name, gai_strerror(err));
+		exit(20);
+	}
+
+	/* Yes, it is a list. We use only the first result. The loop is only
+	 * there to document that we know it is a list */
+	for (tmp = res; tmp; tmp = tmp->ai_next) {
+		memcpy(addr, tmp->ai_addr, sizeof(*addr));
+		break;
+	}
+	freeaddrinfo(res);
+	if (0) { /* debug output */
+		char ip[INET6_ADDRSTRLEN];
+		inet_ntop(AF_INET6, &addr->sin6_addr, ip, sizeof(ip));
+		fprintf(stderr, "%s -> %02x %04x %08x %s %08x\n",
+				name,
+				addr->sin6_family,
+				addr->sin6_port,
+				addr->sin6_flowinfo,
+				ip,
+				addr->sin6_scope_id);
+	}
+}
+
+static unsigned long resolv(const char* name)
+{
+	unsigned long retval;
+
+	if((retval = inet_addr(name)) == INADDR_NONE ) {
+		struct hostent *he;
+		he = gethostbyname(name);
+		if (!he) {
+			fprintf(stderr, "can not resolve the hostname: gethostbyname(%s): %s\n",
+					name, hstrerror(h_errno));
+			exit(20);
+		}
+		retval = ((struct in_addr *)(he->h_addr_list[0]))->s_addr;
+	}
+	return retval;
+}
+
+static void split_ipv6_addr(char **address, int *port)
+{
+	/* ipv6:[fe80::0234:5678:9abc:def1]:8000; */
+	char *b = strrchr(*address,']');
+	if (address[0][0] != '[' || b == NULL ||
+		(b[1] != ':' && b[1] != '\0')) {
+		fprintf(stderr, "unexpected ipv6 format: %s\n",
+				*address);
+		exit(20);
+	}
+
+	*b = 0;
+	*address += 1; /* skip '[' */
+	if (b[1] == ':')
+		*port = m_strtoll(b+2,1); /* b+2: "]:" */
+	else
+		*port = 7788; /* will we ever get rid of that default port? */
+}
+
+static void split_address(const char* text, int *af, char** address, int* port)
+{
+	static struct { char* text; int af; } afs[] = {
+		{ "ipv4:", AF_INET  },
+		{ "ipv6:", AF_INET6 },
+		{ "sdp:",  AF_INET_SDP },
+		{ "ssocks:",  -1 },
+	};
+
+	unsigned int i;
+	char *b;
+
+	*af=AF_INET;
+	*address = text;
+	for (i=0; i<ARRAY_SIZE(afs); i++) {
+		if (!strncmp(text, afs[i].text, strlen(afs[i].text))) {
+			*af = afs[i].af;
+			*address = text + strlen(afs[i].text);
+			break;
+		}
+	}
+
+	if (*af == AF_INET6 && address[0][0] == '[')
+		return split_ipv6_addr(address, port);
+
+	if (*af == -1)
+		*af = get_af_ssocks(1);
+
+	b=strrchr(text,':');
+	if (b) {
+		*b = 0;
+		if (*af == AF_INET6) {
+			/* compatibility handling of ipv6 addresses,
+			 * in the style expected before drbd 8.3.9.
+			 * may go wrong without explicit port */
+			fprintf(stderr, "interpreting ipv6:%s:%s as ipv6:[%s]:%s\n",
+					*address, b+1, *address, b+1);
+		}
+		*port = m_strtoll(b+1,1);
+	} else
+		*port = 7788;
+}
+
+int nla_put_address(struct msg_buff *msg, int attrtype, const char *arg)
+{
+	int af, port;
+	char *address;
+
+	split_address(arg, &af, &address, &port);
+	if (af == AF_INET6) {
+		struct sockaddr_in6 addr6;
+
+		memset(&addr6, 0, sizeof(addr6));
+		resolv6(address, &addr6);
+		addr6.sin6_port = htons(port);
+		/* addr6.sin6_len = sizeof(addr6); */
+		nla_put(msg, attrtype, sizeof(addr6), &addr6);
+	} else {
+		/* AF_INET, AF_SDP, AF_SSOCKS,
+		 * all use the IPv4 addressing scheme */
+		struct sockaddr_in addr;
+
+		memset(&addr, 0, sizeof(addr));
+		addr.sin_port = htons(port);
+		addr.sin_family = af;
+		addr.sin_addr.s_addr = resolv(address);
+		nla_put(msg, attrtype, sizeof(addr), &addr);
+	}
+	return NO_ERROR;
+}
+
+static bool put_address(struct context_def *ctx, struct field_def *field,
+			struct msg_buff *msg, const char *value)
+{
+	assert(type_of_field(ctx, field) == NLA_BINARY);
+	nla_put_address(msg, field->nla_type, value);
+	return true;
+}
+
+static int address_usage(struct field_def *field, char *str, int size)
+{
+	return snprintf(str, size,"[--%s=[{af}:]{local_addr}[:{port}]]",
+			field->name);
+}
+
+static void address_describe_xml(struct field_def *field)
+{
+	printf("\t<option name=\"%s\" type=\"address\">\n"
+	       "\t</option>\n",
+	       field->name);
+}
+
+
 /* ============================================================================================== */
 
 #define ENUM(f, d)									\
@@ -497,6 +784,16 @@ const char *double_quote_string(const char *str)
 	.usage = string_usage,								\
 	.describe_xml = string_describe_xml,						\
 	.needs_double_quoting = true
+
+#define ADDRESS(f)									\
+	.nla_type = T_ ## f,								\
+	.is_default = address_is_default,						\
+	.is_equal = address_is_equal,							\
+	.get = get_address,								\
+	.put = put_address,								\
+	.usage = address_usage,								\
+	.describe_xml = address_describe_xml,						\
+	.needs_double_quoting = false
 
 /* ============================================================================================== */
 
@@ -685,6 +982,8 @@ struct context_def connect_cmd_ctx = {
 	.fields = {
 		{ "tentative", FLAG(tentative) },
 		{ "discard-my-data", FLAG(discard_my_data) },
+		{ "alternate-address", ADDRESS(my_addr2) },
+		{ "alternate-peer-address", ADDRESS(peer_addr2) },
 		CHANGEABLE_NET_OPTIONS,
 		{ } },
 };

@@ -125,6 +125,9 @@ struct d_host_info
   char* address;
   char* port;
   char* address_family;
+  char* alt_address;
+  char* alt_port;
+  char* alt_address_family;
   struct d_proxy_info *proxy;
   struct d_host_info* next;
   struct d_resource* lower;  /* for device stacking */

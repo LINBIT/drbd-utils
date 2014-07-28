@@ -857,6 +857,8 @@ static void dump_host_info(struct d_host_info *hi)
 
 	if (!hi->by_address)
 		dump_address("address", hi->address, hi->port, hi->address_family);
+	if (hi->alt_address)
+		dump_address("alternate-link-address", hi->alt_address, hi->alt_port, hi->alt_address_family);
 	if (hi->proxy)
 		dump_proxy_info(hi->proxy);
 	--indent;
@@ -2158,6 +2160,13 @@ static int adm_connect_or_net_options(struct cfg_ctx *ctx, bool do_connect, bool
 	err = add_connection_endpoints(argv, &argc, res);
 	if (err)
 		return err;
+
+	if (do_connect && res->me->alt_address) {
+		ssprintf(argv[NA(argc)], "--alternate-address");
+		make_address(res->me->alt_address, res->me->alt_port, res->me->alt_address_family);
+		ssprintf(argv[NA(argc)], "--alternate-peer-address");
+		make_address(res->peer->alt_address, res->peer->alt_port, res->peer->alt_address_family);
+	}
 
 	if (reset)
 		argv[NA(argc)] = "--set-defaults";

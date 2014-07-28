@@ -1336,6 +1336,19 @@ void parse_host_section(struct d_resource *res,
 			parse_address(on_hosts, &host->address, &host->port, &host->address_family);
 			range_check(R_PORT, "port", host->port);
 			break;
+		case TK_ALT_ADDRESS:
+			if (host->by_address) {
+				fprintf(stderr,
+					"%s:%d: address statement not allowed for floating {} host sections\n",
+					config_file, fline);
+				config_valid = 0;
+				exit(E_config_invalid);
+			}
+			for_each_host(h, on_hosts)
+				check_upr("alt-address statement", "%s:%s:alt-address", res->name, h->name);
+			parse_address(on_hosts, &host->alt_address, &host->alt_port, &host->alt_address_family);
+			range_check(R_PORT, "port", host->alt_port);
+			break;
 		case TK_PROXY:
 			parse_proxy_section(host);
 			break;
@@ -1442,6 +1455,12 @@ void parse_stacked_section(struct d_resource* res)
 			for_each_host(h, host->on_hosts)
 				check_upr("address statement", "%s:%s:address", res->name, h->name);
 			parse_address(NULL, &host->address, &host->port, &host->address_family);
+			range_check(R_PORT, "port", yylval.txt);
+			break;
+		case TK_ALT_ADDRESS:
+			for_each_host(h, host->on_hosts)
+				check_upr("alt-address statement", "%s:%s:alt-address", res->name, h->name);
+			parse_address(NULL, &host->alt_address, &host->alt_port, &host->alt_address_family);
 			range_check(R_PORT, "port", yylval.txt);
 			break;
 		case TK_PROXY:
