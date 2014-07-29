@@ -122,6 +122,20 @@ static struct d_host_info *find_host_info_by_address(struct d_resource* res, str
 	return NULL;
 }
 
+static bool generate_implicit_node_id(int *addr_hash, struct d_host_info **host_info_array)
+{
+	if (addr_hash[0] > addr_hash[1]) {
+		host_info_array[0]->node_id = strdup("0");
+		host_info_array[1]->node_id = strdup("1");
+	} else if (addr_hash[0] < addr_hash[1]) {
+		host_info_array[0]->node_id = strdup("1");
+		host_info_array[1]->node_id = strdup("0");
+	} else {
+		return false;
+	}
+	return true;
+}
+
 static void set_host_info_in_host_address_pairs(struct d_resource *res, struct connection *con)
 {
 	struct hname_address *ha;
@@ -194,13 +208,24 @@ static void set_host_info_in_host_address_pairs(struct d_resource *res, struct c
 
 	if (con->implicit && i == 2 && !host_info_array[0]->node_id && !host_info_array[1]->node_id) {
 		/* This is drbd-8.3 / drbd-8.4 compatibility, auto created node-id */
-		if (addr_hash[0] > addr_hash[1]) {
-			host_info_array[0]->node_id = strdup("0");
-			host_info_array[1]->node_id = strdup("1");
-		} else if (addr_hash[0] < addr_hash[1]) {
-			host_info_array[0]->node_id = strdup("1");
-			host_info_array[1]->node_id = strdup("0");
-		} else {
+		bool have_node_ids;
+
+		have_node_ids = generate_implicit_node_id(addr_hash, host_info_array);
+
+		if (!have_node_ids) {
+			/* That might be a config with equal node addresses, since it is
+			  127.0.0.1:xxx with a proxy... */
+			for (i = 0; i < 2; i++) {
+				if (!host_info_array[i]->proxy)
+					break;
+
+				addr_hash[i] = crc32c(0x1a656f21,
+						      (void *)host_info_array[i]->proxy->outside.addr,
+						      strlen(host_info_array[i]->proxy->outside.addr));
+			}
+			have_node_ids = generate_implicit_node_id(addr_hash, host_info_array);
+		}
+		if (!have_node_ids) {
 			fprintf(stderr, "BAD LUCK, equal hashes\n");
 			exit(20);
 		}
