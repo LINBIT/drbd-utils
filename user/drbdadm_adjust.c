@@ -306,13 +306,18 @@ static int proxy_reconf(const struct cfg_ctx *ctx, struct d_resource *running)
 	if (res_o &&
 			(!run_o || abs(v1-v2)/(float)minimum > 0.02))
 	{
+		struct connection *conn;
 redo_whole_conn:
 		/* As the memory is in use while the connection is allocated we have to
 		 * completely destroy and rebuild the connection. */
 
-		schedule_deferred_cmd(&proxy_conn_down_cmd, ctx, CFG_NET_PREREQ);
-		schedule_deferred_cmd(&proxy_conn_up_cmd, ctx, CFG_NET_PREREQ);
-		schedule_deferred_cmd(&proxy_conn_plugins_cmd, ctx, CFG_NET_PREREQ);
+		for_each_connection(conn, &ctx->res->connections) {
+			struct cfg_ctx tmp_ctx = { .res = ctx->res, .conn = conn };
+
+			schedule_deferred_cmd(&proxy_conn_down_cmd, &tmp_ctx, CFG_NET_PREREQ);
+			schedule_deferred_cmd(&proxy_conn_up_cmd, &tmp_ctx, CFG_NET_PREREQ);
+			schedule_deferred_cmd(&proxy_conn_plugins_cmd, &tmp_ctx, CFG_NET_PREREQ);
+		}
 
 		/* With connection cleanup and reopen everything is rebuild anyway, and
 		 * DRBD will get a reconnect too.  */
@@ -543,7 +548,7 @@ void compare_volumes(struct volumes *conf_head, struct volumes *kern_head)
 int adm_adjust(const struct cfg_ctx *ctx)
 {
 	char* argv[20];
-	int pid,argc, i;
+	int pid, argc;
 	struct d_resource* running;
 	struct d_volume *vol;
 	struct connection *conn;
@@ -557,8 +562,6 @@ int adm_adjust(const struct cfg_ctx *ctx)
 
 	int can_do_proxy = 1;
 	char config_file_dummy[250];
-	char show_conn[128];
-	char *resource_name;
 
 	/* disable check_uniq, so it won't interfere
 	 * with parsing of drbdsetup show output */
@@ -599,29 +602,32 @@ int adm_adjust(const struct cfg_ctx *ctx)
 	 * FIXME what about "zombie" proxy settings, if we remove proxy
 	 * settings from the config file without prior proxy-down, this won't
 	 * clean them from the proxy. */
-	if (ctx->res->me->proxy) {
-		line = 1;
-		resource_name = proxy_connection_name(ctx);
-		i=snprintf(show_conn, sizeof(show_conn), "show proxy-settings %s", resource_name);
-		if (i>= sizeof(show_conn)-1) {
-			fprintf(stderr,"connection name too long");
-			exit(E_THINKO);
+	if (ctx->res->me->proxy && running) {
+		for_each_connection(conn, &ctx->res->connections) {
+			struct cfg_ctx tmp_ctx = { .res = ctx->res, .conn = conn };
+			char *show_conn;
+			int r;
+
+			line = 1;
+			m_asprintf(&show_conn, "show proxy-settings %s", proxy_connection_name(&tmp_ctx));
+			sprintf(config_file_dummy, "drbd-proxy-ctl -c '%s'", show_conn);
+			config_file = config_file_dummy;
+
+			argc=0;
+			argv[argc++]=drbd_proxy_ctl;
+			argv[argc++]="-c";
+			argv[argc++]=show_conn;
+			argv[argc++]=0;
+
+			/* actually parse "drbd-proxy-ctl show" output */
+			yyin = m_popen(&pid, argv);
+			r = !parse_proxy_options_section(running->me->proxy);
+			printf("r=%d\n", r);
+			can_do_proxy &= r;
+			fclose(yyin);
+
+			waitpid(pid,0,0);
 		}
-		sprintf(config_file_dummy,"drbd-proxy-ctl -c '%s'", show_conn);
-		config_file = config_file_dummy;
-
-		argc=0;
-		argv[argc++]=drbd_proxy_ctl;
-		argv[argc++]="-c";
-		argv[argc++]=show_conn;
-		argv[argc++]=0;
-
-		/* actually parse "drbd-proxy-ctl show" output */
-		yyin = m_popen(&pid,argv);
-		can_do_proxy = !parse_proxy_options_section(running);
-		fclose(yyin);
-
-		waitpid(pid,0,0);
 	}
 
 	compare_volumes(&ctx->res->me->volumes, running ? &running->me->volumes : &empty);

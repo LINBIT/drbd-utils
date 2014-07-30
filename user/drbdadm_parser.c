@@ -1399,10 +1399,9 @@ static int parse_proxy_options(struct options *proxy_options, struct options *pr
 	return 0;
 }
 
-int parse_proxy_options_section(struct d_resource *res)
+int parse_proxy_options_section(struct d_proxy_info *proxy)
 {
 	int token;
-	struct d_resource dummy_res = { "dummy", };
 
 	token = yylex();
 	if (token != TK_PROXY) {
@@ -1410,10 +1409,7 @@ int parse_proxy_options_section(struct d_resource *res)
 		return 1;
 	}
 
-	if (!res)
-		res = &dummy_res;
-
-	return parse_proxy_options(&res->proxy_options, &res->proxy_plugins);
+	return parse_proxy_options(&proxy->options, &proxy->plugins);
 }
 
 static struct hname_address *parse_hname_address_pair(struct connection *conn, int prev_token)
