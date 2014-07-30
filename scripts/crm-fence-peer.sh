@@ -466,7 +466,9 @@ guess_if_pacemaker_will_fence()
 	# but once ha="dead", we can stop waiting for changes.
 	ha_dead=false
 
-	for x in ${node_state%/>} ; do
+	node_state=${node_state%>}
+	node_state=${node_state%/}
+	for x in ${node_state} ; do
 		case $x in
 		in_ccm=\"*\")	x=${x#*=\"}; x=${x%\"}; in_ccm=$x ;;
 		crmd=\"*\")	x=${x#*=\"}; x=${x%\"}; crmd=$x ;;
