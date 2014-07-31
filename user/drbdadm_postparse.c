@@ -645,6 +645,7 @@ static void create_implicit_connections(struct d_resource *res)
 		if (host_info->address.af && host_info->address.addr && host_info->address.port) {
 			ha = alloc_hname_address();
 			ha->host_info = host_info;
+			ha->proxy = host_info->proxy;
 			if (!host_info->lower) {
 				ha->name = STAILQ_FIRST(&host_info->on_hosts)->name;
 			} else {
