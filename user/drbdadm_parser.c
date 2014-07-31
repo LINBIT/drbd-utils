@@ -297,13 +297,12 @@ void pdperror(char *text)
 	exit(E_CONFIG_INVALID);
 }
 
-static void pperror(struct d_host_info *host, struct d_proxy_info *proxy, char *text)
+static void pperror(struct d_proxy_info *proxy, char *text)
 {
 	config_valid = 0;
-	fprintf(stderr, "%s:%d: in section: on %s { proxy on %s { ... } }:"
+	fprintf(stderr, "%s:%d: in section: proxy on %s { ... } }:"
 		" '%s' keyword missing.\n",
-		config_file, c_section_start, names_to_str(&host->on_hosts),
-		names_to_str(&proxy->on_hosts), text);
+		config_file, c_section_start, names_to_str(&proxy->on_hosts), text);
 }
 
 #define typecheck(type,x) \
@@ -804,13 +803,12 @@ static void parse_hosts(struct names *hosts, char delimeter)
 	}
 }
 
-static void parse_proxy_section(struct d_host_info *host)
+static struct d_proxy_info *parse_proxy_section(void)
 {
 	struct d_proxy_info *proxy;
 
 	proxy = calloc(1, sizeof(struct d_proxy_info));
 	STAILQ_INIT(&proxy->on_hosts);
-	host->proxy = proxy;
 
 	EXP(TK_ON);
 	parse_hosts(&proxy->on_hosts, '{');
@@ -835,12 +833,12 @@ static void parse_proxy_section(struct d_host_info *host)
 
  break_loop:
 	if (!proxy->inside.addr)
-		pperror(host, proxy, "inside");
+		pperror(proxy, "inside");
 
 	if (!proxy->outside.addr)
-		pperror(host, proxy, "outside");
+		pperror(proxy, "outside");
 
-	return;
+	return proxy;
 }
 
 void parse_meta_disk(struct d_volume *vol)
@@ -1181,7 +1179,7 @@ static void parse_host_section(struct d_resource *res,
 			range_check(R_PORT, "port", host->address.port);
 			break;
 		case TK_PROXY:
-			parse_proxy_section(host);
+			host->proxy = parse_proxy_section();
 			break;
 		case TK_VOLUME:
 			EXP(TK_INTEGER);
@@ -1278,7 +1276,7 @@ void parse_stacked_section(struct d_resource* res)
 			range_check(R_PORT, "port", yylval.txt);
 			break;
 		case TK_PROXY:
-			parse_proxy_section(host);
+			host->proxy = parse_proxy_section();
 			break;
 		case TK_VOLUME:
 			EXP(TK_INTEGER);
