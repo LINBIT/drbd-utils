@@ -1446,13 +1446,23 @@ static struct hname_address *parse_hname_address_pair(struct connection *conn, i
 	parse_address:
 		__parse_address(&ha->address);
 		ha->parsed_address = 1;
-		EXP(';');
-		break;
+		goto parse_optional_via;
 	case TK_PORT:
 		EXP(TK_INTEGER);
 		ha->address.port = yylval.txt;
 		ha->parsed_port = 1;
-		EXP(';');
+
+	parse_optional_via:
+		token = yylex();
+		if (token == TK_VIA) {
+			EXP(TK_PROXY);
+			ha->proxy = parse_proxy_section();
+		} else if (token != ';')
+			pe_expected_got( "via | ; ", token);
+		break;
+	case TK_VIA:
+		EXP(TK_PROXY);
+		ha->proxy = parse_proxy_section();
 		break;
 	case ';':
 		break;

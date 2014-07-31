@@ -148,7 +148,7 @@ struct d_host_info
 	struct names on_hosts;
 	struct volumes volumes;
 	struct d_address address;
-	struct d_proxy_info *proxy;
+	struct d_proxy_info *proxy; /* parsed here, only for 8.4 compatibility */
 	STAILQ_ENTRY(d_host_info) link;
 	struct d_resource* lower;  /* for device stacking */
 	char *lower_name;          /* for device stacking, before bind_stacked_res() */
@@ -168,6 +168,7 @@ struct hname_address
 	char *name;			/* parsed */
 	int config_line;		/* parsed here */
 	struct d_address address;	/* parsed */
+	struct d_proxy_info *proxy;     /* parsed here */
 	struct d_host_info *host_info;	/* determined in post_parse */
 	unsigned int used_as_me:1;
 	unsigned int faked_hostname;

@@ -59,6 +59,7 @@ no			{ DP; return TK_NO;			}
 net			{ DP; return TK_NET;			}
 yes			{ DP; return TK_YES;			}
 ask			{ DP; return TK_ASK;			}
+via			{ DP; return TK_VIA;			}
 skip			{ DP; return TK_SKIP;			}
 disk			{ DP; return TK_DISK;			}
 host			{ DP; return TK_HOST;			}

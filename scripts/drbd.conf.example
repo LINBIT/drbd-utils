@@ -195,21 +195,33 @@ resource drbd_9_two_connection {
 		ko-count 3;
 	}
 
-	connection "optinal name" {
+	connection "optional name" {
 		host alpha;
 		host bravo;
 		net { protocol C; }
 	}
 
 	connection {
-		host alpha port 7801;
-		host charlie address 192.168.31.3:7801;
+		host alpha address 127.0.0.1:7800 via proxy on alpha {
+			inside 127.0.0.2:7800;
+			outside 192.168.31.1:7801;
+		}
+		host charlie address 127.0.0.1:7800 via proxy on charlie {
+			inside 127.0.0.2:7800;
+			outside 192.168.31.3:7800;
+		}
 		net { protocol A; }
 	}
 
 	connection {
-		host bravo port 7802;
-		host charlie port 7802;
+		host bravo address 127.0.0.1:7800 via proxy on bravo {
+			inside 127.0.0.2:7800;
+			outside 192.168.31.2:7801;
+		}
+		host charlie address 127.0.0.1:7800 via proxy on charlie {
+			inside 127.0.0.2:7800;
+			outside 192.168.31.3:7800;
+		}
 		net { protocol A; }
 	}
 }
