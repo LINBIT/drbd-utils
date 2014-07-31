@@ -304,6 +304,7 @@ void set_me_in_resource(struct d_resource* res, int match_on_proxy)
 		if (h) {
 			h->used_as_me = 1;
 			conn->my_address = h->address.addr ? &h->address : &res->me->address;
+			conn->my_proxy = h->proxy;
 		} else {
 			conn->ignore = 1;
 		}
@@ -352,7 +353,8 @@ static void set_peer_in_connection(struct d_resource* res, struct connection *co
 		host_info = find_host_info_by_name(res, candidate->name);
 		conn->peer = host_info;
 		conn->peer_address = candidate->address.addr ? &candidate->address : &host_info->address;
-		conn->connect_to = host_info->proxy ? &host_info->proxy->inside : conn->peer_address;
+		conn->peer_proxy = candidate->proxy;
+		conn->connect_to = conn->my_proxy ? &conn->my_proxy->inside : conn->peer_address;
 		return;
 	}
 

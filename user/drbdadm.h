@@ -190,6 +190,8 @@ struct connection
 	struct d_address *my_address; /* determined in set_me_in_resource() */
 	struct d_address *peer_address;
 	struct d_address *connect_to;
+	struct d_proxy_info *my_proxy;
+	struct d_proxy_info *peer_proxy;
 
 	struct options net_options; /* parsed here, inherited from res, used here */
 	unsigned int ignore:1;
