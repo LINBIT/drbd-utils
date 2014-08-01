@@ -1615,30 +1615,27 @@ void free_opt(struct d_option *item)
 
 int _proxy_connect_name_len(const struct cfg_ctx *ctx)
 {
-	struct d_resource *res = ctx->res;
 	struct connection *conn = ctx->conn;
 
-	return strlen(res->name) +
-		strlen(names_to_str_c(&conn->peer->proxy->on_hosts, '_')) +
-		strlen(names_to_str_c(&res->me->proxy->on_hosts, '_')) +
+	return strlen(ctx->res->name) +
+		strlen(names_to_str_c(&conn->peer_proxy->on_hosts, '_')) +
+		strlen(names_to_str_c(&conn->my_proxy->on_hosts, '_')) +
 		3 /* for the two dashes and the trailing 0 character */;
 }
 
 char *_proxy_connection_name(char *conn_name, const struct cfg_ctx *ctx)
 {
-	struct d_resource *res = ctx->res;
 	struct connection *conn = ctx->conn;
 
 	sprintf(conn_name, "%s-%s-%s",
-		res->name,
-		names_to_str_c(&conn->peer->proxy->on_hosts, '_'),
-		names_to_str_c(&res->me->proxy->on_hosts, '_'));
+		ctx->res->name,
+		names_to_str_c(&conn->peer_proxy->on_hosts, '_'),
+		names_to_str_c(&conn->my_proxy->on_hosts, '_'));
 	return conn_name;
 }
 
 int do_proxy_conn_up(const struct cfg_ctx *ctx)
 {
-	struct d_resource *res = ctx->res;
 	struct connection *conn = ctx->conn;
 	char *argv[4] = { drbd_proxy_ctl, "-c", NULL, NULL };
 	char *conn_name;
@@ -1649,22 +1646,22 @@ int do_proxy_conn_up(const struct cfg_ctx *ctx)
 	argv[2] = ssprintf(
 		 "add connection %s %s:%s %s:%s %s:%s %s:%s",
 		 conn_name,
-		 res->me->proxy->inside.addr,
-		 res->me->proxy->inside.port,
-		 conn->peer->proxy->outside.addr,
-		 conn->peer->proxy->outside.port,
-		 res->me->proxy->outside.addr,
-		 res->me->proxy->outside.port,
-		 res->me->address.addr,
-		 res->me->address.port);
+		 conn->my_proxy->inside.addr,
+		 conn->my_proxy->inside.port,
+		 conn->peer_proxy->outside.addr,
+		 conn->peer_proxy->outside.port,
+		 conn->my_proxy->outside.addr,
+		 conn->my_proxy->outside.port,
+		 conn->my_address->addr,
+		 conn->my_address->port);
 
-	rv = m_system_ex(argv, SLEEPS_SHORT, res->name);
+	rv = m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
 	return rv;
 }
 
 int do_proxy_conn_plugins(const struct cfg_ctx *ctx)
 {
-	struct d_resource *res = ctx->res;
+	struct connection *conn = ctx->conn;
 	char *argv[MAX_ARGS];
 	char *conn_name;
 	int argc = 0;
@@ -1675,7 +1672,7 @@ int do_proxy_conn_plugins(const struct cfg_ctx *ctx)
 
 	argc = 0;
 	argv[NA(argc)] = drbd_proxy_ctl;
-	STAILQ_FOREACH(opt, &res->me->proxy->options, link) {
+	STAILQ_FOREACH(opt, &conn->my_proxy->options, link) {
 		argv[NA(argc)] = "-c";
 		argv[NA(argc)] = ssprintf("set %s %s %s",
 			 opt->name, conn_name, opt->value);
@@ -1684,8 +1681,8 @@ int do_proxy_conn_plugins(const struct cfg_ctx *ctx)
 	counter = 0;
 	/* Don't send the "set plugin ... END" line if no plugins are defined
 	 * - that's incompatible with the drbd proxy version 1. */
-	if (!STAILQ_EMPTY(&res->me->proxy->plugins)) {
-		STAILQ_FOREACH(opt, &res->me->proxy->plugins, link) {
+	if (!STAILQ_EMPTY(&conn->my_proxy->plugins)) {
+		STAILQ_FOREACH(opt, &conn->my_proxy->plugins, link) {
 			argv[NA(argc)] = "-c";
 			argv[NA(argc)] = ssprintf("set plugin %s %d %s",
 					conn_name, counter, opt->name);
@@ -1696,7 +1693,7 @@ int do_proxy_conn_plugins(const struct cfg_ctx *ctx)
 
 	argv[NA(argc)] = 0;
 	if (argc > 2)
-		return m_system_ex(argv, SLEEPS_SHORT, res->name);
+		return m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
 
 	return 0;
 }
@@ -1717,32 +1714,37 @@ int do_proxy_conn_down(const struct cfg_ctx *ctx)
 
 static int check_proxy(const struct cfg_ctx *ctx, int do_up)
 {
-	struct d_resource *res = ctx->res;
 	struct connection *conn = ctx->conn;
 	int rv;
 
-	if (!res->me->proxy) {
+	if (!conn->my_proxy) {
 		if (all_resources)
 			return 0;
 		fprintf(stderr,
-			"There is no proxy config for host %s in resource %s.\n",
-			hostname, res->name);
+			"%s:%d: In resource '%s',no proxy config for connection %sfrom '%s' to '%s'%s.\n",
+			ctx->res->config_file,
+			conn->config_line,
+			ctx->res->name,
+			conn->name ? ssprintf("'%s' (", conn->name) : "",
+			hostname,
+			names_to_str(&conn->peer->on_hosts),
+			conn->name ? ")" : "");
 		exit(E_CONFIG_INVALID);
 	}
 
-	if (!hostname_in_list(hostname, &res->me->proxy->on_hosts)) {
+	if (!hostname_in_list(hostname, &conn->my_proxy->on_hosts)) {
 		if (all_resources)
 			return 0;
 		fprintf(stderr,
 			"The proxy config in resource %s is not for %s.\n",
-			res->name, hostname);
+			ctx->res->name, hostname);
 		exit(E_CONFIG_INVALID);
 	}
 
-	if (!conn->peer->proxy) {
+	if (!conn->peer_proxy) {
 		fprintf(stderr,
 			"There is no proxy config for the peer in resource %s.\n",
-			res->name);
+			ctx->res->name);
 		if (all_resources)
 			return 0;
 		exit(E_CONFIG_INVALID);

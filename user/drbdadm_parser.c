@@ -1179,7 +1179,7 @@ static void parse_host_section(struct d_resource *res,
 			range_check(R_PORT, "port", host->address.port);
 			break;
 		case TK_PROXY:
-			host->proxy = parse_proxy_section();
+			host->proxy_compat_only = parse_proxy_section();
 			break;
 		case TK_VOLUME:
 			EXP(TK_INTEGER);
@@ -1276,7 +1276,7 @@ void parse_stacked_section(struct d_resource* res)
 			range_check(R_PORT, "port", yylval.txt);
 			break;
 		case TK_PROXY:
-			host->proxy = parse_proxy_section();
+			host->proxy_compat_only = parse_proxy_section();
 			break;
 		case TK_VOLUME:
 			EXP(TK_INTEGER);
@@ -1397,10 +1397,12 @@ static int parse_proxy_options(struct options *proxy_options, struct options *pr
 	return 0;
 }
 
-int parse_proxy_options_section(struct d_proxy_info *proxy)
+int parse_proxy_options_section(struct d_proxy_info **pp)
 {
 	int token;
+	struct d_proxy_info *proxy;
 
+	proxy = *pp ? *pp : calloc(1, sizeof(struct d_proxy_info));
 	token = yylex();
 	if (token != TK_PROXY) {
 		yyrestart(yyin); /* flushes flex's buffers */

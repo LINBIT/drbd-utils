@@ -303,8 +303,8 @@ static void dump_host_info(struct d_host_info *hi)
 
 	if (!hi->by_address && hi->address.addr)
 		dump_address("address", &hi->address, ";\n");
-	if (hi->proxy && !verbose)
-		dump_proxy_info("", hi->proxy);
+	if (hi->proxy_compat_only && !verbose)
+		dump_proxy_info("", hi->proxy_compat_only);
 	--indent;
 	printI("}\n");
 }

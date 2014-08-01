@@ -148,7 +148,7 @@ struct d_host_info
 	struct names on_hosts;
 	struct volumes volumes;
 	struct d_address address;
-	struct d_proxy_info *proxy; /* parsed here, only for 8.4 compatibility */
+	struct d_proxy_info *proxy_compat_only; /* parsed here, only for 8.4 compatibility */
 	STAILQ_ENTRY(d_host_info) link;
 	struct d_resource* lower;  /* for device stacking */
 	char *lower_name;          /* for device stacking, before bind_stacked_res() */
@@ -391,7 +391,7 @@ extern char *_proxy_connection_name(char *conn_name, const struct cfg_ctx *ctx);
 	_proxy_connection_name(alloca(_proxy_connect_name_len(RES)), RES)
 extern struct d_resource *res_by_name(const char *name);
 extern struct d_host_info *find_host_info_by_name(struct d_resource* res, char *name);
-int parse_proxy_options_section(struct d_proxy_info *proxy);
+int parse_proxy_options_section(struct d_proxy_info **proxy);
 /* conn_name is optional and mostly for compatibility with dcmd */
 int do_proxy_conn_up(const struct cfg_ctx *ctx);
 int do_proxy_conn_down(const struct cfg_ctx *ctx);

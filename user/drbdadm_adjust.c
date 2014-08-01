@@ -278,10 +278,10 @@ int _is_plugin_in_list(char *string,
 }
 
 
-static int proxy_reconf(const struct cfg_ctx *ctx, struct d_resource *running)
+static int proxy_reconf(const struct cfg_ctx *ctx, struct connection *running_conn)
 {
 	int reconn = 0;
-	struct d_resource *res = ctx->res;
+	struct connection *conn = ctx->conn;
 	struct d_option* res_o, *run_o;
 	unsigned long long v1, v2, minimum;
 	char *plugin_changes[MAX_PLUGINS], *cp, *conn_name;
@@ -293,11 +293,11 @@ static int proxy_reconf(const struct cfg_ctx *ctx, struct d_resource *running)
 
 	reconn = 0;
 
-	if (!running)
+	if (!running_conn)
 		goto redo_whole_conn;
 
-	res_o = find_opt(&res->me->proxy->options, "memlimit");
-	run_o = find_opt(&running->proxy_options, "memlimit");
+	res_o = find_opt(&conn->my_proxy->options, "memlimit");
+	run_o = find_opt(&running_conn->my_proxy->options, "memlimit");
 	v1 = res_o ? m_strtoll(res_o->value, 1) : 0;
 	v2 = run_o ? m_strtoll(run_o->value, 1) : 0;
 	minimum = v1 < v2 ? v1 : v2;
@@ -306,18 +306,13 @@ static int proxy_reconf(const struct cfg_ctx *ctx, struct d_resource *running)
 	if (res_o &&
 			(!run_o || abs(v1-v2)/(float)minimum > 0.02))
 	{
-		struct connection *conn;
 redo_whole_conn:
 		/* As the memory is in use while the connection is allocated we have to
 		 * completely destroy and rebuild the connection. */
 
-		for_each_connection(conn, &ctx->res->connections) {
-			struct cfg_ctx tmp_ctx = { .res = ctx->res, .conn = conn };
-
-			schedule_deferred_cmd(&proxy_conn_down_cmd, &tmp_ctx, CFG_NET_PREREQ);
-			schedule_deferred_cmd(&proxy_conn_up_cmd, &tmp_ctx, CFG_NET_PREREQ);
-			schedule_deferred_cmd(&proxy_conn_plugins_cmd, &tmp_ctx, CFG_NET_PREREQ);
-		}
+		schedule_deferred_cmd(&proxy_conn_down_cmd, ctx, CFG_NET_PREREQ);
+		schedule_deferred_cmd(&proxy_conn_up_cmd, ctx, CFG_NET_PREREQ);
+		schedule_deferred_cmd(&proxy_conn_plugins_cmd, ctx, CFG_NET_PREREQ);
 
 		/* With connection cleanup and reopen everything is rebuild anyway, and
 		 * DRBD will get a reconnect too.  */
@@ -325,8 +320,8 @@ redo_whole_conn:
 	}
 
 
-	res_o = STAILQ_FIRST(&res->me->proxy->plugins);
-	run_o = STAILQ_FIRST(&running->proxy_plugins);
+	res_o = STAILQ_FIRST(&conn->my_proxy->plugins);
+	run_o = STAILQ_FIRST(&running_conn->my_proxy->plugins);
 	used = 0;
 	conn_name = proxy_connection_name(ctx);
 	for(i=0; i<MAX_PLUGINS; i++)
@@ -602,8 +597,8 @@ int adm_adjust(const struct cfg_ctx *ctx)
 	 * FIXME what about "zombie" proxy settings, if we remove proxy
 	 * settings from the config file without prior proxy-down, this won't
 	 * clean them from the proxy. */
-	if (ctx->res->me->proxy && running) {
-		for_each_connection(conn, &ctx->res->connections) {
+	if (running) {
+		for_each_connection(conn, &running->connections) {
 			struct cfg_ctx tmp_ctx = { .res = ctx->res, .conn = conn };
 			char *show_conn;
 			int r;
@@ -621,7 +616,7 @@ int adm_adjust(const struct cfg_ctx *ctx)
 
 			/* actually parse "drbd-proxy-ctl show" output */
 			yyin = m_popen(&pid, argv);
-			r = !parse_proxy_options_section(running->me->proxy);
+			r = !parse_proxy_options_section(&conn->my_proxy);
 			printf("r=%d\n", r);
 			can_do_proxy &= r;
 			fclose(yyin);
@@ -665,10 +660,11 @@ int adm_adjust(const struct cfg_ctx *ctx)
 			if (!opts_equal(&net_options_ctx, &conn->net_options, &running_conn->net_options))
 				schedule_deferred_cmd(&net_options_defaults_cmd, &tmp_ctx, CFG_NET);
 		}
+
+		if (conn->my_proxy && can_do_proxy)
+			proxy_reconf(ctx, running_conn);
 	}
 
-	if (ctx->res->me->proxy && can_do_proxy)
-		proxy_reconf(ctx, running);
 
 	if (do_res_options)
 		schedule_deferred_cmd(&res_options_defaults_cmd, ctx, CFG_RESOURCE);
