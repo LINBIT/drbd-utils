@@ -330,7 +330,7 @@
 	  <primary>drbd.conf</primary>
 
 	  <secondary>on-io-error</secondary>
-	</indexterm> Configure how DRBD reacts to an I/O errors on a
+	</indexterm> Configure how DRBD reacts to I/O errors on a
 	lower-level device. The following policies are defined:
 
 	<variablelist>
