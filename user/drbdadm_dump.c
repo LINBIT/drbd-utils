@@ -217,9 +217,9 @@ static void dump_address(char *name, struct d_address *address, char *postfix)
 		printI(IPV4FMT, name, address->af, address->addr, address->port, postfix);
 }
 
-static void dump_proxy_info(struct d_proxy_info *pi)
+static void dump_proxy_info(const char *prefix, struct d_proxy_info *pi)
 {
-	printI("proxy on %s {\n", names_to_str(&pi->on_hosts));
+	printI("%sproxy on %s {\n", prefix, names_to_str(&pi->on_hosts));
 	++indent;
 	dump_address("inside", &pi->inside, ";\n");
 	dump_address("outside", &pi->outside, ";\n");
@@ -303,8 +303,8 @@ static void dump_host_info(struct d_host_info *hi)
 
 	if (!hi->by_address && hi->address.addr)
 		dump_address("address", &hi->address, ";\n");
-	if (hi->proxy)
-		dump_proxy_info(hi->proxy);
+	if (hi->proxy && !verbose)
+		dump_proxy_info("", hi->proxy);
 	--indent;
 	printI("}\n");
 }
@@ -325,16 +325,19 @@ static void dump_connection(struct connection *conn)
 	STAILQ_FOREACH(ha, &conn->hname_address_pairs, link) {
 		if (ha->by_address || ha->faked_hostname) {
 			dump_address("address", &ha->address,
-				     ssprintf("; # on %s\n", ha->name));
-			continue;
+				ssprintf("%s# on %s\n", ha->proxy ? " " : "; ", ha->name));
+		} else {
+			printI("host %s", ha->name);
+			if (ha->parsed_address || (verbose && ha->address.addr))
+				dump_address(" address", &ha->address,
+					     ha->proxy ? "\n" : ";\n");
+			else if (ha->parsed_port)
+				printf(" port %s%s\n", ha->address.port,
+					ha->proxy ? "" : ";");
 		}
-		printI("host %s", ha->name);
-		if (ha->parsed_address || (verbose && ha->address.addr))
-			dump_address(" address", &ha->address, ";\n");
-		else if (ha->parsed_port)
-			printf(" port %s;\n", ha->address.port);
-		else
-			printf(";\n");
+
+		if (ha->proxy)
+			dump_proxy_info("via ", ha->proxy);
 	}
 
 	dump_options("net", &conn->net_options);
@@ -476,8 +479,6 @@ static void dump_host_info_xml(struct d_host_info *hi)
 
 	printI("<address family=\"%s\" port=\"%s\">%s</address>\n",
 	       hi->address.af, hi->address.port, hi->address.addr);
-	if (hi->proxy)
-		dump_proxy_info_xml(hi->proxy);
 	--indent;
 	printI("</host>\n");
 }
@@ -494,6 +495,11 @@ static void dump_connection_xml(struct connection *conn)
 
 	STAILQ_FOREACH(ha, &conn->hname_address_pairs, link) {
 		printI("<host name=\"%s\">", ha->name);
+		if (ha->proxy) {
+			printf("\n");
+			++indent;
+			printI("");
+		}
 		if (ha->address.addr)
 			printf("<address family=\"%s\" port=\"%s\">%s</address>",
 			       ha->address.af, ha->address.port, ha->address.addr);
@@ -501,7 +507,14 @@ static void dump_connection_xml(struct connection *conn)
 			printf("<address family=\"%s\" port=\"%s\">%s</address>",
 			       ha->host_info->address.af, ha->host_info->address.port,
 			       ha->host_info->address.addr);
-		printf("</host>\n");
+		if (ha->proxy) {
+			printf("\n");
+			dump_proxy_info_xml(ha->proxy);
+			--indent;
+			printI("</host>\n");
+		} else {
+			printf("</host>\n");
+		}
 	}
 
 	dump_options_xml("net", &conn->net_options);
