@@ -109,6 +109,26 @@ AC_SUBST(WITH_PACEMAKER)
 AC_SUBST(WITH_RGMANAGER)
 AC_SUBST(WITH_BASHCOMPLETION)
 
+dnl Do we know where systemd unit files go?
+PKG_PROG_PKG_CONFIG
+AC_ARG_WITH([systemdunitdir],
+	[AC_HELP_STRING([--with-systemdunitdir=DIR],
+        	        [Directory for systemd service files [Auto]])],
+	[WITH_SYSTEMD_UNIT_DIR=$withval])
+if test x"$with_systemdunitdir" = x || \
+   test x"$with_systemdunitdir" = xyes ; then
+	if test x"$PKG_CONFIG" != x; then
+		systemdunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
+	fi
+	if test x"$systemdunitdir" = x; then
+		AC_MSG_NOTICE([Could not detect systemd unit directory])
+	fi
+else
+	systemdunitdir=$with_systemdunitdir
+fi
+AC_SUBST(systemdunitdir)
+AC_MSG_NOTICE([Using systemd unit directory: $systemdunitdir])
+
 dnl Checks for programs
 AC_PROG_CC
 AC_PROG_LN_S

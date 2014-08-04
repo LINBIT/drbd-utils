@@ -3,6 +3,7 @@
 # for those that expect an autogen.sh,
 # here it is.
 
+aclocal
 autoheader
 autoconf
 
