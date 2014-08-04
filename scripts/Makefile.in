@@ -32,6 +32,7 @@ datadir = @datadir@
 sbindir = @sbindir@
 sysconfdir = @sysconfdir@
 systemdunitdir = @systemdunitdir@
+initscripttype = @initscripttype@
 BASH_COMPLETION_SUFFIX = @BASH_COMPLETION_SUFFIX@
 UDEV_RULE_SUFFIX = @UDEV_RULE_SUFFIX@
 INITDIR = @INITDIR@
@@ -53,8 +54,15 @@ all:
 install: install-utils install-udev install-xen install-pacemaker install-rgmanager install-bashcompletion
 
 install-utils:
+ifneq ($(initscripttype),systemd)	# "sysv" or "both"
 	install -d $(DESTDIR)$(INITDIR)
 	install -m 755 drbd $(DESTDIR)$(INITDIR)/
+endif
+# yes, debian apparently allows installing both types from the same package
+ifneq ($(initscripttype),sysv)		# "systemd" or "both"
+	install -d $(DESTDIR)$(systemdunitdir)
+	install -m 755 drbd.service $(DESTDIR)$(systemdunitdir)/
+endif
 	@ if [ ! -e $(DESTDIR)$(sysconfdir)/drbd.conf ]; then \
 		install -d $(DESTDIR)$(sysconfdir)/; \
 		install -m 644 drbd.conf $(DESTDIR)$(sysconfdir)/; \
@@ -138,7 +146,12 @@ clean:
 distclean: clean
 
 uninstall:
+ifneq ($(initscripttype),systemd)	# "sysv" or "both"
 	rm -f $(DESTDIR)$(INITDIR)/drbd
+endif
+ifneq ($(initscripttype),sysv)		# "systemd" or "both"
+	rm -f $(DESTDIR)$(systemdunitdir)/drbd.service
+endif
 	rm -f $(DESTDIR)$(sysconfdir)/ha.d/resource.d/drbddisk
 	rm -f $(DESTDIR)$(sysconfdir)/ha.d/resource.d/drbdupper
 	rm -f $(DESTDIR)$(sysconfdir)/xen/scripts/block-drbd

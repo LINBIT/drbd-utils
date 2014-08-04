@@ -129,6 +129,21 @@ fi
 AC_SUBST(systemdunitdir)
 AC_MSG_NOTICE([Using systemd unit directory: $systemdunitdir])
 
+AC_ARG_WITH([initscripttype],
+	    [AS_HELP_STRING([--with-initscripttype=INIT_SCRIPT_TYPE],
+			    [Type of init script to install (sysv|systemd|both). [sysv]])
+	    ])
+default_initscripttype=sysv
+case "$with_initscripttype" in
+	"")
+		initscripttype=$default_initscripttype ;;
+	sysv|systemd|both)
+		initscripttype=$with_initscripttype ;;
+	*)
+		AC_MSG_ERROR([Illegal value -$with_initscripttype- for option --with-initscripttype]) ;;
+esac
+AC_SUBST(initscripttype)
+
 dnl Checks for programs
 AC_PROG_CC
 AC_PROG_LN_S
