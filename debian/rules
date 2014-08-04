@@ -13,10 +13,18 @@ override_dh_auto_clean:
 	dh_auto_clean
 	rm -f debian/drbd-utils.drbd.init
 
-override_dh_auto_configure:
-	./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc \
+configure_with = --prefix=/usr --localstatedir=/var --sysconfdir=/etc \
 		--sbindir=/usr/sbin --with-udev --with-xen \
 		--with-pacemaker --with-rgmanager --with-bashcompletion
+ifneq	($(WITH_SYSTEMD),)
+configure_with += --with-systemdunitdir=/lib/systemd/system \
+		--with-initscripttype=both
+# alternatively: --with-initscripttype=systemd,
+# if you want to drop the sysv script from the package. 
+# Need to adjust below, in that case.
+endif
+override_dh_auto_configure:
+	./configure $(configure_with)
 
 override_dh_auto_install:
 	dh_auto_install --destdir debian/drbd-utils
@@ -26,6 +34,10 @@ override_dh_install:
 
 	# Place the initscript where dh_installinit can find it
 	mv $(CURDIR)/debian/drbd-utils/etc/init.d/drbd $(CURDIR)/debian/drbd-utils.drbd.init
+ifneq	($(WITH_SYSTEMD),)
+	# Place the systemd service script ...
+	mv $(CURDIR)/debian/drbd-utils/lib/systemd/system/drbd.service $(CURDIR)/debian/ || :
+endif
 
 override_dh_installinit:
 	dh_installinit --name=drbd --no-start
