@@ -10,6 +10,16 @@
 %{!?with:          %{expand: %%global with()          %%{expand:%%%%{?with_%%{1}:1}%%%%{!?with_%%{1}:0}}}}
 %{!?without:       %{expand: %%global without()       %%{expand:%%%%{?with_%%{1}:0}%%%%{!?with_%%{1}:1}}}}
 
+%if 0%{!?initscripttype:1}
+# initscripttype not explicitly defined in some macro file or on commandline
+# use presence of systemd_post macro to determine the initscripttype
+%if %{?systemd_post:1}%{!?systemd_post:0}
+%global initscripttype systemd
+%else
+%global initscripttype sysv
+%endif
+%endif
+
 # Conditionals
 # Invoke "rpmbuild --without <feature>" or "rpmbuild --with <feature>"
 # to disable or enable specific features
@@ -127,7 +137,11 @@ This packages includes the DRBD administration tools.
 /lib/drbd/drbdsetup-84
 /lib/drbd/drbdadm-84
 %endif
+%if %{initscripttype} == "systemd"
+%{_unitdir}/drbd.service
+%else
 %{_initddir}/drbd
+%endif
 %{_sbindir}/drbd-overview
 %dir %{_prefix}/lib/drbd
 %{_prefix}/lib/drbd/outdate-peer.sh
@@ -309,7 +323,8 @@ management utility.
     %{?_without_bashcompletion} \
     %{?_without_legacy_utils} \
     %{?_without_legacy_utils_84} \
-    --with-initdir=%{_initddir}
+    --with-initdir=%{_initddir} \
+    --with-initscripttype=%{initscripttype}
 make %{?_smp_mflags}
 make doc
 
@@ -333,7 +348,11 @@ ln -sv ..%{_sbindir}/drbdsetup .
 rm -rf %{buildroot}
 
 %post utils
+%if %{initscripttype} == "systemd"
+%systemd_post drbd.service
+%else
 chkconfig --add drbd
+%endif
 for f in drbd drbdadm drbdmeta drbdsetup; do
     ln -s $f-8.4.8.gz %{_mandir}/man8/$f.8.gz
 done
@@ -349,10 +368,20 @@ for f in drbd drbdadm drbdmeta drbdsetup; do
     rm %{_mandir}/man8/$f.8.gz
 done
 rm %{_mandir}/man5/drbd.conf.5.gz
+%if %{initscripttype} == "systemd"
+%systemd_preun drbd.service
+%else
 if [ $1 -eq 0 ]; then
         %{_initrddir}/drbd stop >/dev/null 2>&1
         /sbin/chkconfig --del drbd
 fi
+%endif
+
+%if %{initscripttype} == "systemd"
+%postun utils
+%systemd_postun
+%endif
+
 
 %changelog
 * Tue Jun 10 2014 Philipp Reisner <phil@linbit.com> - 8.9.0-1
