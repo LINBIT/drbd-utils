@@ -32,6 +32,7 @@ datadir = @datadir@
 sbindir = @sbindir@
 sysconfdir = @sysconfdir@
 systemdunitdir = @systemdunitdir@
+udevdir = @udevdir@
 initscripttype = @initscripttype@
 BASH_COMPLETION_SUFFIX = @BASH_COMPLETION_SUFFIX@
 UDEV_RULE_SUFFIX = @UDEV_RULE_SUFFIX@
@@ -129,8 +130,8 @@ endif
 
 install-udev:
 ifeq ($(WITH_UDEV),yes)
-	mkdir -p $(DESTDIR)/lib/udev/rules.d
-	install -m 644 drbd.rules $(DESTDIR)/lib/udev/rules.d/65-drbd.rules$(UDEV_RULE_SUFFIX)
+	mkdir -p $(DESTDIR)$(udevdir)
+	install -m 644 drbd.rules $(DESTDIR)$(udevdir)/65-drbd.rules$(UDEV_RULE_SUFFIX)
 endif
 
 install-bashcompletion:

@@ -126,7 +126,22 @@ else
 	systemdunitdir=$with_systemdunitdir
 fi
 AC_SUBST(systemdunitdir)
-AC_MSG_NOTICE([Using systemd unit directory: $systemdunitdir])
+AC_MSG_RESULT([Using systemd unit directory: $systemdunitdir])
+
+# set default early
+udevdir=/lib/udev
+if test x"$with_udev" = x || \
+   test x"$with_udev" = xyes ; then
+	if test x"$PKG_CONFIG" != x; then
+		udevdir=$($PKG_CONFIG --variable=udevdir udev)
+	fi
+	if test x"$udevdir" = x; then
+		AC_MSG_NOTICE([Could not detect udev rules directory, using default])
+	fi
+	AC_MSG_RESULT([Using udev rules directory: $udevdir])
+fi
+dnl always replace, even if not used
+AC_SUBST(udevdir)
 
 AC_ARG_WITH([initscripttype],
 	    [AS_HELP_STRING([--with-initscripttype=INIT_SCRIPT_TYPE],
