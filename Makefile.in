@@ -192,7 +192,7 @@ rpm: tgz drbd.spec
 
 .PHONY: srpm
 srpm: tgz drbd.spec
-	cp drbd-$(FDIST_VERSION).tar.gz `rpm -E "%_sourcedir"`
+	cp drbd-utils-$(FDIST_VERSION).tar.gz `rpm -E "%_sourcedir"`
 	$(RPMBUILD) -bs \
 		$(RPMOPT) \
 		drbd.spec
