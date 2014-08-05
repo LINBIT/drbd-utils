@@ -7,6 +7,12 @@
 #include <net/if.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <fcntl.h>
+
+#ifndef O_CLOEXEC
+#warning "O_CLOEXEC undefined, redefining to 0"
+#define O_CLOEXEC 0
+#endif
 
 #include "config.h"
 
