@@ -145,12 +145,15 @@ AC_SUBST(udevdir)
 
 AC_ARG_WITH([initscripttype],
 	    [AS_HELP_STRING([--with-initscripttype=INIT_SCRIPT_TYPE],
-			    [Type of init script to install (sysv|systemd|both). [sysv]])
+			    [Type of init script to install (sysv|systemd|both). [auto]])
 	    ])
-default_initscripttype=sysv
 case "$with_initscripttype" in
 	"")
-		initscripttype=$default_initscripttype ;;
+		if grep -ql systemd /sbin/init ; then
+			initscripttype=systemd
+		else
+			initscripttype=sysv
+		fi ;;
 	sysv|systemd|both)
 		initscripttype=$with_initscripttype ;;
 	*)
