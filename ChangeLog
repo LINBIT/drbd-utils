@@ -2,6 +2,21 @@ Latest:
 ------
  For even more detail, use "git log" or visit http://git.drbd.org/.
 
+8.9.1
+--------
+  * add DRBD systemd service
+  * new configuration options socket-check-timeout and csums-after-crash-only
+  * update xen block-drbd helper: allow for type "phy"
+  * update udev rules and move from /etc/ to /lib/
+  * fix various regressions/fallout from the kernel/userland package split,
+    re-add scripts drbddisk and drbdupper,
+    re-add "become-on-primary" feature to init script
+  * crm-fence-peer.sh: improve detection of "clean down"
+  * updated fencing scripts stonith_admin-fence-peer.sh and rhcs_fence
+  * improved "proxy" configuration section parsing
+  * added manpage for drbd-overview, minor review of man pages
+  * build: various changes in configure.ac, makefiles, debian/* and spec file
+
 8.9.0
 --------
   * Initial release of unified drbd-utils
