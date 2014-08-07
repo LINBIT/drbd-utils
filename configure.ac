@@ -129,7 +129,7 @@ AC_SUBST(systemdunitdir)
 AC_MSG_RESULT([Using systemd unit directory: $systemdunitdir])
 
 # set default early
-udevdir=/lib/udev
+default_udevdir=/lib/udev
 if test x"$with_udev" = x || \
    test x"$with_udev" = xyes ; then
 	if test x"$PKG_CONFIG" != x; then
@@ -137,8 +137,11 @@ if test x"$with_udev" = x || \
 	fi
 	if test x"$udevdir" = x; then
 		AC_MSG_NOTICE([Could not detect udev rules directory, using default])
+		udevdir=$default_udevdir
 	fi
 	AC_MSG_RESULT([Using udev rules directory: $udevdir])
+else
+	udevdir=$default_udevdir
 fi
 dnl always replace, even if not used
 AC_SUBST(udevdir)
