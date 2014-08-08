@@ -1,3 +1,10 @@
+drbd-utils (8.9.1+linbit-3) unstable; urgency=medium
+
+  * rebuild: fixed default in case pkg-config does not know about udevdir
+  * fixed udev generated "by-disk" symlinks for drbd 8.4
+
+ -- Lars Ellenberg <lars@linbit.com>  Fri, 08 Aug 2014 13:32:04 +0200
+
 drbd-utils (8.9.1+linbit-1) unstable; urgency=medium
 
   * New upstream release
