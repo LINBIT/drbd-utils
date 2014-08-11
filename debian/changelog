@@ -1,9 +1,12 @@
-drbd-utils (8.9.1+linbit-3) unstable; urgency=medium
+drbd-utils (8.9.1+linbit-4) unstable; urgency=medium
 
+  * some more patches had been only merged into the "9" tools,
+    but unfortunately not the 8.4 tool compat tools
+  * place udev rules into $udevdir/*rules.d*
   * rebuild: fixed default in case pkg-config does not know about udevdir
   * fixed udev generated "by-disk" symlinks for drbd 8.4
 
- -- Lars Ellenberg <lars@linbit.com>  Fri, 08 Aug 2014 13:32:04 +0200
+ -- Lars Ellenberg <lars@linbit.com>  Mon, 11 Aug 2014 14:37:29 +0200
 
 drbd-utils (8.9.1+linbit-1) unstable; urgency=medium
 
