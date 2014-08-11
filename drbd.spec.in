@@ -203,7 +203,7 @@ DRBD devices in /dev/drbd/by-res and /dev/drbd/by-disk.
 
 %files udev
 %defattr(-,root,root,-)
-%config @udevdir@/65-drbd.rules*
+%config @udevrulesdir@/65-drbd.rules*
 %endif # with udev
 
 %if %{with pacemaker}

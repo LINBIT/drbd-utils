@@ -145,6 +145,8 @@ else
 fi
 dnl always replace, even if not used
 AC_SUBST(udevdir)
+udevrulesdir=$udevdir/rules.d
+AC_SUBST(udevrulesdir)
 
 AC_ARG_WITH([initscripttype],
 	    [AS_HELP_STRING([--with-initscripttype=INIT_SCRIPT_TYPE],
