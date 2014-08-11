@@ -354,9 +354,9 @@ rm -rf %{buildroot}
 chkconfig --add drbd
 %endif
 for f in drbd drbdadm drbdmeta drbdsetup; do
-    ln -s $f-8.4.8.gz %{_mandir}/man8/$f.8.gz
+    ln -sf $f-8.4.8.gz %{_mandir}/man8/$f.8.gz
 done
-ln -s drbd.conf-8.4.5.gz %{_mandir}/man5/drbd.conf.5.gz
+ln -sf drbd.conf-8.4.5.gz %{_mandir}/man5/drbd.conf.5.gz
 %if %{without udev}
 for i in `seq 0 15` ; do
     test -b /dev/drbd$i || mknod -m 0660 /dev/drbd$i b 147 $i;
@@ -365,9 +365,9 @@ done
 
 %preun utils
 for f in drbd drbdadm drbdmeta drbdsetup; do
-    rm %{_mandir}/man8/$f.8.gz
+    rm -f %{_mandir}/man8/$f.8.gz
 done
-rm %{_mandir}/man5/drbd.conf.5.gz
+rm -f %{_mandir}/man5/drbd.conf.5.gz
 %if %{initscripttype} == "systemd"
 %systemd_preun drbd.service
 %else
