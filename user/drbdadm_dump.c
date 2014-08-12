@@ -230,9 +230,6 @@ static void dump_proxy_info(const char *prefix, struct d_proxy_info *pi)
 
 static void dump_volume(int has_lower, struct d_volume *vol)
 {
-	if (!(vol->parsed_device || vol->parsed_disk || vol->parsed_meta_disk || verbose))
-		return;
-
 	if (!vol->implicit) {
 		printI("volume %d {\n", vol->vnr);
 		++indent;
@@ -298,8 +295,10 @@ static void dump_host_info(struct d_host_info *hi)
 
 	dump_options("options", &hi->res_options);
 
-	for_each_volume(vol, &hi->volumes)
-		dump_volume(!!hi->lower, vol);
+	for_each_volume(vol, &hi->volumes) {
+		if (vol->parsed_device || vol->parsed_disk || vol->parsed_meta_disk || verbose)
+			dump_volume(!!hi->lower, vol);
+	}
 
 	if (!hi->by_address && hi->address.addr)
 		dump_address("address", &hi->address, ";\n");
@@ -570,9 +569,10 @@ int adm_dump(const struct cfg_ctx *ctx)
 	printI("resource %s {\n", esc(res->name));
 	++indent;
 
-	if (!verbose)
-		for_each_volume(vol, &res->volumes)
+	for_each_volume(vol, &res->volumes) {
+		if (!verbose && (vol->parsed_device || vol->parsed_disk || vol->parsed_meta_disk))
 			dump_volume(res->stacked, vol);
+	}
 
 	for_each_host(host, &res->all_hosts)
 		dump_host_info(host);
