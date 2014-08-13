@@ -47,6 +47,7 @@
 #include <assert.h>
 #include <libgen.h>
 #include <time.h>
+#include <search.h>
 
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
@@ -129,6 +130,11 @@ int main(void)
 }
 #else
 
+#ifndef AF_INET_SDP
+#define AF_INET_SDP 27
+#define PF_INET_SDP AF_INET_SDP
+#endif
+
 /* pretty print helpers */
 static int indent = 0;
 #define INDENT_WIDTH	4
@@ -191,6 +197,7 @@ static int del_minor_cmd(struct drbd_cmd *cm, int argc, char **argv);
 static int del_resource_cmd(struct drbd_cmd *cm, int argc, char **argv);
 
 // sub commands for generic_get_cmd
+static int print_notifications(struct drbd_cmd *, struct genl_info *);
 static int show_scmd(struct drbd_cmd *cm, struct genl_info *info);
 static int role_scmd(struct drbd_cmd *cm, struct genl_info *info);
 static int sh_status_scmd(struct drbd_cmd *cm, struct genl_info *info);
@@ -201,6 +208,9 @@ static int lk_bdev_scmd(struct drbd_cmd *cm, struct genl_info *info);
 static int print_broadcast_events(struct drbd_cmd *, struct genl_info *);
 static int w_connected_state(struct drbd_cmd *, struct genl_info *);
 static int w_synced_state(struct drbd_cmd *, struct genl_info *);
+
+#define ADDRESS_STR_MAX 256
+static char *address_str(char *buffer, void* address, int addr_len);
 
 // convert functions for arguments
 static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
@@ -217,6 +227,13 @@ struct option wait_cmds_options[] = {
 	{ 0,            0,           0,  0  }
 };
 
+struct option events_cmd_options[] = {
+	{ "timestamps", no_argument, 0, 'T' },
+	{ "statistics", no_argument, 0, 's' },
+	{ "now", no_argument, 0, 'n' },
+	{ }
+};
+
 struct option show_cmd_options[] = {
 	{ "show-defaults", no_argument, 0, 'D' },
 	{ }
@@ -225,6 +242,8 @@ struct option show_cmd_options[] = {
 #define F_CONFIG_CMD	generic_config_cmd
 #define NO_PAYLOAD	0
 #define F_GET_CMD(scmd)	DRBD_ADM_GET_STATUS, NO_PAYLOAD, generic_get_cmd, \
+			.show_function = scmd
+#define F_NEW_EVENTS_CMD(scmd)	DRBD_ADM_GET_INITIAL_STATE, NO_PAYLOAD, generic_get_cmd, \
 			.show_function = scmd
 
 struct drbd_cmd commands[] = {
@@ -313,6 +332,11 @@ struct drbd_cmd commands[] = {
 		.missing_ok = true,
 		.continuous_poll = true,
 		.lockless = true, },
+	{"events2", CTX_RESOURCE | CTX_ALL, F_NEW_EVENTS_CMD(print_notifications),
+		.options = events_cmd_options,
+		.missing_ok = true,
+		.continuous_poll = true,
+		.lockless = true },
 	{"wait-connect", CTX_MINOR, F_GET_CMD(w_connected_state),
 		.options = wait_cmds_options,
 		.continuous_poll = true,
@@ -1058,6 +1082,11 @@ static bool kernel_older_than(int version, int patchlevel, int sublevel)
 	return true;
 }
 
+static bool opt_now;
+static bool opt_verbose;
+static bool opt_statistics;
+static bool opt_timestamps;
+
 static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 {
 	char *desc = NULL;
@@ -1138,6 +1167,15 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 			}
 			break;
 
+		case 'n':
+			opt_now = true;
+			break;
+
+		case 's':
+			opt_verbose = true;
+			opt_statistics = true;
+			break;
+
 		case 'w':
 			if (!optarg || !strcmp(optarg, "yes"))
 				wait_after_split_brain = true;
@@ -1145,6 +1183,11 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 
 		case 'D':
 			show_defaults = true;
+			break;
+
+		case 'T':
+			opt_timestamps = true;
+			break;
 		}
 	}
 	n_args = 1;
@@ -1154,10 +1197,6 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	}
 
 	dump_argv(argc, argv, optind, 0);
-
-	/* otherwise we need to change handling/parsing
-	 * of expected replies */
-	ASSERT(cm->cmd_id == DRBD_ADM_GET_STATUS);
 
 	if (cm->wait_for_connect_timeouts) {
 		/* wait-connect, wait-sync */
@@ -1829,6 +1868,561 @@ static int down_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		return print_config_error(rv, NULL);
 	}
 	return 0;
+}
+
+static const char *susp_str(struct resource_info *info)
+{
+	static char buffer[32];
+
+	*buffer = 0;
+	if (info->res_susp)
+		strcat(buffer, ",user" + (*buffer == 0));
+	if (info->res_susp_nod)
+		strcat(buffer, ",no-data" + (*buffer == 0));
+	if (info->res_susp_fen)
+		strcat(buffer, ",fencing" + (*buffer == 0));
+	if (*buffer == 0)
+		strcat(buffer, "no");
+
+	return buffer;
+}
+
+int nowrap_printf(int indent, const char *format, ...)
+{
+	va_list ap;
+	int ret;
+
+	va_start(ap, format);
+	ret = vprintf(format, ap);
+	va_end(ap);
+
+	return ret;
+}
+
+void print_resource_statistics(int indent,
+			       struct resource_statistics *old,
+			       struct resource_statistics *new,
+			       int (*wrap_printf)(int, const char *, ...))
+{
+	static const char *write_ordering_str[] = {
+		[WO_NONE] = "none",
+		[WO_DRAIN_IO] = "drain",
+		[WO_BDEV_FLUSH] = "flush",
+		[WO_BIO_BARRIER] = "barrier",
+	};
+	uint32_t wo = new->res_stat_write_ordering;
+
+	if ((!old ||
+	     old->res_stat_write_ordering != wo) &&
+	    wo < ARRAY_SIZE(write_ordering_str) &&
+	    write_ordering_str[wo]) {
+		wrap_printf(indent, " write-ordering:%s", write_ordering_str[wo]);
+	}
+}
+
+void print_device_statistics(int indent,
+			     struct device_statistics *old,
+			     struct device_statistics *new,
+			     int (*wrap_printf)(int, const char *, ...))
+{
+	if (opt_statistics) {
+		if (opt_verbose)
+			wrap_printf(indent, " size:" U64,
+				    (uint64_t)new->dev_size / 2);
+		wrap_printf(indent, " read:" U64,
+			    (uint64_t)new->dev_read / 2);
+		wrap_printf(indent, " written:" U64,
+			    (uint64_t)new->dev_write / 2);
+		if (opt_verbose) {
+			wrap_printf(indent, " al-writes:" U64,
+				    (uint64_t)new->dev_al_writes);
+			wrap_printf(indent, " bm-writes:" U64,
+				    (uint64_t)new->dev_bm_writes);
+			wrap_printf(indent, " upper-pending:" U32,
+				    new->dev_upper_pending);
+			wrap_printf(indent, " lower-pending:" U32,
+				    new->dev_lower_pending);
+			if (!old ||
+			    old->dev_al_suspended != new->dev_al_suspended)
+				wrap_printf(indent, " al-suspended:%s",
+					    new->dev_al_suspended ? "yes" : "no");
+		}
+	}
+	if ((!old ||
+	     old->dev_upper_blocked != new->dev_upper_blocked ||
+	     old->dev_lower_blocked != new->dev_lower_blocked) &&
+	    new->dev_size != -1 &&
+	    (opt_verbose ||
+	     new->dev_upper_blocked ||
+	     new->dev_lower_blocked)) {
+		const char *x1 = "", *x2 = "";
+		bool first = true;
+
+		if (new->dev_upper_blocked) {
+			x1 = ",upper" + first;
+			first = false;
+		}
+		if (new->dev_lower_blocked) {
+			x2 = ",lower" + first;
+			first = false;
+		}
+		if (first)
+			x1 = "no";
+
+		wrap_printf(indent, " blocked:%s%s", x1, x2);
+	}
+}
+
+void print_connection_statistics(int indent,
+				 struct connection_statistics *old,
+				 struct connection_statistics *new,
+				 int (*wrap_printf)(int, const char *, ...))
+{
+	if (!old ||
+	    old->conn_congested != new->conn_congested)
+		wrap_printf(indent, " congested:%s", new->conn_congested ? "yes" : "no");
+}
+
+void print_peer_device_statistics(int indent,
+				  struct peer_device_statistics *old,
+				  struct peer_device_statistics *new,
+				  int (*wrap_printf)(int, const char *, ...))
+{
+	wrap_printf(indent, " received:" U64,
+		    (uint64_t)new->peer_dev_received / 2);
+	wrap_printf(indent, " sent:" U64,
+		    (uint64_t)new->peer_dev_sent / 2);
+	if (opt_verbose || new->peer_dev_out_of_sync)
+		wrap_printf(indent, " out-of-sync:" U64,
+			    (uint64_t)new->peer_dev_out_of_sync / 2);
+	if (opt_verbose) {
+		wrap_printf(indent, " pending:" U32,
+			    new->peer_dev_pending);
+		wrap_printf(indent, " unacked:" U32,
+			    new->peer_dev_unacked);
+	}
+}
+
+static char *af_to_str(int af)
+{
+	if (af == AF_INET)
+		return "ipv4";
+	else if (af == AF_INET6)
+		return "ipv6";
+	/* AF_SSOCKS typically is 27, the same as AF_INET_SDP.
+	 * But with warn_and_use_default = 0, it will stay at -1 if not available.
+	 * Just keep the test on ssocks before the one on SDP (which is hard-coded),
+	 * and all should be fine.  */
+	else if (af == get_af_ssocks(0))
+		return "ssocks";
+	else if (af == AF_INET_SDP)
+		return "sdp";
+	else return "unknown";
+}
+
+static char *address_str(char *buffer, void* address, int addr_len)
+{
+	union {
+		struct sockaddr     addr;
+		struct sockaddr_in  addr4;
+		struct sockaddr_in6 addr6;
+	} a;
+
+	/* avoid alignment issues on certain platforms (e.g. armel) */
+	memset(&a, 0, sizeof(a));
+	memcpy(&a.addr, address, addr_len);
+	if (a.addr.sa_family == AF_INET
+	|| a.addr.sa_family == get_af_ssocks(0)
+	|| a.addr.sa_family == AF_INET_SDP) {
+		snprintf(buffer, ADDRESS_STR_MAX, "%s:%s:%u",
+			 af_to_str(a.addr4.sin_family),
+			 inet_ntoa(a.addr4.sin_addr),
+			 ntohs(a.addr4.sin_port));
+		return buffer;
+	} else if (a.addr.sa_family == AF_INET6) {
+		char buffer2[INET6_ADDRSTRLEN];
+		snprintf(buffer, ADDRESS_STR_MAX, "%s:[%s]:%u",
+		        af_to_str(a.addr6.sin6_family),
+		        inet_ntop(a.addr6.sin6_family, &a.addr6.sin6_addr, buffer2, INET6_ADDRSTRLEN),
+		        ntohs(a.addr6.sin6_port));
+		return buffer;
+	} else
+		return NULL;
+}
+
+static int event_key(char *key, int size, const char *name, unsigned minor,
+		     struct drbd_cfg_context *ctx)
+{
+	char addr[ADDRESS_STR_MAX];
+	int ret, pos = 0;
+
+	ret = snprintf(key + pos, size,
+		       "%s", name);
+	if (ret < 0)
+		return ret;
+	pos += ret;
+	if (size)
+		size -= ret;
+	if (ctx->ctx_resource_name) {
+		ret = snprintf(key + pos, size,
+			       " name:%s", ctx->ctx_resource_name);
+		if (ret < 0)
+			return ret;
+		pos += ret;
+		if (size)
+			size -= ret;
+	}
+#if 0
+	/* FIXME */
+	if (ctx->ctx_conn_name_len) {
+		ret = snprintf(key + pos, size,
+			       " conn-name:%s", ctx->ctx_conn_name);
+		if (ret < 0)
+			return ret;
+		pos += ret;
+		if (size)
+			size -= ret;
+	}
+#endif
+	if (ctx->ctx_my_addr_len &&
+	    address_str(addr, ctx->ctx_my_addr, ctx->ctx_my_addr_len)) {
+		ret = snprintf(key + pos, size,
+			      " local:%s", addr);
+		if (ret < 0)
+			return ret;
+		pos += ret;
+		if (size)
+			size -= ret;
+	}
+	if (ctx->ctx_peer_addr_len &&
+	    address_str(addr, ctx->ctx_peer_addr, ctx->ctx_peer_addr_len)) {
+		ret = snprintf(key + pos, size,
+			      " peer:%s", addr);
+		if (ret < 0)
+			return ret;
+		pos += ret;
+		if (size)
+			size -= ret;
+	}
+	if (ctx->ctx_volume != -1U) {
+		ret = snprintf(key + pos, size,
+			      " volume:%u", ctx->ctx_volume);
+		if (ret < 0)
+			return ret;
+		pos += ret;
+		if (size)
+			size -= ret;
+	}
+	if (minor != -1U) {
+		ret = snprintf(key + pos, size,
+			      " minor:%u", minor);
+		if (ret < 0)
+			return ret;
+		pos += ret;
+		/* if (size) */
+		/* 	size -= ret; */
+	}
+	return pos;
+}
+
+static void *update_info(char **key, void *value, size_t size)
+{
+	static struct hsearch_data *known_objects;
+
+	struct entry entry = {
+		.key = *key,
+	}, *found = NULL;
+
+	if (!known_objects) {
+		known_objects = calloc(1, sizeof(*known_objects));
+
+		if (!known_objects || !hcreate_r(64, known_objects))
+			goto fail;
+	}
+
+	if (value) {
+		entry.data = malloc(size);
+		if (!entry.data)
+			goto fail;
+		memcpy(entry.data, value, size);
+	}
+	if (!hsearch_r(entry, ENTER, &found, known_objects))
+		goto fail;
+	if (found->key == entry.key) {
+		*key = NULL;
+		return NULL;
+	} else {
+		if (value) {
+			void *old_value = found->data;
+			found->data = entry.data;
+			return old_value;
+		} else {
+			free(found->data);
+			found->data = NULL;
+			return NULL;
+		}
+	}
+
+fail:
+	perror(progname);
+	exit(20);
+}
+
+static const char *resync_susp_str(struct peer_device_info *info)
+{
+	static char buffer[64];
+
+	*buffer = 0;
+	if (info->peer_resync_susp_user)
+		strcat(buffer, ",user" + (*buffer == 0));
+	if (info->peer_resync_susp_peer)
+		strcat(buffer, ",peer" + (*buffer == 0));
+	if (info->peer_resync_susp_dependency)
+		strcat(buffer, ",dependency" + (*buffer == 0));
+	if (*buffer == 0)
+		strcat(buffer, "no");
+
+	return buffer;
+}
+
+static int print_notifications(struct drbd_cmd *cm, struct genl_info *info)
+{
+	static const char *action_name[] = {
+		[NOTIFY_EXISTS] = "exists",
+		[NOTIFY_CREATE] = "create",
+		[NOTIFY_CHANGE] = "change",
+		[NOTIFY_DESTROY] = "destroy",
+		[NOTIFY_CALL] = "call",
+		[NOTIFY_RESPONSE] = "response",
+	};
+	static char *object_name[] = {
+		[DRBD_RESOURCE_STATE] = "resource",
+		[DRBD_DEVICE_STATE] = "device",
+		[DRBD_CONNECTION_STATE] = "connection",
+		[DRBD_PEER_DEVICE_STATE] = "peer-device",
+		[DRBD_HELPER] = "helper",
+	};
+	static uint32_t last_seq;
+	static bool last_seq_known;
+
+	struct drbd_cfg_context ctx = { .ctx_volume = -1U };
+	struct drbd_notification_header nh = { .nh_type = -1U };
+	enum drbd_notification_type action;
+	struct drbd_genlmsghdr *dh;
+	char *key = NULL;
+
+	if (!info)
+		return 0;
+
+	dh = info->userhdr;
+	if (dh->ret_code == ERR_MINOR_INVALID && cm->missing_ok)
+		return 0;
+	if (dh->ret_code != NO_ERROR)
+		return dh->ret_code;
+
+	if (drbd_notification_header_from_attrs(&nh, info))
+		return 0;
+	action = nh.nh_type & ~NOTIFY_FLAGS;
+	if (action >= ARRAY_SIZE(action_name) ||
+	    !action_name[action]) {
+		dbg(1, "unknown notification type\n");
+		goto out;
+	}
+
+	if (opt_now && action != NOTIFY_EXISTS)
+		return 0;
+
+	if (info->genlhdr->cmd != DRBD_INITIAL_STATE_DONE) {
+		if (drbd_cfg_context_from_attrs(&ctx, info))
+			return 0;
+		if (info->genlhdr->cmd >= ARRAY_SIZE(object_name) ||
+		    !object_name[info->genlhdr->cmd]) {
+			dbg(1, "unknown notification\n");
+			goto out;
+		}
+	}
+
+	if (action != NOTIFY_EXISTS) {
+		if (last_seq_known) {
+			int skipped = info->nlhdr->nlmsg_seq - (last_seq + 1);
+
+			if (skipped)
+				printf("- skipped %d\n", skipped);
+		}
+		last_seq = info->nlhdr->nlmsg_seq;
+		last_seq_known = true;
+	}
+
+	if (opt_timestamps) {
+		struct timeval tv;
+		struct tm *tm;
+
+		gettimeofday(&tv, NULL);
+		tm = localtime(&tv.tv_sec);
+		printf("%04u-%02u-%02uT%02u:%02u:%02u.%06u%+03d:%02u ",
+		       tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
+		       tm->tm_hour, tm->tm_min, tm->tm_sec,
+		       (int)tv.tv_usec,
+		       (int)(tm->tm_gmtoff / 3600),
+		       (int)((abs(tm->tm_gmtoff) / 60) % 60));
+	}
+	if (info->genlhdr->cmd != DRBD_INITIAL_STATE_DONE) {
+		const char *name = object_name[info->genlhdr->cmd];
+		int size;
+
+		size = event_key(NULL, 0, name, dh->minor, &ctx);
+		if (size < 0)
+			goto fail;
+		key = malloc(size + 1);
+		if (!key)
+			goto fail;
+		event_key(key, size + 1, name, dh->minor, &ctx);
+	}
+	printf("%s %s",
+	       action_name[action],
+	       key ? key : "-");
+
+	switch(info->genlhdr->cmd) {
+	case DRBD_RESOURCE_STATE:
+		if (action != NOTIFY_DESTROY) {
+			struct {
+				struct resource_info i;
+				struct resource_statistics s;
+			} *old, new;
+
+			if (resource_info_from_attrs(&new.i, info) ||
+			    resource_statistics_from_attrs(&new.s, info)) {
+				dbg(1, "resource info or statistics missing\n");
+				goto out;
+			}
+			old = update_info(&key, &new, sizeof(new));
+			if (!old || new.i.res_role != old->i.res_role)
+				printf(" role:%s",
+				       drbd_role_str(new.i.res_role));
+			if (!old ||
+			    new.i.res_susp != old->i.res_susp ||
+			    new.i.res_susp_nod != old->i.res_susp_nod ||
+			    new.i.res_susp_fen != old->i.res_susp_fen)
+				printf(" suspended:%s",
+				       susp_str(&new.i));
+			if (opt_statistics)
+				print_resource_statistics(0, old ? &old->s : NULL,
+							  &new.s, nowrap_printf);
+			free(old);
+		} else
+			update_info(&key, NULL, 0);
+		break;
+	case DRBD_DEVICE_STATE:
+		if (action != NOTIFY_DESTROY) {
+			struct {
+				struct device_info i;
+				struct device_statistics s;
+			} *old, new;
+
+			if (device_info_from_attrs(&new.i, info) ||
+			    device_statistics_from_attrs(&new.s, info)) {
+				dbg(1, "device info or statistics missing\n");
+				goto out;
+			}
+			old = update_info(&key, &new, sizeof(new));
+			if (!old || new.i.dev_disk_state != old->i.dev_disk_state)
+				printf(" disk:%s",
+				       drbd_disk_str(new.i.dev_disk_state));
+			if (opt_statistics)
+				print_device_statistics(0, old ? &old->s : NULL,
+							&new.s, nowrap_printf);
+			free(old);
+		} else
+			update_info(&key, NULL, 0);
+		break;
+	case DRBD_CONNECTION_STATE:
+		if (action != NOTIFY_DESTROY) {
+			struct {
+				struct connection_info i;
+				struct connection_statistics s;
+			} *old, new;
+
+			if (connection_info_from_attrs(&new.i, info) ||
+			    connection_statistics_from_attrs(&new.s, info)) {
+				dbg(1, "connection info or statistics missing\n");
+				goto out;
+			}
+			old = update_info(&key, &new, sizeof(new));
+			if (!old ||
+			    new.i.conn_connection_state != old->i.conn_connection_state)
+				printf(" connection:%s",
+				       drbd_conn_str(new.i.conn_connection_state));
+			if (!old ||
+			    new.i.conn_role != old->i.conn_role)
+				printf(" role:%s",
+				       drbd_role_str(new.i.conn_role));
+			if (opt_statistics)
+				print_connection_statistics(0, old ? &old->s : NULL,
+							    &new.s, nowrap_printf);
+			free(old);
+		} else
+			update_info(&key, NULL, 0);
+		break;
+	case DRBD_PEER_DEVICE_STATE:
+		if (action != NOTIFY_DESTROY) {
+			struct {
+				struct peer_device_info i;
+				struct peer_device_statistics s;
+			} *old, new;
+
+			if (peer_device_info_from_attrs(&new.i, info) ||
+			    peer_device_statistics_from_attrs(&new.s, info)) {
+				dbg(1, "peer device info or statistics missing\n");
+				goto out;
+			}
+			old = update_info(&key, &new, sizeof(new));
+			if (!old || new.i.peer_repl_state != old->i.peer_repl_state)
+				printf(" replication:%s",
+				       drbd_conn_str(new.i.peer_repl_state));
+			if (!old || new.i.peer_disk_state != old->i.peer_disk_state)
+				printf(" peer-disk:%s",
+				       drbd_disk_str(new.i.peer_disk_state));
+			if (!old ||
+			    new.i.peer_resync_susp_user != old->i.peer_resync_susp_user ||
+			    new.i.peer_resync_susp_peer != old->i.peer_resync_susp_peer ||
+			    new.i.peer_resync_susp_dependency != old->i.peer_resync_susp_dependency)
+				printf(" resync-suspended:%s",
+				       resync_susp_str(&new.i));
+			if (opt_statistics)
+				print_peer_device_statistics(0, old ? &old->s : NULL,
+							     &new.s, nowrap_printf);
+			free(old);
+		} else
+			update_info(&key, NULL, 0);
+		break;
+	case DRBD_HELPER: {
+		struct drbd_helper_info helper_info;
+
+		if (!drbd_helper_info_from_attrs(&helper_info, info)) {
+			printf(" helper:%s", helper_info.helper_name);
+			if (action == NOTIFY_RESPONSE)
+				printf(" status:%u", helper_info.helper_status);
+		} else {
+			dbg(1, "helper info missing\n");
+			goto out;
+		}
+		}
+		break;
+	case DRBD_INITIAL_STATE_DONE:
+		break;
+	}
+	printf("\n");
+
+out:
+	free(key);
+	fflush(stdout);
+	if (opt_now && info->genlhdr->cmd == DRBD_INITIAL_STATE_DONE)
+		return -1;
+	return 0;
+
+fail:
+	perror(progname);
+	exit(20);
 }
 
 /* printf format for minor, resource name, volume */
