@@ -176,6 +176,7 @@ struct drbd_cmd {
 	bool continuous_poll;
 	bool wait_for_connect_timeouts;
 	bool set_defaults;
+	bool lockless;
 	struct context_def *ctx;
 };
 
@@ -289,28 +290,39 @@ struct drbd_cmd commands[] = {
 	{"down", CTX_RESOURCE, DRBD_ADM_DOWN, NO_PAYLOAD, down_cmd,
 		.missing_ok = true, },
 	{"state", CTX_MINOR, F_GET_CMD(role_scmd) },
-	{"role", CTX_MINOR, F_GET_CMD(role_scmd) },
+	{"role", CTX_MINOR, F_GET_CMD(role_scmd),
+		.lockless = true, },
 	{"sh-status", CTX_MINOR | CTX_RESOURCE | CTX_ALL,
 		F_GET_CMD(sh_status_scmd),
-		.missing_ok = true, },
-	{"cstate", CTX_MINOR, F_GET_CMD(cstate_scmd) },
-	{"dstate", CTX_MINOR, F_GET_CMD(dstate_scmd) },
-	{"show-gi", CTX_MINOR, F_GET_CMD(uuids_scmd) },
-	{"get-gi", CTX_MINOR, F_GET_CMD(uuids_scmd) },
+		.missing_ok = true,
+		.lockless = true, },
+	{"cstate", CTX_MINOR, F_GET_CMD(cstate_scmd),
+		.lockless = true, },
+	{"dstate", CTX_MINOR, F_GET_CMD(dstate_scmd),
+		.lockless = true, },
+	{"show-gi", CTX_MINOR, F_GET_CMD(uuids_scmd),
+		.lockless = true, },
+	{"get-gi", CTX_MINOR, F_GET_CMD(uuids_scmd),
+		.lockless = true, },
 	{"show", CTX_MINOR | CTX_RESOURCE | CTX_ALL, F_GET_CMD(show_scmd),
-		.options = show_cmd_options },
-	{"check-resize", CTX_MINOR, F_GET_CMD(lk_bdev_scmd) },
+		.options = show_cmd_options,
+		.lockless = true, },
+	{"check-resize", CTX_MINOR, F_GET_CMD(lk_bdev_scmd),
+		.lockless = true, },
 	{"events", CTX_MINOR | CTX_RESOURCE | CTX_ALL, F_GET_CMD(print_broadcast_events),
 		.missing_ok = true,
-		.continuous_poll = true, },
+		.continuous_poll = true,
+		.lockless = true, },
 	{"wait-connect", CTX_MINOR, F_GET_CMD(w_connected_state),
 		.options = wait_cmds_options,
 		.continuous_poll = true,
-		.wait_for_connect_timeouts = true, },
+		.wait_for_connect_timeouts = true,
+		.lockless = true, },
 	{"wait-sync", CTX_MINOR, F_GET_CMD(w_synced_state),
 		.options = wait_cmds_options,
 		.continuous_poll = true,
-		.wait_for_connect_timeouts = true, },
+		.wait_for_connect_timeouts = true,
+		.lockless = true, },
 
 	{"new-resource", CTX_RESOURCE, DRBD_ADM_NEW_RESOURCE, DRBD_NLA_RESOURCE_OPTS, F_CONFIG_CMD,
 	 .ctx = &resource_options_cmd_ctx },
@@ -2325,7 +2337,7 @@ int main(int argc, char **argv)
 					objname);
 				exit(20);
 			}
-			if (cmd->cmd_id != DRBD_ADM_GET_STATUS)
+			if ((context & CTX_MINOR) && !cmd->lockless)
 				lock_fd = dt_lock_drbd(minor);
 			context = CTX_MINOR;
 		} else
@@ -2351,7 +2363,8 @@ int main(int argc, char **argv)
 
 	/* Make it so that argv[0] is the command name. */
 	rv = cmd->function(cmd, argc - 1, argv + 1);
-	dt_unlock_drbd(lock_fd);
+	if ((context & CTX_MINOR) && !cmd->lockless)
+		dt_unlock_drbd(lock_fd);
 	return rv;
 }
 #endif
