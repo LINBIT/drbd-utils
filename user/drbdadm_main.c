@@ -121,7 +121,7 @@ static int adm_invalidate(const struct cfg_ctx *);
 static int __adm_drbdsetup_silent(const struct cfg_ctx *ctx);
 static int adm_forget_peer(const struct cfg_ctx *);
 
-int ctx_by_name(struct cfg_ctx *ctx, const char *id);
+int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check);
 
 static char *get_opt_val(struct options *, const char *, char *);
 
@@ -1896,14 +1896,34 @@ struct d_volume *volume_by_vnr(struct volumes *volumes, int vnr)
 	return NULL;
 }
 
-int ctx_by_name(struct cfg_ctx *ctx, const char *id)
+/* if there is something to check:
+ * return true if check succeeds, otherwise false */
+static bool set_ignore_flag(struct connection * const conn, checks check, bool ignore)
+{
+	if (ignore == false) {
+		if (check == WOULD_ENABLE_DISABLED && conn->ignore_tmp)
+			return false;
+		else if (check == WOULD_ENABLE_MULTI_TIMES && !conn->ignore_tmp)
+			return false;
+
+		if (check == WOULD_ENABLE_MULTI_TIMES)
+			conn->ignore_tmp = ignore;
+	}
+
+	if (check == SETUP_MULTI)
+		conn->ignore = ignore;
+
+	return true;
+}
+
+int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check)
 {
 	struct d_resource *res;
 	struct d_volume *vol;
 	struct connection *conn;
 	char *input = strdupa(id);
 	char *vol_id;
-	char *res_name, *conn_name;
+	char *res_name, *conn_or_hostname;
 	unsigned vol_nr = ~0U;
 
 	res_name = input;
@@ -1912,9 +1932,9 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id)
 		*vol_id++ = '\0';
 		vol_nr = m_strtoll(vol_id, 0);
 	}
-	conn_name = strchr(input, ':');
-	if (conn_name)
-		*conn_name++ = '\0';
+	conn_or_hostname = strchr(input, ':');
+	if (conn_or_hostname)
+		*conn_or_hostname++ = '\0';
 
 	res = res_by_name(res_name);
 	if (!res || res->ignore)
@@ -1923,44 +1943,76 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id)
 
 	set_peer_in_resource(res, 1);
 
-	if (conn_name) {
-		ctx->conn = NULL;
-		for_each_connection(conn, &res->connections) {
-			struct d_option *opt;
+	/* resource name only (e.g., r0) and in check state
+	 * this would enable all connectionst that are not ignored */
+	if (!conn_or_hostname && check == WOULD_ENABLE_MULTI_TIMES)
+		for_each_connection(conn, &res->connections)
+			if (!conn->ignore) {
+				if (!conn->ignore_tmp)
+					return 1;
+				else
+					conn->ignore_tmp = false;
+			}
 
-			opt = find_opt(&conn->net_options, "_name");
-			if (opt && !strcmp(opt->value, conn_name))
-				goto found;
-		}
-		fprintf(stderr,	"Connection/peer name '%s' is not a peer\n", conn_name);
-		return -ENOENT;
-	} else if (connect_to_host) {
+	if (conn_or_hostname) {
+		/* per se we do not know if the part after ':' is a host or a connection name */
 		struct d_host_info *hi;
+		bool valid_conns = false;
 
-		hi = find_host_info_by_name(res, connect_to_host);
-		if (!hi) {
-			fprintf(stderr,
-				"Host name '%s' (given with --peer option) is not "
-				"mentioned in any connection section\n", connect_to_host);
-			return -ENOENT;
-		}
-		if (res->me == hi) {
-			fprintf(stderr,
-				"Host name '%s' (given with --peer option) is not a "
-				"peer, but the local node\n", connect_to_host);
-			return -ENOENT;
-		}
 		ctx->conn = NULL;
+
+		hi = find_host_info_by_name(res, conn_or_hostname);
 		for_each_connection(conn, &res->connections) {
-			if (conn->peer == hi)
-				goto found;
+			if (hi) { /* it was host name */
+				if (res->me == hi) {
+					fprintf(stderr,
+							"Host name '%s' (given with --peer option) is not a "
+							"peer, but the local node\n", conn_or_hostname);
+					return -ENOENT;
+				}
+
+				if (conn->peer == hi && check == CTX_FIRST)
+					goto found;
+
+				if (conn->peer && !strcmp(conn->peer->node_id, hi->node_id)) {
+					if (!set_ignore_flag(conn, check, false))
+						return 1;
+				}
+				else /* a connection that should be ignored */
+					set_ignore_flag(conn, check, true);
+			} else { /* it was a connection name */
+				struct d_option *opt;
+				opt = find_opt(&conn->net_options, "_name");
+				if (opt && !strcmp(opt->value, conn_or_hostname)) {
+					if (check == CTX_FIRST)
+						goto found;
+
+					if (!set_ignore_flag(conn, check, false))
+						return 1;
+				}
+				else { /* a connection that should be ignored */
+					set_ignore_flag(conn, check, true);
+				}
+			}
+
+			if (!conn->ignore)
+				valid_conns = true;
 		}
-		return -ENOENT;
+
+		if (check == SETUP_MULTI && !valid_conns) {
+			fprintf(stderr, "Not a valid connection (%s) for this host\n", id);
+			return -ENOENT;
+		}
 	}
+
+	if (check != SETUP_MULTI)
+		return 0;
+
 	if (0) {
-	found:
+found:
+		printf("found it\n");
 		if (conn->ignore) {
-			fprintf(stderr, "Connection '%s' has the ignore flag set\n", conn_name);
+			fprintf(stderr, "Connection '%s' has the ignore flag set\n", conn_or_hostname);
 			return -ENOENT;
 		}
 
@@ -3238,11 +3290,39 @@ int main(int argc, char **argv)
 				printf("</config>\n");
 		} else {
 			/* explicit list of resources to work on */
+			struct connection *conn;
+
+			/* first we execute some sanity checks,
+			 * the checks use ignore_tmp */
+			for_each_resource(res, &config)
+				for_each_connection(conn, &res->connections)
+					conn->ignore_tmp = conn->ignore;
+
+			/* check if we would enable a connection that should be ignored */
+			for (i = 0; resource_names[i]; i++)
+				if (ctx_by_name(&ctx, resource_names[i], WOULD_ENABLE_DISABLED) > 0) {
+					fprintf(stderr, "USAGE_BUG: Tried to enable disabled connections %s\n", resource_names[i]);
+					exit(E_USAGE);
+				}
+
+			/* check if we would enable a connection that was already enabled.
+			 * set all connections to ignore and then check if we would enable a
+			 * connection twice */
+			for_each_resource(res, &config)
+				for_each_connection(conn, &res->connections)
+					conn->ignore_tmp = true;
+
+			for (i = 0; resource_names[i]; i++)
+				if (ctx_by_name(&ctx, resource_names[i], WOULD_ENABLE_MULTI_TIMES) > 0) {
+					fprintf(stderr, "USAGE_BUG: %s would enable an already enabled connection\n", resource_names[i]);
+					exit(E_USAGE);
+				}
+
 			for (i = 0; resource_names[i]; i++) {
 				int rv;
 				ctx.res = NULL;
 				ctx.vol = NULL;
-				rv = ctx_by_name(&ctx, resource_names[i]);
+				rv = ctx_by_name(&ctx, resource_names[i], SETUP_MULTI);
 				if (!ctx.res) {
 					ctx_by_minor(&ctx, resource_names[i]);
 					rv = 0;

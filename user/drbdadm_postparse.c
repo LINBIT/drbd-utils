@@ -1279,7 +1279,7 @@ static void _convert_after_option(struct d_resource *res, struct d_volume *vol)
 	next:
 		if (strcmp(opt->name, "resync-after"))
 			continue;
-		ctx_by_name(&depends_on_ctx, opt->value);
+		ctx_by_name(&depends_on_ctx, opt->value, CTX_FIRST);
 		volumes = ctx_set_implicit_volume(&depends_on_ctx);
 		if (volumes > 1) {
 			fprintf(stderr,

@@ -201,6 +201,11 @@ struct connection
 
 	struct options net_options; /* parsed here, inherited from res, used here */
 	unsigned int ignore:1;
+	/* ignore_tmp is a flag that has the same semantic as ignore,
+	 * but the user is free to manipulate it and run checks on it
+	 * e.g., would a connection be enabled multiple times
+	 * this avoids direct maniuplation/restore of the ignore flag itself */
+	unsigned int ignore_tmp:1;
 	unsigned int implicit:1;
 	STAILQ_ENTRY(connection) link;
 };
@@ -363,7 +368,8 @@ extern void maybe_exec_legacy_drbdadm(char **argv);
 extern void uc_node(enum usage_count_type type);
 extern int have_ip(const char *af, const char *ip);
 extern void free_opt(struct d_option *item);
-extern int ctx_by_name(struct cfg_ctx *ctx, const char *id);
+typedef enum {SETUP_MULTI, CTX_FIRST, WOULD_ENABLE_DISABLED, WOULD_ENABLE_MULTI_TIMES} checks;
+extern int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check);
 enum pr_flags {
 	NO_HOST_SECT_ALLOWED  = 4,
 	PARSE_FOR_ADJUST = 8
