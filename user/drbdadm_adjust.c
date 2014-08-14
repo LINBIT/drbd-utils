@@ -599,9 +599,17 @@ int adm_adjust(const struct cfg_ctx *ctx)
 	 * clean them from the proxy. */
 	if (running) {
 		for_each_connection(conn, &running->connections) {
-			struct cfg_ctx tmp_ctx = { .res = ctx->res, .conn = conn };
+			struct connection *configured_conn = NULL;
+			struct cfg_ctx tmp_ctx = { .res = ctx->res };
 			char *show_conn;
 			int r;
+
+			configured_conn = matching_conn(conn, &ctx->res->connections);
+			if (!configured_conn ||
+			    !configured_conn->peer_proxy || !configured_conn->peer_proxy)
+				continue;
+
+			tmp_ctx.conn = configured_conn;
 
 			line = 1;
 			m_asprintf(&show_conn, "show proxy-settings %s", proxy_connection_name(&tmp_ctx));
