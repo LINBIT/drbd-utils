@@ -627,7 +627,6 @@ unsigned minor = -1U;
 struct drbd_cfg_context global_ctx;
 enum cfg_ctx_key context;
 
-int debug_dump_argv = 0; /* enabled by setting DRBD_DEBUG_DUMP_ARGV in the environment */
 int lock_fd;
 
 struct genl_sock *drbd_sock = NULL;
@@ -1029,25 +1028,6 @@ static void warn_print_excess_args(int argc, char **argv, int i)
 	printf("\n");
 }
 
-static void dump_argv(int argc, char **argv, int first_non_option, int n_known_args)
-{
-	int i;
-	if (!debug_dump_argv)
-		return;
-	fprintf(stderr, ",-- ARGV dump (optind %d, known_args %d, argc %u):\n",
-		first_non_option, n_known_args, argc);
-	for (i = 0; i < argc; i++) {
-		if (i == 1)
-			fprintf(stderr, "-- consumed options:");
-		if (i == first_non_option)
-			fprintf(stderr, "-- known args:");
-		if (i == (first_non_option + n_known_args))
-			fprintf(stderr, "-- unexpected args:");
-		fprintf(stderr, "| %2u: %s\n", i, argv[i]);
-	}
-	fprintf(stderr, "`--\n");
-}
-
 int drbd_tla_parse(struct nlmsghdr *nlh)
 {
 	return nla_parse(global_attrs, ARRAY_SIZE(drbd_tla_nl_policy)-1,
@@ -1176,8 +1156,6 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		rv = OTHER_ERROR;
 		goto error;
 	}
-
-	dump_argv(argc, argv, optind, i - 1);
 
 	for(;;) {
 		if (genl_send(drbd_sock, smsg)) {
@@ -1831,8 +1809,6 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		warn_print_excess_args(argc, argv, optind + 1);
 		return 20;
 	}
-
-	dump_argv(argc, argv, optind, 0);
 
 	timeout_ms = -1;
 	if (cm->show_function == &wait_for_family) {
@@ -3801,10 +3777,6 @@ int main(int argc, char **argv)
 		argv[1] = argv[2];
 		argv[2] = swap;
 	}
-
-	/* it is enough to set it, value is ignored */
-	if (getenv("DRBD_DEBUG_DUMP_ARGV"))
-		debug_dump_argv = 1;
 
 	if (argc < 2)
 		print_usage_and_exit(0);
