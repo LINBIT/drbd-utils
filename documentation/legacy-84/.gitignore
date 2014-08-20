@@ -1,1 +1,7 @@
 /Makefile
+drbdsetup_*.xml
+/drbd.8
+/drbd.conf.5
+/drbdadm.8
+/drbdmeta.8
+/drbdsetup.8
