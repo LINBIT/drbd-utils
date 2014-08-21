@@ -1202,6 +1202,13 @@ static void validate_resource(struct d_resource *res, enum pp_flags flags)
 				config_valid = 0;
 		}
 	}
+	if (STAILQ_EMPTY(&res->all_hosts)) {
+		fprintf(stderr,
+			"%s:%d: in resource %s:\n\ta host sections ('on %s { ... }') is missing.\n",
+			res->config_file, res->start_line, res->name,
+			hostname);
+		config_valid = 0;
+	}
 	if (res->ignore)
 		return;
 	if (!res->me) {
