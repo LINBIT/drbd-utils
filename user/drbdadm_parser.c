@@ -964,6 +964,7 @@ struct d_volume *volume0(struct volumes *volumes)
 
 	if (!vol) {
 		vol = calloc(1, sizeof(struct d_volume));
+		STAILQ_INIT(&vol->disk_options);
 		vol->device_minor = -1;
 		vol->implicit = 1;
 		insert_head(volumes, vol);
