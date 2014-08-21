@@ -473,6 +473,7 @@ char *cmdname = NULL; /* "drbdsetup" for reporting in usage etc. */
 char *objname;
 unsigned minor = -1U;
 enum cfg_ctx_key context;
+char *opt_local_addr, *opt_peer_addr;
 
 int lock_fd;
 
@@ -561,7 +562,7 @@ static int conv_minor(struct drbd_argument *ad, struct msg_buff *msg,
 
 static struct option *make_longoptions(struct drbd_cmd *cm)
 {
-	static struct option buffer[42];
+	static struct option buffer[47];
 	int i = 0;
 	int primary_force_index = -1;
 	int connect_tentative_index = -1;
@@ -587,6 +588,16 @@ static struct option *make_longoptions(struct drbd_cmd *cm)
 			i++;
 		}
 		assert(field - cm->ctx->fields == i);
+	}
+
+	if (cm->options) {
+		struct option *option;
+
+		for (option = cm->options; option->name; option++) {
+			assert(i < ARRAY_SIZE(buffer));
+			buffer[i] = *option;
+			i++;
+		}
 	}
 
 	if (primary_force_index != -1) {
@@ -717,9 +728,8 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc,
 {
 	struct drbd_argument *ad = cm->drbd_args;
 	struct nlattr *nla;
-	struct option *lo;
+	struct option *options;
 	int c, i;
-	int n_args;
 	int rv = NO_ERROR;
 	char *desc = NULL; /* error description from kernel reply message */
 
@@ -745,10 +755,10 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc,
 	if (context & (CTX_RESOURCE | CTX_CONNECTION)) {
 		nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
 		if (context & CTX_RESOURCE)
-			nla_put_string(smsg, T_ctx_resource_name, argv[i++]);
+			nla_put_string(smsg, T_ctx_resource_name, objname);
 		if (context & CTX_CONNECTION) {
-			nla_put_address(smsg, T_ctx_my_addr, argv[i++]);
-			nla_put_address(smsg, T_ctx_peer_addr, argv[i++]);
+			nla_put_address(smsg, T_ctx_my_addr, opt_local_addr);
+			nla_put_address(smsg, T_ctx_peer_addr, opt_peer_addr);
 		}
 		nla_nest_end(smsg, nla);
 	} else if (context & CTX_MINOR) {
@@ -757,32 +767,13 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc,
 	}
 
 	nla = NULL;
-	for (ad = cm->drbd_args; ad && ad->name; i++) {
-		if (argc < i + 1) {
-			fprintf(stderr, "Missing argument '%s'\n", ad->name);
-			print_command_usage(cm, FULL);
-			rv = OTHER_ERROR;
-			goto error;
-		}
-		if (!nla) {
-			assert (cm->tla_id != NO_PAYLOAD);
-			nla = nla_nest_start(smsg, cm->tla_id);
-		}
-		rv = ad->convert_function(ad, smsg, dhdr, argv[i]);
-		if (rv != NO_ERROR)
-			goto error;
-		ad++;
-	}
-	n_args = i - 1;  /* command name "doesn't count" here */
 
-	/* dhdr->minor may have been set by one of the convert functions. */
-	minor = dhdr->minor;
-
-	lo = make_longoptions(cm);
+	options = make_longoptions(cm);
+	optind = 0;  /* reset getopt_long() */
 	for (;;) {
 		int idx;
 
-		c = getopt_long(argc, argv, "(", lo, &idx);
+		c = getopt_long(argc, argv, "(", options, &idx);
 		if (c == -1)
 			break;
 		if (c >= 1000) {
@@ -792,7 +783,7 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc,
 		}
 		if (c == 0) {
 			struct field_def *field = &cm->ctx->fields[idx];
-			assert (field->name == lo[idx].name);
+			assert (field->name == options[idx].name);
 			if (!nla) {
 				assert (cm->tla_id != NO_PAYLOAD);
 				nla = nla_nest_start(smsg, cm->tla_id);
@@ -812,10 +803,29 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc,
 		}
 	}
 
+	for (i = optind, ad = cm->drbd_args; ad && ad->name; i++) {
+		if (argc < i + 1) {
+			fprintf(stderr, "Missing argument '%s'\n", ad->name);
+			print_command_usage(cm, FULL);
+			rv = OTHER_ERROR;
+			goto error;
+		}
+		if (!nla) {
+			assert (cm->tla_id != NO_PAYLOAD);
+			nla = nla_nest_start(smsg, cm->tla_id);
+		}
+		rv = ad->convert_function(ad, smsg, dhdr, argv[i]);
+		if (rv != NO_ERROR)
+			goto error;
+		ad++;
+	}
+	/* dhdr->minor may have been set by one of the convert functions. */
+	minor = dhdr->minor;
+
 	/* argc should be cmd + n options + n args;
 	 * if it is more, we did not understand some */
-	if (n_args + optind < argc) {
-		warn_print_excess_args(argc, argv, optind + n_args);
+	if (i < argc) {
+		warn_print_excess_args(argc, argv, i);
 		rv = OTHER_ERROR;
 		goto error;
 	}
@@ -1070,6 +1080,7 @@ static bool opt_timestamps;
 
 static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 {
+	static struct option no_options[] = { { } };
 	char *desc = NULL;
 	struct drbd_genlmsghdr *dhdr;
 	struct msg_buff *smsg;
@@ -1083,7 +1094,8 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	int flags;
 	int rv = NO_ERROR;
 	int err = 0;
-	int n_args;
+	struct option *options = cm->options ? cm->options : no_options;
+	const char *opts = make_optstring(options);
 
 	/* pre allocate request message and reply buffer */
 	iov.iov_len = 8192;
@@ -1095,16 +1107,9 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		goto out;
 	}
 
-	struct option *options = cm->options;
-	if (!options) {
-		static struct option none[] = { { } };
-		options = none;
-	}
-	const char *opts = make_optstring(options);
-	int c;
-
+	optind = 0;  /* reset getopt_long() */
 	for(;;) {
-		c = getopt_long(argc, argv, opts, options, 0);
+		int c = getopt_long(argc, argv, opts, options, 0);
 		if (c == -1)
 			break;
 		switch(c) {
@@ -1171,9 +1176,8 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 			break;
 		}
 	}
-	n_args = 1;
-	if (n_args + optind < argc) {
-		warn_print_excess_args(argc, argv, optind + n_args);
+	if (optind < argc) {
+		warn_print_excess_args(argc, argv, optind);
 		return 20;
 	}
 
@@ -2824,7 +2828,9 @@ void exec_legacy_drbdsetup(char **argv)
 int main(int argc, char **argv)
 {
 	struct drbd_cmd *cmd;
-	int rv=0;
+	struct option *options;
+	int c, rv = 0;
+	int longindex, first_optind;
 
 	progname = basename(argv[0]);
 
@@ -2878,10 +2884,10 @@ int main(int argc, char **argv)
 		print_usage_and_exit("invalid command");
 
 	if (!modprobe_drbd()) {
-		if (!strcmp(argv[1], "down") ||
-		    !strcmp(argv[1], "secondary") ||
-		    !strcmp(argv[1], "disconnect") ||
-		    !strcmp(argv[1], "detach"))
+		if (!strcmp(argv[0], "down") ||
+		    !strcmp(argv[0], "secondary") ||
+		    !strcmp(argv[0], "disconnect") ||
+		    !strcmp(argv[0], "detach"))
 			return 0; /* "down" succeeds even if drbd is missing */
 		return 20;
 	}
@@ -2909,53 +2915,82 @@ int main(int argc, char **argv)
 		}
 	}
 
+	/* Make argv[0] the command name so that getopt_long() will leave it in
+	 * the first position. */
+	argv++;
+	argc--;
+
+	options = make_longoptions(cmd);
+	for (;;) {
+		c = getopt_long(argc, argv, "(", options, &longindex);
+		if (c == -1)
+			break;
+		if (c == '?' || c == ':')
+			print_usage_and_exit(0);
+	}
+	/* All non-option arguments now are in argv[optind .. argc - 1]. */
+	first_optind = optind;
+
 	context = 0;
 	if (cmd->ctx_key & (CTX_MINOR | CTX_RESOURCE | CTX_ALL | CTX_RESOURCE_AND_CONNECTION)) {
-		if (argc < 3) {
-			fprintf(stderr, "Missing first argument\n");
-			print_command_usage(cmd, FULL);
-			exit(20);
-		}
-		objname = argv[2];
-		if (!strcmp(objname, "all")) {
-			if (!(cmd->ctx_key & CTX_ALL))
-				print_usage_and_exit("command does not accept argument 'all'");
-			context = CTX_ALL;
-		} else if (cmd->ctx_key & CTX_MINOR) {
-			minor = dt_minor_of_dev(objname);
-			if (minor == -1U && !(cmd->ctx_key &
-					(CTX_RESOURCE | CTX_RESOURCE_AND_CONNECTION))) {
-				fprintf(stderr, "Cannot determine minor device number of "
-						"device '%s'\n",
-					objname);
+		if (argc == optind &&
+		    !(cmd->ctx_key & (CTX_RESOURCE_AND_CONNECTION | CTX_CONNECTION)) &&
+		    (cmd->ctx_key & CTX_ALL)) {
+			context |= CTX_ALL;  /* assume "all" if no argument is given */
+			objname = "all";
+		} else {
+			if (argc <= optind) {
+				fprintf(stderr, "Missing first argument\n");
+				print_command_usage(cmd, FULL);
 				exit(20);
 			}
-			if ((context & CTX_MINOR) && !cmd->lockless)
-				lock_fd = dt_lock_drbd(minor);
-			context = CTX_MINOR;
-		} else
-			context = CTX_RESOURCE;
+			objname = argv[optind++];
+			if (!strcmp(objname, "all")) {
+				if (!(cmd->ctx_key & CTX_ALL))
+					print_usage_and_exit("command does not accept argument 'all'");
+				context = CTX_ALL;
+			} else if (cmd->ctx_key & CTX_MINOR) {
+				minor = dt_minor_of_dev(objname);
+				if (minor == -1U && !(cmd->ctx_key &
+						(CTX_RESOURCE | CTX_RESOURCE_AND_CONNECTION))) {
+					fprintf(stderr, "Cannot determine minor device number of "
+							"device '%s'\n",
+						objname);
+					exit(20);
+				}
+				context = CTX_MINOR;
+			} else
+				context = CTX_RESOURCE;
+		}
 	}
 	if (cmd->ctx_key & (CTX_CONNECTION | CTX_RESOURCE_AND_CONNECTION)) {
-		if (argc < 4 + !!context) {
+		if (argc <= optind + 1) {
 			fprintf(stderr, "Missing connection endpoint argument\n");
 			print_command_usage(cmd, FULL);
 			exit(20);
 		}
+		opt_local_addr = argv[optind++];
+		opt_peer_addr = argv[optind++];
 		context |= CTX_CONNECTION;
 	}
-	if (objname == NULL && (cmd->ctx_key & CTX_CONNECTION)) {
-		objname = getenv("DRBD_RESOURCE");
-		if (objname == NULL)
-			m_asprintf(&objname, "connection %s %s", argv[2], argv[3]);
+
+	/* Remove the options we have already processed from argv */
+	if (first_optind != optind) {
+		int n;
+
+		for (n = 0; n < argc - optind; n++)
+			argv[first_optind + n] = argv[optind + n];
+		argc -= optind - first_optind;
 	}
-	if (objname == NULL && cmd->ctx == &new_minor_cmd_ctx)
-		objname = argv[2];
+
 	if (objname == NULL)
 		objname = "??";
 
-	/* Make it so that argv[0] is the command name. */
-	rv = cmd->function(cmd, argc - 1, argv + 1);
+	if ((context & CTX_MINOR) && !cmd->lockless)
+		lock_fd = dt_lock_drbd(minor);
+
+	rv = cmd->function(cmd, argc, argv);
+
 	if ((context & CTX_MINOR) && !cmd->lockless)
 		dt_unlock_drbd(lock_fd);
 	return rv;
