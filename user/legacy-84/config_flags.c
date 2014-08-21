@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>
@@ -543,7 +544,7 @@ static const char *get_address(struct context_def *ctx, struct field_def *field,
 	return buffer;
 }
 
-static void resolv6(char *name, struct sockaddr_in6 *addr)
+static void resolv6(const char *name, struct sockaddr_in6 *addr)
 {
 	struct addrinfo hints, *res, *tmp;
 	int err;
@@ -615,7 +616,7 @@ static void split_ipv6_addr(char **address, int *port)
 		*port = 7788; /* will we ever get rid of that default port? */
 }
 
-static void split_address(const char* text, int *af, char** address, int* port)
+static void split_address(int *af, char** address, int* port)
 {
 	static struct { char* text; int af; } afs[] = {
 		{ "ipv4:", AF_INET  },
@@ -628,11 +629,10 @@ static void split_address(const char* text, int *af, char** address, int* port)
 	char *b;
 
 	*af=AF_INET;
-	*address = text;
 	for (i=0; i<ARRAY_SIZE(afs); i++) {
-		if (!strncmp(text, afs[i].text, strlen(afs[i].text))) {
+		if (!strncmp(*address, afs[i].text, strlen(afs[i].text))) {
 			*af = afs[i].af;
-			*address = text + strlen(afs[i].text);
+			*address += strlen(afs[i].text);
 			break;
 		}
 	}
@@ -643,7 +643,7 @@ static void split_address(const char* text, int *af, char** address, int* port)
 	if (*af == -1)
 		*af = get_af_ssocks(1);
 
-	b=strrchr(text,':');
+	b=strrchr(*address,':');
 	if (b) {
 		*b = 0;
 		if (*af == AF_INET6) {
@@ -661,9 +661,9 @@ static void split_address(const char* text, int *af, char** address, int* port)
 int nla_put_address(struct msg_buff *msg, int attrtype, const char *arg)
 {
 	int af, port;
-	char *address;
+	char *address = strdupa(arg);
 
-	split_address(arg, &af, &address, &port);
+	split_address(&af, &address, &port);
 	if (af == AF_INET6) {
 		struct sockaddr_in6 addr6;
 

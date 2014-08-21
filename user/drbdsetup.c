@@ -752,7 +752,7 @@ static unsigned long resolv(const char* name)
 	return retval;
 }
 
-static void split_ipv6_addr(const char **address, int *port)
+static void split_ipv6_addr(char **address, int *port)
 {
 	/* ipv6:[fe80::0234:5678:9abc:def1]:8000; */
 	char *b = strrchr(*address,']');
@@ -771,7 +771,7 @@ static void split_ipv6_addr(const char **address, int *port)
 		*port = 7788; /* will we ever get rid of that default port? */
 }
 
-static void split_address(const char* text, int *af, const char** address, int* port)
+static void split_address(int *af, char** address, int* port)
 {
 	static struct { char* text; int af; } afs[] = {
 		{ "ipv4:", AF_INET  },
@@ -784,11 +784,10 @@ static void split_address(const char* text, int *af, const char** address, int* 
 	char *b;
 
 	*af=AF_INET;
-	*address = text;
 	for (i=0; i<ARRAY_SIZE(afs); i++) {
-		if (!strncmp(text, afs[i].text, strlen(afs[i].text))) {
+		if (!strncmp(*address, afs[i].text, strlen(afs[i].text))) {
 			*af = afs[i].af;
-			*address = text + strlen(afs[i].text);
+			*address += strlen(afs[i].text);
 			break;
 		}
 	}
@@ -799,7 +798,7 @@ static void split_address(const char* text, int *af, const char** address, int* 
 	if (*af == -1)
 		*af = get_af_ssocks(1);
 
-	b=strrchr(text,':');
+	b=strrchr(*address,':');
 	if (b) {
 		*b = 0;
 		if (*af == AF_INET6) {
@@ -817,9 +816,9 @@ static void split_address(const char* text, int *af, const char** address, int* 
 static int sockaddr_from_str(struct sockaddr_storage *storage, const char *str)
 {
 	int af, port;
-	const char *address;
+	char *address = strdupa(str);
 
-	split_address(str, &af, &address, &port);
+	split_address(&af, &address, &port);
 	if (af == AF_INET6) {
 		struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)storage;
 
