@@ -1165,12 +1165,13 @@ static void ensure_proxy_sections(struct d_resource *res)
 
 static void validate_resource(struct d_resource *res, enum pp_flags flags)
 {
-	struct d_option *opt, *next;
+	struct d_option *opt;
 
 	/* there may be more than one "resync-after" statement,
 	 * see commit 89cd0585 */
 	STAILQ_FOREACH(opt, &res->disk_options, link) {
-	  struct d_resource *rs_after_res;
+		struct d_resource *rs_after_res;
+	next:
 		if (strcmp(opt->name, "resync-after"))
 			continue;
 		rs_after_res = res_by_name(opt->value);
@@ -1189,10 +1190,14 @@ static void validate_resource(struct d_resource *res, enum pp_flags flags)
 			 * every pacemaker-induced action, as it would
 			 * ultimately lead to all nodes committing suicide. */
 			if (no_tty) {
-				next = opt;
+				struct d_option *next = STAILQ_NEXT(opt, link);
 				STAILQ_REMOVE(&res->disk_options, opt, d_option, link);
 				free_opt(opt);
 				opt = next;
+				if (opt)
+					goto next;
+				else
+					break;
 			} else
 				config_valid = 0;
 		}
@@ -1256,7 +1261,7 @@ static int ctx_set_implicit_volume(struct cfg_ctx *ctx)
 // Need to convert after from resourcename to minor_number.
 static void _convert_after_option(struct d_resource *res, struct d_volume *vol)
 {
-	struct d_option *opt, *next;
+	struct d_option *opt;
 	struct cfg_ctx depends_on_ctx = { };
 	int volumes;
 
@@ -1264,6 +1269,7 @@ static void _convert_after_option(struct d_resource *res, struct d_volume *vol)
 		return;
 
 	STAILQ_FOREACH(opt, &vol->disk_options, link) {
+	next:
 		if (strcmp(opt->name, "resync-after"))
 			continue;
 		ctx_by_name(&depends_on_ctx, opt->value);
@@ -1279,10 +1285,14 @@ static void _convert_after_option(struct d_resource *res, struct d_volume *vol)
 		}
 
 		if (!depends_on_ctx.res || depends_on_ctx.res->ignore) {
-			next = STAILQ_NEXT(opt, link);
+			struct d_option *next = STAILQ_NEXT(opt, link);
 			STAILQ_REMOVE(&vol->disk_options, opt, d_option, link);
 			free_opt(opt);
 			opt = next;
+			if (opt)
+				goto next;
+			else
+				break;
 		} else {
 			free(opt->value);
 			m_asprintf(&opt->value, "%d", depends_on_ctx.vol->device_minor);
