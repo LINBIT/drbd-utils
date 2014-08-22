@@ -2273,10 +2273,9 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info)
 				struct resource_statistics s;
 			} *old, new;
 
-			if (resource_info_from_attrs(&new.i, info) ||
-			    resource_statistics_from_attrs(&new.s, info)) {
-				dbg(1, "resource info or statistics missing\n");
-				goto out;
+			if (resource_info_from_attrs(&new.i, info)) {
+				dbg(1, "resource info missing\n");
+				goto nl_out;
 			}
 			old = update_info(&key, &new, sizeof(new));
 			if (!old || new.i.res_role != old->i.res_role)
@@ -2288,9 +2287,15 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info)
 			    new.i.res_susp_fen != old->i.res_susp_fen)
 				printf(" suspended:%s",
 				       susp_str(&new.i));
-			if (opt_statistics)
-				print_resource_statistics(0, old ? &old->s : NULL,
-							  &new.s, nowrap_printf);
+			if (opt_statistics) {
+				if (resource_statistics_from_attrs(&new.s, info)) {
+					dbg(1, "resource statistics missing\n");
+					if (old)
+						new.s = old->s;
+				} else
+					print_resource_statistics(0, old ? &old->s : NULL,
+								  &new.s, nowrap_printf);
+			}
 			free(old);
 		} else
 			update_info(&key, NULL, 0);
@@ -2302,18 +2307,23 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info)
 				struct device_statistics s;
 			} *old, new;
 
-			if (device_info_from_attrs(&new.i, info) ||
-			    device_statistics_from_attrs(&new.s, info)) {
-				dbg(1, "device info or statistics missing\n");
-				goto out;
+			if (device_info_from_attrs(&new.i, info)) {
+				dbg(1, "device info missing\n");
+				goto nl_out;
 			}
 			old = update_info(&key, &new, sizeof(new));
 			if (!old || new.i.dev_disk_state != old->i.dev_disk_state)
 				printf(" disk:%s",
 				       drbd_disk_str(new.i.dev_disk_state));
-			if (opt_statistics)
-				print_device_statistics(0, old ? &old->s : NULL,
-							&new.s, nowrap_printf);
+			if (opt_statistics) {
+				if (device_statistics_from_attrs(&new.s, info)) {
+					dbg(1, "device statistics missing\n");
+					if (old)
+						new.s = old->s;
+				} else
+					print_device_statistics(0, old ? &old->s : NULL,
+								&new.s, nowrap_printf);
+			}
 			free(old);
 		} else
 			update_info(&key, NULL, 0);
@@ -2325,10 +2335,9 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info)
 				struct connection_statistics s;
 			} *old, new;
 
-			if (connection_info_from_attrs(&new.i, info) ||
-			    connection_statistics_from_attrs(&new.s, info)) {
-				dbg(1, "connection info or statistics missing\n");
-				goto out;
+			if (connection_info_from_attrs(&new.i, info)) {
+				dbg(1, "connection info missing\n");
+				goto nl_out;
 			}
 			old = update_info(&key, &new, sizeof(new));
 			if (!old ||
@@ -2339,9 +2348,15 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info)
 			    new.i.conn_role != old->i.conn_role)
 				printf(" role:%s",
 				       drbd_role_str(new.i.conn_role));
-			if (opt_statistics)
-				print_connection_statistics(0, old ? &old->s : NULL,
-							    &new.s, nowrap_printf);
+			if (opt_statistics) {
+				if (connection_statistics_from_attrs(&new.s, info)) {
+					dbg(1, "connection statistics missing\n");
+					if (old)
+						new.s = old->s;
+				} else
+					print_connection_statistics(0, old ? &old->s : NULL,
+								    &new.s, nowrap_printf);
+			}
 			free(old);
 		} else
 			update_info(&key, NULL, 0);
@@ -2353,10 +2368,9 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info)
 				struct peer_device_statistics s;
 			} *old, new;
 
-			if (peer_device_info_from_attrs(&new.i, info) ||
-			    peer_device_statistics_from_attrs(&new.s, info)) {
-				dbg(1, "peer device info or statistics missing\n");
-				goto out;
+			if (peer_device_info_from_attrs(&new.i, info)) {
+				dbg(1, "peer device info missing\n");
+				goto nl_out;
 			}
 			old = update_info(&key, &new, sizeof(new));
 			if (!old || new.i.peer_repl_state != old->i.peer_repl_state)
@@ -2371,9 +2385,15 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info)
 			    new.i.peer_resync_susp_dependency != old->i.peer_resync_susp_dependency)
 				printf(" resync-suspended:%s",
 				       resync_susp_str(&new.i));
-			if (opt_statistics)
-				print_peer_device_statistics(0, old ? &old->s : NULL,
-							     &new.s, nowrap_printf);
+			if (opt_statistics) {
+				if (peer_device_statistics_from_attrs(&new.s, info)) {
+					dbg(1, "peer device statistics missing\n");
+					if (old)
+						new.s = old->s;
+				} else
+					print_peer_device_statistics(0, old ? &old->s : NULL,
+								     &new.s, nowrap_printf);
+			}
 			free(old);
 		} else
 			update_info(&key, NULL, 0);
@@ -2387,15 +2407,16 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info)
 				printf(" status:%u", helper_info.helper_status);
 		} else {
 			dbg(1, "helper info missing\n");
-			goto out;
+			goto nl_out;
 		}
 		}
 		break;
 	case DRBD_INITIAL_STATE_DONE:
 		break;
 	}
-	printf("\n");
 
+nl_out:
+	printf("\n");
 out:
 	free(key);
 	fflush(stdout);
