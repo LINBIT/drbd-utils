@@ -30,6 +30,7 @@
 use strict;
 use warnings;
 use IO::Handle;
+use Data::Dumper;
 use Sys::Syslog qw(:standard :macros);
 
 my $THIS_FILE="rhcs_fence";
@@ -101,7 +102,12 @@ sleep_a_bit($conf);
 # Eject the target, if I can.
 eject_target($conf);
 
-# Kill the target.
+# In case cman decided by itself to fence the node...
+eventually_wait_for_fenced($conf); # May exit with exit code 7
+
+# Only kill the target if gracefull eject did not work. This is
+# important because fence_node does not want to be invoked
+# in multiple instances in parallel.
 kill_target($conf);
 
 exit(255);
@@ -316,13 +322,15 @@ sub eject_target
 		$sc->close();
 		$sc_exit=$?;
 		to_log(LOG_DEBUG(), $conf, __LINE__, "DEBUG: Attempt to force-remove node: [$remote_node] exited with: [$sc_exit]");
+
+		return 1;
 	}
 	else
 	{
 		to_log(LOG_DEBUG(), $conf, __LINE__, "Target node: [$remote_node] is *not* a cluster member (state: [$conf->{nodes}{$remote_node}{member}]). Not ejecting.");
-	}
 
-	return(0);
+		return 0;
+	}
 }
 
 # This identifies the remote node.
@@ -509,8 +517,10 @@ sub to_log
 	my ($level, $conf, $line_num, $message)=@_;
 
 	# I want the line number in DEBUG mode.
-	if ($conf->{sys}{debug}) { $message="$line_num; $message"; }
-
+	if ($conf->{sys}{debug}) {
+		$message="$line_num; $message";
+		$level = LOG_INFO() if ($level = LOG_DEBUG());
+	}
 	if (not $conf->{handle}{'log'})
 	{
 		openlog($THIS_FILE, "", LOG_DAEMON());
@@ -539,4 +549,75 @@ sub nice_exit
 	}
 
 	exit ($code);
+}
+
+sub get_fenced_state
+{
+	my ($conf)=@_;
+
+	#fence_tool -n ls
+
+	my $fts = IO::Handle->new();
+	open($fts, "fence_tool -n ls |") or
+	    to_log(LOG_ERR(), $conf, __LINE__, "Failed to call: fence_tools  error was $!\n");
+
+	my %r;
+
+	<$fts> =~ /fence domain/;
+	$r{member_count} = $1 if (<$fts> =~ /member count\s+([0-9]+)/);
+	$r{victim_count} = $1 if (<$fts> =~ /victim count\s+([0-9]+)/);
+	$r{victim_now} = $1 if (<$fts> =~ /victim now\s+([0-9]+)/);
+	$r{master_nodeid} = $1 if (<$fts> =~ /master nodeid\s+([0-9]+)/);
+	$r{wait_state} = $1 if (<$fts> =~ /wait state\s+(\w+)$/);
+	$fts->close();
+
+	return \%r;
+}
+
+sub wait_for_fenced_status
+{
+	my ($conf, $target_state, $time_seconds)=@_;
+	my $fenced_state;
+
+	while ($time_seconds) {
+		$fenced_state = get_fenced_state($conf);
+		if ($fenced_state->{wait_state} eq $target_state) {
+				return $fenced_state;
+		}
+		sleep(1);
+		to_log(LOG_DEBUG(), $conf, __LINE__,
+		       "DEBUG: Waiting for $target_state. Now $fenced_state->{wait_state}\n");
+		$time_seconds--;
+	}
+
+	return $fenced_state;
+}
+
+sub eventually_wait_for_fenced
+{
+	my ($conf)=@_;
+
+	my $fenced_state1 = wait_for_fenced_status($conf, "fencing", 30);
+
+	if ($fenced_state1->{wait_state} ne "fencing") {
+		to_log(LOG_DEBUG(), $conf, __LINE__,
+		       "DEBUG: Expected fencd to do a fence action, got $fenced_state1->{wait_state}\n");
+		return;
+	}
+
+	my $to_fence_node_id = $conf->{nodes}{$conf->{env}{DRBD_PEERS}}{id};
+	if ($fenced_state1->{victim_now} != $to_fence_node_id) {
+		to_log(LOG_ERR(), $conf, __LINE__,
+		       "Fenced is shooting at $fenced_state1->{victim_now};".
+		       "Should shoot at $to_fence_node_id\n");
+	}
+
+	my $fenced_state2 = wait_for_fenced_status($conf, "none", 240);
+	if ($fenced_state2->{wait_state} eq "none") {
+		to_log(LOG_INFO(), $conf, __LINE__, "Seems fenced was successfull\n");
+		exit 7;
+	} else {
+		to_log(LOG_ERR(), $conf, __LINE__, "Fenced failed".
+		       Dumper($fenced_state1).Dumper($fenced_state2));
+	}
 }
