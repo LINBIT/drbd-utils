@@ -506,7 +506,7 @@ sub get_local_node_name
 # Log file entries
 sub to_log
 {
-	my ($level, $conf, $exit, $line_num, $message)=@_;
+	my ($level, $conf, $line_num, $message)=@_;
 
 	# I want the line number in DEBUG mode.
 	if ($conf->{sys}{debug}) { $message="$line_num; $message"; }
@@ -522,7 +522,7 @@ sub to_log
 
 	if (grep($level == $_, LOG_ERR(), LOG_ALERT, LOG_CRIT, LOG_EMERG))
 	{
-		nice_exit($conf, $exit);
+		nice_exit($conf, 1);
 	}
 
 	return(0);
