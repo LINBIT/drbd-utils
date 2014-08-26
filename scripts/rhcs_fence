@@ -247,7 +247,7 @@ sub kill_target
 	$sc=IO::Handle->new();
 	$shell_call="$conf->{path}{fence_node} -v $remote_node";
 	to_log(LOG_DEBUG(), $conf, __LINE__, "DEBUG: shell call: [$shell_call]");
-	open ($sc, "$shell_call 2>&1 |") or to_log(LOG_ERROR(), $conf, __LINE__, "Failed to call: [$sc], error was: $!");
+	open ($sc, "$shell_call 2>&1 |") or to_log(LOG_ERR(), $conf, __LINE__, "Failed to call: [$sc], error was: $!");
 	while(<$sc>)
 	{
 		chomp;
@@ -307,7 +307,7 @@ sub eject_target
 		$sc=IO::Handle->new();
 		$shell_call="$conf->{path}{cman_tool} kill -n $remote_node";
 		to_log(LOG_DEBUG(), $conf, __LINE__, "DEBUG: shell call: [$shell_call]");
-		open ($sc, "$shell_call 2>&1 |") or to_log(LOG_ERROR(), $conf, __LINE__, "Failed to call: [$sc], error was: $!");
+		open ($sc, "$shell_call 2>&1 |") or to_log(LOG_ERR(), $conf, __LINE__, "Failed to call: [$sc], error was: $!");
 		while(<$sc>)
 		{
 			chomp;
@@ -373,7 +373,7 @@ sub get_info_on_other_nodes
 	$sc=IO::Handle->new();
 	$shell_call="$conf->{path}{cman_tool} -a -F id,name,type,addr nodes";
 	to_log(LOG_DEBUG(), $conf, __LINE__, "DEBUG: shell call: [$shell_call]");
-	open ($sc, "$shell_call 2>&1 |") or to_log(LOG_ERROR(), $conf, __LINE__, "Failed to call: [$sc], error was: $!");
+	open ($sc, "$shell_call 2>&1 |") or to_log(LOG_ERR(), $conf, __LINE__, "Failed to call: [$sc], error was: $!");
 	while(<$sc>)
 	{
 		chomp;
@@ -411,7 +411,7 @@ sub get_local_resource_state
 	to_log(LOG_DEBUG(), $conf, __LINE__, "DEBUG: Checking the state of resource with minor number: [$conf->{env}{DRBD_MINOR}]");
 	if ($conf->{env}{DRBD_MINOR} eq "")
 	{
-		to_log(LOG_ERROR(), $conf, __LINE__, "Resource minor number not defined! Unable to proceed.");
+		to_log(LOG_ERR(), $conf, __LINE__, "Resource minor number not defined! Unable to proceed.");
 	}
 
 	# minor can be a space delimited list. Assume it's always a list and iterate over it
@@ -421,7 +421,7 @@ sub get_local_resource_state
 	$sc=IO::Handle->new();
 	$shell_call="</proc/drbd";
 	to_log(LOG_DEBUG(), $conf, __LINE__, "DEBUG: shell call: [$shell_call]");
-	open ($sc, "$shell_call") or to_log(LOG_ERROR(), $conf, __LINE__, "Failed to call: [$sc], error was: $!");
+	open ($sc, "$shell_call") or to_log(LOG_ERR(), $conf, __LINE__, "Failed to call: [$sc], error was: $!");
 	while(<$sc>)
 	{
 		chomp;
@@ -458,7 +458,7 @@ to_log(LOG_DEBUG(), $conf, __LINE__, "DEBUG: sys::local_res_uptodate: [$conf->{s
 	to_log(LOG_DEBUG(), $conf, __LINE__, "DEBUG: UpToDate: [$conf->{sys}{local_res_uptodate}]");
 	if (not $conf->{sys}{local_res_uptodate})
 	{
-		to_log(LOG_ERROR(), $conf, __LINE__, "Local resource: [$conf->{env}{DRBD_RESOURCE}], minor: [@minor] is NOT 'UpToDate', will not fence peer.");
+		to_log(LOG_ERR(), $conf, __LINE__, "Local resource: [$conf->{env}{DRBD_RESOURCE}], minor: [@minor] is NOT 'UpToDate', will not fence peer.");
 	}
 
 	return(0);
@@ -478,7 +478,7 @@ sub get_local_node_name
 	$sc=IO::Handle->new();
 	$shell_call="$conf->{path}{cman_tool} status";
 	to_log(LOG_DEBUG(), $conf, __LINE__, "DEBUG: shell call: [$shell_call]");
-	open ($sc, "$shell_call 2>&1 |") or to_log(LOG_ERROR(), $conf, __LINE__, "Failed to call: [$sc], error was: $!");
+	open ($sc, "$shell_call 2>&1 |") or to_log(LOG_ERR(), $conf, __LINE__, "Failed to call: [$sc], error was: $!");
 	while(<$sc>)
 	{
 		chomp;
@@ -497,7 +497,7 @@ sub get_local_node_name
 	to_log(LOG_DEBUG(), $conf, __LINE__, "DEBUG: I am: [$conf->{sys}{this_node}]");
 	if (not $conf->{sys}{this_node})
 	{
-		to_log(LOG_ERROR(), $conf, __LINE__, "Unable to find local node name.");
+		to_log(LOG_ERR(), $conf, __LINE__, "Unable to find local node name.");
 	}
 
 	return(0);
