@@ -1078,27 +1078,18 @@ static bool opt_verbose;
 static bool opt_statistics;
 static bool opt_timestamps;
 
-static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int generic_get(struct drbd_cmd *cm, int timeout_arg)
 {
-	static struct option no_options[] = { { } };
 	char *desc = NULL;
 	struct drbd_genlmsghdr *dhdr;
 	struct msg_buff *smsg;
 	struct iovec iov;
-	struct choose_timo_ctx timeo_ctx = {
-		.wfc_timeout = DRBD_WFC_TIMEOUT_DEF,
-		.degr_wfc_timeout = DRBD_DEGR_WFC_TIMEOUT_DEF,
-		.outdated_wfc_timeout = DRBD_OUTDATED_WFC_TIMEOUT_DEF,
-	};
-	int timeout_ms = -1;  /* "infinite" */
-	int flags;
+	int timeout_ms, flags;
 	int rv = NO_ERROR;
 	int err = 0;
-	struct option *options = cm->options ? cm->options : no_options;
-	const char *opts = make_optstring(options);
 
 	/* pre allocate request message and reply buffer */
-	iov.iov_len = 8192;
+	iov.iov_len = DEFAULT_MSG_SIZE;
 	iov.iov_base = malloc(iov.iov_len);
 	smsg = msg_new(DEFAULT_MSG_SIZE);
 	if (!smsg || !iov.iov_base) {
@@ -1106,6 +1097,273 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		rv = OTHER_ERROR;
 		goto out;
 	}
+
+	if (cm->continuous_poll) {
+		if (genl_join_mc_group(drbd_sock, "events") &&
+		    !kernel_older_than(2, 6, 23)) {
+			desc = "unable to join drbd events multicast group";
+			rv = OTHER_ERROR;
+			goto out2;
+		}
+	}
+
+	flags = 0;
+	if (minor == -1U)
+		flags |= NLM_F_DUMP;
+	dhdr = genlmsg_put(smsg, &drbd_genl_family, flags, cm->cmd_id);
+	dhdr->minor = minor;
+	dhdr->flags = 0;
+	if (minor == -1U && strcmp(objname, "all")) {
+		/* Restrict the dump to a single resource. */
+		struct nlattr *nla;
+		nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
+		nla_put_string(smsg, T_ctx_resource_name, objname);
+		nla_nest_end(smsg, nla);
+	}
+
+	if (genl_send(drbd_sock, smsg)) {
+		desc = "error sending config command";
+		rv = OTHER_ERROR;
+		goto out2;
+	}
+
+	/* disable sequence number check in genl_recv_msgs */
+	drbd_sock->s_seq_expect = 0;
+
+	for (;;) {
+		int received, rem, ret;
+		struct nlmsghdr *nlh = (struct nlmsghdr *)iov.iov_base;
+		struct timeval before;
+		struct pollfd pollfds[2] = {
+			[0] = {
+				.fd = 1,
+				.events = POLLHUP,
+			},
+			[1] = {
+				.fd = drbd_sock->s_fd,
+				.events = POLLIN,
+			},
+		};
+
+		gettimeofday(&before, NULL);
+
+		timeout_ms = timeout_arg;
+
+		ret = poll(pollfds, 2, timeout_arg);
+		if (ret == 0) {
+			err = 5;
+			goto out2;
+		}
+		if (pollfds[0].revents == POLLERR || pollfds[0].revents == POLLHUP)
+			goto out2;
+
+		received = genl_recv_msgs(drbd_sock, &iov, &desc, -1);
+		if (received < 0) {
+			switch(received) {
+			case E_RCV_TIMEDOUT:
+				err = 5;
+				goto out2;
+			case -E_RCV_FAILED:
+				err = 20;
+				goto out2;
+			case -E_RCV_NO_SOURCE_ADDR:
+				continue; /* ignore invalid message */
+			case -E_RCV_SEQ_MISMATCH:
+				/* we disabled it, so it should not happen */
+				err = 20;
+				goto out2;
+			case -E_RCV_MSG_TRUNC:
+				continue;
+			case -E_RCV_UNEXPECTED_TYPE:
+				continue;
+			case -E_RCV_NLMSG_DONE:
+				if (cm->continuous_poll)
+					continue;
+				err = cm->show_function(cm, NULL);
+				if (err)
+					goto out2;
+				err = -*(int*)nlmsg_data(nlh);
+				if (err &&
+				    (err != ENODEV || !cm->missing_ok)) {
+					fprintf(stderr, "received netlink error reply: %s\n",
+						strerror(err));
+					err = 20;
+				}
+				goto out2;
+			case -E_RCV_ERROR_REPLY:
+				if (!errno) /* positive ACK message */
+					continue;
+				if (!desc)
+					desc = strerror(errno);
+				fprintf(stderr, "received netlink error reply: %s\n",
+					       desc);
+				err = 20;
+				goto out2;
+			default:
+				if (!desc)
+					desc = "error receiving config reply";
+				err = 20;
+				goto out2;
+			}
+		}
+
+		if (timeout_ms != -1) {
+			struct timeval after;
+			int elapsed_ms;
+			bool exit;
+
+			gettimeofday(&after, NULL);
+			elapsed_ms =
+				(after.tv_sec - before.tv_sec) * 1000 +
+				(after.tv_usec - before.tv_usec) / 1000;
+
+			timeout_ms -= elapsed_ms;
+			exit = timeout_ms <= 0;
+
+			if (exit) {
+				err = 5;
+				goto out2;
+			}
+		}
+
+		/* There may be multiple messages in one datagram (for dump replies). */
+		nlmsg_for_each_msg(nlh, nlh, received, rem) {
+			struct drbd_genlmsghdr *dh = genlmsg_data(nlmsg_data(nlh));
+			struct genl_info info = (struct genl_info){
+				.seq = nlh->nlmsg_seq,
+				.nlhdr = nlh,
+				.genlhdr = nlmsg_data(nlh),
+				.userhdr = genlmsg_data(nlmsg_data(nlh)),
+				.attrs = global_attrs,
+			};
+
+			if (nlh->nlmsg_type < NLMSG_MIN_TYPE) {
+				/* Ignore netlink control messages. */
+				continue;
+			}
+			if (nlh->nlmsg_type == GENL_ID_CTRL) {
+#ifdef HAVE_CTRL_CMD_DELMCAST_GRP
+				if (info.genlhdr->cmd == CTRL_CMD_DELMCAST_GRP) {
+					struct nlattr *nla =
+						nlmsg_find_attr(nlh, GENL_HDRLEN, CTRL_ATTR_FAMILY_ID);
+					if (nla && nla_get_u16(nla) == drbd_genl_family.id) {
+						/* FIXME: We could wait for the
+						   multicast group to be recreated ... */
+						goto out2;
+					}
+				}
+#endif
+				/* Ignore other generic netlink control messages. */
+				continue;
+			}
+			if (nlh->nlmsg_type != drbd_genl_family.id) {
+				/* Ignore messages for all other netlink families. */
+				continue;
+			}
+
+			/* parse early, otherwise drbd_cfg_context_from_attrs
+			 * can not work */
+			if (drbd_tla_parse(nlh)) {
+				/* FIXME
+				 * should continuous_poll continue?
+				 */
+				desc = "reply did not validate - "
+					"do you need to upgrade your userland tools?";
+				rv = OTHER_ERROR;
+				goto out2;
+			}
+			if (cm->continuous_poll) {
+				struct drbd_cfg_context ctx;
+				/*
+				 * We will receive all events and have to
+				 * filter for what we want ourself.
+				 */
+				/* FIXME
+				 * Do we want to ignore broadcasts until the
+				 * initial get/dump requests is done? */
+
+				if (!drbd_cfg_context_from_attrs(&ctx, &info)) {
+					switch ((int)cm->ctx_key) {
+					case CTX_MINOR:
+						/* Assert that, for an unicast reply,
+						 * reply minor matches request minor.
+						 * "unsolicited" kernel broadcasts are "pid=0" (netlink "port id")
+						 * (and expected to be genlmsghdr.cmd == DRBD_EVENT) */
+						if (minor != dh->minor) {
+							if (info.nlhdr->nlmsg_pid != 0)
+								dbg(1, "received netlink packet for minor %u, while expecting %u\n",
+									dh->minor, minor);
+							continue;
+						}
+						break;
+					case CTX_RESOURCE:
+					case CTX_RESOURCE | CTX_ALL:
+						if (!strcmp(objname, "all"))
+							break;
+
+						if (strcmp(objname, ctx.ctx_resource_name))
+							continue;
+
+						break;
+#if 0
+					case CTX_CONNECTION:
+					case CTX_CONNECTION | CTX_RESOURCE:
+						if (!endpoints_equal(&ctx, &global_ctx))
+							continue;
+						break;
+#endif
+#if 0
+					case CTX_PEER_DEVICE:
+						if (!endpoints_equal(&ctx, &global_ctx) ||
+						    ctx.ctx_volume != global_ctx.ctx_volume)
+							continue;
+						break;
+#endif
+					default:
+						assert(0);
+					}
+				}
+			}
+			rv = dh->ret_code;
+			if (rv == ERR_MINOR_INVALID && cm->missing_ok)
+				rv = NO_ERROR;
+			if (rv != NO_ERROR)
+				goto out2;
+			err = cm->show_function(cm, &info);
+			if (err) {
+				if (err < 0)
+					err = 0;
+				goto out2;
+			}
+		}
+		if (!cm->continuous_poll && !(flags & NLM_F_DUMP)) {
+			/* There will be no more reply packets.  */
+			err = cm->show_function(cm, NULL);
+			goto out2;
+		}
+	}
+
+out2:
+	msg_free(smsg);
+
+out:
+	if (!err)
+		err = print_config_error(rv, desc);
+	free(iov.iov_base);
+	return err;
+}
+
+static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
+{
+	static struct option no_options[] = { { } };
+	struct choose_timo_ctx timeo_ctx = {
+		.wfc_timeout = DRBD_WFC_TIMEOUT_DEF,
+		.degr_wfc_timeout = DRBD_DEGR_WFC_TIMEOUT_DEF,
+		.outdated_wfc_timeout = DRBD_OUTDATED_WFC_TIMEOUT_DEF,
+	};
+	int timeout_ms = -1;  /* "infinite" */
+	struct option *options = cm->options ? cm->options : no_options;
+	const char *opts = make_optstring(options);
 
 	optind = 0;  /* reset getopt_long() */
 	for(;;) {
@@ -1183,7 +1441,17 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 
 	if (cm->wait_for_connect_timeouts) {
 		/* wait-connect, wait-sync */
+		struct msg_buff *smsg;
+		struct iovec iov;
 		int rr;
+
+		iov.iov_len = 8192;
+		iov.iov_base = malloc(iov.iov_len);
+		smsg = msg_new(DEFAULT_MSG_SIZE);
+		if (!smsg || !iov.iov_base) {
+			fprintf(stderr, "could not allocate netlink messages\n");
+			return 20;
+		}
 
 		timeo_ctx.minor = minor;
 		timeo_ctx.smsg = smsg;
@@ -1194,214 +1462,14 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		if (timeo_ctx.timeout)
 			timeout_ms = timeo_ctx.timeout * 1000;
 
-		/* rewind send message buffer */
-		smsg->tail = smsg->data;
+		msg_free(smsg);
+		free(iov.iov_base);
 	} else if (!cm->continuous_poll)
 		/* normal "get" request, or "show" */
 		timeout_ms = 120000;
 	/* else: events command, defaults to "infinity" */
 
-	if (cm->continuous_poll) {
-		if (genl_join_mc_group(drbd_sock, "events") &&
-		    !kernel_older_than(2, 6, 23)) {
-			fprintf(stderr, "unable to join drbd events multicast group\n");
-			return 20;
-		}
-	}
-
-	flags = 0;
-	if (minor == -1U)
-		flags |= NLM_F_DUMP;
-	dhdr = genlmsg_put(smsg, &drbd_genl_family, flags, cm->cmd_id);
-	dhdr->minor = minor;
-	dhdr->flags = 0;
-	if (minor == -1U && strcmp(objname, "all")) {
-		/* Restrict the dump to a single resource. */
-		struct nlattr *nla;
-		nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
-		nla_put_string(smsg, T_ctx_resource_name, objname);
-		nla_nest_end(smsg, nla);
-	}
-
-	if (genl_send(drbd_sock, smsg)) {
-		desc = "error sending config command";
-		rv = OTHER_ERROR;
-		goto out2;
-	}
-
-	/* disable sequence number check in genl_recv_msgs */
-	drbd_sock->s_seq_expect = 0;
-
-	for (;;) {
-		int received, rem;
-		struct nlmsghdr *nlh = (struct nlmsghdr *)iov.iov_base;
-		struct timeval before;
-
-		if (timeout_ms != -1)
-			gettimeofday(&before, NULL);
-
-		received = genl_recv_msgs(drbd_sock, &iov, &desc, timeout_ms);
-		if (received < 0) {
-			switch(received) {
-			case E_RCV_TIMEDOUT:
-				err = 5;
-				goto out2;
-			case -E_RCV_FAILED:
-				err = 20;
-				goto out2;
-			case -E_RCV_NO_SOURCE_ADDR:
-				continue; /* ignore invalid message */
-			case -E_RCV_SEQ_MISMATCH:
-				/* we disabled it, so it should not happen */
-				err = 20;
-				goto out2;
-			case -E_RCV_MSG_TRUNC:
-				continue;
-			case -E_RCV_UNEXPECTED_TYPE:
-				continue;
-			case -E_RCV_NLMSG_DONE:
-				if (cm->continuous_poll)
-					continue;
-				err = cm->show_function(cm, NULL);
-				if (err)
-					goto out2;
-				err = -*(int*)nlmsg_data(nlh);
-				if (err &&
-				    (err != ENODEV || !cm->missing_ok)) {
-					fprintf(stderr, "received netlink error reply: %s\n",
-						strerror(err));
-					err = 20;
-				}
-				goto out2;
-			case -E_RCV_ERROR_REPLY:
-				if (!errno) /* positive ACK message */
-					continue;
-				if (!desc)
-					desc = strerror(errno);
-				fprintf(stderr, "received netlink error reply: %s\n",
-					       desc);
-				err = 20;
-				goto out2;
-			default:
-				if (!desc)
-					desc = "error receiving config reply";
-				err = 20;
-				goto out2;
-			}
-		}
-
-		if (timeout_ms != -1) {
-			struct timeval after;
-
-			gettimeofday(&after, NULL);
-			timeout_ms -= (after.tv_sec - before.tv_sec) * 1000 +
-				      (after.tv_usec - before.tv_usec) / 1000;
-			if (timeout_ms <= 0) {
-				err = 5;
-				goto out2;
-			}
-		}
-
-		/* There may be multiple messages in one datagram (for dump replies). */
-		nlmsg_for_each_msg(nlh, nlh, received, rem) {
-			struct drbd_genlmsghdr *dh = genlmsg_data(nlmsg_data(nlh));
-			struct genl_info info = (struct genl_info){
-				.seq = nlh->nlmsg_seq,
-				.nlhdr = nlh,
-				.genlhdr = nlmsg_data(nlh),
-				.userhdr = genlmsg_data(nlmsg_data(nlh)),
-				.attrs = global_attrs,
-			};
-
-			if (nlh->nlmsg_type < NLMSG_MIN_TYPE) {
-				/* Ignore netlink control messages. */
-				continue;
-			}
-			if (nlh->nlmsg_type == GENL_ID_CTRL) {
-#ifdef HAVE_CTRL_CMD_DELMCAST_GRP
-				if (info.genlhdr->cmd == CTRL_CMD_DELMCAST_GRP) {
-					struct nlattr *nla =
-						nlmsg_find_attr(nlh, GENL_HDRLEN, CTRL_ATTR_FAMILY_ID);
-					if (nla && nla_get_u16(nla) == drbd_genl_family.id) {
-						/* FIXME: We could wait for the
-						   multicast group to be recreated ... */
-						goto out2;
-					}
-				}
-#endif
-				/* Ignore other generic netlink control messages. */
-				continue;
-			}
-			if (nlh->nlmsg_type != drbd_genl_family.id) {
-				/* Ignore messages for all other netlink families. */
-				continue;
-			}
-
-			/* parse early, otherwise drbd_cfg_context_from_attrs
-			 * can not work */
-			if (drbd_tla_parse(nlh)) {
-				/* FIXME
-				 * should continuous_poll continue?
-				 */
-				desc = "reply did not validate - "
-					"do you need to upgrade your userland tools?";
-				rv = OTHER_ERROR;
-				goto out2;
-			}
-			if (cm->continuous_poll) {
-				/*
-				 * We will receive all events and have to
-				 * filter for what we want ourself.
-				 */
-				/* FIXME
-				 * Do we want to ignore broadcasts until the
-				 * initial get/dump requests is done? */
-				if (minor != -1U) {
-					/* Assert that, for an unicast reply,
-					 * reply minor matches request minor.
-					 * "unsolicited" kernel broadcasts are "pid=0" (netlink "port id")
-					 * (and expected to be genlmsghdr.cmd == DRBD_EVENT) */
-					if (minor != dh->minor) {
-						if (info.nlhdr->nlmsg_pid != 0)
-							dbg(1, "received netlink packet for minor %u, while expecting %u\n",
-								dh->minor, minor);
-						continue;
-					}
-				} else if (strcmp(objname, "all")) {
-					struct drbd_cfg_context ctx;
-
-					if (!drbd_cfg_context_from_attrs(&ctx, &info) &&
-					    strcmp(objname, ctx.ctx_resource_name))
-						continue;
-				}
-			}
-			rv = dh->ret_code;
-			if (rv == ERR_MINOR_INVALID && cm->missing_ok)
-				rv = NO_ERROR;
-			if (rv != NO_ERROR)
-				goto out2;
-			err = cm->show_function(cm, &info);
-			if (err) {
-				if (err < 0)
-					err = 0;
-				goto out2;
-			}
-		}
-		if (!cm->continuous_poll && !(flags & NLM_F_DUMP)) {
-			/* There will be no more reply packets.  */
-			err = cm->show_function(cm, NULL);
-			goto out2;
-		}
-	}
-
-out2:
-	msg_free(smsg);
-
-out:
-	if (rv != NO_ERROR)
-		err = print_config_error(rv, desc);
-	free(iov.iov_base);
-	return err;
+	return generic_get(cm, timeout_ms);
 }
 
 static void show_address(void* address, int addr_len)
