@@ -78,6 +78,7 @@
 #include "config.h"
 #include "config_flags.h"
 #include "wrap_printf.h"
+#include "drbdsetup_colors.h"
 #include "drbd_strings.h"
 
 char *progname;
@@ -195,6 +196,7 @@ static int down_cmd(struct drbd_cmd *cm, int argc, char **argv);
 static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv);
 static int del_minor_cmd(struct drbd_cmd *cm, int argc, char **argv);
 static int del_resource_cmd(struct drbd_cmd *cm, int argc, char **argv);
+static int status_cmd(struct drbd_cmd *cm, int argc, char **argv);
 
 // sub commands for generic_get_cmd
 static int print_notifications(struct drbd_cmd *, struct genl_info *, void *u_ptr);
@@ -219,6 +221,50 @@ static int conv_resource_name(struct drbd_argument *ad, struct msg_buff *msg, st
 static int conv_volume(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 static int conv_minor(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 
+struct resources_list {
+	struct resources_list *next;
+	char *name;
+	struct nlattr *res_opts;
+	struct resource_info info;
+	struct resource_statistics statistics;
+};
+static struct resources_list *list_resources(void);
+static struct resources_list *sort_resources(struct resources_list *);
+static void free_resources(struct resources_list *);
+
+struct devices_list {
+	struct devices_list *next;
+	unsigned minor;
+	struct drbd_cfg_context ctx;
+	struct disk_conf disk_conf;
+	struct device_info info;
+	struct device_statistics statistics;
+};
+static struct devices_list *list_devices(char *);
+static void free_devices(struct devices_list *);
+
+struct connections_list {
+	struct connections_list *next;
+	struct drbd_cfg_context ctx;
+	struct nlattr *net_conf;
+	struct connection_info info;
+	struct connection_statistics statistics;
+};
+static struct connections_list *sort_connections(struct connections_list *);
+static struct connections_list *list_connections(char *);
+static void free_connections(struct connections_list *);
+
+struct peer_devices_list {
+	struct peer_devices_list *next;
+	struct drbd_cfg_context ctx;
+	struct peer_device_info info;
+	struct peer_device_statistics statistics;
+	struct devices_list *device;
+	int timeout_ms; /* used only by wait_for_family() */
+};
+static struct peer_devices_list *list_peer_devices(char *);
+static void free_peer_devices(struct peer_devices_list *);
+
 struct option wait_cmds_options[] = {
 	{ "wfc-timeout",required_argument, 0, 't' },
 	{ "degr-wfc-timeout",required_argument,0,'d'},
@@ -236,6 +282,13 @@ struct option events_cmd_options[] = {
 
 struct option show_cmd_options[] = {
 	{ "show-defaults", no_argument, 0, 'D' },
+	{ }
+};
+
+static struct option status_cmd_options[] = {
+	{ "verbose", no_argument, 0, 'v' },
+	{ "statistics", no_argument, 0, 's' },
+	{ "color", optional_argument, 0, 'c' },
 	{ }
 };
 
@@ -325,6 +378,9 @@ struct drbd_cmd commands[] = {
 		.lockless = true, },
 	{"show", CTX_MINOR | CTX_RESOURCE | CTX_ALL, F_GET_CMD(show_scmd),
 		.options = show_cmd_options,
+		.lockless = true, },
+	{"status", CTX_RESOURCE | CTX_ALL, 0, 0, status_cmd,
+		.options = status_cmd_options,
 		.lockless = true, },
 	{"check-resize", CTX_MINOR, F_GET_CMD(lk_bdev_scmd),
 		.lockless = true, },
@@ -485,6 +541,14 @@ struct genl_family drbd_genl_family = {
 	.version = GENL_MAGIC_VERSION,
 	.hdrsize = GENL_MAGIC_FAMILY_HDRSZ,
 };
+
+static bool endpoints_equal(struct drbd_cfg_context *a, struct drbd_cfg_context *b)
+{
+	return a->ctx_my_addr_len == b->ctx_my_addr_len &&
+	       a->ctx_peer_addr_len == b->ctx_peer_addr_len &&
+	       !memcmp(a->ctx_my_addr, b->ctx_my_addr, a->ctx_my_addr_len) &&
+	       !memcmp(a->ctx_peer_addr, b->ctx_peer_addr, a->ctx_peer_addr_len);
+}
 
 static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 			  struct drbd_genlmsghdr *dhdr, char* arg)
@@ -1536,6 +1600,326 @@ static struct minors_list *enumerate_minors(void)
 	return m;
 }
 
+static int remember_resource(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
+{
+	struct resources_list ***tail = u_ptr;
+	struct drbd_cfg_context cfg = { .ctx_volume = -1U };
+
+	if (!info)
+		return 0;
+
+	drbd_cfg_context_from_attrs(&cfg, info);
+	if (cfg.ctx_resource_name) {
+		struct resources_list *r = calloc(1, sizeof(*r));
+		struct nlattr *res_opts = global_attrs[DRBD_NLA_RESOURCE_OPTS];
+
+		r->name = strdup(cfg.ctx_resource_name);
+		if (res_opts) {
+			int size = nla_total_size(nla_len(res_opts));
+
+			r->res_opts = malloc(size);
+			memcpy(r->res_opts, res_opts, size);
+		}
+		resource_info_from_attrs(&r->info, info);
+		memset(&r->statistics, -1, sizeof(r->statistics));
+		resource_statistics_from_attrs(&r->statistics, info);
+		**tail = r;
+		*tail = &r->next;
+	}
+	return 0;
+}
+
+static void free_resources(struct resources_list *resources)
+{
+	while (resources) {
+		struct resources_list *r = resources;
+		resources = resources->next;
+		free(r->name);
+		free(r->res_opts);
+		free(r);
+	}
+}
+
+static int resource_name_cmp(const struct resources_list * const *a, const struct resources_list * const *b)
+{
+	return strcmp((*a)->name, (*b)->name);
+}
+
+static struct resources_list *sort_resources(struct resources_list *resources)
+{
+	struct resources_list *r;
+	int n;
+
+	for (r = resources, n = 0; r; r = r->next)
+		n++;
+	if (n > 1) {
+		struct resources_list **array;
+
+		array = malloc(sizeof(*array) * n);
+		for (r = resources, n = 0; r; r = r->next)
+			array[n++] = r;
+		qsort(array, n, sizeof(*array), (int (*)(const void *, const void *)) resource_name_cmp);
+		n--;
+		array[n]->next = NULL;
+		for (; n > 0; n--)
+			array[n - 1]->next = array[n];
+		resources = array[0];
+		free(array);
+	}
+	return resources;
+}
+
+/*
+ * Expects objname to be set to the resource name or "all".
+ */
+static struct resources_list *list_resources(void)
+{
+	struct drbd_cmd cmd = {
+		.cmd_id = DRBD_ADM_GET_RESOURCES,
+		.show_function = remember_resource,
+		.missing_ok = false,
+	};
+	struct resources_list *list = NULL, **tail = &list;
+	char *old_objname = objname;
+	unsigned old_minor = minor;
+	int err;
+
+	objname = "all";
+	minor = -1;
+	err = generic_get(&cmd, 120000, &tail);
+	objname = old_objname;
+	minor = old_minor;
+	if (err) {
+		free_resources(list);
+		list = NULL;
+	}
+
+	return list;
+}
+
+static int remember_device(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
+{
+	struct devices_list ***tail = u_ptr;
+	struct drbd_cfg_context ctx = { .ctx_volume = -1U };
+
+	if (!info)
+		return 0;
+
+	drbd_cfg_context_from_attrs(&ctx, info);
+
+	if (ctx.ctx_volume != -1U) {
+		struct devices_list *d = calloc(1, sizeof(*d));
+
+		d->minor =  ((struct drbd_genlmsghdr*)(info->userhdr))->minor;
+		d->ctx = ctx;
+		disk_conf_from_attrs(&d->disk_conf, info);
+		d->info.dev_disk_state = D_DISKLESS;
+		device_info_from_attrs(&d->info, info);
+		memset(&d->statistics, -1, sizeof(d->statistics));
+		device_statistics_from_attrs(&d->statistics, info);
+		**tail = d;
+		*tail = &d->next;
+	}
+	return 0;
+}
+
+/*
+ * Expects objname to be set to the resource name or "all".
+ */
+static struct devices_list *list_devices(char *resource_name)
+{
+	struct drbd_cmd cmd = {
+		.cmd_id = DRBD_ADM_GET_DEVICES,
+		.show_function = remember_device,
+		.missing_ok = false,
+	};
+	struct devices_list *list = NULL, **tail = &list;
+	char *old_objname = objname;
+	unsigned old_minor = minor;
+	int err;
+
+	objname = resource_name ? resource_name : "all";
+	minor = -1;
+	err = generic_get(&cmd, 120000, &tail);
+	objname = old_objname;
+	minor = old_minor;
+	if (err) {
+		free_devices(list);
+		list = NULL;
+	}
+	return list;
+}
+
+static void free_devices(struct devices_list *devices)
+{
+	while (devices) {
+		struct devices_list *d = devices;
+		devices = devices->next;
+		free(d);
+	}
+}
+
+static int remember_connection(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
+{
+	struct connections_list ***tail = u_ptr;
+	struct drbd_cfg_context ctx = { .ctx_volume = -1U };
+
+	if (!info)
+		return 0;
+
+	drbd_cfg_context_from_attrs(&ctx, info);
+	if (ctx.ctx_resource_name) {
+		struct connections_list *c = calloc(1, sizeof(*c));
+		struct nlattr *net_conf = global_attrs[DRBD_NLA_NET_CONF];
+
+		c->ctx = ctx;
+		if (net_conf) {
+			int size = nla_total_size(nla_len(net_conf));
+
+			c->net_conf = malloc(size);
+			memcpy(c->net_conf, net_conf, size);
+		}
+		connection_info_from_attrs(&c->info, info);
+		memset(&c->statistics, -1, sizeof(c->statistics));
+		connection_statistics_from_attrs(&c->statistics, info);
+		**tail = c;
+		*tail = &c->next;
+	}
+	return 0;
+}
+
+#if 0
+static int connection_name_cmp(const struct connections_list * const *a, const struct connections_list * const *b)
+{
+	if (!(*a)->ctx.ctx_conn_name_len != !(*b)->ctx.ctx_conn_name_len)
+		return !(*b)->ctx.ctx_conn_name_len;
+	return strcmp((*a)->ctx.ctx_conn_name, (*b)->ctx.ctx_conn_name);
+}
+#endif
+
+static struct connections_list *sort_connections(struct connections_list *connections)
+{
+	struct connections_list *c;
+	int n;
+
+	for (c = connections, n = 0; c; c = c->next)
+		n++;
+	if (n > 1) {
+		struct connections_list **array;
+
+		array = malloc(sizeof(*array) * n);
+		for (c = connections, n = 0; c; c = c->next)
+			array[n++] = c;
+#if 0
+		qsort(array, n, sizeof(*array), (int (*)(const void *, const void *)) connection_name_cmp);
+#endif
+		n--;
+		array[n]->next = NULL;
+		for (; n > 0; n--)
+			array[n - 1]->next = array[n];
+		connections = array[0];
+		free(array);
+	}
+	return connections;
+}
+
+/*
+ * Expects objname to be set to the resource name or "all".
+ */
+static struct connections_list *list_connections(char *resource_name)
+{
+	struct drbd_cmd cmd = {
+		.cmd_id = DRBD_ADM_GET_CONNECTIONS,
+		.show_function = remember_connection,
+		.missing_ok = true,
+	};
+	struct connections_list *list = NULL, **tail = &list;
+	char *old_objname = objname;
+	unsigned old_minor = minor;
+	int err;
+
+	objname = resource_name ? resource_name : "all";
+	minor = -1;
+	err = generic_get(&cmd, 120000, &tail);
+	objname = old_objname;
+	minor = old_minor;
+	if (err) {
+		free_connections(list);
+		list = NULL;
+	}
+	return list;
+}
+
+static void free_connections(struct connections_list *connections)
+{
+	while (connections) {
+		struct connections_list *l = connections;
+		connections = connections->next;
+		free(l);
+	}
+}
+
+static int remember_peer_device(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
+{
+	struct peer_devices_list ***tail = u_ptr;
+	struct drbd_cfg_context ctx = { .ctx_volume = -1U };
+
+	if (!info)
+		return 0;
+
+	drbd_cfg_context_from_attrs(&ctx, info);
+	if (ctx.ctx_resource_name) {
+		struct peer_devices_list *p = calloc(1, sizeof(*p));
+
+		if (!p)
+			exit(20);
+
+		p->ctx = ctx;
+		peer_device_info_from_attrs(&p->info, info);
+		memset(&p->statistics, -1, sizeof(p->statistics));
+		peer_device_statistics_from_attrs(&p->statistics, info);
+		**tail = p;
+		*tail = &p->next;
+	}
+	return 0;
+}
+
+/*
+ * Expects objname to be set to the resource name or "all".
+ */
+static struct peer_devices_list *list_peer_devices(char *resource_name)
+{
+	struct drbd_cmd cmd = {
+		.cmd_id = DRBD_ADM_GET_PEER_DEVICES,
+		.show_function = remember_peer_device,
+		.missing_ok = false,
+	};
+	struct peer_devices_list *list = NULL, **tail = &list;
+	char *old_objname = objname;
+	unsigned old_minor = minor;
+	int err;
+
+	objname = resource_name ? resource_name : "all";
+	minor = -1;
+	err = generic_get(&cmd, 120000, &tail);
+	objname = old_objname;
+	minor = old_minor;
+	if (err) {
+		free_peer_devices(list);
+		list = NULL;
+	}
+	return list;
+}
+
+static void free_peer_devices(struct peer_devices_list *peer_devices)
+{
+	while (peer_devices) {
+		struct peer_devices_list *p = peer_devices;
+		peer_devices = peer_devices->next;
+		free(p);
+	}
+}
+
 /* may be called for a "show" of a single minor device.
  * prints all available configuration information in that case.
  *
@@ -2052,6 +2436,301 @@ void print_peer_device_statistics(int indent,
 	}
 }
 
+void resource_status(struct resources_list *resource)
+{
+	enum drbd_role role = resource->info.res_role;
+
+	wrap_printf(0, "%s", resource->name);
+#if 0
+	if (opt_verbose) {
+		struct nlattr *nla;
+
+		nla = nla_find_nested(resource->res_opts, __nla_type(T_node_id));
+		if (nla)
+			wrap_printf(4, " node-id:%d", *(uint32_t *)nla_data(nla));
+	}
+#endif
+	wrap_printf(4, " role:%s%s%s",
+		    role_color_start(role, true),
+		    drbd_role_str(role),
+		    role_color_stop(role, true));
+	if (opt_verbose ||
+	    resource->info.res_susp ||
+	    resource->info.res_susp_nod ||
+	    resource->info.res_susp_fen)
+		wrap_printf(4, " suspended:%s", susp_str(&resource->info));
+#if 0
+	if (opt_verbose || resource->info.res_weak)
+		wrap_printf(4, " weak:%s",
+			    resource->info.res_weak ? "yes" : "no");
+#endif
+	if (opt_statistics && opt_verbose) {
+		wrap_printf(4, "\n");
+		print_resource_statistics(4, NULL, &resource->statistics, wrap_printf);
+	}
+	wrap_printf(0, "\n");
+}
+
+static void device_status(struct devices_list *device, bool single_device)
+{
+	enum drbd_disk_state disk_state = device->info.dev_disk_state;
+	int indent = 2;
+
+	if (opt_verbose || !(single_device && device->ctx.ctx_volume == 0)) {
+		wrap_printf(indent, "volume:%u",  device->ctx.ctx_volume);
+		indent = 6;
+		if (opt_verbose)
+			wrap_printf(indent, " minor:%u", device->minor);
+	}
+	wrap_printf(indent, " disk:%s%s%s",
+		    disk_state_color_start(disk_state, true),
+		    drbd_disk_str(disk_state),
+		    disk_state_color_stop(disk_state, true));
+	indent = 6;
+	if (device->statistics.dev_size != -1) {
+		if (opt_statistics)
+			wrap_printf(indent, "\n");
+		print_device_statistics(indent, NULL, &device->statistics, wrap_printf);
+	}
+	wrap_printf(indent, "\n");
+}
+
+static const char *resync_susp_str(struct peer_device_info *info)
+{
+	static char buffer[64];
+
+	*buffer = 0;
+	if (info->peer_resync_susp_user)
+		strcat(buffer, ",user" + (*buffer == 0));
+	if (info->peer_resync_susp_peer)
+		strcat(buffer, ",peer" + (*buffer == 0));
+	if (info->peer_resync_susp_dependency)
+		strcat(buffer, ",dependency" + (*buffer == 0));
+	if (*buffer == 0)
+		strcat(buffer, "no");
+
+	return buffer;
+}
+
+static void peer_device_status(struct peer_devices_list *peer_device, bool single_device)
+{
+	int indent = 4;
+
+	if (opt_verbose || !(single_device && peer_device->ctx.ctx_volume == 0)) {
+		wrap_printf(indent, "volume:%d", peer_device->ctx.ctx_volume);
+		indent = 8;
+	}
+	if (opt_verbose || peer_device->info.peer_repl_state > C_CONNECTED) {
+		enum drbd_conns repl_state = peer_device->info.peer_repl_state;
+
+		wrap_printf(indent, " replication:%s%s%s",
+			    repl_state_color_start(repl_state),
+			    drbd_conn_str(repl_state),
+			    repl_state_color_stop(repl_state));
+		indent = 8;
+	}
+	if (opt_verbose || opt_statistics ||
+	    peer_device->info.peer_repl_state != C_CONNECTED ||
+	    peer_device->info.peer_disk_state != D_UNKNOWN) {
+		enum drbd_disk_state disk_state = peer_device->info.peer_disk_state;
+
+		wrap_printf(indent, " peer-disk:%s%s%s",
+			    disk_state_color_start(disk_state, false),
+			    drbd_disk_str(disk_state),
+			    disk_state_color_stop(disk_state, false));
+		indent = 8;
+		if (peer_device->info.peer_repl_state >= C_SYNC_SOURCE &&
+		    peer_device->info.peer_repl_state <= C_PAUSED_SYNC_T) {
+			wrap_printf(indent, " done:%.2f", 100 * (1 -
+				(double)peer_device->statistics.peer_dev_out_of_sync /
+				(double)peer_device->device->statistics.dev_size));
+		}
+		if (opt_verbose ||
+		    peer_device->info.peer_resync_susp_user ||
+		    peer_device->info.peer_resync_susp_peer ||
+		    peer_device->info.peer_resync_susp_dependency)
+			wrap_printf(indent, " resync-suspended:%s",
+				    resync_susp_str(&peer_device->info));
+		if (opt_statistics && peer_device->statistics.peer_dev_received != -1) {
+			wrap_printf(indent, "\n");
+			print_peer_device_statistics(indent, NULL, &peer_device->statistics, wrap_printf);
+		}
+	}
+
+	wrap_printf(0, "\n");
+}
+
+static void peer_devices_status(struct drbd_cfg_context *ctx, struct peer_devices_list *peer_devices, bool single_device)
+{
+	struct peer_devices_list *peer_device;
+
+	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next) {
+		if (!endpoints_equal(ctx, &peer_device->ctx))
+			continue;
+		peer_device_status(peer_device, single_device);
+	}
+}
+
+static void connection_status(struct connections_list *connection,
+			      struct peer_devices_list *peer_devices,
+			      bool single_device)
+{
+	char local_addr[ADDRESS_STR_MAX], peer_addr[ADDRESS_STR_MAX];
+
+#if 0
+	if (connection->ctx.ctx_conn_name_len)
+		wrap_printf(2, "%s", connection->ctx.ctx_conn_name);
+#endif
+
+	if (opt_verbose || /* connection->ctx.ctx_conn_name_len == 0 */ true) {
+		if (!address_str(local_addr, connection->ctx.ctx_my_addr, connection->ctx.ctx_my_addr_len))
+			strcpy(local_addr, "?");
+		if (!address_str(peer_addr, connection->ctx.ctx_peer_addr, connection->ctx.ctx_peer_addr_len))
+			strcpy(peer_addr, "?");
+		/* FIXME: Reject undefined endpoints once the kernel stops creating NULL connections. */
+		if (/* connection->ctx.ctx_conn_name_len == 0 */ true)
+			wrap_printf(2, "local:%s", local_addr);
+		else
+			wrap_printf(6, " local:%s", local_addr);
+		wrap_printf(6, " peer:%s", peer_addr);
+	}
+#if 0
+	if (opt_verbose) {
+		struct nlattr *nla;
+
+		nla = nla_find_nested(connection->net_conf, __nla_type(T_peer_node_id));
+		if (nla)
+			wrap_printf(6, " node-id:%d", *(uint32_t *)nla_data(nla));
+	}
+#endif
+	if (opt_verbose || connection->info.conn_connection_state != C_CONNECTED) {
+		enum drbd_conns cstate = connection->info.conn_connection_state;
+		wrap_printf(6, " connection:%s%s%s",
+			    cstate_color_start(cstate),
+			    drbd_conn_str(cstate),
+			    cstate_color_stop(cstate));
+	}
+	if (opt_verbose || connection->info.conn_connection_state == C_CONNECTED) {
+		enum drbd_role role = connection->info.conn_role;
+		wrap_printf(6, " role:%s%s%s",
+			    role_color_start(role, false),
+			    drbd_role_str(role),
+			    role_color_stop(role, false));
+	}
+	if (opt_verbose || connection->statistics.conn_congested > 0)
+		print_connection_statistics(6, NULL, &connection->statistics, wrap_printf);
+	wrap_printf(0, "\n");
+	if (opt_verbose || opt_statistics || connection->info.conn_connection_state == C_CONNECTED)
+		peer_devices_status(&connection->ctx, peer_devices, single_device);
+}
+
+static void stop_colors(int sig)
+{
+	printf("%s", stop_color_code());
+	signal(sig, SIG_DFL);
+	raise(sig);
+}
+
+static void link_peer_devices_to_devices(struct peer_devices_list *peer_devices, struct devices_list *devices)
+{
+	struct peer_devices_list *peer_device;
+	struct devices_list *device;
+
+	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next) {
+		for (device = devices; device; device = device->next) {
+			if (peer_device->ctx.ctx_volume == device->ctx.ctx_volume) {
+				peer_device->device = device;
+				break;
+			}
+		}
+	}
+}
+
+static void print_usage_and_exit(const char* addinfo);
+
+static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
+{
+	struct resources_list *resources, *resource;
+	struct sigaction sa = {
+		.sa_handler = stop_colors,
+		.sa_flags = SA_RESETHAND,
+	};
+	bool found = false;
+	int c;
+
+	optind = 0;  /* reset getopt_long() */
+	for (;;) {
+		c = getopt_long(argc, argv, make_optstring(cm->options), cm->options, 0);
+		if (c == -1)
+			break;
+		switch(c) {
+		default:
+		case '?':
+			return 20;
+		case 'v':
+			opt_verbose = true;
+			break;
+		case 's':
+			opt_statistics = true;
+			break;
+		case 'c':
+			if (!optarg || !strcmp(optarg, "always"))
+				opt_color = ALWAYS_COLOR;
+			else if (!strcmp(optarg, "never"))
+				opt_color = NEVER_COLOR;
+			else if (!strcmp(optarg, "auto"))
+				opt_color = AUTO_COLOR;
+			else
+				print_usage_and_exit("unknown --color argument");
+			break;
+		}
+	}
+
+	resources = sort_resources(list_resources());
+
+	sigaction(SIGHUP, &sa, NULL);
+	sigaction(SIGINT, &sa, NULL);
+	sigaction(SIGPIPE, &sa, NULL);
+	sigaction(SIGTERM, &sa, NULL);
+
+	for (resource = resources; resource; resource = resource->next) {
+		struct devices_list *devices, *device;
+		struct connections_list *connections, *connection;
+		struct peer_devices_list *peer_devices = NULL;
+		bool single_device;
+
+		if (strcmp(objname, "all") && strcmp(objname, resource->name))
+			continue;
+
+		devices = list_devices(resource->name);
+		connections = sort_connections(list_connections(resource->name));
+		if (devices && connections)
+			peer_devices = list_peer_devices(resource->name);
+
+		link_peer_devices_to_devices(peer_devices, devices);
+
+		resource_status(resource);
+		single_device = devices && !devices->next;
+		for (device = devices; device; device = device->next)
+			device_status(device, single_device);
+		for (connection = connections; connection; connection = connection->next)
+			connection_status(connection, peer_devices, single_device);
+		wrap_printf(0, "\n");
+
+		free_connections(connections);
+		free_devices(devices);
+		free_peer_devices(peer_devices);
+		found = true;
+	}
+
+	free_resources(resources);
+	if (!found && strcmp(objname, "all")) {
+		fprintf(stderr, "%s: No such resource\n", objname);
+		return 10;
+	}
+	return 0;
+}
+
 static char *af_to_str(int af)
 {
 	if (af == AF_INET)
@@ -2215,23 +2894,6 @@ static void *update_info(char **key, void *value, size_t size)
 fail:
 	perror(progname);
 	exit(20);
-}
-
-static const char *resync_susp_str(struct peer_device_info *info)
-{
-	static char buffer[64];
-
-	*buffer = 0;
-	if (info->peer_resync_susp_user)
-		strcat(buffer, ",user" + (*buffer == 0));
-	if (info->peer_resync_susp_peer)
-		strcat(buffer, ",peer" + (*buffer == 0));
-	if (info->peer_resync_susp_dependency)
-		strcat(buffer, ",dependency" + (*buffer == 0));
-	if (*buffer == 0)
-		strcat(buffer, "no");
-
-	return buffer;
 }
 
 static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)

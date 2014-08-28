@@ -58,7 +58,7 @@ drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_main.o \
 
 drbdsetup-obj = ../libgenl.o registry.o drbdsetup.o drbdtool_common.o \
 		../drbd_buildtag.o drbd_strings.o config_flags.o drbd_nla.o \
-		wrap_printf.o
+		wrap_printf.o drbdsetup_colors.o
 
 all: tools
 
