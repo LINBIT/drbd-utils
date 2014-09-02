@@ -2853,42 +2853,47 @@ static int event_key(char *key, int size, const char *name, unsigned minor,
 	return pos;
 }
 
+static int known_objects_cmp(const void *a, const void *b) {
+	return strcmp(((const struct entry *)a)->key, ((const struct entry *)b)->key);
+}
+
 static void *update_info(char **key, void *value, size_t size)
 {
-	static struct hsearch_data *known_objects;
+	static void *known_objects;
 
-	struct entry entry = {
-		.key = *key,
-	}, *found = NULL;
-
-	if (!known_objects) {
-		known_objects = calloc(1, sizeof(*known_objects));
-
-		if (!known_objects || !hcreate_r(64, known_objects))
-			goto fail;
-	}
+	struct entry entry = { .key = *key }, **found;
 
 	if (value) {
-		entry.data = malloc(size);
-		if (!entry.data)
-			goto fail;
-		memcpy(entry.data, value, size);
-	}
-	if (!hsearch_r(entry, ENTER, &found, known_objects))
-		goto fail;
-	if (found->key == entry.key) {
-		*key = NULL;
-		return NULL;
-	} else {
-		if (value) {
-			void *old_value = found->data;
-			found->data = entry.data;
-			return old_value;
-		} else {
-			free(found->data);
-			found->data = NULL;
-			return NULL;
+		void *old_value = NULL;
+
+		found = tsearch(&entry, &known_objects, known_objects_cmp);
+		if (*found != &entry)
+			old_value = (*found)->data;
+		else {
+			*found = malloc(sizeof(**found));
+			if (!*found)
+				goto fail;
+			(*found)->key = *key;
+			*key = NULL;
 		}
+
+		(*found)->data = malloc(size);
+		if (!(*found)->data)
+			goto fail;
+		memcpy((*found)->data, value, size);
+
+		return old_value;
+	} else {
+		found = tfind(&entry, &known_objects, known_objects_cmp);
+		if (found) {
+			struct entry *entry = *found;
+
+			tdelete(entry, &known_objects, known_objects_cmp);
+			free(entry->data);
+			free(entry->key);
+			free(entry);
+		}
+		return NULL;
 	}
 
 fail:
