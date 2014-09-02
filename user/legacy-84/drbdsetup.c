@@ -3642,7 +3642,7 @@ int main(int argc, char **argv)
 	}
 
 	if (try_genl) {
-		if (cmd->continuous_poll)
+		if (cmd->continuous_poll && kernel_older_than(2, 6, 23))
 			drbd_genl_family.nl_groups = -1;
 		drbd_sock = genl_connect_to_family(&drbd_genl_family);
 		if (!drbd_sock) {
