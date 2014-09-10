@@ -91,7 +91,7 @@ clean:
 
 doc:	man
 ifeq ($(WITH_83_SUPPORT),yes)
-	$(MAKE) -C legacy-83 doc
+	$(MAKE) -C v83 doc
 endif
 ifeq ($(WITH_84_SUPPORT),yes)
 	$(MAKE) -C v84 doc
@@ -104,7 +104,7 @@ MAN_LINK=9.0
 endif
 
 doc-clean: distclean
-	$(MAKE) -C legacy-83 doc-clean
+	$(MAKE) -C v83 doc-clean
 	$(MAKE) -C v84 doc-clean
 
 
@@ -169,7 +169,7 @@ install:
 		fi \
 	done
 ifeq ($(WITH_83_SUPPORT),yes)
-	$(MAKE) -C legacy-83 install
+	$(MAKE) -C v83 install
 endif
 ifeq ($(WITH_84_SUPPORT),yes)
 	$(MAKE) -C v84 install
@@ -183,7 +183,7 @@ uninstall:
 		rm -vf $(DESTDIR)$(mandir)/man$$s/$$f ; \
 	done
 ifeq ($(WITH_83_SUPPORT),yes)
-	$(MAKE) -C legacy-83 uninstall
+	$(MAKE) -C v83 uninstall
 endif
 ifeq ($(WITH_84_SUPPORT),yes)
 	$(MAKE) -C v84 uninstall

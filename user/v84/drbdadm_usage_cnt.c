@@ -300,9 +300,9 @@ void maybe_exec_drbdadm_83(char **argv)
 		execvp(drbdadm_83, argv);
 		fprintf(stderr, "execvp() failed to exec %s: %m\n", drbdadm_83);
 #else
-		fprintf(stderr, "This drbdadm was build without support for legacy\n"
+		fprintf(stderr, "This drbdadm was build without support for v83\n"
 			"drbd kernel code. Consider to rebuild your user land\n"
-			"tools with ./configure --with-legacy-connector\n");
+			"tools with ./configure --with-v83-connector\n");
 #endif
 		exit(E_exec_error);
 	}

@@ -1034,7 +1034,7 @@ void config_help_legacy(const char * const tool,
 		const struct version * const driver_version)
 {
 	fprintf(stderr,
-			"This %s was build without support for legacy\n"
+			"This %s was build without support for v83\n"
 			"drbd kernel code (%d.%d). Consider to rebuild your user land\n"
 			"tools and do not give --without-%d%d-support on the\n"
 			"commandline\n", tool, driver_version->version.major,

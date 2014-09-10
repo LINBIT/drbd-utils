@@ -292,7 +292,7 @@ struct option wait_cmds_options[] = {
 struct drbd_cmd commands[] = {
 	{"primary", P_primary, F_CONFIG_CMD, {{ NULL,
 	 (struct drbd_option[]) {
-		 { "overwrite-data-of-peer",'o',T_primary_force, EB   }, /* legacy name */
+		 { "overwrite-data-of-peer",'o',T_primary_force, EB   }, /* v83 name */
 		 { "force",'f',			T_primary_force, EB   },
 		 CLOSE_OPTIONS }} }, },
 
@@ -2702,7 +2702,7 @@ int main(int argc, char** argv)
 	}
 
 	/*
-	 * The legacy drbdsetup takes the object to operate on as its first argument,
+	 * The v83 drbdsetup takes the object to operate on as its first argument,
 	 * followed by the command.  For forward compatibility, check if we got the
 	 * command name first.
 	 */

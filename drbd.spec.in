@@ -3,7 +3,7 @@
 # autoconf...
 %{!?_initddir: %{expand: %%global _initddir %{_initrddir}}}
 
-# Compatibility macro wrappers for legacy RPM versions that do not
+# Compatibility macro wrappers for v83 RPM versions that do not
 # support conditional builds
 %{!?bcond_without: %{expand: %%global bcond_without() %%{expand:%%%%{!?_without_%%{1}:%%%%global with_%%{1} 1}}}}
 %{!?bcond_with:    %{expand: %%global bcond_with()    %%{expand:%%%%{?_with_%%{1}:%%%%global with_%%{1} 1}}}}

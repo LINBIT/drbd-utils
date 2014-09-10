@@ -3553,7 +3553,7 @@ void exec_legacy_drbdsetup(char **argv)
 	char *progname, *drbdsetup;
 
 	/* in case drbdsetup is called with an absolute or relative pathname
-	 * look for the legacy drbdsetup binary in the same location,
+	 * look for the v83 drbdsetup binary in the same location,
 	 * otherwise, just let execvp sort it out... */
 	if ((progname = strrchr(argv[0], '/')) == 0) {
 		drbdsetup = strdup(legacy_drbdsetup);
@@ -3574,8 +3574,8 @@ void exec_legacy_drbdsetup(char **argv)
 	}
 	execvp(drbdsetup, argv);
 #else
-	fprintf(stderr, "This drbdsetup was not built with support for legacy drbd-8.3\n"
-		"Eventually rebuild with ./configure --with-legacy-connector\n");
+	fprintf(stderr, "This drbdsetup was not built with support for v83 drbd-8.3\n"
+		"Eventually rebuild with ./configure --with-v83-connector\n");
 #endif
 }
 

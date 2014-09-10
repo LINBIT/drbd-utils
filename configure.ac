@@ -45,7 +45,7 @@ infodir="`eval echo ${infodir}`"
 mandir="`eval echo ${mandir}`"
 docdir="`eval echo ${docdir}`"
 
-dnl "--with-<foo>" options (all except legacy and rgm enabled by default, pass --without-<foo> to disable)
+dnl "--with-<foo>" options (all except v83 and rgm enabled by default, pass --without-<foo> to disable)
 WITH_83_SUPPORT=yes
 WITH_84_SUPPORT=yes
 WITH_UDEV=yes
@@ -362,7 +362,7 @@ fi
 
 dnl The configuration files we create (from their .in template)
 if test -z $SPECMODE; then
-   AC_CONFIG_FILES(Makefile user/Makefile user/legacy/Makefile user/v84/Makefile scripts/Makefile documentation/Makefile documentation/legacy-83/Makefile documentation/v84/Makefile scripts/drbd.rules)
+   AC_CONFIG_FILES(Makefile user/Makefile user/v83/Makefile user/v84/Makefile scripts/Makefile documentation/Makefile documentation/v83/Makefile documentation/v84/Makefile scripts/drbd.rules)
    AC_CONFIG_HEADERS(user/config.h)
 else
    AC_CONFIG_FILES(drbd.spec)

@@ -643,7 +643,7 @@ check_peer_node_reachable()
 
 		if ! $will_fence && [[ $crmd != "online" ]] ; then
 
-			# "legacy" cman + pacemaker clusters older than 1.1.10
+			# "v83" cman + pacemaker clusters older than 1.1.10
 			# may "forget" about startup fencing.
 			# We can detect this because the "expected" attribute is missing.
 			# Does not make much difference for our logic, though.
