@@ -9,7 +9,6 @@
 /tags
 /Makefile
 
-user/Makefile
 scripts/Makefile
 documentation/Makefile
 
@@ -20,27 +19,32 @@ documentation/Makefile
 *.gcno
 *.o
 
-user/config.h
-user/config.h.in
-user/drbd_buildtag.c
-user/drbd_strings.[ch]
-user/drbdadm
-user/drbdadm_scanner.c
-user/drbdmeta
-user/drbdmeta_scanner.c
-user/drbdsetup
+user/v9/config.h
+user/v9/config.h.in
+user/v9/drbd_buildtag.c
+user/v9/drbd_strings.[ch]
+user/v9/drbdadm
+user/v9/drbdadm_scanner.c
+user/v9/drbdmeta
+user/v9/drbdmeta_scanner.c
+user/v9/drbdsetup
 
-documentation/drbd.8
-documentation/drbd.conf.5
-documentation/drbdadm.8
-documentation/drbddisk.8
-documentation/drbdmeta.8
-documentation/drbdsetup.8
-documentation/drbd-overview.8
-documentation/manpage.links
-documentation/manpage.refs
-documentation/drbdsetup_*.xml
-documentation/drbd.conf.xml
-documentation/drbdsetup.xml
+documentation/v9/Makefile
+documentation/v9/drbd.8
+documentation/v9/drbd.conf.5
+documentation/v9/drbdadm.8
+documentation/v9/drbddisk.8
+documentation/v9/drbdmeta.8
+documentation/v9/drbdsetup.8
+documentation/v9/drbd-overview.8
+documentation/v9/manpage.links
+documentation/v9/manpage.refs
+documentation/v9/drbdsetup_*.xml
+documentation/v9/drbd.conf.xml
+documentation/v9/drbdsetup.xml
+
+documentation/v84/*.xml
+documentation/v84/*.8
+documentation/v84/Makefile
 
 benchmark/dm
