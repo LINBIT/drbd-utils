@@ -94,7 +94,7 @@ ifeq ($(WITH_83_SUPPORT),yes)
 	$(MAKE) -C legacy-83 doc
 endif
 ifeq ($(WITH_84_SUPPORT),yes)
-	$(MAKE) -C legacy-84 doc
+	$(MAKE) -C v84 doc
 endif
 
 ifeq ($(WITH_84_SUPPORT),yes)
@@ -105,7 +105,7 @@ endif
 
 doc-clean: distclean
 	$(MAKE) -C legacy-83 doc-clean
-	$(MAKE) -C legacy-84 doc-clean
+	$(MAKE) -C v84 doc-clean
 
 
 ####### Implicit rules
@@ -172,7 +172,7 @@ ifeq ($(WITH_83_SUPPORT),yes)
 	$(MAKE) -C legacy-83 install
 endif
 ifeq ($(WITH_84_SUPPORT),yes)
-	$(MAKE) -C legacy-84 install
+	$(MAKE) -C v84 install
 endif
 
 uninstall:
@@ -186,7 +186,7 @@ ifeq ($(WITH_83_SUPPORT),yes)
 	$(MAKE) -C legacy-83 uninstall
 endif
 ifeq ($(WITH_84_SUPPORT),yes)
-	$(MAKE) -C legacy-84 uninstall
+	$(MAKE) -C v84 uninstall
 endif
 
 
