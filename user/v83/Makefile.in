@@ -46,13 +46,13 @@ WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 # variables meant to be overridden from the make command line
 DESTDIR ?= /
 
-CFLAGS += -Wall -I. -I..
+CFLAGS += -Wall -I. -I../v9
 
 drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_main.o \
 	      drbdadm_adjust.o drbdtool_common.o drbdadm_usage_cnt.o \
-	      ../drbd_buildtag.o drbdadm_minor_table.o
+	      ../v9/drbd_buildtag.o drbdadm_minor_table.o
 
-drbdsetup-obj = drbdsetup.o drbdtool_common.o ../drbd_buildtag.o \
+drbdsetup-obj = drbdsetup.o drbdtool_common.o ../v9/drbd_buildtag.o \
 	        drbd_strings.o
 
 all: tools
@@ -105,7 +105,7 @@ drbdsetup.o:       unaligned.h
 drbdtool_common.o: drbdtool_common.h
 drbdadm_main.o:    drbdtool_common.h drbdadm.h
 drbdadm_adjust.o:  drbdtool_common.h drbdadm.h
-drbdadm_parser.o:  drbdtool_common.h drbdadm.h linux/drbd_limits.h ../drbd_endian.h
+drbdadm_parser.o:  drbdtool_common.h drbdadm.h linux/drbd_limits.h ../v9/drbd_endian.h
 drbdadm_scanner.o: drbdtool_common.h drbdadm.h drbdadm_parser.h
 drbdsetup.o:       drbdtool_common.h           linux/drbd_limits.h
-drbdadm_usage_cnt.o: drbdtool_common.h drbdadm.h ../drbd_endian.h
+drbdadm_usage_cnt.o: drbdtool_common.h drbdadm.h ../v9/drbd_endian.h

@@ -90,13 +90,6 @@ clean:
 	@echo "To clean the documentation: make doc-clean"
 
 doc:	man
-ifeq ($(WITH_83_SUPPORT),yes)
-	$(MAKE) -C v83 doc
-endif
-ifeq ($(WITH_84_SUPPORT),yes)
-	$(MAKE) -C v84 doc
-endif
-
 ifeq ($(WITH_84_SUPPORT),yes)
 MAN_LINK=8.4
 else
@@ -104,8 +97,6 @@ MAN_LINK=9.0
 endif
 
 doc-clean: distclean
-	$(MAKE) -C v83 doc-clean
-	$(MAKE) -C v84 doc-clean
 
 
 ####### Implicit rules
@@ -127,11 +118,11 @@ doc-clean: distclean
 	$(XSLTPROC_FO_OPTIONS) \
 	$(FO_STYLESHEET) $<
 
-../user/drbdsetup:
-	(cd ../user; make drbdsetup)
+../../user/v9/drbdsetup:
+	(cd ../../user/v9; make drbdsetup)
 
-drbdsetup_xml-help_%.xml: ../user/drbdsetup
-	../user/drbdsetup xml-help $* > $@
+drbdsetup_xml-help_%.xml: ../../user/v9/drbdsetup
+	../../user/v9/drbdsetup xml-help $* > $@
 
 drbdsetup_%.xml: drbdsetup_xml-help_%.xml xml-usage-to-docbook.xsl
 	$(XSLTPROC) -o $@ xml-usage-to-docbook.xsl $<
@@ -168,12 +159,6 @@ install:
 			ln -sf $$b-$(MAN_LINK).$$s $(DESTDIR)$(mandir)/man$$s/$$f ; \
 		fi \
 	done
-ifeq ($(WITH_83_SUPPORT),yes)
-	$(MAKE) -C v83 install
-endif
-ifeq ($(WITH_84_SUPPORT),yes)
-	$(MAKE) -C v84 install
-endif
 
 uninstall:
 	@ set -e; for f in $(MANPAGES) ; do \
@@ -182,13 +167,6 @@ uninstall:
 		rm -vf $(DESTDIR)$(mandir)/man$$s/$$b-9.0.$$s ; \
 		rm -vf $(DESTDIR)$(mandir)/man$$s/$$f ; \
 	done
-ifeq ($(WITH_83_SUPPORT),yes)
-	$(MAKE) -C v83 uninstall
-endif
-ifeq ($(WITH_84_SUPPORT),yes)
-	$(MAKE) -C v84 uninstall
-endif
-
 
 html:	$(SOURCES:.xml=.html)
 
