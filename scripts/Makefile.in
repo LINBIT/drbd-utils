@@ -44,6 +44,7 @@ LN_S = @LN_S@
 WITH_UDEV = @WITH_UDEV@
 WITH_XEN = @WITH_XEN@
 WITH_PACEMAKER = @WITH_PACEMAKER@
+WITH_HEARTBEAT = @WITH_HEARTBEAT@
 WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 
@@ -52,7 +53,7 @@ DESTDIR ?= /
 
 all:
 
-install: install-utils install-udev install-xen install-pacemaker install-rgmanager install-bashcompletion
+install: install-utils install-udev install-xen install-heartbeat install-pacemaker install-rgmanager install-bashcompletion
 
 install-utils:
 ifneq ($(initscripttype),systemd)	# "sysv" or "both"

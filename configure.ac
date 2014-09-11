@@ -51,6 +51,7 @@ WITH_84_SUPPORT=yes
 WITH_UDEV=yes
 WITH_XEN=yes
 WITH_PACEMAKER=yes
+WITH_HEARTBEAT=yes
 WITH_RGMANAGER=no
 WITH_BASHCOMPLETION=yes
 WITH_NOARCH_SUBPACKAGES=no
@@ -74,6 +75,10 @@ AC_ARG_WITH([pacemaker],
 	[AS_HELP_STRING([--with-pacemaker],
 			[Enable Pacemaker integration])],
 	[WITH_PACEMAKER=$withval])
+AC_ARG_WITH([heartbeat],
+	[AS_HELP_STRING([--with-heartbeat],
+			[Enable Heartbeat v1 haresources integration scripts])],
+	[WITH_HEARTBEAT=$withval])
 AC_ARG_WITH([rgmanager],
 	[AS_HELP_STRING([--with-rgmanager],
 			[Enable Red Hat Cluster Suite integration])],
@@ -105,6 +110,7 @@ AC_SUBST(WITH_84_SUPPORT)
 AC_SUBST(WITH_UDEV)
 AC_SUBST(WITH_XEN)
 AC_SUBST(WITH_PACEMAKER)
+AC_SUBST(WITH_HEARTBEAT)
 AC_SUBST(WITH_RGMANAGER)
 AC_SUBST(WITH_BASHCOMPLETION)
 
