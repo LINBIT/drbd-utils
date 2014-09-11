@@ -1,0 +1,96 @@
+# Makefile for drbd.o
+#
+# This file is part of DRBD by Philipp Reisner and Lars Ellenberg.
+#
+# drbd is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2, or (at your option)
+# any later version.
+#
+# drbd is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with drbd; see the file COPYING.  If not, write to
+# the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+#
+
+# variables set by configure
+DISTRO = @DISTRO@
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+localstatedir = @localstatedir@
+datarootdir = @datarootdir@
+datadir = @datadir@
+sbindir = @sbindir@
+sysconfdir = @sysconfdir@
+BASH_COMPLETION_SUFFIX = @BASH_COMPLETION_SUFFIX@
+UDEV_RULE_SUFFIX = @UDEV_RULE_SUFFIX@
+INITDIR = @INITDIR@
+LIBDIR = @prefix@/lib/@PACKAGE_TARNAME@
+CC = @CC@
+CFLAGS = @CFLAGS@
+LDFLAGS = @LDFLAGS@
+LN_S = @LN_S@
+
+DRBD_LIB_DIR = @DRBD_LIB_DIR@
+DRBD_RUN_DIR = @DRBD_RUN_DIR@
+DRBD_LOCK_DIR = @DRBD_LOCK_DIR@
+DRBD_CONFIG_DIR = @DRBD_CONFIG_DIR@
+
+# features enabled or disabled by configure
+WITH_83_SUPPORT = @WITH_83_SUPPORT@
+WITH_84_SUPPORT = @WITH_84_SUPPORT@
+WITH_UDEV = @WITH_UDEV@
+WITH_XEN = @WITH_XEN@
+WITH_PACEMAKER = @WITH_PACEMAKER@
+WITH_RGMANAGER = @WITH_RGMANAGER@
+WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
+
+# for some reason some of the commands below only work correctly in bash,
+# and not in e.g. dash. I'm too lazy to fix it to be compatible.
+SHELL=/bin/bash
+
+# variables meant to be overridden from the make command line
+DESTDIR ?= /
+
+CFLAGS += -Wall -I../../common -I.. -I.
+
+.PHONY: drbd_buildtag.c
+
+all: drbdmeta_scanner.c drbd_buildtag.c
+
+drbd_buildtag.c:
+	@set -e; exec > $@.new;							\
+	echo -e "/* automatically generated. DO NOT EDIT. */";			\
+	echo -e "#include <linux/drbd.h>";					\
+	echo -e "const char *drbd_buildtag(void)\n{";				\
+	if test -e ../../.git && GITHEAD=$$(git rev-parse HEAD); then		\
+		GITDIFF=$$(cd .. && git diff --name-only HEAD |			\
+			tr -s '\t\n' '  ' |					\
+			sed -e 's/^/ /;s/ *$$//');				\
+		echo -e "\treturn \"GIT-hash: $$GITHEAD$$GITDIFF\"";		\
+	elif ! test -e $@ ; then						\
+		echo >&2 "$@ not found.";					\
+		test -e ../../.git &&						\
+		>&2 printf "%s\n"						\
+			"git did not work, but this looks like a git checkout?"	\
+			"Install git and try again." ||				\
+		echo >&2 "Your DRBD source tree is broken. Unpack again.";	\
+		exit 1;								\
+	else									\
+		grep return $@ ;						\
+	fi ;									\
+	echo -e "\t\t\" build by $$USER@$$HOSTNAME, `date "+%F %T"`\";\n}";	\
+	mv --force $@.new $@
+
+drbdmeta_scanner.c: drbdmeta_scanner.fl drbdmeta_parser.h
+	flex -s -odrbdmeta_scanner.c drbdmeta_scanner.fl
+
+clean:
+	rm -f drbdmeta_scanner.c
+	! test -e ../../.git || rm -f drbd_buildtag.c
+
+distclean: clean

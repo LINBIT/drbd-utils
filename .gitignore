@@ -21,13 +21,19 @@ documentation/Makefile
 
 user/v9/config.h
 user/v9/config.h.in
-user/v9/drbd_buildtag.c
 user/v9/drbd_strings.[ch]
 user/v9/drbdadm
-user/v9/drbdadm_scanner.c
 user/v9/drbdmeta
 user/v9/drbdmeta_scanner.c
 user/v9/drbdsetup
+
+user/v9/Makefile
+user/v83/Makefile
+user/v84/Makefile
+user/shared/Makefile
+
+user/shared/drbd_buildtag.c
+user/shared/drbdadm_scanner.c
 
 documentation/v9/Makefile
 documentation/v9/drbd.8
