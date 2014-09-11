@@ -17,6 +17,8 @@
 # the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 #
 
+VPATH = ../shared
+
 # variables set by configure
 DISTRO = @DISTRO@
 prefix = @prefix@
@@ -46,14 +48,14 @@ WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 # variables meant to be overridden from the make command line
 DESTDIR ?= /
 
-CFLAGS += -Wall -I. -I../v9
+CFLAGS += -Wall -I. -I../v9 -I../shared
 
 drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_main.o \
 	      drbdadm_adjust.o drbdtool_common.o drbdadm_usage_cnt.o \
-	      ../v9/drbd_buildtag.o drbdadm_minor_table.o
+	      ../v9/drbd_buildtag.o drbdadm_minor_table.o shared_tool.o
 
 drbdsetup-obj = drbdsetup.o drbdtool_common.o ../v9/drbd_buildtag.o \
-	        drbd_strings.o
+	        drbd_strings.o shared_tool.o
 
 all: tools
 

@@ -58,7 +58,7 @@ SHELL=/bin/bash
 # variables meant to be overridden from the make command line
 DESTDIR ?= /
 
-CFLAGS += -Wall -I../../common -I.. -I.
+CFLAGS += -Wall -I../../common -I.. -I. -I../shared
 
 GENETLINK_H := /usr/include/linux/genetlink.h
 libgenl.o: CFLAGS += $(shell for w in CTRL_ATTR_VERSION CTRL_ATTR_HDRSIZE CTRL_ATTR_MCAST_GROUPS; do grep -qw $$w $(GENETLINK_H) && echo -DHAVE_$$w; done)
@@ -66,14 +66,14 @@ libgenl.o: CFLAGS += $(shell for w in CTRL_ATTR_VERSION CTRL_ATTR_HDRSIZE CTRL_A
 drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_postparse.o \
 	      drbdadm_main.o drbdadm_adjust.o drbdadm_dump.o drbdtool_common.o \
 	      drbdadm_usage_cnt.o drbd_buildtag.o registry.o config_flags.o \
-	      libgenl.o drbd_nla.o
+	      libgenl.o drbd_nla.o shared_tool.o
 
 drbdsetup-obj = libgenl.o registry.o drbdsetup.o drbdtool_common.o \
 		drbd_buildtag.o drbd_strings.o config_flags.o drbd_nla.o \
-		wrap_printf.o drbdsetup_colors.o
+		wrap_printf.o drbdsetup_colors.o shared_tool.o
 
 drbdmeta-obj = drbdmeta.o drbdmeta_scanner.o drbdtool_common.o drbd_buildtag.o \
-	       drbd_strings.o
+	       drbd_strings.o shared_tool.o
 
 all: tools
 
