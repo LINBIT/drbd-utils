@@ -812,7 +812,7 @@ static void parse_address(struct d_name *on_hosts, char** addr, char** port, cha
 {
 	struct d_name *h;
 	__parse_address(addr, port, af);
-	if (!strcmp(*addr, "127.0.0.1") || !strcmp(*addr, "::1"))
+	if (addr_scope_local(*addr))
 		for_each_host(h, on_hosts)
 			check_uniq("IP", "%s:%s:%s", h->name, *addr, *port);
 	else
@@ -1715,7 +1715,7 @@ void set_on_hosts_in_res(struct d_resource *res)
 			host->lower = l_res;
 
 			/* */
-			if (!strcmp(host->address, "127.0.0.1") || !strcmp(host->address, "::1"))
+			if (addr_scope_local(host->address))
 				for_each_host(h, host->on_hosts)
 					check_uniq("IP", "%s:%s:%s", h->name, host->address, host->port);
 

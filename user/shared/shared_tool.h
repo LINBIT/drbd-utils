@@ -4,9 +4,15 @@
 #include <linux/fs.h>           /* for BLKGETSIZE64 */
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <fcntl.h>
 
+#ifndef IN_IS_ADDR_LOOPBACK
+#define IN_IS_ADDR_LOOPBACK(a) ((htonl((a)->s_addr) & 0xff000000) == 0x7f000000)
+#endif
+
 struct option;
+struct d_address;
 
 extern const char* shell_escape(const char* s);
 
@@ -62,6 +68,7 @@ extern void fprintf_hex(FILE *fp, off_t file_offset, const void *buf, unsigned l
 
 extern void ensure_sanity_of_res_name(char *stg);
 
+extern bool addr_scope_local(const char *input);
 
 extern unsigned long long m_strtoll(const char* s,const char def_unit);
 extern int only_digits(const char *s);

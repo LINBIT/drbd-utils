@@ -20,8 +20,10 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdarg.h>
+#include <arpa/inet.h>
 
 #include "config.h"
+#include "drbdadm.h"
 #include "drbd_endian.h"
 #include "linux/drbd.h"
 
@@ -436,6 +438,19 @@ void ensure_sanity_of_res_name(char *stg)
 	stg++;
     }
     return;
+}
+
+bool addr_scope_local(const char *input)
+{
+	struct in_addr addr4;
+	struct in6_addr addr6;
+
+	if (inet_pton(AF_INET6, input, &addr6) == 1)
+		return IN6_IS_ADDR_LOOPBACK(&addr6);
+	else if (inet_pton(AF_INET, input, &addr4) == 1)
+		return IN_IS_ADDR_LOOPBACK(&addr4);
+
+	return false;
 }
 unsigned long long
 m_strtoll(const char *s, const char def_unit)

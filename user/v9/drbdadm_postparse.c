@@ -90,7 +90,7 @@ void set_on_hosts_in_res(struct d_resource *res)
 			host->lower = l_res;
 
 			/* */
-			if (!strcmp(host->address.addr, "127.0.0.1") || !strcmp(host->address.addr, "::1"))
+			if (addr_scope_local(host->address.addr))
 				STAILQ_FOREACH(h, &host->on_hosts, link)
 					check_uniq("IP", "%s:%s:%s", h->name, host->address.addr, host->address.port);
 
@@ -776,11 +776,6 @@ static struct hname_address *find_hname_addr_in_res(struct d_resource *res, stru
 	return NULL;
 }
 
-static bool addr_scope_local(struct d_address *addr)
-{
-	return !strcmp(addr->addr, "127.0.0.1") || !strcmp(addr->addr, "::1");
-}
-
 /* An AF/IP/addr triple might be used by multiple connections within one resource,
    but may not be mentioned in any other resource. Also make sure that the two
    endpoints are not configured as the same.
@@ -801,7 +796,7 @@ static void check_addr_conflict(struct d_resource *res, struct resources *resour
 
 			STAILQ_FOREACH(ha1, &con->hname_address_pairs, link) {
 				addr[i] = ha1->address.addr ? &ha1->address : &ha1->host_info->address;
-				if (addr_scope_local(addr[i]))
+				if (addr_scope_local(addr[i]->addr))
 					continue;
 
 				if (ha1->conflicts)
@@ -824,7 +819,7 @@ static void check_addr_conflict(struct d_resource *res, struct resources *resour
 				config_valid = 0;
 				i++;
 			}
-			if (i == 2 && addresses_equal(addr[0], addr[1]) && !addr_scope_local(addr[0])) {
+			if (i == 2 && addresses_equal(addr[0], addr[1]) && !addr_scope_local(addr[0]->addr)) {
 				fprintf(stderr, "%s:%d: in resource %s %s:%s:%s is used for both endpoints\n",
 					res->config_file, con->config_line, res->name,
 					addr[0]->af, addr[0]->addr, addr[0]->port);
