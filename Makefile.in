@@ -37,6 +37,8 @@ WITH_XEN = @WITH_XEN@
 WITH_PACEMAKER = @WITH_PACEMAKER@
 WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
+WITH_83_SUPPORT = @WITH_83_SUPPORT@
+WITH_84_SUPPORT = @WITH_84_SUPPORT@
 
 # for some reason some of the commands below only work correctly in bash,
 # and not in e.g. dash. I'm too lazy to fix it to be compatible.
