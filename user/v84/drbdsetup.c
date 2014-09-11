@@ -3699,6 +3699,7 @@ int main(int argc, char **argv)
 				exit(20);
 			}
 			objname = argv[optind++];
+			ensure_sanity_of_res_name(objname);
 			if (!strcmp(objname, "all")) {
 				if (!(cmd->ctx_key & CTX_ALL))
 					print_usage_and_exit("command does not accept argument 'all'");

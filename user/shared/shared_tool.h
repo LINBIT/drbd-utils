@@ -60,6 +60,9 @@ extern int m_asprintf(char **strp, const char *fmt, ...);
 extern void fprintf_hex(FILE *fp, off_t file_offset, const void *buf, unsigned len);
 
 
+extern void ensure_sanity_of_res_name(char *stg);
+
+
 extern unsigned long long m_strtoll(const char* s,const char def_unit);
 extern int only_digits(const char *s);
 extern int dt_lock_drbd(int minor);

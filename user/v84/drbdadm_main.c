@@ -3714,6 +3714,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 		optarg = argv[optind];
 		if (*cmd) {
 			int n;
+			ensure_sanity_of_res_name(optarg);
 			for (n = 0; (*resource_names)[n]; n++)
 				/* do nothing */ ;
 			*resource_names = realloc(*resource_names,

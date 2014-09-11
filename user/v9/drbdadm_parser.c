@@ -1868,6 +1868,7 @@ void my_parse(void)
 			break;
 		case TK_RESOURCE:
 			EXP(TK_STRING);
+			ensure_sanity_of_res_name(yylval.txt);
 			EXP('{');
 			insert_tail(&config, parse_resource(yylval.txt, 0));
 			break;

@@ -3880,6 +3880,7 @@ int main(int argc, char **argv)
 			print_command_usage(cmd, FULL);
 			exit(20);
 		} else if (next_arg & (CTX_RESOURCE | CTX_MINOR | CTX_ALL)) {
+			ensure_sanity_of_res_name(argv[optind]);
 			if (!objname)
 				objname = argv[optind];
 			if (!strcmp(argv[optind], "all")) {

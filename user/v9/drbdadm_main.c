@@ -2919,6 +2919,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 		optarg = argv[optind];
 		if (*cmd) {
 			static int last_idx = 0;
+			ensure_sanity_of_res_name(optarg);
 			(*resource_names)[last_idx++] = optarg;
 		}
 		else if (!strcmp(optarg, "help"))

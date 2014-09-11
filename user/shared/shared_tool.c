@@ -413,6 +413,30 @@ void fprintf_hex(FILE *fp, off_t file_offset, const void *buf, unsigned len)
 	fprintf(fp, "%08llx\n", (unsigned long long)len + file_offset);
 }
 
+
+void ensure_sanity_of_res_name(char *stg)
+{
+    unsigned code;
+    if (!*stg) {
+	fprintf(stderr, "Resource name is empty.\n");
+	exit(1);
+    }
+
+    while (*stg) {
+	/* No, we won't verify valid UTF-8, and neither check for unicode
+	 * control sequences. */
+	/* Only works for ASCII derived code sets. */
+	code = * (unsigned char*) stg;
+	if (code < ' ' || code == '\x7f')
+	{
+	    fprintf(stderr, "Resource name is invalid - please don't use control characters.\n");
+	    exit(1);
+	}
+
+	stg++;
+    }
+    return;
+}
 unsigned long long
 m_strtoll(const char *s, const char def_unit)
 {
