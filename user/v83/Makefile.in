@@ -48,7 +48,7 @@ WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 # variables meant to be overridden from the make command line
 DESTDIR ?= /
 
-CFLAGS += -Wall -I. -I../v9 -I../shared
+CFLAGS += -Wall -I. -I../v9 -I../shared -I../../common/
 
 drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_main.o \
 	      drbdadm_adjust.o drbdtool_common.o drbdadm_usage_cnt.o \
@@ -99,15 +99,6 @@ uninstall:
 	rm -f $(DESTDIR)/lib/drbd/drbdsetup-83
 	rm -f $(DESTDIR)/lib/drbd/drbdadm-83
 
-###dependencies
-drbdsetup.o:       drbdtool_common.h linux/drbd_limits.h
-drbdsetup.o:       linux/drbd_tag_magic.h linux/drbd.h
-drbdsetup.o:       linux/drbd_config.h linux/drbd_nl.h
-drbdsetup.o:       unaligned.h
-drbdtool_common.o: drbdtool_common.h
-drbdadm_main.o:    drbdtool_common.h drbdadm.h
-drbdadm_adjust.o:  drbdtool_common.h drbdadm.h
-drbdadm_parser.o:  drbdtool_common.h drbdadm.h linux/drbd_limits.h ../v9/drbd_endian.h
-drbdadm_scanner.o: drbdtool_common.h drbdadm.h drbdadm_parser.h
-drbdsetup.o:       drbdtool_common.h           linux/drbd_limits.h
-drbdadm_usage_cnt.o: drbdtool_common.h drbdadm.h ../v9/drbd_endian.h
+Makefile.dep: $(wildcard *.[ch] ../shared/*.[ch])
+	$(CC) $(CFLAGS) -MM $^ > $@
+-include Makefile.dep

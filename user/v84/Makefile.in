@@ -109,17 +109,6 @@ spell:
 	 	aspell --save-repl --dont-backup --personal=./../documentation/aspell.en.per check $$f; \
 	done
 
-###dependencies
-drbdset.o:     drbdtool_common.h linux/drbd_limits.h
-drbdsetup.o:       linux/drbd_genl.h
-drbdsetup.o:       linux/drbd.h
-drbdsetup.o:       linux/genl_magic_struct.h
-drbdsetup.o:       linux/genl_magic_func.h
-drbdsetup.o:       ../v9/libgenl.h config_flags.h
-drbdtool_common.o: drbdtool_common.h
-drbdadm_main.o:    drbdtool_common.h drbdadm.h
-drbdadm_adjust.o:  drbdtool_common.h drbdadm.h
-drbdadm_parser.o:  drbdtool_common.h drbdadm.h linux/drbd_limits.h
-drbdadm_scanner.o: drbdtool_common.h drbdadm.h               drbdadm_parser.h
-drbdsetup.o:       drbdtool_common.h           linux/drbd_limits.h
-drbdadm_usage_cnt.o: drbdtool_common.h drbdadm.h ../v9/drbd_endian.h
+Makefile.dep: $(wildcard *.[ch] ../shared/*.[ch])
+	$(CC) $(CFLAGS) -MM $^ > $@
+-include Makefile.dep

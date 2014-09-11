@@ -27,8 +27,11 @@ user/v9/drbdmeta
 user/v9/drbdmeta_scanner.c
 user/v9/drbdsetup
 
+user/v9/Makefile.dep
 user/v9/Makefile
+user/v83/Makefile.dep
 user/v83/Makefile
+user/v84/Makefile.dep
 user/v84/Makefile
 user/shared/Makefile
 
