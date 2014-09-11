@@ -142,10 +142,10 @@ PNAME	:= drbd-utils
 	@[ -s .filelist ] # assert there is something in .filelist now
 	@find documentation -name "[^.]*.[58]" -o -name "*.html" | \
 	sed "s/^/$(PNAME)-$(DIST_VERSION)\//"              >> .filelist ; \
-	echo $(PNAME)-$(DIST_VERSION)/user/drbd_buildtag.c >> .filelist ; \
+	echo $(PNAME)-$(DIST_VERSION)/user/v9/drbd_buildtag.c >> .filelist ; \
 	echo $(PNAME)-$(DIST_VERSION)/.filelist            >> .filelist ; \
 	echo $(PNAME)-$(DIST_VERSION)/configure            >> .filelist ; \
-	echo $(PNAME)-$(DIST_VERSION)/user/config.h.in     >> .filelist ; \
+	echo $(PNAME)-$(DIST_VERSION)/user/v9/config.h.in  >> .filelist ; \
 	echo "./.filelist updated."
 
 # tgz will no longer automatically update .filelist,
