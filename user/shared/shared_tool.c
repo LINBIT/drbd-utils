@@ -29,6 +29,7 @@
 
 #include "drbdtool_common.h"
 #include "shared_tool.h"
+#include "shared_main.h"
 
 const char* shell_escape(const char* s)
 {
@@ -481,9 +482,13 @@ m_strtoll(const char *s, const char def_unit)
 	}
 }
 
-void alarm_handler(int __attribute((unused)) signo)
-{ /* nothing. just interrupt F_SETLKW */ }
 
+volatile int alarm_raised;
+/* nothing. just interrupt F_SETLKW */
+void alarm_handler(int __attribute((unused)) signo)
+{
+	alarm_raised = 1;
+}
 
 /* it is implicitly unlocked when the process dies.
  * but if you want to explicitly unlock it, just close it. */

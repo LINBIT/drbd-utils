@@ -55,6 +55,7 @@
 #include "drbdadm.h"
 #include "registry.h"
 #include "config_flags.h"
+#include "shared_main.h"
 
 #define MAX_ARGS 40
 
@@ -172,7 +173,6 @@ int ctx_set_implicit_volume(struct cfg_ctx *ctx);
 
 static char *get_opt_val(struct d_option *, const char *, char *);
 
-static struct ifreq *get_ifreq();
 
 char ss_buffer[1024];
 struct utsname nodeinfo;
@@ -211,7 +211,6 @@ struct setup_option *setup_options;
 
 
 char *connect_to_host = NULL;
-volatile int alarm_raised;
 
 struct deferred_cmd *deferred_cmds[__CFG_LAST] = { NULL, };
 struct deferred_cmd *deferred_cmds_tail[__CFG_LAST] = { NULL, };
@@ -1423,11 +1422,6 @@ static void find_drbdcmd(char **cmd, char **pathes)
 	exit(E_exec_error);
 }
 
-static void alarm_handler(int __attribute((unused)) signo)
-{
-	alarm_raised = 1;
-}
-
 void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd, int *ex)
 {
 	pid_t pid;
@@ -2500,13 +2494,6 @@ static int adm_wait_c(struct cfg_ctx *ctx)
 	return rv;
 }
 
-static unsigned minor_by_id(const char *id)
-{
-	if (strncmp(id, "minor-", 6))
-		return -1U;
-	return m_strtoll(id + 6, 1);
-}
-
 int ctx_by_minor(struct cfg_ctx *ctx, const char *id)
 {
 	struct d_resource *res, *t;
@@ -2721,11 +2708,6 @@ static char *get_opt_val(struct d_option *base, const char *name, char *def)
 		base = base->next;
 	}
 	return def;
-}
-
-void chld_sig_hand(int __attribute((unused)) unused)
-{
-	// do nothing. But interrupt systemcalls :)
 }
 
 static int check_exit_codes(pid_t * pids)
@@ -3018,145 +3000,6 @@ void print_usage_and_exit(struct adm_cmd *cmd, const char *addinfo, int status)
 		printf("\n%s\n", addinfo);
 
 	exit(status);
-}
-
-/*
- * I'd really rather parse the output of
- *   ip -o a s
- * once, and be done.
- * But anyways....
- */
-
-static struct ifreq *get_ifreq(void)
-{
-	int sockfd, num_ifaces;
-	struct ifreq *ifr;
-	struct ifconf ifc;
-	size_t buf_size;
-
-	if (0 > (sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP))) {
-		perror("Cannot open socket");
-		exit(EXIT_FAILURE);
-	}
-
-	num_ifaces = 0;
-	ifc.ifc_req = NULL;
-
-	/* realloc buffer size until no overflow occurs  */
-	do {
-		num_ifaces += 16;	/* initial guess and increment */
-		buf_size = ++num_ifaces * sizeof(struct ifreq);
-		ifc.ifc_len = buf_size;
-		if (NULL == (ifc.ifc_req = realloc(ifc.ifc_req, ifc.ifc_len))) {
-			fprintf(stderr, "Out of memory.\n");
-			return NULL;
-		}
-		if (ioctl(sockfd, SIOCGIFCONF, &ifc)) {
-			perror("ioctl SIOCFIFCONF");
-			free(ifc.ifc_req);
-			return NULL;
-		}
-	} while (buf_size <= (size_t) ifc.ifc_len);
-
-	num_ifaces = ifc.ifc_len / sizeof(struct ifreq);
-	/* Since we allocated at least one more than necessary,
-	 * this serves as a stop marker for the iteration in
-	 * have_ip() */
-	ifc.ifc_req[num_ifaces].ifr_name[0] = 0;
-	for (ifr = ifc.ifc_req; ifr->ifr_name[0] != 0; ifr++) {
-		/* we only want to look up the presence or absence of a certain address
-		 * here. but we want to skip "down" interfaces.  if an interface is down,
-		 * we store an invalid sa_family, so the lookup will skip it.
-		 */
-		struct ifreq ifr_for_flags = *ifr;	/* get a copy to work with */
-		if (ioctl(sockfd, SIOCGIFFLAGS, &ifr_for_flags) < 0) {
-			perror("ioctl SIOCGIFFLAGS");
-			ifr->ifr_addr.sa_family = -1;	/* what's wrong here? anyways: skip */
-			continue;
-		}
-		if (!(ifr_for_flags.ifr_flags & IFF_UP)) {
-			ifr->ifr_addr.sa_family = -1;	/* is not up: skip */
-			continue;
-		}
-	}
-	close(sockfd);
-	return ifc.ifc_req;
-}
-
-int have_ip_ipv4(const char *ip)
-{
-	struct ifreq *ifr;
-	struct in_addr query_addr;
-
-	query_addr.s_addr = inet_addr(ip);
-
-	if (!ifreq_list)
-		ifreq_list = get_ifreq();
-
-	for (ifr = ifreq_list; ifr && ifr->ifr_name[0] != 0; ifr++) {
-		/* SIOCGIFCONF only supports AF_INET */
-		struct sockaddr_in *list_addr =
-		    (struct sockaddr_in *)&ifr->ifr_addr;
-		if (ifr->ifr_addr.sa_family != AF_INET)
-			continue;
-		if (query_addr.s_addr == list_addr->sin_addr.s_addr)
-			return 1;
-	}
-	return 0;
-}
-
-int have_ip_ipv6(const char *ip)
-{
-	FILE *if_inet6;
-	struct in6_addr addr6, query_addr;
-	unsigned int b[4];
-	char tmp_ip[INET6_ADDRSTRLEN+1];
-	char name[20]; /* IFNAMSIZ aka IF_NAMESIZE is 16 */
-	int i;
-
-	/* don't want to do getaddrinfo lookup, but inet_pton get's confused by
-	 * %eth0 link local scope specifiers. So we have a temporary copy
-	 * without that part. */
-	for (i=0; ip[i] && ip[i] != '%' && i < INET6_ADDRSTRLEN; i++)
-		tmp_ip[i] = ip[i];
-	tmp_ip[i] = 0;
-
-	if (inet_pton(AF_INET6, tmp_ip, &query_addr) <= 0)
-		return 0;
-
-#define PROC_IF_INET6 "/proc/net/if_inet6"
-	if_inet6 = fopen(PROC_IF_INET6, "r");
-	if (!if_inet6) {
-		if (errno != ENOENT)
-			perror("open of " PROC_IF_INET6 " failed:");
-#undef PROC_IF_INET6
-		return 0;
-	}
-
-	while (fscanf
-	       (if_inet6,
-		X32(08) X32(08) X32(08) X32(08) " %*02x %*02x %*02x %*02x %s",
-		b, b + 1, b + 2, b + 3, name) > 0) {
-		for (i = 0; i < 4; i++)
-			addr6.s6_addr32[i] = cpu_to_be32(b[i]);
-
-		if (memcmp(&query_addr, &addr6, sizeof(struct in6_addr)) == 0) {
-			fclose(if_inet6);
-			return 1;
-		}
-	}
-	fclose(if_inet6);
-	return 0;
-}
-
-int have_ip(const char *af, const char *ip)
-{
-	if (!strcmp(af, "ipv4"))
-		return have_ip_ipv4(ip);
-	else if (!strcmp(af, "ipv6"))
-		return have_ip_ipv6(ip);
-
-	return 1;		/* SCI */
 }
 
 void verify_ips(struct d_resource *res)
@@ -3788,16 +3631,6 @@ help:
 	else
 		fprintf(stderr, "try '%s help'\n", progname);
 	return E_usage;
-}
-
-static void substitute_deprecated_cmd(char **c, char *deprecated,
-				      char *substitution)
-{
-	if (!strcmp(*c, deprecated)) {
-		fprintf(stderr, "'%s %s' is deprecated, use '%s %s' instead.\n",
-			progname, deprecated, progname, substitution);
-		*c = substitution;
-	}
 }
 
 struct adm_cmd *find_cmd(char *cmdname)

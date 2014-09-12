@@ -28,6 +28,8 @@ extern uint64_t bdev_size(int fd);
 extern void unescape(char *txt);
 
 
+extern volatile int alarm_raised;
+
 /* If the lower level device is resized,
  * and DRBD did not move its "internal" meta data in time,
  * the next time we try to attach, we won't find our meta data.
