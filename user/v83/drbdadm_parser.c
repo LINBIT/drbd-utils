@@ -38,6 +38,7 @@
 #include "linux/drbd_limits.h"
 #include "drbdtool_common.h"
 #include "drbdadm_parser.h"
+#include "shared_parser.h"
 
 YYSTYPE yylval;
 
@@ -419,31 +420,6 @@ int vcheck_uniq(struct hsearch_data *ht, const char *what, const char *fmt, va_l
 	if (EXIT_ON_CONFLICT && ep)
 		exit(E_config_invalid);
 	return !ep;
-}
-
-int check_uniq(const char *what, const char *fmt, ...)
-{
-	int rv;
-	va_list ap;
-
-	va_start(ap, fmt);
-	rv = vcheck_uniq(&global_htable, what, fmt, ap);
-	va_end(ap);
-
-	return rv;
-}
-
-/* unique per resource */
-int check_upr(const char *what, const char *fmt, ...)
-{
-	int rv;
-	va_list ap;
-
-	va_start(ap, fmt);
-	rv = vcheck_uniq(&per_resource_htable, what, fmt, ap);
-	va_end(ap);
-
-	return rv;
 }
 
 void check_meta_disk(struct d_host_info *host)
@@ -1648,27 +1624,6 @@ void post_parse(struct d_resource *config, enum pp_flags flags)
 	for_each_resource(res, tmp, config)
 		if (res->stacked_on_one)
 			set_disk_in_res(res);
-}
-
-void include_file(FILE *f, char *name)
-{
-	int saved_line;
-	char *saved_config_file, *saved_config_save;
-
-	saved_line = line;
-	saved_config_file = config_file;
-	saved_config_save = config_save;
-	line = 1;
-	config_file = name;
-	config_save = canonify_path(name);
-
-	my_yypush_buffer_state(f);
-	my_parse();
-	yypop_buffer_state();
-
-	line = saved_line;
-	config_file = saved_config_file;
-	config_save = saved_config_save;
 }
 
 void include_stmt(char *str)

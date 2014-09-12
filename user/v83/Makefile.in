@@ -53,7 +53,7 @@ CFLAGS += -Wall -I. -I../v9 -I../shared -I../../common/
 drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_main.o \
 	      drbdadm_adjust.o drbdtool_common.o drbdadm_usage_cnt.o \
 	      ../v9/drbd_buildtag.o drbdadm_minor_table.o shared_tool.o \
-		  shared_main.o
+		  shared_main.o shared_parser.o
 
 drbdsetup-obj = drbdsetup.o drbdtool_common.o ../v9/drbd_buildtag.o \
 	        drbd_strings.o shared_tool.o

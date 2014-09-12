@@ -56,7 +56,7 @@ GENETLINK_H := /usr/include/linux/genetlink.h
 drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_main.o \
 	      drbdadm_adjust.o drbdtool_common.o drbdadm_usage_cnt.o \
 	      ../v9/drbd_buildtag.o registry.o config_flags.o ../v9/libgenl.o \
-	      drbd_nla.o shared_tool.o shared_main.o
+	      drbd_nla.o shared_tool.o shared_main.o shared_parser.o
 
 drbdsetup-obj = ../v9/libgenl.o registry.o drbdsetup.o drbdtool_common.o \
 		../v9/drbd_buildtag.o drbd_strings.o config_flags.o drbd_nla.o \
