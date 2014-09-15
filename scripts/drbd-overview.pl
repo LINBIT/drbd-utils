@@ -132,7 +132,7 @@ sub slurp_proc_drbd_or_exit() {
 sub abbreviate {
 	my($w, $max) = @_;
 
-	$max //= 15;
+	$max ||= 15;
 
 # keep UPPERCase and a few lowercase characters.
 	1 while length($w) > $max && $w =~ s/([a-z]+)[a-z]/$1/g;
@@ -177,8 +177,8 @@ sub shorten_list {
 		$done{$wc_data}++
 			if ($wc_data);
 
-	for my $k (@$keys) {
-		my $v = $hash->{$k};
+	for my $k2 (@$keys) {
+		my $v = $hash->{$k2};
 		next if $done{$v}++;
 
 		push @stg, abbreviate($v, 4) .
@@ -223,27 +223,27 @@ sub slurp_drbdsetup() {
             $later{$res}{vol_minor}{$vol} = $minor;
             $later{$res}{peers}{dstates}{$HOSTNAME}  = $f{disk};
         } elsif ($what eq "peer-device") {
-            my $p = $f{"conn-name"};
-            $later{$res}{peers}{dstates}{$p} = $f{"peer-disk"};
+            my $n = $f{"conn-name"};
+            $later{$res}{peers}{dstates}{$n} = $f{"peer-disk"};
         } else {
             warn("unknown key $what\n");
         }
     }
 
 
-    for my $res (keys %later) {
-        my @h = sort keys %{$later{$res}{hosts}};
+    for my $res2 (keys %later) {
+        my @h = sort keys %{$later{$res2}{hosts}};
         my @h_incl = ($HOSTNAME, @h);
-        my $vol_minor = $later{$res}{vol_minor};
-        my $peers = $later{$res}{peers};
+        my $vol_minor = $later{$res2}{vol_minor};
+        my $peers = $later{$res2}{peers};
 
-        for my $vol (keys %$vol_minor) {
-            my $minor = $vol_minor->{$vol};
+        for my $vol2 (keys %$vol_minor) {
+            my $minor2 = $vol_minor->{$vol2};
 
-            my $name = length($vol) ? "$res/$vol" : $res;
+            my $name = length($vol2) ? "$res2/$vol2" : $res2;
 # create hash
-            $drbd{$minor}{name} = $name;
-            my $v = $drbd{$minor};
+            $drbd{$minor2}{name} = $name;
+            my $v = $drbd{$minor2};
 
 
 # role with local=first
@@ -437,8 +437,8 @@ for my $m (@minors_sorted) {
 }
 my @fmt = map { "%-${_}s" } @maxw;
 for (@out) {
-	for (my $c = 0; $c < @$_; $c++) {
-		printf $fmt[$c], $_->[$c];
+	for (my $c2 = 0; $c2 < @$_; $c2++) {
+		printf $fmt[$c2], $_->[$c2];
 	}
 	print "\n";
 }
