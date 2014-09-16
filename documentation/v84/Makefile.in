@@ -35,6 +35,7 @@ CFLAGS = @CFLAGS@
 XSLTPROC = @XSLTPROC@
 
 # features enabled or disabled by configure
+WITH_83_SUPPORT = @WITH_83_SUPPORT@
 WITH_UDEV = @WITH_UDEV@
 WITH_XEN = @WITH_XEN@
 WITH_PACEMAKER = @WITH_PACEMAKER@
@@ -79,7 +80,12 @@ all:
 clean:
 	@echo "To clean the documentation: make doc-clean"
 
+ifeq ($(WITH_84_SUPPORT),yes)
 doc:	man
+else
+doc:
+endif
+
 
 doc-clean: distclean
 
@@ -122,6 +128,7 @@ distclean:
 man:	$(MANPAGES)
 
 install:
+ifeq ($(WITH_84_SUPPORT),yes)
 	@ok=true; for f in $(MANPAGES) ; \
 		do [ -e $$f ] || { echo $$f missing ; ok=false; } ; \
 	done ; $$ok
@@ -130,13 +137,16 @@ install:
 		b=$${f%.[0-9]}; \
 		install -v -D -m 644 $$f $(DESTDIR)$(mandir)/man$$s/$$b-8.4.$$s ; \
 	done
+endif
 
 uninstall:
+ifeq ($(WITH_84_SUPPORT),yes)
 	@ set -e; for f in $(MANPAGES) ; do \
 		s=$${f##*.}; \
 		b=$${f%.[0-9]}; \
 		rm -vf $(DESTDIR)$(mandir)/man$$s/$$b-8.4.$$s ; \
 	done
+endif
 
 html:	$(SOURCES:.xml=.html)
 
