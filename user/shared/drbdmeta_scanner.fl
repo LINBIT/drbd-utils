@@ -66,6 +66,7 @@ node-id	DP; CP; return TK_NODE_ID;
 current-uuid	DP; CP; return TK_CURRENT_UUID;
 bitmap		DP; CP; return TK_BITMAP;
 bitmap-uuid	DP; CP; return TK_BITMAP_UUID;
+bitmap-dagtag	DP; CP; return TK_BITMAP_DAGTAG;
 history-uuids	DP; CP; return TK_HISTORY_UUIDS;
 peer		DP; CP; return TK_PEER;
 hash		DP; CP; return TK_HASH;

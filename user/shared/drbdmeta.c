@@ -256,6 +256,7 @@ typedef struct { unsigned long be; } be_ulong;
  */
 struct peer_md_cpu {
 	uint64_t bitmap_uuid;
+	uint64_t bitmap_dagtag;
 	uint32_t flags;
 	int32_t node_id;
 };
@@ -786,9 +787,10 @@ int v84_al_disk_to_cpu(struct al_4k_cpu *al_cpu, struct al_4k_transaction_on_dis
 
 struct peer_dev_md_on_disk {
 	be_u64 bitmap_uuid;
+	be_u64 bitmap_dagtag;
 	be_u32 flags;
 	be_s32 node_id;
-	be_u32 reserved_u32[4];
+	be_u32 reserved_u32[2];
 } __packed;
 
 struct md_on_disk_09 {
@@ -848,6 +850,9 @@ void md_disk_09_to_cpu(struct md_cpu *cpu, const struct md_on_disk_09 *disk)
 		cpu->peers[p].node_id = be32_to_cpu(disk->peers[p].node_id.be);
 		cpu->peers[p].bitmap_uuid =
 			be64_to_cpu(disk->peers[p].bitmap_uuid.be);
+		cpu->peers[p].bitmap_dagtag =
+			be64_to_cpu(disk->peers[p].bitmap_dagtag.be);
+
 	}
 	BUILD_BUG_ON(ARRAY_SIZE(cpu->history_uuids) != ARRAY_SIZE(disk->history_uuids));
 	for (i = 0; i < ARRAY_SIZE(cpu->history_uuids); i++)
@@ -880,6 +885,9 @@ void md_cpu_to_disk_09(struct md_on_disk_09 *disk, const struct md_cpu *cpu)
 		disk->peers[p].node_id.be = cpu_to_be32(cpu->peers[p].node_id);
 		disk->peers[p].bitmap_uuid.be =
 			cpu_to_be64(cpu->peers[p].bitmap_uuid);
+		disk->peers[p].bitmap_dagtag.be =
+			cpu_to_be64(cpu->peers[p].bitmap_dagtag);
+
 	}
 	BUILD_BUG_ON(ARRAY_SIZE(disk->history_uuids) != ARRAY_SIZE(cpu->history_uuids));
 	for (i = 0; i < ARRAY_SIZE(disk->history_uuids); i++)
@@ -3248,8 +3256,10 @@ int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc
 				       peer->node_id);
 			}
 			printf("    bitmap-uuid 0x"X64(016)";\n"
+			       "    bitmap-dagtag 0x"X64(016)";\n"
 			       "    flags 0x"X32(08)";\n",
 			       peer->bitmap_uuid,
+			       peer->bitmap_dagtag,
 			       peer->flags);
 			printf("}\n");
 		}
@@ -3329,6 +3339,8 @@ void md_parse_error(int expected_token, int seen_token,const char *etext)
 			etext = "keyword 'current-uuid'"; break;
 		case TK_BITMAP_UUID:
 			etext = "keyword 'bitmap-uuid'"; break;
+		case TK_BITMAP_DAGTAG:
+			etext = "keyword 'bitmap-dagtag'"; break;
 		case TK_PEER:
 			etext = "keyword 'peer'"; break;
 		case TK_HASH:
@@ -3644,6 +3656,8 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 				cfg->md.peers[i].node_id = yylval.u64;
 				EXP(TK_BITMAP_UUID); EXP(TK_U64); EXP(';');
 				cfg->md.peers[i].bitmap_uuid = yylval.u64;
+				EXP(TK_BITMAP_DAGTAG); EXP(TK_U64); EXP(';');
+				cfg->md.peers[i].bitmap_dagtag = yylval.u64;
 				EXP(TK_FLAGS); EXP(TK_U32); EXP(';');
 				cfg->md.peers[i].flags = (uint32_t)yylval.u64;
 				EXP('}');
