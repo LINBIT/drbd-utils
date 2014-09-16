@@ -271,6 +271,11 @@ struct {								\
 		(var);							\
 		(var) = ((var)->field.stqe_next))
 
+#define STAILQ_FOREACH_SAFE(var, next, head, field)					\
+	for ((var) = ((head)->stqh_first);						\
+		(((var) != NULL) && (((next) = ((var)->field.stqe_next)) || 1));	\
+		(var) = (next))
+
 #define	STAILQ_CONCAT(head1, head2) do {				\
 	if (!STAILQ_EMPTY((head2))) {					\
 		*(head1)->stqh_last = (head2)->stqh_first;		\

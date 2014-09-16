@@ -514,6 +514,8 @@ void compare_volumes(struct volumes *conf_head, struct volumes *kern_head)
 	struct volumes to_be_deleted = STAILQ_HEAD_INITIALIZER(to_be_deleted);
 	struct d_volume *conf = STAILQ_FIRST(conf_head);
 	struct d_volume *kern = STAILQ_FIRST(kern_head);
+	struct d_volume *next;
+
 	while (conf || kern) {
 		if (kern && (conf == NULL || kern->vnr < conf->vnr)) {
 			insert_volume(&to_be_deleted, new_to_be_deleted_minor_from_template(kern));
@@ -533,7 +535,7 @@ void compare_volumes(struct volumes *conf_head, struct volumes *kern_head)
 			kern = STAILQ_NEXT(kern, link);
 		}
 	}
-	for_each_volume(conf, &to_be_deleted)
+	for_each_volume_safe(conf, next, &to_be_deleted)
 		insert_volume(conf_head, conf);
 }
 

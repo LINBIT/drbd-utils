@@ -488,6 +488,7 @@ extern struct names backend_options;
 /* CAUTION: arguments may not have side effects! */
 #define for_each_resource(var, head) STAILQ_FOREACH(var, head, link)
 #define for_each_volume(var, head) STAILQ_FOREACH(var, head, link)
+#define for_each_volume_safe(var, next, head) STAILQ_FOREACH_SAFE(var, next, head, link)
 #define for_each_host(var, head) STAILQ_FOREACH(var, head, link)
 #define for_each_connection(var, head) STAILQ_FOREACH(var, head, link)
 
