@@ -93,6 +93,8 @@ drbdmeta_scanner.c: drbdmeta_scanner.fl drbdmeta_parser.h
 # v9, so that's where it gets built and installed.
 
 clean:
+	rm -f drbdmeta_scanner.c
+	! test -e ../../.git || rm -f drbd_buildtag.c
 
 distclean: clean
 
