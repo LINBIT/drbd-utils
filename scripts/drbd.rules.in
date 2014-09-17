@@ -5,13 +5,15 @@ KERNEL!="drbd*", GOTO="drbd_end"
 
 IMPORT{program}="@sbindir@/drbdadm sh-udev minor-%m"
 
-NAME=="", ENV{DEVICE}!="", NAME="$env{DEVICE}"
-
 # Use symlink from the environment if available
-ENV{SYMLINK}!="", SYMLINK="$env{SYMLINK}", GOTO="drbd_end"
+ENV{SYMLINK}!="", SYMLINK="$env{SYMLINK}", GOTO="have_symlink"
 
-# Legacy rules for DRBD 8.3 & 8.4
+# Legacy rules for older DRBD 8.3 & 8.4 when drbdadm sh-udev did not yet export SYMLINK
 ENV{DISK}!="", SYMLINK+="drbd/by-disk/$env{DISK}"
 ENV{RESOURCE}!="", SYMLINK+="drbd/by-res/$env{RESOURCE}"
+
+LABEL="have_symlink"
+
+ENV{DEVICE}=="drbd_?*", SYMLINK+="$env{DEVICE}"
 
 LABEL="drbd_end"
