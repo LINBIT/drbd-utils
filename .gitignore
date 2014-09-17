@@ -1,3 +1,4 @@
+/aclocal.m4
 /autom4te.cache
 /config.log
 /config.status
@@ -9,7 +10,6 @@
 /tags
 /Makefile
 
-scripts/Makefile
 documentation/Makefile
 
 ./.filelist
@@ -33,10 +33,6 @@ user/v83/Makefile.dep
 user/v83/Makefile
 user/v84/Makefile.dep
 user/v84/Makefile
-user/shared/Makefile
-
-user/shared/drbd_buildtag.c
-user/shared/drbdadm_scanner.c
 
 documentation/v9/Makefile
 documentation/v9/drbd.8
@@ -55,5 +51,3 @@ documentation/v9/drbdsetup.xml
 documentation/v84/*.xml
 documentation/v84/*.8
 documentation/v84/Makefile
-
-benchmark/dm
