@@ -3240,6 +3240,13 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 		struct timeval tv;
 		struct tm *tm;
 
+		/* FIXME: Within the same event which can consist of multiple
+		 * notifications (indicated by the NOTIFY_CONTINUES flag), use
+		 * the same timestamp.  Do users of the eventss interface need
+		 * a way to detect which events belong together even without
+		 * timestamps?
+		 */
+
 		gettimeofday(&tv, NULL);
 		tm = localtime(&tv.tv_sec);
 		printf("%04u-%02u-%02uT%02u:%02u:%02u.%06u%+03d:%02u ",
