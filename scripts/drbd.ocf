@@ -298,17 +298,28 @@ drbd_set_status_variables() {
 	local _flags_susp _flags_aftr_isp _flags_peer_isp _flags_user_isp
 	local _resynced_percent
 
-	# NOT local! but "return values"
-	# since 8.4 supports multi volumes per resource,
-	# these are shell arrays
-	DRBD_ROLE_LOCAL=(Unconfigured)
-	DRBD_ROLE_REMOTE=(Unknown)
-	DRBD_CSTATE=(Unconfigured)
-	DRBD_DSTATE_LOCAL=(Unconfigured)
-	DRBD_DSTATE_REMOTE=(DUnknown)
+	DRBD_ROLE_LOCAL=()
+	DRBD_ROLE_REMOTE=()
+	DRBD_CSTATE=()
+	DRBD_DSTATE_LOCAL=()
+	DRBD_DSTATE_REMOTE=()
 
-	# Populates a set of variables relevant to DRBD's status
 	eval "$($DRBDSETUP "$DRBD_RESOURCE" sh-status)"
+
+	# if there was no output at all, or a weird output
+	# make sure the status arrays won't be empty.
+	[[ ${#DRBD_ROLE_LOCAL[@]}    != 0 ]] || DRBD_ROLE_LOCAL=(Unconfigured)
+	[[ ${#DRBD_ROLE_REMOTE[@]}   != 0 ]] || DRBD_ROLE_REMOTE=(Unknown)
+	[[ ${#DRBD_CSTATE[@]}        != 0 ]] || DRBD_CSTATE=(Unconfigured)
+	[[ ${#DRBD_DSTATE_LOCAL[@]}  != 0 ]] || DRBD_DSTATE_LOCAL=(Unconfigured)
+	[[ ${#DRBD_DSTATE_REMOTE[@]} != 0 ]] || DRBD_DSTATE_REMOTE=(DUnknown)
+
+
+	: == DEBUG == DRBD_ROLE_LOCAL    == ${DRBD_ROLE_LOCAL[@]} ==
+	: == DEBUG == DRBD_ROLE_REMOTE   == ${DRBD_ROLE_REMOTE[@]} ==
+	: == DEBUG == DRBD_CSTATE        == ${DRBD_CSTATE[@]} ==
+	: == DEBUG == DRBD_DSTATE_LOCAL  == ${DRBD_DSTATE_LOCAL[@]} ==
+	: == DEBUG == DRBD_DSTATE_REMOTE == ${DRBD_DSTATE_REMOTE[@]} ==
 }
 
 # This is not the only fencing mechanism.
@@ -501,6 +512,18 @@ drbd_status() {
 	local dev
 	rc=$OCF_NOT_RUNNING
 
+	# NOT local! but "return values"
+	# since 8.4 supports multi volumes per resource,
+	# these are shell arrays.
+	#
+	# Initialize to "Unconfigured", in case this returns early.
+	# They will be re-initialized and properly populated in drbd_set_status_variables.
+	DRBD_ROLE_LOCAL=(Unconfigured)
+	DRBD_ROLE_REMOTE=(Unknown)
+	DRBD_CSTATE=(Unconfigured)
+	DRBD_DSTATE_LOCAL=(Unconfigured)
+	DRBD_DSTATE_REMOTE=(DUnknown)
+
 	is_drbd_enabled || return $rc
 
 	# Not running, if no block devices exist.
@@ -539,13 +562,6 @@ drbd_status() {
 # I'm sorry, but there is no $OCF_DEGRADED_MASTER or similar yet.
 drbd_monitor() {
 	local status
-
-	DRBD_ROLE_LOCAL=(Unconfigured)
-	DRBD_ROLE_REMOTE=(Unknown)
-	DRBD_CSTATE=(Unconfigured)
-	DRBD_DSTATE_LOCAL=(Unconfigured)
-	DRBD_DSTATE_REMOTE=(DUnknown)
-
 	drbd_status
 	status=$?
 
