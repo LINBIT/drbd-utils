@@ -400,12 +400,12 @@ void config_help_legacy(const char * const tool,
 		const struct version * const driver_version)
 {
 	fprintf(stderr,
-			"This %s was build without support for v83\n"
-			"drbd kernel code (%d.%d). Consider to rebuild your user land\n"
-			"tools and do not give --without-%d%d-support on the\n"
-			"commandline\n", tool, driver_version->version.major,
-			driver_version->version.minor, driver_version->version.major,
-			driver_version->version.minor);
+			"This %s was build without support for drbd kernel code (%d.%d).\n"
+			"Consider to rebuild your user land tools\n"
+			"and configure --with-%d%d-support ...\n",
+			tool,
+			driver_version->version.major, driver_version->version.minor,
+			driver_version->version.major, driver_version->version.minor);
 }
 
 void add_lib_drbd_to_path(void)

@@ -292,7 +292,7 @@ struct option wait_cmds_options[] = {
 struct drbd_cmd commands[] = {
 	{"primary", P_primary, F_CONFIG_CMD, {{ NULL,
 	 (struct drbd_option[]) {
-		 { "overwrite-data-of-peer",'o',T_primary_force, EB   }, /* v83 name */
+		 { "overwrite-data-of-peer",'o',T_primary_force, EB   }, /* legacy name */
 		 { "force",'f',			T_primary_force, EB   },
 		 CLOSE_OPTIONS }} }, },
 

@@ -3574,8 +3574,8 @@ void exec_legacy_drbdsetup(char **argv)
 	}
 	execvp(drbdsetup, argv);
 #else
-	fprintf(stderr, "This drbdsetup was not built with support for v83 drbd-8.3\n"
-		"Eventually rebuild with ./configure --with-v83-connector\n");
+	fprintf(stderr, "This drbdsetup was not built with support for drbd-8.3\n"
+		"Consider to rebuild with ./configure --with-83-support\n");
 #endif
 }
 

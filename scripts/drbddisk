@@ -23,7 +23,7 @@ else
 fi
 
 ## EXIT CODES
-# since this is a "v83 heartbeat R1 resource agent" script,
+# since this is a "legacy heartbeat R1 resource agent" script,
 # exit codes actually do not matter that much as long as we conform to
 #  http://wiki.linux-ha.org/HeartbeatResourceAgent
 # but it does not hurt to conform to lsb init-script exit codes,

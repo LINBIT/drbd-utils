@@ -45,7 +45,7 @@ infodir="`eval echo ${infodir}`"
 mandir="`eval echo ${mandir}`"
 docdir="`eval echo ${docdir}`"
 
-dnl "--with-<foo>" options (all except v83 and rgm enabled by default, pass --without-<foo> to disable)
+dnl "--with-<foo>" options (all except rgm enabled by default, pass --without-<foo> to disable)
 WITH_83_SUPPORT=yes
 WITH_84_SUPPORT=yes
 WITH_UDEV=yes
