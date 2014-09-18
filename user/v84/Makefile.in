@@ -48,26 +48,33 @@ WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 # variables meant to be overridden from the make command line
 DESTDIR ?= /
 
-CFLAGS += -Wall -I. -I../v9 -I../shared
+CFLAGS += -Wall -I. -I../shared
 
 GENETLINK_H := /usr/include/linux/genetlink.h
+libgenl.o: CFLAGS += $(shell for w in CTRL_ATTR_VERSION CTRL_ATTR_HDRSIZE CTRL_ATTR_MCAST_GROUPS; do grep -qw $$w $(GENETLINK_H) && echo -DHAVE_$$w; done)
 
 drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_main.o \
 	      drbdadm_adjust.o drbdtool_common.o drbdadm_usage_cnt.o \
-	      ../v9/drbd_buildtag.o registry.o config_flags.o ../v9/libgenl.o \
+	      drbd_buildtag.o registry.o config_flags.o libgenl.o \
 	      drbd_nla.o shared_tool.o shared_main.o shared_parser.o
 
-drbdsetup-obj = ../v9/libgenl.o registry.o drbdsetup.o drbdtool_common.o \
-		../v9/drbd_buildtag.o drbd_strings.o config_flags.o drbd_nla.o \
+drbdsetup-obj = libgenl.o registry.o drbdsetup.o drbdtool_common.o \
+		drbd_buildtag.o drbd_strings.o config_flags.o drbd_nla.o \
 		wrap_printf.o drbdsetup_colors.o shared_tool.o
 
 all: tools
+
+include ../shared_prereqs.mk
 
 ifeq ($(WITH_84_SUPPORT),yes)
 tools: drbdadm-84 drbdsetup-84
 else
 tools:
 endif
+
+.PHONY: drbdadm drbdsetup
+drbdadm drbdsetup:
+	echo >&2 "You meant to ask for $@-84" ; exit 1
 
 drbdadm-84: $(drbdadm-obj)
 	$(LINK.c) $(LDFLAGS) -o $@ $^
@@ -107,7 +114,3 @@ spell:
 	for f in drbdadm_adjust.c drbdadm_main.c drbdadm_parser.c drbdadm_usage_cnt.c drbdsetup.c drbdtool_common.c; do \
 	 	aspell --save-repl --dont-backup --personal=./../documentation/aspell.en.per check $$f; \
 	done
-
-Makefile.dep: $(wildcard *.[ch] ../shared/*.[ch])
-	$(CC) $(CFLAGS) -MM $^ > $@
--include Makefile.dep

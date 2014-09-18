@@ -48,23 +48,29 @@ WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 # variables meant to be overridden from the make command line
 DESTDIR ?= /
 
-CFLAGS += -Wall -I. -I../v9 -I../shared -I../../common/
+CFLAGS += -Wall -I. -I../shared
 
 drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_main.o \
 	      drbdadm_adjust.o drbdtool_common.o drbdadm_usage_cnt.o \
-	      ../v9/drbd_buildtag.o drbdadm_minor_table.o shared_tool.o \
+	      drbd_buildtag.o drbdadm_minor_table.o shared_tool.o \
 		  shared_main.o shared_parser.o
 
-drbdsetup-obj = drbdsetup.o drbdtool_common.o ../v9/drbd_buildtag.o \
+drbdsetup-obj = drbdsetup.o drbdtool_common.o drbd_buildtag.o \
 	        drbd_strings.o shared_tool.o
 
 all: tools
+
+include ../shared_prereqs.mk
 
 ifeq ($(WITH_83_SUPPORT),yes)
 tools: drbdadm-83 drbdsetup-83
 else
 tools:
 endif
+
+.PHONY: drbdadm drbdsetup
+drbdadm drbdsetup:
+	echo >&2 "You meant to ask for $@-83" ; exit 1
 
 drbdadm-83: $(drbdadm-obj)
 	$(LINK.c) $(LDFLAGS) -o $@ $^
@@ -99,7 +105,3 @@ endif
 uninstall:
 	rm -f $(DESTDIR)/lib/drbd/drbdsetup-83
 	rm -f $(DESTDIR)/lib/drbd/drbdadm-83
-
-Makefile.dep: $(wildcard *.[ch] ../shared/*.[ch])
-	$(CC) $(CFLAGS) -MM $^ > $@
--include Makefile.dep

@@ -116,7 +116,7 @@ doc-clean: distclean
 	$(FO_STYLESHEET) $<
 
 ../../user/v9/drbdsetup:
-	(cd ../../user/v9; make drbdsetup)
+	$(MAKE) -C $(@D) $(@F)
 
 drbdsetup_xml-help_%.xml: ../../user/v9/drbdsetup
 	../../user/v9/drbdsetup xml-help $* > $@

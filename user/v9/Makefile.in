@@ -77,6 +77,8 @@ drbdmeta-obj = drbdmeta.o drbdmeta_scanner.o drbdtool_common.o drbd_buildtag.o \
 
 all: tools
 
+include ../shared_prereqs.mk
+
 tools: drbdadm drbdmeta drbdsetup
 
 drbdadm: $(drbdadm-obj)
@@ -128,7 +130,3 @@ spell:
 	for f in drbdadm_adjust.c drbdadm_main.c drbdadm_parser.c drbdadm_usage_cnt.c drbdmeta.c drbdsetup.c drbdtool_common.c; do \
 	 	aspell --save-repl --dont-backup --personal=./../documentation/aspell.en.per check $$f; \
 	done
-
-Makefile.dep: $(wildcard *.[ch] ../shared/*.[ch])
-	$(CC) $(CFLAGS) -MM $^ > $@
--include Makefile.dep

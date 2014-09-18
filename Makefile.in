@@ -65,11 +65,11 @@ ifeq ($(FDIST_VERSION),)
 FDIST_VERSION := $(DIST_VERSION)
 endif
 
-all: tools
+all: configure tools
 
-.PHONY: tools
+.PHONY: all tools doc
 tools:
-	@ set -e; for i in $(patsubst drbd,,$(SUBDIRS)); do $(MAKE) -C $$i ; done
+	@ set -e; for i in $(SUBDIRS); do $(MAKE) -C $$i ; done
 	@ echo -e "\n\tUserland tools build was successful."
 
 doc:
@@ -82,6 +82,7 @@ ifeq ($(WITH_84_SUPPORT),yes)
 endif
 
 
+.PHONY:	doc-clean install install-tools clean distclean extra-clean uninstall
 doc-clean:
 	$(MAKE) -C documentation doc-clean
 
@@ -106,7 +107,7 @@ distclean:
 
 EXTRA_CLEAN += Makefile user/Makefile user/v83/Makefile user/v84/Makefile user/v9/Makefile scripts/Makefile 
 EXTRA_CLEAN += documentation/Makefile documentation/v83/Makefile documentation/v84/Makefile documentation/v9/Makefile
-EXTRA_CLEAN += user/v9/config.h drbd.spec
+EXTRA_CLEAN += user/shared/config.h drbd.spec
 EXTRA_CLEAN += configure
 extra-clean: distclean
 	rm -f $(EXTRA_CLEAN)
@@ -114,6 +115,7 @@ extra-clean: distclean
 uninstall:
 	@ set -e; for i in $(SUBDIRS); do $(MAKE) -C $$i uninstall; done
 
+.PHONY: check_changelogs_up2date
 check_changelogs_up2date:
 	@ up2date=true; dver_re=$(DIST_VERSION); dver_re=$${dver_re//./\\.}; \
 	echo "checking for presence of $$dver_re in various changelog files"; \
@@ -131,22 +133,23 @@ check_changelogs_up2date:
 	then \
 	   echo -e "\n\tconfigure.ac needs update"; \
 	   up2date=false; fi ; \
-	if ! grep "^drbd8 (2:$$dver_re-" >/dev/null 2>&1 debian/changelog; \
+	if ! grep "^drbd-utils ($$dver_re+linbit" >/dev/null 2>&1 debian/changelog; \
 	then \
 	   echo -e "\n\tdebian/changelog needs update [ignored]\n"; \
 	   : do not fail the build because of outdated debian/changelog ; fi ; \
 	$$up2date
 
 PNAME	:= drbd-utils
+.PHONY: .filelist
 .filelist:
 	@$(GIT) ls-files | sed '$(if $(PRESERVE_DEBIAN),,/^debian/d);s#^#$(PNAME)-$(DIST_VERSION)/#' | grep -v "gitignore" > .filelist
 	@[ -s .filelist ] # assert there is something in .filelist now
 	@find documentation -name "[^.]*.[58]" -o -name "*.html" | \
 	sed "s/^/$(PNAME)-$(DIST_VERSION)\//"              >> .filelist ; \
-	echo $(PNAME)-$(DIST_VERSION)/user/v9/drbd_buildtag.c >> .filelist ; \
+	echo $(PNAME)-$(DIST_VERSION)/user/shared/drbd_buildtag.c >> .filelist ; \
+	echo $(PNAME)-$(DIST_VERSION)/user/shared/config.h.in  >> .filelist ; \
 	echo $(PNAME)-$(DIST_VERSION)/.filelist            >> .filelist ; \
 	echo $(PNAME)-$(DIST_VERSION)/configure            >> .filelist ; \
-	echo $(PNAME)-$(DIST_VERSION)/user/v9/config.h.in  >> .filelist ; \
 	echo "./.filelist updated."
 
 # tgz will no longer automatically update .filelist,
@@ -154,6 +157,7 @@ PNAME	:= drbd-utils
 # an extracted tarball, too.
 # to generate a distribution tarball, use make tarball,
 # which will regenerate .filelist
+.PHONY: tgz
 tgz:
 	test -e .filelist
 	rm -f drbd-utils-$(FDIST_VERSION)
@@ -167,6 +171,7 @@ ifeq ($(FORCE),)
 tgz: check_changelogs_up2date doc
 endif
 
+.PHONY: check_all_committed prepare_release tarball
 check_all_committed:
 	@$(if $(FORCE),-,)modified=`$(GIT) ls-files -m -t`; 		\
 	if test -n "$$modified" ; then	\
@@ -179,14 +184,12 @@ prepare_release:
 	$(MAKE) tarball PRESERVE_DEBIAN=1
 
 configure: configure.ac
+	aclocal
 	autoheader
 	autoconf
 
 tarball: check_all_committed distclean doc configure .filelist
 	$(MAKE) tgz
-
-all module tools doc .filelist:
-
 
 ifdef RPMBUILD
 drbd.spec: drbd.spec.in configure
