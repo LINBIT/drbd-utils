@@ -175,9 +175,9 @@ struct drbd_cmd {
 	const enum cfg_ctx_key ctx_key;
 	const int cmd_id;
 	const int tla_id; /* top level attribute id */
-	int (*function)(struct drbd_cmd *, int, char **);
+	int (*function)(const struct drbd_cmd *, int, char **);
 	struct drbd_argument *drbd_args;
-	int (*show_function)(struct drbd_cmd*, struct genl_info *, void *u_prt);
+	int (*show_function)(const struct drbd_cmd*, struct genl_info *, void *u_prt);
 	struct option *options;
 	bool missing_ok;
 	bool continuous_poll;
@@ -188,28 +188,28 @@ struct drbd_cmd {
 };
 
 // other functions
-static void print_command_usage(struct drbd_cmd *cm, enum usage_type);
+static void print_command_usage(const struct drbd_cmd *cm, enum usage_type);
 
 // command functions
-static int generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int down_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int del_minor_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int del_resource_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int status_cmd(struct drbd_cmd *cm, int argc, char **argv);
+static int generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv);
+static int down_cmd(const struct drbd_cmd *cm, int argc, char **argv);
+static int generic_get_cmd(const struct drbd_cmd *cm, int argc, char **argv);
+static int del_minor_cmd(const struct drbd_cmd *cm, int argc, char **argv);
+static int del_resource_cmd(const struct drbd_cmd *cm, int argc, char **argv);
+static int status_cmd(const struct drbd_cmd *cm, int argc, char **argv);
 
 // sub commands for generic_get_cmd
-static int print_notifications(struct drbd_cmd *, struct genl_info *, void *u_ptr);
-static int show_scmd(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
-static int role_scmd(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
-static int sh_status_scmd(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
-static int cstate_scmd(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
-static int dstate_scmd(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
-static int uuids_scmd(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
-static int lk_bdev_scmd(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
-static int print_broadcast_events(struct drbd_cmd *, struct genl_info *, void *u_ptr);
-static int w_connected_state(struct drbd_cmd *, struct genl_info *, void *u_ptr);
-static int w_synced_state(struct drbd_cmd *, struct genl_info *, void *u_ptr);
+static int print_notifications(const struct drbd_cmd *, struct genl_info *, void *u_ptr);
+static int show_scmd(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
+static int role_scmd(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
+static int sh_status_scmd(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
+static int cstate_scmd(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
+static int dstate_scmd(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
+static int uuids_scmd(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
+static int lk_bdev_scmd(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
+static int print_broadcast_events(const struct drbd_cmd *, struct genl_info *, void *u_ptr);
+static int w_connected_state(const struct drbd_cmd *, struct genl_info *, void *u_ptr);
+static int w_synced_state(const struct drbd_cmd *, struct genl_info *, void *u_ptr);
 
 #define ADDRESS_STR_MAX 256
 static char *address_str(char *buffer, void* address, int addr_len);
@@ -299,7 +299,7 @@ static struct option status_cmd_options[] = {
 #define F_NEW_EVENTS_CMD(scmd)	DRBD_ADM_GET_INITIAL_STATE, NO_PAYLOAD, generic_get_cmd, \
 			.show_function = scmd
 
-struct drbd_cmd commands[] = {
+const struct drbd_cmd commands[] = {
 	{"primary", CTX_MINOR, DRBD_ADM_PRIMARY, DRBD_NLA_SET_ROLE_PARMS,
 		F_CONFIG_CMD,
 	 .ctx = &primary_cmd_ctx },
@@ -624,7 +624,7 @@ static int conv_minor(struct drbd_argument *ad, struct msg_buff *msg,
 	return NO_ERROR;
 }
 
-static struct option *make_longoptions(struct drbd_cmd *cm)
+static struct option *make_longoptions(const struct drbd_cmd *cm)
 {
 	static struct option buffer[47];
 	int i = 0;
@@ -787,7 +787,7 @@ int drbd_tla_parse(struct nlmsghdr *nlh)
 #define ASSERT(exp) if (!(exp)) \
 		fprintf(stderr,"ASSERT( " #exp " ) in %s:%d\n", __FILE__,__LINE__);
 
-static int _generic_config_cmd(struct drbd_cmd *cm, int argc,
+static int _generic_config_cmd(const struct drbd_cmd *cm, int argc,
 			       char **argv, int quiet)
 {
 	struct drbd_argument *ad = cm->drbd_args;
@@ -934,12 +934,12 @@ error:
 	return rv;
 }
 
-static int generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 {
 	return _generic_config_cmd(cm, argc, argv, 0);
 }
 
-static int del_minor_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int del_minor_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 {
 	int rv;
 
@@ -949,7 +949,7 @@ static int del_minor_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	return rv;
 }
 
-static int del_resource_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int del_resource_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 {
 	int rv;
 
@@ -959,7 +959,7 @@ static int del_resource_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	return rv;
 }
 
-static struct drbd_cmd *find_cmd_by_name(const char *name)
+static const struct drbd_cmd *find_cmd_by_name(const char *name)
 {
 	unsigned int i;
 
@@ -973,7 +973,7 @@ static struct drbd_cmd *find_cmd_by_name(const char *name)
 
 static void print_options(const char *cmd_name, const char *sect_name)
 {
-	struct drbd_cmd *cmd;
+	const struct drbd_cmd *cmd;
 	struct field_def *field;
 	int opened = 0;
 
@@ -1142,7 +1142,7 @@ static bool opt_verbose;
 static bool opt_statistics;
 static bool opt_timestamps;
 
-static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
+static int generic_get(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 {
 	char *desc = NULL;
 	struct drbd_genlmsghdr *dhdr;
@@ -1417,7 +1417,7 @@ out:
 	return err;
 }
 
-static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int generic_get_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 {
 	static struct option no_options[] = { { } };
 	struct choose_timo_ctx timeo_ctx = {
@@ -1550,7 +1550,7 @@ struct minors_list {
 };
 struct minors_list *__remembered_minors;
 
-static int remember_minor(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
+static int remember_minor(const struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
 {
 	struct drbd_cfg_context cfg = { .ctx_volume = -1U };
 
@@ -1600,7 +1600,7 @@ static struct minors_list *enumerate_minors(void)
 	return m;
 }
 
-static int remember_resource(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
+static int remember_resource(const struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
 {
 	struct resources_list ***tail = u_ptr;
 	struct drbd_cfg_context cfg = { .ctx_volume = -1U };
@@ -1697,7 +1697,7 @@ static struct resources_list *list_resources(void)
 	return list;
 }
 
-static int remember_device(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
+static int remember_device(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 {
 	struct devices_list ***tail = u_ptr;
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U };
@@ -1759,7 +1759,7 @@ static void free_devices(struct devices_list *devices)
 	}
 }
 
-static int remember_connection(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
+static int remember_connection(const struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
 {
 	struct connections_list ***tail = u_ptr;
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U };
@@ -1859,7 +1859,7 @@ static void free_connections(struct connections_list *connections)
 	}
 }
 
-static int remember_peer_device(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
+static int remember_peer_device(const struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
 {
 	struct peer_devices_list ***tail = u_ptr;
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U };
@@ -1926,7 +1926,7 @@ static void free_peer_devices(struct peer_devices_list *peer_devices)
  * may also be called iteratively for a "show-all", which should try to not
  * print redundant configuration information for the same resource (tconn).
  */
-static int show_scmd(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
+static int show_scmd(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 {
 	/* FIXME need some define for max len here */
 	static char last_ctx_resource_name[128];
@@ -2016,7 +2016,7 @@ static int show_scmd(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 	return 0;
 }
 
-static int lk_bdev_scmd(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
+static int lk_bdev_scmd(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 {
 	unsigned minor;
 	struct disk_conf dc = { .disk_size = 0, };
@@ -2059,7 +2059,7 @@ static int lk_bdev_scmd(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr
 	return 0;
 }
 
-static int sh_status_scmd(struct drbd_cmd *cm __attribute((unused)),
+static int sh_status_scmd(const struct drbd_cmd *cm __attribute((unused)),
 		struct genl_info *info, void *u_ptr)
 {
 	unsigned minor;
@@ -2145,7 +2145,7 @@ static int sh_status_scmd(struct drbd_cmd *cm __attribute((unused)),
 #undef _P
 }
 
-static int role_scmd(struct drbd_cmd *cm __attribute((unused)),
+static int role_scmd(const struct drbd_cmd *cm __attribute((unused)),
 		struct genl_info *info, void *u_ptr)
 {
 	union drbd_state state = { .i = 0 };
@@ -2175,7 +2175,7 @@ static int role_scmd(struct drbd_cmd *cm __attribute((unused)),
 	return 0;
 }
 
-static int cstate_scmd(struct drbd_cmd *cm __attribute((unused)),
+static int cstate_scmd(const struct drbd_cmd *cm __attribute((unused)),
 		struct genl_info *info, void *u_ptr)
 {
 	union drbd_state state = { .i = 0 };
@@ -2200,7 +2200,7 @@ static int cstate_scmd(struct drbd_cmd *cm __attribute((unused)),
 	return 0;
 }
 
-static int dstate_scmd(struct drbd_cmd *cm __attribute((unused)),
+static int dstate_scmd(const struct drbd_cmd *cm __attribute((unused)),
 		struct genl_info *info, void *u_ptr)
 {
 	union drbd_state state = { .i = 0 };
@@ -2225,7 +2225,7 @@ static int dstate_scmd(struct drbd_cmd *cm __attribute((unused)),
 	return 0;
 }
 
-static int uuids_scmd(struct drbd_cmd *cm,
+static int uuids_scmd(const struct drbd_cmd *cm,
 		struct genl_info *info, void *u_ptr)
 {
 	union drbd_state state = { .i = 0 };
@@ -2277,7 +2277,7 @@ static int uuids_scmd(struct drbd_cmd *cm,
 	return 0;
 }
 
-static int down_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int down_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 {
 	struct minors_list *minors, *m;
 	int rv;
@@ -2648,7 +2648,7 @@ static void link_peer_devices_to_devices(struct peer_devices_list *peer_devices,
 
 static void print_usage_and_exit(const char* addinfo);
 
-static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int status_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 {
 	struct resources_list *resources, *resource;
 	struct sigaction sa = {
@@ -2901,7 +2901,7 @@ fail:
 	exit(20);
 }
 
-static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
+static int print_notifications(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 {
 	static const char *action_name[] = {
 		[NOTIFY_EXISTS] = "exists",
@@ -3183,7 +3183,7 @@ static void print_state(char *tag, unsigned seq, unsigned minor,
 	       s.user_isp ? 'u' : '-' );
 }
 
-static int print_broadcast_events(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
+static int print_broadcast_events(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 {
 	struct drbd_cfg_context cfg = { .ctx_volume = -1U };
 	struct state_info si = { .current_state = 0 };
@@ -3278,7 +3278,7 @@ out:
 	return 0;
 }
 
-static int w_connected_state(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
+static int w_connected_state(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 {
 	struct state_info si = { .current_state = 0 };
 	union drbd_state state;
@@ -3319,7 +3319,7 @@ static int w_connected_state(struct drbd_cmd *cm, struct genl_info *info, void *
 	return 0;
 }
 
-static int w_synced_state(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
+static int w_synced_state(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 {
 	struct state_info si = { .current_state = 0 };
 	union drbd_state state;
@@ -3358,7 +3358,7 @@ static bool power_of_two(int i)
 	return i && !(i & (i - 1));
 }
 
-static void print_command_usage(struct drbd_cmd *cm, enum usage_type ut)
+static void print_command_usage(const struct drbd_cmd *cm, enum usage_type ut)
 {
 	struct drbd_argument *args;
 
@@ -3581,7 +3581,7 @@ void exec_legacy_drbdsetup(char **argv)
 
 int main(int argc, char **argv)
 {
-	struct drbd_cmd *cmd;
+	const struct drbd_cmd *cmd;
 	struct option *options;
 	int c, rv = 0;
 	int longindex, first_optind;
