@@ -1347,7 +1347,7 @@ static int generic_get(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				 * initial get/dump requests is done? */
 
 				if (!drbd_cfg_context_from_attrs(&ctx, &info)) {
-					switch ((int)cm->ctx_key) {
+					switch (context) {
 					case CTX_MINOR:
 						/* Assert that, for an unicast reply,
 						 * reply minor matches request minor.
@@ -1360,11 +1360,11 @@ static int generic_get(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 							continue;
 						}
 						break;
-					case CTX_RESOURCE:
-					case CTX_RESOURCE | CTX_ALL:
-						if (!strcmp(objname, "all"))
-							break;
 
+					case CTX_ALL:
+						break;
+
+					case CTX_RESOURCE:
 						if (strcmp(objname, ctx.ctx_resource_name))
 							continue;
 
@@ -3706,15 +3706,22 @@ int main(int argc, char **argv)
 				context = CTX_ALL;
 			} else if (cmd->ctx_key & CTX_MINOR) {
 				minor = dt_minor_of_dev(objname);
-				if (minor == -1U && !(cmd->ctx_key &
+				if (minor != -1U)
+					context = CTX_MINOR;
+				else if (!(cmd->ctx_key &
 						(CTX_RESOURCE | CTX_RESOURCE_AND_CONNECTION))) {
 					fprintf(stderr, "Cannot determine minor device number of "
 							"device '%s'\n",
 						objname);
 					exit(20);
 				}
-				context = CTX_MINOR;
-			} else
+			}
+			/* It could have been "all", but was not.
+			 * It could have been a minor number (or device node name), but was not.
+			 * So it has to be a resource,
+			 * or a resource and possibly connection specification.
+			 * (CTX_CONNECTION alone will not enter this branch). */
+			if (!context)
 				context = CTX_RESOURCE;
 		}
 	}
