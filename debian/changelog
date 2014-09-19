@@ -1,3 +1,9 @@
+drbd-utils (8.9.2rc1-1) unstable; urgency=medium
+
+  *  New upstream release.
+
+ -- Philipp Reisner <phil@linbit.com>  Fri, 19 Sep 2014 16:03:03 +0200
+
 drbd-utils (8.9.1+linbit-4) unstable; urgency=medium
 
   * some more patches had been only merged into the "9" tools,

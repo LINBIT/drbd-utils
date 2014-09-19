@@ -2,6 +2,17 @@ Latest:
 ------
  For even more detail, use "git log" or visit http://git.drbd.org/.
 
+8.9.2rc1
+--------
+  * udev rules (symlinks in /dev/by-res and by-disk) got fixed
+  * Fixed upper limit for drbd-8.4 activity log entries
+  * many fixes to drbdadm adjust and proxy commands for drbd-9
+  * rhcs_fence: Do not invoke fence agents in parallel, rewrite in bash
+  * drbdsetup events2 is now also available in drbd-8.4 (backported from drbd-9)
+  * reorganized the repository have common code for drbd-9, drbd-8.4
+    and drbd-8.3 only once
+  * Fix drbd.ocf for resources without volume 0
+
 8.9.1
 --------
   * add DRBD systemd service

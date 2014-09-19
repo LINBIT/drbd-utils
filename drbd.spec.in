@@ -394,6 +394,9 @@ fi
 
 
 %changelog
+* Fri Sep 19 2014 Philipp Reisner <phil@linbit.com> - 8.9.2rc1-1
+- New upstream release.
+
 * Fri Aug 08 2014 Lars Ellenberg <lars@linbit.com> - 8.9.1-3
 - some more patches had been only merged into the "9" tools,
   but unfortunately not the 8.4 tool compat tools
