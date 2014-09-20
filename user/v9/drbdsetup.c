@@ -3187,6 +3187,8 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 	};
 	static uint32_t last_seq;
 	static bool last_seq_known;
+	static struct timeval tv;
+	static bool keep_tv;
 
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U };
 	struct drbd_notification_header nh = { .nh_type = -1U };
@@ -3194,8 +3196,10 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 	struct drbd_genlmsghdr *dh;
 	char *key = NULL;
 
-	if (!info)
+	if (!info) {
+		keep_tv = false;
 		return 0;
+	}
 
 	dh = info->userhdr;
 	if (dh->ret_code == ERR_MINOR_INVALID && cm->missing_ok)
@@ -3237,17 +3241,12 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 	}
 
 	if (opt_timestamps) {
-		struct timeval tv;
 		struct tm *tm;
 
-		/* FIXME: Within the same event which can consist of multiple
-		 * notifications (indicated by the NOTIFY_CONTINUES flag), use
-		 * the same timestamp.  Do users of the eventss interface need
-		 * a way to detect which events belong together even without
-		 * timestamps?
-		 */
+		if (!keep_tv)
+			gettimeofday(&tv, NULL);
+		keep_tv = !!(nh.nh_type & NOTIFY_CONTINUES);
 
-		gettimeofday(&tv, NULL);
 		tm = localtime(&tv.tv_sec);
 		printf("%04u-%02u-%02uT%02u:%02u:%02u.%06u%+03d:%02u ",
 		       tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
