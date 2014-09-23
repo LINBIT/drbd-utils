@@ -44,12 +44,13 @@ if [ -f /lib/lsb/init-functions ]; then
     . /lib/lsb/init-functions
 fi
 
-function assure_module_is_loaded
+assure_module_is_loaded()
 {
     [ -e "$PROC_DRBD" ] && return
 
     $MODPROBE -s drbd $ADD_MOD_PARAM || {
-	echo "Can not load the drbd module."$'\n'; exit 20
+	echo "Can not load the drbd module."$'\n'
+	exit 5 # LSB for "not installed"
     }
     # tell klogd to reload module symbol information ...
     [ -e /var/run/klogd.pid ] && [ -x /sbin/klogd ] && /sbin/klogd -i
@@ -140,6 +141,9 @@ run_hook()
 
 case "$1" in
     start)
+	# no module, no DRBD.
+	assure_module_is_loaded
+
 	# Just in case drbdadm want to display any errors in the configuration
 	# file, or we need to ask the user about registering this installation
 	# at http://usage.drbd.org, we call drbdadm here without any IO
@@ -152,9 +156,8 @@ case "$1" in
 	if [[ $ex != 0 ]] ; then
 	    printf "\n%s\n" "$out" >&2
 	    log_end_msg 1
-	    exit 1
+	    exit 6 # LSB for "not configured"
 	fi
-	assure_module_is_loaded
 
 	$DRBDADM adjust-with-progress all
 	[[ $? -gt 1 ]] && exit 20
