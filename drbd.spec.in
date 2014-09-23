@@ -32,8 +32,8 @@
 %bcond_without sbinsymlinks
 # --with xen is ignored on any non-x86 architecture
 %bcond_without xen
-%bcond_without legacy_utils
-%bcond_without legacy_utils_84
+%bcond_without 83support
+%bcond_without 84support
 %ifnarch %{ix86} x86_64
 %global _without_xen --without-xen
 %endif
@@ -105,11 +105,13 @@ Group: System Environment/Kernel
 # Now we split the userland part, we "provide" a list of versions here,
 # to be able to use this package with existing module packages.
 #
-# which 9.0 version equivalent this package provides
-@SPEC_PROVIDES_DRBD_UTILS_90@
-%if %{with legacy_utils_84}
+%if %{with 84support}
 # which 8.4 version equivalent this package provides
 @SPEC_PROVIDES_DRBD_UTILS_84@
+%endif
+%if %{with 83support}
+# which 8.3 version equivalent this package provides
+@SPEC_PROVIDES_DRBD_UTILS_83@
 %endif
 # We used to have one monolithic userland package.
 # Since all other packages require drbd-utils,
@@ -137,12 +139,12 @@ This packages includes the DRBD administration tools.
 %{_sbindir}/drbdsetup
 %{_sbindir}/drbdadm
 %{_sbindir}/drbdmeta
-%if %{with legacy_utils}
+%if %{with 83support}
 %dir /lib/drbd/
 /lib/drbd/drbdsetup-83
 /lib/drbd/drbdadm-83
 %endif
-%if %{with legacy_utils_84}
+%if %{with 84support}
 /lib/drbd/drbdsetup-84
 /lib/drbd/drbdadm-84
 %endif
@@ -331,8 +333,8 @@ management utility.
     %{?_without_heartbeat} \
     %{?_with_rgmanager} \
     %{?_without_bashcompletion} \
-    %{?_without_legacy_utils} \
-    %{?_without_legacy_utils_84} \
+    %{?_without_83support} \
+    %{?_without_84support} \
     --with-initdir=%{_initddir} \
     --with-initscripttype=%{initscripttype}
 make %{?_smp_mflags}
