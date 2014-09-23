@@ -39,8 +39,8 @@ int have_ip_ipv6(const char *ip);
 
 const char *drbd_buildtag(void);
 
+#define E_USAGE		  1
 #define E_SYNTAX	  2
-#define E_USAGE		  3
 #define E_CONFIG_INVALID 10
 #define E_EXEC_ERROR     20
 #define E_THINKO	 42 /* :) */
