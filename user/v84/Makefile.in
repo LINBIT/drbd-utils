@@ -62,6 +62,8 @@ drbdsetup-obj = libgenl.o registry.o drbdsetup.o drbdtool_common.o \
 		drbd_buildtag.o drbd_strings.o config_flags.o drbd_nla.o \
 		wrap_printf.o drbdsetup_colors.o shared_tool.o
 
+all-obj := $(drbdadm-obj) $(drbdsetup-obj)
+
 all: tools
 
 include ../shared_prereqs.mk
@@ -87,10 +89,11 @@ drbdsetup-84: $(drbdsetup-obj)
 
 clean:
 	rm -f drbdadm_scanner.c
-	rm -f drbdsetup-84 drbdadm-84 *.o
+	rm -f drbdsetup-84 drbdadm-84 $(all-obj)
 	rm -f *~
 
 distclean: clean
+	rm -f $(all-dep)
 
 install:
 ifeq ($(WITH_84_SUPPORT),yes)

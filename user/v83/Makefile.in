@@ -58,6 +58,8 @@ drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_main.o \
 drbdsetup-obj = drbdsetup.o drbdtool_common.o drbd_buildtag.o \
 	        drbd_strings.o shared_tool.o
 
+all-obj := $(drbdadm-obj) $(drbdsetup-obj)
+
 all: tools
 
 include ../shared_prereqs.mk
@@ -83,10 +85,11 @@ drbdsetup-83: $(drbdsetup-obj)
 
 clean:
 	rm -f drbdadm_scanner.c
-	rm -f drbdsetup-83 drbdadm-83 *.o
+	rm -f drbdsetup-83 drbdadm-83 $(all-obj)
 	rm -f *~
 
 distclean: clean
+	rm -f $(all-dep)
 
 install:
 ifeq ($(WITH_83_SUPPORT),yes)
