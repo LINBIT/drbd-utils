@@ -298,7 +298,7 @@ void pdperror(char *text)
 	config_valid = 0;
 	fprintf(stderr, "%s:%d: in proxy plugin section: %s.\n",
 		config_file, line, text);
-	exit(E_config_invalid);
+	exit(E_CONFIG_INVALID);
 }
 
 static void pperror(struct d_host_info *host, struct d_proxy_info *proxy, char *text)
@@ -343,7 +343,7 @@ void check_uniq_init(void)
 	memset(&global_htable, 0, sizeof(global_htable));
 	if (!hcreate_r(256 * ((2 * 4) + 4), &global_htable)) {
 		fprintf(stderr, "Insufficient memory.\n");
-		exit(E_exec_error);
+		exit(E_EXEC_ERROR);
 	};
 }
 
@@ -361,7 +361,7 @@ void check_upr_init(void)
 	memset(&per_resource_htable, 0, sizeof(per_resource_htable));
 	if (!hcreate_r(256, &per_resource_htable)) {
 		fprintf(stderr, "Insufficient memory.\n");
-		exit(E_exec_error);
+		exit(E_EXEC_ERROR);
 	};
 	created = 1;
 }
@@ -385,13 +385,13 @@ int vcheck_uniq(struct hsearch_data *ht, const char *what, const char *fmt, va_l
 
 	if (rv < 0) {
 		perror("vasprintf");
-		exit(E_thinko);
+		exit(E_THINKO);
 	}
 
 	if (EXIT_ON_CONFLICT && !what) {
 		fprintf(stderr, "Oops, unset argument in %s:%d.\n", __FILE__,
 			__LINE__);
-		exit(E_thinko);
+		exit(E_THINKO);
 	}
 	m_asprintf((char **)&e.data, "%s:%u", config_file, fline);
 	hsearch_r(e, FIND, &ep, ht);
@@ -413,12 +413,12 @@ int vcheck_uniq(struct hsearch_data *ht, const char *what, const char *fmt, va_l
 		if (!ep) {
 			fprintf(stderr, "hash table entry (%s => %s) failed\n",
 					e.key, (char *)e.data);
-			exit(E_thinko);
+			exit(E_THINKO);
 		}
 		ep = NULL;
 	}
 	if (EXIT_ON_CONFLICT && ep)
-		exit(E_config_invalid);
+		exit(E_CONFIG_INVALID);
 	return !ep;
 }
 
@@ -455,7 +455,7 @@ static void pe_expected(const char *exp)
 	fprintf(stderr, "%s:%u: Parse error: '%s' expected,\n\t"
 		"but got '%.20s%s'\n", config_file, line, exp, s,
 		strlen(s) > 20 ? "..." : "");
-	exit(E_config_invalid);
+	exit(E_CONFIG_INVALID);
 }
 
 static void check_string_error(int got)
@@ -475,7 +475,7 @@ static void check_string_error(int got)
 		return;
 	}
 	fprintf(stderr,"%s:%u: %s >>>%.20s...<<<\n", config_file, line, msg, yytext);
-	exit(E_config_invalid);
+	exit(E_CONFIG_INVALID);
 }
 
 static void pe_expected_got(const char *exp, int got)
@@ -489,7 +489,7 @@ static void pe_expected_got(const char *exp, int got)
 		"but got '%.20s%s' (TK %d)\n",
 		config_file, line,
 		tmp[0] ? tmp : exp, s, strlen(s) > 20 ? "..." : "", got);
-	exit(E_config_invalid);
+	exit(E_CONFIG_INVALID);
 }
 
 #define EXP(TOKEN1)						\
@@ -944,7 +944,7 @@ static void parse_host_section(struct d_resource *res,
 					"%s:%d: address statement not allowed for floating {} host sections\n",
 					config_file, fline);
 				config_valid = 0;
-				exit(E_config_invalid);
+				exit(E_CONFIG_INVALID);
 			}
 			for_each_host(h, on_hosts)
 				check_upr("address statement", "%s:%s:address", res->name, h->name);
@@ -1048,7 +1048,7 @@ void parse_skip()
 			fprintf(stderr, "%s:%u: reached eof "
 				"while parsing this skip block.\n",
 				config_file, fline);
-			exit(E_config_invalid);
+			exit(E_CONFIG_INVALID);
 		}
 	}
 	while (level) ;
@@ -1217,7 +1217,7 @@ void set_peer_in_resource(struct d_resource* res, int peer_required)
 		fprintf(stderr, "%s:%d: in resource %s:\n"
 				"\tcannot determine the peer, don't even know myself!\n",
 				res->config_file, res->start_line, res->name);
-		exit(E_thinko);
+		exit(E_THINKO);
 	}
 
 	/* only one host section? */
@@ -1389,7 +1389,7 @@ void proxy_delegate(void *ctx)
 	if (token != '{') {
 		fprintf(stderr,	"%s:%d: expected \"{\" after \"proxy\" keyword\n",
 				config_file, fline);
-		exit(E_config_invalid);
+		exit(E_CONFIG_INVALID);
 	}
 
 	options = NULL;
@@ -1405,7 +1405,7 @@ void proxy_delegate(void *ctx)
 
 				fprintf(stderr,	"%s:%d: Missing \";\" before  \"}\"\n",
 					config_file, fline);
-				exit(E_config_invalid);
+				exit(E_CONFIG_INVALID);
 			}
 
 			word = malloc(sizeof(struct d_name));
@@ -1493,7 +1493,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 					"%s:%d: in resource %s, "
 					"'ignore-on' statement must precede any real host section (on ... { ... }).\n",
 					config_file, line, res->name);
-				exit(E_config_invalid);
+				exit(E_CONFIG_INVALID);
 			}
 			EXP(TK_STRING);
 			fprintf(stderr, "%s:%d: in resource %s, "
@@ -1613,12 +1613,12 @@ void post_parse(struct d_resource *config, enum pp_flags flags)
 	/* Needs "on_hosts" and host->lower already set */
 	for_each_resource(res, tmp, config)
 		if (!res->stacked_on_one)
-			set_me_in_resource(res, flags & match_on_proxy);
+			set_me_in_resource(res, flags & MATCH_ON_PROXY);
 
 	/* Needs host->lower->me already set */
 	for_each_resource(res, tmp, config)
 		if (res->stacked_on_one)
-			set_me_in_resource(res, flags & match_on_proxy);
+			set_me_in_resource(res, flags & MATCH_ON_PROXY);
 
 	// Needs "me" set already
 	for_each_resource(res, tmp, config)
@@ -1640,7 +1640,7 @@ void include_stmt(char *str)
 	cwd_fd = open(".", O_RDONLY | O_CLOEXEC);
 	if (cwd_fd < 0) {
 		fprintf(stderr, "open(\".\") failed: %m\n");
-		exit(E_usage);
+		exit(E_USAGE);
 	}
 
 	tmp = strdupa(config_save);
@@ -1650,7 +1650,7 @@ void include_stmt(char *str)
 
 	if (chdir(tmp)) {
 		fprintf(stderr, "chdir(\"%s\") failed: %m\n", tmp);
-		exit(E_usage);
+		exit(E_USAGE);
 	}
 
 	r = glob(str, 0, NULL, &glob_buf);
@@ -1677,12 +1677,12 @@ void include_stmt(char *str)
 		}
 	} else {
 		fprintf(stderr, "glob() failed: %d\n", r);
-		exit(E_usage);
+		exit(E_USAGE);
 	}
 
 	if (fchdir(cwd_fd) < 0) {
 		fprintf(stderr, "fchdir() failed: %m\n");
-		exit(E_usage);
+		exit(E_USAGE);
 	}
 	close(cwd_fd);
 }

@@ -15,64 +15,7 @@
 #endif
 
 #include "config.h"
-const char *drbd_buildtag(void);
-
-#define E_syntax	  2
-#define E_usage		  3
-#define E_config_invalid 10
-#define E_exec_error     20
-#define E_thinko	 42 /* :) */
-
-enum {
-  SLEEPS_FINITE        = 1,
-  SLEEPS_SHORT         = 2+1,
-  SLEEPS_LONG          = 4+1,
-  SLEEPS_VERY_LONG     = 8+1,
-  SLEEPS_MASK          = 15,
-
-  RETURN_PID           = 2,
-  SLEEPS_FOREVER       = 4,
-
-  SUPRESS_STDERR       = 0x10,
-  RETURN_STDOUT_FD     = 0x20,
-  RETURN_STDERR_FD     = 0x40,
-  DONT_REPORT_FAILED   = 0x80,
-};
-
-/* for check_uniq(): Check for uniqueness of certain values...
- * comment out if you want to NOT choke on the first conflict */
-#define EXIT_ON_CONFLICT 1
-
-/* for verify_ips(): are not verifyable ips fatal? */
-#define INVALID_IP_IS_INVALID_CONF 1
-
-enum usage_count_type {
-  UC_YES,
-  UC_NO,
-  UC_ASK,
-};
-
-struct d_globals
-{
-  int disable_io_hints;
-  int disable_ip_verification;
-  int minor_count;
-  int dialog_refresh;
-  enum usage_count_type usage_count;
-};
-
-#define IFI_HADDR 8
-#define IFI_ALIAS 1
-
-struct ifi_info {
-  char ifi_name[IFNAMSIZ];      /* interface name, nul terminated */
-  uint8_t ifi_haddr[IFI_HADDR]; /* hardware address */
-  uint16_t ifi_hlen;            /* bytes in hardware address, 0, 6, 8 */
-  short ifi_flags;              /* IFF_xxx constants from <net/if.h> */
-  short ifi_myflags;            /* our own IFI_xxx flags */
-  struct sockaddr *ifi_addr;    /* primary address */
-  struct ifi_info *ifi_next;    /* next ifi_info structure */
-};
+#include "shared_main.h"
 
 struct d_name
 {
@@ -192,9 +135,6 @@ extern char *lookup_minor(int minor);
 enum pr_flags {
   NoneHAllowed  = 4,
   IgnDiscardMyData = 8
-};
-enum pp_flags {
-	match_on_proxy = 1,
 };
 extern struct d_resource* parse_resource(char*, enum pr_flags);
 extern void post_parse(struct d_resource *config, enum pp_flags);

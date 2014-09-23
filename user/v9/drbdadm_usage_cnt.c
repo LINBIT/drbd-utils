@@ -192,7 +192,7 @@ static int read_node_id(struct node_info *ni)
  * gethostbyname would otherwise just restart the syscall
  * and timeout again. */
 static jmp_buf timed_out;
-static void alarm_handler(int __attribute((unused)) signo)
+static void gethostbyname_timeout(int __attribute((unused)) signo)
 {
 	longjmp(timed_out, 1);
 }
@@ -206,7 +206,7 @@ struct hostent *my_gethostbyname(const char *name)
 	struct hostent *h;
 
 	alarm(0);
-	sa.sa_handler = &alarm_handler;
+	sa.sa_handler = &gethostbyname_timeout;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = 0;
 
