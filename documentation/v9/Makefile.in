@@ -76,10 +76,12 @@ DRBDSETUP_CMDS += forget-peer
 
 make_doc := $(shell $(XSLTPROC)				\
 	$(XSLTPROC_MANPAGES_OPTIONS)			\
-	$(MANPAGES_STYLESHEET) < /dev/null && echo doc )
+	$(MANPAGES_STYLESHEET) < /dev/null > /dev/null 2>&1 && echo doc )
 
-all: $(make_doc)
-ifneq ($(make_doc),doc)
+ifeq ($(make_doc),doc)
+all: doc
+else
+all:
 	@echo "To (re)make the documentation: make doc"
 endif
 

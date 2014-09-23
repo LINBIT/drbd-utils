@@ -65,8 +65,17 @@ XSLTPROC_MANPAGES_OPTIONS ?= $(XSLTPROC_OPTIONS)
 XSLTPROC_HTML_OPTIONS ?= $(XSLTPROC_OPTIONS)
 XSLTPROC_FO_OPTIONS ?= $(XSLTPROC_OPTIONS)
 
+make_doc := $(shell $(XSLTPROC)				\
+	$(XSLTPROC_MANPAGES_OPTIONS)			\
+	$(MANPAGES_STYLESHEET) < /dev/null > /dev/null 2>&1 && echo doc )
+
+ifeq ($(make_doc),doc)
+all: doc
+else
 all:
 	@echo "To (re)make the documentation: make doc"
+endif
+
 
 clean:
 	@echo "To clean the documentation: make doc-clean"
