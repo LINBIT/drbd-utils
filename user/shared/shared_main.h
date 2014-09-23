@@ -108,7 +108,7 @@ extern char *sh_varname;
 extern void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd, int *ex);
 static inline int m_system_ex(char **argv, int flags, const char *res_name)
 {
-	int ex;
+	int ex = -1;
 	m__system(argv, flags, res_name, NULL, NULL, &ex);
 	return ex;
 }
