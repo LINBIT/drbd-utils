@@ -24,37 +24,9 @@
 #define ARRAY_SIZE(A) (sizeof(A)/sizeof(A[0]))
 #endif
 
-#define COMM_TIMEOUT 120
-
-/* MetaDataIndex for v06 / v07 style meta data blocks */
-enum MetaDataIndex {
-	Flags,			/* Consistency flag,connected-ind,primary-ind */
-	HumanCnt,		/* human-intervention-count */
-	TimeoutCnt,		/* timout-count */
-	ConnectedCnt,		/* connected-count */
-	ArbitraryCnt,		/* arbitrary-count */
-	GEN_CNT_SIZE		/* MUST BE LAST! (and Flags must stay first...) */
-};
-
-/*
-#define PERROR(fmt, args...) \
-do { fprintf(stderr,fmt ": " , ##args); perror(0); } while (0)
-*/
-#define PERROR(fmt, args...) fprintf(stderr, fmt ": %m\n" , ##args);
-
-enum new_strtoll_errs {
-	MSE_OK,
-	MSE_DEFAULT_UNIT,
-	MSE_MISSING_NUMBER,
-	MSE_INVALID_NUMBER,
-	MSE_INVALID_UNIT,
-	MSE_OUT_OF_RANGE,
-};
-
 struct option;
 
 extern void dt_release_lockfile(int drbd_fd);
-extern int new_strtoll(const char *s, const char def_unit, unsigned long long *rv);
 extern void dt_print_uuids(const uint64_t* uuid, unsigned int flags);
 extern void dt_pretty_print_uuids(const uint64_t* uuid, unsigned int flags);
 extern int fget_token(char *s, int size, FILE* stream);

@@ -50,24 +50,6 @@ extern int __build_bug_on_failed;
 	} while(0)
 #endif
 
-#define COMM_TIMEOUT 120
-
-/* MetaDataIndex for v06 / v07 style meta data blocks */
-enum MetaDataIndex {
-	Flags,			/* Consistency flag,connected-ind,primary-ind */
-	HumanCnt,		/* human-intervention-count */
-	TimeoutCnt,		/* timout-count */
-	ConnectedCnt,		/* connected-count */
-	ArbitraryCnt,		/* arbitrary-count */
-	GEN_CNT_SIZE		/* MUST BE LAST! (and Flags must stay first...) */
-};
-
-/*
-#define PERROR(fmt, args...) \
-do { fprintf(stderr,fmt ": " , ##args); perror(0); } while (0)
-*/
-#define PERROR(fmt, args...) fprintf(stderr, fmt ": %m\n" , ##args);
-
 /* Flags which used to be in enum mdf_flag before version 09 */
 enum mdf_flag_08 {
 	MDF_CONNECTED_IND =  1 << 2,
@@ -114,17 +96,6 @@ extern int version_equal(const struct version *rev1, const struct version *rev2)
 extern void config_help_legacy(const char * const tool, const struct version * const driver_version);
 extern void add_lib_drbd_to_path(void);
 extern uint32_t crc32c(uint32_t crc, const uint8_t *data, unsigned int length);
-
-enum new_strtoll_errs {
-	MSE_OK,
-	MSE_DEFAULT_UNIT,
-	MSE_MISSING_NUMBER,
-	MSE_INVALID_NUMBER,
-	MSE_INVALID_UNIT,
-	MSE_OUT_OF_RANGE,
-};
-enum new_strtoll_errs
-new_strtoll(const char *s, const char def_unit, unsigned long long *rv);
 
 
 
