@@ -186,6 +186,7 @@ int config_valid = 1;
 int no_tty;
 int dry_run = 0;
 int verbose = 0;
+int adjust_with_progress = 0;
 int do_verify_ips = 0;
 int do_register_minor = 1;
 /* whether drbdadm was called with "all" instead of resource name(s) */
@@ -1242,156 +1243,6 @@ static void find_drbdcmd(char **cmd, char **pathes)
 	exit(E_EXEC_ERROR);
 }
 
-
-void m__system(char **argv, int flags, struct d_resource *res, pid_t *kid, int *fd, int *ex)
-{
-	pid_t pid;
-	int status, rv = -1;
-	int timeout = 0;
-	char **cmdline = argv;
-	int pipe_fds[2];
-
-	struct sigaction so;
-	struct sigaction sa;
-
-	sa.sa_handler = &alarm_handler;
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = 0;
-
-	if (dry_run || verbose) {
-		if (sh_varname && *cmdline)
-			printf("%s=%s\n", sh_varname, shell_escape(res->name));
-		while (*cmdline) {
-			printf("%s ", shell_escape(*cmdline++));
-		}
-		printf("\n");
-		if (dry_run) {
-			if (kid)
-				*kid = -1;
-			if (fd)
-				*fd = 0;
-			if (ex)
-				*ex = 0;
-			return;
-		}
-	}
-
-	/* flush stdout and stderr, so output of drbdadm
-	 * and helper binaries is reported in order! */
-	fflush(stdout);
-	fflush(stderr);
-
-	if (flags & (RETURN_STDOUT_FD | RETURN_STDERR_FD)) {
-		if (pipe(pipe_fds) < 0) {
-			perror("pipe");
-			fprintf(stderr, "Error in pipe, giving up.\n");
-			exit(E_EXEC_ERROR);
-		}
-	}
-
-	pid = fork();
-	if (pid == -1) {
-		fprintf(stderr, "Can not fork\n");
-		exit(E_EXEC_ERROR);
-	}
-	if (pid == 0) {
-		if (flags & RETURN_STDOUT_FD) {
-			close(pipe_fds[0]);
-			dup2(pipe_fds[1], 1);
-		}
-		if (flags & RETURN_STDERR_FD) {
-			close(pipe_fds[0]);
-			dup2(pipe_fds[1], 2);
-		}
-		if (flags & SUPRESS_STDERR)
-			fclose(stderr);
-		execvp(argv[0], argv);
-		fprintf(stderr, "Can not exec\n");
-		exit(E_EXEC_ERROR);
-	}
-
-	if (flags & (RETURN_STDOUT_FD | RETURN_STDERR_FD))
-		close(pipe_fds[1]);
-
-	if (flags & SLEEPS_FINITE) {
-		sigaction(SIGALRM, &sa, &so);
-		alarm_raised = 0;
-		switch (flags & SLEEPS_MASK) {
-		case SLEEPS_SHORT:
-			timeout = 5;
-			break;
-		case SLEEPS_LONG:
-			timeout = COMM_TIMEOUT + 1;
-			break;
-		case SLEEPS_VERY_LONG:
-			timeout = 600;
-			break;
-		default:
-			fprintf(stderr, "logic bug in %s:%d\n", __FILE__,
-				__LINE__);
-			exit(E_THINKO);
-		}
-		alarm(timeout);
-	}
-
-	if (kid)
-		*kid = pid;
-	if (fd)
-		*fd = pipe_fds[0];
-
-	if (flags & (RETURN_STDOUT_FD | RETURN_STDERR_FD)
-	||  flags == RETURN_PID)
-		return;
-
-	while (1) {
-		if (waitpid(pid, &status, 0) == -1) {
-			if (errno != EINTR)
-				break;
-			if (alarm_raised) {
-				alarm(0);
-				sigaction(SIGALRM, &so, NULL);
-				rv = 0x100;
-				break;
-			} else {
-				fprintf(stderr, "logic bug in %s:%d\n",
-					__FILE__, __LINE__);
-				exit(E_EXEC_ERROR);
-			}
-		} else {
-			if (WIFEXITED(status)) {
-				rv = WEXITSTATUS(status);
-				break;
-			}
-		}
-	}
-
-	if (flags & SLEEPS_FINITE) {
-		if (rv >= 10
-		    && !(flags & (DONT_REPORT_FAILED | SUPRESS_STDERR))) {
-			fprintf(stderr, "Command '");
-			for (cmdline = argv; *cmdline; cmdline++) {
-				fprintf(stderr, "%s", *cmdline);
-				if (cmdline[1])
-					fputc(' ', stderr);
-			}
-			if (alarm_raised) {
-				fprintf(stderr,
-					"' did not terminate within %u seconds\n",
-					timeout);
-				exit(E_EXEC_ERROR);
-			} else {
-				fprintf(stderr,
-					"' terminated with exit code %d\n", rv);
-			}
-		}
-	}
-	fflush(stdout);
-	fflush(stderr);
-
-	if (ex)
-		*ex = rv;
-}
-
 #define NA(ARGC) \
   ({ if((ARGC) >= MAX_ARGS) { fprintf(stderr,"MAX_ARGS too small\n"); \
        exit(E_THINKO); \
@@ -1438,7 +1289,7 @@ int adm_attach(struct d_resource *res, const char *unused __attribute((unused)))
 	make_options(opt);
 	argv[NA(argc)] = 0;
 
-	return m_system_ex(argv, SLEEPS_LONG, res);
+	return m_system_ex(argv, SLEEPS_LONG, res->name);
 }
 
 struct d_option *find_opt(struct d_option *base, char *name)
@@ -1472,7 +1323,7 @@ int adm_resize(struct d_resource *res, const char *cmd)
 
 	/* if this is not "resize", but "check-resize", be silent! */
 	silent = strcmp(cmd, "resize") ? SUPRESS_STDERR : 0;
-	ex = m_system_ex(argv, SLEEPS_SHORT | silent, res);
+	ex = m_system_ex(argv, SLEEPS_SHORT | silent, res->name);
 
 	if (ex)
 		return ex;
@@ -1489,7 +1340,7 @@ int adm_resize(struct d_resource *res, const char *cmd)
 	argv[2] = "check-resize";
 	argv[3] = NULL;
 	/* ignore exit code */
-	m_system_ex(argv, SLEEPS_SHORT | silent, res);
+	m_system_ex(argv, SLEEPS_SHORT | silent, res->name);
 
 	return 0;
 }
@@ -1523,7 +1374,7 @@ int _admm_generic(struct d_resource *res, const char *cmd, int flags)
 
 	argv[NA(argc)] = 0;
 
-	return m_system_ex(argv, flags, res);
+	return m_system_ex(argv, flags, res->name);
 }
 
 static int admm_generic(struct d_resource *res, const char *cmd)
@@ -1545,7 +1396,7 @@ static void _adm_generic(struct d_resource *res, const char *cmd, int flags, pid
 	argv[NA(argc)] = 0;
 
 	setenv("DRBD_RESOURCE", res->name, 1);
-	m__system(argv, flags, res, pid, fd, ex);
+	m__system(argv, flags, res->name, pid, fd, ex);
 }
 
 static int adm_generic(struct d_resource *res, const char *cmd, int flags)
@@ -1753,7 +1604,7 @@ static int adm_khelper(struct d_resource *res, const char *cmd)
 
 	if ((sh_cmd = get_opt_val(res->handlers, cmd, NULL))) {
 		argv[2] = sh_cmd;
-		rv = m_system_ex(argv, SLEEPS_VERY_LONG, res);
+		rv = m_system_ex(argv, SLEEPS_VERY_LONG, res->name);
 	}
 	return rv;
 }
@@ -1817,7 +1668,7 @@ int adm_connect(struct d_resource *res,
 
 	argv[NA(argc)] = 0;
 
-	return m_system_ex(argv, SLEEPS_SHORT, res);
+	return m_system_ex(argv, SLEEPS_SHORT, res->name);
 }
 
 struct d_resource *res_by_name(const char *name);
@@ -1906,7 +1757,7 @@ int do_proxy_conn_up(struct d_resource *res, const char *conn_name)
 			res->me->proxy->outside_port, res->me->address,
 			res->me->port);
 
-	rv = m_system_ex(argv, SLEEPS_SHORT, res);
+	rv = m_system_ex(argv, SLEEPS_SHORT, res->name);
 	return rv;
 }
 
@@ -1947,7 +1798,7 @@ int do_proxy_conn_plugins(struct d_resource *res, const char *conn_name)
 
 	argv[NA(argc)] = 0;
 	if (argc > 2)
-		return m_system_ex(argv, SLEEPS_SHORT, res);
+		return m_system_ex(argv, SLEEPS_SHORT, res->name);
 
 	return 0;
 }
@@ -1961,7 +1812,7 @@ int do_proxy_conn_down(struct d_resource *res, const char *conn_name)
 		conn_name = proxy_connection_name(res);
 	ssprintf(argv[2], "del connection %s", conn_name);
 
-	rv = m_system_ex(argv, SLEEPS_SHORT, res);
+	rv = m_system_ex(argv, SLEEPS_SHORT, res->name);
 	return rv;
 }
 
@@ -2048,7 +1899,7 @@ int adm_syncer(struct d_resource *res, const char *unused __attribute((unused)))
 
 	argv[NA(argc)] = 0;
 
-	return m_system_ex(argv, SLEEPS_SHORT, res);
+	return m_system_ex(argv, SLEEPS_SHORT, res->name);
 }
 
 static int adm_up(struct d_resource *res,
@@ -2091,7 +1942,7 @@ static int adm_wait_c(struct d_resource *res,
 	}
 	argv[NA(argc)] = 0;
 
-	rv = m_system_ex(argv, SLEEPS_FOREVER, res);
+	rv = m_system_ex(argv, SLEEPS_FOREVER, res->name);
 
 	return rv;
 }
@@ -2310,7 +2161,7 @@ static int adm_wait_ci(struct d_resource *ignored __attribute((unused)),
 		make_options(opt);
 		argv[NA(argc)] = 0;
 
-		m__system(argv, RETURN_PID, res, &pids[i++], NULL, NULL);
+		m__system(argv, RETURN_PID, res->name, &pids[i++], NULL, NULL);
 	}
 
 	wtime = global_options.dialog_refresh ? : -1;

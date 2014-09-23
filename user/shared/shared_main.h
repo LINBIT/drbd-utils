@@ -100,4 +100,17 @@ struct ifi_info {
 	struct ifi_info *ifi_next;    /* next ifi_info structure */
 };
 
+extern int dry_run;
+extern int verbose;
+extern int adjust_with_progress;
+extern char *sh_varname;
+
+extern void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd, int *ex);
+static inline int m_system_ex(char **argv, int flags, const char *res_name)
+{
+	int ex;
+	m__system(argv, flags, res_name, NULL, NULL, &ex);
+	return ex;
+}
+
 #endif

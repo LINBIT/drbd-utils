@@ -265,13 +265,6 @@ extern struct adm_cmd proxy_reconf_cmd;
 extern int adm_create_md(const struct cfg_ctx *);
 extern int _adm_drbdmeta(const struct cfg_ctx *, int flags, char *argument);
 
-extern void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd, int *ex);
-static inline int m_system_ex(char **argv, int flags, const char *res_name)
-{
-	int ex;
-	m__system(argv, flags, res_name, NULL, NULL, &ex);
-	return ex;
-}
 extern struct d_option *find_opt(struct options *base, const char *name);
 /* stages of configuration, as performed on "drbdadm up"
  * or "drbdadm adjust":

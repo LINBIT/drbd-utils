@@ -212,7 +212,7 @@ static int do_proxy_reconf(struct d_resource *res, const char *cmd)
 	int rv;
 	char *argv[4] = { drbd_proxy_ctl, "-c", (char*)cmd, NULL };
 
-	rv = m_system_ex(argv, SLEEPS_SHORT, res);
+	rv = m_system_ex(argv, SLEEPS_SHORT, res->name);
 	return rv;
 }
 

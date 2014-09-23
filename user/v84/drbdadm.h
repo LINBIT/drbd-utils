@@ -155,13 +155,6 @@ extern int adm_generic_s(struct cfg_ctx *);
 extern int adm_create_md(struct cfg_ctx *);
 extern int _admm_generic(struct cfg_ctx *, int flags);
 
-extern void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd, int *ex);
-static inline int m_system_ex(char **argv, int flags, const char *res_name)
-{
-	int ex;
-	m__system(argv, flags, res_name, NULL, NULL, &ex);
-	return ex;
-}
 extern struct d_option* find_opt(struct d_option*,char*);
 extern void validate_resource(struct d_resource *, enum pp_flags);
 /* stages of configuration, as performed on "drbdadm up"
