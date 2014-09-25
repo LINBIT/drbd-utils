@@ -1156,9 +1156,12 @@ static void __adm_drbdsetup(const struct cfg_ctx *ctx, int flags, pid_t *pid, in
 
 	argv[NA(argc)] = drbdsetup;
 	argv[NA(argc)] = (char *)ctx->cmd->name;
-	if (ctx->vol)
-		argv[NA(argc)] = ssprintf("%d", ctx->vol->device_minor);
-	else if (ctx->cmd->backend_res_name && ctx->res)
+	if (ctx->vol) {
+		if (ctx->cmd->need_peer && ctx->cmd->iterate_volumes)
+			argv[NA(argc)] = ssprintf("%d", ctx->vol->vnr);
+		else
+			argv[NA(argc)] = ssprintf("%d", ctx->vol->device_minor);
+	} else if (ctx->cmd->backend_res_name && ctx->res)
 		argv[NA(argc)] = ssprintf("%s", ctx->res->name);
 
 	if (ctx->cmd->need_peer) {
