@@ -645,7 +645,7 @@ char* run_admm_generic(struct d_resource* res ,const char* cmd)
 		dup2(pipes[1],1); // 1 = stdout
 		close(pipes[1]);
 		exit(_admm_generic(res,cmd,
-				   SLEEPS_VERY_LONG|SUPRESS_STDERR|
+				   SLEEPS_VERY_LONG|
 				   DONT_REPORT_FAILED));
 	}
 	close(pipes[1]); // close writing end

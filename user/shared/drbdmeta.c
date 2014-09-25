@@ -123,18 +123,18 @@ static int confirmed(const char *text)
 	size_t n = 0;
 	int ok;
 
-	printf("\n%s\n", text);
+	fprintf(stderr, "\n%s\n", text);
 
 	if (force) {
-	    printf("*** confirmation forced via --force option ***\n");
+	    fprintf(stderr, "*** confirmation forced via --force option ***\n");
 	    ok = 1;
 	}
 	else {
-	    printf("[need to type '%s' to confirm] ", yes);
+	    fprintf(stderr, "[need to type '%s' to confirm] ", yes);
 	    ok = getline(&answer,&n,stdin) == N &&
 		strncmp(answer,yes,N-1) == 0;
 	    free(answer);
-	    printf("\n");
+	    fprintf(stderr, "\n");
 	}
 	return ok;
 }

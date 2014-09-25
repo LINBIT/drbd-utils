@@ -466,7 +466,7 @@ static char* run_adm_drbdmeta(const struct cfg_ctx *ctx, const char *arg_overrid
 		local_cmd.name = arg_override;
 		local_ctx.cmd = &local_cmd;
 		rr = _adm_drbdmeta(&local_ctx,
-				   SLEEPS_VERY_LONG|SUPRESS_STDERR|
+				   SLEEPS_VERY_LONG|
 				   DONT_REPORT_FAILED,
 				   NULL);
 		exit(rr);

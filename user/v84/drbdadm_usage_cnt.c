@@ -678,7 +678,7 @@ static char* run_admm_generic(struct cfg_ctx *ctx, const char *arg_override)
 		 * no propagation to parent */
 		ctx->arg = arg_override;
 		rr = _admm_generic(ctx,
-				   SLEEPS_VERY_LONG|SUPRESS_STDERR|
+				   SLEEPS_VERY_LONG|
 				   DONT_REPORT_FAILED);
 		exit(rr);
 	}
