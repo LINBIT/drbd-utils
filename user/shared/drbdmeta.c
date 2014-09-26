@@ -56,6 +56,7 @@
 #include "drbd_endian.h"
 #include "drbdtool_common.h"
 #include "drbd_strings.h"
+#include "drbd_meta_data.h"
 
 #include "drbdmeta_parser.h"
 
@@ -784,44 +785,9 @@ int v84_al_disk_to_cpu(struct al_4k_cpu *al_cpu, struct al_4k_transaction_on_dis
 /*
  * -- DRBD 9.0 --------------------------------------
  */
+/* struct meta_data_on_disk_9 is in drbd_meta_data.h */
 
-struct peer_dev_md_on_disk {
-	be_u64 bitmap_uuid;
-	be_u64 bitmap_dagtag;
-	be_u32 flags;
-	be_s32 node_id;
-	be_u32 reserved_u32[2];
-} __packed;
-
-struct md_on_disk_09 {
-	be_u64 effective_size;    /* last agreed size */
-	be_u64 current_uuid;
-	be_u64 reserved_u64[4];   /* to have the magic at the same position as in v07, and v08 */
-	be_u64 device_uuid;
-	be_u32 flags;             /* MDF */
-	be_u32 magic;
-	be_u32 md_size_sect;
-	be_u32 al_offset;         /* offset to this block */
-	be_u32 al_nr_extents;     /* important for restoring the AL */
-	be_u32 bm_offset;         /* offset to the bitmap, from here */
-	be_u32 bm_bytes_per_bit;  /* BM_BLOCK_SIZE */
-	be_u32 la_peer_max_bio_size;   /* last peer max_bio_size */
-	be_u32 max_peers;
-	be_s32 node_id;
-
-	/* see al_tr_number_to_on_disk_sector() */
-	be_u32 al_stripes;
-	be_u32 al_stripe_size_4k;
-
-	be_u32 reserved_u32[2];
-
-	struct peer_dev_md_on_disk peers[DRBD_PEERS_MAX];
-	be_u64 history_uuids[HISTORY_UUIDS];
-
-	char padding[0] __attribute__((aligned(4096)));
-} __packed;
-
-void md_disk_09_to_cpu(struct md_cpu *cpu, const struct md_on_disk_09 *disk)
+void md_disk_09_to_cpu(struct md_cpu *cpu, const struct meta_data_on_disk_9 *disk)
 {
 	int p, i;
 
@@ -836,7 +802,7 @@ void md_disk_09_to_cpu(struct md_cpu *cpu, const struct md_on_disk_09 *disk)
 	cpu->bm_offset = be32_to_cpu(disk->bm_offset.be);
 	cpu->bm_bytes_per_bit = be32_to_cpu(disk->bm_bytes_per_bit.be);
 	cpu->la_peer_max_bio_size = be32_to_cpu(disk->la_peer_max_bio_size.be);
-	cpu->max_peers = be32_to_cpu(disk->max_peers.be);
+	cpu->max_peers = be32_to_cpu(disk->bm_max_peers.be);
 	cpu->node_id = be32_to_cpu(disk->node_id.be);
 	cpu->al_stripes = be32_to_cpu(disk->al_stripes.be);
 	cpu->al_stripe_size_4k = be32_to_cpu(disk->al_stripe_size_4k.be);
@@ -859,7 +825,7 @@ void md_disk_09_to_cpu(struct md_cpu *cpu, const struct md_on_disk_09 *disk)
 		cpu->history_uuids[i] = be64_to_cpu(disk->history_uuids[i].be);
 }
 
-void md_cpu_to_disk_09(struct md_on_disk_09 *disk, const struct md_cpu *cpu)
+void md_cpu_to_disk_09(struct meta_data_on_disk_9 *disk, const struct md_cpu *cpu)
 {
 	int p, i;
 
@@ -874,7 +840,7 @@ void md_cpu_to_disk_09(struct md_on_disk_09 *disk, const struct md_cpu *cpu)
 	disk->bm_offset.be = cpu_to_be32(cpu->bm_offset);
 	disk->bm_bytes_per_bit.be = cpu_to_be32(cpu->bm_bytes_per_bit);
 	disk->la_peer_max_bio_size.be = cpu_to_be32(cpu->la_peer_max_bio_size);
-	disk->max_peers.be = cpu_to_be32(cpu->max_peers);
+	disk->bm_max_peers.be = cpu_to_be32(cpu->max_peers);
 	disk->node_id.be = cpu_to_be32(cpu->node_id);
 	disk->al_stripes.be = cpu_to_be32(cpu->al_stripes);
 	disk->al_stripe_size_4k.be = cpu_to_be32(cpu->al_stripe_size_4k);
@@ -2956,8 +2922,8 @@ int v09_md_disk_to_cpu(struct format *cfg)
 {
 	struct md_cpu md;
 	int ok;
-	PREAD(cfg, on_disk_buffer, sizeof(struct md_on_disk_09), cfg->md_offset);
-	md_disk_09_to_cpu(&md, (struct md_on_disk_09*)on_disk_buffer);
+	PREAD(cfg, on_disk_buffer, sizeof(struct meta_data_on_disk_9), cfg->md_offset);
+	md_disk_09_to_cpu(&md, (struct meta_data_on_disk_9*)on_disk_buffer);
 	ok = is_valid_md(DRBD_V09, &md, cfg->md_index, cfg->bd_size);
 	if (ok)
 		cfg->md = md;
@@ -2970,8 +2936,8 @@ int v09_md_cpu_to_disk(struct format *cfg)
 {
 	if (!is_valid_md(DRBD_V09, &cfg->md, cfg->md_index, cfg->bd_size))
 		return -1;
-	md_cpu_to_disk_09((struct md_on_disk_09 *)on_disk_buffer, &cfg->md);
-	PWRITE(cfg, on_disk_buffer, sizeof(struct md_on_disk_09), cfg->md_offset);
+	md_cpu_to_disk_09((struct meta_data_on_disk_9 *)on_disk_buffer, &cfg->md);
+	PWRITE(cfg, on_disk_buffer, sizeof(struct meta_data_on_disk_9), cfg->md_offset);
 	cfg->update_lk_bdev = 1;
 	return 0;
 }
@@ -4277,7 +4243,7 @@ enum md_format detect_md(struct md_cpu *md, const uint64_t ll_size)
 		*md = md_test;
 	}
 
-	md_disk_09_to_cpu(&md_test, (struct md_on_disk_09*)on_disk_buffer);
+	md_disk_09_to_cpu(&md_test, (struct meta_data_on_disk_9*)on_disk_buffer);
 	if (is_valid_md(DRBD_V09, &md_test, DRBD_MD_INDEX_FLEX_INT, ll_size)) {
 		have = DRBD_V09;
 		*md = md_test;
@@ -5009,10 +4975,10 @@ int main(int argc, char **argv)
 				(unsigned long)sizeof(struct md_on_disk_08));
 		exit(111);
 	}
-	if (sizeof(struct md_on_disk_09) != 4096) {
+	if (sizeof(struct meta_data_on_disk_9) != 4096) {
 		fprintf(stderr, "Where did you get this broken build!?\n"
-				"sizeof(md_on_disk_09) == %lu, should be 4096\n",
-				(unsigned long)sizeof(struct md_on_disk_09));
+				"sizeof(meta_data_on_disk_9) == %lu, should be 4096\n",
+				(unsigned long)sizeof(struct meta_data_on_disk_9));
 		exit(111);
 	}
 #if 0
