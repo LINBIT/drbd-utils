@@ -259,7 +259,7 @@ struct peer_md_cpu {
 	uint64_t bitmap_uuid;
 	uint64_t bitmap_dagtag;
 	uint32_t flags;
-	int32_t node_id;
+	int32_t bitmap_index;
 };
 
 struct md_cpu {
@@ -355,9 +355,9 @@ struct format_ops {
 	int (*md_initialize) (struct format *, int do_disk_writes, int max_peers);
 	int (*md_disk_to_cpu) (struct format *);
 	int (*md_cpu_to_disk) (struct format *);
-	void (*get_gi) (struct md_cpu *md, int bm_idx);
-	void (*show_gi) (struct md_cpu *md, int bm_idx);
-	void (*set_gi) (struct md_cpu *md, int bm_idx, char **argv, int argc);
+	void (*get_gi) (struct md_cpu *md, int node_id);
+	void (*show_gi) (struct md_cpu *md, int node_id);
+	void (*set_gi) (struct md_cpu *md, int node_id, char **argv, int argc);
 	int (*outdate_gi) (struct md_cpu *md);
 	int (*invalidate_gi) (struct md_cpu *md);
 };
@@ -481,9 +481,9 @@ int is_valid_md(enum md_format f,
 		return 0;
 	}
 	for (n = 0; n < md->max_peers; n++) {
-		if (md->peers[n].node_id < -1 || md->peers[n].node_id > DRBD_PEERS_MAX + 1) {
+		if (md->peers[n].bitmap_index < -1 || md->peers[n].bitmap_index > DRBD_PEERS_MAX + 1) {
 			fprintf(stderr, "%s peer device %d node-id value %d out of bounds\n",
-				v, n, md->peers[n].node_id);
+				v, n, md->peers[n].bitmap_index);
 			return 0;
 		}
 	}
@@ -811,9 +811,9 @@ void md_disk_09_to_cpu(struct md_cpu *cpu, const struct meta_data_on_disk_9 *dis
 		cpu->max_peers = DRBD_PEERS_MAX;
 
 	cpu->current_uuid = be64_to_cpu(disk->current_uuid.be);
-	for (p = 0; p < cpu->max_peers; p++) {
+	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
 		cpu->peers[p].flags = be32_to_cpu(disk->peers[p].flags.be);
-		cpu->peers[p].node_id = be32_to_cpu(disk->peers[p].node_id.be);
+		cpu->peers[p].bitmap_index = be32_to_cpu(disk->peers[p].bitmap_index.be);
 		cpu->peers[p].bitmap_uuid =
 			be64_to_cpu(disk->peers[p].bitmap_uuid.be);
 		cpu->peers[p].bitmap_dagtag =
@@ -846,9 +846,9 @@ void md_cpu_to_disk_09(struct meta_data_on_disk_9 *disk, const struct md_cpu *cp
 	disk->al_stripe_size_4k.be = cpu_to_be32(cpu->al_stripe_size_4k);
 
 	disk->current_uuid.be = cpu_to_be64(cpu->current_uuid);
-	for (p = 0; p < cpu->max_peers; p++) {
+	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
 		disk->peers[p].flags.be = cpu_to_be32(cpu->peers[p].flags);
-		disk->peers[p].node_id.be = cpu_to_be32(cpu->peers[p].node_id);
+		disk->peers[p].bitmap_index.be = cpu_to_be32(cpu->peers[p].bitmap_index);
 		disk->peers[p].bitmap_uuid.be =
 			cpu_to_be64(cpu->peers[p].bitmap_uuid);
 		disk->peers[p].bitmap_dagtag.be =
@@ -865,17 +865,17 @@ void md_cpu_to_disk_09(struct meta_data_on_disk_9 *disk, const struct md_cpu *cp
  */
 
 /* pre declarations */
-void m_get_gc(struct md_cpu *md, int bm_idx);
-void m_show_gc(struct md_cpu *md, int bm_idx);
-void m_set_gc(struct md_cpu *md, int bm_idx, char **argv, int argc);
+void m_get_gc(struct md_cpu *md, int node_id);
+void m_show_gc(struct md_cpu *md, int node_id);
+void m_set_gc(struct md_cpu *md, int node_id, char **argv, int argc);
 int m_outdate_gc(struct md_cpu *md);
 int m_invalidate_gc(struct md_cpu *md);
-void m_get_uuid(struct md_cpu *md, int bm_idx);
-void m_show_uuid(struct md_cpu *md, int bm_idx);
-void m_set_uuid(struct md_cpu *md, int bm_idx, char **argv, int argc);
-void m_get_v9_uuid(struct md_cpu *md, int bm_idx);
-void m_show_v9_uuid(struct md_cpu *md, int bm_idx);
-void m_set_v9_uuid(struct md_cpu *md, int bm_idx, char **argv, int argc);
+void m_get_uuid(struct md_cpu *md, int node_id);
+void m_show_uuid(struct md_cpu *md, int node_id);
+void m_set_uuid(struct md_cpu *md, int node_id, char **argv, int argc);
+void m_get_v9_uuid(struct md_cpu *md, int node_id);
+void m_show_v9_uuid(struct md_cpu *md, int node_id);
+void m_set_v9_uuid(struct md_cpu *md, int node_id, char **argv, int argc);
 int m_outdate_uuid(struct md_cpu *md);
 int m_invalidate_uuid(struct md_cpu *md);
 int m_invalidate_v9_uuid(struct md_cpu *md);
@@ -1189,21 +1189,21 @@ size_t pwrite_with_limit_or_die(struct format *cfg, const void *buf, size_t coun
 	return count;
 }
 
-void m_get_gc(struct md_cpu *md, int bm_idx __attribute((unused)))
+void m_get_gc(struct md_cpu *md, int node_id __attribute((unused)))
 {
 	dt_print_gc(md->gc);
 }
 
-void m_show_gc(struct md_cpu *md, int bm_idx __attribute((unused)))
+void m_show_gc(struct md_cpu *md, int node_id __attribute((unused)))
 {
 	dt_pretty_print_gc(md->gc);
 }
 
-void m_get_uuid(struct md_cpu *md, int bm_idx)
+void m_get_uuid(struct md_cpu *md, int node_id)
 {
 	uint64_t uuids[] = {
 		[UI_CURRENT] = md->current_uuid,
-		[UI_BITMAP] = md->peers[bm_idx].bitmap_uuid,
+		[UI_BITMAP] = md->peers[node_id].bitmap_uuid,
 		[UI_HISTORY_START] = md->history_uuids[0],
 		[UI_HISTORY_END] = md->history_uuids[1],
 	};
@@ -1211,11 +1211,11 @@ void m_get_uuid(struct md_cpu *md, int bm_idx)
 	dt_print_uuids(uuids, md->flags);
 }
 
-void m_show_uuid(struct md_cpu *md, int bm_idx)
+void m_show_uuid(struct md_cpu *md, int node_id)
 {
 	uint64_t uuids[] = {
 		[UI_CURRENT] = md->current_uuid,
-		[UI_BITMAP] = md->peers[bm_idx].bitmap_uuid,
+		[UI_BITMAP] = md->peers[node_id].bitmap_uuid,
 		[UI_HISTORY_START] = md->history_uuids[0],
 		[UI_HISTORY_END] = md->history_uuids[1],
 	};
@@ -1223,28 +1223,28 @@ void m_show_uuid(struct md_cpu *md, int bm_idx)
 	dt_pretty_print_uuids(uuids, md->flags);
 }
 
-void m_get_v9_uuid(struct md_cpu *md, int bm_idx)
+void m_get_v9_uuid(struct md_cpu *md, int node_id)
 {
 	uint64_t uuids[] = {
 		[UI_CURRENT] = md->current_uuid,
-		[UI_BITMAP] = md->peers[bm_idx].bitmap_uuid,
+		[UI_BITMAP] = md->peers[node_id].bitmap_uuid,
 		[UI_HISTORY_START] = md->history_uuids[0],
 		[UI_HISTORY_END] = md->history_uuids[1],
 	};
 
-	dt_print_v9_uuids(uuids, md->flags, md->peers[bm_idx].flags);
+	dt_print_v9_uuids(uuids, md->flags, md->peers[node_id].flags);
 }
 
-void m_show_v9_uuid(struct md_cpu *md, int bm_idx)
+void m_show_v9_uuid(struct md_cpu *md, int node_id)
 {
 	uint64_t uuids[] = {
 		[UI_CURRENT] = md->current_uuid,
-		[UI_BITMAP] = md->peers[bm_idx].bitmap_uuid,
+		[UI_BITMAP] = md->peers[node_id].bitmap_uuid,
 		[UI_HISTORY_START] = md->history_uuids[0],
 		[UI_HISTORY_END] = md->history_uuids[1],
 	};
 
-	dt_pretty_print_v9_uuids(uuids, md->flags, md->peers[bm_idx].flags);
+	dt_pretty_print_v9_uuids(uuids, md->flags, md->peers[node_id].flags);
 }
 
 int m_strsep_u32(char **s, uint32_t *val)
@@ -1327,7 +1327,7 @@ int m_strsep_bit(char **s, uint32_t *val, int mask)
 	return rv;
 }
 
-void m_set_gc(struct md_cpu *md, int bm_idx __attribute((unused)), char **argv, int argc __attribute((unused)))
+void m_set_gc(struct md_cpu *md, int node_id __attribute((unused)), char **argv, int argc __attribute((unused)))
 {
 	char **str;
 
@@ -1345,7 +1345,7 @@ void m_set_gc(struct md_cpu *md, int bm_idx __attribute((unused)), char **argv, 
 	} while (0);
 }
 
-void m_set_uuid(struct md_cpu *md, int bm_idx, char **argv, int argc __attribute((unused)))
+void m_set_uuid(struct md_cpu *md, int node_id, char **argv, int argc __attribute((unused)))
 {
 	char **str;
 	int i;
@@ -1354,7 +1354,7 @@ void m_set_uuid(struct md_cpu *md, int bm_idx, char **argv, int argc __attribute
 
 	do {
 		if (!m_strsep_u64(str, &md->current_uuid)) break;
-		if (!m_strsep_u64(str, &md->peers[bm_idx].bitmap_uuid)) break;
+		if (!m_strsep_u64(str, &md->peers[node_id].bitmap_uuid)) break;
 		for (i = 0; i < HISTORY_UUIDS_V08; i++)
 			if (!m_strsep_u64(str, &md->history_uuids[i])) return;
 		if (!m_strsep_bit(str, &md->flags, MDF_CONSISTENT)) break;
@@ -1367,7 +1367,7 @@ void m_set_uuid(struct md_cpu *md, int bm_idx, char **argv, int argc __attribute
 	} while (0);
 }
 
-void m_set_v9_uuid(struct md_cpu *md, int bm_idx, char **argv, int argc __attribute((unused)))
+void m_set_v9_uuid(struct md_cpu *md, int node_id, char **argv, int argc __attribute((unused)))
 {
 	char **str;
 	int i;
@@ -1376,7 +1376,7 @@ void m_set_v9_uuid(struct md_cpu *md, int bm_idx, char **argv, int argc __attrib
 
 	do {
 		if (!m_strsep_u64(str, &md->current_uuid)) break;
-		if (!m_strsep_u64(str, &md->peers[bm_idx].bitmap_uuid)) break;
+		if (!m_strsep_u64(str, &md->peers[node_id].bitmap_uuid)) break;
 		for (i = 0; i < HISTORY_UUIDS_V08; i++)
 			if (!m_strsep_u64(str, &md->history_uuids[i])) return;
 		if (!m_strsep_bit(str, &md->flags, MDF_CONSISTENT)) break;
@@ -1385,10 +1385,10 @@ void m_set_v9_uuid(struct md_cpu *md, int bm_idx, char **argv, int argc __attrib
 		if (!m_strsep_bit(str, &md->flags, MDF_CRASHED_PRIMARY)) break;
 		if (!m_strsep_bit(str, &md->flags, MDF_AL_CLEAN)) break;
 		if (!m_strsep_bit(str, &md->flags, MDF_AL_DISABLED)) break;
-		if (!m_strsep_bit(str, &md->peers[bm_idx].flags, MDF_PEER_CONNECTED)) break;
-		if (!m_strsep_bit(str, &md->peers[bm_idx].flags, MDF_PEER_OUTDATED)) break;
-		if (!m_strsep_bit(str, &md->peers[bm_idx].flags, MDF_PEER_FENCING)) break;
-		if (!m_strsep_bit(str, &md->peers[bm_idx].flags, MDF_PEER_FULL_SYNC)) break;
+		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_CONNECTED)) break;
+		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_OUTDATED)) break;
+		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_FENCING)) break;
+		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_FULL_SYNC)) break;
 	} while (0);
 }
 
@@ -1429,13 +1429,13 @@ int m_invalidate_uuid(struct md_cpu *md)
 
 int m_invalidate_v9_uuid(struct md_cpu *md)
 {
-	int bm_idx;
+	int node_id;
 
 	md->flags &= ~MDF_CONSISTENT;
 	md->flags &= ~MDF_WAS_UP_TO_DATE;
 
-	for (bm_idx = 0; bm_idx < md->max_peers; bm_idx++) {
-		md->peers[bm_idx].flags |= MDF_PEER_FULL_SYNC;
+	for (node_id = 0; node_id < DRBD_NODE_ID_MAX; node_id++) {
+		md->peers[node_id].flags |= MDF_PEER_FULL_SYNC;
 	}
 
 	return 0;
@@ -2960,10 +2960,10 @@ int v09_md_initialize(struct format *cfg, int do_disk_writes, int max_peers)
 	for (i = 0; i < ARRAY_SIZE(cfg->md.history_uuids); i++)
 		cfg->md.history_uuids[i] = 0;
 
-	for (p = 0; p < max_peers; p++) {
+	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
 		cfg->md.peers[p].bitmap_uuid = 0;
 		cfg->md.peers[p].flags = 0;
-		cfg->md.peers[p].node_id = -1;
+		cfg->md.peers[p].bitmap_index = -1;
 	}
 
 	return md_initialize_common(cfg, do_disk_writes);
@@ -2972,24 +2972,6 @@ int v09_md_initialize(struct format *cfg, int do_disk_writes, int max_peers)
 /******************************************
   }}} end of v09
  ******************************************/
-
-static int node_id_to_bm_idx(struct format *cfg, int node_id)
-{
-	int bm_idx;
-
-	if (format_version(cfg) < DRBD_V09)
-		return 0;
-
-	for (bm_idx = 0; bm_idx < cfg->md.max_peers; bm_idx++) {
-		/*if (cfg->md.peers[bm_idx].node_id == -1)
-		  vacant_idx = bm_idx; */
-		if (cfg->md.peers[bm_idx].node_id == node_id)
-			return bm_idx;
-	}
-
-	fprintf(stderr, "The node-id %d not known (yet) in meta data\n", node_id);
-	exit(10);
-}
 
 int meta_get_gi(struct format *cfg, char **argv __attribute((unused)), int argc)
 {
@@ -3000,7 +2982,7 @@ int meta_get_gi(struct format *cfg, char **argv __attribute((unused)), int argc)
 	if (cfg->ops->open(cfg))
 		return -1;
 
-	cfg->ops->get_gi(&cfg->md, node_id_to_bm_idx(cfg, option_node_id));
+	cfg->ops->get_gi(&cfg->md, option_node_id);
 
 	return cfg->ops->close(cfg);
 }
@@ -3018,7 +3000,7 @@ int meta_show_gi(struct format *cfg, char **argv __attribute((unused)), int argc
 
 	// find the correct slot from node-id.
 
-	cfg->ops->show_gi(&cfg->md, node_id_to_bm_idx(cfg, option_node_id));
+	cfg->ops->show_gi(&cfg->md, option_node_id);
 
 	if (cfg->md.effective_size) {
 		printf("last agreed size: %s (%llu sectors)\n",
@@ -3069,7 +3051,6 @@ int meta_set_gi(struct format *cfg, char **argv, int argc)
 {
 	struct md_cpu tmp;
 	int err;
-	int bm_idx;
 
 	if (argc > 1) {
 		fprintf(stderr, "Ignoring additional arguments\n");
@@ -3082,14 +3063,12 @@ int meta_set_gi(struct format *cfg, char **argv, int argc)
 	if (cfg->ops->open(cfg))
 		return -1;
 
-	bm_idx = node_id_to_bm_idx(cfg, option_node_id);
-
 	tmp = cfg->md;
-	cfg->ops->set_gi(&tmp, bm_idx, argv, argc);
+	cfg->ops->set_gi(&tmp, option_node_id, argv, argc);
 	printf("previously ");
-	cfg->ops->get_gi(&cfg->md, bm_idx);
+	cfg->ops->get_gi(&cfg->md, option_node_id);
 	printf("set GI to  ");
-	cfg->ops->get_gi(&tmp, bm_idx);
+	cfg->ops->get_gi(&tmp, option_node_id);
 
 	if (!confirmed("Write new GI to disk?")) {
 		printf("Operation canceled.\n");
@@ -3213,13 +3192,13 @@ int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc
 		       "flags 0x"X32(08)";\n",
 		       cfg->md.node_id,
 		       cfg->md.current_uuid, cfg->md.flags);
-		for (i = 0; i < cfg->md.max_peers; i++) {
+		for (i = 0; i < DRBD_NODE_ID_MAX; i++) {
 			struct peer_md_cpu *peer = &cfg->md.peers[i];
 
 			printf("peer[%d] {\n", i);
 			if (format_version(cfg) >= DRBD_V09) {
-				printf("    node-id %d;\n",
-				       peer->node_id);
+				printf("    bitmap-index %d;\n",
+				       peer->bitmap_index);
 			}
 			printf("    bitmap-uuid 0x"X64(016)";\n"
 			       "    bitmap-dagtag 0x"X64(016)";\n"
@@ -3607,7 +3586,7 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 			EXP(TK_FLAGS); EXP(TK_U32); EXP(';');
 			cfg->md.flags = (uint32_t)yylval.u64;
 
-			for (i = 0; i < cfg->md.max_peers; i++) {
+			for (i = 0; i < DRBD_NODE_ID_MAX; i++) {
 				EXP(TK_PEER); EXP('[');
 				EXP(TK_NUM); EXP(']');
 				if (yylval.u64 != i) {
@@ -3617,9 +3596,9 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 					exit(10);
 				}
 				EXP('{');
-				EXP(TK_NODE_ID);
+				EXP(TK_BITMAP_INDEX);
 				EXP(TK_NUM); EXP(';');
-				cfg->md.peers[i].node_id = yylval.u64;
+				cfg->md.peers[i].bitmap_index = yylval.u64;
 				EXP(TK_BITMAP_UUID); EXP(TK_U64); EXP(';');
 				cfg->md.peers[i].bitmap_uuid = yylval.u64;
 				EXP(TK_BITMAP_DAGTAG); EXP(TK_U64); EXP(';');
@@ -4910,17 +4889,15 @@ int meta_chk_offline_resize(struct format *cfg, char **argv, int argc)
 
 int meta_forget_peer(struct format *cfg, char **argv, int argc)
 {
-	int bm_idx, err;
+	int err;
 
 	err = cfg->ops->open(cfg);
 	if (err)
 		return -1;
 
-	bm_idx = node_id_to_bm_idx(cfg, option_node_id);
-
-	cfg->md.peers[bm_idx].node_id = -1;
-	cfg->md.peers[bm_idx].bitmap_uuid = 0;
-	cfg->md.peers[bm_idx].flags = 0;
+	cfg->md.peers[option_node_id].bitmap_index = -1;
+	cfg->md.peers[option_node_id].bitmap_uuid = 0;
+	cfg->md.peers[option_node_id].flags = 0;
 
 	cfg->ops->md_cpu_to_disk(cfg);
 	err = cfg->ops->close(cfg) || err;

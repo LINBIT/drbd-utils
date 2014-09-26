@@ -71,6 +71,7 @@ history-uuids	DP; CP; return TK_HISTORY_UUIDS;
 peer		DP; CP; return TK_PEER;
 hash		DP; CP; return TK_HASH;
 max-peers	DP; CP; return TK_MAX_PEERS;
+bitmap-index    DP; CP; return TK_BITMAP_INDEX;
 
 {INVALID_STRING} CP; bad_token("invalid string"); return TK_INVALID;
 {EMPTY_STRING}	 CP; bad_token("invalid string"); return TK_INVALID;
