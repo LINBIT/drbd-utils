@@ -283,7 +283,7 @@ struct md_cpu {
 	/* Since DRBD 9.0 the following new stuff: */
 	uint32_t max_peers;
 	int32_t node_id;
-	struct peer_md_cpu peers[MAX_PEERS];
+	struct peer_md_cpu peers[DRBD_PEERS_MAX];
 	uint32_t al_stripes;
 	uint32_t al_stripe_size_4k;
 };
@@ -469,18 +469,18 @@ int is_valid_md(enum md_format f,
 		return 0;
 	}
 
-	if (md->max_peers < 1 || md->max_peers > MAX_PEERS) {
+	if (md->max_peers < 1 || md->max_peers > DRBD_PEERS_MAX) {
 		fprintf(stderr, "%s max-peers value %d out of bounds\n",
 			v, md->max_peers);
 		return 0;
 	}
-	if (md->node_id < -1 || md->node_id > MAX_PEERS + 1) {
+	if (md->node_id < -1 || md->node_id > DRBD_PEERS_MAX + 1) {
 		fprintf(stderr, "%s device node-id value %d out of bounds\n",
 			v, md->node_id);
 		return 0;
 	}
 	for (n = 0; n < md->max_peers; n++) {
-		if (md->peers[n].node_id < -1 || md->peers[n].node_id > MAX_PEERS + 1) {
+		if (md->peers[n].node_id < -1 || md->peers[n].node_id > DRBD_PEERS_MAX + 1) {
 			fprintf(stderr, "%s peer device %d node-id value %d out of bounds\n",
 				v, n, md->peers[n].node_id);
 			return 0;
@@ -815,7 +815,7 @@ struct md_on_disk_09 {
 
 	be_u32 reserved_u32[2];
 
-	struct peer_dev_md_on_disk peers[MAX_PEERS];
+	struct peer_dev_md_on_disk peers[DRBD_PEERS_MAX];
 	be_u64 history_uuids[HISTORY_UUIDS];
 
 	char padding[0] __attribute__((aligned(4096)));
@@ -841,8 +841,8 @@ void md_disk_09_to_cpu(struct md_cpu *cpu, const struct md_on_disk_09 *disk)
 	cpu->al_stripes = be32_to_cpu(disk->al_stripes.be);
 	cpu->al_stripe_size_4k = be32_to_cpu(disk->al_stripe_size_4k.be);
 
-	if (cpu->max_peers > MAX_PEERS)
-		cpu->max_peers = MAX_PEERS;
+	if (cpu->max_peers > DRBD_PEERS_MAX)
+		cpu->max_peers = DRBD_PEERS_MAX;
 
 	cpu->current_uuid = be64_to_cpu(disk->current_uuid.be);
 	for (p = 0; p < cpu->max_peers; p++) {
@@ -4570,8 +4570,8 @@ int meta_create_md(struct format *cfg, char **argv __attribute((unused)), int ar
 	} else if (argc > 0)
 		fprintf(stderr, "Ignoring additional arguments\n");
 
-	if (max_peers < 1 || max_peers > MAX_PEERS) {
-		fprintf(stderr, "MAX_PEERS argument not in allowed range 1 .. %d.\n", MAX_PEERS);
+	if (max_peers < 1 || max_peers > DRBD_PEERS_MAX) {
+		fprintf(stderr, "MAX_PEERS argument not in allowed range 1 .. %d.\n", DRBD_PEERS_MAX);
 		exit(20);
 	}
 
@@ -5063,8 +5063,8 @@ int main(int argc, char **argv)
 		    break;
 	    case 'i':
 		    option_node_id = m_strtoll(optarg, 1);
-		    if (option_node_id < 0 || option_node_id > (MAX_PEERS - 1)) {
-			    fprintf(stderr, "node-id out of range (0...%d)\n", MAX_PEERS - 1);
+		    if (option_node_id < 0 || option_node_id > (DRBD_PEERS_MAX - 1)) {
+			    fprintf(stderr, "node-id out of range (0...%d)\n", DRBD_PEERS_MAX - 1);
 			    exit(10);
 		    }
 		    break;
