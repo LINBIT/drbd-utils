@@ -307,6 +307,7 @@ int adm_adjust_wp(const struct cfg_ctx *ctx)
 /*  */ struct adm_cmd net_options_cmd = {"net-options", adm_connect, &net_options_ctx, ACF1_CONNECT};
 /*  */ struct adm_cmd disconnect_cmd = {"disconnect", adm_drbdsetup, &disconnect_cmd_ctx, ACF1_DISCONNECT};
 static struct adm_cmd up_cmd = {"up", adm_up, ACF1_RESNAME };
+static struct adm_cmd direct_connect_cmd = {"direct-connect", adm_up, ACF1_RESNAME };
 /*  */ struct adm_cmd res_options_cmd = {"resource-options", adm_resource, &resource_options_ctx, ACF1_RESNAME};
 static struct adm_cmd down_cmd = {"down", adm_drbdsetup, ACF1_RESNAME .takes_long = 1};
 static struct adm_cmd primary_cmd = {"primary", adm_drbdsetup, &primary_cmd_ctx, ACF1_RESNAME .takes_long = 1};
@@ -395,6 +396,7 @@ struct adm_cmd *cmds[] = {
 	&net_options_cmd,
 	&disconnect_cmd,
 	&up_cmd,
+	&direct_connect_cmd,
 	&res_options_cmd,
 	&down_cmd,
 	&primary_cmd,
@@ -501,6 +503,13 @@ static const struct adm_cmd forget_peer_setup_cmd = {
 	"forget-peer",
 	__adm_drbdsetup_silent,
 	ACF1_DISCONNECT .backend_res_name = 1, .need_peer = 0
+};
+
+static struct adm_cmd connect_direct_cmd = {
+	"connect",
+	adm_connect,
+	&connect_cmd_ctx,
+	ACF1_CONNECT
 };
 
 static void initialize_deferred_cmds()
@@ -1422,17 +1431,47 @@ static int adm_connect(const struct cfg_ctx *ctx)
 {
 	struct d_resource *res = ctx->res;
 	struct connection *conn = ctx->conn;
+
+	struct d_address tmp_my_address = *conn->my_address;
+	struct d_address tmp_connect_to = *conn->connect_to;
+
 	char *argv[MAX_ARGS];
 	int argc = 0;
 	bool do_connect = (ctx->cmd == &connect_cmd);
+	bool do_connect_direct = (ctx->cmd == &connect_direct_cmd);
 	bool reset = (ctx->cmd == &net_options_defaults_cmd);
+
+	if (do_connect_direct && conn->my_proxy) {
+		bool local_loopback = addr_scope_local(tmp_my_address.addr);
+		bool peer_loopback = addr_scope_local(conn->peer_address->addr);
+
+		if (!peer_loopback) /* fine, we can reach our peer */
+			tmp_connect_to = *conn->peer_address;
+		else {
+			/* connect to the proxy outside, but keep our port */
+			tmp_connect_to = conn->peer_proxy->outside;
+			tmp_connect_to.port = conn->peer_address->port;
+
+			if (local_loopback) {
+				/* both are loopbacks:
+				 * overwrite my address with proxy, but keep our port */
+				tmp_my_address = conn->my_proxy->outside;
+				tmp_my_address.port = conn->my_address->port;
+			}
+		}
+
+		if (local_loopback || peer_loopback)
+			fprintf(stderr,
+					"WARN: This potentially requires interaction on the peer\n"
+					"You may have to execute drbdadm direct-connect on the peer\n");
+	}
 
 	argv[NA(argc)] = drbdsetup;
 	argv[NA(argc)] = (char *)ctx->cmd->name; /* "connect" : "net-options"; */
 	if (do_connect)
 		argv[NA(argc)] = ssprintf("%s", res->name);
-	argv[NA(argc)] = ssprintf_addr(conn->my_address);
-	argv[NA(argc)] = ssprintf_addr(conn->connect_to);
+	argv[NA(argc)] = ssprintf_addr(&tmp_my_address);
+	argv[NA(argc)] = ssprintf_addr(&tmp_connect_to);
 
 	if (reset)
 		argv[NA(argc)] = "--set-defaults";
@@ -1633,7 +1672,11 @@ static int adm_up(const struct cfg_ctx *ctx)
 			continue;
 
 		tmp_ctx.conn = conn;
-		schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET);
+
+		if (ctx->cmd == &direct_connect_cmd)
+			schedule_deferred_cmd(&connect_direct_cmd, &tmp_ctx, CFG_NET);
+		else
+			schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET);
 	}
 	tmp_ctx.conn = NULL;
 
