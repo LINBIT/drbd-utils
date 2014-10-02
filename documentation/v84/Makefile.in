@@ -62,6 +62,8 @@ HTML_STYLESHEET ?= $(STYLESHEET_PREFIX)/xhtml/docbook.xsl
 FO_STYLESHEET ?= $(STYLESHEET_PREFIX)/fo/docbook.xsl
 
 XSLTPROC_OPTIONS ?= --xinclude
+XSLTPROC_OPTIONS += --stringparam variablelist.term.break.after 1
+#XSLTPROC_OPTIONS += --stringparam variablelist.term.separator ""
 XSLTPROC_MANPAGES_OPTIONS ?= $(XSLTPROC_OPTIONS)
 XSLTPROC_HTML_OPTIONS ?= $(XSLTPROC_OPTIONS)
 XSLTPROC_FO_OPTIONS ?= $(XSLTPROC_OPTIONS)
@@ -117,7 +119,7 @@ doc-clean: distclean
 	$(XSLTPROC_FO_OPTIONS) \
 	$(FO_STYLESHEET) $<
 
-../../user/v84/drbdsetup:
+../../user/v84/drbdsetup-84:
 	$(MAKE) -C $(@D) $(@F)
 
 drbdsetup_xml-help_%.xml: ../../user/v84/drbdsetup-84
@@ -127,7 +129,9 @@ drbdsetup_%.xml: drbdsetup_xml-help_%.xml xml-usage-to-docbook.xsl
 	$(XSLTPROC) -o $@ xml-usage-to-docbook.xsl $<
 
 distclean:
+ifeq ($(make_doc),doc)
 	rm -f *.[58] manpage.links manpage.refs *~ manpage.log
+endif
 	rm -f *.ps.gz *.pdf *.ps *.html pod2htm*
 	rm -f drbdsetup_*.xml
 
