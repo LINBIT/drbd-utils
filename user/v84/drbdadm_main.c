@@ -3629,7 +3629,7 @@ void print_dump_header(void)
 int main(int argc, char **argv)
 {
 	size_t i;
-	int rv = 0;
+	int rv = 0, r;
 	struct adm_cmd *cmd = NULL;
 	char **resource_names = NULL;
 	struct d_resource *res, *tmp;
@@ -3783,7 +3783,7 @@ int main(int argc, char **argv)
 					continue;
 				ctx.res = res;
 				ctx.vol = NULL;
-				int r = call_cmd(cmd, &ctx, EXIT_ON_FAIL);	/* does exit for r >= 20! */
+				r = call_cmd(cmd, &ctx, EXIT_ON_FAIL);	/* does exit for r >= 20! */
 				/* this super positioning of return values is soo ugly
 				 * anyone any better idea? */
 				if (r > rv)
@@ -3845,7 +3845,9 @@ int main(int argc, char **argv)
 				verify_ips(ctx.res);
 				if (!is_dump && !config_valid)
 					exit(E_CONFIG_INVALID);
-				rv = call_cmd(cmd, &ctx, EXIT_ON_FAIL);	/* does exit for rv >= 20! */
+				r = call_cmd(cmd, &ctx, EXIT_ON_FAIL);	/* does exit for rv >= 20! */
+				if (r > rv)
+					rv = r;
 			}
 		}
 	} else {		// Commands which do not need a resource name
@@ -3860,9 +3862,9 @@ int main(int argc, char **argv)
 		}
 	}
 
-	/* do we really have to bitor the exit code?
-	 * it is even only a Boolean value in this case! */
-	rv |= run_deferred_cmds();
+	r = run_deferred_cmds();
+	if (r > rv)
+		rv = r;
 
 	free_config(config);
 	free(resource_names);

@@ -2854,7 +2854,7 @@ void die_if_no_resources(void)
 int main(int argc, char **argv)
 {
 	size_t i;
-	int rv = 0;
+	int rv = 0, r;
 	struct adm_cmd *cmd = NULL;
 	char **resource_names = NULL;
 	struct d_resource *res;
@@ -3004,7 +3004,7 @@ int main(int argc, char **argv)
 					continue;
 				ctx.res = res;
 				ctx.vol = NULL;
-				int r = call_cmd(cmd, &ctx, EXIT_ON_FAIL);	/* does exit for r >= 20! */
+				r = call_cmd(cmd, &ctx, EXIT_ON_FAIL);	/* does exit for r >= 20! */
 				/* this super positioning of return values is soo ugly
 				 * anyone any better idea? */
 				if (r > rv)
@@ -3043,13 +3043,12 @@ int main(int argc, char **argv)
 				}
 
 			for (i = 0; resource_names[i]; i++) {
-				int rv;
 				ctx.res = NULL;
 				ctx.vol = NULL;
-				rv = ctx_by_name(&ctx, resource_names[i], SETUP_MULTI);
+				r = ctx_by_name(&ctx, resource_names[i], SETUP_MULTI);
 				if (!ctx.res) {
 					ctx_by_minor(&ctx, resource_names[i]);
-					rv = 0;
+					r = 0;
 				}
 				if (!ctx.res) {
 					fprintf(stderr,
@@ -3057,7 +3056,7 @@ int main(int argc, char **argv)
 						resource_names[i]);
 					exit(E_USAGE);
 				}
-				if (rv)
+				if (r)
 					exit(E_USAGE);
 				if (!cmd->vol_id_required && !cmd->iterate_volumes && ctx.vol != NULL && !cmd->vol_id_optional) {
 					if (ctx.vol->implicit)
@@ -3097,7 +3096,9 @@ int main(int argc, char **argv)
 				verify_ips(ctx.res);
 				if (!is_dump && !config_valid)
 					exit(E_CONFIG_INVALID);
-				(void) call_cmd(cmd, &ctx, EXIT_ON_FAIL);	/* does exit for rv >= 20! */
+				r = call_cmd(cmd, &ctx, EXIT_ON_FAIL);	/* does exit for r >= 20! */
+				if (r > rv)
+					rv = r;
 			}
 		}
 	} else {		// Commands which do not need a resource name
@@ -3115,7 +3116,9 @@ int main(int argc, char **argv)
 
 	/* do we really have to bitor the exit code?
 	 * it is even only a Boolean value in this case! */
-	rv |= run_deferred_cmds();
+	r = run_deferred_cmds();
+	if (r > rv)
+		rv = r;
 
 	free_config();
 	free(resource_names);

@@ -2975,7 +2975,7 @@ void print_dump_header(void)
 int main(int argc, char **argv)
 {
 	size_t i;
-	int rv = 0;
+	int rv = 0, r;
 	struct adm_cmd *cmd = NULL;
 	struct d_resource *res, *tmp;
 	char *env_drbd_nodename = NULL;
@@ -3187,7 +3187,9 @@ int main(int argc, char **argv)
 				verify_ips(res);
 				if (!is_dump && !config_valid)
 					exit(E_CONFIG_INVALID);
-				rv = call_cmd(cmd, res, EXIT_ON_FAIL);	/* does exit for rv >= 20! */
+				r = call_cmd(cmd, res, EXIT_ON_FAIL);	/* does exit for rv >= 20! */
+				if (r > rv)
+					rv = r;
 			}
 		}
 	} else {		// Commands which do not need a resource name
@@ -3203,7 +3205,9 @@ int main(int argc, char **argv)
 
 	/* do we really have to bitor the exit code?
 	 * it is even only a Boolean value in this case! */
-	rv |= run_dcmds();
+	r = run_dcmds();
+	if (r > rv)
+		rv = r;
 
 	free_config(config);
 
