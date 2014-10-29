@@ -119,6 +119,7 @@ max-buffers		{ DP; CP; RC(MAX_BUFFERS); return TK_NET_OPTION;}
 sndbuf-size		{ DP; CP; RC(SNDBUF_SIZE); return TK_NET_OPTION | TK_PROXY_GROUP;}
 rcvbuf-size		{ DP; CP; RC(RCVBUF_SIZE); return TK_NET_OPTION | TK_PROXY_GROUP;}
 connect-int		{ DP; CP; RC(CONNECT_INT); return TK_NET_OPTION;}
+transport		{ DP; CP; return TK_NET_OPTION;		}
 cram-hmac-alg		{ DP; CP; return TK_NET_OPTION;		}
 shared-secret		{ DP; CP; return TK_NET_OPTION;		}
 max-epoch-size		{ DP; CP; RC(MAX_EPOCH_SIZE); return TK_NET_OPTION;}

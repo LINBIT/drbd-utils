@@ -693,6 +693,7 @@ struct context_def connect_cmd_ctx = {
 		{ "tentative", FLAG(tentative) },
 		{ "discard-my-data", FLAG(discard_my_data) },
 		{ "peer-node-id", NUMERIC(peer_node_id, NODE_ID) },
+		{ "transport", STRING(transport_name) },
 		CHANGEABLE_NET_OPTIONS,
 		{ } },
 };
