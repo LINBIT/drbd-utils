@@ -4937,7 +4937,7 @@ int main(int argc, char **argv)
 	struct format *cfg;
 	size_t i;
 	int ai, rv;
-	bool minor_attached;
+	bool minor_attached = false;
 
 #if 1
 	if (sizeof(struct md_on_disk_07) != 4096) {
@@ -5057,21 +5057,26 @@ int main(int argc, char **argv)
 	 * unlock happens implicitly when the process dies,
 	 * but may be requested implicitly
 	 */
-	cfg->minor = dt_minor_of_dev(cfg->drbd_dev_name);
-	if (cfg->minor < 0) {
-		fprintf(stderr, "Cannot determine minor device number of "
-				"drbd device '%s'",
-			cfg->drbd_dev_name);
-		exit(20);
-	}
-	cfg->lock_fd = dt_lock_drbd(cfg->minor);
+	if (strcmp(cfg->drbd_dev_name, "-")) {
+		cfg->minor = dt_minor_of_dev(cfg->drbd_dev_name);
+		if (cfg->minor < 0) {
+			fprintf(stderr, "Cannot determine minor device number of "
+					"drbd device '%s'",
+				cfg->drbd_dev_name);
+			exit(20);
+		}
+		cfg->lock_fd = dt_lock_drbd(cfg->minor);
 
-	/* unconditionally check whether this is in use */
-	minor_attached = is_attached(cfg->minor);
-	if (minor_attached && command->modifies_md) {
-		fprintf(stderr, "Device '%s' is configured!\n",
-			cfg->drbd_dev_name);
-		exit(20);
+		/* check whether this is in use */
+		minor_attached = is_attached(cfg->minor);
+		if (minor_attached && command->modifies_md) {
+			fprintf(stderr, "Device '%s' is configured!\n",
+				cfg->drbd_dev_name);
+			exit(20);
+		}
+	} else {
+		cfg->minor = -1;
+		cfg->lock_fd = -1;
 	}
 
 	if (option_peer_max_bio_size &&
