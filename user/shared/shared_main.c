@@ -186,7 +186,7 @@ int have_ip_ipv6(const char *ip)
 
 	while (fscanf
 	       (if_inet6,
-		X32(08) X32(08) X32(08) X32(08) " %*02x %*02x %*02x %*02x %s",
+		X32(08) X32(08) X32(08) X32(08) " %*x %*x %*x %*x %s",
 		b, b + 1, b + 2, b + 3, name) > 0) {
 		for (i = 0; i < 4; i++)
 			addr6.s6_addr32[i] = cpu_to_be32(b[i]);
