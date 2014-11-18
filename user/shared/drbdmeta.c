@@ -4999,8 +4999,8 @@ int main(int argc, char **argv)
 	    case 'p':
 		    option_peer_max_bio_size = m_strtoll(optarg, 1);
 		    if (option_peer_max_bio_size < 0 ||
-			option_peer_max_bio_size > 128 * 1024) {
-			    fprintf(stderr, "peer-max-bio-size out of range (0...128k)\n");
+			option_peer_max_bio_size > 1024 * 1024) {
+			    fprintf(stderr, "peer-max-bio-size out of range (0...1M)\n");
 			    exit(10);
 		    }
 		    break;
