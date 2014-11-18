@@ -2416,8 +2416,22 @@ int meta_apply_al(struct format *cfg, char **argv __attribute((unused)), int arg
 unsigned long bm_bytes(const struct md_cpu const *md, uint64_t sectors)
 {
 	unsigned long long bm_bits;
+	unsigned long sectors_per_bit = md->bm_bytes_per_bit >> 9;
 
-	bm_bits = ALIGN(sectors, 8) / (md->bm_bytes_per_bit >> 9);
+	/* we announced 1 PiB as "supported" iirc. */
+	ASSERT(sectors <= (1ULL << (50-9)));
+
+	/* round up storage sectors to full "bitmap sectors per bit", then
+	 * convert to number of bits needed, and round that up to 64bit words
+	 * to ease interoperability between 32bit and 64bit architectures.
+	 */
+	bm_bits = (sectors + sectors_per_bit -1)/sectors_per_bit;
+	bm_bits = ALIGN(bm_bits, 64);
+
+	/* convert to bytes, multiply by number of peers,
+	 * and, because we do all our meta data IO in 4k blocks,
+	 * round up to full 4k
+	 */
 	return ALIGN(bm_bits / 8 * md->max_peers, 4096);
 }
 
