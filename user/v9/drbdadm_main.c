@@ -2907,11 +2907,11 @@ int main(int argc, char **argv)
 			all_resources = 1;
 		else if (cmd->res_name_required)
 			print_usage_and_exit(cmd, "No resource names specified", E_USAGE);
-	} else if (resource_names[0] && resource_names[1]) {
+	} else if (resource_names[0]) {
 		if (!cmd->res_name_required)
 			fprintf(stderr,
 				"This command will ignore resource names!\n");
-		else if (cmd->use_cached_config_file)
+		else if (resource_names[1] && cmd->use_cached_config_file)
 			fprintf(stderr,
 				"You should not use this command with multiple resources!\n");
 	}
