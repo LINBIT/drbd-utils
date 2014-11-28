@@ -204,7 +204,7 @@ case "$1" in
 			*) echo "$M" >&2 ;;
 			esac
 		done
-		for res in $($DRBDSETUP show all | sed -ne 's/^resource \(.*\) {$/\1/p'); do
+		for res in $($DRBDADM -S sh-resources) $($DRBDADM sh-resources); do
 			$DRBDSETUP down "$res"
 		done
 		_udev_settle &> /dev/null
