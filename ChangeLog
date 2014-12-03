@@ -2,6 +2,25 @@ Latest:
 ------
  For even more detail, use "git log" or visit http://git.drbd.org/.
 
+8.9.2XXX
+--------
+  * init script: fixes for stacked resources
+  * fix regression corner cases in bitmap size calculation
+  * allow create-md to initialize peer-max-bio-size to 1M
+  * make transport selectable
+  * introduce an dedicated error code for create transport errors
+  * fix aggregating drbdsetup / drbdmeta exit statii
+  * some documentation fixes (content and build)
+  * added direct-connect command
+  * use node_id as index for peer_md instead of the bitmap_index
+  * move the meta_data disk layout to common code 
+  * drbdadm/meta/usage_cnt: ensure output is visible
+  * drbdsetup: fix arguments for all commands expecting a peer_device
+  * exit codes: redefine E_USAGE to 1 (not 3)
+  * some build changes
+  * init script: on start, first try to load the module
+  * drbdsetup events2: Improve how timestamps are assigned
+
 8.9.2rc1
 --------
   * udev rules (symlinks in /dev/by-res and by-disk) got fixed
