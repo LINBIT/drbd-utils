@@ -109,5 +109,8 @@ extern int dt_minor_of_dev(const char *device);
 extern void dt_print_gc(const uint32_t* gen_cnt);
 extern void dt_pretty_print_gc(const uint32_t* gen_cnt);
 
+extern void initialize_err(void);
+extern int err(const char *format, ...);
+
 
 #endif

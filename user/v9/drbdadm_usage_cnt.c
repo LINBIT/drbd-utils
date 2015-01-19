@@ -73,7 +73,7 @@ void maybe_exec_legacy_drbdadm(char **argv)
 		setenv("DRBD_DONT_WARN_ON_VERSION_MISMATCH", "1", 0);
 		add_lib_drbd_to_path();
 		execvp(drbdadm_83, argv);
-		fprintf(stderr, "execvp() failed to exec %s: %m\n", drbdadm_83);
+		err("execvp() failed to exec %s: %m\n", drbdadm_83);
 #else
 		config_help_legacy("drbdadm", driver_version);
 #endif
@@ -86,7 +86,7 @@ void maybe_exec_legacy_drbdadm(char **argv)
 		setenv("DRBD_DONT_WARN_ON_VERSION_MISMATCH", "1", 0);
 		add_lib_drbd_to_path();
 		execvp(drbdadm_84, argv);
-		fprintf(stderr, "execvp() failed to exec %s: %m\n", drbdadm_84);
+		err("execvp() failed to exec %s: %m\n", drbdadm_84);
 #else
 		config_help_legacy("drbdadm", driver_version);
 #endif
@@ -124,7 +124,7 @@ static void write_node_id(struct node_info *ni)
 	}
 
 	if( fd == -1) {
-		perror("Creation of "NODE_ID_FILE" failed.");
+		err("Creation of "NODE_ID_FILE" failed: %m\n");
 		exit(20);
 	}
 
@@ -143,7 +143,7 @@ static void write_node_id(struct node_info *ni)
 	}
 
 	if( write(fd,&on_disk, size) != size) {
-		perror("Write to "NODE_ID_FILE" failed.");
+		err("Write to "NODE_ID_FILE" failed: %m\n");
 		exit(20);
 	}
 
@@ -310,7 +310,7 @@ static int make_get_request(char *uri) {
 			if (buffer[0] == '\r' || buffer[0] == '\n')
 				writeit = 1;
 		} else {
-			fprintf(stderr,"%s", buffer);
+			err("%s", buffer);
 		}
 	}
 	fclose(sockfd);
@@ -384,28 +384,27 @@ void uc_node(enum usage_count_type type)
 
 	n_comment[0]=0;
 	if (type == UC_ASK ) {
-		fprintf(stderr,
-"\n"
-"\t\t--== This is %s of DRBD ==--\n"
-"Please take part in the global DRBD usage count at http://"HTTP_HOST".\n\n"
-"The counter works anonymously. It creates a random number to identify\n"
-"your machine and sends that random number, along with the kernel and\n"
-"DRBD version, to "HTTP_HOST".\n\n"
-"The benefits for you are:\n"
-" * In response to your submission, the server ("HTTP_HOST") will tell you\n"
-"   how many users before you have installed this version (%s).\n"
-" * With a high counter LINBIT has a strong motivation to\n"
-"   continue funding DRBD's development.\n\n"
-"http://"HTTP_HOST"/cgi-bin/insert_usage.pl?nu="U64"&%s\n\n"
-"In case you want to participate but know that this machine is firewalled,\n"
-"simply issue the query string with your favorite web browser or wget.\n"
-"You can control all of this by setting 'usage-count' in your drbd.conf.\n\n"
-"* You may enter a free form comment about your machine, that gets\n"
-"  used on "HTTP_HOST" instead of the big random number.\n"
-"* If you wish to opt out entirely, simply enter 'no'.\n"
-"* To count this node without comment, just press [RETURN]\n",
-			update ? "an update" : "a new installation",
-			PACKAGE_VERSION,ni.node_uuid, vcs_to_str(&ni.rev));
+		err("\n"
+		    "\t\t--== This is %s of DRBD ==--\n"
+		    "Please take part in the global DRBD usage count at http://"HTTP_HOST".\n\n"
+		    "The counter works anonymously. It creates a random number to identify\n"
+		    "your machine and sends that random number, along with the kernel and\n"
+		    "DRBD version, to "HTTP_HOST".\n\n"
+		    "The benefits for you are:\n"
+		    " * In response to your submission, the server ("HTTP_HOST") will tell you\n"
+		    "   how many users before you have installed this version (%s).\n"
+		    " * With a high counter LINBIT has a strong motivation to\n"
+		    "   continue funding DRBD's development.\n\n"
+		    "http://"HTTP_HOST"/cgi-bin/insert_usage.pl?nu="U64"&%s\n\n"
+		    "In case you want to participate but know that this machine is firewalled,\n"
+		    "simply issue the query string with your favorite web browser or wget.\n"
+		    "You can control all of this by setting 'usage-count' in your drbd.conf.\n\n"
+		    "* You may enter a free form comment about your machine, that gets\n"
+		    "  used on "HTTP_HOST" instead of the big random number.\n"
+		    "* If you wish to opt out entirely, simply enter 'no'.\n"
+		    "* To count this node without comment, just press [RETURN]\n",
+		    update ? "an update" : "a new installation",
+		    PACKAGE_VERSION, ni.node_uuid, vcs_to_str(&ni.rev));
 		r = fgets(answer, ANSWER_SIZE, stdin);
 		if(r && !strcmp(answer,"no\n")) send = 0;
 		url_encode(answer,n_comment);
@@ -418,21 +417,19 @@ void uc_node(enum usage_count_type type)
 	if (send) {
 		write_node_id(&ni);
 
-		fprintf(stderr,
-"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
-"  --==  Thank you for participating in the global usage survey  ==--\n"
-"The server's response is:\n\n");
+		err("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+		    "  --==  Thank you for participating in the global usage survey  ==--\n"
+		    "The server's response is:\n\n");
 		make_get_request(uri);
 		if (type == UC_ASK) {
-			fprintf(stderr,
-"\n"
-"From now on, drbdadm will contact "HTTP_HOST" only when you update\n"
-"DRBD or when you use 'drbdadm create-md'. Of course it will continue\n"
-"to ask you for confirmation as long as 'usage-count' is at its default\n"
-"value of 'ask'.\n\n"
-"Just press [RETURN] to continue: ");
+			err("\n"
+			    "From now on, drbdadm will contact "HTTP_HOST" only when you update\n"
+			    "DRBD or when you use 'drbdadm create-md'. Of course it will continue\n"
+			    "to ask you for confirmation as long as 'usage-count' is at its default\n"
+			    "value of 'ask'.\n\n"
+			    "Just press [RETURN] to continue: ");
 			if (fgets(answer, 9, stdin) == NULL)
-				fprintf(stderr, "Could not read answer\n");
+				err("Could not read answer\n");
 		}
 	}
 }
@@ -453,7 +450,7 @@ static char* run_adm_drbdmeta(const struct cfg_ctx *ctx, const char *arg_overrid
 
 	pid = fork();
 	if(pid == -1) {
-		fprintf(stderr,"Can not fork\n");
+		err("Can not fork\n");
 		exit(E_EXEC_ERROR);
 	}
 	if(pid == 0) {
@@ -552,19 +549,17 @@ int adm_create_md(const struct cfg_ctx *ctx)
 
 		if( global_options.usage_count == UC_YES ) send = 1;
 		if( global_options.usage_count == UC_ASK ) {
-			fprintf(stderr,
-"\n"
-"\t\t--== Creating metadata ==--\n"
-"As with nodes, we count the total number of devices mirrored by DRBD\n"
-"at http://"HTTP_HOST".\n\n"
-"The counter works anonymously. It creates a random number to identify\n"
-"the device and sends that random number, along with the kernel and\n"
-"DRBD version, to "HTTP_HOST".\n\n"
-"http://"HTTP_HOST"/cgi-bin/insert_usage.pl?nu="U64"&ru="U64"&rs="U64"\n\n"
-"* If you wish to opt out entirely, simply enter 'no'.\n"
-"* To continue, just press [RETURN]\n",
-				ni.node_uuid,device_uuid,device_size
-				);
+			err("\n"
+			    "\t\t--== Creating metadata ==--\n"
+			    "As with nodes, we count the total number of devices mirrored by DRBD\n"
+			    "at http://"HTTP_HOST".\n\n"
+			    "The counter works anonymously. It creates a random number to identify\n"
+			    "the device and sends that random number, along with the kernel and\n"
+			    "DRBD version, to "HTTP_HOST".\n\n"
+			    "http://"HTTP_HOST"/cgi-bin/insert_usage.pl?nu="U64"&ru="U64"&rs="U64"\n\n"
+			    "* If you wish to opt out entirely, simply enter 'no'.\n"
+			    "* To continue, just press [RETURN]\n",
+			    ni.node_uuid, device_uuid, device_size);
 			r = fgets(answer, ANSWER_SIZE, stdin);
 			if(r && strcmp(answer,"no\n")) send = 1;
 		}

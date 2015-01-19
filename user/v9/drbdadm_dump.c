@@ -60,12 +60,12 @@ char *esc(char *str)
 				*e++ = '\\';
 			}
 			if (e - buffer >= 1022) {
-				fprintf(stderr, "string too long.\n");
+				err("string too long.\n");
 				exit(E_SYNTAX);
 			}
 			*e++ = *ue++;
 			if (e - buffer >= 1022) {
-				fprintf(stderr, "string too long.\n");
+				err("string too long.\n");
 				exit(E_SYNTAX);
 			}
 		}
@@ -90,7 +90,7 @@ static char *esc_xml(char *str)
 			if (*ue == '"' || *ue == '\\') {
 				*e++ = '\\';
 				if (e - buffer >= 1021) {
-					fprintf(stderr, "string too long.\n");
+					err("string too long.\n");
 					exit(E_SYNTAX);
 				}
 				*e++ = *ue++;
@@ -109,14 +109,14 @@ static char *esc_xml(char *str)
 					strcpy(e, "&amp;");
 					e += 5;
 				} else {
-					fprintf(stderr, "string too long.\n");
+					err("string too long.\n");
 					exit(E_SYNTAX);
 				}
 				ue++;
 			} else {
 				*e++ = *ue++;
 				if (e - buffer >= 1022) {
-					fprintf(stderr, "string too long.\n");
+					err("string too long.\n");
 					exit(E_SYNTAX);
 				}
 			}

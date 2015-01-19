@@ -21,6 +21,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <arpa/inet.h>
+#include <syslog.h>
 
 #include "config.h"
 #include "drbdadm.h"
@@ -776,4 +777,46 @@ new_strtoll(const char *s, const char def_unit, unsigned long long *rv)
 	/* then convert */
 	*rv = *rv << shift;
 	return MSE_OK;
+}
+
+struct err_state {
+	unsigned int initialized:1;
+	unsigned int stderr_available:1;
+};
+
+static struct err_state err_state = { /* all zero */ };
+
+void initialize_err(void)
+{
+	int err;
+
+	err = fcntl(STDERR_FILENO, F_GETFL);
+	if (err < 0 && errno == EBADF) {
+		err_state.stderr_available = 0;
+		openlog(NULL, LOG_PID, LOG_SYSLOG);
+	} else {
+		err_state.stderr_available = 1;
+	}
+}
+
+int err(const char *format, ...)
+{
+	va_list ap;
+	int n;
+
+	if (err_state.initialized)
+		initialize_err();
+
+	va_start(ap, format);
+
+	if (err_state.stderr_available) {
+		n = vfprintf(stderr, format, ap);
+	} else {
+		vsyslog(LOG_ERR, format, ap);
+		n = 1;
+	}
+
+	va_end(ap);
+
+	return n;
 }
