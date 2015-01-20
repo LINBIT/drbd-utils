@@ -2,18 +2,18 @@ Latest:
 ------
  For even more detail, use "git log" or visit http://git.drbd.org/.
 
-8.9.2XXX
+8.9.2rc2
 --------
+  * drbdadm 9: Log errors to syslog if stderr is not available
   * init script: fixes for stacked resources
   * fix regression corner cases in bitmap size calculation
   * allow create-md to initialize peer-max-bio-size to 1M
   * make transport selectable
-  * introduce an dedicated error code for create transport errors
   * fix aggregating drbdsetup / drbdmeta exit statii
   * some documentation fixes (content and build)
   * added direct-connect command
-  * use node_id as index for peer_md instead of the bitmap_index
-  * move the meta_data disk layout to common code 
+  * incompatible drbd-9 metadata format changeuse: node_id as index for
+    peer_md instead of the bitmap_index
   * drbdadm/meta/usage_cnt: ensure output is visible
   * drbdsetup: fix arguments for all commands expecting a peer_device
   * exit codes: redefine E_USAGE to 1 (not 3)
