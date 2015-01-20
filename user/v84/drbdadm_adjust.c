@@ -181,7 +181,7 @@ static int addr_equal(struct d_resource* conf, struct d_resource* running)
 		!strcmp(peer_port, running->peer->port) &&
 		!strcmp(peer_af, running->peer->address_family);
 
-	if (verbose > 2)
+	if (!equal && verbose > 2)
 		fprintf(stderr, "Network addresses differ:\n"
 			"\trunning: %s:%s:%s -- %s:%s:%s\n"
 			"\t config: %s:%s:%s -- %s:%s:%s\n",
