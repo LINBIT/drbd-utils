@@ -326,6 +326,10 @@ management utility.
 %setup -q -n drbd-utils-%{version}
 
 %build
+# rebuild configure...
+aclocal
+autoheader
+autoconf
 %configure \
     %{?_without_udev} \
     %{?_without_xen} \
