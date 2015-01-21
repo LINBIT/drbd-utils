@@ -780,12 +780,12 @@ new_strtoll(const char *s, const char def_unit, unsigned long long *rv)
 }
 
 struct err_state {
-	unsigned int initialized:1;
 	unsigned int stderr_available:1;
 };
 
 static struct err_state err_state = { /* all zero */ };
 
+/* Call initialize_err() before creating any FD */
 void initialize_err(void)
 {
 	int err;
@@ -803,9 +803,6 @@ int err(const char *format, ...)
 {
 	va_list ap;
 	int n;
-
-	if (err_state.initialized)
-		initialize_err();
 
 	va_start(ap, format);
 
