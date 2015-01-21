@@ -242,8 +242,12 @@ int lk_bdev_save(const unsigned minor, const struct bdev_info *bd)
 	int ok = 0;
 
 	fp = fopen(path, "w");
+	/* Do not use stderr (or stdout) while having any FD open for write.
+	   We might get called with stdin, stdout and stderr closed. then
+	   fp might be on FD 2. Using stderr would send the text to the file.
+	   Work around: Error messages after closing the writebale FD. */
 	if (!fp)
-		goto fail;
+		goto fail_no_fp;
 
 	ok = fprintf(fp, "%llu\t%s\n",
 		(unsigned long long) bd->bd_size, bd->bd_name);
@@ -251,12 +255,15 @@ int lk_bdev_save(const unsigned minor, const struct bdev_info *bd)
 		goto fail;
 	if (bd->bd_uuid)
 		fprintf(fp, "uuid:\t"X64(016)"\n", bd->bd_uuid);
-	ok =       0 == fflush(fp);
-	ok = ok && 0 == fsync(fileno(fp));
-	ok = ok && 0 == fclose(fp);
 
-	if (!ok)
-fail:		/* MAYBE: unlink. But maybe partial info is better than no info? */
+ fail:
+	fflush(fp);
+	fsync(fileno(fp));
+	fclose(fp);
+
+ fail_no_fp:
+	if (ok <= 0)
+		/* MAYBE: unlink. But maybe partial info is better than no info? */
 		fprintf(stderr, "lk_bdev_save(%s) failed: %m\n", path);
 
 	free(path);
