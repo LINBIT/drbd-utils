@@ -2641,7 +2641,10 @@ int v07_style_md_open(struct format *cfg)
 	}
 
 	cfg->bd_size = bdev_size(cfg->md_fd);
-	if ((cfg->bd_size >> 9) < MD_BM_OFFSET_07) {
+	/* check_for_existing_data() wants to read that much,
+	 * so having less than that doesn't make sense.
+	 * It's only 68kB anyway! */
+	if (cfg->bd_size < SO_MUCH) {
 		fprintf(stderr, "%s is only %llu bytes. That's not enough.\n",
 			cfg->md_device_name, (long long unsigned)cfg->bd_size);
 		exit(10);
