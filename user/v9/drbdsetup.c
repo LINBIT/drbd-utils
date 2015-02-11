@@ -498,9 +498,8 @@ struct drbd_cmd commands[] = {
 	 .ctx = &resource_options_ctx,
 	 .summary = "Create a new resource." },
 
-	/* only payload is resource name and volume number */
 	{"new-minor", CTX_RESOURCE | CTX_MINOR | CTX_VOLUME | CTX_MULTIPLE_ARGUMENTS,
-		DRBD_ADM_NEW_MINOR, DRBD_NLA_CFG_CONTEXT,
+		DRBD_ADM_NEW_MINOR, DRBD_NLA_DEVICE_CONF,
 		F_CONFIG_CMD,
 	 .ctx = &device_options_ctx,
 	 .summary = "Create a new replicated device within a resource." },
