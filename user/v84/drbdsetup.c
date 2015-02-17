@@ -180,6 +180,7 @@ struct drbd_cmd {
 	int (*show_function)(const struct drbd_cmd*, struct genl_info *, void *u_prt);
 	struct option *options;
 	bool missing_ok;
+	bool warn_on_missing;
 	bool continuous_poll;
 	bool wait_for_connect_timeouts;
 	bool set_defaults;
@@ -360,7 +361,8 @@ const struct drbd_cmd commands[] = {
 		F_CONFIG_CMD,
 	 .ctx = &verify_cmd_ctx },
 	{"down", CTX_RESOURCE, DRBD_ADM_DOWN, NO_PAYLOAD, down_cmd,
-		.missing_ok = true, },
+		.missing_ok = true,
+		.warn_on_missing = true, },
 	{"state", CTX_MINOR, F_GET_CMD(role_scmd) },
 	{"role", CTX_MINOR, F_GET_CMD(role_scmd),
 		.lockless = true, },
@@ -913,8 +915,15 @@ retry_recv:
 			struct drbd_genlmsghdr *dh = genlmsg_data(nlmsg_data(nlh));
 			ASSERT(dh->minor == minor);
 			rv = dh->ret_code;
-			if (rv == ERR_RES_NOT_KNOWN && cm->missing_ok)
-				rv = NO_ERROR;
+
+			if (rv == ERR_RES_NOT_KNOWN) {
+				if (cm->warn_on_missing && isatty(STDERR_FILENO))
+					fprintf(stderr, "Resource unknown");
+
+				if (cm->missing_ok)
+					rv = NO_ERROR;
+			}
+
 			drbd_tla_parse(nlh);
 		} else {
 			if (received == -E_RCV_ERROR_REPLY && !errno)
@@ -1389,8 +1398,13 @@ static int generic_get(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				}
 			}
 			rv = dh->ret_code;
-			if (rv == ERR_MINOR_INVALID && cm->missing_ok)
-				rv = NO_ERROR;
+			if (rv == ERR_MINOR_INVALID) {
+				if (cm->warn_on_missing)
+					fprintf(stderr, "Minor invalid");
+
+				if (cm->missing_ok)
+					rv = NO_ERROR;
+			}
 			if (rv != NO_ERROR)
 				goto out2;
 			err = cm->show_function(cm, &info, u_ptr);

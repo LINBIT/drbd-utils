@@ -224,6 +224,7 @@ struct drbd_cmd {
 	int (*show_function)(struct drbd_cmd*, struct genl_info *, void *u_ptr);
 	struct option *options;
 	bool missing_ok;
+	bool warn_on_missing;
 	bool continuous_poll;
 	bool set_defaults;
 	bool lockless;
@@ -427,6 +428,7 @@ struct drbd_cmd commands[] = {
 	 .summary = "Verify the data on a lower-level device against a peer device." },
 	{"down", CTX_RESOURCE | CTX_ALL, DRBD_ADM_DOWN, NO_PAYLOAD, down_cmd,
 	 .missing_ok = true,
+	 .warn_on_missing = true,
 	 .summary = "Take a resource down." },
 	{"role", CTX_RESOURCE, 0, NO_PAYLOAD, role_cmd,
 	 .lockless = true,
@@ -1201,8 +1203,13 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 			}
 		}
 	}
-	if (rv == ERR_RES_NOT_KNOWN && cm->missing_ok)
-		rv = NO_ERROR;
+	if (rv == ERR_RES_NOT_KNOWN) {
+		if (cm->warn_on_missing && isatty(STDERR_FILENO))
+			fprintf(stderr, "Resource unknown");
+
+		if (cm->missing_ok)
+			rv = NO_ERROR;
+	}
 	drbd_tla_parse(nlh);
 
 error:
