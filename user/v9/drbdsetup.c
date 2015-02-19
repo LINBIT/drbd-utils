@@ -403,6 +403,12 @@ struct drbd_cmd commands[] = {
 	 .ctx = &resource_options_ctx,
 	 .summary = "Change the resource options of an existing resource." },
 
+	{"peer-device-options", CTX_PEER_DEVICE, DRBD_ADM_CHG_PEER_DEVICE_OPTS,
+		DRBD_NLA_PEER_DEVICE_OPTS, F_CONFIG_CMD,
+	 .set_defaults = true,
+	 .ctx = &peer_device_options_ctx,
+	 .summary = "Change peer-device options." },
+
 	{"new-current-uuid", CTX_MINOR, DRBD_ADM_NEW_C_UUID, DRBD_NLA_NEW_C_UUID_PARMS,
 		F_CONFIG_CMD,
 	 .ctx = &new_current_uuid_cmd_ctx,
