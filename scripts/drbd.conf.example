@@ -211,6 +211,17 @@ resource drbd_9_two_connection {
 			outside 192.168.31.3:7800;
 		}
 		net { protocol A; }
+
+		volume 0 {
+			disk {
+				resync-rate 10M;
+				c-plan-ahead 20;
+				c-delay-target 10;
+				c-fill-target 100;
+				c-min-rate 10;
+				c-max-rate 100M;
+			}
+		}
 	}
 
 	connection {

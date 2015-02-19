@@ -1447,6 +1447,7 @@ struct connection *alloc_connection()
 	}
 	STAILQ_INIT(&conn->hname_address_pairs);
 	STAILQ_INIT(&conn->net_options);
+	STAILQ_INIT(&conn->peer_devices);
 
 	return conn;
 }
@@ -1456,9 +1457,32 @@ void free_connection(struct connection *connection)
 	free(connection);
 }
 
+static struct peer_device *parse_peer_device(int vnr)
+{
+	struct peer_device *peer_device;
+
+	peer_device = calloc(1, sizeof(*peer_device));
+	if (!peer_device)  {
+		err("calloc: %m\n");
+		exit(E_EXEC_ERROR);
+	}
+
+	peer_device->vnr = vnr;
+	peer_device->config_line = line;
+
+	EXP('{');
+	EXP(TK_DISK);
+	EXP('{');
+	peer_device->pd_options = parse_options(0, 0, TK_PEER_DEVICE);
+	EXP('}');
+
+	return peer_device;
+}
+
 static struct connection *parse_connection(enum pr_flags flags)
 {
 	struct connection *conn;
+	struct peer_device *peer_device;
 	int hosts = 0, token;
 
 	conn = alloc_connection();
@@ -1501,6 +1525,12 @@ static struct connection *parse_connection(enum pr_flags flags)
 			break;
 		case TK_SKIP:
 			parse_skip();
+			break;
+		case TK_VOLUME:
+			EXP(TK_INTEGER);
+			peer_device = parse_peer_device(atoi(yylval.txt));
+			peer_device->connection = conn;
+			STAILQ_INSERT_TAIL(&conn->peer_devices, peer_device, connection_link);
 			break;
 		case '}':
 			return conn;

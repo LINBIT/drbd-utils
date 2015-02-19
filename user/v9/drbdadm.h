@@ -57,6 +57,25 @@ struct d_proxy_info
 	struct options plugins; /* named proxy_plugins in other places */
 };
 
+struct connection;
+struct d_volume;
+
+struct peer_device
+{
+	int vnr; /* parsed */
+	struct options pd_options; /* parsed */
+	int config_line; /* parsed here */
+
+	struct connection *connection;
+	struct d_volume *volume; /* set in post_parese() */
+
+	STAILQ_ENTRY(peer_device) connection_link; /* added during parsing */
+	STAILQ_ENTRY(peer_device) volume_link; /* added in post_parse() */
+
+	unsigned int implicit:1; /* Do not dump by default */
+};
+STAILQ_HEAD(peer_devices, peer_device);
+
 struct d_volume
 {
 	unsigned vnr;
@@ -130,6 +149,7 @@ struct connection
 	struct hname_address_pairs hname_address_pairs; /* parsed here */
 	int config_line; /* parsed here */
 
+	struct peer_devices peer_devices;
 	struct d_host_info *peer;
 	struct d_address *my_address; /* determined in set_me_in_resource() */
 	struct d_address *peer_address;

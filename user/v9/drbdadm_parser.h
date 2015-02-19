@@ -133,7 +133,8 @@ enum yytokentype {
 	TK_VIA,
 	TK__GROUPING_BASE = 0x1000,
 	TK_SYNCER_OLD_OPT = 0x2000, /* Might be or'ed to TK_[NET|DISK]_[OPTION|SWITCH] */
-	TK_PROXY_GROUP = 0x3000, /* Gets or'ed to some options */
+	TK_PROXY_GROUP =    0x3000, /* Gets or'ed to some options */
+	TK_PEER_DEVICE =    0x4000, /* A peer_device option */
 };
 
 /* The higher bits define one or more token groups. */
