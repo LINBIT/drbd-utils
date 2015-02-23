@@ -2534,7 +2534,8 @@ static void peer_device_status(struct peer_devices_list *peer_device, bool singl
 		wrap_printf(indent, "volume:%d", peer_device->ctx.ctx_volume);
 		indent = 8;
 	}
-	if (opt_verbose || peer_device->info.peer_repl_state > C_CONNECTED) {
+	/* this > C_WF_REPORT_PARAMS is > L_ESTABLISHED in DRBD 9 */
+	if (opt_verbose || peer_device->info.peer_repl_state > C_WF_REPORT_PARAMS) {
 		enum drbd_conns repl_state = peer_device->info.peer_repl_state;
 
 		wrap_printf(indent, " replication:%s%s%s",
@@ -2543,8 +2544,9 @@ static void peer_device_status(struct peer_devices_list *peer_device, bool singl
 			    repl_state_color_stop(repl_state));
 		indent = 8;
 	}
+	/* this C_WF_REPORT_PARAMS is C_CONNECTED resp. L_OFF in DRBD 9 */
 	if (opt_verbose || opt_statistics ||
-	    peer_device->info.peer_repl_state != C_CONNECTED ||
+	    peer_device->info.peer_repl_state != C_WF_REPORT_PARAMS ||
 	    peer_device->info.peer_disk_state != D_UNKNOWN) {
 		enum drbd_disk_state disk_state = peer_device->info.peer_disk_state;
 
@@ -2589,42 +2591,20 @@ static void connection_status(struct connections_list *connection,
 			      struct peer_devices_list *peer_devices,
 			      bool single_device)
 {
-	char local_addr[ADDRESS_STR_MAX], peer_addr[ADDRESS_STR_MAX];
+	wrap_printf(2, "%s", "peer" /* connection->ctx.ctx_conn_name */);
 
-#if 0
-	if (connection->ctx.ctx_conn_name_len)
-		wrap_printf(2, "%s", connection->ctx.ctx_conn_name);
-#endif
+	/* We do not want the IP-pair information */
+	/* We do not have any node-id information */
 
-	if (opt_verbose || /* connection->ctx.ctx_conn_name_len == 0 */ true) {
-		if (!address_str(local_addr, connection->ctx.ctx_my_addr, connection->ctx.ctx_my_addr_len))
-			strcpy(local_addr, "?");
-		if (!address_str(peer_addr, connection->ctx.ctx_peer_addr, connection->ctx.ctx_peer_addr_len))
-			strcpy(peer_addr, "?");
-		/* FIXME: Reject undefined endpoints once the kernel stops creating NULL connections. */
-		if (/* connection->ctx.ctx_conn_name_len == 0 */ true)
-			wrap_printf(2, "local:%s", local_addr);
-		else
-			wrap_printf(6, " local:%s", local_addr);
-		wrap_printf(6, " peer:%s", peer_addr);
-	}
-#if 0
-	if (opt_verbose) {
-		struct nlattr *nla;
-
-		nla = nla_find_nested(connection->net_conf, __nla_type(T_peer_node_id));
-		if (nla)
-			wrap_printf(6, " node-id:%d", *(uint32_t *)nla_data(nla));
-	}
-#endif
-	if (opt_verbose || connection->info.conn_connection_state != C_CONNECTED) {
+	/* this C_WF_REPORT_PARAMS is C_CONNECTED in DRBD 9 */
+	if (opt_verbose || connection->info.conn_connection_state < C_WF_REPORT_PARAMS) {
 		enum drbd_conns cstate = connection->info.conn_connection_state;
 		wrap_printf(6, " connection:%s%s%s",
 			    cstate_color_start(cstate),
 			    drbd_conn_str(cstate),
 			    cstate_color_stop(cstate));
 	}
-	if (opt_verbose || connection->info.conn_connection_state == C_CONNECTED) {
+	if (opt_verbose || connection->info.conn_connection_state == C_WF_REPORT_PARAMS) {
 		enum drbd_role role = connection->info.conn_role;
 		wrap_printf(6, " role:%s%s%s",
 			    role_color_start(role, false),
@@ -2634,7 +2614,7 @@ static void connection_status(struct connections_list *connection,
 	if (opt_verbose || connection->statistics.conn_congested > 0)
 		print_connection_statistics(6, NULL, &connection->statistics, wrap_printf);
 	wrap_printf(0, "\n");
-	if (opt_verbose || opt_statistics || connection->info.conn_connection_state == C_CONNECTED)
+	if (opt_verbose || opt_statistics || connection->info.conn_connection_state == C_WF_REPORT_PARAMS)
 		peer_devices_status(&connection->ctx, peer_devices, single_device);
 }
 
