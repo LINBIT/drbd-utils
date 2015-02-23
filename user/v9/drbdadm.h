@@ -334,6 +334,7 @@ extern struct d_resource* parse_resource_for_adjust(const struct cfg_ctx *ctx);
 extern struct d_resource* parse_resource(char*, enum pr_flags);
 extern void post_parse(struct resources *, enum pp_flags);
 extern struct connection *alloc_connection();
+extern struct d_volume *alloc_volume(void);
 extern void free_connection(struct connection *connection);
 extern void expand_common(void);
 extern void global_validate_maybe_expand_die_if_invalid(int expand, enum pp_flags flags);

@@ -492,7 +492,7 @@ static void inherit_volumes(struct volumes *from, struct d_host_info *host)
 	for_each_volume(s, from) {
 		t = find_volume(&host->volumes, s->vnr);
 		if (!t) {
-			t = calloc(1, sizeof(struct d_volume));
+			t = alloc_volume();
 			t->device_minor = -1;
 			t->vnr = s->vnr;
 			insert_volume(&host->volumes, t);
