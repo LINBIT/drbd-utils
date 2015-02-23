@@ -830,6 +830,56 @@ static void must_have_two_hosts(struct d_resource *res, struct connection *con)
 	}
 }
 
+static struct peer_device *find_peer_device(struct connection *conn, int vnr)
+{
+	struct peer_device *peer_device;
+
+	STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
+		if (peer_device->vnr == vnr)
+			return peer_device;
+	}
+
+	return NULL;
+}
+
+static void fixup_peer_devices(struct d_resource *res)
+{
+	struct connection *conn;
+	struct d_host_info *some_host = STAILQ_FIRST(&res->all_hosts);
+	/* At this point all hosts of the resource have the same set of volumes */
+
+	for_each_connection(conn, &res->connections) {
+		struct peer_device *peer_device;
+		struct d_volume *vol;
+
+		STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
+
+			vol = volume_by_vnr(&some_host->volumes, peer_device->vnr);
+			if (!vol) {
+				err("%s:%d: Resouce %s: There is a reference to a volume %d, that"
+				    "is not known in this resource\n",
+				    res->config_file, peer_device->config_line, res->name,
+				    peer_device->vnr);
+				config_valid = 0;
+			}
+			peer_device->volume = vol;
+			STAILQ_INSERT_TAIL(&vol->peer_devices, peer_device, volume_link);
+		}
+		for_each_volume(vol, &some_host->volumes) {
+			peer_device = find_peer_device(conn, vol->vnr);
+			if (peer_device)
+				continue;
+			peer_device = alloc_peer_device();
+			peer_device->vnr = vol->vnr;
+			peer_device->implicit = 1;
+			peer_device->connection = conn;
+			peer_device->volume = vol;
+			STAILQ_INSERT_TAIL(&conn->peer_devices, peer_device, connection_link);
+			STAILQ_INSERT_TAIL(&vol->peer_devices, peer_device, volume_link);
+		}
+	}
+}
+
 void post_parse(struct resources *resources, enum pp_flags flags)
 {
 	struct d_resource *res;
@@ -890,6 +940,9 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 	for_each_resource(res, resources)
 		if (res->stacked_on_one)
 			set_disk_in_res(res);
+
+	for_each_resource(res, resources)
+		fixup_peer_devices(res);
 }
 
 static void expand_opts(struct options *common, struct options *options)
@@ -934,6 +987,7 @@ void expand_common(void)
 		if (common) {
 			expand_opts(&common->net_options, &res->net_options);
 			expand_opts(&common->disk_options, &res->disk_options);
+			expand_opts(&common->pd_options, &res->pd_options);
 			expand_opts(&common->startup_options, &res->startup_options);
 			expand_opts(&common->proxy_options, &res->proxy_options);
 			expand_opts(&common->handlers, &res->handlers);
@@ -948,8 +1002,10 @@ void expand_common(void)
 		/* now that common disk options (if any) have been propagated to the
 		 * resource level, further propagate them to the volume level. */
 		for_each_host(h, &res->all_hosts) {
-			for_each_volume(vol, &h->volumes)
+			for_each_volume(vol, &h->volumes) {
 				expand_opts(&res->disk_options, &vol->disk_options);
+				expand_opts(&res->pd_options, &vol->pd_options);
+			}
 		}
 
 		/* now from all volume/disk-options on resource level to host level */
@@ -957,6 +1013,7 @@ void expand_common(void)
 			for_each_host(h, &res->all_hosts) {
 				host_vol = volume_by_vnr(&h->volumes, vol->vnr);
 				expand_opts(&vol->disk_options, &host_vol->disk_options);
+				expand_opts(&vol->pd_options, &host_vol->pd_options);
 			}
 		}
 
@@ -973,6 +1030,16 @@ void expand_common(void)
 
 				expand_opts(&res->proxy_options, &ha->proxy->options);
 				expand_opts(&res->proxy_plugins, &ha->proxy->plugins);
+			}
+		}
+
+		/* inherit peer_device options from connections to peer_devices AND
+		   tie the peer_device options from the volume to peer_devices */
+		for_each_connection(conn, &res->connections) {
+			struct peer_device *peer_device;
+			STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
+				expand_opts(&conn->pd_options, &peer_device->pd_options);
+				expand_opts(&peer_device->volume->pd_options, &peer_device->pd_options);
 			}
 		}
 	}

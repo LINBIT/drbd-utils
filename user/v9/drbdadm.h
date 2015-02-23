@@ -89,6 +89,7 @@ struct d_volume
 	STAILQ_ENTRY(d_volume) link;
 	struct options disk_options; /* Additional per volume options */
 	struct options pd_options; /* peer device options */
+	struct peer_devices peer_devices;
 
 	/* Do not dump an explicit volume section */
 	unsigned int implicit :1 ;
@@ -335,6 +336,7 @@ extern struct d_resource* parse_resource(char*, enum pr_flags);
 extern void post_parse(struct resources *, enum pp_flags);
 extern struct connection *alloc_connection();
 extern struct d_volume *alloc_volume(void);
+extern struct peer_device *alloc_peer_device();
 extern void free_connection(struct connection *connection);
 extern void expand_common(void);
 extern void global_validate_maybe_expand_die_if_invalid(int expand, enum pp_flags flags);

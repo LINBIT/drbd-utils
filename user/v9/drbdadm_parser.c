@@ -953,6 +953,7 @@ struct d_volume *alloc_volume(void)
 
 	STAILQ_INIT(&vol->disk_options);
 	STAILQ_INIT(&vol->pd_options);
+	STAILQ_INIT(&vol->peer_devices);
 
 	return vol;
 }
@@ -1489,7 +1490,7 @@ void free_connection(struct connection *connection)
 	free(connection);
 }
 
-static struct peer_device *parse_peer_device(int vnr)
+struct peer_device *alloc_peer_device()
 {
 	struct peer_device *peer_device;
 
@@ -1498,7 +1499,16 @@ static struct peer_device *parse_peer_device(int vnr)
 		err("calloc: %m\n");
 		exit(E_EXEC_ERROR);
 	}
+	STAILQ_INIT(&peer_device->pd_options);
 
+	return peer_device;
+}
+
+static struct peer_device *parse_peer_device(int vnr)
+{
+	struct peer_device *peer_device;
+
+	peer_device = alloc_peer_device();
 	peer_device->vnr = vnr;
 	peer_device->config_line = line;
 
