@@ -212,9 +212,6 @@ static int print_broadcast_events(const struct drbd_cmd *, struct genl_info *, v
 static int w_connected_state(const struct drbd_cmd *, struct genl_info *, void *u_ptr);
 static int w_synced_state(const struct drbd_cmd *, struct genl_info *, void *u_ptr);
 
-#define ADDRESS_STR_MAX 256
-static char *address_str(char *buffer, void* address, int addr_len);
-
 // convert functions for arguments
 static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 static int conv_md_idx(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
@@ -2725,57 +2722,9 @@ static int status_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	return 0;
 }
 
-static char *af_to_str(int af)
-{
-	if (af == AF_INET)
-		return "ipv4";
-	else if (af == AF_INET6)
-		return "ipv6";
-	/* AF_SSOCKS typically is 27, the same as AF_INET_SDP.
-	 * But with warn_and_use_default = 0, it will stay at -1 if not available.
-	 * Just keep the test on ssocks before the one on SDP (which is hard-coded),
-	 * and all should be fine.  */
-	else if (af == get_af_ssocks(0))
-		return "ssocks";
-	else if (af == AF_INET_SDP)
-		return "sdp";
-	else return "unknown";
-}
-
-static char *address_str(char *buffer, void* address, int addr_len)
-{
-	union {
-		struct sockaddr     addr;
-		struct sockaddr_in  addr4;
-		struct sockaddr_in6 addr6;
-	} a;
-
-	/* avoid alignment issues on certain platforms (e.g. armel) */
-	memset(&a, 0, sizeof(a));
-	memcpy(&a.addr, address, addr_len);
-	if (a.addr.sa_family == AF_INET
-	|| a.addr.sa_family == get_af_ssocks(0)
-	|| a.addr.sa_family == AF_INET_SDP) {
-		snprintf(buffer, ADDRESS_STR_MAX, "%s:%s:%u",
-			 af_to_str(a.addr4.sin_family),
-			 inet_ntoa(a.addr4.sin_addr),
-			 ntohs(a.addr4.sin_port));
-		return buffer;
-	} else if (a.addr.sa_family == AF_INET6) {
-		char buffer2[INET6_ADDRSTRLEN];
-		snprintf(buffer, ADDRESS_STR_MAX, "%s:[%s]:%u",
-		        af_to_str(a.addr6.sin6_family),
-		        inet_ntop(a.addr6.sin6_family, &a.addr6.sin6_addr, buffer2, INET6_ADDRSTRLEN),
-		        ntohs(a.addr6.sin6_port));
-		return buffer;
-	} else
-		return NULL;
-}
-
 static int event_key(char *key, int size, const char *name, unsigned minor,
 		     struct drbd_cfg_context *ctx)
 {
-	char addr[ADDRESS_STR_MAX];
 	int ret, pos = 0;
 
 	ret = snprintf(key + pos, size,
@@ -2794,32 +2743,11 @@ static int event_key(char *key, int size, const char *name, unsigned minor,
 		if (size)
 			size -= ret;
 	}
-#if 0
-	/* FIXME */
-	if (ctx->ctx_conn_name_len) {
-		ret = snprintf(key + pos, size,
-			       " conn-name:%s", ctx->ctx_conn_name);
-		if (ret < 0)
-			return ret;
-		pos += ret;
-		if (size)
-			size -= ret;
-	}
-#endif
-	if (ctx->ctx_my_addr_len &&
-	    address_str(addr, ctx->ctx_my_addr, ctx->ctx_my_addr_len)) {
-		ret = snprintf(key + pos, size,
-			      " local:%s", addr);
-		if (ret < 0)
-			return ret;
-		pos += ret;
-		if (size)
-			size -= ret;
-	}
-	if (ctx->ctx_peer_addr_len &&
-	    address_str(addr, ctx->ctx_peer_addr, ctx->ctx_peer_addr_len)) {
-		ret = snprintf(key + pos, size,
-			      " peer:%s", addr);
+	/* Always use "peer" as connection name,
+	 * and print it if ctx has peer address set.
+	 * Do not show IP address pairs */
+	if (ctx->ctx_peer_addr_len) {
+		ret = snprintf(key + pos, size, " conn-name:%s", "peer");
 		if (ret < 0)
 			return ret;
 		pos += ret;
