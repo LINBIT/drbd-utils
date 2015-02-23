@@ -1469,6 +1469,7 @@ struct connection *alloc_connection()
 	STAILQ_INIT(&conn->hname_address_pairs);
 	STAILQ_INIT(&conn->net_options);
 	STAILQ_INIT(&conn->peer_devices);
+	STAILQ_INIT(&conn->pd_options);
 
 	return conn;
 }
@@ -1546,6 +1547,10 @@ static struct connection *parse_connection(enum pr_flags flags)
 			break;
 		case TK_SKIP:
 			parse_skip();
+			break;
+		case TK_DISK:
+			EXP('{');
+			conn->pd_options = parse_options(0, 0, TK_PEER_DEVICE);
 			break;
 		case TK_VOLUME:
 			EXP(TK_INTEGER);

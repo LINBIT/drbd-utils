@@ -357,6 +357,7 @@ static void dump_connection(struct connection *conn)
 	}
 
 	dump_options("net", &conn->net_options);
+	dump_options("disk", &conn->pd_options);
 	STAILQ_FOREACH(pd, &conn->peer_devices, connection_link) {
 		if (pd->implicit && !verbose)
 			continue;
@@ -557,6 +558,7 @@ static void dump_connection_xml(struct connection *conn)
 	}
 
 	dump_options_xml("net", &conn->net_options);
+	dump_options_xml("disk", &conn->pd_options);
 	STAILQ_FOREACH(pd, &conn->peer_devices, connection_link) {
 		if (pd->implicit && !verbose)
 			continue;

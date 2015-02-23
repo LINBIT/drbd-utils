@@ -159,6 +159,7 @@ struct connection
 	struct d_proxy_info *peer_proxy;
 
 	struct options net_options; /* parsed here, inherited from res, used here */
+	struct options pd_options; /* parsed here, inherited into the peer_devices */
 	unsigned int ignore:1;
 	/* ignore_tmp is a flag that has the same semantic as ignore,
 	 * but the user is free to manipulate it and run checks on it
