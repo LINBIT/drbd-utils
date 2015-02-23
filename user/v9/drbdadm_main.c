@@ -121,6 +121,7 @@ static int adm_drbdsetup(const struct cfg_ctx *);
 static int adm_invalidate(const struct cfg_ctx *);
 static int __adm_drbdsetup_silent(const struct cfg_ctx *ctx);
 static int adm_forget_peer(const struct cfg_ctx *);
+static int adm_peer_device(const struct cfg_ctx *);
 
 int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check);
 
@@ -328,6 +329,8 @@ static struct adm_cmd role_cmd = {"role", adm_drbdsetup, ACF1_RESNAME};
 static struct adm_cmd cstate_cmd = {"cstate", adm_drbdsetup, ACF1_DISCONNECT};
 static struct adm_cmd dstate_cmd = {"dstate", adm_setup_and_meta, ACF1_DEFAULT .disk_required = 1};
 static struct adm_cmd status_cmd = {"status", adm_drbdsetup, .show_in_usage = 1, .uc_dialog = 1};
+static struct adm_cmd peer_device_options_cmd = {"peer-device-options", adm_peer_device,
+						 &peer_device_options_ctx, ACF1_PEER_DEVICE};
 static struct adm_cmd dump_cmd = {"dump", adm_dump, ACF1_DUMP};
 static struct adm_cmd dump_xml_cmd = {"dump-xml", adm_dump_xml, ACF1_DUMP};
 
@@ -398,6 +401,7 @@ struct adm_cmd *cmds[] = {
 	&up_cmd,
 	&direct_connect_cmd,
 	&res_options_cmd,
+	&peer_device_options_cmd,
 	&down_cmd,
 	&primary_cmd,
 	&secondary_cmd,
@@ -1032,6 +1036,7 @@ struct d_option *find_opt(struct options *base, const char *name)
 
 int adm_new_minor(const struct cfg_ctx *ctx)
 {
+	struct peer_device *peer_device;
 	char *argv[MAX_ARGS];
 	int argc = 0, ex;
 
@@ -1045,6 +1050,20 @@ int adm_new_minor(const struct cfg_ctx *ctx)
 	ex = m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
 	if (!ex && do_register)
 		register_minor(ctx->vol->device_minor, config_save);
+
+	STAILQ_FOREACH(peer_device, &ctx->vol->peer_devices, volume_link) {
+		struct cfg_ctx tmp_ctx;
+
+		if (!peer_device->connection->my_address || !peer_device->connection->connect_to)
+			continue;
+		if (STAILQ_EMPTY(&peer_device->pd_options))
+			continue;
+
+		tmp_ctx = *ctx;
+		tmp_ctx.conn = peer_device->connection;
+		call_cmd_fn(&peer_device_options_cmd, &tmp_ctx, KEEP_RUNNING);
+	}
+
 	return ex;
 }
 
@@ -1425,6 +1444,37 @@ static int adm_khelper(const struct cfg_ctx *ctx)
 	return rv;
 }
 
+int adm_peer_device(const struct cfg_ctx *ctx)
+{
+	struct d_resource *res = ctx->res;
+	struct connection *conn = ctx->conn;
+	struct d_volume *vol = ctx->vol;
+	struct peer_device *peer_device;
+	char *argv[MAX_ARGS];
+	int argc = 0;
+
+	STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
+		if (peer_device->volume == vol)
+			goto found;
+	}
+
+	fprintf(stderr, "Could not find peer_device object!\n");
+	exit(E_THINKO);
+
+found:
+	argv[NA(argc)] = drbdsetup;
+	argv[NA(argc)] = (char *)ctx->cmd->name; /* peer-device-options */
+
+	argv[NA(argc)] = ssprintf("%d", vol->vnr);
+	argv[NA(argc)] = ssprintf_addr(conn->my_address);
+	argv[NA(argc)] = ssprintf_addr(conn->connect_to);
+
+	make_options(argv[NA(argc)], &peer_device->pd_options);
+	argv[NA(argc)] = 0;
+
+	return m_system_ex(argv, SLEEPS_SHORT, res->name);
+}
+
 static int adm_connect(const struct cfg_ctx *ctx)
 {
 	struct d_resource *res = ctx->res;
@@ -1438,6 +1488,8 @@ static int adm_connect(const struct cfg_ctx *ctx)
 	bool do_connect = (ctx->cmd == &connect_cmd);
 	bool do_connect_direct = (ctx->cmd == &connect_direct_cmd);
 	bool reset = (ctx->cmd == &net_options_defaults_cmd);
+	struct peer_device *peer_device;
+	int ex;
 
 	if (do_connect_direct && conn->my_proxy) {
 		bool local_loopback = addr_scope_local(tmp_my_address.addr);
@@ -1480,7 +1532,22 @@ static int adm_connect(const struct cfg_ctx *ctx)
 	add_setup_options(argv, &argc);
 	argv[NA(argc)] = 0;
 
-	return m_system_ex(argv, SLEEPS_SHORT, res->name);
+	ex = m_system_ex(argv, SLEEPS_SHORT, res->name);
+	if (ex)
+		return ex;
+
+	STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
+		struct cfg_ctx tmp_ctx;
+
+		if (STAILQ_EMPTY(&peer_device->pd_options))
+			continue;
+
+		tmp_ctx = *ctx;
+		tmp_ctx.vol = peer_device->volume;
+		call_cmd_fn(&peer_device_options_cmd, &tmp_ctx, KEEP_RUNNING);
+	}
+
+	return ex;
 }
 
 void free_opt(struct d_option *item)
