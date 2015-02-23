@@ -697,6 +697,11 @@ static struct options parse_options(int token_flag, int token_no_flag, int token
 	return parse_options_d(token_flag, token_no_flag, token_option, 0, NULL, NULL);
 }
 
+static void parse_disk_options(struct options *disk_options, struct options *peer_device_options)
+{
+	*options = parse_options(TK_DISK_FLAG, TK_DISK_NO_FLAG, TK_DISK_OPTION);
+}
+
 static void __parse_address(struct d_address *a)
 {
 	switch(yylex()) {
@@ -954,9 +959,7 @@ int parse_volume_stmt(struct d_volume *vol, struct names* on_hosts, int token)
 			EXP(';');
 			break;
 		case '{':
-			vol->disk_options = parse_options(TK_DISK_FLAG,
-							  TK_DISK_NO_FLAG,
-							  TK_DISK_OPTION);
+			parse_disk_options(&vol->disk_options, NULL);
 			break;
 		default:
 			check_string_error(token);
@@ -1036,7 +1039,7 @@ struct d_volume *parse_stacked_volume(int vnr)
 			break;
 		case TK_DISK:
 			EXP('{');
-			vol->disk_options = parse_options(TK_DISK_FLAG, TK_DISK_NO_FLAG, TK_DISK_OPTION);
+			parse_disk_options(&vol->disk_options, NULL);
 			break;
 		case '}':
 			goto exit_loop;
@@ -1644,7 +1647,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 				break;
 			case '{':
 				check_upr("disk section", "%s:disk", res->name);
-				options = parse_options(TK_DISK_FLAG, TK_DISK_NO_FLAG, TK_DISK_OPTION);
+				parse_disk_options(&options, NULL);
 				STAILQ_CONCAT(&res->disk_options, &options);
 				break;
 			default:
