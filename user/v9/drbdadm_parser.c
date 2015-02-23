@@ -649,7 +649,11 @@ static struct options parse_options_d(int token_flag, int token_no_flag, int tok
 		token = REMOVE_GROUP_FROM_TOKEN(token_group);
 		fline = line;
 		opt_name = yylval.txt;
-		if (token == token_flag) {
+		if (token == token_delegate ||
+				GET_TOKEN_GROUP(token_delegate & token_group)) {
+			delegate(ctx);
+			continue;
+		} else if (token == token_flag) {
 			switch(yylex()) {
 			case TK_YES:
 				insert_tail(&options, new_opt(opt_name, strdup("yes")));
@@ -676,10 +680,6 @@ static struct options parse_options_d(int token_flag, int token_no_flag, int tok
 			expect_STRING_or_INT();
 			range_check(rc, opt_name, yylval.txt);
 			insert_tail(&options, new_opt(opt_name, yylval.txt));
-		} else if (token == token_delegate ||
-				GET_TOKEN_GROUP(token_delegate & token_group)) {
-			delegate(ctx);
-			continue;
 		} else if (token == TK_DEPRECATED_OPTION) {
 			/* fprintf(stderr, "Warn: Ignoring deprecated option '%s'\n", yylval.txt); */
 			expect_STRING_or_INT();
@@ -697,9 +697,24 @@ static struct options parse_options(int token_flag, int token_no_flag, int token
 	return parse_options_d(token_flag, token_no_flag, token_option, 0, NULL, NULL);
 }
 
+static void insert_options_delegate(void *ctx)
+{
+	struct options *options = ctx;
+	char *opt_name = yylval.txt;
+	enum range_checks rc;
+
+	rc = yylval.rc;
+	expect_STRING_or_INT();
+	range_check(rc, opt_name, yylval.txt);
+	insert_tail(options, new_opt(opt_name, yylval.txt));
+	EXP(';');
+}
+
 static void parse_disk_options(struct options *disk_options, struct options *peer_device_options)
 {
-	*options = parse_options(TK_DISK_FLAG, TK_DISK_NO_FLAG, TK_DISK_OPTION);
+	*disk_options = parse_options_d(TK_DISK_FLAG, TK_DISK_NO_FLAG, TK_DISK_OPTION,
+					TK_PEER_DEVICE, insert_options_delegate,
+					peer_device_options);
 }
 
 static void __parse_address(struct d_address *a)
@@ -933,6 +948,7 @@ struct d_volume *volume0(struct volumes *volumes)
 	if (!vol) {
 		vol = calloc(1, sizeof(struct d_volume));
 		STAILQ_INIT(&vol->disk_options);
+		STAILQ_INIT(&vol->pd_options);
 		vol->device_minor = -1;
 		vol->implicit = 1;
 		insert_head(volumes, vol);
@@ -959,7 +975,7 @@ int parse_volume_stmt(struct d_volume *vol, struct names* on_hosts, int token)
 			EXP(';');
 			break;
 		case '{':
-			parse_disk_options(&vol->disk_options, NULL);
+			parse_disk_options(&vol->disk_options, &vol->pd_options);
 			break;
 		default:
 			check_string_error(token);
@@ -1004,6 +1020,7 @@ struct d_volume *parse_volume(int vnr, struct names* on_hosts)
 
 	vol = calloc(1,sizeof(struct d_volume));
 	STAILQ_INIT(&vol->disk_options);
+	STAILQ_INIT(&vol->pd_options);
 	vol->device_minor = -1;
 	vol->vnr = vnr;
 
@@ -1027,6 +1044,7 @@ struct d_volume *parse_stacked_volume(int vnr)
 
 	vol = calloc(1,sizeof(struct d_volume));
 	STAILQ_INIT(&vol->disk_options);
+	STAILQ_INIT(&vol->pd_options);
 	vol->device_minor = -1;
 	vol->vnr = vnr;
 
@@ -1039,7 +1057,7 @@ struct d_volume *parse_stacked_volume(int vnr)
 			break;
 		case TK_DISK:
 			EXP('{');
-			parse_disk_options(&vol->disk_options, NULL);
+			parse_disk_options(&vol->disk_options, &vol->pd_options);
 			break;
 		case '}':
 			goto exit_loop;
@@ -1595,6 +1613,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 	STAILQ_INIT(&res->all_hosts);
 	STAILQ_INIT(&res->net_options);
 	STAILQ_INIT(&res->disk_options);
+	STAILQ_INIT(&res->pd_options);
 	STAILQ_INIT(&res->res_options);
 	STAILQ_INIT(&res->startup_options);
 	STAILQ_INIT(&res->handlers);
@@ -1647,7 +1666,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 				break;
 			case '{':
 				check_upr("disk section", "%s:disk", res->name);
-				parse_disk_options(&options, NULL);
+				parse_disk_options(&options, &res->pd_options);
 				STAILQ_CONCAT(&res->disk_options, &options);
 				break;
 			default:

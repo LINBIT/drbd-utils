@@ -88,6 +88,7 @@ struct d_volume
 	int meta_minor;
 	STAILQ_ENTRY(d_volume) link;
 	struct options disk_options; /* Additional per volume options */
+	struct options pd_options; /* peer device options */
 
 	/* Do not dump an explicit volume section */
 	unsigned int implicit :1 ;
@@ -184,6 +185,7 @@ struct d_resource
 
 	struct options net_options; /* parsed here, inherited to connections */
 	struct options disk_options;
+	struct options pd_options; /* peer device options */
 	struct options res_options;
 	struct options startup_options;
 	struct options handlers;

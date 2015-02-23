@@ -127,16 +127,10 @@ static char *esc_xml(char *str)
 	return str;
 }
 
-static void dump_options2(char *name, struct options *options,
-			  void(*within)(struct options *), struct options *ctx)
+static void __dump_options(struct options *options)
 {
 	struct d_option *option;
 
-	if (STAILQ_EMPTY(options) && (!ctx || (ctx && STAILQ_EMPTY(ctx))))
-		return;
-
-	printI("%s {\n", name);
-	++indent;
 	STAILQ_FOREACH(option, options, link) {
 		if (option->value)
 			printA(option->name,
@@ -145,10 +139,30 @@ static void dump_options2(char *name, struct options *options,
 		else
 			printI(BFMT, option->name);
 	}
+}
+
+static void dump_options2(char *name, struct options *options,
+			  void(*within)(struct options *), struct options *ctx)
+{
+
+	if (STAILQ_EMPTY(options) && (!ctx || (ctx && STAILQ_EMPTY(ctx))))
+		return;
+
+	printI("%s {\n", name);
+	++indent;
+	__dump_options(options);
 	if (within)
 		within(ctx);
 	--indent;
 	printI("}\n");
+}
+
+static void dump_peer_device_options(struct options *options)
+{
+	if (!STAILQ_EMPTY(options)) {
+		/* printI("# peer device options:\n"); */
+		__dump_options(options);
+	}
 }
 
 static void dump_options(char *name, struct options *options)
@@ -200,7 +214,8 @@ static void dump_common_info()
 	fake_startup_options(common);
 	dump_options("options", &common->res_options);
 	dump_options("net", &common->net_options);
-	dump_options("disk", &common->disk_options);
+	dump_options2("disk", &common->disk_options,
+		      dump_peer_device_options, &common->pd_options);
 	dump_options("startup", &common->startup_options);
 	dump_options2("proxy", &common->proxy_options,
 			dump_proxy_plugins, &common->proxy_plugins);
@@ -239,7 +254,8 @@ static void dump_volume(int has_lower, struct d_volume *vol)
 	if (!vol->device && !vol->disk && !vol->meta_disk && !vol->meta_index)
 		goto out;
 
-	dump_options("disk", &vol->disk_options);
+	dump_options2("disk", &vol->disk_options,
+		      dump_peer_device_options, &vol->pd_options);
 
 	if (vol->parsed_device || verbose) {
 		printI("device%*s", -19 + INDENT_WIDTH * indent, "");
@@ -311,6 +327,7 @@ static void dump_host_info(struct d_host_info *hi)
 static void dump_connection(struct connection *conn)
 {
 	struct hname_address *ha;
+	struct peer_device *pd;
 
 	if (conn->implicit && !verbose)
 		return;
@@ -340,20 +357,23 @@ static void dump_connection(struct connection *conn)
 	}
 
 	dump_options("net", &conn->net_options);
+	STAILQ_FOREACH(pd, &conn->peer_devices, connection_link) {
+		if (pd->implicit && !verbose)
+			continue;
+		printI("volume %d {\n", pd->vnr);
+		++indent;
+		dump_options("disk", &pd->pd_options);
+		--indent;
+		printI("}\n");
+	}
 	--indent;
 	printI("}\n");
 }
 
-static void dump_options_xml2(char *name, struct options *options,
-			      void(*within)(struct options *), struct options *ctx)
+static void __dump_options_xml(struct options *options)
 {
 	struct d_option *option;
 
-	if (STAILQ_EMPTY(options) && (!ctx || (ctx && STAILQ_EMPTY(ctx))))
-		return;
-
-	printI("<section name=\"%s\">\n", name);
-	++indent;
 	STAILQ_FOREACH(option, options, link) {
 		if (option->value)
 			printI("<option name=\"%s\" value=\"%s\"/>\n",
@@ -363,10 +383,27 @@ static void dump_options_xml2(char *name, struct options *options,
 		else
 			printI("<option name=\"%s\"/>\n", option->name);
 	}
+}
+
+static void dump_options_xml2(char *name, struct options *options,
+			      void(*within)(struct options *), struct options *ctx)
+{
+	if (STAILQ_EMPTY(options) && (!ctx || (ctx && STAILQ_EMPTY(ctx))))
+		return;
+
+	printI("<section name=\"%s\">\n", name);
+	++indent;
+	__dump_options_xml(options);
 	if (within)
 		within(ctx);
 	--indent;
 	printI("</section>\n");
+}
+
+static void dump_peer_device_options_xml(struct options *options)
+{
+	if (!STAILQ_EMPTY(options))
+		__dump_options_xml(options);
 }
 
 static void dump_options_xml(char *name, struct options *options)
@@ -408,7 +445,8 @@ static void dump_common_info_xml()
 	fake_startup_options(common);
 	dump_options_xml("options", &common->res_options);
 	dump_options_xml("net", &common->net_options);
-	dump_options_xml("disk", &common->disk_options);
+	dump_options_xml2("disk", &common->disk_options,
+			  dump_peer_device_options_xml, &common->pd_options);
 	dump_options_xml("startup", &common->startup_options);
 	dump_options_xml2("proxy", &common->proxy_options,
 			  dump_proxy_plugins, &common->proxy_plugins);
@@ -435,7 +473,8 @@ static void dump_volume_xml(struct d_volume *vol)
 	printI("<volume vnr=\"%d\">\n", vol->vnr);
 	++indent;
 
-	dump_options_xml("disk", &vol->disk_options);
+	dump_options_xml2("disk", &vol->disk_options,
+			  dump_peer_device_options_xml, &vol->pd_options);
 	printI("<device minor=\"%d\">%s</device>\n", vol->device_minor,
 	       esc_xml(vol->device));
 	printI("<disk>%s</disk>\n", esc_xml(vol->disk));
@@ -485,6 +524,7 @@ static void dump_host_info_xml(struct d_host_info *hi)
 static void dump_connection_xml(struct connection *conn)
 {
 	struct hname_address *ha;
+	struct peer_device *pd;
 
 	if (conn->name)
 		printI("<connection name=\"%s\">\n", esc_xml(conn->name));
@@ -517,6 +557,15 @@ static void dump_connection_xml(struct connection *conn)
 	}
 
 	dump_options_xml("net", &conn->net_options);
+	STAILQ_FOREACH(pd, &conn->peer_devices, connection_link) {
+		if (pd->implicit && !verbose)
+			continue;
+		printI("<volume vnr=\"%d\">\n", pd->vnr);
+		++indent;
+		dump_options_xml("disk", &pd->pd_options);
+		--indent;
+		printI("</volume>\n");
+	}
 	--indent;
 	printI("</connection>\n");
 }
@@ -586,7 +635,8 @@ int adm_dump(const struct cfg_ctx *ctx)
 	fake_startup_options(res);
 	dump_options("options", &res->res_options);
 	dump_options("net", &res->net_options);
-	dump_options("disk", &res->disk_options);
+	dump_options2("disk", &res->disk_options,
+		      dump_peer_device_options, &res->pd_options);
 	dump_options("startup", &res->startup_options);
 	dump_options2("proxy", &res->proxy_options,
 			dump_proxy_plugins, &res->proxy_plugins);
@@ -620,7 +670,8 @@ int adm_dump_xml(const struct cfg_ctx *ctx)
 	fake_startup_options(res);
 	dump_options_xml("options", &res->res_options);
 	dump_options_xml("net", &res->net_options);
-	dump_options_xml("disk", &res->disk_options);
+	dump_options_xml2("disk", &res->disk_options,
+			  dump_peer_device_options_xml, &res->pd_options);
 	dump_options_xml("startup", &res->startup_options);
 	dump_options_xml2("proxy", &res->proxy_options,
 			dump_proxy_plugins_xml, &res->proxy_plugins);
