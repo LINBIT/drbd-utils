@@ -117,10 +117,13 @@ doc-clean: distclean
 	$(XSLTPROC_FO_OPTIONS) \
 	$(FO_STYLESHEET) $<
 
+../../user/v9/drbdsetup.o:
+	$(MAKE) -C $(@D) drbdsetup
+
 ../../user/v9/drbdsetup:
 	$(MAKE) -C $(@D) $(@F)
 
-drbdsetup_xml-help_%.xml: ../../user/v9/drbdsetup
+drbdsetup_xml-help_%.xml: ../../user/v9/drbdsetup.o
 	../../user/v9/drbdsetup xml-help $* > $@
 
 drbdsetup_%.xml: drbdsetup_xml-help_%.xml xml-usage-to-docbook.xsl
