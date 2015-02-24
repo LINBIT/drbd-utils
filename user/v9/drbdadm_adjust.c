@@ -537,6 +537,37 @@ void compare_volumes(struct volumes *conf_head, struct volumes *kern_head)
 		insert_volume(conf_head, conf);
 }
 
+static struct peer_device *matching_peer_device(struct peer_device *pattern, struct peer_devices *pool)
+{
+	struct peer_device *peer_device;
+
+	STAILQ_FOREACH(peer_device, pool, connection_link) {
+		if (pattern->vnr == peer_device->vnr)
+			return peer_device;
+	}
+	return NULL;
+}
+
+static void
+adjust_peer_devices(const struct cfg_ctx *ctx, struct connection *conn, struct connection *running_conn)
+{
+	struct adm_cmd *cmd = &peer_device_options_defaults_cmd;
+	struct context_def *oc = &peer_device_options_ctx;
+	struct peer_device *peer_device, *running_pd;
+	struct cfg_ctx tmp_ctx = *ctx;
+
+	STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
+		running_pd = matching_peer_device(peer_device, &running_conn->peer_devices);
+		tmp_ctx.vol = peer_device->volume;
+		if (!running_pd) {
+			schedule_deferred_cmd(cmd, &tmp_ctx, CFG_PEER_DEVICE);
+			continue;
+		}
+		if (!opts_equal(oc, &peer_device->pd_options, &running_pd->pd_options))
+			schedule_deferred_cmd(cmd, &tmp_ctx, CFG_PEER_DEVICE);
+	}
+}
+
 /*
  * CAUTION this modifies global static char * config_file!
  */
@@ -655,7 +686,7 @@ int adm_adjust(const struct cfg_ctx *ctx)
 
 	for_each_connection(conn, &ctx->res->connections) {
 		struct connection *running_conn = NULL;
-		struct cfg_ctx tmp_ctx = { .res = ctx->res, .conn = conn };
+		const struct cfg_ctx tmp_ctx = { .res = ctx->res, .conn = conn };
 
 		if (conn->ignore)
 			continue;
@@ -667,6 +698,7 @@ int adm_adjust(const struct cfg_ctx *ctx)
 		} else {
 			if (!opts_equal(&net_options_ctx, &conn->net_options, &running_conn->net_options))
 				schedule_deferred_cmd(&net_options_defaults_cmd, &tmp_ctx, CFG_NET);
+			adjust_peer_devices(&tmp_ctx, conn, running_conn);
 		}
 
 		if (conn->my_proxy && can_do_proxy)

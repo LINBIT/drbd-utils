@@ -493,6 +493,12 @@ struct adm_cmd *cmds[] = {
 	&net_options_ctx,
 	ACF1_CONNECT
 };
+/*  */ struct adm_cmd peer_device_options_defaults_cmd = {
+	"peer-device-options",
+	adm_peer_device,
+	&peer_device_options_ctx,
+	ACF1_CONNECT
+};
 /*  */ struct adm_cmd proxy_conn_down_cmd = { "", do_proxy_conn_down, ACF1_DEFAULT};
 /*  */ struct adm_cmd proxy_conn_up_cmd = { "", do_proxy_conn_up, ACF1_DEFAULT};
 /*  */ struct adm_cmd proxy_conn_plugins_cmd = { "", do_proxy_conn_plugins, ACF1_DEFAULT};
@@ -637,6 +643,7 @@ static char *drbd_cfg_stage_string[] = {
 	[CFG_DISK] = "adjust disk",
 	[CFG_NET_PREREQ] = "prepare net",
 	[CFG_NET] = "adjust net",
+	[CFG_PEER_DEVICE] = "adjust peer_devices",
 };
 
 int _run_deferred_cmds(enum drbd_cfg_stage stage)
@@ -1446,6 +1453,7 @@ static int adm_khelper(const struct cfg_ctx *ctx)
 
 int adm_peer_device(const struct cfg_ctx *ctx)
 {
+	bool reset = (ctx->cmd == &peer_device_options_defaults_cmd);
 	struct d_resource *res = ctx->res;
 	struct connection *conn = ctx->conn;
 	struct d_volume *vol = ctx->vol;
@@ -1468,6 +1476,9 @@ found:
 	argv[NA(argc)] = ssprintf("%d", vol->vnr);
 	argv[NA(argc)] = ssprintf_addr(conn->my_address);
 	argv[NA(argc)] = ssprintf_addr(conn->connect_to);
+
+	if (reset)
+		argv[NA(argc)] = "--set-defaults";
 
 	make_options(argv[NA(argc)], &peer_device->pd_options);
 	argv[NA(argc)] = 0;

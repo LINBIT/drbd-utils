@@ -278,6 +278,7 @@ extern struct adm_cmd resize_cmd;
 extern struct adm_cmd connect_cmd;
 extern struct adm_cmd net_options_cmd;
 extern struct adm_cmd net_options_defaults_cmd;
+extern struct adm_cmd peer_device_options_defaults_cmd;
 extern struct adm_cmd disconnect_cmd;
 extern struct adm_cmd detach_cmd;
 extern struct adm_cmd del_minor_cmd;
@@ -315,6 +316,7 @@ enum drbd_cfg_stage {
 	/* discard/set connection parameters */
 	CFG_NET,
 
+	CFG_PEER_DEVICE,
 	__CFG_LAST
 };
 
