@@ -255,8 +255,6 @@ static int show_or_get_gi_cmd(struct drbd_cmd *cm, int argc, char **argv);
 // sub commands for generic_get_cmd
 static int print_notifications(struct drbd_cmd *, struct genl_info *, void *);
 static int wait_for_family(struct drbd_cmd *, struct genl_info *, void *);
-static int show_current_volume(struct drbd_cmd *, struct genl_info *, void *);
-static int print_current_connection(struct drbd_cmd *, struct genl_info *, void *);
 static int remember_resource(struct drbd_cmd *, struct genl_info *, void *);
 static int remember_device(struct drbd_cmd *, struct genl_info *, void *);
 static int remember_connection(struct drbd_cmd *, struct genl_info *, void *);
@@ -285,6 +283,7 @@ struct devices_list {
 	struct devices_list *next;
 	unsigned minor;
 	struct drbd_cfg_context ctx;
+	struct nlattr *disk_conf_nl;
 	struct disk_conf disk_conf;
 	struct device_info info;
 	struct device_statistics statistics;
@@ -306,6 +305,7 @@ static void free_connections(struct connections_list *);
 struct peer_devices_list {
 	struct peer_devices_list *next;
 	struct drbd_cfg_context ctx;
+	struct nlattr *peer_device_conf;
 	struct peer_device_info info;
 	struct peer_device_statistics statistics;
 	struct devices_list *device;
@@ -1314,11 +1314,6 @@ static void print_options(struct nlattr *attr, struct context_def *ctx, const ch
 	}
 }
 
-static void print_current_options(struct context_def *ctx, const char *sect_name)
-{
-	print_options(global_attrs[ctx->nla_type], ctx, sect_name);
-}
-
 struct choose_timeout_ctx {
 	struct drbd_cfg_context ctx;
 	struct msg_buff *smsg;
@@ -1888,40 +1883,61 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	return err;
 }
 
-static int print_current_connection(struct drbd_cmd *cm, struct genl_info *info, void * u)
+static int show_connection(struct connections_list *connection)
 {
-	struct drbd_cfg_context cfg = { .ctx_volume = -1U };
-
-	if (!info)
-		return 0;
-
-	drbd_cfg_context_from_attrs(&cfg, info);
-
 	printI("connection {\n");
 	++indent;
-	if (cfg.ctx_my_addr_len) {
+	if (connection->ctx.ctx_my_addr_len) {
 		char address[ADDRESS_STR_MAX];
-		if (address_str(address, cfg.ctx_my_addr, cfg.ctx_my_addr_len)) {
+		if (address_str(address, connection->ctx.ctx_my_addr, connection->ctx.ctx_my_addr_len)) {
 			char *colon = strchr(address, ':');
 			if (colon)
 				*colon = ' ';
 			printI("_this_host %s;\n", address);
 		}
 	}
-	if (cfg.ctx_peer_addr_len) {
+	if (connection->ctx.ctx_peer_addr_len) {
 		char address[ADDRESS_STR_MAX];
-		if (address_str(address, cfg.ctx_peer_addr, cfg.ctx_peer_addr_len)) {
+		if (address_str(address, connection->ctx.ctx_peer_addr, connection->ctx.ctx_peer_addr_len)) {
 			char *colon = strchr(address, ':');
 			if (colon)
 				*colon = ' ';
 			printI("_remote_host %s;\n", address);
 		}
 	}
-	print_current_options(&net_options_ctx, "net");
+	print_options(connection->net_conf, &net_options_ctx, "net");
 	--indent;
 	printI("}\n");
 
 	return 0;
+}
+
+static void show_volume(struct devices_list *device)
+{
+	printI("volume %d {\n", device->ctx.ctx_volume);
+	++indent;
+	printI("device\t\t\tminor %d;\n", device->minor);
+	if (device->disk_conf.backing_dev[0]) {
+		printI("disk\t\t\t\"%s\";\n", device->disk_conf.backing_dev);
+		printI("meta-disk\t\t\t");
+		switch(device->disk_conf.meta_dev_idx) {
+		case DRBD_MD_INDEX_INTERNAL:
+		case DRBD_MD_INDEX_FLEX_INT:
+			printf("internal;\n");
+			break;
+		case DRBD_MD_INDEX_FLEX_EXT:
+			printf("%s;\n",
+			       double_quote_string(device->disk_conf.meta_dev));
+			break;
+		default:
+			printf("%s [ %d ];\n",
+			       double_quote_string(device->disk_conf.meta_dev),
+			       device->disk_conf.meta_dev_idx);
+		}
+	}
+	print_options(device->disk_conf_nl, &attach_cmd_ctx, "disk");
+	--indent;
+	printI("}\n"); /* close volume */
 }
 
 static int show_cmd(struct drbd_cmd *cm, int argc, char **argv)
@@ -1948,11 +1964,19 @@ static int show_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	resources_list = sort_resources(list_resources());
 
 	for (resource = resources_list; resource; resource = resource->next) {
-		struct drbd_cmd cmd = {};
+		struct devices_list *devices, *device;
+		struct connections_list *connections, *connection;
+		struct peer_devices_list *peer_devices = NULL;
+
 		struct nlattr *nla;
 
 		if (strcmp(old_objname, "all") && strcmp(old_objname, resource->name))
 			continue;
+
+		devices = list_devices(resource->name);
+		connections = sort_connections(list_connections(resource->name));
+		if (devices && connections)
+			peer_devices = list_peer_devices(resource->name);
 
 		objname = resource->name;
 
@@ -1968,19 +1992,21 @@ static int show_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		if (nla)
 			printI("node-id\t\t\t%d;\n", *(uint32_t *)nla_data(nla));
 
-		cmd.cmd_id = DRBD_ADM_GET_DEVICES;
-		cmd.show_function = show_current_volume;
-		generic_get(&cmd, 120000, NULL);
+		for (device = devices; device; device = device->next)
+			show_volume(device);
 
 		--indent;
 		printI("}\n");
 
-		cmd.cmd_id = DRBD_ADM_GET_CONNECTIONS;
-		cmd.show_function = print_current_connection;
-		generic_get(&cmd, 120000, NULL);
+		for (connection = connections; connection; connection = connection->next)
+			show_connection(connection);
 
 		--indent;
 		printI("}\n\n");
+
+		free_connections(connections);
+		free_devices(devices);
+		free_peer_devices(peer_devices);
 	}
 
 	free(resources_list);
@@ -2637,9 +2663,16 @@ static int remember_device(struct drbd_cmd *cm, struct genl_info *info, void *u_
 
 	if (ctx.ctx_volume != -1U) {
 		struct devices_list *d = calloc(1, sizeof(*d));
+		struct nlattr *disk_conf_nl = global_attrs[DRBD_NLA_DISK_CONF];
 
 		d->minor =  ((struct drbd_genlmsghdr*)(info->userhdr))->minor;
 		d->ctx = ctx;
+		if (disk_conf_nl) {
+			int size = nla_total_size(nla_len(disk_conf_nl));
+
+			d->disk_conf_nl = malloc(size);
+			memcpy(d->disk_conf_nl, disk_conf_nl, size);
+		}
 		disk_conf_from_attrs(&d->disk_conf, info);
 		d->info.dev_disk_state = D_DISKLESS;
 		device_info_from_attrs(&d->info, info);
@@ -2689,6 +2722,7 @@ static void free_devices(struct devices_list *devices)
 	while (devices) {
 		struct devices_list *d = devices;
 		devices = devices->next;
+		free(d->disk_conf_nl);
 		free(d);
 	}
 }
@@ -2791,6 +2825,7 @@ static void free_connections(struct connections_list *connections)
 	while (connections) {
 		struct connections_list *l = connections;
 		connections = connections->next;
+		free(l->net_conf);
 		free(l);
 	}
 }
@@ -2806,11 +2841,16 @@ static int remember_peer_device(struct drbd_cmd *cmd, struct genl_info *info, vo
 	drbd_cfg_context_from_attrs(&ctx, info);
 	if (ctx.ctx_resource_name) {
 		struct peer_devices_list *p = calloc(1, sizeof(*p));
-
+		struct nlattr *peer_device_conf = global_attrs[DRBD_NLA_PEER_DEVICE_OPTS];
 		if (!p)
 			exit(20);
 
 		p->ctx = ctx;
+		if (peer_device_conf) {
+			int size = nla_total_size(nla_len(peer_device_conf));
+			p->peer_device_conf = malloc(size);
+			memcpy(p->peer_device_conf, peer_device_conf, size);
+		}
 		peer_device_info_from_attrs(&p->info, info);
 		memset(&p->statistics, -1, sizeof(p->statistics));
 		peer_device_statistics_from_attrs(&p->statistics, info);
@@ -2858,51 +2898,9 @@ static void free_peer_devices(struct peer_devices_list *peer_devices)
 	while (peer_devices) {
 		struct peer_devices_list *p = peer_devices;
 		peer_devices = peer_devices->next;
+		free(p->peer_device_conf);
 		free(p);
 	}
-}
-
-static int show_current_volume(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
-{
-	unsigned minor;
-	struct drbd_cfg_context cfg = { .ctx_volume = -1U };
-	struct disk_conf dc = { .disk_size = 0, };
-
-	if (!info)
-		return 0;
-
-	minor = ((struct drbd_genlmsghdr*)(info->userhdr))->minor;
-	drbd_cfg_context_from_attrs(&cfg, info);
-	disk_conf_from_attrs(&dc, info);
-
-	printI("volume %d {\n", cfg.ctx_volume);
-	++indent;
-	printI("device\t\t\tminor %d;\n", minor);
-	if (global_attrs[DRBD_NLA_DISK_CONF]) {
-		if (dc.backing_dev[0]) {
-			printI("disk\t\t\t\"%s\";\n", dc.backing_dev);
-			printI("meta-disk\t\t\t");
-			switch(dc.meta_dev_idx) {
-			case DRBD_MD_INDEX_INTERNAL:
-			case DRBD_MD_INDEX_FLEX_INT:
-				printf("internal;\n");
-				break;
-			case DRBD_MD_INDEX_FLEX_EXT:
-				printf("%s;\n",
-				       double_quote_string(dc.meta_dev));
-				break;
-			default:
-				printf("%s [ %d ];\n",
-				       double_quote_string(dc.meta_dev),
-				       dc.meta_dev_idx);
-			 }
-		}
-	}
-	print_current_options(&attach_cmd_ctx, "disk");
-	--indent;
-	printI("}\n"); /* close volume */
-
-	return 0;
 }
 
 static int check_resize_cmd(struct drbd_cmd *cm, int argc, char **argv)
