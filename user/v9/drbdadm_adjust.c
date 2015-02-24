@@ -160,6 +160,23 @@ static int opts_equal(struct context_def *ctx, struct options *conf, struct opti
 	return 1;
 }
 
+static int
+opt_equal(struct context_def *ctx, const char *opt_name, struct options *conf, struct options *run_base)
+{
+	struct field_def *field = field_def_of(opt_name, ctx);
+	struct d_option *opt = find_opt(conf, opt_name);
+	struct d_option *run_opt = find_opt(run_base, opt_name);
+
+	if (opt && run_opt)
+		return field->is_equal(field, opt->value, run_opt->value);
+	else if (opt)
+		return field->is_default(field, opt->value);
+	else if (run_opt)
+		return field->is_default(field, run_opt->value);
+
+	return 1; /* Both not set */
+}
+
 static int addr_equal(struct d_address *a1, struct d_address *a2)
 {
 	return  !strcmp(a1->addr, a2->addr) &&
@@ -698,8 +715,18 @@ int adm_adjust(const struct cfg_ctx *ctx)
 		if (!running_conn) {
 			schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET);
 		} else {
-			if (!opts_equal(&net_options_ctx, &conn->net_options, &running_conn->net_options))
-				schedule_deferred_cmd(&net_options_defaults_cmd, &tmp_ctx, CFG_NET);
+			struct context_def *oc = &show_net_options_ctx;
+			struct options *conf_o = &conn->net_options;
+			struct options *runn_o = &running_conn->net_options;
+
+			if (!opts_equal(oc, conf_o, runn_o)) {
+				if (!opt_equal(oc, "transport", conf_o, runn_o)) {
+					schedule_deferred_cmd(&disconnect_cmd, &tmp_ctx, CFG_NET);
+					schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET);
+				} else {
+					schedule_deferred_cmd(&net_options_defaults_cmd, &tmp_ctx, CFG_NET);
+				}
+			}
 			adjust_peer_devices(&tmp_ctx, conn, running_conn);
 		}
 

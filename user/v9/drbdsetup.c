@@ -1949,7 +1949,7 @@ static void show_connection(struct connections_list *connection, struct peer_dev
 			printI("_remote_host %s;\n", address);
 		}
 	}
-	print_options(connection->net_conf, &net_options_ctx, "net");
+	print_options(connection->net_conf, &show_net_options_ctx, "net");
 
 	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next) {
 		if (endpoints_equal(&connection->ctx, &peer_device->ctx))

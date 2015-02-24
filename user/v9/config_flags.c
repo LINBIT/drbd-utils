@@ -686,6 +686,15 @@ struct context_def connect_cmd_ctx = {
 		{ } },
 };
 
+struct context_def show_net_options_ctx = {
+	NLA_POLICY(net_conf),
+	.nla_type = DRBD_NLA_NET_CONF,
+	.fields = {
+		{ "transport", STRING(transport_name) },
+		CHANGEABLE_NET_OPTIONS,
+		{ } },
+};
+
 struct context_def disconnect_cmd_ctx = {
 	NLA_POLICY(disconnect_parms),
 	.nla_type = DRBD_NLA_DISCONNECT_PARMS,
