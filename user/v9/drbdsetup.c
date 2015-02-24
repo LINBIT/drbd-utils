@@ -1883,8 +1883,52 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	return err;
 }
 
-static int show_connection(struct connections_list *connection)
+static bool options_empty(struct nlattr *attr, struct context_def *ctx)
 {
+	struct field_def *field;
+
+	if (!attr)
+		return true;
+
+	if (drbd_nla_parse_nested(nested_attr_tb, ctx->nla_policy_size - 1,
+				  attr, ctx->nla_policy)) {
+		fprintf(stderr, "nla_policy violation\n");
+	}
+
+	for (field = ctx->fields; field->name; field++) {
+		struct nlattr *nlattr;
+		const char *str;
+		bool is_default;
+
+		nlattr = ntb(field->nla_type);
+		if (!nlattr)
+			continue;
+		str = field->get(ctx, field, nlattr);
+		is_default = field->is_default(field, str);
+		if (is_default && !show_defaults)
+			continue;
+		return false;
+	}
+
+	return true;
+}
+
+static void show_peer_device(struct peer_devices_list *peer_device)
+{
+	if (options_empty(peer_device->peer_device_conf, &peer_device_options_ctx))
+		return;
+
+	printI("volume %d {\n", peer_device->ctx.ctx_volume);
+	++indent;
+	print_options(peer_device->peer_device_conf, &peer_device_options_ctx, "disk");
+	--indent;
+	printI("}\n");
+}
+
+static void show_connection(struct connections_list *connection, struct peer_devices_list *peer_devices)
+{
+	struct peer_devices_list *peer_device;
+
 	printI("connection {\n");
 	++indent;
 	if (connection->ctx.ctx_my_addr_len) {
@@ -1906,10 +1950,14 @@ static int show_connection(struct connections_list *connection)
 		}
 	}
 	print_options(connection->net_conf, &net_options_ctx, "net");
+
+	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next) {
+		if (endpoints_equal(&connection->ctx, &peer_device->ctx))
+			show_peer_device(peer_device);
+	}
+
 	--indent;
 	printI("}\n");
-
-	return 0;
 }
 
 static void show_volume(struct devices_list *device)
@@ -1999,7 +2047,7 @@ static int show_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		printI("}\n");
 
 		for (connection = connections; connection; connection = connection->next)
-			show_connection(connection);
+			show_connection(connection, peer_devices);
 
 		--indent;
 		printI("}\n\n");
