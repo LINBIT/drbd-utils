@@ -367,6 +367,7 @@ int parse_proxy_options_section(struct d_proxy_info **proxy);
 int do_proxy_conn_up(const struct cfg_ctx *ctx);
 int do_proxy_conn_down(const struct cfg_ctx *ctx);
 int do_proxy_conn_plugins(const struct cfg_ctx *ctx);
+struct peer_device *find_peer_device(struct connection *conn, int vnr);
 
 extern char *config_file;
 extern char *config_save;

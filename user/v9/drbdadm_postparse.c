@@ -830,7 +830,7 @@ static void must_have_two_hosts(struct d_resource *res, struct connection *con)
 	}
 }
 
-static struct peer_device *find_peer_device(struct connection *conn, int vnr)
+struct peer_device *find_peer_device(struct connection *conn, int vnr)
 {
 	struct peer_device *peer_device;
 

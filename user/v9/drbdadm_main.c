@@ -1461,15 +1461,12 @@ int adm_peer_device(const struct cfg_ctx *ctx)
 	char *argv[MAX_ARGS];
 	int argc = 0;
 
-	STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
-		if (peer_device->volume == vol)
-			goto found;
+	peer_device = find_peer_device(conn, vol->vnr);
+	if (!peer_device) {
+		fprintf(stderr, "Could not find peer_device object!\n");
+		exit(E_THINKO);
 	}
 
-	fprintf(stderr, "Could not find peer_device object!\n");
-	exit(E_THINKO);
-
-found:
 	argv[NA(argc)] = drbdsetup;
 	argv[NA(argc)] = (char *)ctx->cmd->name; /* peer-device-options */
 
