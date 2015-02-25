@@ -87,29 +87,31 @@ static FILE *m_popen(int *pid,char** argv)
 	return fdopen(pipes[0],"r");
 }
 
-static int is_equal(struct context_def *ctx, struct d_option *a, struct d_option *b)
+struct field_def *field_def_of(const char *opt_name, struct context_def *ctx)
 {
 	struct field_def *field;
 
 	for (field = ctx->fields; field->name; field++) {
-		if (!strcmp(field->name, a->name))
-			return field->is_equal(field, a->value, b->value);
+		if (!strcmp(field->name, opt_name))
+			return field;
 	}
 
-	err("Internal error: option '%s' not known in this context\n", a->name);
+	err("Internal error: option '%s' not known in this context\n", opt_name);
 	abort();
+}
+
+static int is_equal(struct context_def *ctx, struct d_option *a, struct d_option *b)
+{
+	struct field_def *field = field_def_of(a->name, ctx);
+
+	return field->is_equal(field, a->value, b->value);
 }
 
 static bool is_default(struct context_def *ctx, struct d_option *opt)
 {
-	struct field_def *field;
+	struct field_def *field = field_def_of(opt->name, ctx);
 
-	for (field = ctx->fields; field->name; field++) {
-		if (strcmp(field->name, opt->name))
-			continue;
-		return field->is_default(field, opt->value);
-	}
-	return false;
+	return field->is_default(field, opt->value);
 }
 
 static int opts_equal(struct context_def *ctx, struct options *conf, struct options *run_base)
