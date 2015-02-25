@@ -856,7 +856,7 @@ static void fixup_peer_devices(struct d_resource *res)
 
 			vol = volume_by_vnr(&some_host->volumes, peer_device->vnr);
 			if (!vol) {
-				err("%s:%d: Resouce %s: There is a reference to a volume %d, that"
+				err("%s:%d: Resource %s: There is a reference to a volume %d that"
 				    "is not known in this resource\n",
 				    res->config_file, peer_device->config_line, res->name,
 				    peer_device->vnr);
