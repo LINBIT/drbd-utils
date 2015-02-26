@@ -281,14 +281,15 @@ void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd
 		exit(E_EXEC_ERROR);
 	}
 	if (pid == 0) {
+		/* Child: close reading end. */
+		close(pipe_fds[0]);
 		if (flags & RETURN_STDOUT_FD) {
-			close(pipe_fds[0]);
 			dup2(pipe_fds[1], STDOUT_FILENO);
 		}
 		if (flags & RETURN_STDERR_FD) {
-			close(pipe_fds[0]);
 			dup2(pipe_fds[1], STDERR_FILENO);
 		}
+		close(pipe_fds[1]);
 
 		if (flags & SUPRESS_STDERR)
 			fclose(stderr);
@@ -298,8 +299,8 @@ void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd
 		exit(E_EXEC_ERROR);
 	}
 
-	if (flags & (RETURN_STDOUT_FD | RETURN_STDERR_FD))
-		close(pipe_fds[1]);
+	/* Parent process: close writing end. */
+	close(pipe_fds[1]);
 
 	if (flags & SLEEPS_FINITE) {
 		sigaction(SIGALRM, &sa, &so);
@@ -354,6 +355,9 @@ void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd
 			}
 		}
 	}
+
+	/* Do not close earlier, else the child gets EPIPE. */
+	close(pipe_fds[0]);
 
 	if (flags & SLEEPS_FINITE) {
 		if (rv >= 10
