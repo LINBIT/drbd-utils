@@ -626,6 +626,7 @@ const char *read_balancing_map[] = {
 	{ "use-rle", BOOLEAN(use_rle, USE_RLE) },					\
 	{ "socket-check-timeout", NUMERIC(sock_check_timeo, SOCKET_CHECK_TIMEO) },	\
 	{ "fencing", ENUM(fencing_policy, FENCING) },					\
+	{ "max-buffers", NUMERIC(max_buffers, MAX_BUFFERS) },				\
 	{ "_name", STRING(name) }
 
 struct context_def disk_options_ctx = {
@@ -754,7 +755,6 @@ struct context_def device_options_ctx = {
 	.nla_type = DRBD_NLA_DEVICE_CONF,
 	.fields = {
 		{ "max-bio-size", NUMERIC(max_bio_size, MAX_BIO_SIZE) },
-		{ "max-buffers", NUMERIC(max_buffers, MAX_BUFFERS) },
 		{ } },
 };
 
