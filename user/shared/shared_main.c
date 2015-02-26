@@ -232,6 +232,9 @@ void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd
 	struct sigaction so;
 	struct sigaction sa;
 
+	if (flags & (RETURN_STDERR_FD | RETURN_STDOUT_FD))
+		assert(fd);
+
 	sa.sa_handler = &alarm_handler;
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = 0;
@@ -248,7 +251,7 @@ void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd
 			if (kid)
 				*kid = -1;
 			if (fd)
-				*fd = 0;
+				*fd = -1;
 			if (ex)
 				*ex = 0;
 			return;
@@ -280,12 +283,13 @@ void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd
 	if (pid == 0) {
 		if (flags & RETURN_STDOUT_FD) {
 			close(pipe_fds[0]);
-			dup2(pipe_fds[1], 1);
+			dup2(pipe_fds[1], STDOUT_FILENO);
 		}
 		if (flags & RETURN_STDERR_FD) {
 			close(pipe_fds[0]);
-			dup2(pipe_fds[1], 2);
+			dup2(pipe_fds[1], STDERR_FILENO);
 		}
+
 		if (flags & SUPRESS_STDERR)
 			fclose(stderr);
 		if (argv[0])
@@ -320,12 +324,14 @@ void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd
 
 	if (kid)
 		*kid = pid;
-	if (fd)
-		*fd = pipe_fds[0];
 
 	if (flags & (RETURN_STDOUT_FD | RETURN_STDERR_FD)
-	||  flags == RETURN_PID)
+			||  flags == RETURN_PID) {
+		if (fd)
+			*fd = pipe_fds[0];
+
 		return;
+	}
 
 	while (1) {
 		if (waitpid(pid, &status, 0) == -1) {
