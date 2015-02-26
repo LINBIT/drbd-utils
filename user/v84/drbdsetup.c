@@ -915,7 +915,7 @@ retry_recv:
 
 			if (rv == ERR_RES_NOT_KNOWN) {
 				if (cm->warn_on_missing && isatty(STDERR_FILENO))
-					fprintf(stderr, "Resource unknown");
+					fprintf(stderr, "Resource unknown\n");
 
 				if (cm->missing_ok)
 					rv = NO_ERROR;

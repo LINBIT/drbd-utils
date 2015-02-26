@@ -1211,7 +1211,7 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	}
 	if (rv == ERR_RES_NOT_KNOWN) {
 		if (cm->warn_on_missing && isatty(STDERR_FILENO))
-			fprintf(stderr, "Resource unknown");
+			fprintf(stderr, "Resource unknown\n");
 
 		if (cm->missing_ok)
 			rv = NO_ERROR;
