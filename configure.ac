@@ -138,6 +138,12 @@ fi
 AC_SUBST(systemdunitdir)
 AC_MSG_RESULT([Using systemd unit directory: $systemdunitdir])
 
+AC_ARG_WITH(tmpfilesdir,
+	AC_HELP_STRING([--with-tmpfilesdir=DIR],
+		[install configuration files for management of volatile files and directories in DIR [[PREFIX/lib/tmpfiles.d]]]),
+		tmpfilesdir=$withval, tmpfilesdir='${prefix}/lib/tmpfiles.d')
+AC_SUBST(tmpfilesdir)
+
 # set default early
 default_udevdir=/lib/udev
 if test x"$with_udev" = x || \

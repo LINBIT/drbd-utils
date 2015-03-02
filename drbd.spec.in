@@ -41,7 +41,7 @@
 Name: drbd
 Summary: DRBD driver for Linux
 Version: @PACKAGE_VERSION@
-Release: 4@RPM_DIST_TAG@
+Release: 5@RPM_DIST_TAG@
 Source: http://oss.linbit.com/drbd/drbd-utils-%{version}.tar.gz
 License: GPLv2+
 ExclusiveOS: linux
@@ -150,6 +150,7 @@ This packages includes the DRBD administration tools.
 %endif
 %if %{initscripttype} == "systemd"
 %{_unitdir}/drbd.service
+%{_tmpfilesdir}/drbd.conf
 %else
 %{_initddir}/drbd
 %endif
@@ -167,6 +168,8 @@ This packages includes the DRBD administration tools.
 %{_prefix}/lib/drbd/notify-pri-lost.sh
 %{_prefix}/lib/drbd/notify-pri-on-incon-degr.sh
 %{_prefix}/lib/drbd/notify.sh
+%dir %{_sharedstatedir}/drbd
+%ghost %dir %{_var}/run/drbd
 
 %defattr(-,root,root,-)
 %config(noreplace) %{_sysconfdir}/drbd.conf
@@ -340,6 +343,7 @@ autoconf
     %{?_without_83support} \
     %{?_without_84support} \
     --with-initdir=%{_initddir} \
+    %{?_tmpfilesdir:--with-tmpfilesdir=%{_tmpfilesdir}} \
     --with-initscripttype=%{initscripttype}
 make %{?_smp_mflags}
 make doc

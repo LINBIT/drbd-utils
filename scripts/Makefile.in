@@ -32,6 +32,7 @@ datadir = @datadir@
 sbindir = @sbindir@
 sysconfdir = @sysconfdir@
 systemdunitdir = @systemdunitdir@
+tmpfilesdir = @tmpfilesdir@
 udevrulesdir = @udevrulesdir@
 initscripttype = @initscripttype@
 BASH_COMPLETION_SUFFIX = @BASH_COMPLETION_SUFFIX@
@@ -64,6 +65,8 @@ endif
 ifneq ($(initscripttype),sysv)		# "systemd" or "both"
 	install -d $(DESTDIR)$(systemdunitdir)
 	install -m 755 drbd.service $(DESTDIR)$(systemdunitdir)/
+	install -d $(DESTDIR)$(tmpfilesdir)/
+	install -m 444 drbd.tmpfiles.conf $(DESTDIR)$(tmpfilesdir)/drbd.conf
 endif
 	@ if [ ! -e $(DESTDIR)$(sysconfdir)/drbd.conf ]; then \
 		install -d $(DESTDIR)$(sysconfdir)/; \
