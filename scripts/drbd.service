@@ -1,34 +1,17 @@
 [Unit]
 Description=DRBD -- please disable. Unless you are NOT using a cluster manager.
-After=network.target
+Wants=network.target sshd.service
+After=network.target sshd.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 
-# Check the configuration file for syntax errors
-ExecStartPre=/sbin/drbdadm sh-nop
-
-# Create the resources (and log what is being done)
-ExecStart=/sbin/drbdadm adjust-with-progress all
-
-# Wait for connection
-# This used to be interactive, but that is no longer feasible
-# with systemd. If this should block, you have to log in and
-# killall drbdsetup drbdadm ...
-# Also: configure a proper timeout!
-ExecStart=/sbin/drbdadm wait-connect all
-
-# Switch resources to primary if applicable
-# Better: disable this service unit, and use a cluster manger (pacemaker)
-ExecStart=/sbin/drbdadm sh-b-pri all
-
-# Deactivate all resources on stop
-ExecStop=/sbin/drbdadm down all
+ExecStart=/lib/drbd/drbd start
+ExecStop=/lib/drbd/drbd stop
 
 # Re-adjust everything on reload
-ExecReload=/sbin/drbdadm adjust all
-
+ExecReload=/lib/drbd/drbd reload
 
 [Install]
 WantedBy=multi-user.target

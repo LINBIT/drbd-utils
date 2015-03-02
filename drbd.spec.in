@@ -151,6 +151,7 @@ This packages includes the DRBD administration tools.
 %if %{initscripttype} == "systemd"
 %{_unitdir}/drbd.service
 %{_tmpfilesdir}/drbd.conf
+%{_prefix}/lib/drbd/drbd
 %else
 %{_initddir}/drbd
 %endif

@@ -57,6 +57,7 @@ all:
 install: install-utils install-udev install-xen install-heartbeat install-pacemaker install-rgmanager install-bashcompletion
 
 install-utils:
+	install -d $(DESTDIR)$(LIBDIR)
 ifneq ($(initscripttype),systemd)	# "sysv" or "both"
 	install -d $(DESTDIR)$(INITDIR)
 	install -m 755 drbd $(DESTDIR)$(INITDIR)/
@@ -65,6 +66,7 @@ endif
 ifneq ($(initscripttype),sysv)		# "systemd" or "both"
 	install -d $(DESTDIR)$(systemdunitdir)
 	install -m 755 drbd.service $(DESTDIR)$(systemdunitdir)/
+	install -m 755 drbd $(DESTDIR)$(LIBDIR)/
 	install -d $(DESTDIR)$(tmpfilesdir)/
 	install -m 444 drbd.tmpfiles.conf $(DESTDIR)$(tmpfilesdir)/drbd.conf
 endif
@@ -74,7 +76,6 @@ endif
 		install -d $(DESTDIR)$(sysconfdir)/drbd.d; \
 		install -m 644 global_common.conf $(DESTDIR)$(sysconfdir)/drbd.d; \
 	fi
-	install -d $(DESTDIR)$(LIBDIR)
 	install -m 755 outdate-peer.sh $(DESTDIR)$(LIBDIR)
 	install -m 755 snapshot-resync-target-lvm.sh $(DESTDIR)$(LIBDIR)
 	install -m 755 notify.sh $(DESTDIR)$(LIBDIR)
