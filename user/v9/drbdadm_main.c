@@ -2049,6 +2049,7 @@ int gets_timeout(pid_t * pids, char *s, int size, int timeout)
 		n = 1;
 	}
 
+redo_without_fd:
 	if (!childs_running(pids, WNOHANG)) {
 		pr = -1;
 		goto out;
@@ -2075,6 +2076,11 @@ int gets_timeout(pid_t * pids, char *s, int size, int timeout)
 		if (rr == -1) {
 			perror("read");
 			exit(E_EXEC_ERROR);
+		} else if (size > 1 && rr == 0) {
+			/* WTF. End-of-file... avoid busy loop. */
+			s[0] = 0;
+			n = 0;
+			goto redo_without_fd;
 		}
 		s[rr] = 0;
 	}
@@ -2121,6 +2127,7 @@ static int adm_wait_ci(const struct cfg_ctx *ctx)
 	int saved_stdin, saved_stdout, fd;
 	int N;
 	struct sigaction so, sa;
+	int have_tty = 1;
 
 	saved_stdin = -1;
 	saved_stdout = -1;
@@ -2135,13 +2142,16 @@ static int adm_wait_ci(const struct cfg_ctx *ctx)
 		if (saved_stdin == -1)
 			perror("dup(stdout)");
 		fd = open("/dev/console", O_RDONLY);
-		if (fd == -1)
+		if (fd == -1) {
 			perror("open('/dev/console, O_RDONLY)");
-		dup2(fd, fileno(stdin));
-		fd = open("/dev/console", O_WRONLY);
-		if (fd == -1)
-			perror("open('/dev/console, O_WRONLY)");
-		dup2(fd, fileno(stdout));
+			have_tty = 0;
+		} else {
+			dup2(fd, fileno(stdin));
+			fd = open("/dev/console", O_WRONLY);
+			if (fd == -1)
+				perror("open('/dev/console, O_WRONLY)");
+			dup2(fd, fileno(stdout));
+		}
 	}
 
 	sa.sa_handler = chld_sig_hand;
@@ -2197,10 +2207,6 @@ static int adm_wait_ci(const struct cfg_ctx *ctx)
 		/* Just in case, if plymouth or usplash is running,
 		 * tell them to step aside.
 		 * Also try to force canonical tty mode. */
-		if (system("exec > /dev/null 2>&1; plymouth quit ; usplash_write QUIT ; "
-			   "stty echo icanon icrnl"))
-			/* Ignore return value. Cannot do anything about it anyways. */;
-
 		printf
 		    ("\n***************************************************************\n"
 		     " DRBD's startup script waits for the peer node(s) to appear.\n"
@@ -2213,6 +2219,33 @@ static int adm_wait_ci(const struct cfg_ctx *ctx)
 				 "0"), get_opt_val(&STAILQ_FIRST(&config)->startup_options,
 						   "wfc-timeout", "0"),
 		     STAILQ_FIRST(&config)->name);
+
+		if (!have_tty) {
+			printf(" To abort waiting for DRBD connections, kill this process: kill %u\n", getpid());
+			fflush(stdout);
+			/* wait untill killed, or all drbdsetup children have finished. */
+			do {
+				rr = poll(NULL, 0, -1);
+				if (rr == -1) {
+					if (errno == EINTR) {
+						if (childs_running(pids, WNOHANG))
+							continue;
+						break;
+					}
+					perror("poll");
+					exit(E_EXEC_ERROR);
+				}
+			} while (rr != -1);
+
+			kill_childs(pids);
+			childs_running(pids, 0);
+			check_exit_codes(pids);
+			return 0;
+		}
+
+		if (system("exec > /dev/null 2>&1; plymouth quit ; usplash_write QUIT ; "
+			   "stty echo icanon icrnl"))
+			/* Ignore return value. Cannot do anything about it anyways. */;
 
 		printf(" To abort waiting enter 'yes' [ -- ]: ");
 		do {
