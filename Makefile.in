@@ -97,7 +97,13 @@ check-submods:
 
 .PHONY:	doc-clean install install-tools clean distclean extra-clean uninstall
 doc-clean:
-	$(MAKE) -C documentation doc-clean
+	$(MAKE) -C documentation/v9 doc-clean
+ifeq ($(WITH_83_SUPPORT),yes)
+	$(MAKE) -C documentation/v83 doc-clean
+endif
+ifeq ($(WITH_84_SUPPORT),yes)
+	$(MAKE) -C documentation/v84 doc-clean
+endif
 
 install: install-tools
 
