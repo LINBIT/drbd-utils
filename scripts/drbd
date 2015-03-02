@@ -182,21 +182,29 @@ case "$1" in
 	# Currently, this is necessary for drbd8
 	# drbd9 supports automatic promote and removes the "sh-b-pri" command.
 	$DRBDADM sh-b-pri all || true
+	log_end_msg 0
 
 	# Now handle stacked devices, if any
-	$DRBDADM -S adjust-with-progress all
-	[[ $? -gt 1 ]] && exit 20
-	for DEVICE in `$DRBDADM -S sh-dev all`; do
-	    UDEV_TIMEOUT_LOCAL=$UDEV_TIMEOUT
-	    while [ ! -e $DEVICE ] && [ $UDEV_TIMEOUT_LOCAL -gt 0 ] ; do
-		sleep 1
-		UDEV_TIMEOUT_LOCAL=$(( $UDEV_TIMEOUT_LOCAL-1 ))
-	    done
-	done
-	$DRBDADM -S wait-con-int # User interruptible version of wait-connect all
-	$DRBDADM -S sh-b-pri all || true
+	DEVICES=`$DRBDADM -S sh-dev all`
+	if [[ $DEVICES ]] ; then
+	    log_daemon_msg "Starting stacked DRBD resources, if any"
+	    $DRBDADM -S adjust-with-progress all
+	    if [[ $? -gt 1 ]] ; then
+		log_end_msg 1
+	    else
+		for DEVICE in $DEVICES; do
+		    UDEV_TIMEOUT_LOCAL=$UDEV_TIMEOUT
+		    while [ ! -e $DEVICE ] && [ $UDEV_TIMEOUT_LOCAL -gt 0 ] ; do
+			sleep 1
+			UDEV_TIMEOUT_LOCAL=$(( $UDEV_TIMEOUT_LOCAL-1 ))
+		    done
+		done
+		$DRBDADM -S wait-con-int # User interruptible version of wait-connect all
+		$DRBDADM -S sh-b-pri all || true
+		log_end_msg 0
+	    fi
+	fi
 
-	log_end_msg 0
 	;;
     stop)
 	$DRBDADM sh-nop
