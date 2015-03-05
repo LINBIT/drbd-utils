@@ -56,7 +56,7 @@ SHELL=/bin/bash
 # variables meant to be overridden from the make command line
 DESTDIR ?= /
 
-CFLAGS += -Wall -I../../common -I.. -I.
+CFLAGS += -Wall -I../../drbd-headers -I.. -I.
 
 .PHONY: drbd_buildtag.c
 

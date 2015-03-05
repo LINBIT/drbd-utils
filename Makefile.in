@@ -143,6 +143,9 @@ PNAME	:= drbd-utils
 .PHONY: .filelist
 .filelist:
 	@$(GIT) ls-files | sed '$(if $(PRESERVE_DEBIAN),,/^debian/d);s#^#$(PNAME)-$(DIST_VERSION)/#' | grep -v "gitignore" > .filelist
+	@for d in `git submodule foreach | cut -f2 -d"'"`; do \
+		(cd $$d && git ls-files | xargs printf "$(PNAME)-$(DIST_VERSION)/$$d/%s\n";) \
+	done >> .filelist
 	@[ -s .filelist ] # assert there is something in .filelist now
 	@find documentation -name "[^.]*.[58]" -o -name "*.html" | \
 	sed "s/^/$(PNAME)-$(DIST_VERSION)\//"              >> .filelist ; \
