@@ -658,14 +658,13 @@ static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 {
 	struct stat sb;
 	int device_fd;
-	int err;
 
 	if ((device_fd = open(arg,O_RDWR))==-1) {
 		PERROR("Can not open device '%s'", arg);
 		return OTHER_ERROR;
 	}
 
-	if ( (err=fstat(device_fd, &sb)) ) {
+	if (fstat(device_fd, &sb)) {
 		PERROR("fstat(%s) failed", arg);
 		return OTHER_ERROR;
 	}
