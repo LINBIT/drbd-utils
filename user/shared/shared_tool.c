@@ -824,3 +824,94 @@ int err(const char *format, ...)
 
 	return n;
 }
+
+/* if @str is NULL or the empty string, return "";
+ * if @str contains ' ', '\t' or '\\',
+ * surround it with ", and escape space, tab, backslash and double-quote with backslash.
+ * This escape is for escaping tokens for the drbdadm config parser,
+ * so any legal input do drbdadm "drbdadm dump" should result in output, which,
+ * if fed into an additional "drbdadm dump" should give the same output again.
+ */
+const char *esc(char *str)
+{
+	static char buffer[1024];
+	char *ue = str, *e = buffer;
+
+	if (!str || !str[0]) {
+		return "\"\"";
+	}
+	if (strchr(str, ' ') || strchr(str, '\t') || strchr(str, '\\')) {
+		*e++ = '"';
+		while (*ue) {
+			if (*ue == '"' || *ue == '\\') {
+				*e++ = '\\';
+			}
+			if (e - buffer >= 1022) {
+				err("string too long.\n");
+				exit(E_SYNTAX);
+			}
+			*e++ = *ue++;
+			if (e - buffer >= 1022) {
+				err("string too long.\n");
+				exit(E_SYNTAX);
+			}
+		}
+		*e++ = '"';
+		*e++ = '\0';
+		return buffer;
+	}
+	return str;
+}
+
+/* escape a few things that are not legal in xml content; good enough for our
+ * purposes, but likely not "academically correct" resp.  "complete". */
+const char *esc_xml(char *str)
+{
+	static char buffer[1024];
+	char *ue = str, *e = buffer;
+
+	if (!str || !str[0]) {
+		return "";
+	}
+	if (strchr(str, '"') || strchr(str, '\'') || strchr(str, '<') ||
+	    strchr(str, '>') || strchr(str, '&') || strchr(str, '\\')) {
+		while (*ue) {
+			if (*ue == '"' || *ue == '\\') {
+				*e++ = '\\';
+				if (e - buffer >= 1021) {
+					err("string too long.\n");
+					exit(E_SYNTAX);
+				}
+				*e++ = *ue++;
+			} else if (*ue == '\'' || *ue == '<' || *ue == '>'
+				   || *ue == '&') {
+				if (*ue == '\'' && e - buffer < 1017) {
+					strcpy(e, "&apos;");
+					e += 6;
+				} else if (*ue == '<' && e - buffer < 1019) {
+					strcpy(e, "&lt;");
+					e += 4;
+				} else if (*ue == '>' && e - buffer < 1019) {
+					strcpy(e, "&gt;");
+					e += 4;
+				} else if (*ue == '&' && e - buffer < 1018) {
+					strcpy(e, "&amp;");
+					e += 5;
+				} else {
+					err("string too long.\n");
+					exit(E_SYNTAX);
+				}
+				ue++;
+			} else {
+				*e++ = *ue++;
+				if (e - buffer >= 1022) {
+					err("string too long.\n");
+					exit(E_SYNTAX);
+				}
+			}
+		}
+		*e++ = '\0';
+		return buffer;
+	}
+	return str;
+}

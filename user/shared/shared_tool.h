@@ -111,6 +111,8 @@ extern void dt_pretty_print_gc(const uint32_t* gen_cnt);
 
 extern void initialize_err(void);
 extern int err(const char *format, ...);
+extern const char *esc_xml(char *str);
+extern const char *esc(char *str);
 
 
 #endif

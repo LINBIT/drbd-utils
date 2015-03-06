@@ -549,8 +549,8 @@ int _run_deferred_cmds(enum drbd_cfg_stage stage)
 				if (d->ctx.res != last_res)
 					printf(" [skipped:%s]", d->ctx.res->name);
 			} else
-				fprintf(stderr, "%s: %s %s: skipped due to earlier error\n",
-					progname, d->ctx.arg, d->ctx.res->name);
+				err("%s: %s %s: skipped due to earlier error\n",
+				    progname, d->ctx.arg, d->ctx.res->name);
 			r = 0;
 		} else {
 			if (adjust_with_progress) {
@@ -602,88 +602,6 @@ int run_deferred_cmds(void)
 }
 
 /*** These functions are used to the print the config ***/
-
-static char *esc(char *str)
-{
-	static char buffer[1024];
-	char *ue = str, *e = buffer;
-
-	if (!str || !str[0]) {
-		return "\"\"";
-	}
-	if (strchr(str, ' ') || strchr(str, '\t') || strchr(str, '\\')) {
-		*e++ = '"';
-		while (*ue) {
-			if (*ue == '"' || *ue == '\\') {
-				*e++ = '\\';
-			}
-			if (e - buffer >= 1022) {
-				fprintf(stderr, "string too long.\n");
-				exit(E_SYNTAX);
-			}
-			*e++ = *ue++;
-			if (e - buffer >= 1022) {
-				fprintf(stderr, "string too long.\n");
-				exit(E_SYNTAX);
-			}
-		}
-		*e++ = '"';
-		*e++ = '\0';
-		return buffer;
-	}
-	return str;
-}
-
-static char *esc_xml(char *str)
-{
-	static char buffer[1024];
-	char *ue = str, *e = buffer;
-
-	if (!str || !str[0]) {
-		return "";
-	}
-	if (strchr(str, '"') || strchr(str, '\'') || strchr(str, '<') ||
-	    strchr(str, '>') || strchr(str, '&') || strchr(str, '\\')) {
-		while (*ue) {
-			if (*ue == '"' || *ue == '\\') {
-				*e++ = '\\';
-				if (e - buffer >= 1021) {
-					fprintf(stderr, "string too long.\n");
-					exit(E_SYNTAX);
-				}
-				*e++ = *ue++;
-			} else if (*ue == '\'' || *ue == '<' || *ue == '>'
-				   || *ue == '&') {
-				if (*ue == '\'' && e - buffer < 1017) {
-					strcpy(e, "&apos;");
-					e += 6;
-				} else if (*ue == '<' && e - buffer < 1019) {
-					strcpy(e, "&lt;");
-					e += 4;
-				} else if (*ue == '>' && e - buffer < 1019) {
-					strcpy(e, "&gt;");
-					e += 4;
-				} else if (*ue == '&' && e - buffer < 1018) {
-					strcpy(e, "&amp;");
-					e += 5;
-				} else {
-					fprintf(stderr, "string too long.\n");
-					exit(E_SYNTAX);
-				}
-				ue++;
-			} else {
-				*e++ = *ue++;
-				if (e - buffer >= 1022) {
-					fprintf(stderr, "string too long.\n");
-					exit(E_SYNTAX);
-				}
-			}
-		}
-		*e++ = '\0';
-		return buffer;
-	}
-	return str;
-}
 
 static void dump_options2(char *name, struct d_option *opts,
 		void(*within)(void*), void *ctx)
@@ -3671,6 +3589,7 @@ int main(int argc, char **argv)
 	int is_dump;
 	struct cfg_ctx ctx = { .arg = NULL };
 
+	initialize_err();
 	yyin = NULL;
 	uname(&nodeinfo);	/* FIXME maybe fold to lower case ? */
 	no_tty = (!isatty(fileno(stdin)) || !isatty(fileno(stdout)));
