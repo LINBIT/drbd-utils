@@ -952,7 +952,7 @@ static void find_drbdcmd(char **cmd, char **pathes)
 }
 
 #define NA(ARGC) \
-  ({ if((ARGC) >= MAX_ARGS) { fprintf(stderr,"MAX_ARGS too small\n"); \
+  ({ if((ARGC) >= MAX_ARGS) { err("MAX_ARGS too small\n"); \
        exit(E_THINKO); \
      } \
      (ARGC)++; \
@@ -1463,7 +1463,7 @@ int adm_peer_device(const struct cfg_ctx *ctx)
 
 	peer_device = find_peer_device(conn, vol->vnr);
 	if (!peer_device) {
-		fprintf(stderr, "Could not find peer_device object!\n");
+		err("Could not find peer_device object!\n");
 		exit(E_THINKO);
 	}
 
@@ -2852,23 +2852,20 @@ char *config_file_from_arg(char *arg)
 	if (minor >= 0) {
 		f = lookup_minor(minor);
 		if (!f) {
-			err("Don't know which config file belongs ""to minor %d, trying default ones...\n",
-			    minor);
+			err("Don't know which config file belongs to minor %d, trying default ones...\n", minor);
 			return NULL;
 		}
 	} else {
 		f = lookup_resource(arg);
 		if (!f) {
-			err("Don't know which config file belongs ""to resource %s, trying default ""ones...\n",
-			    arg);
+			err("Don't know which config file belongs to resource %s, trying default ones...\n", arg);
 			return NULL;
 		}
 	}
 
 	yyin = fopen(f, "r");
 	if (yyin == NULL) {
-		err("Couldn't open file %s for reading, reason: %m\n""trying default config file...\n",
-		    config_file);
+		err("Couldn't open file %s for reading, reason: %m\ntrying default config file...\n", config_file);
 		return NULL;
 	}
 	return f;
@@ -2927,8 +2924,7 @@ void die_if_no_resources(void)
 		exit(E_USAGE);
 	}
 	if (!is_drbd_top && nr_resources[NORMAL] == 0) {
-		err("WARN: no normal resources defined for this host (%s)!?\n",
-		    hostname);
+		err("WARN: no normal resources defined for this host (%s)!?\n", hostname);
 		exit(E_USAGE);
 	}
 	if (is_drbd_top && nr_resources[STACKED] == 0) {
@@ -3140,8 +3136,7 @@ int main(int argc, char **argv)
 					r = 0;
 				}
 				if (!ctx.res) {
-					err("'%s' not defined in your config (for this host).\n",
-					    resource_names[i]);
+					err("'%s' not defined in your config (for this host).\n", resource_names[i]);
 					exit(E_USAGE);
 				}
 				if (r)
@@ -3160,8 +3155,7 @@ int main(int argc, char **argv)
 				if (cmd->vol_id_required && !ctx.vol) {
 					err("%s requires a specific volume id, but none is specified.\n"
 					    "Try '%s minor-<minor_number>' or '%s %s/<vnr>'\n",
-					    cmd->name, cmd->name, cmd->name,
-					    resource_names[i]);
+					    cmd->name, cmd->name, cmd->name, resource_names[i]);
 					exit(E_USAGE);
 				}
 				if (ctx.res->ignore && !is_dump) {

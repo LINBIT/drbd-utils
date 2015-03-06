@@ -141,8 +141,7 @@ void m_strtoll_range(const char *s, char def_unit,
 	unsigned long long r = m_strtoll(s, def_unit);
 	char unit[] = { def_unit != '1' ? def_unit : 0, 0 };
 	if (min > r || r > max) {
-		fprintf(stderr,
-			"%s:%d: %s %s => %llu%s out of range [%llu..%llu]%s.\n",
+		err("%s:%d: %s %s => %llu%s out of range [%llu..%llu]%s.\n",
 			config_file, fline, name, s, r, unit, min, max, unit);
 		if (config_valid <= 1) {
 			config_valid = 0;
@@ -150,8 +149,7 @@ void m_strtoll_range(const char *s, char def_unit,
 		}
 	}
 	if (DEBUG_RANGE_CHECK) {
-		fprintf(stderr,
-			"%s:%d: %s %s => %llu%s in range [%llu..%llu]%s.\n",
+		err("%s:%d: %s %s => %llu%s in range [%llu..%llu]%s.\n",
 			config_file, fline, name, s, r, unit, min, max, unit);
 	}
 }
@@ -175,8 +173,7 @@ void range_check(const enum range_checks what, const char *name,
 	case R_NO_CHECK:
 		break;
 	default:
-		fprintf(stderr, "%s:%d: unknown range for %s => %s\n",
-			config_file, fline, name, value);
+		err("%s:%d: unknown range for %s => %s\n", config_file, fline, name, value);
 		break;
 	case R_MINOR_COUNT:
 		M_STRTOLL_RANGE(MINOR_COUNT);
@@ -272,7 +269,7 @@ void range_check(const enum range_checks what, const char *name,
 		}
 		if (!proto && config_valid <= 1) {
 			config_valid = 0;
-			fprintf(stderr, "unknown protocol '%s', should be one of A,B,C\n", value);
+			err("unknown protocol '%s', should be one of A,B,C\n", value);
 		}
 	}
 }
@@ -281,7 +278,7 @@ struct d_option *new_opt(char *name, char *value)
 {
 	struct d_option *cn = calloc(1, sizeof(struct d_option));
 
-	/* fprintf(stderr,"%s:%d: %s = %s\n",config_file,line,name,value); */
+	/* err("%s:%d: %s = %s\n",config_file,line,name,value); */
 	cn->name = name;
 	cn->value = value;
 
@@ -290,7 +287,7 @@ struct d_option *new_opt(char *name, char *value)
 static void derror(struct d_host_info *host, struct d_resource *res, char *text)
 {
 	config_valid = 0;
-	fprintf(stderr, "%s:%d: in resource %s, on %s { ... }:"
+	err("%s:%d: in resource %s, on %s { ... }:"
 		" '%s' keyword missing.\n",
 		config_file, c_section_start, res->name, names_to_str(host->on_hosts), text);
 }
@@ -298,18 +295,16 @@ static void derror(struct d_host_info *host, struct d_resource *res, char *text)
 void pdperror(char *text)
 {
 	config_valid = 0;
-	fprintf(stderr, "%s:%d: in proxy plugin section: %s.\n",
-		config_file, line, text);
+	err("%s:%d: in proxy plugin section: %s.\n", config_file, line, text);
 	exit(E_CONFIG_INVALID);
 }
 
 static void pperror(struct d_host_info *host, struct d_proxy_info *proxy, char *text)
 {
 	config_valid = 0;
-	fprintf(stderr, "%s:%d: in section: on %s { proxy on %s { ... } }:"
-		" '%s' keyword missing.\n",
-		config_file, c_section_start, names_to_str(host->on_hosts),
-		names_to_str(proxy->on_hosts), text);
+	err("%s:%d: in section: on %s { proxy on %s { ... } }: '%s' keyword missing.\n",
+	    config_file, c_section_start, names_to_str(host->on_hosts),
+	    names_to_str(proxy->on_hosts), text);
 }
 
 #define typecheck(type,x) \
@@ -344,7 +339,7 @@ void check_uniq_init(void)
 {
 	memset(&global_htable, 0, sizeof(global_htable));
 	if (!hcreate_r(256 * ((2 * 4) + 4), &global_htable)) {
-		fprintf(stderr, "Insufficient memory.\n");
+		err("Insufficient memory.\n");
 		exit(E_EXEC_ERROR);
 	};
 }
@@ -362,7 +357,7 @@ void check_upr_init(void)
 		hdestroy_r(&per_resource_htable);
 	memset(&per_resource_htable, 0, sizeof(per_resource_htable));
 	if (!hcreate_r(256, &per_resource_htable)) {
-		fprintf(stderr, "Insufficient memory.\n");
+		err("Insufficient memory.\n");
 		exit(E_EXEC_ERROR);
 	};
 	created = 1;
@@ -386,35 +381,30 @@ int vcheck_uniq(struct hsearch_data *ht, const char *what, const char *fmt, va_l
 	rv = vasprintf(&e.key, fmt, ap);
 
 	if (rv < 0) {
-		perror("vasprintf");
+		err("vasprintf: %m\n");
 		exit(E_THINKO);
 	}
 
 	if (EXIT_ON_CONFLICT && !what) {
-		fprintf(stderr, "Oops, unset argument in %s:%d.\n", __FILE__,
-			__LINE__);
+		err("Oops, unset argument in %s:%d.\n", __FILE__, __LINE__);
 		exit(E_THINKO);
 	}
 	m_asprintf((char **)&e.data, "%s:%u", config_file, fline);
 	hsearch_r(e, FIND, &ep, ht);
-	//fprintf(stderr, "FIND %s: %p\n", e.key, ep);
+	//err("FIND %s: %p\n", e.key, ep);
 	if (ep) {
 		if (what) {
-			fprintf(stderr,
-				"%s: conflicting use of %s '%s' ...\n"
-				"%s: %s '%s' first used here.\n",
-				(char *)e.data,  what, ep->key,
-				(char *)ep->data, what, ep->key);
+			err("%s: conflicting use of %s '%s' ...\n%s: %s '%s' first used here.\n",
+			    (char *)e.data, what, ep->key, (char *)ep->data, what, ep->key);
 		}
 		free(e.key);
 		free(e.data);
 		config_valid = 0;
 	} else {
-		//fprintf(stderr, "ENTER %s\t=>\t%s\n", e.key, (char *)e.data);
+		//err("ENTER %s\t=>\t%s\n", e.key, (char *)e.data);
 		hsearch_r(e, ENTER, &ep, ht);
 		if (!ep) {
-			fprintf(stderr, "hash table entry (%s => %s) failed\n",
-					e.key, (char *)e.data);
+			err("hash table entry (%s => %s) failed\n", e.key, (char *)e.data);
 			exit(E_THINKO);
 		}
 		ep = NULL;
@@ -442,9 +432,8 @@ void check_meta_disk(struct d_volume *vol, struct d_host_info *host)
 static void pe_expected(const char *exp)
 {
 	const char *s = yytext;
-	fprintf(stderr, "%s:%u: Parse error: '%s' expected,\n\t"
-		"but got '%.20s%s'\n", config_file, line, exp, s,
-		strlen(s) > 20 ? "..." : "");
+	err("%s:%u: Parse error: '%s' expected,\n\tbut got '%.20s%s'\n",
+	    config_file, line, exp, s, strlen(s) > 20 ? "..." : "");
 	exit(E_CONFIG_INVALID);
 }
 
@@ -464,7 +453,7 @@ static void check_string_error(int got)
 	default:
 		return;
 	}
-	fprintf(stderr,"%s:%u: %s >>>%.20s...<<<\n", config_file, line, msg, yytext);
+	err("%s:%u: %s >>>%.20s...<<<\n", config_file, line, msg, yytext);
 	exit(E_CONFIG_INVALID);
 }
 
@@ -475,10 +464,8 @@ static void pe_expected_got(const char *exp, int got)
 	if (exp[0] == '\'' && exp[1] && exp[2] == '\'' && exp[3] == 0) {
 		tmp[0] = exp[1];
 	}
-	fprintf(stderr, "%s:%u: Parse error: '%s' expected,\n\t"
-		"but got '%.20s%s' (TK %d)\n",
-		config_file, line,
-		tmp[0] ? tmp : exp, s, strlen(s) > 20 ? "..." : "", got);
+	err("%s:%u: Parse error: '%s' expected,\n\tbut got '%.20s%s' (TK %d)\n",
+	    config_file, line, tmp[0] ? tmp : exp, s, strlen(s) > 20 ? "..." : "", got);
 	exit(E_CONFIG_INVALID);
 }
 
@@ -515,10 +502,8 @@ static void parse_global(void)
 	fline = line;
 	check_uniq("global section", "global");
 	if (config) {
-		fprintf(stderr,
-			"%s:%u: You should put the global {} section\n\t"
-			"in front of any resource {} section\n",
-			config_file, line);
+		err("%s:%u: You should put the global {} section\n\tin front of any resource {} section\n",
+		    config_file, line);
 	}
 	EXP('{');
 	while (1) {
@@ -724,7 +709,7 @@ static struct d_option *parse_options_d(int token_flag, int token_no_flag, int t
 			delegate(ctx);
 			continue;
 		} else if (token == TK_DEPRECATED_OPTION) {
-			/* fprintf(stderr, "Warn: Ignoring deprecated option '%s'\n", yylval.txt); */
+			/* err("Warn: Ignoring deprecated option '%s'\n", yylval.txt); */
 			expect_STRING_or_INT();
 		} else if (token == '}') {
 			return options;
@@ -903,22 +888,20 @@ static void check_minor_nonsense(const char *devname, const int explicit_minor)
 		if (m == explicit_minor)
 			return;
 
-		fprintf(stderr,
-			"%s:%d: explicit minor number must match with device name\n"
-			"\tTry \"device /dev/drbd%u minor %u;\",\n"
-			"\tor leave off either device name or explicit minor.\n"
-			"\tArbitrary device names must start with /dev/drbd_\n"
-			"\tmind the '_'! (/dev/ is optional, but drbd_ is required)\n",
-			config_file, fline, explicit_minor, explicit_minor);
+		err("%s:%d: explicit minor number must match with device name\n"
+		    "\tTry \"device /dev/drbd%u minor %u;\",\n"
+		    "\tor leave off either device name or explicit minor.\n"
+		    "\tArbitrary device names must start with /dev/drbd_\n"
+		    "\tmind the '_'! (/dev/ is optional, but drbd_ is required)\n",
+		    config_file, fline, explicit_minor, explicit_minor);
 		config_valid = 0;
 		return;
 	} else if (devname[9] == '_')
 		return;
 
-	fprintf(stderr,
-		"%s:%d: arbitrary device name must start with /dev/drbd_\n"
-		"\tmind the '_'! (/dev/ is optional, but drbd_ is required)\n",
-		config_file, fline);
+	err("%s:%d: arbitrary device name must start with /dev/drbd_\n"
+	    "\tmind the '_'! (/dev/ is optional, but drbd_ is required)\n",
+	    config_file, fline);
 	config_valid = 0;
 	return;
 }
@@ -937,10 +920,9 @@ static void parse_device(struct d_name* on_hosts, struct d_volume *vol)
 			vol->device = yylval.txt;
 
 		if (strncmp("/dev/drbd", vol->device, 9)) {
-			fprintf(stderr,
-				"%s:%d: device name must start with /dev/drbd\n"
-				"\t(/dev/ is optional, but drbd is required)\n",
-				config_file, fline);
+			err("%s:%d: device name must start with /dev/drbd\n"
+			    "\t(/dev/ is optional, but drbd is required)\n",
+			    config_file, fline);
 			config_valid = 0;
 			/* no goto out yet,
 			 * as that would additionally throw a parse error */
@@ -952,9 +934,8 @@ static void parse_device(struct d_name* on_hosts, struct d_volume *vol)
 		case ';':
 			m = dt_minor_of_dev(vol->device);
 			if (m < 0) {
-				fprintf(stderr,
-					"%s:%d: no minor given nor device name contains a minor number\n",
-					config_file, fline);
+				err("%s:%d: no minor given nor device name contains a minor number\n",
+				    config_file, fline);
 				config_valid = 0;
 			}
 			vol->device_minor = m;
@@ -1005,9 +986,8 @@ struct d_volume *volume0(struct d_volume **volp)
 			return vol;
 
 		config_valid = 0;
-		fprintf(stderr,
-			"%s:%d: Explicit and implicit volumes not allowed\n",
-			config_file, line);
+		err("%s:%d: Explicit and implicit volumes not allowed\n",
+		    config_file, line);
 		return vol;
 	}
 }
@@ -1149,9 +1129,7 @@ void check_volumes_complete(struct d_resource *res, struct d_host_info *host)
 		if (vnr == -1U || vnr < vol->vnr)
 			vnr = vol->vnr;
 		else
-			fprintf(stderr,
-				"internal error: in %s: unsorted volumes list\n",
-				res->name);
+			err("internal error: in %s: unsorted volumes list\n", res->name);
 		check_volume_complete(res, host, vol);
 		vol = vol->next;
 	}
@@ -1171,14 +1149,12 @@ void check_volume_sets_equal(struct d_resource *res, struct d_host_info *host1, 
 	/* volume lists are supposed to be sorted on vnr */
 	while (a || b) {
 		while (a && (!b || a->vnr < b->vnr)) {
-			fprintf(stderr,
-				"%s:%d: in resource %s, on %s { ... }: "
-				"volume %d not defined on %s\n",
-				config_file, line, res->name,
-				names_to_str(host1->on_hosts),
-				a->vnr,
-				compare_stacked ? host1->lower->name
-					: names_to_str(host2->on_hosts));
+			err("%s:%d: in resource %s, on %s { ... }: volume %d not defined on %s\n",
+			    config_file, line, res->name,
+			    names_to_str(host1->on_hosts),
+			    a->vnr,
+			    compare_stacked ? host1->lower->name
+				    : names_to_str(host2->on_hosts));
 			a = a->next;
 			config_valid = 0;
 		}
@@ -1188,14 +1164,13 @@ void check_volume_sets_equal(struct d_resource *res, struct d_host_info *host1, 
 			 * top of it.  Warn (if we have a terminal),
 			 * but consider it as valid. */
 			if (!(compare_stacked && no_tty))
-				fprintf(stderr,
-					"%s:%d: in resource %s, on %s { ... }: "
-					"volume %d missing (present on %s)\n",
-					config_file, line, res->name,
-					names_to_str(host1->on_hosts),
-					b->vnr,
-					compare_stacked ? host1->lower->name
-						: names_to_str(host2->on_hosts));
+				err("%s:%d: in resource %s, on %s { ... }: "
+				    "volume %d missing (present on %s)\n",
+				    config_file, line, res->name,
+				    names_to_str(host1->on_hosts),
+				    b->vnr,
+				    compare_stacked ? host1->lower->name
+					    : names_to_str(host2->on_hosts));
 			if (!compare_stacked)
 				config_valid = 0;
 			b = b->next;
@@ -1299,9 +1274,8 @@ void parse_host_section(struct d_resource *res,
 			break;
 		case TK_ADDRESS:
 			if (host->by_address) {
-				fprintf(stderr,
-					"%s:%d: address statement not allowed for floating {} host sections\n",
-					config_file, fline);
+				err("%s:%d: address statement not allowed for floating {} host sections\n",
+				    config_file, fline);
 				config_valid = 0;
 				exit(E_CONFIG_INVALID);
 			}
@@ -1312,9 +1286,8 @@ void parse_host_section(struct d_resource *res,
 			break;
 		case TK_ALT_ADDRESS:
 			if (host->by_address) {
-				fprintf(stderr,
-					"%s:%d: address statement not allowed for floating {} host sections\n",
-					config_file, fline);
+				err("%s:%d: address statement not allowed for floating {} host sections\n",
+				    config_file, fline);
 				config_valid = 0;
 				exit(E_CONFIG_INVALID);
 			}
@@ -1392,9 +1365,8 @@ void parse_skip()
 			level--;
 			break;
 		case 0:
-			fprintf(stderr, "%s:%u: reached eof "
-				"while parsing this skip block.\n",
-				config_file, fline);
+			err("%s:%u: reached eof while parsing this skip block.\n",
+			    config_file, fline);
 			exit(E_CONFIG_INVALID);
 		}
 	}
@@ -1523,23 +1495,21 @@ void set_me_in_resource(struct d_resource* res, int match_on_proxy)
 		/* we matched. */
 		if (res->ignore) {
 			config_valid = 0;
-			fprintf(stderr,
-				"%s:%d: in resource %s, %s %s { ... }:\n"
-				"\tYou cannot ignore and define at the same time.\n",
-				res->config_file, host->config_line, res->name,
-				host->lower ? "stacked-on-top-of" : "on",
-				host->lower ? host->lower->name : names_to_str(host->on_hosts));
+			err("%s:%d: in resource %s, %s %s { ... }:\n"
+			    "\tYou cannot ignore and define at the same time.\n",
+			    res->config_file, host->config_line, res->name,
+			    host->lower ? "stacked-on-top-of" : "on",
+			    host->lower ? host->lower->name : names_to_str(host->on_hosts));
 		}
 		if (res->me) {
 			config_valid = 0;
-			fprintf(stderr,
-				"%s:%d: in resource %s, %s %s { ... } ... %s %s { ... }:\n"
-				"\tThere are multiple host sections for this node.\n",
-				res->config_file, host->config_line, res->name,
-				res->me->lower ? "stacked-on-top-of" : "on",
-				res->me->lower ? res->me->lower->name : names_to_str(res->me->on_hosts),
-				host->lower ? "stacked-on-top-of" : "on",
-				host->lower ? host->lower->name : names_to_str(host->on_hosts));
+			err("%s:%d: in resource %s, %s %s { ... } ... %s %s { ... }:\n"
+			    "\tThere are multiple host sections for this node.\n",
+			    res->config_file, host->config_line, res->name,
+			    res->me->lower ? "stacked-on-top-of" : "on",
+			    res->me->lower ? res->me->lower->name : names_to_str(res->me->on_hosts),
+			    host->lower ? "stacked-on-top-of" : "on",
+			    host->lower ? host->lower->name : names_to_str(host->on_hosts));
 		}
 		res->me = host;
 		if (host->lower)
@@ -1563,9 +1533,9 @@ void set_peer_in_resource(struct d_resource* res, int peer_required)
 	/* me must be already set */
 	if (!res->me) {
 		/* should have been implicitly ignored. */
-		fprintf(stderr, "%s:%d: in resource %s:\n"
-				"\tcannot determine the peer, don't even know myself!\n",
-				res->config_file, res->start_line, res->name);
+		err("%s:%d: in resource %s:\n"
+		    "\tcannot determine the peer, don't even know myself!\n",
+		    res->config_file, res->start_line, res->name);
 		exit(E_THINKO);
 	}
 
@@ -1587,10 +1557,9 @@ void set_peer_in_resource(struct d_resource* res, int peer_required)
 		res->peer = res->all_hosts == res->me ?
 			res->all_hosts->next : res->all_hosts;
 		if (dry_run > 1 && connect_to_host)
-			fprintf(stderr,
-				"%s:%d: in resource %s:\n"
-				"\tIgnoring --peer '%s': there are only two host sections.\n",
-				res->config_file, res->start_line, res->name, connect_to_host);
+			err("%s:%d: in resource %s:\n"
+			    "\tIgnoring --peer '%s': there are only two host sections.\n",
+			    res->config_file, res->start_line, res->name, connect_to_host);
 		return;
 	}
 
@@ -1598,11 +1567,10 @@ void set_peer_in_resource(struct d_resource* res, int peer_required)
 	 * we need some help! */
 	if (!connect_to_host) {
 		if (peer_required) {
-			fprintf(stderr,
-				"%s:%d: in resource %s:\n"
-				"\tThere are multiple host sections for the peer node.\n"
-				"\tUse the --peer option to select which peer section to use.\n",
-				res->config_file, res->start_line, res->name);
+			err("%s:%d: in resource %s:\n"
+			    "\tThere are multiple host sections for the peer node.\n"
+			    "\tUse the --peer option to select which peer section to use.\n",
+			    res->config_file, res->start_line, res->name);
 			config_valid = 0;
 		}
 		return;
@@ -1617,19 +1585,17 @@ void set_peer_in_resource(struct d_resource* res, int peer_required)
 			continue;
 
 		if (host == res->me) {
-			fprintf(stderr,
-				"%s:%d: in resource %s\n"
-				"\tInvoked with --peer '%s', but that matches myself!\n",
-				res->config_file, res->start_line, res->name, connect_to_host);
+			err("%s:%d: in resource %s\n"
+			    "\tInvoked with --peer '%s', but that matches myself!\n",
+			    res->config_file, res->start_line, res->name, connect_to_host);
 			res->peer = NULL;
 			break;
 		}
 
 		if (res->peer) {
-			fprintf(stderr,
-				"%s:%d: in resource %s:\n"
-				"\tInvoked with --peer '%s', but that matches multiple times!\n",
-				res->config_file, res->start_line, res->name, connect_to_host);
+			err("%s:%d: in resource %s:\n"
+			    "\tInvoked with --peer '%s', but that matches multiple times!\n",
+			    res->config_file, res->start_line, res->name, connect_to_host);
 			res->peer = NULL;
 			break;
 		}
@@ -1639,10 +1605,9 @@ void set_peer_in_resource(struct d_resource* res, int peer_required)
 	if (peer_required && !res->peer) {
 		config_valid = 0;
 		if (!host)
-			fprintf(stderr,
-				"%s:%d: in resource %s:\n"
-				"\tNo host ('on' or 'floating') section matches --peer '%s'\n",
-				res->config_file, res->start_line, res->name, connect_to_host);
+			err("%s:%d: in resource %s:\n"
+			    "\tNo host ('on' or 'floating') section matches --peer '%s'\n",
+			    res->config_file, res->start_line, res->name, connect_to_host);
 	}
 }
 
@@ -1660,10 +1625,10 @@ void set_on_hosts_in_res(struct d_resource *res)
 			}
 
 			if (l_res == NULL) {
-				fprintf(stderr, "%s:%d: in resource %s, "
-					"referenced resource '%s' not defined.\n",
-					res->config_file, res->start_line, res->name,
-					host->lower_name);
+				err("%s:%d: in resource %s, "
+				    "referenced resource '%s' not defined.\n",
+				    res->config_file, res->start_line, res->name,
+				    host->lower_name);
 				config_valid = 0;
 				continue;
 			}
@@ -1761,8 +1726,8 @@ void proxy_delegate(void *ctx)
 	opt = NULL;
 	token = yylex();
 	if (token != '{') {
-		fprintf(stderr,	"%s:%d: expected \"{\" after \"proxy\" keyword\n",
-				config_file, fline);
+		err("%s:%d: expected \"{\" after \"proxy\" keyword\n",
+		    config_file, fline);
 		exit(E_CONFIG_INVALID);
 	}
 
@@ -1778,8 +1743,8 @@ void proxy_delegate(void *ctx)
 				if (pnp == &line)
 					goto out;
 
-				fprintf(stderr,	"%s:%d: Missing \";\" before  \"}\"\n",
-					config_file, fline);
+				err("%s:%d: Missing \";\" before  \"}\"\n",
+				    config_file, fline);
 				exit(E_CONFIG_INVALID);
 			}
 
@@ -1873,16 +1838,14 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 			break;
 		case TK_IGNORE:
 			if (res->me || res->peer) {
-				fprintf(stderr,
-					"%s:%d: in resource %s, "
-					"'ignore-on' statement must precede any real host section (on ... { ... }).\n",
-					config_file, line, res->name);
+				err("%s:%d: in resource %s, "
+				    "'ignore-on' statement must precede any real host section (on ... { ... }).\n",
+				    config_file, line, res->name);
 				exit(E_CONFIG_INVALID);
 			}
 			EXP(TK_STRING);
-			fprintf(stderr, "%s:%d: in resource %s, "
-			       "WARN: The 'ignore-on' keyword is deprecated.\n",
-			       config_file, line, res->name);
+			err("%s:%d: in resource %s, WARN: The 'ignore-on' keyword is deprecated.\n",
+			    config_file, line, res->name);
 			EXP(';');
 			break;
 		case TK__THIS_HOST:
@@ -1991,10 +1954,8 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 	if (flags == NoneHAllowed && res->all_hosts) {
 		config_valid = 0;
 
-		fprintf(stderr,
-			"%s:%d: in the %s section, there are no host sections"
-			" allowed.\n",
-			config_file, c_section_start, res->name);
+		err("%s:%d: in the %s section, there are no host sections allowed.\n",
+		    config_file, c_section_start, res->name);
 	}
 
 	if (!(flags & PARSE_FOR_ADJUST))
@@ -2061,7 +2022,7 @@ void include_stmt(char *str)
 	   directory to the location of the current configuration file. */
 	cwd_fd = open(".", O_RDONLY | O_CLOEXEC);
 	if (cwd_fd < 0) {
-		fprintf(stderr, "open(\".\") failed: %m\n");
+		err("open(\".\") failed: %m\n");
 		exit(E_USAGE);
 	}
 
@@ -2071,7 +2032,7 @@ void include_stmt(char *str)
 		*last_slash = 0;
 
 	if (chdir(tmp)) {
-		fprintf(stderr, "chdir(\"%s\") failed: %m\n", tmp);
+		err("chdir(\"%s\") failed: %m\n", tmp);
 		exit(E_USAGE);
 	}
 
@@ -2083,27 +2044,25 @@ void include_stmt(char *str)
 				include_file(f, strdup(glob_buf.gl_pathv[i]));
 				fclose(f);
 			} else {
-				fprintf(stderr,
-					"%s:%d: Failed to open include file '%s'.\n",
-					config_file, line, yylval.txt);
+				err("%s:%d: Failed to open include file '%s'.\n",
+				    config_file, line, yylval.txt);
 				config_valid = 0;
 			}
 		}
 		globfree(&glob_buf);
 	} else if (r == GLOB_NOMATCH) {
 		if (!strchr(str, '?') && !strchr(str, '*') && !strchr(str, '[')) {
-			fprintf(stderr,
-				"%s:%d: Failed to open include file '%s'.\n",
-				config_file, line, yylval.txt);
+			err("%s:%d: Failed to open include file '%s'.\n",
+			    config_file, line, yylval.txt);
 			config_valid = 0;
 		}
 	} else {
-		fprintf(stderr, "glob() failed: %d\n", r);
+		err("glob() failed: %d\n", r);
 		exit(E_USAGE);
 	}
 
 	if (fchdir(cwd_fd) < 0) {
-		fprintf(stderr, "fchdir() failed: %m\n");
+		err("fchdir() failed: %m\n");
 		exit(E_USAGE);
 	}
 

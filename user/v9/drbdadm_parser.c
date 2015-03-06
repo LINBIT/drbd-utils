@@ -139,8 +139,7 @@ void m_strtoll_range(const char *s, char def_unit,
 	unsigned long long r = m_strtoll(s, def_unit);
 	char unit[] = { def_unit != '1' ? def_unit : 0, 0 };
 	if (min > r || r > max) {
-		fprintf(stderr,
-			"%s:%d: %s %s => %llu%s out of range [%llu..%llu]%s.\n",
+		err("%s:%d: %s %s => %llu%s out of range [%llu..%llu]%s.\n",
 			config_file, fline, name, s, r, unit, min, max, unit);
 		if (config_valid <= 1) {
 			config_valid = 0;
@@ -148,8 +147,7 @@ void m_strtoll_range(const char *s, char def_unit,
 		}
 	}
 	if (DEBUG_RANGE_CHECK) {
-		fprintf(stderr,
-			"%s:%d: %s %s => %llu%s in range [%llu..%llu]%s.\n",
+		err("%s:%d: %s %s => %llu%s in range [%llu..%llu]%s.\n",
 			config_file, fline, name, s, r, unit, min, max, unit);
 	}
 }
@@ -173,8 +171,7 @@ void range_check(const enum range_checks what, const char *name,
 	case R_NO_CHECK:
 		break;
 	default:
-		err("%s:%d: unknown range for %s => %s\n", config_file,
-		    fline, name, value);
+		err("%s:%d: unknown range for %s => %s\n", config_file, fline, name, value);
 		break;
 	case R_MINOR_COUNT:
 		M_STRTOLL_RANGE(MINOR_COUNT);
@@ -283,7 +280,7 @@ struct d_option *new_opt(char *name, char *value)
 {
 	struct d_option *cn = calloc(1, sizeof(struct d_option));
 
-	/* fprintf(stderr,"%s:%d: %s = %s\n",config_file,line,name,value); */
+	/* err("%s:%d: %s = %s\n",config_file,line,name,value); */
 	cn->name = name;
 	cn->value = value;
 
@@ -383,22 +380,20 @@ int vcheck_uniq(struct hsearch_data *ht, const char *what, const char *fmt, va_l
 	}
 	m_asprintf((char **)&e.data, "%s:%u", config_file, fline);
 	hsearch_r(e, FIND, &ep, ht);
-	//fprintf(stderr, "FIND %s: %p\n", e.key, ep);
+	//err("FIND %s: %p\n", e.key, ep);
 	if (ep) {
 		if (what) {
-			err("%s: conflicting use of %s '%s' ...\n""%s: %s '%s' first used here.\n",
-			    (char *)e.data, what, ep->key, (char *)ep->data,
-			    what, ep->key);
+			err("%s: conflicting use of %s '%s' ...\n%s: %s '%s' first used here.\n",
+			    (char *)e.data, what, ep->key, (char *)ep->data, what, ep->key);
 		}
 		free(e.key);
 		free(e.data);
 		config_valid = 0;
 	} else {
-		//fprintf(stderr, "ENTER %s\t=>\t%s\n", e.key, (char *)e.data);
+		//err("ENTER %s\t=>\t%s\n", e.key, (char *)e.data);
 		hsearch_r(e, ENTER, &ep, ht);
 		if (!ep) {
-			err("hash table entry (%s => %s) failed\n", e.key,
-			    (char *)e.data);
+			err("hash table entry (%s => %s) failed\n", e.key, (char *)e.data);
 			exit(E_THINKO);
 		}
 		ep = NULL;
@@ -411,7 +406,7 @@ int vcheck_uniq(struct hsearch_data *ht, const char *what, const char *fmt, va_l
 static void pe_expected(const char *exp)
 {
 	const char *s = yytext;
-	err("%s:%u: Parse error: '%s' expected,\n\t""but got '%.20s%s'\n",
+	err("%s:%u: Parse error: '%s' expected,\n\tbut got '%.20s%s'\n",
 	    config_file, line, exp, s, strlen(s) > 20 ? "..." : "");
 	exit(E_CONFIG_INVALID);
 }
@@ -443,9 +438,8 @@ static void pe_expected_got(const char *exp, int got)
 	if (exp[0] == '\'' && exp[1] && exp[2] == '\'' && exp[3] == 0) {
 		tmp[0] = exp[1];
 	}
-	err("%s:%u: Parse error: '%s' expected,\n\t""but got '%.20s%s' (TK %d)\n",
-	    config_file, line, tmp[0] ? tmp : exp, s,
-	    strlen(s) > 20 ? "..." : "", got);
+	err("%s:%u: Parse error: '%s' expected,\n\tbut got '%.20s%s' (TK %d)\n",
+	    config_file, line, tmp[0] ? tmp : exp, s, strlen(s) > 20 ? "..." : "", got);
 	exit(E_CONFIG_INVALID);
 }
 
@@ -482,7 +476,7 @@ static void parse_global(void)
 	fline = line;
 	check_uniq("global section", "global");
 	if (!STAILQ_EMPTY(&config)) {
-		err("%s:%u: You should put the global {} section\n\t""in front of any resource {} section\n",
+		err("%s:%u: You should put the global {} section\n\tin front of any resource {} section\n",
 		    config_file, line);
 	}
 	EXP('{');
@@ -681,7 +675,7 @@ static struct options parse_options_d(int token_flag, int token_no_flag, int tok
 			range_check(rc, opt_name, yylval.txt);
 			insert_tail(&options, new_opt(opt_name, yylval.txt));
 		} else if (token == TK_DEPRECATED_OPTION) {
-			/* fprintf(stderr, "Warn: Ignoring deprecated option '%s'\n", yylval.txt); */
+			/* err("Warn: Ignoring deprecated option '%s'\n", yylval.txt); */
 			expect_STRING_or_INT();
 		} else if (token == '}') {
 			return options;
@@ -1291,7 +1285,7 @@ void startup_delegate(void *ctx)
 	struct d_resource *res = (struct d_resource *)ctx;
 
 	if (!strcmp(yytext, "become-primary-on")) {
-		/* fprintf(stderr, "Warn: Ignoring deprecated become-primary-on. Use automatic-promote\n"); */
+		/* err("Warn: Ignoring deprecated become-primary-on. Use automatic-promote\n"); */
 		int token;
 		do {
 			token = yylex();
@@ -1771,7 +1765,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 	if (flags == NO_HOST_SECT_ALLOWED && !STAILQ_EMPTY(&res->all_hosts)) {
 		config_valid = 0;
 
-		err("%s:%d: in the %s section, there are no host sections"" allowed.\n",
+		err("%s:%d: in the %s section, there are no host sections allowed.\n",
 		    config_file, c_section_start, res->name);
 	}
 

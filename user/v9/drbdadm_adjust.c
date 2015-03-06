@@ -153,7 +153,7 @@ static int opts_equal(struct context_def *ctx, struct options *conf, struct opti
 
 		if (opt->mentioned==0 && !is_default(ctx, opt)) {
 			if (verbose > 2)
-				err("Only in optig file %s: %s\n", opt->name, opt->value);
+				err("Only in config file %s: %s\n", opt->name, opt->value);
 			return 0;
 		}
 	}
