@@ -222,6 +222,9 @@ case "$1" in
 			$DRBDSETUP down "$res"
 		done
 		_udev_settle &> /dev/null
+		if [ -d /sys/module/drbd/holders ]; then
+			(cd /sys/module/drbd/holders; for tr in *; do [ -d ${tr} ] && ${RMMOD} ${tr}; done)
+		fi
 		$RMMOD drbd && break
 	    fi
 	done
