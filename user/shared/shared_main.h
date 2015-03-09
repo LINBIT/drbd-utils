@@ -24,6 +24,11 @@
 #ifndef __SHARED_MAIN_H__
 #define __SHARED_MAIN_H__
 
+#define CMD_TIMEOUT_SHORT_DEF 5
+#define CMD_TIMEOUT_MEDIUM_DEF 121
+#define CMD_TIMEOUT_LONG_DEF 600
+extern struct d_globals global_options;
+
 void alarm_handler(int __attribute((unused)) signo);
 void chld_sig_hand(int __attribute((unused)) unused);
 
@@ -80,7 +85,9 @@ enum pp_flags {
 
 struct d_globals
 {
-	int disable_io_hints;
+	unsigned int cmd_timeout_short;
+	unsigned int cmd_timeout_medium;
+	unsigned int cmd_timeout_long;
 	int disable_ip_verification;
 	int minor_count;
 	int dialog_refresh;

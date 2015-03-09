@@ -69,6 +69,9 @@ proxy			{ DP; return TK_PROXY;			}
 minor			{ DP; return TK_MINOR;			}
 inside			{ DP; return TK_INSIDE;			}
 volume			{ DP; return TK_VOLUME;			}
+cmd-timeout-short	{ DP; return TK_CMD_TIMEOUT_SHORT;	}
+cmd-timeout-medium	{ DP; return TK_CMD_TIMEOUT_MEDIUM;	}
+cmd-timeout-long	{ DP; return TK_CMD_TIMEOUT_LONG;	}
 syncer			{ DP; return TK_SYNCER;			}
 device			{ DP; return TK_DEVICE;			}
 global			{ DP; return TK_GLOBAL;			}

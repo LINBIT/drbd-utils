@@ -271,6 +271,7 @@ void range_check(const enum range_checks what, const char *name,
 			config_valid = 0;
 			err("unknown protocol '%s', should be one of A,B,C\n", value);
 		}
+		break;
 	}
 }
 
@@ -523,6 +524,21 @@ static void parse_global(void)
 			range_check(R_DIALOG_REFRESH, "dialog-refresh",
 				    yylval.txt);
 			global_options.dialog_refresh = atoi(yylval.txt);
+			break;
+		case TK_CMD_TIMEOUT_SHORT:
+			EXP(TK_INTEGER);
+			m_strtoll_range(yylval.txt, '1', "cmd-timeout-short", 0, 900);
+			global_options.cmd_timeout_short = atoi(yylval.txt);
+			break;
+		case TK_CMD_TIMEOUT_MEDIUM:
+			EXP(TK_INTEGER);
+			m_strtoll_range(yylval.txt, '1', "cmd-timeout-medium", 0, 900);
+			global_options.cmd_timeout_medium = atoi(yylval.txt);
+			break;
+		case TK_CMD_TIMEOUT_LONG:
+			EXP(TK_INTEGER);
+			m_strtoll_range(yylval.txt, '1', "cmd-timeout-long", 0, 900);
+			global_options.cmd_timeout_long = atoi(yylval.txt);
 			break;
 		case TK_USAGE_COUNT:
 			switch (yylex()) {

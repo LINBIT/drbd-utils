@@ -374,7 +374,6 @@ extern char *config_save;
 extern int config_valid;
 extern struct resources config;
 extern struct d_resource* common;
-extern struct d_globals global_options;
 extern int line, fline;
 extern struct hsearch_data global_htable;
 

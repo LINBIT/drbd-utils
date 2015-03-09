@@ -131,7 +131,6 @@ char ss_buffer[1024];
 const char *hostname;
 int line = 1;
 int fline;
-struct d_globals global_options = { 0, 0, 0, 1, UC_ASK };
 
 char *config_file = NULL;
 char *config_save = NULL;

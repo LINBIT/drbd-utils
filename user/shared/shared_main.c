@@ -57,7 +57,15 @@
 
 extern struct ifreq *ifreq_list;
 
+struct d_globals global_options = {
 
+	.cmd_timeout_short = CMD_TIMEOUT_SHORT_DEF,
+	.cmd_timeout_medium = CMD_TIMEOUT_MEDIUM_DEF,
+	.cmd_timeout_medium = CMD_TIMEOUT_LONG_DEF,
+
+	.dialog_refresh = 1,
+	.usage_count = UC_ASK,
+};
 
 void chld_sig_hand(int __attribute((unused)) unused)
 {
@@ -307,13 +315,13 @@ void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd
 		alarm_raised = 0;
 		switch (flags & SLEEPS_MASK) {
 		case SLEEPS_SHORT:
-			timeout = 5;
+			timeout = global_options.cmd_timeout_short;
 			break;
 		case SLEEPS_LONG:
-			timeout = COMM_TIMEOUT + 1;
+			timeout = global_options.cmd_timeout_medium;
 			break;
 		case SLEEPS_VERY_LONG:
-			timeout = 600;
+			timeout = global_options.cmd_timeout_long;
 			break;
 		default:
 			fprintf(stderr, "logic bug in %s:%d\n", __FILE__,

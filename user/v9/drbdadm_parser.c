@@ -498,6 +498,21 @@ static void parse_global(void)
 				    yylval.txt);
 			global_options.dialog_refresh = atoi(yylval.txt);
 			break;
+		case TK_CMD_TIMEOUT_SHORT:
+			EXP(TK_INTEGER);
+			m_strtoll_range(yylval.txt, '1', "cmd-timeout-short", 0, 900);
+			global_options.cmd_timeout_short = atoi(yylval.txt);
+			break;
+		case TK_CMD_TIMEOUT_MEDIUM:
+			EXP(TK_INTEGER);
+			m_strtoll_range(yylval.txt, '1', "cmd-timeout-medium", 0, 900);
+			global_options.cmd_timeout_medium = atoi(yylval.txt);
+			break;
+		case TK_CMD_TIMEOUT_LONG:
+			EXP(TK_INTEGER);
+			m_strtoll_range(yylval.txt, '1', "cmd-timeout-long", 0, 900);
+			global_options.cmd_timeout_long = atoi(yylval.txt);
+			break;
 		case TK_USAGE_COUNT:
 			switch (yylex()) {
 			case TK_YES:
