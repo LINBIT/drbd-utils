@@ -169,7 +169,7 @@ This packages includes the DRBD administration tools.
 %{_prefix}/lib/drbd/notify-pri-lost.sh
 %{_prefix}/lib/drbd/notify-pri-on-incon-degr.sh
 %{_prefix}/lib/drbd/notify.sh
-%dir %{_sharedstatedir}/drbd
+%dir %{_var}/lib/drbd
 %ghost %dir %{_var}/run/drbd
 
 %defattr(-,root,root,-)
@@ -358,6 +358,7 @@ make install DESTDIR=%{buildroot} CREATE_MAN_LINK=no
 # compat: we used to live in /sbin/
 # there may be many hardcoded /sbin/drbd* out there,
 # including variants of our own scripts.
+mkdir -p %{buildroot}/var/run/drbd
 mkdir %{buildroot}/sbin/
 cd %{buildroot}/sbin/
 ln -sv ..%{_sbindir}/drbdadm .
