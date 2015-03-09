@@ -2,8 +2,12 @@ Latest:
 ------
  For even more detail, use "git log" or visit http://git.drbd.org/.
 
-8.9.2rc2
+8.9.2rc3
 --------
+  * change systemd unit file: basically just call the init script
+  * make some previously hardcoded timeouts configurable
+  * drbdadm: New command peer-device-options
+  * drbd: Move max_buffers to net_conf
   * drbdadm 9: Log errors to syslog if stderr is not available
   * init script: fixes for stacked resources
   * fix regression corner cases in bitmap size calculation

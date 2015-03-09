@@ -7,7 +7,7 @@ dnl Minimum autoconf version we require
 AC_PREREQ(2.53)
 
 dnl What we are, our version, who to bug in case of problems
-AC_INIT(DRBD, 8.9.2rc2, [drbd-dev@lists.linbit.com])
+AC_INIT(DRBD, 8.9.2rc3, [drbd-dev@lists.linbit.com])
 
 AC_SUBST(PACKAGE_VERSION_EQUIVALENT_84, ["8.4.5 8.4.4 8.4.3 8.4.2 8.4.1 8.4.0"])
 AC_SUBST(SPEC_PROVIDES_DRBD_UTILS_84, ["$(printf "Provides: drbd-utils = %s\n" $PACKAGE_VERSION_EQUIVALENT_84)"])
@@ -16,7 +16,7 @@ dnl No, I don't want to "fake provide" anything older than this.
 AC_SUBST(PACKAGE_VERSION_EQUIVALENT_83, ["8.3.16"])
 AC_SUBST(SPEC_PROVIDES_DRBD_UTILS_83, ["$(printf "Provides: drbd-utils = %s\n" $PACKAGE_VERSION_EQUIVALENT_83)"])
 
-AC_SUBST(PACKAGE_VERSION_EQUIVALENT_90, ["9.0.0pre9"])
+AC_SUBST(PACKAGE_VERSION_EQUIVALENT_90, ["9.0.0rc3"])
 AC_SUBST(SPEC_PROVIDES_DRBD_UTILS_90, ["$(printf "Provides: drbd-utils = %s\n" $PACKAGE_VERSION_EQUIVALENT_90)"])
 
 dnl Sanitize $prefix. Autoconf does this by itself, but so late in the

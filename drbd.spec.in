@@ -41,7 +41,7 @@
 Name: drbd
 Summary: DRBD driver for Linux
 Version: @PACKAGE_VERSION@
-Release: 5@RPM_DIST_TAG@
+Release: 1@RPM_DIST_TAG@
 Source: http://oss.linbit.com/drbd/drbd-utils-%{version}.tar.gz
 License: GPLv2+
 ExclusiveOS: linux
@@ -405,8 +405,8 @@ fi
 
 
 %changelog
-* Tue Jan 20 2015 Philipp Reisner <phil@linbit.com> - 8.9.2rc2-1
-- New upstream release.
+* Mon Mar 09 2015 Lars Ellenberg <lars@linbit.com> - 8.9.2rc3-1
+- New upstream release candidate.
 
 * Fri Aug 08 2014 Lars Ellenberg <lars@linbit.com> - 8.9.1-3
 - some more patches had been only merged into the "9" tools,
