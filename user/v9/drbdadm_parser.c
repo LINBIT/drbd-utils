@@ -43,6 +43,7 @@
 #include "drbdtool_common.h"
 #include "drbdadm_parser.h"
 #include "shared_parser.h"
+#include <config_flags.h>
 
 YYSTYPE yylval;
 
@@ -640,70 +641,133 @@ void parse_options_syncer(struct d_resource *res)
 	}
 }
 
-static struct options parse_options_d(int token_flag, int token_no_flag, int token_option,
-				      int token_delegate, void (*delegate)(void*),
-				      void *ctx)
+static void pe_valid_enums(const char **map, int nr_enums)
 {
-	char *opt_name;
-	int token, token_group;
-	enum range_checks rc;
+	int i, size = 0;
+	char *buffer, *p;
+
+	for (i = 0; i < nr_enums; i++) {
+		if (map[i])
+			size += strlen(map[i]) + 3;
+	}
+
+	buffer = alloca(size);
+	p = buffer;
+	for (i = 0; i < nr_enums; i++) {
+		if (map[i])
+			p += sprintf(p, "%s | ", map[i]);
+	}
+
+	buffer[size - 3] = 0; /* Eliminate last " | " */
+	err("Allowed values are: %s\n", buffer);
+}
+
+static void pe_field(struct field_def *field, enum check_codes e, char *value)
+{
+	static const char *err_strings[] = {
+		[CC_NOT_AN_ENUM] = "not valid",
+		[CC_NOT_A_BOOL] = "not 'yes' or 'no'",
+		[CC_NOT_A_NUMBER] = "not a number",
+		[CC_TOO_SMALL] = "too small",
+		[CC_TOO_BIG] = "too big",
+	};
+	err("%s:%u: Parse error: while parsing value ('%s') for %s. Value is %s.\n",
+	    config_file, line, value, field->name, err_strings[e]);
+
+	if (e == CC_NOT_AN_ENUM)
+		pe_valid_enums(field->u.e.map, field->u.e.size);
+
+	exit(E_CONFIG_INVALID);
+}
+
+static void pe_options(struct context_def *options_def)
+{
+	struct field_def *field;
+	char *buffer, *p;
+	int size = 0;
+
+	for (field = options_def->fields; field->name; field++)
+		size += strlen(field->name) + 3;
+
+	buffer = alloca(size);
+	p = buffer;
+	for (field = options_def->fields; field->name; field++)
+		p += sprintf(p, "%s | ", field->name);
+	buffer[size - 3] = 0; /* Eliminate last " | " */
+	pe_expected(buffer);
+}
+
+static struct field_def *find_field(struct context_def *options_def, const char *name)
+{
+	struct field_def *field;
+
+	for (field = options_def->fields; field->name; field++) {
+		if (!strcmp(field->name, name))
+			return field;
+	}
+
+	return NULL;
+}
+
+
+static char *parse_option_value(struct field_def *field_def)
+{
+	char *value;
+	int token;
+
+	token = yylex();
+	if (token == ';') {
+		value = strdup("yes");
+	} else {
+		enum check_codes e;
+		if (!field_def->checked_in_postparse) {
+			e = field_def->ops->check(field_def, yytext);
+			if (e != CC_OK)
+				pe_field(field_def, e, yytext);
+		}
+		value = strdup(yytext);
+		EXP(';');
+	}
+
+	return value;
+}
+
+static struct options __parse_options(struct context_def *options_def,
+				      int token_delegate,
+				      void (*delegate)(void*),
+				      void *delegate_context)
+{
 	struct options options = STAILQ_HEAD_INITIALIZER(options);
+	struct field_def *field_def;
+	char *value;
+	int token;
 
 	c_section_start = line;
 	fline = line;
 
 	while (1) {
-		token_group = yylex();
-		/* Keep the higher bits in token_option, remove them from token. */
-		token = REMOVE_GROUP_FROM_TOKEN(token_group);
-		fline = line;
-		opt_name = yylval.txt;
-		if (token == token_delegate ||
-				GET_TOKEN_GROUP(token_delegate & token_group)) {
-			delegate(ctx);
-			continue;
-		} else if (token == token_flag) {
-			switch(yylex()) {
-			case TK_YES:
-				insert_tail(&options, new_opt(opt_name, strdup("yes")));
-				break;
-			case TK_NO:
-				insert_tail(&options, new_opt(opt_name, strdup("no")));
-				break;
-			case ';':
-				/* Flag value missing; assume yes.  */
-				insert_tail(&options, new_opt(opt_name, strdup("yes")));
-				continue;
-			default:
-				pe_expected("yes | no | ;");
-			}
-		} else if (token == token_no_flag) {
-			/* Backward compatibility with the old config file syntax. */
-			assert(!strncmp(opt_name, "no-", 3));
-			insert_tail(&options, new_opt(strdup(opt_name + 3), strdup("no")));
-			free(opt_name);
-		} else if (token == token_option ||
-				GET_TOKEN_GROUP(token_option & token_group)) {
-			check_and_change_deprecated_alias(&opt_name, token_option);
-			rc = yylval.rc;
-			expect_STRING_or_INT();
-			range_check(rc, opt_name, yylval.txt);
-			insert_tail(&options, new_opt(opt_name, yylval.txt));
-		} else if (token == TK_DEPRECATED_OPTION) {
-			/* err("Warn: Ignoring deprecated option '%s'\n", yylval.txt); */
-			expect_STRING_or_INT();
-		} else if (token == '}') {
+		token = yylex();
+		if (token == '}')
 			return options;
-		} else {
-			pe_expected("an option keyword");
+
+		field_def = find_field(options_def, yytext);
+		if (!field_def) {
+			if (delegate) {
+				delegate(delegate_context);
+				continue;
+			} else {
+				pe_options(options_def);
+			}
 		}
-		EXP(';');
+
+		value = parse_option_value(field_def);
+		insert_tail(&options, new_opt((char *)field_def->name, value));
 	}
 }
 
-static struct options parse_options(int token_flag, int token_no_flag, int token_option)
+static struct options parse_options(struct context_def *options_def)
 {
-	return parse_options_d(token_flag, token_no_flag, token_option, 0, NULL, NULL);
+	return __parse_options(options_def, 0, NULL, NULL);
 }
 
 static void insert_options_delegate(void *ctx)
@@ -721,7 +785,7 @@ static void insert_options_delegate(void *ctx)
 
 static void parse_disk_options(struct options *disk_options, struct options *peer_device_options)
 {
-	*disk_options = parse_options_d(TK_DISK_FLAG, TK_DISK_NO_FLAG, TK_DISK_OPTION,
+	*disk_options = __parse_options(&attach_cmd_ctx,
 					TK_PEER_DEVICE, insert_options_delegate,
 					peer_device_options);
 }
@@ -1199,9 +1263,7 @@ static void parse_host_section(struct d_resource *res,
 			break;
 		case TK_OPTIONS:
 			EXP('{');
-			host->res_options = parse_options(TK_RES_FLAG,
-							  0,
-							  TK_RES_OPTION);
+			host->res_options = parse_options(&resource_options_ctx);
 			break;
 		case TK_SKIP:
 			parse_skip();
@@ -1390,7 +1452,7 @@ static int parse_proxy_options(struct options *proxy_options, struct options *pr
 	struct options opts;
 
 	EXP('{');
-	opts = parse_options_d(0, 0, TK_PROXY_OPTION | TK_PROXY_GROUP,
+	opts = __parse_options(&proxy_options_ctx,
 			       TK_PROXY_DELEGATE, proxy_delegate, proxy_plugins);
 
 	if (proxy_options)
@@ -1524,7 +1586,7 @@ static struct peer_device *parse_peer_device(int vnr)
 	EXP('{');
 	EXP(TK_DISK);
 	EXP('{');
-	peer_device->pd_options = parse_options(0, 0, TK_PEER_DEVICE);
+	peer_device->pd_options = parse_options(&peer_device_options_ctx);
 	EXP('}');
 
 	return peer_device;
@@ -1571,15 +1633,16 @@ static struct connection *parse_connection(enum pr_flags flags)
 				config_valid = 0;
 			}
 			EXP('{');
-			conn->net_options = parse_options_d(TK_NET_FLAG, TK_NET_NO_FLAG, TK_NET_OPTION,
-							    TK_NET_DELEGATE, &net_delegate, (void *)flags);
+			conn->net_options = __parse_options(&show_net_options_ctx,
+							    TK_NET_DELEGATE,
+							    &net_delegate, (void *)flags);
 			break;
 		case TK_SKIP:
 			parse_skip();
 			break;
 		case TK_DISK:
 			EXP('{');
-			conn->pd_options = parse_options(0, 0, TK_PEER_DEVICE);
+			conn->pd_options = parse_options(&peer_device_options_ctx);
 			break;
 		case TK_VOLUME:
 			EXP(TK_INTEGER);
@@ -1619,8 +1682,9 @@ void parse_connection_mesh(struct d_resource *res, enum pr_flags flags)
 			}
 			EXP('{');
 			res->mesh_net_options =
-				parse_options_d(TK_NET_FLAG, TK_NET_NO_FLAG, TK_NET_OPTION,
-						TK_NET_DELEGATE, &net_delegate, (void *)flags);
+				__parse_options(&show_net_options_ctx,
+						TK_NET_DELEGATE, &net_delegate,
+						(void *)flags);
 			break;
 		case '}':
 			return;
@@ -1711,8 +1775,10 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 		case TK_NET:
 			check_upr("net section", "%s:net", res->name);
 			EXP('{');
-			options = parse_options_d(TK_NET_FLAG, TK_NET_NO_FLAG, TK_NET_OPTION,
-						  TK_NET_DELEGATE, &net_delegate, (void *)flags);
+			options = __parse_options(&show_net_options_ctx,
+						  TK_NET_DELEGATE,
+						  &net_delegate, (void *)flags);
+
 			STAILQ_CONCAT(&res->net_options, &options);
 			break;
 		case TK_SYNCER:
@@ -1723,9 +1789,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 		case TK_STARTUP:
 			check_upr("startup section", "%s:startup", res->name);
 			EXP('{');
-			res->startup_options = parse_options_d(TK_STARTUP_FLAG,
-							       0,
-							       TK_STARTUP_OPTION,
+			res->startup_options = __parse_options(&startup_options_ctx,
 							       TK_STARTUP_DELEGATE,
 							       &startup_delegate,
 							       res);
@@ -1733,7 +1797,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 		case TK_HANDLER:
 			check_upr("handlers section", "%s:handlers", res->name);
 			EXP('{');
-			res->handlers =  parse_options(0, 0, TK_HANDLER_OPTION);
+			res->handlers = parse_options(&handlers_ctx);
 			break;
 		case TK_PROXY:
 			check_upr("proxy section", "%s:proxy", res->name);
@@ -1752,7 +1816,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 		case TK_OPTIONS:
 			check_upr("resource options section", "%s:res_options", res->name);
 			EXP('{');
-			options = parse_options(TK_RES_FLAG, 0, TK_RES_OPTION);
+			options = parse_options(&resource_options_ctx);
 			STAILQ_CONCAT(&res->res_options, &options);
 			break;
 		case TK_CONNECTION:

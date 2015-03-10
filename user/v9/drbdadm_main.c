@@ -891,7 +891,6 @@ static void free_options(struct options *options)
 {
 	struct d_option *f, *option = STAILQ_FIRST(options);
 	while (option) {
-		free(option->name);
 		free(option->value);
 		f = option;
 		option = STAILQ_NEXT(option, link);

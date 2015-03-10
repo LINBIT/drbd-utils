@@ -648,7 +648,7 @@ const char *read_balancing_map[] = {
 	{ "disk-drain", BOOLEAN(disk_drain, DISK_DRAIN) },				\
 	{ "md-flushes", BOOLEAN(md_flushes, MD_FLUSHES) },				\
 	{ "unplug-watermark", NUMERIC(unplug_watermark, UNPLUG_WATERMARK) },		\
-	{ "resync-after", NUMERIC(resync_after, MINOR_NUMBER) },			\
+	{ "resync-after", NUMERIC(resync_after, MINOR_NUMBER), .checked_in_postparse = true}, \
 	{ "al-extents", NUMERIC(al_extents, AL_EXTENTS) },				\
 	{ "al-updates", BOOLEAN(al_updates, AL_UPDATES) },				\
 	{ "disk-timeout", NUMERIC(disk_timeout,	DISK_TIMEOUT),				\
@@ -852,5 +852,53 @@ struct context_def create_md_ctx = {
 		{ .name = "peer-max-bio-size", .argument_is_optional = false },
 		{ .name = "al-stripes", .argument_is_optional = false },
 		{ .name = "al-stripe-size-kB", .argument_is_optional = false },
+		{ } },
+};
+
+// only used by drbdadm's config file parser:
+struct context_def handlers_ctx = {
+	.fields = {
+		{ "pri-on-incon-degr", .ops = &fc_string, .needs_double_quoting = true},
+		{ "pri-lost-after-sb", .ops = &fc_string, .needs_double_quoting = true},
+		{ "pri-lost", .ops = &fc_string, .needs_double_quoting = true},
+		{ "initial-split-brain", .ops = &fc_string, .needs_double_quoting = true},
+		{ "split-brain", .ops = &fc_string, .needs_double_quoting = true},
+		{ "outdate-peer", .ops = &fc_string, .needs_double_quoting = true},
+		{ "fence-peer", .ops = &fc_string, .needs_double_quoting = true},
+		{ "local-io-error", .ops = &fc_string, .needs_double_quoting = true},
+		{ "before-resync-target", .ops = &fc_string, .needs_double_quoting = true},
+		{ "after-resync-target", .ops = &fc_string, .needs_double_quoting = true},
+		{ "before-resync-source", .ops = &fc_string, .needs_double_quoting = true},
+		{ "out-of-sync", .ops = &fc_string, .needs_double_quoting = true},
+		{ } },
+};
+
+struct context_def proxy_options_ctx = {
+	.fields = {
+		{ "memlimit", .ops = &fc_numeric, .u={.n={.min = 0, .max=-1}}},
+		{ "read-loops", .ops = &fc_numeric, .u={.n={.min = 0, .max=-1}}},
+		{ "compression", .ops = &fc_numeric, .u={.n={.min = 0, .max=-1}}},
+		{ "bwlimit", .ops = &fc_numeric, .u={.n={.min = 0, .max=-1}}},
+		{ "sndbuf-size", NUMERIC(sndbuf_size, SNDBUF_SIZE), .unit = "bytes" },
+		{ "rcvbuf-size", NUMERIC(rcvbuf_size, RCVBUF_SIZE), .unit = "bytes" },
+		{ "ping-timeout", NUMERIC(ping_timeo, PING_TIMEO), .unit = "1/10 seconds" },
+		{ } },
+};
+
+#define ADM_NUMERIC(d)									\
+	.ops = &fc_numeric,								\
+	.u = { .n = {									\
+		.min = DRBD_ ## d ## _MIN,						\
+		.max = DRBD_ ## d ## _MAX,						\
+		.def = DRBD_ ## d ## _DEF,						\
+		.is_signed = false,							\
+		.scale = DRBD_ ## d ## _SCALE } }
+
+struct context_def startup_options_ctx = {
+	.fields = {
+		{ "wfc-timeout", ADM_NUMERIC(WFC_TIMEOUT) },
+		{ "degr-wfc-timeout", ADM_NUMERIC(DEGR_WFC_TIMEOUT) },
+		{ "outdated-wfc-timeout", ADM_NUMERIC(OUTDATED_WFC_TIMEOUT) },
+		{ "wait-after-sb", .ops = &fc_boolean },
 		{ } },
 };

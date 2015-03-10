@@ -49,6 +49,8 @@ struct field_def {
 	} u;
 	bool needs_double_quoting;
 	bool argument_is_optional;
+	bool checked_in_postparse; /* Do not check in drbdadm_parse.c
+				      It gets checked and converted later*/
 	const char *unit;
 };
 
@@ -82,6 +84,10 @@ extern struct context_def device_options_ctx;
 extern struct context_def invalidate_ctx;
 extern struct context_def create_md_ctx;
 extern struct context_def peer_device_options_ctx;
+extern struct context_def handlers_ctx;
+extern struct context_def proxy_options_ctx;
+extern struct context_def startup_options_ctx;
+
 
 extern const char *double_quote_string(const char *str);
 
