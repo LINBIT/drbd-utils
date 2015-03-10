@@ -523,106 +523,22 @@ static void parse_global(void)
 	}
 }
 
-static void check_and_change_deprecated_alias(char **name, int token)
+static char *check_deprecated_alias(char *name)
 {
 	int i;
 	static struct {
-		enum yytokentype token;
 		char *old_name, *new_name;
 	} table[] = {
-		{ TK_HANDLER_OPTION, "outdate-peer", "fence-peer" },
-		{ TK_DISK_OPTION, "rate", "resync-rate" },
-		{ TK_DISK_OPTION, "after", "resync-after" },
+		{ "outdate-peer", "fence-peer" },
+		{ "rate", "resync-rate" },
+		{ "after", "resync-after" },
 	};
 
 	for (i = 0; i < ARRAY_SIZE(table); i++) {
-		if (table[i].token == token &&
-		    !strcmp(table[i].old_name, *name)) {
-			free(*name);
-			*name = strdup(table[i].new_name);
-		}
+		if (!strcmp(table[i].old_name, name))
+			return table[i].new_name;
 	}
-}
-
-/* The syncer section is deprecated. Distribute the options to the disk or net options. */
-void parse_options_syncer(struct d_resource *res)
-{
-	char *opt_name;
-	int token;
-	enum range_checks rc;
-
-	struct options *options = NULL;
-	c_section_start = line;
-	fline = line;
-
-	while (1) {
-		token = yylex();
-		fline = line;
-		if (token >= TK_GLOBAL && !(token & TK_SYNCER_OLD_OPT))
-			pe_expected("a syncer option keyword");
-		token &= ~TK_SYNCER_OLD_OPT;
-		switch (token) {
-		case TK_NET_FLAG:
-		case TK_NET_NO_FLAG:
-		case TK_NET_OPTION:
-			options = &res->net_options;
-			break;
-		case TK_DISK_FLAG:
-		case TK_DISK_NO_FLAG:
-		case TK_DISK_OPTION:
-			options = &res->disk_options;
-			break;
-		case TK_RES_OPTION:
-			options = &res->res_options;
-			break;
-		case '}':
-			return;
-		default:
-			pe_expected("a syncer option keyword");
-		}
-		opt_name = yylval.txt;
-		switch (token) {
-		case TK_NET_FLAG:
-		case TK_DISK_FLAG:
-			token = yylex();
-			switch(token) {
-			case TK_NO:
-				insert_tail(options, new_opt(opt_name, strdup("no")));
-				token = yylex();
-				break;
-			default:
-				insert_tail(options, new_opt(opt_name, strdup("yes")));
-				if (token == TK_YES)
-					token = yylex();
-				break;
-			}
-			break;
-		case TK_NET_NO_FLAG:
-		case TK_DISK_NO_FLAG:
-			/* Backward compatibility with the old config file syntax. */
-			assert(!strncmp(opt_name, "no-", 3));
-			insert_tail(options, new_opt(strdup(opt_name + 3), strdup("no")));
-			free(opt_name);
-			token = yylex();
-			break;
-		case TK_NET_OPTION:
-		case TK_DISK_OPTION:
-		case TK_RES_OPTION:
-			check_and_change_deprecated_alias(&opt_name, token);
-			rc = yylval.rc;
-			expect_STRING_or_INT();
-			range_check(rc, opt_name, yylval.txt);
-			insert_tail(options, new_opt(opt_name, yylval.txt));
-			token = yylex();
-			break;
-		}
-		switch (token) {
-		case ';':
-			break;
-		default:
-			pe_expected(";");
-		}
-	}
+	return name;
 }
 
 static void pe_valid_enums(const char **map, int nr_enums)
@@ -701,7 +617,6 @@ static struct field_def *find_field(bool *no_prefix, struct context_def *options
 	return NULL;
 }
 
-
 static char *parse_option_value(struct field_def *field_def, bool no_prefix)
 {
 	char *value;
@@ -722,6 +637,49 @@ static char *parse_option_value(struct field_def *field_def, bool no_prefix)
 	}
 
 	return value;
+}
+
+
+/* The syncer section is deprecated. Distribute the options to the disk or net options. */
+void parse_options_syncer(struct d_resource *res)
+{
+	struct field_def *field_def;
+	bool no_prefix;
+	char *text, *value;
+	int token;
+
+	struct options *options = NULL;
+	c_section_start = line;
+	fline = line;
+
+	while (1) {
+		token = yylex();
+		fline = line;
+
+		if (token == '}')
+			return;
+
+		text = check_deprecated_alias(yytext);
+		field_def = find_field(&no_prefix, &show_net_options_ctx, text);
+		if (field_def) {
+			options = &res->net_options;
+		} else {
+			field_def = find_field(&no_prefix, &attach_cmd_ctx, text);
+			if (field_def) {
+				options = &res->disk_options;
+			} else {
+				field_def = find_field(&no_prefix, &resource_options_ctx,
+						       text);
+				if (field_def)
+					options = &res->res_options;
+				else
+					pe_expected("a syncer option keyword");
+			}
+		}
+
+		value = parse_option_value(field_def, no_prefix);
+		insert_tail(options, new_opt((char *)field_def->name, value));
+	}
 }
 
 static struct options __parse_options(struct context_def *options_def,
