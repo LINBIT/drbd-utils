@@ -5,16 +5,21 @@ struct msg_buff;
 struct nlattr;
 
 struct context_def;
+struct field_def;
 
-struct field_def {
-	const char *name;
-	unsigned short nla_type;
+struct field_class {
 	bool (*is_default)(struct field_def *, const char *);
 	bool (*is_equal)(struct field_def *, const char *, const char *);
 	const char *(*get)(struct context_def *, struct field_def *, struct nlattr *);
 	bool (*put)(struct context_def *, struct field_def *, struct msg_buff *, const char *);
 	int (*usage)(struct field_def *, char *, int);
 	void (*describe_xml)(struct field_def *);
+};
+
+struct field_def {
+	const char *name;
+	unsigned short nla_type;
+	const struct field_class *ops;
 	union {
 		struct {
 			const char **map;

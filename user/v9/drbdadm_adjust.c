@@ -104,14 +104,14 @@ static int is_equal(struct context_def *ctx, struct d_option *a, struct d_option
 {
 	struct field_def *field = field_def_of(a->name, ctx);
 
-	return field->is_equal(field, a->value, b->value);
+	return field->ops->is_equal(field, a->value, b->value);
 }
 
 static bool is_default(struct context_def *ctx, struct d_option *opt)
 {
 	struct field_def *field = field_def_of(opt->name, ctx);
 
-	return field->is_default(field, opt->value);
+	return field->ops->is_default(field, opt->value);
 }
 
 static int opts_equal(struct context_def *ctx, struct options *conf, struct options *run_base)
@@ -168,11 +168,11 @@ opt_equal(struct context_def *ctx, const char *opt_name, struct options *conf, s
 	struct d_option *run_opt = find_opt(run_base, opt_name);
 
 	if (opt && run_opt)
-		return field->is_equal(field, opt->value, run_opt->value);
+		return field->ops->is_equal(field, opt->value, run_opt->value);
 	else if (opt)
-		return field->is_default(field, opt->value);
+		return field->ops->is_default(field, opt->value);
 	else if (run_opt)
-		return field->is_default(field, run_opt->value);
+		return field->ops->is_default(field, run_opt->value);
 
 	return 1; /* Both not set */
 }

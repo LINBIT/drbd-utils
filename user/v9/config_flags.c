@@ -150,6 +150,24 @@ static void enum_describe_xml(struct field_def *field)
 	printf("\t</option>\n");
 }
 
+struct field_class fc_enum = {
+	.is_default = enum_is_default,
+	.is_equal = enum_is_equal,
+	.get = get_enum,
+	.put = put_enum,
+	.usage = enum_usage,
+	.describe_xml = enum_describe_xml,
+};
+
+struct field_class fc_enum_nocase = {
+	.is_default = enum_is_default_nocase,
+	.is_equal = enum_is_equal_nocase,
+	.get = get_enum,
+	.put = put_enum_nocase,
+	.usage = enum_usage,
+	.describe_xml = enum_describe_xml,
+};
+
 /* ---------------------------------------------------------------------------------------------- */
 
 static bool numeric_is_default(struct field_def *field, const char *value)
@@ -274,6 +292,15 @@ static void numeric_describe_xml(struct field_def *field)
 	printf("\t</option>\n");
 }
 
+struct field_class fc_numeric = {
+	.is_default = numeric_is_default,
+	.is_equal = numeric_is_equal,
+	.get = get_numeric,
+	.put = put_numeric,
+	.usage = numeric_usage,
+	.describe_xml = numeric_describe_xml,
+};
+
 /* ---------------------------------------------------------------------------------------------- */
 
 static int boolean_string_to_int(const char *value)
@@ -350,6 +377,24 @@ static void boolean_describe_xml(struct field_def *field)
 	       field->u.b.def ? "yes" : "no");
 }
 
+struct field_class fc_boolean = {
+	.is_default = boolean_is_default,
+	.is_equal = boolean_is_equal,
+	.get = get_boolean,
+	.put = put_boolean,
+	.usage = boolean_usage,
+	.describe_xml = boolean_describe_xml,
+};
+
+struct field_class fc_flag = {
+	.is_default = boolean_is_default,
+	.is_equal = boolean_is_equal,
+	.get = get_boolean,
+	.put = put_flag,
+	.usage = boolean_usage,
+	.describe_xml = boolean_describe_xml,
+};
+
 /* ---------------------------------------------------------------------------------------------- */
 
 static bool string_is_default(struct field_def *field, const char *value)
@@ -422,16 +467,20 @@ const char *double_quote_string(const char *str)
 	return buffer;
 }
 
+struct field_class fc_string = {
+	.is_default = string_is_default,
+	.is_equal = string_is_equal,
+	.get = get_string,
+	.put = put_string,
+	.usage = string_usage,
+	.describe_xml = string_describe_xml,
+};
+
 /* ============================================================================================== */
 
 #define ENUM(f, d)									\
 	.nla_type = T_ ## f,								\
-	.is_default = enum_is_default,							\
-	.is_equal = enum_is_equal,							\
-	.get = get_enum,								\
-	.put = put_enum,								\
-	.usage = enum_usage,								\
-	.describe_xml = enum_describe_xml,						\
+	.ops = &fc_enum,									\
 	.u = { .e = {									\
 		.map = f ## _map,							\
 		.size = ARRAY_SIZE(f ## _map),						\
@@ -439,12 +488,7 @@ const char *double_quote_string(const char *str)
 
 #define ENUM_NOCASE(f, d)								\
 	.nla_type = T_ ## f,								\
-	.is_default = enum_is_default_nocase,						\
-	.is_equal = enum_is_equal_nocase,						\
-	.get = get_enum,								\
-	.put = put_enum_nocase,								\
-	.usage = enum_usage,								\
-	.describe_xml = enum_describe_xml,						\
+	.ops = &fc_enum_nocase,								\
 	.u = { .e = {									\
 		.map = f ## _map,							\
 		.size = ARRAY_SIZE(f ## _map),						\
@@ -452,12 +496,7 @@ const char *double_quote_string(const char *str)
 
 #define NUMERIC(f, d)									\
 	.nla_type = T_ ## f,								\
-	.is_default = numeric_is_default,						\
-	.is_equal = numeric_is_equal,							\
-	.get = get_numeric,								\
-	.put = put_numeric,								\
-	.usage = numeric_usage,								\
-	.describe_xml = numeric_describe_xml,						\
+	.ops = &fc_numeric,								\
 	.u = { .n = {									\
 		.min = DRBD_ ## d ## _MIN,						\
 		.max = DRBD_ ## d ## _MAX,						\
@@ -467,36 +506,21 @@ const char *double_quote_string(const char *str)
 
 #define BOOLEAN(f, d)									\
 	.nla_type = T_ ## f,								\
-	.is_default = boolean_is_default,						\
-	.is_equal = boolean_is_equal,							\
-	.get = get_boolean,								\
-	.put = put_boolean,								\
-	.usage = boolean_usage,								\
-	.describe_xml = boolean_describe_xml,						\
+	.ops = &fc_boolean,								\
 	.u = { .b = {									\
 		.def = DRBD_ ## d ## _DEF } },						\
 	.argument_is_optional = true
 
 #define FLAG(f)										\
 	.nla_type = T_ ## f,								\
-	.is_default = boolean_is_default,						\
-	.is_equal = boolean_is_equal,							\
-	.get = get_boolean,								\
-	.put = put_flag,								\
-	.usage = boolean_usage,								\
-	.describe_xml = boolean_describe_xml,						\
+	.ops = &fc_flag,								\
 	.u = { .b = {									\
 		.def = false } },							\
 	.argument_is_optional = true
 
 #define STRING(f)									\
 	.nla_type = T_ ## f,								\
-	.is_default = string_is_default,						\
-	.is_equal = string_is_equal,							\
-	.get = get_string,								\
-	.put = put_string,								\
-	.usage = string_usage,								\
-	.describe_xml = string_describe_xml,						\
+	.ops = &fc_string,								\
 	.needs_double_quoting = true
 
 /* ============================================================================================== */

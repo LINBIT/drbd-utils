@@ -1128,7 +1128,7 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 				assert (cm->tla_id != NO_PAYLOAD);
 				nla = nla_nest_start(smsg, cm->tla_id);
 			}
-			if (!field->put(cm->ctx, field, smsg, optarg)) {
+			if (!field->ops->put(cm->ctx, field, smsg, optarg)) {
 				fprintf(stderr, "Option --%s: invalid "
 					"argument '%s'\n",
 					field->name, optarg);
@@ -1284,8 +1284,8 @@ static void print_options(struct nlattr *attr, struct context_def *ctx, const ch
 		nlattr = ntb(field->nla_type);
 		if (!nlattr)
 			continue;
-		str = field->get(ctx, field, nlattr);
-		is_default = field->is_default(field, str);
+		str = field->ops->get(ctx, field, nlattr);
+		is_default = field->ops->is_default(field, str);
 		if (is_default && !show_defaults)
 			continue;
 		if (!opened) {
@@ -1902,8 +1902,8 @@ static bool options_empty(struct nlattr *attr, struct context_def *ctx)
 		nlattr = ntb(field->nla_type);
 		if (!nlattr)
 			continue;
-		str = field->get(ctx, field, nlattr);
-		is_default = field->is_default(field, str);
+		str = field->ops->get(ctx, field, nlattr);
+		is_default = field->ops->is_default(field, str);
 		if (is_default && !show_defaults)
 			continue;
 		return false;
@@ -3667,7 +3667,7 @@ static void print_command_usage(struct drbd_cmd *cm, enum usage_type ut)
 			struct field_def *field;
 
 			for (field = cm->ctx->fields; field->name; field++)
-				field->describe_xml(field);
+				field->ops->describe_xml(field);
 		}
 		printf("</command>\n");
 		return;
@@ -3733,7 +3733,7 @@ static void print_command_usage(struct drbd_cmd *cm, enum usage_type ut)
 			for (field = cm->ctx->fields; field->name; field++) {
 				char buffer[300];
 				int n;
-				n = field->usage(field, buffer, sizeof(buffer));
+				n = field->ops->usage(field, buffer, sizeof(buffer));
 				assert(n < sizeof(buffer));
 				wrap_printf(4, " %s", buffer);
 			}
