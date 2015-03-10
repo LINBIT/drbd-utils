@@ -1677,7 +1677,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 		token = yylex();
 		fline = line;
 		switch(token) {
-		case TK_NET_OPTION:
+		case TK_STRING:
 			if (strcmp(yylval.txt, "protocol"))
 				goto goto_default;
 			check_upr("protocol statement","%s: protocol",res->name);

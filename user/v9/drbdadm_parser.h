@@ -83,17 +83,6 @@ enum yytokentype {
 	TK_INTEGER,
 	TK_STRING,
 	TK_ELSE,
-	TK_DISK_FLAG,
-	TK_DISK_NO_FLAG,
-	TK_DISK_OPTION,
-	TK_NET_FLAG,
-	TK_NET_NO_FLAG,
-	TK_NET_OPTION,
-	TK_SYNCER_FLAG,
-	TK_SYNCER_OPTION,
-	TK_STARTUP_FLAG,
-	TK_STARTUP_OPTION,
-	TK_HANDLER_OPTION,
 	TK_USAGE_COUNT,
 	TK_ASK,
 	TK_YES,
@@ -104,7 +93,6 @@ enum yytokentype {
 	TK_INSIDE,
 	TK_OUTSIDE,
 	TK_MEMLIMIT,
-	TK_PROXY_OPTION,
 	TK_ERR_STRING_TOO_LONG,
 	TK_ERR_DQSTRING_TOO_LONG,
 	TK_ERR_DQSTRING,
@@ -117,13 +105,10 @@ enum yytokentype {
 	TK_INCLUDE,
 	TK_BWLIMIT,
 	TK_FLOATING,
-	TK_DEPRECATED_OPTION,
 	TK_VOLUME,
 	TK_CMD_TIMEOUT_SHORT,
 	TK_CMD_TIMEOUT_MEDIUM,
 	TK_CMD_TIMEOUT_LONG,
-	TK_RES_OPTION,
-	TK_RES_FLAG,
 	TK_OPTIONS,
 	TK_CONNECTION,
 	TK_HOST,
@@ -131,15 +116,7 @@ enum yytokentype {
 	TK_CONNECTION_MESH,
 	TK_HOSTS,
 	TK_VIA,
-	TK__GROUPING_BASE = 0x1000,
-	TK_SYNCER_OLD_OPT = 0x2000, /* Might be or'ed to TK_[NET|DISK]_[OPTION|SWITCH] */
-	TK_PROXY_GROUP =    0x3000, /* Gets or'ed to some options */
-	TK_PEER_DEVICE =    0x4000, /* A peer_device option */
 };
-
-/* The higher bits define one or more token groups. */
-#define GET_TOKEN_GROUP(__x)         ((__x) & ~(TK__GROUPING_BASE - 1))
-#define REMOVE_GROUP_FROM_TOKEN(__x) ((__x) &  (TK__GROUPING_BASE - 1))
 
 typedef struct YYSTYPE {
 	char* txt;
