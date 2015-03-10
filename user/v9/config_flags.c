@@ -150,6 +150,18 @@ static void enum_describe_xml(struct field_def *field)
 	printf("\t</option>\n");
 }
 
+static enum check_codes enum_check(struct field_def *field, const char *value)
+{
+	int n = enum_string_to_int(field->u.e.map, field->u.e.size, value, strcmp);
+	return n == -1 ? CC_NOT_AN_ENUM : CC_OK;
+}
+
+static enum check_codes enum_check_nocase(struct field_def *field, const char *value)
+{
+	int n = enum_string_to_int(field->u.e.map, field->u.e.size, value, strcasecmp);
+	return n == -1 ? CC_NOT_AN_ENUM : CC_OK;
+}
+
 struct field_class fc_enum = {
 	.is_default = enum_is_default,
 	.is_equal = enum_is_equal,
@@ -157,6 +169,7 @@ struct field_class fc_enum = {
 	.put = put_enum,
 	.usage = enum_usage,
 	.describe_xml = enum_describe_xml,
+	.check = enum_check,
 };
 
 struct field_class fc_enum_nocase = {
@@ -166,6 +179,7 @@ struct field_class fc_enum_nocase = {
 	.put = put_enum_nocase,
 	.usage = enum_usage,
 	.describe_xml = enum_describe_xml,
+	.check = enum_check_nocase,
 };
 
 /* ---------------------------------------------------------------------------------------------- */
@@ -292,6 +306,19 @@ static void numeric_describe_xml(struct field_def *field)
 	printf("\t</option>\n");
 }
 
+static enum check_codes numeric_check(struct field_def *field, const char *value)
+{
+	enum new_strtoll_errs e;
+	unsigned long long l;
+
+	e = new_strtoll(value, field->u.n.scale, &l);
+
+	return  e != MSE_OK ? CC_NOT_A_NUMBER :
+		l < field->u.n.min ? CC_TOO_SMALL :
+		l > field->u.n.max ? CC_TOO_BIG :
+		CC_OK;
+}
+
 struct field_class fc_numeric = {
 	.is_default = numeric_is_default,
 	.is_equal = numeric_is_equal,
@@ -299,6 +326,7 @@ struct field_class fc_numeric = {
 	.put = put_numeric,
 	.usage = numeric_usage,
 	.describe_xml = numeric_describe_xml,
+	.check = numeric_check,
 };
 
 /* ---------------------------------------------------------------------------------------------- */
@@ -377,6 +405,12 @@ static void boolean_describe_xml(struct field_def *field)
 	       field->u.b.def ? "yes" : "no");
 }
 
+static enum check_codes boolean_check(struct field_def *field, const char *value)
+{
+	int yesno = boolean_string_to_int(value);
+	return yesno == -1 ? CC_NOT_A_BOOL : CC_OK;
+}
+
 struct field_class fc_boolean = {
 	.is_default = boolean_is_default,
 	.is_equal = boolean_is_equal,
@@ -384,6 +418,7 @@ struct field_class fc_boolean = {
 	.put = put_boolean,
 	.usage = boolean_usage,
 	.describe_xml = boolean_describe_xml,
+	.check = boolean_check,
 };
 
 struct field_class fc_flag = {
@@ -393,6 +428,7 @@ struct field_class fc_flag = {
 	.put = put_flag,
 	.usage = boolean_usage,
 	.describe_xml = boolean_describe_xml,
+	.check = boolean_check,
 };
 
 /* ---------------------------------------------------------------------------------------------- */
@@ -440,6 +476,11 @@ static void string_describe_xml(struct field_def *field)
 	       field->name);
 }
 
+static enum check_codes string_check(struct field_def *field, const char *value)
+{
+	return CC_OK;
+}
+
 const char *double_quote_string(const char *str)
 {
 	static char *buffer;
@@ -474,6 +515,7 @@ struct field_class fc_string = {
 	.put = put_string,
 	.usage = string_usage,
 	.describe_xml = string_describe_xml,
+	.check = string_check,
 };
 
 /* ============================================================================================== */

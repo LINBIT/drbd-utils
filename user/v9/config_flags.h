@@ -7,6 +7,15 @@ struct nlattr;
 struct context_def;
 struct field_def;
 
+enum check_codes {
+	CC_OK,
+	CC_NOT_AN_ENUM,
+	CC_NOT_A_BOOL,
+	CC_NOT_A_NUMBER,
+	CC_TOO_SMALL,
+	CC_TOO_BIG,
+};
+
 struct field_class {
 	bool (*is_default)(struct field_def *, const char *);
 	bool (*is_equal)(struct field_def *, const char *, const char *);
@@ -14,6 +23,7 @@ struct field_class {
 	bool (*put)(struct context_def *, struct field_def *, struct msg_buff *, const char *);
 	int (*usage)(struct field_def *, char *, int);
 	void (*describe_xml)(struct field_def *);
+	enum check_codes (*check)(struct field_def *, const char*);
 };
 
 struct field_def {
@@ -48,6 +58,13 @@ struct context_def {
 	int nla_type;
 	struct field_def fields[];
 };
+
+extern struct field_class fc_enum;
+extern struct field_class fc_enum_nocase;
+extern struct field_class fc_numeric;
+extern struct field_class fc_boolean;
+extern struct field_class fc_flag;
+extern struct field_class fc_string;
 
 extern struct context_def disk_options_ctx;
 extern struct context_def net_options_ctx;
