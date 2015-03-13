@@ -681,9 +681,17 @@ static void pe_options(struct context_def *options_def)
 	pe_expected(buffer);
 }
 
-static struct field_def *find_field(struct context_def *options_def, const char *name)
+static struct field_def *find_field(bool *no_prefix, struct context_def *options_def,
+				    const char *name)
 {
 	struct field_def *field;
+
+	if (!strncmp(name, "no-", 3)) {
+		name += 3;
+		*no_prefix = true;
+	} else {
+		*no_prefix = false;
+	}
 
 	for (field = options_def->fields; field->name; field++) {
 		if (!strcmp(field->name, name))
@@ -694,14 +702,14 @@ static struct field_def *find_field(struct context_def *options_def, const char 
 }
 
 
-static char *parse_option_value(struct field_def *field_def)
+static char *parse_option_value(struct field_def *field_def, bool no_prefix)
 {
 	char *value;
 	int token;
 
 	token = yylex();
 	if (token == ';') {
-		value = strdup("yes");
+		value = strdup(no_prefix ? "no" : "yes");
 	} else {
 		enum check_codes e;
 		if (!field_def->checked_in_postparse) {
@@ -723,6 +731,7 @@ static struct options __parse_options(struct context_def *options_def,
 	struct options options = STAILQ_HEAD_INITIALIZER(options);
 	struct field_def *field_def;
 	char *value;
+	bool no_prefix;
 	int token;
 
 	c_section_start = line;
@@ -733,7 +742,7 @@ static struct options __parse_options(struct context_def *options_def,
 		if (token == '}')
 			return options;
 
-		field_def = find_field(options_def, yytext);
+		field_def = find_field(&no_prefix, options_def, yytext);
 		if (!field_def) {
 			if (delegate) {
 				delegate(delegate_context);
@@ -743,7 +752,7 @@ static struct options __parse_options(struct context_def *options_def,
 			}
 		}
 
-		value = parse_option_value(field_def);
+		value = parse_option_value(field_def, no_prefix);
 		insert_tail(&options, new_opt((char *)field_def->name, value));
 	}
 }
@@ -757,12 +766,13 @@ static void insert_pd_options_delegate(void *ctx)
 {
 	struct options *options = ctx;
 	struct field_def *field_def;
+	bool no_prefix;
 	char *value;
 
-	field_def = find_field(&peer_device_options_ctx, yytext);
+	field_def = find_field(&no_prefix, &peer_device_options_ctx, yytext);
 	if (!field_def)
 		pe_options(&peer_device_options_ctx);
-	value = parse_option_value(field_def);
+	value = parse_option_value(field_def, no_prefix);
 	insert_tail(options, new_opt((char *)field_def->name, value));
 }
 
