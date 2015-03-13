@@ -139,7 +139,6 @@ allow-two-primaries	{ DP; CP; return TK_NET_FLAG;		}
 always-asbp		{ DP; CP; return TK_NET_FLAG;		}
 no-tcp-cork		{ DP; CP; return TK_NET_NO_FLAG;	}
 tcp-cork		{ DP; CP; return TK_NET_FLAG;		}
-discard-my-data		{ DP; CP; return TK_NET_DELEGATE;	}
 rate			{ DP; CP; RC(RATE); return TK_SYNCER_OLD_OPT | TK_DISK_OPTION;	}
 resync-rate		{ DP; CP; RC(RATE); return TK_DISK_OPTION | TK_PEER_DEVICE;	}
 after			{ DP; CP; return TK_SYNCER_OLD_OPT | TK_DISK_OPTION;	}
@@ -169,8 +168,6 @@ auto-promote		{ DP; CP; return TK_RES_FLAG;	}
 wfc-timeout		{ DP; CP; RC(WFC_TIMEOUT); return TK_STARTUP_OPTION;}
 degr-wfc-timeout	{ DP; CP; RC(DEGR_WFC_TIMEOUT); return TK_STARTUP_OPTION;}
 outdated-wfc-timeout	{ DP; CP; RC(OUTDATED_WFC_TIMEOUT); return TK_STARTUP_OPTION;}
-stacked-timeouts	{ DP; return TK_STARTUP_DELEGATE;       }
-become-primary-on	{ DP; return TK_STARTUP_DELEGATE;       }
 wait-after-sb		{ DP; CP; return TK_STARTUP_FLAG;     }
 pri-on-incon-degr	{ DP; CP; return TK_HANDLER_OPTION;	}
 pri-lost-after-sb	{ DP; CP; return TK_HANDLER_OPTION;	}
@@ -187,7 +184,6 @@ memlimit		{ DP; CP; return TK_PROXY_OPTION | TK_PROXY_GROUP; }
 read-loops		{ DP; CP; return TK_PROXY_OPTION | TK_PROXY_GROUP; }
 compression		{ DP; CP; return TK_PROXY_OPTION | TK_PROXY_GROUP; }
 bwlimit			{ DP; CP; return TK_PROXY_OPTION | TK_PROXY_GROUP; }
-plugin			{ DP; CP; return TK_PROXY_DELEGATE;     }
 out-of-sync             { DP; CP; return TK_HANDLER_OPTION;     }
 {IPV4ADDR}		{ DP; CP; return TK_IPADDR;		}
 {IPV6ADDR}		{ DP; CP; return TK_IPADDR6;		}

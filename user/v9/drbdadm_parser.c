@@ -733,7 +733,6 @@ static char *parse_option_value(struct field_def *field_def)
 }
 
 static struct options __parse_options(struct context_def *options_def,
-				      int token_delegate,
 				      void (*delegate)(void*),
 				      void *delegate_context)
 {
@@ -767,7 +766,7 @@ static struct options __parse_options(struct context_def *options_def,
 
 static struct options parse_options(struct context_def *options_def)
 {
-	return __parse_options(options_def, 0, NULL, NULL);
+	return __parse_options(options_def, NULL, NULL);
 }
 
 static void insert_options_delegate(void *ctx)
@@ -786,7 +785,7 @@ static void insert_options_delegate(void *ctx)
 static void parse_disk_options(struct options *disk_options, struct options *peer_device_options)
 {
 	*disk_options = __parse_options(&attach_cmd_ctx,
-					TK_PEER_DEVICE, insert_options_delegate,
+					insert_options_delegate,
 					peer_device_options);
 }
 
@@ -1453,7 +1452,7 @@ static int parse_proxy_options(struct options *proxy_options, struct options *pr
 
 	EXP('{');
 	opts = __parse_options(&proxy_options_ctx,
-			       TK_PROXY_DELEGATE, proxy_delegate, proxy_plugins);
+			       proxy_delegate, proxy_plugins);
 
 	if (proxy_options)
 		*proxy_options = opts;
@@ -1634,7 +1633,6 @@ static struct connection *parse_connection(enum pr_flags flags)
 			}
 			EXP('{');
 			conn->net_options = __parse_options(&show_net_options_ctx,
-							    TK_NET_DELEGATE,
 							    &net_delegate, (void *)flags);
 			break;
 		case TK_SKIP:
@@ -1683,7 +1681,7 @@ void parse_connection_mesh(struct d_resource *res, enum pr_flags flags)
 			EXP('{');
 			res->mesh_net_options =
 				__parse_options(&show_net_options_ctx,
-						TK_NET_DELEGATE, &net_delegate,
+						&net_delegate,
 						(void *)flags);
 			break;
 		case '}':
@@ -1776,7 +1774,6 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 			check_upr("net section", "%s:net", res->name);
 			EXP('{');
 			options = __parse_options(&show_net_options_ctx,
-						  TK_NET_DELEGATE,
 						  &net_delegate, (void *)flags);
 
 			STAILQ_CONCAT(&res->net_options, &options);
@@ -1790,7 +1787,6 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 			check_upr("startup section", "%s:startup", res->name);
 			EXP('{');
 			res->startup_options = __parse_options(&startup_options_ctx,
-							       TK_STARTUP_DELEGATE,
 							       &startup_delegate,
 							       res);
 			break;
