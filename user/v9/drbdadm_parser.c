@@ -456,22 +456,6 @@ static void pe_expected_got(const char *exp, int got)
 	token;							\
 })
 
-static void expect_STRING_or_INT(void)
-{
-	int token = yylex();
-	switch(token) {
-	case TK_INTEGER:
-	case TK_STRING:
-		break;
-	case TK_ON:
-		yylval.txt = strdup(yytext);
-		break;
-	default:
-		check_string_error(token);
-		pe_expected_got("TK_STRING | TK_INTEGER", token);
-	}
-}
-
 static void parse_global(void)
 {
 	fline = line;
@@ -769,23 +753,23 @@ static struct options parse_options(struct context_def *options_def)
 	return __parse_options(options_def, NULL, NULL);
 }
 
-static void insert_options_delegate(void *ctx)
+static void insert_pd_options_delegate(void *ctx)
 {
 	struct options *options = ctx;
-	char *opt_name = yylval.txt;
-	enum range_checks rc;
+	struct field_def *field_def;
+	char *value;
 
-	rc = yylval.rc;
-	expect_STRING_or_INT();
-	range_check(rc, opt_name, yylval.txt);
-	insert_tail(options, new_opt(opt_name, yylval.txt));
-	EXP(';');
+	field_def = find_field(&peer_device_options_ctx, yytext);
+	if (!field_def)
+		pe_options(&peer_device_options_ctx);
+	value = parse_option_value(field_def);
+	insert_tail(options, new_opt((char *)field_def->name, value));
 }
 
 static void parse_disk_options(struct options *disk_options, struct options *peer_device_options)
 {
 	*disk_options = __parse_options(&attach_cmd_ctx,
-					insert_options_delegate,
+					insert_pd_options_delegate,
 					peer_device_options);
 }
 
