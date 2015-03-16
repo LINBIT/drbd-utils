@@ -107,11 +107,16 @@ Group: System Environment/Kernel
 #
 %if %{with 84support}
 # which 8.4 version equivalent this package provides
-@SPEC_PROVIDES_DRBD_UTILS_84@
+Provides: drbd-utils = 8.4.5
+Provides: drbd-utils = 8.4.4
+Provides: drbd-utils = 8.4.3
+Provides: drbd-utils = 8.4.2
+Provides: drbd-utils = 8.4.1
+Provides: drbd-utils = 8.4.0
 %endif
 %if %{with 83support}
 # which 8.3 version equivalent this package provides
-@SPEC_PROVIDES_DRBD_UTILS_83@
+Provides: drbd-utils = 8.3.16
 %endif
 # We used to have one monolithic userland package.
 # Since all other packages require drbd-utils,
