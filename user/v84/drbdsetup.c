@@ -2096,7 +2096,7 @@ static int sh_status_scmd(const struct drbd_cmd *cm __attribute((unused)),
 		available = 1;
 	state.i = si.current_state;
 
-	if (state.conn == C_STANDALONE && state.disk == D_DISKLESS) {
+	if (state.conn == C_STANDALONE && state.disk == D_DISKLESS && state.role != R_PRIMARY) {
 		printf("%s_known=%s\n\n", _P,
 			available ? "Unconfigured"
 			          : "NA # not available or not yet created");
