@@ -868,8 +868,9 @@
 	</indexterm> If a secondary node fails to complete a write request in
       <option>ko-count</option> times the <option>timeout</option> parameter,
       it is excluded from the cluster. The primary node then sets the
-      connection to this secondary node to Standalone. The default value of
-      <option>ko-count</option> is 0, which disables this feature.</para>
+      connection to this secondary node to Standalone.
+      To disable this feature, you should explicitly set it to 0; defaults may change between versions.
+      </para>
     </definition>
   </drbdsetup_option>
 

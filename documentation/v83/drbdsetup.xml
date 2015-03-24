@@ -687,7 +687,7 @@
 	      request for <replaceable>count</replaceable> times the
 	      <replaceable>timeout</replaceable>, it is expelled from the
 	      cluster, i.e. the primary node goes into StandAlone mode.
-	      The default is 0, which disables this feature.
+	      To disable this feature, you should explicitly set it to 0; defaults may change between versions.
 	      </para>
           </listitem>
         </varlistentry>

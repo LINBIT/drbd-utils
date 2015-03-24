@@ -1018,8 +1018,9 @@
               </indexterm> In case the secondary node fails to complete a single write request for
             <replaceable>count</replaceable> times the <replaceable>timeout</replaceable>, it is
             expelled from the cluster. (I.e. the primary node goes into
-            <option>StandAlone</option> mode.) The default value is 0, which disables this
-            feature.</para>
+	    <option>StandAlone</option> mode.)
+	    To disable this feature, you should explicitly set it to 0; defaults may change between versions.
+	    </para>
           </listitem>
         </varlistentry>
 
