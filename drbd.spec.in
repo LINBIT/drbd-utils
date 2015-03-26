@@ -411,6 +411,9 @@ fi
 
 
 %changelog
+* Thu Mar 26 2015 Philipp Reisner <phil@linbit.com> - 8.9.2rc4-1
+- New upstream release candidate.
+
 * Mon Mar 09 2015 Lars Ellenberg <lars@linbit.com> - 8.9.2rc3-1
 - New upstream release candidate.
 

@@ -2,21 +2,22 @@ Latest:
 ------
  For even more detail, use "git log" or visit http://git.drbd.org/.
 
-8.9.2rc3
+
+8.9.2rc4
 --------
   * change systemd unit file: basically just call the init script
   * make some previously hardcoded timeouts configurable
   * drbdadm: New command peer-device-options
-  * drbd: Move max_buffers to net_conf
-  * drbdadm 9: Log errors to syslog if stderr is not available
+  * drbd 9: Move max_buffers to net_conf
+  * drbd 9: Log errors to syslog if stderr is not available
   * init script: fixes for stacked resources
   * fix regression corner cases in bitmap size calculation
   * allow create-md to initialize peer-max-bio-size to 1M
-  * make transport selectable
+  * drbd 9: make transport selectable
   * fix aggregating drbdsetup / drbdmeta exit statii
   * some documentation fixes (content and build)
   * added direct-connect command
-  * incompatible drbd-9 metadata format changeuse: node_id as index for
+  * incompatible drbd-9 metadata format change. use: node_id as index for
     peer_md instead of the bitmap_index
   * drbdadm/meta/usage_cnt: ensure output is visible
   * drbdsetup: fix arguments for all commands expecting a peer_device
@@ -24,9 +25,6 @@ Latest:
   * some build changes
   * init script: on start, first try to load the module
   * drbdsetup events2: Improve how timestamps are assigned
-
-8.9.2rc1
---------
   * udev rules (symlinks in /dev/by-res and by-disk) got fixed
   * Fixed upper limit for drbd-8.4 activity log entries
   * many fixes to drbdadm adjust and proxy commands for drbd-9
