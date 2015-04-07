@@ -40,7 +40,7 @@ int role_colors[] = {
 int cstate_colors[] = {
 	[C_STANDALONE] = COLOR_BAD,
 	[C_WF_CONNECTION] = COLOR_BAD,
-	[C_CONNECTED] = COLOR_NORMAL,
+	[C_WF_REPORT_PARAMS] = COLOR_NORMAL,
 };
 
 int repl_state_colors[] = {

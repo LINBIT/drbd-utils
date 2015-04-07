@@ -2522,6 +2522,26 @@ static const char *resync_susp_str(struct peer_device_info *info)
 	return buffer;
 }
 
+const char *drbd_repl_str9(enum drbd_conns s)
+{
+	static const char *n[] = {
+		[C_WF_REPORT_PARAMS] = "Off",
+		[C_CONNECTED] = "Established",
+	};
+
+	return (s == C_WF_REPORT_PARAMS || s == C_CONNECTED) ? n[s] : drbd_conn_str(s);
+}
+
+const char *drbd_conn_str9(enum drbd_conns s)
+{
+	static const char *n[] = {
+		[C_WF_CONNECTION] = "Connecting",
+		[C_WF_REPORT_PARAMS] = "Connected",
+	};
+
+	return (s == C_WF_CONNECTION || s == C_WF_REPORT_PARAMS) ? n[s] : drbd_conn_str(s);
+}
+
 static void peer_device_status(struct peer_devices_list *peer_device, bool single_device)
 {
 	int indent = 4;
@@ -2536,7 +2556,7 @@ static void peer_device_status(struct peer_devices_list *peer_device, bool singl
 
 		wrap_printf(indent, " replication:%s%s%s",
 			    repl_state_color_start(repl_state),
-			    drbd_conn_str(repl_state),
+			    drbd_repl_str9(repl_state),
 			    repl_state_color_stop(repl_state));
 		indent = 8;
 	}
@@ -2597,7 +2617,7 @@ static void connection_status(struct connections_list *connection,
 		enum drbd_conns cstate = connection->info.conn_connection_state;
 		wrap_printf(6, " connection:%s%s%s",
 			    cstate_color_start(cstate),
-			    drbd_conn_str(cstate),
+			    drbd_conn_str9(cstate),
 			    cstate_color_stop(cstate));
 	}
 	if (opt_verbose || connection->info.conn_connection_state == C_WF_REPORT_PARAMS) {
@@ -3003,7 +3023,7 @@ static int print_notifications(const struct drbd_cmd *cm, struct genl_info *info
 			if (!old ||
 			    new.i.conn_connection_state != old->i.conn_connection_state)
 				printf(" connection:%s",
-				       drbd_conn_str(new.i.conn_connection_state));
+				       drbd_conn_str9(new.i.conn_connection_state));
 			if (!old ||
 			    new.i.conn_role != old->i.conn_role)
 				printf(" role:%s",
@@ -3035,7 +3055,7 @@ static int print_notifications(const struct drbd_cmd *cm, struct genl_info *info
 			old = update_info(&key, &new, sizeof(new));
 			if (!old || new.i.peer_repl_state != old->i.peer_repl_state)
 				printf(" replication:%s",
-				       drbd_conn_str(new.i.peer_repl_state));
+				       drbd_repl_str9(new.i.peer_repl_state));
 			if (!old || new.i.peer_disk_state != old->i.peer_disk_state)
 				printf(" peer-disk:%s",
 				       drbd_disk_str(new.i.peer_disk_state));
