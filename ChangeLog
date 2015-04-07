@@ -3,7 +3,7 @@ Latest:
  For even more detail, use "git log" or visit http://git.drbd.org/.
 
 
-8.9.2rc4
+8.9.2
 --------
   * change systemd unit file: basically just call the init script
   * make some previously hardcoded timeouts configurable
