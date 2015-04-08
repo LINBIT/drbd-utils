@@ -27,14 +27,14 @@
 /* ============================================================================================== */
 
 static int enum_string_to_int(const char **map, int size, const char *value,
-			      int (*strcmp)(const char *, const char *))
+			      int (*strcmp_fn)(const char *, const char *))
 {
 	int n;
 
 	if (!value)
 		return -1;
 	for (n = 0; n < size; n++) {
-		if (map[n] && !strcmp(value, map[n]))
+		if (map[n] && !strcmp_fn(value, map[n]))
 			return n;
 	}
 	return -1;
