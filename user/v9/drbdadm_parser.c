@@ -156,8 +156,6 @@ void m_strtoll_range(const char *s, char def_unit,
 void range_check(const enum range_checks what, const char *name,
 		 char *value)
 {
-	char proto = 0;
-
 	/*
 	 * FIXME: Handle signed/unsigned values correctly by checking the
 	 * F_field_name_IS_SIGNED defines.
@@ -169,49 +167,11 @@ void range_check(const enum range_checks what, const char *name,
 				DRBD_ ## x ## _MAX)
 
 	switch (what) {
-	case R_NO_CHECK:
-		break;
-	default:
-		err("%s:%d: unknown range for %s => %s\n", config_file, fline, name, value);
-		break;
 	case R_MINOR_COUNT:
 		M_STRTOLL_RANGE(MINOR_COUNT);
 		break;
 	case R_DIALOG_REFRESH:
 		M_STRTOLL_RANGE(DIALOG_REFRESH);
-		break;
-	case R_DISK_SIZE:
-		M_STRTOLL_RANGE(DISK_SIZE);
-		break;
-	case R_TIMEOUT:
-		M_STRTOLL_RANGE(TIMEOUT);
-		break;
-	case R_CONNECT_INT:
-		M_STRTOLL_RANGE(CONNECT_INT);
-		break;
-	case R_PING_INT:
-		M_STRTOLL_RANGE(PING_INT);
-		break;
-	case R_MAX_BUFFERS:
-		M_STRTOLL_RANGE(MAX_BUFFERS);
-		break;
-	case R_MAX_EPOCH_SIZE:
-		M_STRTOLL_RANGE(MAX_EPOCH_SIZE);
-		break;
-	case R_SNDBUF_SIZE:
-		M_STRTOLL_RANGE(SNDBUF_SIZE);
-		break;
-	case R_RCVBUF_SIZE:
-		M_STRTOLL_RANGE(RCVBUF_SIZE);
-		break;
-	case R_KO_COUNT:
-		M_STRTOLL_RANGE(KO_COUNT);
-		break;
-	case R_RATE:
-		M_STRTOLL_RANGE(RESYNC_RATE);
-		break;
-	case R_AL_EXTENTS:
-		M_STRTOLL_RANGE(AL_EXTENTS);
 		break;
 	case R_PORT:
 		M_STRTOLL_RANGE(PORT);
@@ -221,58 +181,11 @@ void range_check(const enum range_checks what, const char *name,
 		M_STRTOLL_RANGE(META_IDX);
 		break;
 	*/
-	case R_WFC_TIMEOUT:
-		M_STRTOLL_RANGE(WFC_TIMEOUT);
-		break;
-	case R_DEGR_WFC_TIMEOUT:
-		M_STRTOLL_RANGE(DEGR_WFC_TIMEOUT);
-		break;
-	case R_OUTDATED_WFC_TIMEOUT:
-		M_STRTOLL_RANGE(OUTDATED_WFC_TIMEOUT);
-		break;
-
-	case R_C_PLAN_AHEAD:
-		M_STRTOLL_RANGE(C_PLAN_AHEAD);
-		break;
-
-	case R_C_DELAY_TARGET:
-		M_STRTOLL_RANGE(C_DELAY_TARGET);
-		break;
-
-	case R_C_FILL_TARGET:
-		M_STRTOLL_RANGE(C_FILL_TARGET);
-		break;
-
-	case R_C_MAX_RATE:
-		M_STRTOLL_RANGE(C_MAX_RATE);
-		break;
-
-	case R_C_MIN_RATE:
-		M_STRTOLL_RANGE(C_MIN_RATE);
-		break;
-
-	case R_CONG_FILL:
-		M_STRTOLL_RANGE(CONG_FILL);
-		break;
-
-	case R_CONG_EXTENTS:
-		M_STRTOLL_RANGE(CONG_EXTENTS);
-		break;
-	case R_PROTOCOL:
-		if (value && value[0] && value[1] == 0) {
-			proto = value[0] & ~0x20; /* toupper */
-			if (proto == 'A' || proto == 'B' || proto == 'C')
-				value[0] = proto;
-			else
-				proto = 0;
-		}
-		if (!proto && config_valid <= 1) {
-			config_valid = 0;
-			err("unknown protocol '%s', should be one of A,B,C\n", value);
-		}
-		break;
 	case R_NODE_ID:
 		M_STRTOLL_RANGE(NODE_ID);
+		break;
+	default:
+		err("%s:%d: unknown range for %s => %s\n", config_file, fline, name, value);
 		break;
 	}
 }
@@ -601,6 +514,10 @@ static struct field_def *find_field(bool *no_prefix, struct context_def *options
 				    const char *name)
 {
 	struct field_def *field;
+	bool ignored_no_prefix;
+
+	if (no_prefix == NULL)
+		no_prefix = &ignored_no_prefix;
 
 	if (!strncmp(name, "no-", 3)) {
 		name += 3;
@@ -1646,10 +1563,11 @@ void parse_connection_mesh(struct d_resource *res, enum pr_flags flags)
 
 struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 {
+	struct field_def *proto_f;
+	char *proto_v;
 	struct d_resource* res;
 	struct names host_names;
 	struct options options;
-	char *opt_name;
 	int token;
 
 	check_upr_init();
@@ -1681,11 +1599,9 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 			if (strcmp(yylval.txt, "protocol"))
 				goto goto_default;
 			check_upr("protocol statement","%s: protocol",res->name);
-			opt_name = yylval.txt;
-			EXP(TK_STRING);
-			range_check(R_PROTOCOL, opt_name, yylval.txt);
-			insert_tail(&res->net_options, new_opt(opt_name, yylval.txt));
-			EXP(';');
+			proto_f = find_field(NULL, &net_options_ctx, yylval.txt);
+			proto_v = parse_option_value(proto_f, false);
+			insert_tail(&res->net_options, new_opt((char *)proto_f->name, proto_v));
 			break;
 		case TK_ON:
 			STAILQ_INIT(&host_names);

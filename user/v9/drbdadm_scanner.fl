@@ -16,8 +16,7 @@ void err_dqstring(char* text);
 #define DP
 #endif
 
-#define CP yylval.txt = strdup(yytext); yylval.rc = R_NO_CHECK
-#define RC(N) yylval.rc = R_ ## N
+#define CP yylval.txt = strdup(yytext);
 
 #define YY_NO_INPUT 1
 #define YY_NO_UNPUT 1

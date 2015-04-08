@@ -26,34 +26,10 @@
 
 enum range_checks
 {
-	R_NO_CHECK,
 	R_MINOR_COUNT,
 	R_DIALOG_REFRESH,
-	R_DISK_SIZE,
-	R_TIMEOUT,
-	R_CONNECT_INT,
-	R_PING_INT,
-	R_MAX_BUFFERS,
-	R_MAX_EPOCH_SIZE,
-	R_SNDBUF_SIZE,
-	R_RCVBUF_SIZE,
-	R_KO_COUNT,
-	R_RATE,
-	R_GROUP,
-	R_AL_EXTENTS,
 	R_PORT,
 	R_META_IDX,
-	R_WFC_TIMEOUT,
-	R_DEGR_WFC_TIMEOUT,
-	R_OUTDATED_WFC_TIMEOUT,
-	R_C_PLAN_AHEAD,
-	R_C_DELAY_TARGET,
-	R_C_FILL_TARGET,
-	R_C_MAX_RATE,
-	R_C_MIN_RATE,
-	R_CONG_FILL,
-	R_CONG_EXTENTS,
-	R_PROTOCOL,
 	R_NODE_ID,
 };
 
@@ -120,7 +96,6 @@ enum yytokentype {
 
 typedef struct YYSTYPE {
 	char* txt;
-	enum range_checks rc;
 } YYSTYPE;
 
 #define yystype YYSTYPE /* obsolescent; will be withdrawn */
