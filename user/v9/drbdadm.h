@@ -320,6 +320,8 @@ enum drbd_cfg_stage {
 	__CFG_LAST
 };
 
+#define SCHEDULE_ONCE 0x1000
+
 extern void schedule_deferred_cmd(struct adm_cmd *, const struct cfg_ctx *, enum drbd_cfg_stage);
 extern void maybe_exec_legacy_drbdadm(char **argv);
 extern void uc_node(enum usage_count_type type);

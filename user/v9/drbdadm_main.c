@@ -534,6 +534,18 @@ void schedule_deferred_cmd(struct adm_cmd *cmd,
 {
 	struct deferred_cmd *d;
 
+	if (stage & SCHEDULE_ONCE) {
+		stage &= ~SCHEDULE_ONCE;
+
+		STAILQ_FOREACH(d, &deferred_cmds[stage], link) {
+			if (d->ctx.cmd == cmd &&
+			    d->ctx.res == ctx->res &&
+			    d->ctx.conn == ctx->conn &&
+			    d->ctx.vol == ctx->vol)
+				return;
+		}
+	}
+
 	d = calloc(1, sizeof(struct deferred_cmd));
 	if (d == NULL) {
 		perror("calloc");

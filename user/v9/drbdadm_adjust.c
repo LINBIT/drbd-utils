@@ -603,7 +603,7 @@ void schedule_peer_device_options(const struct cfg_ctx *ctx)
 				continue;
 
 			tmp_ctx.vol = peer_device->volume;
-			schedule_deferred_cmd(cmd, &tmp_ctx, CFG_PEER_DEVICE);
+			schedule_deferred_cmd(cmd, &tmp_ctx, CFG_PEER_DEVICE | SCHEDULE_ONCE);
 		}
 	} else if (!tmp_ctx.conn) {
 		STAILQ_FOREACH(peer_device, &tmp_ctx.vol->peer_devices, volume_link) {
@@ -614,7 +614,7 @@ void schedule_peer_device_options(const struct cfg_ctx *ctx)
 				continue;
 
 			tmp_ctx.conn = peer_device->connection;
-			schedule_deferred_cmd(cmd, &tmp_ctx, CFG_PEER_DEVICE);
+			schedule_deferred_cmd(cmd, &tmp_ctx, CFG_PEER_DEVICE | SCHEDULE_ONCE);
 		}
 	} else {
 		err("vol and conn set in schedule_peer_devices_options()!");
