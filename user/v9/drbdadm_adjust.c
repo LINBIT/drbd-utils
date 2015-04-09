@@ -587,6 +587,41 @@ adjust_peer_devices(const struct cfg_ctx *ctx, struct connection *conn, struct c
 	}
 }
 
+void schedule_peer_device_options(const struct cfg_ctx *ctx)
+{
+	struct adm_cmd *cmd = &peer_device_options_defaults_cmd;
+	struct cfg_ctx tmp_ctx = *ctx;
+	struct peer_device *peer_device;
+
+	if (!tmp_ctx.vol && !tmp_ctx.conn) {
+		err("Call schedule_peer_devices_options() with vol or conn set!");
+		exit(E_THINKO);
+	} else if (!tmp_ctx.vol) {
+		STAILQ_FOREACH(peer_device, &tmp_ctx.conn->peer_devices, connection_link) {
+
+			if (STAILQ_EMPTY(&peer_device->pd_options))
+				continue;
+
+			tmp_ctx.vol = peer_device->volume;
+			schedule_deferred_cmd(cmd, &tmp_ctx, CFG_PEER_DEVICE);
+		}
+	} else if (!tmp_ctx.conn) {
+		STAILQ_FOREACH(peer_device, &tmp_ctx.vol->peer_devices, volume_link) {
+
+			if (!peer_device->connection->my_address || !peer_device->connection->connect_to)
+				continue;
+			if (STAILQ_EMPTY(&peer_device->pd_options))
+				continue;
+
+			tmp_ctx.conn = peer_device->connection;
+			schedule_deferred_cmd(cmd, &tmp_ctx, CFG_PEER_DEVICE);
+		}
+	} else {
+		err("vol and conn set in schedule_peer_devices_options()!");
+		exit(E_THINKO);
+	}
+}
+
 /*
  * CAUTION this modifies global static char * config_file!
  */
@@ -714,6 +749,7 @@ int adm_adjust(const struct cfg_ctx *ctx)
 			running_conn = matching_conn(conn, &running->connections);
 		if (!running_conn) {
 			schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET);
+			schedule_peer_device_options(&tmp_ctx);
 		} else {
 			struct context_def *oc = &show_net_options_ctx;
 			struct options *conf_o = &conn->net_options;
@@ -723,6 +759,7 @@ int adm_adjust(const struct cfg_ctx *ctx)
 				if (!opt_equal(oc, "transport", conf_o, runn_o)) {
 					schedule_deferred_cmd(&disconnect_cmd, &tmp_ctx, CFG_NET);
 					schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET);
+					schedule_peer_device_options(&tmp_ctx);
 				} else {
 					schedule_deferred_cmd(&net_options_defaults_cmd, &tmp_ctx, CFG_NET);
 				}
@@ -747,8 +784,10 @@ int adm_adjust(const struct cfg_ctx *ctx)
 			schedule_deferred_cmd(&detach_cmd, &tmp_ctx, CFG_PREREQ);
 		if (vol->adj_del_minor)
 			schedule_deferred_cmd(&del_minor_cmd, &tmp_ctx, CFG_PREREQ);
-		if (vol->adj_new_minor)
+		if (vol->adj_new_minor) {
 			schedule_deferred_cmd(&new_minor_cmd, &tmp_ctx, CFG_DISK_PREREQ);
+			schedule_peer_device_options(&tmp_ctx);
+		}
 		if (vol->adj_attach)
 			schedule_deferred_cmd(&attach_cmd, &tmp_ctx, CFG_DISK);
 		if (vol->adj_disk_opts)

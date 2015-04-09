@@ -1041,7 +1041,6 @@ struct d_option *find_opt(struct options *base, const char *name)
 
 int adm_new_minor(const struct cfg_ctx *ctx)
 {
-	struct peer_device *peer_device;
 	char *argv[MAX_ARGS];
 	int argc = 0, ex;
 
@@ -1055,19 +1054,6 @@ int adm_new_minor(const struct cfg_ctx *ctx)
 	ex = m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
 	if (!ex && do_register)
 		register_minor(ctx->vol->device_minor, config_save);
-
-	STAILQ_FOREACH(peer_device, &ctx->vol->peer_devices, volume_link) {
-		struct cfg_ctx tmp_ctx;
-
-		if (!peer_device->connection->my_address || !peer_device->connection->connect_to)
-			continue;
-		if (STAILQ_EMPTY(&peer_device->pd_options))
-			continue;
-
-		tmp_ctx = *ctx;
-		tmp_ctx.conn = peer_device->connection;
-		call_cmd_fn(&peer_device_options_cmd, &tmp_ctx, KEEP_RUNNING);
-	}
 
 	return ex;
 }
@@ -1494,8 +1480,6 @@ static int adm_connect(const struct cfg_ctx *ctx)
 	bool do_connect = (ctx->cmd == &connect_cmd);
 	bool do_connect_direct = (ctx->cmd == &connect_direct_cmd);
 	bool reset = (ctx->cmd == &net_options_defaults_cmd);
-	struct peer_device *peer_device;
-	int ex;
 
 	if (do_connect_direct && conn->my_proxy) {
 		bool local_loopback = addr_scope_local(tmp_my_address.addr);
@@ -1538,22 +1522,7 @@ static int adm_connect(const struct cfg_ctx *ctx)
 	add_setup_options(argv, &argc);
 	argv[NA(argc)] = 0;
 
-	ex = m_system_ex(argv, SLEEPS_SHORT, res->name);
-	if (ex)
-		return ex;
-
-	STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
-		struct cfg_ctx tmp_ctx;
-
-		if (STAILQ_EMPTY(&peer_device->pd_options))
-			continue;
-
-		tmp_ctx = *ctx;
-		tmp_ctx.vol = peer_device->volume;
-		call_cmd_fn(&peer_device_options_cmd, &tmp_ctx, KEEP_RUNNING);
-	}
-
-	return ex;
+	return m_system_ex(argv, SLEEPS_SHORT, res->name);
 }
 
 void free_opt(struct d_option *item)
@@ -1733,6 +1702,8 @@ static int adm_up(const struct cfg_ctx *ctx)
 
 	set_peer_in_resource(ctx->res, true);
 	for_each_connection(conn, &ctx->res->connections) {
+		struct peer_device *peer_device;
+
 		if (conn->ignore)
 			continue;
 
@@ -1742,6 +1713,17 @@ static int adm_up(const struct cfg_ctx *ctx)
 			schedule_deferred_cmd(&connect_direct_cmd, &tmp_ctx, CFG_NET);
 		else
 			schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET);
+
+		STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
+			struct cfg_ctx tmp2_ctx;
+
+			if (STAILQ_EMPTY(&peer_device->pd_options))
+				continue;
+
+			tmp2_ctx = tmp_ctx;
+			tmp2_ctx.vol = peer_device->volume;
+			schedule_deferred_cmd(&peer_device_options_cmd, &tmp2_ctx, CFG_PEER_DEVICE);
+		}
 	}
 	tmp_ctx.conn = NULL;
 
