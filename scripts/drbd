@@ -185,9 +185,17 @@ case "$1" in
 	log_end_msg 0
 
 	# Now handle stacked devices, if any
-	DEVICES=`$DRBDADM -S sh-dev all`
-	if [[ $DEVICES ]] ; then
-	    log_daemon_msg "Starting stacked DRBD resources, if any"
+	STACKED_RESOURCES=""
+	# no point trying stacking, if we don't have at least one primary.
+	if grep -w Primary /proc/drbd &> /dev/null; then
+	    # heuristic: don't mess with dinosaurs # :-(
+	    if ! grep -Ee '\<drbddisk|drbdupper\>' /etc/ha.d/haresources &> /dev/null; then
+		STACKED_RESOURCES=`$DRBDADM -S sh-resources`
+	    fi
+	fi
+	if [[ $STACKED_RESOURCES ]] ; then
+	    log_daemon_msg "Starting stacked DRBD resources"
+	    DEVICES=`$DRBDADM -S sh-dev all`
 	    $DRBDADM -S adjust-with-progress all
 	    if [[ $? -gt 1 ]] ; then
 		log_end_msg 1
