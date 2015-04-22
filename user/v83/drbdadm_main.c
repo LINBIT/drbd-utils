@@ -1434,12 +1434,12 @@ static int adm_generic_b(struct d_resource *res, const char *cmd)
 
 	_adm_generic(res, cmd, SLEEPS_SHORT | RETURN_STDERR_FD, &pid, &fd, NULL);
 
-	if (fd < 0) {
-		fprintf(stderr, "Strange: got negative fd.\n");
-		exit(E_THINKO);
-	}
-
 	if (!dry_run) {
+		if (fd < 0) {
+			fprintf(stderr, "Strange: got negative fd.\n");
+			exit(E_THINKO);
+		}
+
 		while (1) {
 			rr = read(fd, buffer + s, 4096 - s);
 			if (rr <= 0)

@@ -1237,12 +1237,12 @@ static int __adm_drbdsetup_silent(const struct cfg_ctx *ctx)
 
 	__adm_drbdsetup(ctx, SLEEPS_SHORT | RETURN_STDERR_FD, &pid, &fd, NULL);
 
-	if (fd < 0) {
-		err("Strange: got negative fd.\n");
-		exit(E_THINKO);
-	}
-
 	if (!dry_run) {
+		if (fd < 0) {
+			err("Strange: got negative fd.\n");
+			exit(E_THINKO);
+		}
+
 		while (1) {
 			rr = read(fd, buffer + s, 4096 - s);
 			if (rr <= 0)
