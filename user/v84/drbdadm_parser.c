@@ -334,6 +334,9 @@ static void pperror(struct d_host_info *host, struct d_proxy_info *proxy, char *
  *   )
  *     since nobody (?) will actually use more than a dozen minors,
  *     this should be more than enough.
+ *
+ * Furthermore, the names of files that have been read are
+ * registered here, to avoid reading the same file multiple times.
  */
 struct hsearch_data global_htable;
 void check_uniq_init(void)
@@ -2025,6 +2028,42 @@ void post_parse(struct d_resource *config, enum pp_flags flags)
 			set_disk_in_res(res);
 }
 
+/* Returns the "previous" count, ie. 0 if this file wasn't seen before. */
+int was_file_already_seen(char *fn)
+{
+	ENTRY e, *ep;
+	char *real_path;
+
+	real_path = realpath(fn, NULL);
+	if (!real_path)
+		real_path = fn;
+
+	ep = NULL;
+	e.key = real_path;
+	e.data = real_path;
+	hsearch_r(e, FIND, &ep, &global_htable);
+	if (ep) {
+		/* Can be freed, it's just a queried key. */
+		if (real_path != fn)
+			free(real_path);
+		return 1;
+	}
+
+	e.key = real_path;
+	e.data = real_path;
+	hsearch_r(e, ENTER, &ep, &global_htable);
+	if (!ep) {
+		err("hash table entry (%s => %s) failed\n", e.key, (char *)e.data);
+		exit(E_THINKO);
+	}
+
+
+	/* Must not be freed, because it's still referenced by the hash table. */
+	/* free(real_path); */
+
+	return 0;
+}
+
 void include_stmt(char *str)
 {
 	char *last_slash, *tmp;
@@ -2055,6 +2094,9 @@ void include_stmt(char *str)
 	r = glob(str, 0, NULL, &glob_buf);
 	if (r == 0) {
 		for (i=0; i<glob_buf.gl_pathc; i++) {
+			if (was_file_already_seen(glob_buf.gl_pathv[i]))
+				continue;
+
 			f = fopen(glob_buf.gl_pathv[i], "re");
 			if (f) {
 				include_file(f, strdup(glob_buf.gl_pathv[i]));
@@ -2092,6 +2134,9 @@ void my_parse(void)
 		check_uniq_init();
 		global_htable_init = 1;
 	}
+
+	/* Remember that we're reading that file. */
+	was_file_already_seen(config_file);
 
 	while (1) {
 		int token = yylex();
