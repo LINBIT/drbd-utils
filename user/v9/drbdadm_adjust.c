@@ -87,6 +87,21 @@ static FILE *m_popen(int *pid,char** argv)
 	return fdopen(pipes[0],"r");
 }
 
+__attribute__((format(printf, 2, 3)))
+void report_compare(bool differs, const char *fmt, ...)
+{
+	va_list ap;
+	if (verbose <= (3 - differs))
+		return;
+	if (differs)
+		fprintf(stderr, " [ne] ");
+	else
+		fprintf(stderr, " [eq] ");
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+}
+
 struct field_def *field_def_of(const char *opt_name, struct context_def *ctx)
 {
 	struct field_def *field;
@@ -211,15 +226,26 @@ static int disk_equal(struct d_volume *conf, struct d_volume *running)
 
 	if (conf->disk == NULL && running->disk == NULL)
 		return 1;
-	if (conf->disk == NULL || running->disk == NULL)
+	if (conf->disk == NULL) {
+		report_compare(1, "minor %u (vol:%u) %s missing from config\n",
+			running->device_minor, running->vnr, running->disk);
 		return 0;
+	} else if (running->disk == NULL) {
+		report_compare(1, "minor %u (vol:%u) %s missing from kernel\n",
+			conf->device_minor, conf->vnr, conf->disk);
+		return 0;
+	}
 
-	eq &= !strcmp(conf->disk, running->disk);
-	eq &= int_eq(conf->meta_disk, running->meta_disk);
-	if (!strcmp(conf->meta_disk, "internal"))
-		return eq;
-	eq &= !strcmp(conf->meta_disk, running->meta_disk);
-
+	eq = !strcmp(conf->disk, running->disk);
+	report_compare(!eq, "minor %u (vol:%u) disk: r=%s c=%s\n",
+		running->device_minor, running->vnr, running->disk, conf->disk);
+	if (eq) {
+		eq = int_eq(conf->meta_disk, running->meta_disk);
+		if (eq && strcmp(conf->meta_disk, "internal") != 0)
+			eq = !strcmp(conf->meta_disk, running->meta_disk);
+	}
+	report_compare(!eq, "minor %u (vol:%u) meta-disk: r=%s c=%s\n",
+		running->device_minor, running->vnr, running->meta_disk, conf->meta_disk);
 	return eq;
 }
 
@@ -465,6 +491,10 @@ void compare_size(struct d_volume *conf, struct d_volume *kern)
 	/* size options differ */
 	if (k && c && !is_equal(&attach_cmd_ctx, c, k))
 		conf->adj_resize = 1;
+
+	report_compare(conf->adj_resize, "minor %u (vol:%u) size: r=%s c=%s\n",
+		conf->device_minor, conf->vnr,
+		k ? k->value : "-", c ? c->value : "-");
 }
 
 void compare_volume(struct d_volume *conf, struct d_volume *kern)
@@ -472,14 +502,13 @@ void compare_volume(struct d_volume *conf, struct d_volume *kern)
 	conf->adj_new_minor = conf->device_minor != kern->device_minor;
 	conf->adj_del_minor = conf->adj_new_minor && kern->disk;
 
+	if (conf->adj_new_minor)
+		report_compare(1, "vol:%u minor differs: r=%u c=%u\n",
+			conf->vnr, kern->device_minor, conf->device_minor);
+
 	if (!disk_equal(conf, kern)) {
-		if (conf->disk && kern->disk) {
-			conf->adj_attach = 1;
-			conf->adj_detach = 1;
-		} else {
-			conf->adj_attach = conf->disk != NULL;
-			conf->adj_detach = kern->disk != NULL;
-		}
+		conf->adj_attach = conf->disk != NULL;
+		conf->adj_detach = kern->disk != NULL;
 	}
 
 	/* do we need to resize? */
@@ -531,11 +560,16 @@ void compare_volumes(struct volumes *conf_head, struct volumes *kern_head)
 	while (conf || kern) {
 		if (kern && (conf == NULL || kern->vnr < conf->vnr)) {
 			insert_volume(&to_be_deleted, new_to_be_deleted_minor_from_template(kern));
+			if (verbose > 2)
+				err("Deleting minor %u (vol:%u) from kernel, not in config\n",
+					kern->device_minor, kern->vnr);
 			kern = STAILQ_NEXT(kern, link);
 		} else if (conf && (kern == NULL || kern->vnr > conf->vnr)) {
 			conf->adj_new_minor = 1;
 			if (conf->disk)
 				conf->adj_attach = 1;
+			if (verbose > 2)
+				err("New minor %u (vol:%u)\n", conf->device_minor, conf->vnr);
 			conf = STAILQ_NEXT(conf, link);
 		} else {
 			ASSERT(conf);
