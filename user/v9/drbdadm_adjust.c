@@ -469,11 +469,6 @@ void compare_size(struct d_volume *conf, struct d_volume *kern)
 
 void compare_volume(struct d_volume *conf, struct d_volume *kern)
 {
-	/* Special case "size", we need to issue a resize command to change that.
-	 * Move both options to the head of the disk_options list,
-	 * so we can easily skip them in the opts_equal, later.
-	 */
-
 	conf->adj_new_minor = conf->device_minor != kern->device_minor;
 	conf->adj_del_minor = conf->adj_new_minor && kern->disk;
 

@@ -491,6 +491,12 @@ void compare_size(struct d_volume *conf, struct d_volume *kern)
 	struct d_option *c = find_opt(conf->disk_options, "size");
 	struct d_option *k = find_opt(kern->disk_options, "size");
 
+	/* Special-case "max-bio-bvecs", we do not allow to change that
+	 * while attached, yet.
+	 * Also special case "size", we need to issue a resize command to change that.
+	 * Move both options to the head of the disk_options list,
+	 * so we can easily skip them in the opts_equal, later.
+	 */
 	move_opt_to_head(&conf->disk_options, c);
 	move_opt_to_head(&kern->disk_options, k);
 
@@ -504,12 +510,6 @@ void compare_size(struct d_volume *conf, struct d_volume *kern)
 
 void compare_volume(struct d_volume *conf, struct d_volume *kern)
 {
-	/* Special-case "max-bio-bvecs", we do not allow to change that
-	 * while attached, yet.
-	 * Also special case "size", we need to issue a resize command to change that.
-	 * Move both options to the head of the disk_options list,
-	 * so we can easily skip them in the opts_equal, later.
-	 */
 	struct d_option *c, *k;
 
 	/* do we need to do a full attach,
