@@ -500,6 +500,8 @@ void compare_size(struct d_volume *conf, struct d_volume *kern)
 void compare_volume(struct d_volume *conf, struct d_volume *kern)
 {
 	conf->adj_new_minor = conf->device_minor != kern->device_minor;
+	/* Why only del-minor if attached?
+	 * Don't we need to always del-minor, and optionally detach first? */
 	conf->adj_del_minor = conf->adj_new_minor && kern->disk;
 
 	if (conf->adj_new_minor)
@@ -511,8 +513,10 @@ void compare_volume(struct d_volume *conf, struct d_volume *kern)
 		conf->adj_detach = kern->disk != NULL;
 	}
 
-	/* do we need to resize? */
-	compare_size(conf, kern);
+	/* Do we need to resize?
+	 * Though, if we are already going to attach, skip the resize. */
+	if (!conf->adj_attach)
+		compare_size(conf, kern);
 
 	/* is it sufficient to only adjust the disk options? */
 	if (!(conf->adj_detach || conf->adj_attach) && conf->disk)
