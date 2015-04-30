@@ -692,7 +692,9 @@ static struct d_option *parse_options_d(int token_flag, int token_no_flag, int t
 		token = REMOVE_GROUP_FROM_TOKEN(token_group);
 		fline = line;
 		opt_name = yylval.txt;
-		if (token == token_flag) {
+		if (token <= 0) {
+			pe_expected("an option");
+		} else if (token == token_flag) {
 			switch(yylex()) {
 			case TK_YES:
 				current_option = new_opt(opt_name, strdup("yes"));
@@ -723,8 +725,8 @@ static struct d_option *parse_options_d(int token_flag, int token_no_flag, int t
 			range_check(rc, opt_name, yylval.txt);
 			current_option = new_opt(opt_name, yylval.txt);
 			options = APPEND(options, current_option);
-		} else if (token == token_delegate ||
-				GET_TOKEN_GROUP(token_delegate & token_group)) {
+		} else if (ctx && (token == token_delegate ||
+					GET_TOKEN_GROUP(token_delegate & token_group))) {
 			delegate(ctx);
 			continue;
 		} else if (token == TK_DEPRECATED_OPTION) {
@@ -1752,10 +1754,16 @@ void proxy_delegate(void *ctx)
 
 	options = NULL;
 	while (1) {
+		line = NULL;
 		pnp = &line;
 		while (1) {
 			yylval.txt = NULL;
 			token = yylex();
+			if (token <= 0) {
+				err("%s:%d: Unexpected end-of-file\n",
+				    config_file, fline);
+				exit(E_CONFIG_INVALID);
+			}
 			if (token == ';')
 				break;
 			if (token == '}') {
