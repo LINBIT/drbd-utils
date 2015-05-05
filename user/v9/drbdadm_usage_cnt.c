@@ -508,14 +508,12 @@ int adm_create_md(const struct cfg_ctx *ctx)
 	char *tb;
 	int rv,fd;
 	char *r, *max_peers_str = NULL;
-	struct d_name *b_opt;
+	struct d_name *b_opt_max_peers;
 	const char *opt_max_peers = "--max-peers=";
 
-	b_opt = find_backend_option(opt_max_peers);
-	if (b_opt) {
-		max_peers_str = ssprintf("%s", b_opt->name + strlen(opt_max_peers));
-		STAILQ_REMOVE(&backend_options, b_opt, d_name, link);
-		free(b_opt);
+	b_opt_max_peers = find_backend_option(opt_max_peers);
+	if (b_opt_max_peers) {
+		max_peers_str = ssprintf("%s", b_opt_max_peers->name + strlen(opt_max_peers));
 	} else {
 		int max_peers = 0;
 
@@ -533,8 +531,17 @@ int adm_create_md(const struct cfg_ctx *ctx)
 	device_uuid = strto_u64(tb,NULL,16);
 	free(tb);
 
-	/* this is "drbdmeta ... create-md" */
+	/* drbdmeta create-md does not understand "--max-peers=",
+	 * so we drop it from the option list here... */
+	if (b_opt_max_peers)
+		STAILQ_REMOVE(&backend_options, b_opt_max_peers, d_name, link);
+	/* This is "drbdmeta ... create-md".
+	 * It implicitly adds all backend_options to the command line. */
 	rv = _adm_drbdmeta(ctx, SLEEPS_VERY_LONG, max_peers_str);
+	/* ... now add back "--max-peers=", if any,
+	 * in case the caller loops over several volumes. */
+	if (b_opt_max_peers)
+		insert_head(&backend_options, b_opt_max_peers);
 
 	if(rv || dry_run) return rv;
 
