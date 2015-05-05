@@ -4839,7 +4839,8 @@ int is_attached(int minor)
 		exit(20);
 	}
 	if (pid == 0) {
-		fclose(stderr);
+		freopen("/dev/null", "w", stderr);
+
 		close(pipes[0]);
 		dup2(pipes[1], 1);
 

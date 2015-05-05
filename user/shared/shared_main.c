@@ -300,7 +300,7 @@ void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd
 		close(pipe_fds[1]);
 
 		if (flags & SUPRESS_STDERR)
-			fclose(stderr);
+			freopen("/dev/null", "w", stderr);
 		if (argv[0])
 			execvp(argv[0], argv);
 		fprintf(stderr, "Can not exec\n");
