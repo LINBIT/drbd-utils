@@ -585,6 +585,10 @@ void uc_node(enum usage_count_type type)
 		get_random_bytes(&ni.node_uuid,sizeof(ni.node_uuid));
 		ni.rev = current_vcs_rel;
 		send = 1;
+	} else if (current_vcs_is_from_proc_drbd == 0) {
+		/* Avoid flapping between drbd-utils git-hash and
+		 * kernel module git-hash. */
+		send = 0;
 	} else {
 		// read_node_id() was successful
 		if (!vcs_eq(&ni.rev,&current_vcs_rel)) {
