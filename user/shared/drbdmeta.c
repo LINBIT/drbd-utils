@@ -3798,6 +3798,14 @@ void md_convert_08_to_07(struct format *cfg)
 
 void md_convert_08_to_09(struct format *cfg)
 {
+	int p;
+
+	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
+		cfg->md.peers[p].bitmap_uuid = 0;
+		cfg->md.peers[p].flags = 0;
+		cfg->md.peers[p].bitmap_index = -1;
+	}
+
 	if (cfg->md.flags & MDF_CONNECTED_IND)
 		cfg->md.peers[0].flags |= MDF_PEER_CONNECTED;
 
