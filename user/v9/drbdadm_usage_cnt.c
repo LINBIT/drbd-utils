@@ -341,6 +341,19 @@ static void url_encode(char* in, char* out)
 	*out = 0;
 }
 
+/* returns 1, if either svn_revision or git_hash are known,
+ * returns 0 otherwise.  */
+int have_vcs_hash(const struct version *v)
+{
+	int i;
+	if (v->svn_revision)
+		return 1;
+	for (i = 0; i < GIT_HASH_BYTE; i++)
+		if (v->git_hash[i])
+			return 1;
+	return 0;
+}
+
 /* Ensure that the node is counted on http://usage.drbd.org
  */
 #define ANSWER_SIZE 80
@@ -371,6 +384,14 @@ void uc_node(enum usage_count_type type)
 		get_random_bytes(&ni.node_uuid,sizeof(ni.node_uuid));
 		ni.rev = *driver_version;
 		send = 1;
+	} else if (!have_vcs_hash(driver_version)) {
+		/* If we don't know the current version control system hash,
+		 * we found the version via "modprobe -F version drbd",
+		 * and did not find a /proc/drbd to read it from.
+		 * Avoid flipping between "hash-some-value" and "hash-all-zero",
+		 * Re-registering every time...
+		 */
+		send = 0;
 	} else {
 		// read_node_id() was successful
 		if (!version_equal(&ni.rev, driver_version)) {
