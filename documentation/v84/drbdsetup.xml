@@ -1611,8 +1611,19 @@
         <secondary>show</secondary>
       </indexterm>
 
-      <para>Shows all available configuration information of the
-      <replaceable>device</replaceable>.</para>
+		<para>Shows all available configuration information of a resource, or of all resources. Available options:
+			<variablelist>
+				<varlistentry>
+					<term><option>--show-defaults</option></term>
+
+					<listitem>
+						<para>Show all configuration parameters, even the ones with
+							default values.  Normally, parameters with default values are
+							not shown.</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</para>
     </refsect2>
 
     <refsect2>
