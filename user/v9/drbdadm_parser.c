@@ -467,6 +467,8 @@ static void pe_valid_enums(const char **map, int nr_enums)
 			size += strlen(map[i]) + 3;
 	}
 
+	assert(size >= 3);
+
 	buffer = alloca(size);
 	p = buffer;
 	for (i = 0; i < nr_enums; i++) {
@@ -504,6 +506,8 @@ static void pe_options(struct context_def *options_def)
 
 	for (field = options_def->fields; field->name; field++)
 		size += strlen(field->name) + 3;
+
+	assert(size >= 3);
 
 	buffer = alloca(size);
 	p = buffer;
@@ -689,6 +693,8 @@ static void __parse_address(struct d_address *a)
 	default:
 		pe_expected("ssocks | sdp | ipv4 | ipv6 | <ipv4 address> ");
 	}
+
+	assert(a->af != NULL);
 
 	a->addr = yylval.txt;
 	if (!strcmp(a->af, "ipv6"))
