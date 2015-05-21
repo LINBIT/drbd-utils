@@ -81,7 +81,7 @@
 
 	  <listitem>
 	    <para>A device, specified by minor number
-	      (<option>minor-</option><replaceable>minor</replaceable>) or by resource and
+	      (<option>minor-</option><replaceable>minornumber</replaceable>, e.g. <option>minor-</option><replaceable>0</replaceable>) or by resource and
 	      volume number
 	      (<replaceable>resource</replaceable>/<replaceable>volume</replaceable>).
 	      If only a <replaceable>resource</replaceable> is
