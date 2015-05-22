@@ -1,9 +1,14 @@
+### IMPORTANT ###
+# This is a copy of "control", but without the dh_sytemd Build-Depends
+# Currently this is neccessary, because Ubuntu/Precise does not have a dh_systemd package
+# But we want to force this dependency, for further information take a look at the
+# git commit that introduced this file
 Source: drbd-utils
 Section: admin
 Priority: extra
 Maintainer: DRBD dev <drbd-dev@lists.linbit.com>
 Uploaders: Philipp Reisner <philipp.reisner@linbit.com>, Lars Ellenberg <lars.ellenberg@linbit.com>
-Build-Depends: debhelper (>= 7), flex, xsltproc, docbook-xsl, dh-systemd
+Build-Depends: debhelper (>= 7), flex, xsltproc, docbook-xsl
 Standards-Version: 3.9.5
 Homepage: http://www.drbd.org/
 Vcs-Browser: http://git.linbit.com/drbd-utils.git/
