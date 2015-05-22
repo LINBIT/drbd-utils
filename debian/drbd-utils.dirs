@@ -1,6 +1,0 @@
-etc
-etc/init.d
-etc/ha.d/resource.d
-lib/udev/rules.d
-usr/sbin
-lib/systemd/system
