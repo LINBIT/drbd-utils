@@ -168,6 +168,7 @@ resource
       [disk]
       volume
          disk
+         [disk]
    options
    stacked-on-top-of
    startup</programlisting>
