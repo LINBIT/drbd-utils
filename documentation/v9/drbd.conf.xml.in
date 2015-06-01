@@ -165,7 +165,6 @@ resource
    handlers
    [net]
    on
-      [disk]
       volume
          disk
          [disk]
