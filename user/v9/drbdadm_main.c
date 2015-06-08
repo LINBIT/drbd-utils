@@ -56,6 +56,7 @@
 #include "config_flags.h"
 #include "drbdadm_dump.h"
 #include "shared_main.h"
+#include "drbdadm_parser.h"
 
 #define MAX_ARGS 40
 
@@ -84,7 +85,6 @@ struct option general_admopt[] = {
 };
 struct option *admopt = general_admopt;
 
-extern void my_parse();
 extern int yydebug;
 extern FILE *yyin;
 

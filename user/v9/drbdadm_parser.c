@@ -51,7 +51,6 @@ YYSTYPE yylval;
 
 static int c_section_start;
 static int parse_proxy_options(struct options *, struct options *);
-void my_parse(void);
 static void parse_skip(void);
 
 struct d_name *names_from_str(char* str)

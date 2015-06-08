@@ -106,6 +106,8 @@ extern yystype yylval;
 extern char* yytext;
 extern FILE* yyin;
 
+void my_parse(void);
+
 /* avoid compiler warnings about implicit declaration */
 int yylex(void);
 void my_yypush_buffer_state(FILE *f);
