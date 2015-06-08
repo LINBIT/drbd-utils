@@ -92,6 +92,7 @@ enum yytokentype {
 	TK_CONNECTION_MESH,
 	TK_HOSTS,
 	TK_VIA,
+	TK_TEMPLATE_FILE,
 };
 
 typedef struct YYSTYPE {

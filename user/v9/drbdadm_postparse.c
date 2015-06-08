@@ -964,6 +964,7 @@ void expand_common(void)
 	struct d_volume *vol, *host_vol;
 	struct d_host_info *h;
 	struct connection *conn;
+	struct d_resource *template;
 
 	for_each_resource(res, &config) {
 		/* make sure vol->device is non-NULL */
@@ -984,19 +985,24 @@ void expand_common(void)
 			}
 		}
 
-		if (common) {
-			expand_opts(&common->net_options, &res->net_options);
-			expand_opts(&common->disk_options, &res->disk_options);
-			expand_opts(&common->pd_options, &res->pd_options);
-			expand_opts(&common->startup_options, &res->startup_options);
-			expand_opts(&common->proxy_options, &res->proxy_options);
-			expand_opts(&common->handlers, &res->handlers);
-			expand_opts(&common->res_options, &res->res_options);
+		if (res->template)
+			template = res->template;
+		else
+			template = common;
 
-			if (common->stacked_timeouts)
+		if (template) {
+			expand_opts(&template->net_options, &res->net_options);
+			expand_opts(&template->disk_options, &res->disk_options);
+			expand_opts(&template->pd_options, &res->pd_options);
+			expand_opts(&template->startup_options, &res->startup_options);
+			expand_opts(&template->proxy_options, &res->proxy_options);
+			expand_opts(&template->handlers, &res->handlers);
+			expand_opts(&template->res_options, &res->res_options);
+
+			if (template->stacked_timeouts)
 				res->stacked_timeouts = 1;
 
-			expand_opts(&common->proxy_plugins, &res->proxy_plugins);
+			expand_opts(&template->proxy_plugins, &res->proxy_plugins);
 		}
 
 		/* now that common disk options (if any) have been propagated to the

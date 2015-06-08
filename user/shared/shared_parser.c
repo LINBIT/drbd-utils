@@ -33,6 +33,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include "shared_parser.h"
 #include "drbdadm.h"
 #include "drbdadm_parser.h"
 
@@ -41,25 +42,36 @@ extern int vcheck_uniq(struct hsearch_data *ht, const char *what, const char *fm
 extern struct hsearch_data per_resource_htable;
 
 
-void include_file(FILE *f, char *name)
+void save_parse_context(struct include_file_buffer *buffer, FILE *f, char *name)
 {
-	int saved_line;
-	char *saved_config_file, *saved_config_save;
+	buffer->line = line;
+	buffer->config_file = config_file;
+	buffer->config_save = config_save;
 
-	saved_line = line;
-	saved_config_file = config_file;
-	saved_config_save = config_save;
 	line = 1;
 	config_file = name;
 	config_save = canonify_path(name);
 
 	my_yypush_buffer_state(f);
-	my_parse();
+
+}
+
+void restore_parse_context(struct include_file_buffer *buffer)
+{
 	yypop_buffer_state();
 
-	line = saved_line;
-	config_file = saved_config_file;
-	config_save = saved_config_save;
+	line = buffer->line;
+	config_file = buffer->config_file;
+	config_save = buffer->config_save;
+}
+
+void include_file(FILE *f, char *name)
+{
+	struct include_file_buffer buffer;
+
+	save_parse_context(&buffer, f, name);
+	my_parse();
+	restore_parse_context(&buffer);
 }
 
 int check_uniq(const char *what, const char *fmt, ...)

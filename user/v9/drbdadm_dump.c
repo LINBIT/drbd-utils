@@ -538,6 +538,9 @@ int adm_dump(const struct cfg_ctx *ctx)
 	printI("resource %s {\n", esc(res->name));
 	++indent;
 
+	if (res->template)
+		printI("template-file %s;\n", esc(res->template->config_file));
+
 	for_each_volume(vol, &res->volumes) {
 		if (!verbose && (vol->parsed_device || vol->parsed_disk || vol->parsed_meta_disk))
 			dump_volume(res->stacked, vol);
@@ -582,6 +585,10 @@ int adm_dump_xml(const struct cfg_ctx *ctx)
 		esc_xml(res->name),
 		esc_xml(res->config_file), res->start_line);
 	++indent;
+
+	if (res->template)
+		printI("<template file=\"%s\">\n", esc_xml(res->template->config_file));
+
 	// else if (common && common->protocol) printA("# common protocol", common->protocol);
 	for_each_host(host, &res->all_hosts)
 		dump_host_info_xml(host);

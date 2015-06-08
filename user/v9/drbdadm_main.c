@@ -2927,6 +2927,21 @@ void die_if_no_resources(void)
 	}
 }
 
+static void chdir_to_config(void)
+{
+	char *last_slash, *tmp;
+
+	tmp = strdupa(config_save);
+	last_slash = strrchr(tmp, '/');
+	if (last_slash)
+		*last_slash = 0;
+
+	if (chdir(tmp)) {
+		err("chdir(\"%s\") failed: %m\n", tmp);
+		exit(E_USAGE);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	size_t i;
@@ -3005,6 +3020,9 @@ int main(int argc, char **argv)
 		config_save = config_file;
 	else
 		config_save = canonify_path(config_file);
+
+	if (!config_from_stdin)
+		chdir_to_config();
 
 	my_parse();
 

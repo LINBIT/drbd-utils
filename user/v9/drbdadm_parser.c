@@ -52,6 +52,7 @@ YYSTYPE yylval;
 static int c_section_start;
 static int parse_proxy_options(struct options *, struct options *);
 static void parse_skip(void);
+static struct d_resource *template_file(const char *res_name);
 
 struct d_name *names_from_str(char* str)
 {
@@ -1697,6 +1698,9 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 		case TK_CONNECTION_MESH:
 			parse_connection_mesh(res, flags);
 			break;
+		case TK_TEMPLATE_FILE:
+			res->template = template_file(res_name);
+			break;
 		case TK_SKIP:
 			parse_skip();
 			break;
@@ -1780,6 +1784,37 @@ int was_file_already_seen(char *fn)
 	return 0;
 }
 
+static struct d_resource *template_file(const char *res_name)
+{
+	struct d_resource *template = NULL;
+	char *file_name;
+	FILE *f;
+
+	EXP(TK_STRING);
+	file_name = yylval.txt;
+	EXP(';');
+
+	f = fopen(file_name, "re");
+	if (f) {
+		struct include_file_buffer buffer;
+		char *tn = ssprintf("template-%s", res_name);
+
+		save_parse_context(&buffer, f, file_name);
+
+		EXP(TK_COMMON);
+		EXP('{');
+		template = parse_resource(tn, NO_HOST_SECT_ALLOWED);
+
+		restore_parse_context(&buffer);
+		fclose(f);
+	} else {
+		err("%s:%d: Failed to open template file '%s'.\n",
+		    config_file, line, file_name);
+		config_valid = 0;
+	}
+
+	return template;
+}
 
 void include_stmt(char *str)
 {

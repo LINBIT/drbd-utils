@@ -24,8 +24,16 @@
 #ifndef __SHARED_PARSER_H__
 #define __SHARED_PARSER_H__
 
+struct include_file_buffer {
+	int line;
+	char *config_file;
+	char *config_save;
+};
 
 void include_file(FILE *f, char *name);
+void save_parse_context(struct include_file_buffer *buffer, FILE *f, char *name);
+void restore_parse_context(struct include_file_buffer *buffer);
+
 int check_uniq(const char *what, const char *fmt, ...);
 int check_upr(const char *what, const char *fmt, ...);
 

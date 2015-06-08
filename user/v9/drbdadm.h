@@ -176,6 +176,7 @@ struct d_resource
 {
 	char* name;
 
+	struct d_resource *template;
 	struct volumes volumes;
 	struct connections connections;
 
