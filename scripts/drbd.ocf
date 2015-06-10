@@ -1037,6 +1037,7 @@ drbd_validate_all () {
 	for i in $OCF_RESKEY_adjust_master_score; do
 		[[ $i = *[!0-9]* ]]   && fallback=true && ocf_log err "BAD adjust_master_score value $i ; falling back to default"
 		[[ $j && $i -lt $j ]] && fallback=true && ocf_log err "BAD adjust_master_score value $j > $i ; falling back to default"
+		j=$i
 		n=$(( n+1 ))
 	done
 	[[ $n != 4 ]] && fallback=true && ocf_log err "Not enough adjust_master_score values ($n != 4); falling back to default"
