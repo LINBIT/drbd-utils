@@ -2450,6 +2450,32 @@ static char *conf_file[] = {
 	0
 };
 
+int pushd(const char *path)
+{
+	int cwd_fd = -1;
+	cwd_fd = open(".", O_RDONLY | O_CLOEXEC);
+	if (cwd_fd < 0) {
+		err("open(\".\") failed: %m\n");
+		exit(E_USAGE);
+	}
+	if (path && path[0] && chdir(path)) {
+		err("chdir(\"%s\") failed: %m\n", path);
+		exit(E_USAGE);
+	}
+	return cwd_fd;
+}
+
+void popd(int fd)
+{
+	if (fd >= 0) {
+		if (fchdir(fd) < 0) {
+			err("fchdir() failed: %m\n");
+			exit(E_USAGE);
+		}
+		close(fd);
+	}
+}
+
 
 /*
  * returns a pointer to an malloced area that contains
@@ -2473,17 +2499,13 @@ char *canonify_path(char *path)
 	tmp = strdupa(path);
 	last_slash = strrchr(tmp, '/');
 
+	/* Maybe this already is in the top level directory. */
+	if (last_slash == tmp)
+		return strdup(path);
+
 	if (last_slash) {
 		*last_slash++ = '\0';
-		cwd_fd = open(".", O_RDONLY | O_CLOEXEC);
-		if (cwd_fd < 0) {
-			err("open(\".\") failed: %m\n");
-			exit(E_USAGE);
-		}
-		if (chdir(tmp)) {
-			err("chdir(\"%s\") failed: %m\n", tmp);
-			exit(E_USAGE);
-		}
+		cwd_fd = pushd(tmp);
 	} else {
 		last_slash = tmp;
 	}
@@ -2494,19 +2516,14 @@ char *canonify_path(char *path)
 		exit(E_USAGE);
 	}
 
+	/* could have been a symlink to / */
 	if (!strcmp("/", that_wd))
 		m_asprintf(&abs_path, "/%s", last_slash);
 	else
 		m_asprintf(&abs_path, "%s/%s", that_wd, last_slash);
 
 	free(that_wd);
-	if (cwd_fd >= 0) {
-		if (fchdir(cwd_fd) < 0) {
-			err("fchdir() failed: %m\n");
-			exit(E_USAGE);
-		}
-		close(cwd_fd);
-	}
+	popd(cwd_fd);
 
 	return abs_path;
 }
@@ -2927,21 +2944,6 @@ void die_if_no_resources(void)
 	}
 }
 
-static void chdir_to_config(void)
-{
-	char *last_slash, *tmp;
-
-	tmp = strdupa(config_save);
-	last_slash = strrchr(tmp, '/');
-	if (last_slash)
-		*last_slash = 0;
-
-	if (chdir(tmp)) {
-		err("chdir(\"%s\") failed: %m\n", tmp);
-		exit(E_USAGE);
-	}
-}
-
 int main(int argc, char **argv)
 {
 	size_t i;
@@ -3020,9 +3022,6 @@ int main(int argc, char **argv)
 		config_save = config_file;
 	else
 		config_save = canonify_path(config_file);
-
-	if (!config_from_stdin)
-		chdir_to_config();
 
 	my_parse();
 

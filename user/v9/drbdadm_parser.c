@@ -1784,11 +1784,44 @@ int was_file_already_seen(char *fn)
 	return 0;
 }
 
+/* In order to allow relative paths in include statements we change
+ * directory to the location of the current configuration file.
+ * Before we start parsing, we canonicalize the full path name stored in
+ * config_save, which means config_save always contains at least one slash.
+ * Unless we are currently parsing STDIN (then it is the fixed string STDIN).
+ */
+static int pushd_to_current_config_file_unless_stdin(void)
+{
+	char *last_slash, *tmp;
+
+	/* config_save was canonicalized before, unless it is STDIN */
+	tmp = strdupa(config_save);
+	last_slash = strrchr(tmp, '/');
+	if (!last_slash)
+		/* Currently parsing stdin, stay where we are.
+		 * FIXME introduce DRBD_INCLUDE_PATH?
+		 * I don't feel comfortable "trusting" the current directory
+		 * for relative include file paths.
+		 */
+		return -1;
+
+	/* If last_slash == tmp, config_save is in the top level directory. */
+	if (last_slash == tmp)
+		tmp = "/";
+	else
+		*last_slash = 0;
+
+	return pushd(tmp);
+}
+
 static struct d_resource *template_file(const char *res_name)
 {
 	struct d_resource *template = NULL;
 	char *file_name;
 	FILE *f;
+	int cwd;
+
+	cwd = pushd_to_current_config_file_unless_stdin();
 
 	EXP(TK_STRING);
 	file_name = yylval.txt;
@@ -1809,39 +1842,24 @@ static struct d_resource *template_file(const char *res_name)
 		fclose(f);
 	} else {
 		err("%s:%d: Failed to open template file '%s'.\n",
-		    config_file, line, file_name);
+		    config_save, line, file_name);
 		config_valid = 0;
 	}
+
+	popd(cwd);
 
 	return template;
 }
 
 void include_stmt(char *str)
 {
-	char *last_slash, *tmp;
 	glob_t glob_buf;
-	int cwd_fd;
+	int cwd;
 	FILE *f;
 	size_t i;
 	int r;
 
-	/* in order to allow relative paths in include statements we change
-	   directory to the location of the current configuration file. */
-	cwd_fd = open(".", O_RDONLY | O_CLOEXEC);
-	if (cwd_fd < 0) {
-		err("open(\".\") failed: %m\n");
-		exit(E_USAGE);
-	}
-
-	tmp = strdupa(config_save);
-	last_slash = strrchr(tmp, '/');
-	if (last_slash)
-		*last_slash = 0;
-
-	if (chdir(tmp)) {
-		err("chdir(\"%s\") failed: %m\n", tmp);
-		exit(E_USAGE);
-	}
+	cwd = pushd_to_current_config_file_unless_stdin();
 
 	r = glob(str, 0, NULL, &glob_buf);
 	if (r == 0) {
@@ -1855,7 +1873,7 @@ void include_stmt(char *str)
 				fclose(f);
 			} else {
 				err("%s:%d: Failed to open include file '%s'.\n",
-				    config_file, line, yylval.txt);
+				    config_save, line, yylval.txt);
 				config_valid = 0;
 			}
 		}
@@ -1863,7 +1881,7 @@ void include_stmt(char *str)
 	} else if (r == GLOB_NOMATCH) {
 		if (!strchr(str, '?') && !strchr(str, '*') && !strchr(str, '[')) {
 			err("%s:%d: Failed to open include file '%s'.\n",
-			    config_file, line, yylval.txt);
+			    config_save, line, yylval.txt);
 			config_valid = 0;
 		}
 	} else {
@@ -1871,12 +1889,7 @@ void include_stmt(char *str)
 		exit(E_USAGE);
 	}
 
-	if (fchdir(cwd_fd) < 0) {
-		err("fchdir() failed: %m\n");
-		exit(E_USAGE);
-	}
-
-	close(cwd_fd);
+	popd(cwd);
 }
 
 void my_parse(void)

@@ -265,6 +265,8 @@ struct cfg_ctx {
 
 
 extern char *canonify_path(char *path);
+extern int pushd(const char *path);
+extern void popd(int fd);
 
 extern int adm_adjust(const struct cfg_ctx *);
 
