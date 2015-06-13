@@ -22,6 +22,7 @@
 #include <stdarg.h>
 #include <arpa/inet.h>
 #include <syslog.h>
+#include <fnmatch.h>
 
 #include "config.h"
 #include "drbdadm.h"
@@ -840,7 +841,7 @@ const char *esc(char *str)
 	if (!str || !str[0]) {
 		return "\"\"";
 	}
-	if (strchr(str, ' ') || strchr(str, '\t') || strchr(str, '\\')) {
+	if (0 == fnmatch("*[!a-zA-Z0-9/._-]*", str, 0) || strlen(str) > 80) {
 		*e++ = '"';
 		while (*ue) {
 			if (*ue == '"' || *ue == '\\') {
