@@ -166,13 +166,17 @@ struct drbd_argument {
 enum cfg_ctx_key {
 	/* Only one of these can be present in a command: */
 	CTX_RESOURCE = 1,
-	CTX_MINOR = 2,
-	CTX_VOLUME = 4,
-	CTX_MY_ADDR = 8,
-	CTX_PEER_ADDR = 16,
-	CTX_ALL = 32,
+	CTX_PEER_NODE_ID = 2,
+	CTX_MINOR = 4,
+	CTX_VOLUME = 8,
+	CTX_MY_ADDR = 16,
+	CTX_PEER_ADDR = 32,
+	CTX_ALL = 64,
 
-	CTX_MULTIPLE_ARGUMENTS = 64,
+	CTX_MULTIPLE_ARGUMENTS = 128,
+
+	/* To identify a connection, we use (resource_name, peer_node_id) */
+	CTX_PEER_NODE = CTX_RESOURCE | CTX_PEER_NODE_ID | CTX_MULTIPLE_ARGUMENTS,
 
 	CTX_CONNECTION = CTX_MY_ADDR | CTX_PEER_ADDR | CTX_MULTIPLE_ARGUMENTS,
 	CTX_PEER_DEVICE = CTX_MY_ADDR | CTX_PEER_ADDR | CTX_VOLUME | CTX_MULTIPLE_ARGUMENTS,
@@ -199,6 +203,8 @@ const char *ctx_arg_string(enum cfg_ctx_key key, enum usage_type ut)
 	switch(key) {
 	case CTX_RESOURCE:
 		return xml ? "resource" : "{resource}";
+	case CTX_PEER_NODE_ID:
+		return xml ? "peer_node_id" : "{peer_node_id}";
 	case CTX_MINOR:
 		return xml ? "minor" : "{minor}";
 	case CTX_VOLUME:
@@ -375,7 +381,7 @@ struct drbd_cmd commands[] = {
 	 .ctx = &detach_cmd_ctx,
 	 .summary = "Detach the lower-level device of a replicated device." },
 
-	{"connect", CTX_RESOURCE | CTX_CONNECTION,
+	{"connect", CTX_RESOURCE | CTX_PEER_NODE_ID | CTX_CONNECTION,
 		DRBD_ADM_CONNECT, DRBD_NLA_NET_CONF,
 		F_CONFIG_CMD,
 	 .ctx = &connect_cmd_ctx,
@@ -1097,6 +1103,8 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
 		if (context & CTX_RESOURCE)
 			nla_put_string(smsg, T_ctx_resource_name, objname);
+		if (context & CTX_PEER_NODE_ID)
+			nla_put_u32(smsg, T_ctx_peer_node_id, global_ctx.ctx_peer_node_id);
 		if (context & CTX_VOLUME)
 			nla_put_u32(smsg, T_ctx_volume, global_ctx.ctx_volume);
 		if (context & CTX_MY_ADDR)
@@ -2332,23 +2340,16 @@ static void connection_status(struct connections_list *connection,
 		wrap_printf(2, "%s", connection->ctx.ctx_conn_name);
 
 	if (opt_verbose || connection->ctx.ctx_conn_name_len == 0) {
+		int in = connection->ctx.ctx_conn_name_len ? 6 : 2;
+		wrap_printf(in, " node-id:%d", connection->ctx.ctx_peer_node_id);
+	}
+	if (opt_verbose || connection->ctx.ctx_conn_name_len == 0) {
 		if (!address_str(local_addr, connection->ctx.ctx_my_addr, connection->ctx.ctx_my_addr_len))
 			strcpy(local_addr, "?");
 		if (!address_str(peer_addr, connection->ctx.ctx_peer_addr, connection->ctx.ctx_peer_addr_len))
 			strcpy(peer_addr, "?");
-		/* FIXME: Reject undefined endpoints once the kernel stops creating NULL connections. */
-		if (connection->ctx.ctx_conn_name_len == 0)
-			wrap_printf(2, "local:%s", local_addr);
-		else
-			wrap_printf(6, " local:%s", local_addr);
+		wrap_printf(6, " local:%s", local_addr);
 		wrap_printf(6, " peer:%s", peer_addr);
-	}
-	if (opt_verbose) {
-		struct nlattr *nla;
-
-		nla = nla_find_nested(connection->net_conf, __nla_type(T_peer_node_id));
-		if (nla)
-			wrap_printf(6, " node-id:%d", *(uint32_t *)nla_data(nla));
 	}
 	if (opt_verbose || connection->info.conn_connection_state != C_CONNECTED) {
 		enum drbd_conn_state cstate = connection->info.conn_connection_state;
@@ -2777,7 +2778,7 @@ static void free_devices(struct devices_list *devices)
 static int remember_connection(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
 {
 	struct connections_list ***tail = u_ptr;
-	struct drbd_cfg_context ctx = { .ctx_volume = -1U };
+	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U, };
 
 	if (!info)
 		return 0;
@@ -3128,6 +3129,15 @@ static int event_key(char *key, int size, const char *name, unsigned minor,
 		if (size)
 			size -= ret;
 	}
+	if (ctx->ctx_peer_node_id != -1U) {
+		ret = snprintf(key + pos, size,
+			      " peer-node-id:%d", ctx->ctx_peer_node_id);
+		if (ret < 0)
+			return ret;
+		pos += ret;
+		if (size)
+			size -= ret;
+	}
 	if (ctx->ctx_conn_name_len) {
 		ret = snprintf(key + pos, size,
 			       " conn-name:%s", ctx->ctx_conn_name);
@@ -3248,7 +3258,7 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 	static struct timeval tv;
 	static bool keep_tv;
 
-	struct drbd_cfg_context ctx = { .ctx_volume = -1U };
+	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U, };
 	struct drbd_notification_header nh = { .nh_type = -1U };
 	enum drbd_notification_type action;
 	struct drbd_genlmsghdr *dh;
@@ -3988,8 +3998,12 @@ int main(int argc, char **argv)
 				assert(sizeof(global_ctx.ctx_peer_addr) >= sizeof(*x));
 				x = (struct sockaddr_storage *)&global_ctx.ctx_peer_addr;
 				global_ctx.ctx_peer_addr_len = sockaddr_from_str(x, str);
-			} else if (next_arg == CTX_VOLUME)
+			} else if (next_arg == CTX_VOLUME) {
 				global_ctx.ctx_volume = m_strtoll(argv[optind], 1);
+			} else if (next_arg == CTX_PEER_NODE_ID) {
+				global_ctx.ctx_peer_node_id = m_strtoll(argv[optind], 1);
+			} else
+				assert(0);
 			context |= next_arg;
 		}
 	}

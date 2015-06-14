@@ -1481,15 +1481,15 @@ static int adm_connect(const struct cfg_ctx *ctx)
 
 	argv[NA(argc)] = drbdsetup;
 	argv[NA(argc)] = (char *)ctx->cmd->name; /* "connect" : "net-options"; */
-	if (do_connect)
+	if (do_connect) {
 		argv[NA(argc)] = ssprintf("%s", res->name);
+		argv[NA(argc)] = ssprintf("%s", conn->peer->node_id);
+	}
 	argv[NA(argc)] = ssprintf_addr(conn->my_address);
 	argv[NA(argc)] = ssprintf_addr(conn->connect_to);
 
 	if (reset)
 		argv[NA(argc)] = "--set-defaults";
-	if (do_connect)
-		argv[NA(argc)] = ssprintf("--peer-node-id=%s", conn->peer->node_id);
 	if (reset || do_connect)
 		make_options(argv[NA(argc)], &conn->net_options);
 
