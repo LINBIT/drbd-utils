@@ -356,25 +356,6 @@
       </varlistentry>
 
       <varlistentry>
-        <term>direct-connect
-	  <arg choice="req" rep="norepeat"><replaceable>resource</replaceable></arg>
-	</term>
-
-        <listitem>
-          <para><indexterm significance="normal">
-              <primary>drbdadm</primary>
-
-	      <secondary>direct-connect</secondary> </indexterm> Bring up the specified
-		resource, but skip proxy. This command is similar to <option>up</option> and is
-		mainly meant for (proxy) developers to ease debugging.
-		See <citerefentry>
-	      <refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</manvolnum>
-	    </citerefentry> for details.
-	  </para>
-        </listitem>
-      </varlistentry>
-
-      <varlistentry>
         <term>disconnect
 	  <arg choice="req" rep="norepeat"><replaceable>connection</replaceable></arg>
 	</term>
