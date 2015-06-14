@@ -150,6 +150,13 @@ static void set_host_info_in_host_address_pairs(struct d_resource *res, struct c
 				err("LOGIC BUG in set_host_info_in_host_address_pairs()\n");
 				exit(20);
 			}
+			if (!host_info->address.addr) {
+				err("\"connection-mesh\" (for \"%s\") with a host (\"%s\") "
+						"that has no \"address\" defined\n",
+						res->name, ha->name);
+				config_valid = 0;
+				return;
+			}
 			addr_hash[i] = crc32c(0x1a656f21,
 					(void *)host_info->address.addr,
 					strlen(host_info->address.addr));
