@@ -919,6 +919,11 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 
 		for_each_connection(con, &res->connections)
 			must_have_two_hosts(res, con);
+
+		/* Other steps make no sense. */
+		if (!config_valid)
+			continue;
+
 		create_connections_from_mesh(res);
 		create_implicit_connections(res);
 		for_each_connection(con, &res->connections)
