@@ -178,8 +178,8 @@ enum cfg_ctx_key {
 	/* To identify a connection, we use (resource_name, peer_node_id) */
 	CTX_PEER_NODE = CTX_RESOURCE | CTX_PEER_NODE_ID | CTX_MULTIPLE_ARGUMENTS,
 
-	CTX_CONNECTION = CTX_MY_ADDR | CTX_PEER_ADDR | CTX_MULTIPLE_ARGUMENTS,
-	CTX_PEER_DEVICE = CTX_MY_ADDR | CTX_PEER_ADDR | CTX_VOLUME | CTX_MULTIPLE_ARGUMENTS,
+	CTX_CONNECTION = CTX_PEER_NODE | CTX_MY_ADDR | CTX_PEER_ADDR,
+	CTX_PEER_DEVICE = CTX_PEER_NODE | CTX_VOLUME,
 };
 
 enum cfg_ctx_key ctx_next_arg(enum cfg_ctx_key *key)
@@ -387,13 +387,13 @@ struct drbd_cmd commands[] = {
 	 .ctx = &connect_cmd_ctx,
 	 .summary = "Connect a resource to a peer host." },
 
-	{"net-options", CTX_CONNECTION, DRBD_ADM_CHG_NET_OPTS, DRBD_NLA_NET_CONF,
+	{"net-options", CTX_PEER_NODE, DRBD_ADM_CHG_NET_OPTS, DRBD_NLA_NET_CONF,
 		F_CONFIG_CMD,
 	 .set_defaults = true,
 	 .ctx = &net_options_ctx,
 	 .summary = "Change the network options of a connection." },
 
-	{"disconnect", CTX_CONNECTION, DRBD_ADM_DISCONNECT, DRBD_NLA_DISCONNECT_PARMS,
+	{"disconnect", CTX_PEER_NODE, DRBD_ADM_DISCONNECT, DRBD_NLA_DISCONNECT_PARMS,
 		F_CONFIG_CMD,
 	 .ctx = &disconnect_cmd_ctx,
 	 .summary = "Remove a connection to a peer host." },
@@ -445,7 +445,7 @@ struct drbd_cmd commands[] = {
 	{"role", CTX_RESOURCE, 0, NO_PAYLOAD, role_cmd,
 	 .lockless = true,
 	 .summary = "Show the current role of a resource." },
-	{"cstate", CTX_CONNECTION, 0, NO_PAYLOAD, cstate_cmd,
+	{"cstate", CTX_PEER_NODE, 0, NO_PAYLOAD, cstate_cmd,
 	 .lockless = true,
 	 .summary = "Show the current state of a connection." },
 	{"dstate", CTX_MINOR, 0, NO_PAYLOAD, dstate_cmd,
@@ -479,7 +479,7 @@ struct drbd_cmd commands[] = {
 	 .continuous_poll = true,
 	 .lockless = true,
 	 .summary = "Wait until resync finished on a volume." },
-	{"wait-sync-connection", CTX_RESOURCE | CTX_CONNECTION, F_NEW_EVENTS_CMD(wait_for_family),
+	{"wait-sync-connection", CTX_PEER_NODE, F_NEW_EVENTS_CMD(wait_for_family),
 	 .options = wait_cmds_options,
 	 .continuous_poll = true,
 	 .lockless = true,
@@ -494,7 +494,7 @@ struct drbd_cmd commands[] = {
 	 .continuous_poll = true,
 	 .lockless = true,
 	 .summary = "Wait until a device on a peer is visible." },
-	{"wait-connect-connection", CTX_RESOURCE | CTX_CONNECTION, F_NEW_EVENTS_CMD(wait_for_family),
+	{"wait-connect-connection", CTX_PEER_NODE, F_NEW_EVENTS_CMD(wait_for_family),
 	 .options = wait_cmds_options,
 	 .continuous_poll = true,
 	 .lockless = true,
@@ -651,6 +651,8 @@ struct genl_family drbd_genl_family = {
 	.hdrsize = GENL_MAGIC_FAMILY_HDRSZ,
 };
 
+#if 0
+/* currently unused. */
 static bool endpoints_equal(struct drbd_cfg_context *a, struct drbd_cfg_context *b)
 {
 	return a->ctx_my_addr_len == b->ctx_my_addr_len &&
@@ -658,6 +660,7 @@ static bool endpoints_equal(struct drbd_cfg_context *a, struct drbd_cfg_context 
 	       !memcmp(a->ctx_my_addr, b->ctx_my_addr, a->ctx_my_addr_len) &&
 	       !memcmp(a->ctx_peer_addr, b->ctx_peer_addr, a->ctx_peer_addr_len);
 }
+#endif
 
 static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 			  struct drbd_genlmsghdr *dhdr, char* arg)
@@ -1358,9 +1361,9 @@ int choose_timeout(struct choose_timeout_ctx *ctx)
 	dhdr->flags = 0;
 
 	nla = nla_nest_start(ctx->smsg, DRBD_NLA_CFG_CONTEXT);
+	nla_put_string(ctx->smsg, T_ctx_resource_name, ctx->ctx.ctx_resource_name);
+	nla_put_u32(ctx->smsg, T_ctx_peer_node_id, ctx->ctx.ctx_peer_node_id);
 	nla_put_u32(ctx->smsg, T_ctx_volume, ctx->ctx.ctx_volume);
-	nla_put(ctx->smsg, T_ctx_my_addr, ctx->ctx.ctx_my_addr_len, &ctx->ctx.ctx_my_addr);
-	nla_put(ctx->smsg, T_ctx_peer_addr, ctx->ctx.ctx_peer_addr_len, &ctx->ctx.ctx_peer_addr);
 	nla_nest_end(ctx->smsg, nla);
 
 	if (genl_send(drbd_sock, ctx->smsg)) {
@@ -1694,6 +1697,15 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 							continue;
 						}
 						break;
+					case CTX_PEER_DEVICE:
+						if (ctx.ctx_volume != global_ctx.ctx_volume)
+							continue;
+						/* also needs to match the connection, of course */
+					case CTX_CONNECTION:
+					case CTX_PEER_NODE:
+						if (ctx.ctx_peer_node_id != global_ctx.ctx_peer_node_id)
+							continue;
+						/* also needs to match the resource, of course */
 					case CTX_RESOURCE:
 					case CTX_RESOURCE | CTX_ALL:
 						if (!strcmp(objname, "all"))
@@ -1703,17 +1715,8 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 							continue;
 
 						break;
-					case CTX_CONNECTION:
-					case CTX_CONNECTION | CTX_RESOURCE:
-						if (!endpoints_equal(&ctx, &global_ctx))
-							continue;
-						break;
-					case CTX_PEER_DEVICE:
-						if (!endpoints_equal(&ctx, &global_ctx) ||
-						    ctx.ctx_volume != global_ctx.ctx_volume)
-							continue;
-						break;
 					default:
+						fprintf(stderr, "DRECK: %x\n", cm->ctx_key);
 						assert(0);
 					}
 				}
@@ -1959,7 +1962,7 @@ static void show_connection(struct connections_list *connection, struct peer_dev
 	print_options(connection->net_conf, &show_net_options_ctx, "net");
 
 	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next) {
-		if (endpoints_equal(&connection->ctx, &peer_device->ctx))
+		if (connection->ctx.ctx_peer_node_id == peer_device->ctx.ctx_peer_node_id)
 			show_peer_device(peer_device);
 	}
 
@@ -2324,7 +2327,7 @@ static void peer_devices_status(struct drbd_cfg_context *ctx, struct peer_device
 	struct peer_devices_list *peer_device;
 
 	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next) {
-		if (!endpoints_equal(ctx, &peer_device->ctx))
+		if (ctx->ctx_peer_node_id != peer_device->ctx.ctx_peer_node_id)
 			continue;
 		peer_device_status(peer_device, single_device);
 	}
@@ -2509,7 +2512,7 @@ static int cstate_cmd(struct drbd_cmd *cm, int argc, char **argv)
 
 	connections = list_connections(NULL);
 	for (connection = connections; connection; connection = connection->next) {
-		if (!endpoints_equal(&connection->ctx, &global_ctx))
+		if (connection->ctx.ctx_peer_node_id != global_ctx.ctx_peer_node_id)
 			continue;
 
 		printf("%s\n", drbd_conn_str(connection->info.conn_connection_state));
@@ -2599,7 +2602,7 @@ static char *address_str(char *buffer, void* address, int addr_len)
 static int remember_resource(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
 {
 	struct resources_list ***tail = u_ptr;
-	struct drbd_cfg_context cfg = { .ctx_volume = -1U };
+	struct drbd_cfg_context cfg = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
 
 	if (!info)
 		return 0;
@@ -2702,7 +2705,7 @@ static struct resources_list *list_resources(void)
 static int remember_device(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 {
 	struct devices_list ***tail = u_ptr;
-	struct drbd_cfg_context ctx = { .ctx_volume = -1U };
+	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
 
 	if (!info)
 		return 0;
@@ -2778,7 +2781,7 @@ static void free_devices(struct devices_list *devices)
 static int remember_connection(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
 {
 	struct connections_list ***tail = u_ptr;
-	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U, };
+	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
 
 	if (!info)
 		return 0;
@@ -2881,7 +2884,7 @@ static void free_connections(struct connections_list *connections)
 static int remember_peer_device(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
 {
 	struct peer_devices_list ***tail = u_ptr;
-	struct drbd_cfg_context ctx = { .ctx_volume = -1U };
+	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
 
 	if (!info)
 		return 0;
@@ -3007,6 +3010,14 @@ static int check_resize_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	return ret;
 }
 
+static bool peer_device_ctx_match(struct drbd_cfg_context *a, struct drbd_cfg_context *b)
+{
+	return
+		strcmp(a->ctx_resource_name, b->ctx_resource_name) == 0
+	&&	a->ctx_peer_node_id == b->ctx_peer_node_id
+	&&	a->ctx_volume == b->ctx_volume;
+}
+
 static int show_or_get_gi_cmd(struct drbd_cmd *cm, int argc, char **argv)
 {
 	struct peer_devices_list *peer_devices, *peer_device;
@@ -3016,8 +3027,7 @@ static int show_or_get_gi_cmd(struct drbd_cmd *cm, int argc, char **argv)
 
 	peer_devices = list_peer_devices(NULL);
 	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next) {
-		if (!endpoints_equal(&peer_device->ctx, &global_ctx) ||
-		    peer_device->ctx.ctx_volume != global_ctx.ctx_volume)
+		if (!peer_device_ctx_match(&global_ctx, &peer_device->ctx))
 			continue;
 
 		devices = list_devices(peer_device->ctx.ctx_resource_name);
@@ -3520,7 +3530,7 @@ void peer_devices_append(struct peer_devices_list *peer_devices, struct genl_inf
 static int wait_for_family(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 {
 	struct peer_devices_list *peer_devices = u_ptr;
-	struct drbd_cfg_context ctx = { .ctx_volume = -1U };
+	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
 	struct drbd_notification_header nh = { .nh_type = -1U };
 	struct drbd_genlmsghdr *dh;
 
@@ -3582,24 +3592,27 @@ static int wait_for_family(struct drbd_cmd *cm, struct genl_info *info, void *u_
 		     peer_device = peer_device->next) {
 			enum drbd_repl_state rs;
 
-			if (endpoints_equal(&ctx, &peer_device->ctx) &&
-			    ctx.ctx_volume == peer_device->ctx.ctx_volume)
+			if (peer_device_ctx_match(&ctx, &peer_device->ctx))
 				peer_device->info = peer_device_info;
 
-			if ((cm->ctx_key == CTX_PEER_DEVICE &&
-			    (endpoints_equal(&peer_device->ctx, &global_ctx) &&
-			     peer_device->ctx.ctx_volume == global_ctx.ctx_volume)) ||
-			    (cm->ctx_key == (CTX_RESOURCE | CTX_CONNECTION) &&
-			     endpoints_equal(&peer_device->ctx, &global_ctx)) ||
-			    cm->ctx_key == CTX_RESOURCE) {
-				nr_peer_devices++;
+			/* wait-*-volume: filter out all but the specific peer device */
+			if (cm->ctx_key == CTX_PEER_DEVICE &&
+			    !peer_device_ctx_match(&global_ctx, &peer_device->ctx))
+				continue;
 
-				rs = peer_device->info.peer_repl_state;
-				if (rs == L_ESTABLISHED ||
-				    (wait_connect && rs > L_ESTABLISHED) ||
-				    peer_device->timeout_ms == 0)
-					nr_done++;
-			}
+			/* wait-*-connection: filter out other connections */
+			if (cm->ctx_key == CTX_PEER_NODE &&
+			    peer_device->ctx.ctx_peer_node_id != global_ctx.ctx_peer_node_id)
+				continue;
+
+			/* wait-*-resource: no filter */
+			nr_peer_devices++;
+
+			rs = peer_device->info.peer_repl_state;
+			if (rs == L_ESTABLISHED ||
+			    (wait_connect && rs > L_ESTABLISHED) ||
+			    peer_device->timeout_ms == 0)
+				nr_done++;
 		}
 
 		if (nr_peer_devices == nr_done)
@@ -3970,7 +3983,7 @@ int main(int argc, char **argv)
 					exit(20);
 				}
 				context |= CTX_MINOR;
-			} else if (strcmp(argv[optind], "all")) {
+			} else /* not "all", and not a minor number/device name */ {
 				if (!(next_arg & CTX_RESOURCE)) {
 					fprintf(stderr, "command does not accept argument '%s'\n",
 						objname);
@@ -3978,6 +3991,10 @@ int main(int argc, char **argv)
 					exit(20);
 				}
 				context |= CTX_RESOURCE;
+				assert(strlen(objname) < sizeof(global_ctx.ctx_resource_name));
+				memset(global_ctx.ctx_resource_name, 0, sizeof(global_ctx.ctx_resource_name));
+				global_ctx.ctx_resource_name_len = strlen(objname);
+				strcpy(global_ctx.ctx_resource_name, objname);
 			}
 		} else {
 			if (next_arg == CTX_MY_ADDR) {

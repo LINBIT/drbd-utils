@@ -185,6 +185,15 @@ int adm_adjust_wp(const struct cfg_ctx *ctx)
 	.verify_ips = 0,		\
 	.uc_dialog = 1,			\
 
+#define ACF1_MINOR_ONLY			\
+	.show_in_usage = 1,		\
+	.res_name_required = 1,		\
+	.backend_res_name = 0,		\
+	.iterate_volumes = 1,		\
+	.verify_ips = 0,		\
+	.uc_dialog = 1,			\
+	.disk_required = 1,		\
+
 #define ACF1_RESNAME			\
 	.show_in_usage = 1,		\
 	.res_name_required = 1,		\
@@ -203,7 +212,7 @@ int adm_adjust_wp(const struct cfg_ctx *ctx)
 #define ACF1_DISCONNECT			\
 	.show_in_usage = 1,		\
 	.res_name_required = 1,		\
-	.backend_res_name = 0,		\
+	.backend_res_name = 1,		\
 	.need_peer = 1,			\
 	.uc_dialog = 1,			\
 
@@ -300,9 +309,9 @@ int adm_adjust_wp(const struct cfg_ctx *ctx)
 	.res_name_required = 0,		\
 	.verify_ips = 0,		\
 
-/*  */ struct adm_cmd attach_cmd = {"attach", adm_attach, &attach_cmd_ctx, ACF1_DEFAULT .disk_required = 1};
-/*  */ struct adm_cmd disk_options_cmd = {"disk-options", adm_attach, &attach_cmd_ctx, ACF1_DEFAULT .disk_required = 1};
-/*  */ struct adm_cmd detach_cmd = {"detach", adm_drbdsetup, &detach_cmd_ctx, ACF1_DEFAULT .takes_long = 1};
+/*  */ struct adm_cmd attach_cmd = {"attach", adm_attach, &attach_cmd_ctx, ACF1_MINOR_ONLY };
+/*  */ struct adm_cmd disk_options_cmd = {"disk-options", adm_attach, &attach_cmd_ctx, ACF1_MINOR_ONLY };
+/*  */ struct adm_cmd detach_cmd = {"detach", adm_drbdsetup, &detach_cmd_ctx, .takes_long = 1, ACF1_MINOR_ONLY };
 /*  */ struct adm_cmd connect_cmd = {"connect", adm_connect, &connect_cmd_ctx, ACF1_CONNECT};
 /*  */ struct adm_cmd net_options_cmd = {"net-options", adm_connect, &net_options_ctx, ACF1_CONNECT};
 /*  */ struct adm_cmd disconnect_cmd = {"disconnect", adm_drbdsetup, &disconnect_cmd_ctx, ACF1_DISCONNECT};
@@ -311,7 +320,7 @@ static struct adm_cmd up_cmd = {"up", adm_up, ACF1_RESNAME };
 static struct adm_cmd down_cmd = {"down", adm_drbdsetup, ACF1_RESNAME .takes_long = 1};
 static struct adm_cmd primary_cmd = {"primary", adm_drbdsetup, &primary_cmd_ctx, ACF1_RESNAME .takes_long = 1};
 static struct adm_cmd secondary_cmd = {"secondary", adm_drbdsetup, ACF1_RESNAME .takes_long = 1};
-static struct adm_cmd invalidate_cmd = {"invalidate", adm_invalidate, ACF1_DEFAULT .disk_required = 1};
+static struct adm_cmd invalidate_cmd = {"invalidate", adm_invalidate, ACF1_MINOR_ONLY };
 static struct adm_cmd invalidate_remote_cmd = {"invalidate-remote", adm_drbdsetup, ACF1_PEER_DEVICE .takes_long = 1};
 static struct adm_cmd outdate_cmd = {"outdate", adm_outdate, ACF1_DEFAULT};
 /*  */ struct adm_cmd resize_cmd = {"resize", adm_resize, ACF1_DEFNET .disk_required = 1};
@@ -325,19 +334,19 @@ static struct adm_cmd wait_sync_cmd = {"wait-sync", adm_wait_c, ACF1_WAIT};
 static struct adm_cmd wait_ci_cmd = {"wait-con-int", adm_wait_ci, .show_in_usage = 1,.verify_ips = 1,};
 static struct adm_cmd role_cmd = {"role", adm_drbdsetup, ACF1_RESNAME};
 static struct adm_cmd cstate_cmd = {"cstate", adm_drbdsetup, ACF1_DISCONNECT};
-static struct adm_cmd dstate_cmd = {"dstate", adm_setup_and_meta, ACF1_DEFAULT .disk_required = 1};
+static struct adm_cmd dstate_cmd = {"dstate", adm_setup_and_meta, ACF1_MINOR_ONLY };
 static struct adm_cmd status_cmd = {"status", adm_drbdsetup, .show_in_usage = 1, .uc_dialog = 1};
 static struct adm_cmd peer_device_options_cmd = {"peer-device-options", adm_peer_device,
 						 &peer_device_options_ctx, ACF1_PEER_DEVICE};
 static struct adm_cmd dump_cmd = {"dump", adm_dump, ACF1_DUMP};
 static struct adm_cmd dump_xml_cmd = {"dump-xml", adm_dump_xml, ACF1_DUMP};
 
-static struct adm_cmd create_md_cmd = {"create-md", adm_create_md, &create_md_ctx, ACF1_DEFAULT .disk_required = 1};
+static struct adm_cmd create_md_cmd = {"create-md", adm_create_md, &create_md_ctx, ACF1_MINOR_ONLY };
 static struct adm_cmd show_gi_cmd = {"show-gi", adm_setup_and_meta, ACF1_PEER_DEVICE .disk_required = 1};
 static struct adm_cmd get_gi_cmd = {"get-gi", adm_setup_and_meta, ACF1_PEER_DEVICE .disk_required = 1};
-static struct adm_cmd dump_md_cmd = {"dump-md", adm_drbdmeta, ACF1_DEFAULT .disk_required = 1};
-static struct adm_cmd wipe_md_cmd = {"wipe-md", adm_drbdmeta, ACF1_DEFAULT .disk_required = 1};
-static struct adm_cmd apply_al_cmd = {"apply-al", adm_drbdmeta, ACF1_DEFAULT .disk_required = 1};
+static struct adm_cmd dump_md_cmd = {"dump-md", adm_drbdmeta, ACF1_MINOR_ONLY };
+static struct adm_cmd wipe_md_cmd = {"wipe-md", adm_drbdmeta, ACF1_MINOR_ONLY };
+static struct adm_cmd apply_al_cmd = {"apply-al", adm_drbdmeta, ACF1_MINOR_ONLY };
 static struct adm_cmd forget_peer_cmd = {"forget-peer", adm_forget_peer, ACF1_DISCONNECT };
 
 static struct adm_cmd hidden_cmd = {"hidden-commands", hidden_cmds,.show_in_usage = 1,};
@@ -361,7 +370,7 @@ static struct adm_cmd proxy_down_cmd = {"proxy-down", adm_proxy_down, ACF2_PROXY
 
 /*  */ struct adm_cmd new_resource_cmd = {"new-resource", adm_resource, ACF2_SH_RESNAME};
 /*  */ struct adm_cmd new_minor_cmd = {"new-minor", adm_new_minor, ACF4_ADVANCED};
-/*  */ struct adm_cmd del_minor_cmd = {"del-minor", adm_drbdsetup, ACF1_DEFAULT	.show_in_usage = 4 };
+/*  */ struct adm_cmd del_minor_cmd = {"del-minor", adm_drbdsetup, ACF1_MINOR_ONLY .show_in_usage = 4 };
 
 static struct adm_cmd khelper01_cmd = {"before-resync-target", adm_khelper, ACF3_RES_HANDLER};
 static struct adm_cmd khelper02_cmd = {"after-resync-target", adm_khelper, ACF3_RES_HANDLER};
@@ -375,10 +384,10 @@ static struct adm_cmd khelper09_cmd = {"initial-split-brain", adm_khelper, ACF3_
 static struct adm_cmd khelper10_cmd = {"split-brain", adm_khelper, ACF3_RES_HANDLER};
 static struct adm_cmd khelper11_cmd = {"out-of-sync", adm_khelper, ACF3_RES_HANDLER};
 
-static struct adm_cmd suspend_io_cmd = {"suspend-io", adm_drbdsetup, ACF4_ADVANCED};
-static struct adm_cmd resume_io_cmd = {"resume-io", adm_drbdsetup, ACF4_ADVANCED};
+static struct adm_cmd suspend_io_cmd = {"suspend-io", adm_drbdsetup, ACF4_ADVANCED  .backend_res_name = 0 };
+static struct adm_cmd resume_io_cmd = {"resume-io", adm_drbdsetup, ACF4_ADVANCED  .backend_res_name = 0 };
 static struct adm_cmd set_gi_cmd = {"set-gi", adm_drbdmeta, .disk_required = 1, .need_peer = 1, ACF4_ADVANCED_NEED_VOL};
-static struct adm_cmd new_current_uuid_cmd = {"new-current-uuid", adm_drbdsetup, &new_current_uuid_cmd_ctx, ACF4_ADVANCED_NEED_VOL};
+static struct adm_cmd new_current_uuid_cmd = {"new-current-uuid", adm_drbdsetup, &new_current_uuid_cmd_ctx, ACF4_ADVANCED_NEED_VOL .backend_res_name = 0};
 static struct adm_cmd check_resize_cmd = {"check-resize", adm_chk_resize, ACF4_ADVANCED};
 
 struct adm_cmd *cmds[] = {
@@ -482,7 +491,7 @@ struct adm_cmd *cmds[] = {
 	"disk-options",
 	adm_attach,
 	&attach_cmd_ctx,
-	ACF1_DEFAULT .disk_required = 1
+	ACF1_MINOR_ONLY
 };
 /*  */ struct adm_cmd net_options_defaults_cmd = {
 	"net-options",
@@ -503,13 +512,13 @@ struct adm_cmd *cmds[] = {
 static const struct adm_cmd invalidate_setup_cmd = {
 	"invalidate",
 	__adm_drbdsetup_silent,
-	ACF1_DEFAULT .disk_required = 1
+	ACF1_MINOR_ONLY
 };
 
 static const struct adm_cmd forget_peer_setup_cmd = {
 	"forget-peer",
 	__adm_drbdsetup_silent,
-	ACF1_DISCONNECT .backend_res_name = 1, .need_peer = 0
+	ACF1_DISCONNECT
 };
 
 static void initialize_deferred_cmds()
@@ -1176,21 +1185,19 @@ static void __adm_drbdsetup(const struct cfg_ctx *ctx, int flags, pid_t *pid, in
 
 	argv[NA(argc)] = drbdsetup;
 	argv[NA(argc)] = (char *)ctx->cmd->name;
+
+	if (ctx->cmd->backend_res_name && ctx->res)
+		argv[NA(argc)] = ssprintf("%s", ctx->res->name);
+
+	if (ctx->cmd->need_peer)
+		argv[NA(argc)] = ssprintf("%s", ctx->conn->peer->node_id);
+
 	if (ctx->vol) {
 		if (ctx->cmd->need_peer && ctx->cmd->iterate_volumes)
 			argv[NA(argc)] = ssprintf("%d", ctx->vol->vnr);
 		else
 			argv[NA(argc)] = ssprintf("%d", ctx->vol->device_minor);
-	} else if (ctx->cmd->backend_res_name && ctx->res)
-		argv[NA(argc)] = ssprintf("%s", ctx->res->name);
-
-	if (ctx->cmd->need_peer) {
-		argv[NA(argc)] = ssprintf_addr(ctx->conn->my_address);
-		argv[NA(argc)] = ssprintf_addr(ctx->conn->connect_to);
 	}
-
-	if (ctx->cmd == &forget_peer_setup_cmd)
-		argv[NA(argc)] = ssprintf("%s", ctx->conn->peer->node_id);
 
 	add_setup_options(argv, &argc);
 
@@ -1384,7 +1391,7 @@ static int adm_invalidate(const struct cfg_ctx *ctx)
 	static const struct adm_cmd invalidate_meta_cmd = {
 		"invalidate",
 		adm_drbdmeta,
-		ACF1_DEFAULT .disk_required = 1
+		ACF1_MINOR_ONLY
 	};
 
 	int rv;
@@ -1457,9 +1464,9 @@ int adm_peer_device(const struct cfg_ctx *ctx)
 	argv[NA(argc)] = drbdsetup;
 	argv[NA(argc)] = (char *)ctx->cmd->name; /* peer-device-options */
 
+	argv[NA(argc)] = ssprintf("%s", res->name);
+	argv[NA(argc)] = ssprintf("%s", conn->peer->node_id);
 	argv[NA(argc)] = ssprintf("%d", vol->vnr);
-	argv[NA(argc)] = ssprintf_addr(conn->my_address);
-	argv[NA(argc)] = ssprintf_addr(conn->connect_to);
 
 	if (reset)
 		argv[NA(argc)] = "--set-defaults";
@@ -1481,12 +1488,13 @@ static int adm_connect(const struct cfg_ctx *ctx)
 
 	argv[NA(argc)] = drbdsetup;
 	argv[NA(argc)] = (char *)ctx->cmd->name; /* "connect" : "net-options"; */
+	argv[NA(argc)] = ssprintf("%s", res->name);
+	argv[NA(argc)] = ssprintf("%s", conn->peer->node_id);
+
 	if (do_connect) {
-		argv[NA(argc)] = ssprintf("%s", res->name);
-		argv[NA(argc)] = ssprintf("%s", conn->peer->node_id);
+		argv[NA(argc)] = ssprintf_addr(conn->my_address);
+		argv[NA(argc)] = ssprintf_addr(conn->connect_to);
 	}
-	argv[NA(argc)] = ssprintf_addr(conn->my_address);
-	argv[NA(argc)] = ssprintf_addr(conn->connect_to);
 
 	if (reset)
 		argv[NA(argc)] = "--set-defaults";
