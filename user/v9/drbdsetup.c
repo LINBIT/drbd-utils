@@ -3998,12 +3998,12 @@ int main(int argc, char **argv)
 		return 20;
 	}
 
-	if (drbd_genl_family.version != API_VERSION ||
+	if (drbd_genl_family.version != GENL_MAGIC_VERSION ||
 	    drbd_genl_family.hdrsize != sizeof(struct drbd_genlmsghdr)) {
 		fprintf(stderr, "API mismatch!\n\t"
 			"API version drbdsetup: %u kernel: %u\n\t"
 			"header size drbdsetup: %u kernel: %u\n",
-			API_VERSION, drbd_genl_family.version,
+			GENL_MAGIC_VERSION, drbd_genl_family.version,
 			(unsigned)sizeof(struct drbd_genlmsghdr),
 			drbd_genl_family.hdrsize);
 		return 20;

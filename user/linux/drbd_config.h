@@ -22,6 +22,4 @@
 
 extern const char *drbd_buildtag(void);
 
-#define API_VERSION 1
-
 #endif

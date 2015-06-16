@@ -20,7 +20,11 @@
 #include "config.h"
 #include "shared_main.h"
 
-#define API_VERSION 1
+/* FIXME keep in sync with GENL_MAGIC_VERSION,
+ * without including all the genl magic...
+ */
+#define API_VERSION 2
+
 struct d_name
 {
 	char *name;
