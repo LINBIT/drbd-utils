@@ -353,9 +353,9 @@ redo_whole_conn:
 		/* As the memory is in use while the connection is allocated we have to
 		 * completely destroy and rebuild the connection. */
 
-		schedule_deferred_cmd(&proxy_conn_down_cmd, ctx, CFG_NET_PREREQ);
-		schedule_deferred_cmd(&proxy_conn_up_cmd, ctx, CFG_NET_PREREQ);
-		schedule_deferred_cmd(&proxy_conn_plugins_cmd, ctx, CFG_NET_PREREQ);
+		schedule_deferred_cmd(&proxy_conn_down_cmd, ctx, CFG_NET_PREP_DOWN);
+		schedule_deferred_cmd(&proxy_conn_up_cmd, ctx, CFG_NET_PREP_UP);
+		schedule_deferred_cmd(&proxy_conn_plugins_cmd, ctx, CFG_NET_PREP_UP);
 
 		/* With connection cleanup and reopen everything is rebuild anyway, and
 		 * DRBD will get a reconnect too.  */
@@ -765,7 +765,7 @@ int adm_adjust(const struct cfg_ctx *ctx)
 			configured_conn = matching_conn(conn, &ctx->res->connections);
 			if (!configured_conn) {
 				struct cfg_ctx tmp_ctx = { .res = running, .conn = conn };
-				schedule_deferred_cmd(&disconnect_cmd, &tmp_ctx, CFG_NET);
+				schedule_deferred_cmd(&disconnect_cmd, &tmp_ctx, CFG_NET_PREP_DOWN);
 			}
 		}
 	}
@@ -780,7 +780,9 @@ int adm_adjust(const struct cfg_ctx *ctx)
 		if (running)
 			running_conn = matching_conn(conn, &running->connections);
 		if (!running_conn) {
-			schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET);
+			schedule_deferred_cmd(&new_peer_cmd, &tmp_ctx, CFG_NET_PREP_UP);
+			schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PREP_UP);
+			schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET_CONNECT);
 			schedule_peer_device_options(&tmp_ctx);
 		} else {
 			struct context_def *oc = &show_net_options_ctx;
@@ -789,8 +791,13 @@ int adm_adjust(const struct cfg_ctx *ctx)
 
 			if (!opts_equal(oc, conf_o, runn_o)) {
 				if (!opt_equal(oc, "transport", conf_o, runn_o)) {
-					schedule_deferred_cmd(&disconnect_cmd, &tmp_ctx, CFG_NET);
-					schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET);
+					schedule_deferred_cmd(&disconnect_cmd, &tmp_ctx, CFG_NET_PREP_DOWN);
+					/* To be done:
+					schedule_deferred_cmd(&del_peer_cmd, &tmp_ctx, CFG_NET_PREP_DOWN);
+					 */
+					schedule_deferred_cmd(&new_peer_cmd, &tmp_ctx, CFG_NET_PREP_UP);
+					schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PREP_UP);
+					schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET_CONNECT);
 					schedule_peer_device_options(&tmp_ctx);
 				} else {
 					schedule_deferred_cmd(&net_options_defaults_cmd, &tmp_ctx, CFG_NET);
@@ -813,11 +820,11 @@ int adm_adjust(const struct cfg_ctx *ctx)
 	for_each_volume(vol, &ctx->res->me->volumes) {
 		struct cfg_ctx tmp_ctx = { .res = ctx->res, .vol = vol };
 		if (vol->adj_detach)
-			schedule_deferred_cmd(&detach_cmd, &tmp_ctx, CFG_PREREQ);
+			schedule_deferred_cmd(&detach_cmd, &tmp_ctx, CFG_DISK_PREP_DOWN);
 		if (vol->adj_del_minor)
-			schedule_deferred_cmd(&del_minor_cmd, &tmp_ctx, CFG_PREREQ);
+			schedule_deferred_cmd(&del_minor_cmd, &tmp_ctx, CFG_DISK_PREP_DOWN);
 		if (vol->adj_new_minor) {
-			schedule_deferred_cmd(&new_minor_cmd, &tmp_ctx, CFG_DISK_PREREQ);
+			schedule_deferred_cmd(&new_minor_cmd, &tmp_ctx, CFG_DISK_PREP_UP);
 			schedule_peer_device_options(&tmp_ctx);
 		}
 		if (vol->adj_attach)

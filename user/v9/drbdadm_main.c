@@ -656,11 +656,14 @@ out:
 static char *drbd_cfg_stage_string[] = {
 	[CFG_PREREQ] = "create res",
 	[CFG_RESOURCE] = "adjust res",
-	[CFG_DISK_PREREQ] = "prepare disk",
+	[CFG_DISK_PREP_DOWN] = "prepare disk",
+	[CFG_DISK_PREP_UP] = "prepare disk",
 	[CFG_DISK] = "adjust disk",
-	[CFG_NET_PREREQ] = "prepare net",
+	[CFG_NET_PREP_DOWN] = "prepare net",
+	[CFG_NET_PREP_UP] = "prepare net",
 	[CFG_NET] = "adjust net",
 	[CFG_PEER_DEVICE] = "adjust peer_devices",
+	[CFG_NET_CONNECT] = "attempt to connect",
 };
 
 int _run_deferred_cmds(enum drbd_cfg_stage stage)
@@ -698,7 +701,11 @@ int _run_deferred_cmds(enum drbd_cfg_stage stage)
 				 * options, or failed to attach, we still want
 				 * to adjust other options, or try to connect.
 				 */
-				if (stage == CFG_PREREQ || stage == CFG_DISK_PREREQ)
+				if (stage == CFG_PREREQ
+				||  stage == CFG_DISK_PREP_DOWN
+				||  stage == CFG_DISK_PREP_UP
+				||  stage == CFG_NET_PREP_DOWN
+				||  stage == CFG_NET_PREP_UP)
 					d->ctx.res->skip_further_deferred_command = 1;
 				if (adjust_with_progress)
 					printf(":failed(%s:%u)", d->ctx.cmd->name, r);
@@ -1733,7 +1740,9 @@ static int adm_up(const struct cfg_ctx *ctx)
 
 		tmp_ctx.conn = conn;
 
-		schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET);
+		schedule_deferred_cmd(&new_peer_cmd, &tmp_ctx, CFG_NET_PREP_UP);
+		schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PREP_UP);
+		schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET_CONNECT);
 
 		STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
 			struct cfg_ctx tmp2_ctx;
@@ -1750,7 +1759,7 @@ static int adm_up(const struct cfg_ctx *ctx)
 
 	for_each_volume(vol, &ctx->res->me->volumes) {
 		tmp_ctx.vol = vol;
-		schedule_deferred_cmd(&new_minor_cmd, &tmp_ctx, CFG_PREREQ);
+		schedule_deferred_cmd(&new_minor_cmd, &tmp_ctx, CFG_DISK_PREP_UP);
 		if (vol->disk)
 			schedule_deferred_cmd(&attach_cmd, &tmp_ctx, CFG_DISK);
 	}

@@ -278,6 +278,8 @@ extern struct adm_cmd attach_cmd;
 extern struct adm_cmd disk_options_cmd;
 extern struct adm_cmd disk_options_defaults_cmd;
 extern struct adm_cmd resize_cmd;
+extern struct adm_cmd new_peer_cmd;
+extern struct adm_cmd new_path_cmd;
 extern struct adm_cmd connect_cmd;
 extern struct adm_cmd net_options_cmd;
 extern struct adm_cmd net_options_defaults_cmd;
@@ -305,21 +307,26 @@ enum drbd_cfg_stage {
 	CFG_RESOURCE,
 
 	/* detach/attach local disks, */
-	CFG_DISK_PREREQ,
+	/* detach, del-minor */
+	CFG_DISK_PREP_DOWN,
+	/* new-minor */
+	CFG_DISK_PREP_UP,
+	/* attach, disk-options, resize */
 	CFG_DISK,
 
-	/* The stage to discard network configuration, during adjust.
-	 * This is after the DISK stage, because we don't want to cut access to
-	 * good data while in primary role.  And before the SETTINGS stage, as
-	 * some proxy or syncer settings may cause side effects and additional
-	 * handshakes while we have an established connection.
-	 */
-	CFG_NET_PREREQ,
+	/* down, disconnect, del-peer, proxy down */
+	CFG_NET_PREP_DOWN,
+	/* add-peer, add-path, proxy up */
+	CFG_NET_PREP_UP,
 
 	/* discard/set connection parameters */
 	CFG_NET,
 
 	CFG_PEER_DEVICE,
+
+	/* actually start with connection attempts */
+	CFG_NET_CONNECT,
+
 	__CFG_LAST
 };
 
