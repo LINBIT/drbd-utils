@@ -92,6 +92,8 @@ static int adm_new_minor(const struct cfg_ctx *ctx);
 static int adm_resource(const struct cfg_ctx *);
 static int adm_attach(const struct cfg_ctx *);
 static int adm_connect(const struct cfg_ctx *);
+static int adm_new_peer(const struct cfg_ctx *);
+static int adm_new_path(const struct cfg_ctx *);
 static int adm_resize(const struct cfg_ctx *);
 static int adm_up(const struct cfg_ctx *);
 static int adm_wait_c(const struct cfg_ctx *);
@@ -312,8 +314,10 @@ int adm_adjust_wp(const struct cfg_ctx *ctx)
 /*  */ struct adm_cmd attach_cmd = {"attach", adm_attach, &attach_cmd_ctx, ACF1_MINOR_ONLY };
 /*  */ struct adm_cmd disk_options_cmd = {"disk-options", adm_attach, &attach_cmd_ctx, ACF1_MINOR_ONLY };
 /*  */ struct adm_cmd detach_cmd = {"detach", adm_drbdsetup, &detach_cmd_ctx, .takes_long = 1, ACF1_MINOR_ONLY };
+/*  */ struct adm_cmd new_peer_cmd = {"new-peer", adm_new_peer, &new_peer_cmd_ctx, ACF1_CONNECT};
+/*  */ struct adm_cmd new_path_cmd = {"new-path", adm_new_path, &new_path_cmd_ctx, ACF1_CONNECT};
 /*  */ struct adm_cmd connect_cmd = {"connect", adm_connect, &connect_cmd_ctx, ACF1_CONNECT};
-/*  */ struct adm_cmd net_options_cmd = {"net-options", adm_connect, &net_options_ctx, ACF1_CONNECT};
+/*  */ struct adm_cmd net_options_cmd = {"net-options", adm_new_peer, &net_options_ctx, ACF1_CONNECT};
 /*  */ struct adm_cmd disconnect_cmd = {"disconnect", adm_drbdsetup, &disconnect_cmd_ctx, ACF1_DISCONNECT};
 static struct adm_cmd up_cmd = {"up", adm_up, ACF1_RESNAME };
 /*  */ struct adm_cmd res_options_cmd = {"resource-options", adm_resource, &resource_options_ctx, ACF1_RESNAME};
@@ -402,6 +406,8 @@ struct adm_cmd *cmds[] = {
 	&attach_cmd,
 	&disk_options_cmd,
 	&detach_cmd,
+	&new_peer_cmd,
+	&new_path_cmd,
 	&connect_cmd,
 	&net_options_cmd,
 	&disconnect_cmd,
@@ -495,7 +501,7 @@ struct adm_cmd *cmds[] = {
 };
 /*  */ struct adm_cmd net_options_defaults_cmd = {
 	"net-options",
-	adm_connect,
+	adm_new_peer,
 	&net_options_ctx,
 	ACF1_CONNECT
 };
@@ -1483,23 +1489,59 @@ static int adm_connect(const struct cfg_ctx *ctx)
 	struct connection *conn = ctx->conn;
 	char *argv[MAX_ARGS];
 	int argc = 0;
-	bool do_connect = (ctx->cmd == &connect_cmd);
-	bool reset = (ctx->cmd == &net_options_defaults_cmd);
 
 	argv[NA(argc)] = drbdsetup;
-	argv[NA(argc)] = (char *)ctx->cmd->name; /* "connect" : "net-options"; */
+	argv[NA(argc)] = (char *)ctx->cmd->name; /* "connect" */
 	argv[NA(argc)] = ssprintf("%s", res->name);
 	argv[NA(argc)] = ssprintf("%s", conn->peer->node_id);
 
-	if (do_connect) {
-		argv[NA(argc)] = ssprintf_addr(conn->my_address);
-		argv[NA(argc)] = ssprintf_addr(conn->connect_to);
-	}
+	add_setup_options(argv, &argc);
+	argv[NA(argc)] = 0;
+
+	return m_system_ex(argv, SLEEPS_SHORT, res->name);
+}
+
+static int adm_new_peer(const struct cfg_ctx *ctx)
+{
+	struct d_resource *res = ctx->res;
+	struct connection *conn = ctx->conn;
+
+	char *argv[MAX_ARGS];
+	int argc = 0;
+
+	bool reset = (ctx->cmd == &net_options_defaults_cmd);
+
+	argv[NA(argc)] = drbdsetup;
+	argv[NA(argc)] = (char *)ctx->cmd->name; /* "connect", "net-options" */
+	argv[NA(argc)] = ssprintf("%s", res->name);
+	argv[NA(argc)] = ssprintf("%s", conn->peer->node_id);
 
 	if (reset)
 		argv[NA(argc)] = "--set-defaults";
-	if (reset || do_connect)
-		make_options(argv[NA(argc)], &conn->net_options);
+
+	make_options(argv[NA(argc)], &conn->net_options);
+
+	add_setup_options(argv, &argc);
+	argv[NA(argc)] = 0;
+
+	return m_system_ex(argv, SLEEPS_SHORT, res->name);
+}
+
+static int adm_new_path(const struct cfg_ctx *ctx)
+{
+	struct d_resource *res = ctx->res;
+	struct connection *conn = ctx->conn;
+
+	char *argv[MAX_ARGS];
+	int argc = 0;
+
+	argv[NA(argc)] = drbdsetup;
+	argv[NA(argc)] = (char *)ctx->cmd->name;
+	argv[NA(argc)] = ssprintf("%s", res->name);
+	argv[NA(argc)] = ssprintf("%s", conn->peer->node_id);
+
+	argv[NA(argc)] = ssprintf_addr(conn->my_address);
+	argv[NA(argc)] = ssprintf_addr(conn->connect_to);
 
 	add_setup_options(argv, &argc);
 	argv[NA(argc)] = 0;

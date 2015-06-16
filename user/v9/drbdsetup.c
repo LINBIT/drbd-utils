@@ -177,8 +177,6 @@ enum cfg_ctx_key {
 
 	/* To identify a connection, we use (resource_name, peer_node_id) */
 	CTX_PEER_NODE = CTX_RESOURCE | CTX_PEER_NODE_ID | CTX_MULTIPLE_ARGUMENTS,
-
-	CTX_CONNECTION = CTX_PEER_NODE | CTX_MY_ADDR | CTX_PEER_ADDR,
 	CTX_PEER_DEVICE = CTX_PEER_NODE | CTX_VOLUME,
 };
 
@@ -273,6 +271,7 @@ static char *address_str(char *buffer, void* address, int addr_len);
 static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 static int conv_md_idx(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 static int conv_u32(struct drbd_argument *, struct msg_buff *, struct drbd_genlmsghdr *, char *);
+static int conv_addr(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 
 struct resources_list {
 	struct resources_list *next;
@@ -381,11 +380,27 @@ struct drbd_cmd commands[] = {
 	 .ctx = &detach_cmd_ctx,
 	 .summary = "Detach the lower-level device of a replicated device." },
 
-	{"connect", CTX_RESOURCE | CTX_PEER_NODE_ID | CTX_CONNECTION,
-		DRBD_ADM_CONNECT, DRBD_NLA_NET_CONF,
+	{"connect", CTX_PEER_NODE,
+		DRBD_ADM_CONNECT, DRBD_NLA_CONNECT_PARMS,
 		F_CONFIG_CMD,
 	 .ctx = &connect_cmd_ctx,
-	 .summary = "Connect a resource to a peer host." },
+	 .summary = "Attempt to (re)establish a replication link to a peer host." },
+
+	{"new-peer", CTX_PEER_NODE,
+		DRBD_ADM_NEW_PEER, DRBD_NLA_NET_CONF,
+		F_CONFIG_CMD,
+	 .ctx = &new_peer_cmd_ctx,
+	 .summary = "Make a peer host known to a resource." },
+
+	{"new-path", CTX_PEER_NODE,
+		DRBD_ADM_NEW_PATH, DRBD_NLA_PATH_PARMS,
+		F_CONFIG_CMD,
+	 .drbd_args = (struct drbd_argument[]) {
+		{ "local-addr", T_my_addr, conv_addr },
+		{ "remote-addr", T_peer_addr, conv_addr },
+		{ } },
+	 .ctx = &new_path_cmd_ctx,
+	 .summary = "Add a path (endpoint address pair) where a peer host should be reachable." },
 
 	{"net-options", CTX_PEER_NODE, DRBD_ADM_CHG_NET_OPTS, DRBD_NLA_NET_CONF,
 		F_CONFIG_CMD,
@@ -855,6 +870,28 @@ static int sockaddr_from_str(struct sockaddr_storage *storage, const char *str)
 	}
 	return 0;
 }
+
+static int conv_addr(struct drbd_argument *ad, struct msg_buff *msg,
+			  struct drbd_genlmsghdr *dhdr, char* arg)
+{
+	struct sockaddr_storage x;
+	int addr_len;
+
+	if (strncmp(arg, "local:", 6) == 0)
+		arg += 6;
+	else if (strncmp(arg, "peer:", 5) == 0)
+		arg += 5;
+
+	addr_len = sockaddr_from_str(&x, arg);
+	if (addr_len == 0) {
+		fprintf(stderr, "does not look like an endpoint address '%s'", arg);
+		return OTHER_ERROR;
+	}
+
+	nla_put(msg, ad->nla_type, addr_len, &x);
+	return NO_ERROR;
+}
+
 
 /* It will only print the WARNING if the warn flag is set
    with the _first_ call! */
@@ -1701,7 +1738,6 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 						if (ctx.ctx_volume != global_ctx.ctx_volume)
 							continue;
 						/* also needs to match the connection, of course */
-					case CTX_CONNECTION:
 					case CTX_PEER_NODE:
 						if (ctx.ctx_peer_node_id != global_ctx.ctx_peer_node_id)
 							continue;

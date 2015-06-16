@@ -741,14 +741,27 @@ struct context_def detach_cmd_ctx = {
 	},
 };
 
-struct context_def connect_cmd_ctx = {
+struct context_def new_peer_cmd_ctx = {
 	NLA_POLICY(net_conf),
 	.nla_type = DRBD_NLA_NET_CONF,
 	.fields = {
-		{ "tentative", FLAG(tentative) },
-		{ "discard-my-data", FLAG(discard_my_data) },
 		{ "transport", STRING(transport_name) },
 		CHANGEABLE_NET_OPTIONS,
+		{ } },
+};
+
+struct context_def new_path_cmd_ctx = {
+	NLA_POLICY(path_parms),
+	.nla_type = DRBD_NLA_PATH_PARMS,
+	.fields = { { } },
+};
+
+struct context_def connect_cmd_ctx = {
+	NLA_POLICY(connect_parms),
+	.nla_type = DRBD_NLA_CONNECT_PARMS,
+	.fields = {
+		{ "tentative", FLAG(tentative) },
+		{ "discard-my-data", FLAG(discard_my_data) },
 		{ } },
 };
 
