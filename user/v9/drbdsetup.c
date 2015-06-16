@@ -1977,6 +1977,7 @@ static void show_connection(struct connections_list *connection, struct peer_dev
 
 	printI("connection {\n");
 	++indent;
+	printI("_peer_node_id %d;\n", connection->ctx.ctx_peer_node_id);
 	if (connection->ctx.ctx_my_addr_len) {
 		char address[ADDRESS_STR_MAX];
 		if (address_str(address, connection->ctx.ctx_my_addr, connection->ctx.ctx_my_addr_len)) {

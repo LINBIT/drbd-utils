@@ -206,8 +206,7 @@ static struct connection *matching_conn(struct connection *pattern, struct conne
 	for_each_connection(conn, pool) {
 		if (conn->ignore)
 			continue;
-		if (addr_equal(pattern->my_address, conn->my_address) &&
-		    addr_equal(pattern->connect_to, conn->connect_to))
+		if (!strcmp(pattern->peer->node_id, conn->peer->node_id))
 			return conn;
 	}
 
@@ -704,10 +703,10 @@ int adm_adjust(const struct cfg_ctx *ctx)
 		struct resources running_as_list;
 		STAILQ_INIT(&running_as_list);
 		insert_tail(&running_as_list, running);
-		post_parse(&running_as_list, 0);
+		post_parse(&running_as_list, DRBDSETUP_SHOW);
 
-		set_me_in_resource(running, 0);
-		set_peer_in_resource(running, 0);
+		set_me_in_resource(running, DRBDSETUP_SHOW);
+		set_peer_in_resource(running, DRBDSETUP_SHOW);
 	}
 
 
@@ -788,6 +787,21 @@ int adm_adjust(const struct cfg_ctx *ctx)
 			struct context_def *oc = &show_net_options_ctx;
 			struct options *conf_o = &conn->net_options;
 			struct options *runn_o = &running_conn->net_options;
+
+			/* Ensure addresses are equal */
+			if (!running_conn->my_address || !running_conn->connect_to) {
+				schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PREP_UP);
+				schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET_CONNECT);
+				schedule_peer_device_options(&tmp_ctx);
+			} else if (!(addr_equal(running_conn->my_address, conn->my_address) &&
+				     addr_equal(running_conn->connect_to, conn->connect_to))) {
+				/* To be done:
+				   schedule_deferred_cmd(&del_peer_cmd, &tmp_ctx, CFG_NET_PREP_DOWN);
+				*/
+				schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PREP_UP);
+				schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET_CONNECT);
+				schedule_peer_device_options(&tmp_ctx);
+			}
 
 			if (!opts_equal(oc, conf_o, runn_o)) {
 				if (!opt_equal(oc, "transport", conf_o, runn_o)) {

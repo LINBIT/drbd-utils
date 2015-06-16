@@ -93,6 +93,7 @@ node-id			{ DP; return TK_NODE_ID;		}
 usage-count 		{ DP; return TK_USAGE_COUNT;		}
 _this_host 		{ DP; return TK__THIS_HOST;		}
 _remote_host 		{ DP; return TK__REMOTE_HOST;		}
+_peer_node_id 		{ DP; return TK__PEER_NODE_ID;		}
 template-file		{ DP; return TK_TEMPLATE_FILE;		}
 sci			{ DP; CP; return TK_SCI;		}
 ssocks			{ DP; CP; return TK_SSOCKS;		}

@@ -1469,6 +1469,27 @@ static struct peer_device *parse_peer_device(int vnr)
 	return peer_device;
 }
 
+static struct d_host_info *parse_peer_node_id(void)
+{
+	struct d_host_info *host;
+
+	host = calloc(1,sizeof(struct d_host_info));
+	STAILQ_INIT(&host->res_options);
+	STAILQ_INIT(&host->volumes);
+	STAILQ_INIT(&host->on_hosts);
+
+	host->config_line = c_section_start;
+	host->implicit = 1;
+	host->require_minor = 0;
+
+	EXP(TK_INTEGER);
+	range_check(R_NODE_ID, "node-id", yylval.txt);
+	host->node_id = yylval.txt;
+	EXP(';');
+
+	return host;
+}
+
 static struct connection *parse_connection(enum pr_flags flags)
 {
 	struct connection *conn;
@@ -1502,6 +1523,9 @@ static struct connection *parse_connection(enum pr_flags flags)
 				    config_file, fline);
 				config_valid = 0;
 			}
+			break;
+		case TK__PEER_NODE_ID:
+			conn->peer = parse_peer_node_id();
 			break;
 		case TK_NET:
 			if (!STAILQ_EMPTY(&conn->net_options)) {

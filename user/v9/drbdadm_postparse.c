@@ -169,8 +169,10 @@ static void set_host_info_in_host_address_pairs(struct d_resource *res, struct c
 			host_info = find_host_info_by_name(res, ha->name);
 		}
 		if (!host_info && !strcmp(ha->name, "_remote_host")) {
-			/* drbdsetup show does not output a host section for the _remote_host */
-			continue;
+			if (con->peer)
+				host_info = con->peer; /* With new format we create one for _peer_node_id */
+			else
+				continue; /* Old drbdsetup does not houtput a host section */
 		}
 
 		if (!host_info) {
@@ -330,10 +332,12 @@ void set_me_in_resource(struct d_resource* res, int match_on_proxy)
 
 		if (h) {
 			h->used_as_me = 1;
-			conn->my_address = h->address.addr ? &h->address : &res->me->address;
+			if (!conn->my_address)
+				conn->my_address = h->address.addr ? &h->address : &res->me->address;
 			conn->my_proxy = h->proxy;
 		} else {
-			conn->ignore = 1;
+			if (!conn->peer) /* Keep w/o addresses form "drbdsetup show" for adjust */
+				conn->ignore = 1;
 		}
 	}
 }
@@ -345,7 +349,7 @@ static void set_peer_in_connection(struct d_resource* res, struct connection *co
 	struct d_host_info *host_info;
 	int nr_hosts = 0, candidates = 0;
 
-	if (res->ignore || conn->ignore || conn->connect_to)
+	if (res->ignore || conn->ignore || conn->connect_to || conn->peer)
 		return;
 
 	/* me must be already set */
@@ -917,8 +921,10 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 	for_each_resource(res, resources) {
 		struct d_host_info *host;
 
-		for_each_connection(con, &res->connections)
-			must_have_two_hosts(res, con);
+		if (!(flags & DRBDSETUP_SHOW)) {
+			for_each_connection(con, &res->connections)
+				must_have_two_hosts(res, con);
+		}
 
 		/* Other steps make no sense. */
 		if (!config_valid)

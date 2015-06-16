@@ -81,6 +81,7 @@ enum usage_count_type {
 
 enum pp_flags {
 	MATCH_ON_PROXY = 1,
+	DRBDSETUP_SHOW = 2,
 };
 
 struct d_globals

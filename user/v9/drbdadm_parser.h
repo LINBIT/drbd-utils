@@ -65,6 +65,7 @@ enum yytokentype {
 	TK_NO,
 	TK__THIS_HOST,
 	TK__REMOTE_HOST,
+	TK__PEER_NODE_ID,
 	TK_PROXY,
 	TK_INSIDE,
 	TK_OUTSIDE,
