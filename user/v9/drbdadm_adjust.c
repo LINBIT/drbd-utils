@@ -787,20 +787,23 @@ int adm_adjust(const struct cfg_ctx *ctx)
 			struct context_def *oc = &show_net_options_ctx;
 			struct options *conf_o = &conn->net_options;
 			struct options *runn_o = &running_conn->net_options;
+			bool connect = false, new_path = false;
+
+			if (running_conn->is_standalone)
+				connect = true;
 
 			/* Ensure addresses are equal */
 			if (!running_conn->my_address || !running_conn->connect_to) {
-				schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PREP_UP);
-				schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET_CONNECT);
+				new_path = true;
+				connect = true;
 				schedule_peer_device_options(&tmp_ctx);
 			} else if (!(addr_equal(running_conn->my_address, conn->my_address) &&
 				     addr_equal(running_conn->connect_to, conn->connect_to))) {
 				/* To be done:
-				   schedule_deferred_cmd(&del_peer_cmd, &tmp_ctx, CFG_NET_PREP_DOWN);
+				   schedule_deferred_cmd(&del_path_cmd, &tmp_ctx, ****);
 				*/
-				schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PREP_UP);
-				schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET_CONNECT);
-				schedule_peer_device_options(&tmp_ctx);
+				new_path = true;
+				connect = true;
 			}
 
 			if (!opts_equal(oc, conf_o, runn_o)) {
@@ -810,13 +813,19 @@ int adm_adjust(const struct cfg_ctx *ctx)
 					schedule_deferred_cmd(&del_peer_cmd, &tmp_ctx, CFG_NET_PREP_DOWN);
 					 */
 					schedule_deferred_cmd(&new_peer_cmd, &tmp_ctx, CFG_NET_PREP_UP);
-					schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PREP_UP);
-					schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET_CONNECT);
+					new_path = true;
+					connect = true;
 					schedule_peer_device_options(&tmp_ctx);
 				} else {
 					schedule_deferred_cmd(&net_options_defaults_cmd, &tmp_ctx, CFG_NET);
 				}
 			}
+
+			if (new_path)
+				schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PREP_UP);
+			if (connect)
+				schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET_CONNECT);
+
 			adjust_peer_devices(&tmp_ctx, conn, running_conn);
 		}
 

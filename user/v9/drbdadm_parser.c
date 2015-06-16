@@ -1550,6 +1550,10 @@ static struct connection *parse_connection(enum pr_flags flags)
 			peer_device->connection = conn;
 			STAILQ_INSERT_TAIL(&conn->peer_devices, peer_device, connection_link);
 			break;
+		case TK__IS_STANDALONE:
+			conn->is_standalone = 1;
+			EXP(';');
+			break;
 		case '}':
 			return conn;
 		default:

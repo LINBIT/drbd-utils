@@ -1996,6 +1996,8 @@ static void show_connection(struct connections_list *connection, struct peer_dev
 			printI("_remote_host %s;\n", address);
 		}
 	}
+	if (connection->info.conn_connection_state == C_STANDALONE)
+		printI("_is_standalone;\n");
 	print_options(connection->net_conf, &show_net_options_ctx, "net");
 
 	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next) {

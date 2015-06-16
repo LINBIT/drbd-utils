@@ -168,6 +168,7 @@ struct connection
 	 * this avoids direct maniuplation/restore of the ignore flag itself */
 	unsigned int ignore_tmp:1;
 	unsigned int implicit:1;
+	unsigned int is_standalone:1;
 	STAILQ_ENTRY(connection) link;
 };
 STAILQ_HEAD(connections, connection);
