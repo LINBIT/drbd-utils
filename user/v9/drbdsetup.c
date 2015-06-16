@@ -392,6 +392,12 @@ struct drbd_cmd commands[] = {
 	 .ctx = &new_peer_cmd_ctx,
 	 .summary = "Make a peer host known to a resource." },
 
+	{"del-peer", CTX_PEER_NODE,
+		DRBD_ADM_DEL_PEER, DRBD_NLA_DISCONNECT_PARMS,
+		F_CONFIG_CMD,
+	 .ctx = &disconnect_cmd_ctx,
+	 .summary = "Remove a connection to a peer host." },
+
 	{"new-path", CTX_PEER_NODE,
 		DRBD_ADM_NEW_PATH, DRBD_NLA_PATH_PARMS,
 		F_CONFIG_CMD,
@@ -399,8 +405,18 @@ struct drbd_cmd commands[] = {
 		{ "local-addr", T_my_addr, conv_addr },
 		{ "remote-addr", T_peer_addr, conv_addr },
 		{ } },
-	 .ctx = &new_path_cmd_ctx,
+	 .ctx = &path_cmd_ctx,
 	 .summary = "Add a path (endpoint address pair) where a peer host should be reachable." },
+
+	{"del-path", CTX_PEER_NODE,
+		DRBD_ADM_DEL_PATH, DRBD_NLA_PATH_PARMS,
+		F_CONFIG_CMD,
+	 .drbd_args = (struct drbd_argument[]) {
+		{ "local-addr", T_my_addr, conv_addr },
+		{ "remote-addr", T_peer_addr, conv_addr },
+		{ } },
+	 .ctx = &path_cmd_ctx,
+	 .summary = "Remove a path (endpoint address pair) from a connection to a peer host." },
 
 	{"net-options", CTX_PEER_NODE, DRBD_ADM_CHG_NET_OPTS, DRBD_NLA_NET_CONF,
 		F_CONFIG_CMD,
@@ -411,7 +427,7 @@ struct drbd_cmd commands[] = {
 	{"disconnect", CTX_PEER_NODE, DRBD_ADM_DISCONNECT, DRBD_NLA_DISCONNECT_PARMS,
 		F_CONFIG_CMD,
 	 .ctx = &disconnect_cmd_ctx,
-	 .summary = "Remove a connection to a peer host." },
+	 .summary = "Unconnect from a peer host." },
 
 	{"resize", CTX_MINOR, DRBD_ADM_RESIZE, DRBD_NLA_RESIZE_PARMS,
 		F_CONFIG_CMD,

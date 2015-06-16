@@ -750,7 +750,7 @@ struct context_def new_peer_cmd_ctx = {
 		{ } },
 };
 
-struct context_def new_path_cmd_ctx = {
+struct context_def path_cmd_ctx = {
 	NLA_POLICY(path_parms),
 	.nla_type = DRBD_NLA_PATH_PARMS,
 	.fields = { { } },

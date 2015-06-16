@@ -93,7 +93,7 @@ static int adm_resource(const struct cfg_ctx *);
 static int adm_attach(const struct cfg_ctx *);
 static int adm_connect(const struct cfg_ctx *);
 static int adm_new_peer(const struct cfg_ctx *);
-static int adm_new_path(const struct cfg_ctx *);
+static int adm_path(const struct cfg_ctx *);
 static int adm_resize(const struct cfg_ctx *);
 static int adm_up(const struct cfg_ctx *);
 static int adm_wait_c(const struct cfg_ctx *);
@@ -315,7 +315,9 @@ int adm_adjust_wp(const struct cfg_ctx *ctx)
 /*  */ struct adm_cmd disk_options_cmd = {"disk-options", adm_attach, &attach_cmd_ctx, ACF1_MINOR_ONLY };
 /*  */ struct adm_cmd detach_cmd = {"detach", adm_drbdsetup, &detach_cmd_ctx, .takes_long = 1, ACF1_MINOR_ONLY };
 /*  */ struct adm_cmd new_peer_cmd = {"new-peer", adm_new_peer, &new_peer_cmd_ctx, ACF1_CONNECT};
-/*  */ struct adm_cmd new_path_cmd = {"new-path", adm_new_path, &new_path_cmd_ctx, ACF1_CONNECT};
+/*  */ struct adm_cmd del_peer_cmd = {"del-peer", adm_drbdsetup, &disconnect_cmd_ctx, ACF1_CONNECT};
+/*  */ struct adm_cmd new_path_cmd = {"new-path", adm_path, &path_cmd_ctx, ACF1_CONNECT};
+/*  */ struct adm_cmd del_path_cmd = {"del-path", adm_path, &path_cmd_ctx, ACF1_CONNECT};
 /*  */ struct adm_cmd connect_cmd = {"connect", adm_connect, &connect_cmd_ctx, ACF1_CONNECT};
 /*  */ struct adm_cmd net_options_cmd = {"net-options", adm_new_peer, &net_options_ctx, ACF1_CONNECT};
 /*  */ struct adm_cmd disconnect_cmd = {"disconnect", adm_drbdsetup, &disconnect_cmd_ctx, ACF1_DISCONNECT};
@@ -407,7 +409,9 @@ struct adm_cmd *cmds[] = {
 	&disk_options_cmd,
 	&detach_cmd,
 	&new_peer_cmd,
+	&del_peer_cmd,
 	&new_path_cmd,
+	&del_path_cmd,
 	&connect_cmd,
 	&net_options_cmd,
 	&disconnect_cmd,
@@ -1534,7 +1538,7 @@ static int adm_new_peer(const struct cfg_ctx *ctx)
 	return m_system_ex(argv, SLEEPS_SHORT, res->name);
 }
 
-static int adm_new_path(const struct cfg_ctx *ctx)
+static int adm_path(const struct cfg_ctx *ctx)
 {
 	struct d_resource *res = ctx->res;
 	struct connection *conn = ctx->conn;
@@ -1543,7 +1547,7 @@ static int adm_new_path(const struct cfg_ctx *ctx)
 	int argc = 0;
 
 	argv[NA(argc)] = drbdsetup;
-	argv[NA(argc)] = (char *)ctx->cmd->name;
+	argv[NA(argc)] = (char *)ctx->cmd->name; /* add-path, del-path */
 	argv[NA(argc)] = ssprintf("%s", res->name);
 	argv[NA(argc)] = ssprintf("%s", conn->peer->node_id);
 

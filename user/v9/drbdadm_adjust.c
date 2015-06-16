@@ -764,7 +764,7 @@ int adm_adjust(const struct cfg_ctx *ctx)
 			configured_conn = matching_conn(conn, &ctx->res->connections);
 			if (!configured_conn) {
 				struct cfg_ctx tmp_ctx = { .res = running, .conn = conn };
-				schedule_deferred_cmd(&disconnect_cmd, &tmp_ctx, CFG_NET_PREP_DOWN);
+				schedule_deferred_cmd(&del_peer_cmd, &tmp_ctx, CFG_NET_PREP_DOWN);
 			}
 		}
 	}
@@ -799,19 +799,16 @@ int adm_adjust(const struct cfg_ctx *ctx)
 				schedule_peer_device_options(&tmp_ctx);
 			} else if (!(addr_equal(running_conn->my_address, conn->my_address) &&
 				     addr_equal(running_conn->connect_to, conn->connect_to))) {
-				/* To be done:
-				   schedule_deferred_cmd(&del_path_cmd, &tmp_ctx, ****);
-				*/
+
+				schedule_deferred_cmd(&del_path_cmd, &tmp_ctx, CFG_NET_PREP_DOWN);
 				new_path = true;
 				connect = true;
 			}
 
 			if (!opts_equal(oc, conf_o, runn_o)) {
 				if (!opt_equal(oc, "transport", conf_o, runn_o)) {
-					schedule_deferred_cmd(&disconnect_cmd, &tmp_ctx, CFG_NET_PREP_DOWN);
-					/* To be done:
+					/* disconnect implicit by del-peer */
 					schedule_deferred_cmd(&del_peer_cmd, &tmp_ctx, CFG_NET_PREP_DOWN);
-					 */
 					schedule_deferred_cmd(&new_peer_cmd, &tmp_ctx, CFG_NET_PREP_UP);
 					new_path = true;
 					connect = true;
