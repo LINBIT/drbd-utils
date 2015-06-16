@@ -3,9 +3,14 @@ Latest:
  For even more detail, use "git log" or visit http://git.drbd.org/.
 
 
-8.9.3rc1
+8.9.3
 --------
-  * Rewrite the parser for configure options; Reuse the data structures
+  * Support for the new new-peer, add-path, connect, del-path, disconnect
+    and del-peer commands of drbd-9.0.0; drbdadm support for the new
+    commands
+  * New configuration file directive template-file; with that a dedicated
+    file for the common section of a resource can be specified
+  * Rewrite the parser for configure options; reuse the data structures
     describing drbdsetup options
   * No longer try to set peer-device-options with the connect or attach
     commands; Only do it with the up and attach commands
