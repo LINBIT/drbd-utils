@@ -299,6 +299,7 @@ static void free_devices(struct devices_list *);
 struct connections_list {
 	struct connections_list *next;
 	struct drbd_cfg_context ctx;
+	struct nlattr *path_list;
 	struct nlattr *net_conf;
 	struct connection_info info;
 	struct connection_statistics statistics;
@@ -1163,10 +1164,6 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 			nla_put_u32(smsg, T_ctx_peer_node_id, global_ctx.ctx_peer_node_id);
 		if (context & CTX_VOLUME)
 			nla_put_u32(smsg, T_ctx_volume, global_ctx.ctx_volume);
-		if (context & CTX_MY_ADDR)
-			nla_put(smsg, T_ctx_my_addr, global_ctx.ctx_my_addr_len, &global_ctx.ctx_my_addr);
-		if (context & CTX_PEER_ADDR)
-			nla_put(smsg, T_ctx_peer_addr, global_ctx.ctx_peer_addr_len, &global_ctx.ctx_peer_addr);
 		nla_nest_end(smsg, nla);
 	}
 
@@ -1987,6 +1984,31 @@ static void show_peer_device(struct peer_devices_list *peer_device)
 	printI("}\n");
 }
 
+static void print_paths(struct connections_list *connection)
+{
+	char address[ADDRESS_STR_MAX];
+	char *colon;
+	struct nlattr *nla;
+	int tmp;
+
+	if (!connection->path_list)
+		return;
+
+	nla_for_each_nested(nla, connection->path_list, tmp) {
+		int l = nla_len(nla);
+
+		if (!address_str(address, nla_data(nla), l))
+			continue;
+		colon = strchr(address, ':');
+		if (colon)
+			*colon = ' ';
+		if (nla->nla_type == T_my_addr)
+			printI("_this_host %s;\n", address);
+		if (nla->nla_type == T_peer_addr)
+			printI("_remote_host %s;\n", address);
+	}
+}
+
 static void show_connection(struct connections_list *connection, struct peer_devices_list *peer_devices)
 {
 	struct peer_devices_list *peer_device;
@@ -1994,24 +2016,8 @@ static void show_connection(struct connections_list *connection, struct peer_dev
 	printI("connection {\n");
 	++indent;
 	printI("_peer_node_id %d;\n", connection->ctx.ctx_peer_node_id);
-	if (connection->ctx.ctx_my_addr_len) {
-		char address[ADDRESS_STR_MAX];
-		if (address_str(address, connection->ctx.ctx_my_addr, connection->ctx.ctx_my_addr_len)) {
-			char *colon = strchr(address, ':');
-			if (colon)
-				*colon = ' ';
-			printI("_this_host %s;\n", address);
-		}
-	}
-	if (connection->ctx.ctx_peer_addr_len) {
-		char address[ADDRESS_STR_MAX];
-		if (address_str(address, connection->ctx.ctx_peer_addr, connection->ctx.ctx_peer_addr_len)) {
-			char *colon = strchr(address, ':');
-			if (colon)
-				*colon = ' ';
-			printI("_remote_host %s;\n", address);
-		}
-	}
+
+	print_paths(connection);
 	if (connection->info.conn_connection_state == C_STANDALONE)
 		printI("_is_standalone;\n");
 	print_options(connection->net_conf, &show_net_options_ctx, "net");
@@ -2392,22 +2398,12 @@ static void connection_status(struct connections_list *connection,
 			      struct peer_devices_list *peer_devices,
 			      bool single_device)
 {
-	char local_addr[ADDRESS_STR_MAX], peer_addr[ADDRESS_STR_MAX];
-
 	if (connection->ctx.ctx_conn_name_len)
 		wrap_printf(2, "%s", connection->ctx.ctx_conn_name);
 
 	if (opt_verbose || connection->ctx.ctx_conn_name_len == 0) {
 		int in = connection->ctx.ctx_conn_name_len ? 6 : 2;
 		wrap_printf(in, " node-id:%d", connection->ctx.ctx_peer_node_id);
-	}
-	if (opt_verbose || connection->ctx.ctx_conn_name_len == 0) {
-		if (!address_str(local_addr, connection->ctx.ctx_my_addr, connection->ctx.ctx_my_addr_len))
-			strcpy(local_addr, "?");
-		if (!address_str(peer_addr, connection->ctx.ctx_peer_addr, connection->ctx.ctx_peer_addr_len))
-			strcpy(peer_addr, "?");
-		wrap_printf(6, " local:%s", local_addr);
-		wrap_printf(6, " peer:%s", peer_addr);
 	}
 	if (opt_verbose || connection->info.conn_connection_state != C_CONNECTED) {
 		enum drbd_conn_state cstate = connection->info.conn_connection_state;
@@ -2845,6 +2841,7 @@ static int remember_connection(struct drbd_cmd *cmd, struct genl_info *info, voi
 	if (ctx.ctx_resource_name) {
 		struct connections_list *c = calloc(1, sizeof(*c));
 		struct nlattr *net_conf = global_attrs[DRBD_NLA_NET_CONF];
+		struct nlattr *path_list = global_attrs[DRBD_NLA_PATH_PARMS];
 
 		c->ctx = ctx;
 		if (net_conf) {
@@ -2852,6 +2849,11 @@ static int remember_connection(struct drbd_cmd *cmd, struct genl_info *info, voi
 
 			c->net_conf = malloc(size);
 			memcpy(c->net_conf, net_conf, size);
+		}
+		if (path_list) {
+			int size = nla_total_size(nla_len(path_list));
+			c->path_list = malloc(size);
+			memcpy(c->path_list, path_list, size);
 		}
 		connection_info_from_attrs(&c->info, info);
 		memset(&c->statistics, -1, sizeof(c->statistics));
