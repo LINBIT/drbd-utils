@@ -365,7 +365,7 @@ redo_whole_conn:
 	res_o = STAILQ_FIRST(&conn->my_proxy->plugins);
 	run_o = STAILQ_FIRST(&running_conn->my_proxy->plugins);
 	used = 0;
-	conn_name = proxy_connection_name(ctx);
+	conn_name = proxy_connection_name(ctx->res, running_conn);
 	for(i=0; i<MAX_PLUGINS; i++)
 	{
 		if (used >= sizeof(plugin_changes)-1) {
@@ -729,7 +729,7 @@ int adm_adjust(const struct cfg_ctx *ctx)
 			tmp_ctx.conn = configured_conn;
 
 			line = 1;
-			m_asprintf(&show_conn, "show proxy-settings %s", proxy_connection_name(&tmp_ctx));
+			m_asprintf(&show_conn, "show proxy-settings %s", proxy_connection_name(tmp_ctx.res, configured_conn));
 			sprintf(config_file_dummy, "drbd-proxy-ctl -c '%s'", show_conn);
 			config_file = config_file_dummy;
 

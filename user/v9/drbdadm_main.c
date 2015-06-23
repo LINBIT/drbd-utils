@@ -1567,22 +1567,18 @@ void free_opt(struct d_option *item)
 	free(item);
 }
 
-int _proxy_connect_name_len(const struct cfg_ctx *ctx)
+int _proxy_connect_name_len(const struct d_resource *res, const struct connection *conn)
 {
-	struct connection *conn = ctx->conn;
-
-	return strlen(ctx->res->name) +
+	return (conn->name ? strlen(conn->name) : strlen(res->name)) +
 		strlen(names_to_str_c(&conn->peer_proxy->on_hosts, '_')) +
 		strlen(names_to_str_c(&conn->my_proxy->on_hosts, '_')) +
 		3 /* for the two dashes and the trailing 0 character */;
 }
 
-char *_proxy_connection_name(char *conn_name, const struct cfg_ctx *ctx)
+char *_proxy_connection_name(char *conn_name, const struct d_resource *res, const struct connection *conn)
 {
-	struct connection *conn = ctx->conn;
-
 	sprintf(conn_name, "%s-%s-%s",
-		ctx->res->name,
+		conn->name ?: res->name,
 		names_to_str_c(&conn->peer_proxy->on_hosts, '_'),
 		names_to_str_c(&conn->my_proxy->on_hosts, '_'));
 	return conn_name;
@@ -1590,79 +1586,99 @@ char *_proxy_connection_name(char *conn_name, const struct cfg_ctx *ctx)
 
 int do_proxy_conn_up(const struct cfg_ctx *ctx)
 {
-	struct connection *conn = ctx->conn;
 	char *argv[4] = { drbd_proxy_ctl, "-c", NULL, NULL };
+	struct connection *conn;
 	char *conn_name;
 	int rv;
 
-	conn_name = proxy_connection_name(ctx);
+	rv = 0;
 
-	argv[2] = ssprintf(
-		 "add connection %s %s:%s %s:%s %s:%s %s:%s",
-		 conn_name,
-		 conn->my_proxy->inside.addr,
-		 conn->my_proxy->inside.port,
-		 conn->peer_proxy->outside.addr,
-		 conn->peer_proxy->outside.port,
-		 conn->my_proxy->outside.addr,
-		 conn->my_proxy->outside.port,
-		 conn->my_address->addr,
-		 conn->my_address->port);
+	for_each_connection(conn, &ctx->res->connections) {
+		conn_name = proxy_connection_name(ctx->res, conn);
 
-	rv = m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
+		argv[2] = ssprintf(
+				"add connection %s %s:%s %s:%s %s:%s %s:%s",
+				conn_name,
+				conn->my_proxy->inside.addr,
+				conn->my_proxy->inside.port,
+				conn->peer_proxy->outside.addr,
+				conn->peer_proxy->outside.port,
+				conn->my_proxy->outside.addr,
+				conn->my_proxy->outside.port,
+				conn->my_address->addr,
+				conn->my_address->port);
+
+		rv = m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
+		if (rv)
+			break;
+	}
 	return rv;
 }
 
 int do_proxy_conn_plugins(const struct cfg_ctx *ctx)
 {
-	struct connection *conn = ctx->conn;
+	struct connection *conn;
 	char *argv[MAX_ARGS];
 	char *conn_name;
 	int argc = 0;
 	struct d_option *opt;
 	int counter;
+	int rv;
 
-	conn_name = proxy_connection_name(ctx);
+	rv = 0;
 
-	argc = 0;
-	argv[NA(argc)] = drbd_proxy_ctl;
-	STAILQ_FOREACH(opt, &conn->my_proxy->options, link) {
-		argv[NA(argc)] = "-c";
-		argv[NA(argc)] = ssprintf("set %s %s %s",
-			 opt->name, conn_name, opt->value);
-	}
+	for_each_connection(conn, &ctx->res->connections) {
+		conn_name = proxy_connection_name(ctx->res, conn);
 
-	counter = 0;
-	/* Don't send the "set plugin ... END" line if no plugins are defined
-	 * - that's incompatible with the drbd proxy version 1. */
-	if (!STAILQ_EMPTY(&conn->my_proxy->plugins)) {
-		STAILQ_FOREACH(opt, &conn->my_proxy->plugins, link) {
+		argc = 0;
+		argv[NA(argc)] = drbd_proxy_ctl;
+		STAILQ_FOREACH(opt, &conn->my_proxy->options, link) {
 			argv[NA(argc)] = "-c";
-			argv[NA(argc)] = ssprintf("set plugin %s %d %s",
-					conn_name, counter, opt->name);
-			counter++;
+			argv[NA(argc)] = ssprintf("set %s %s %s",
+					opt->name, conn_name, opt->value);
 		}
-		argv[NA(argc)] = ssprintf("set plugin %s %d END", conn_name, counter);
+
+		counter = 0;
+		/* Don't send the "set plugin ... END" line if no plugins are defined
+		 * - that's incompatible with the drbd proxy version 1. */
+		if (!STAILQ_EMPTY(&conn->my_proxy->plugins)) {
+			STAILQ_FOREACH(opt, &conn->my_proxy->plugins, link) {
+				argv[NA(argc)] = "-c";
+				argv[NA(argc)] = ssprintf("set plugin %s %d %s",
+						conn_name, counter, opt->name);
+				counter++;
+			}
+			argv[NA(argc)] = ssprintf("set plugin %s %d END", conn_name, counter);
+		}
+
+		argv[NA(argc)] = 0;
+		if (argc > 2)
+			rv = m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
+		if (rv)
+			break;
 	}
 
-	argv[NA(argc)] = 0;
-	if (argc > 2)
-		return m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
-
-	return 0;
+	return rv;
 }
 
 int do_proxy_conn_down(const struct cfg_ctx *ctx)
 {
 	struct d_resource *res = ctx->res;
+	struct connection *conn;
 	char *conn_name;
 	char *argv[4] = { drbd_proxy_ctl, "-c", NULL, NULL};
 	int rv;
 
-	conn_name = proxy_connection_name(ctx);
-	argv[2] = ssprintf("del connection %s", conn_name);
 
-	rv = m_system_ex(argv, SLEEPS_SHORT, res->name);
+	rv = 0;
+	for_each_connection(conn, &res->connections) {
+		conn_name = proxy_connection_name(ctx->res, conn);
+		argv[2] = ssprintf("del connection %s", conn_name);
+
+		rv = m_system_ex(argv, SLEEPS_SHORT, res->name);
+		if (rv)
+			break;
+	}
 	return rv;
 }
 
