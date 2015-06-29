@@ -308,7 +308,13 @@ drbd_set_status_variables() {
 	DRBD_DSTATE_LOCAL=()
 	DRBD_DSTATE_REMOTE=()
 
-	eval "$($DRBDADM sh-status "$DRBD_RESOURCE")"
+	if $DRBD_HAS_MULTI_VOLUME ; then
+		eval "$($DRBDSETUP sh-status "$DRBD_RESOURCE")"
+	else
+		# without "MULTI_VOLUME", the DRBD_DEVICES array
+		# should contain exactly one value
+		eval "$($DRBDSETUP "$DRBD_DEVICES" sh-status)"
+	fi
 
 	# if there was no output at all, or a weird output
 	# make sure the status arrays won't be empty.
