@@ -114,7 +114,11 @@ DEBUG_LOG=$DEBUG_LOG_DIR/log
 USE_DEBUG_LOG=false
 ls_stat_is_dir_0700_root() {
 	set -- $(command ls -ldn "$1" 2>/dev/null);
-	[[ $1/$3 = drwx?-??-?/0 ]]
+	case "$1/$3" in
+	drwx?-??-?/0|\
+	drwx?-??-?./0)	true ;;
+	*)	false ;;
+	esac
 }
 # try to avoid symlink vuln.
 if ls_stat_is_dir_0700_root $DEBUG_LOG_DIR &&
