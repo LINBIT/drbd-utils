@@ -926,6 +926,18 @@ drbd_validate_all () {
 	if VERSION="$($DRBDADM --version 2>/dev/null)"; then
 		eval $VERSION
 	fi
+	if (( $DRBD_KERNEL_VERSION_CODE == 0x0 )) ; then
+		# Maybe the DRBD module was not loaded (yet).
+		# I don't want to load the module here,
+		# maybe this is just a probe or stop.
+		# It will be loaded on "start", though.
+		# Instead, look at modinfo output.
+		# Newer drbdadm does this implicitly, but may reexec older
+		# drbdadm versions for compatibility reasons.
+		DRBD_KERNEL_VERSION_CODE=$(printf "0x%02x%02x%02x" $(
+			modinfo -F version drbd |
+			sed -ne 's/^\([0-9]\+\)\.\([0-9]\+\)\.\([0-9]\+\).*$/\1 \2 \3/p'))
+	fi
 	if (( $DRBD_KERNEL_VERSION_CODE >= 0x080400 )); then
 		DRBD_HAS_MULTI_VOLUME=true
 	fi
