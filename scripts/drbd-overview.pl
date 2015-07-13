@@ -22,6 +22,8 @@ my %minor_of_name;
 my $DRBD_VERSION;
 my @DRBD_VERSION;
 
+our $use_colors = (-t STDOUT) + 0;
+
 my %xen_info;
 my %virsh_info;
 
@@ -129,15 +131,20 @@ sub slurp_proc_drbd_or_exit() {
 	}
 }
 
+our $ansi_color_re = qr{(\033\[[\d;]+?m)};
+
 sub abbreviate {
 	my($w, $max) = @_;
 
 	$max ||= 15;
 
+    my $col_pre  = ($w =~ s/^$ansi_color_re//o ) ? $1 : "";
+    my $col_post = ($w =~  s/$ansi_color_re$//o) ? $1 : "";
+
 # keep UPPERCase and a few lowercase characters.
 	1 while length($w) > $max && $w =~ s/([a-z]+)[a-z]/$1/g;
 
-	return substr($w, 0, $max);
+	return $col_pre . substr($w, 0, $max) . $col_post;
 }
 
 # taking a sorted list of keys and a hash, produce a short output.
@@ -188,7 +195,9 @@ sub shorten_list {
 }
 
 sub slurp_drbdsetup() {
-	unless (open(DS,"drbdsetup events2 --now --statistics |")) {
+    unless (open(DS,"drbdsetup events2 --now --statistics " .
+                ($use_colors ? "--color=always " : "") .
+                " |")) {
 		print "drbdsetup not started\n";
 		exit 0;
 	}
@@ -377,15 +386,22 @@ sub virsh_info
 	@{$t}{qw(domname vdev bus)};
 }
 
-# very stupid option handling
 # first, for debugging of this script and its regex'es,
 # allow reading from a prepared file instead of /proc/drbd
-if (@ARGV > 1 and $ARGV[0] eq '--proc-drbd') {
-	$PROC_DRBD = $ARGV[1];
-	splice @ARGV,0,2;
-}
-$stderr_to_dev_null = 0 if @ARGV and $ARGV[0] eq '-d';
+# Getopt::Long is standard since quite some time, but in case it's not available somewhere we'll fail soft.
+eval {
+    use Getopt::Long;
 
+    GetOptions(
+            "proc-drbd=s" => \$PROC_DRBD,
+            "stderr-to-dev-null|d" => \$stderr_to_dev_null,
+            "color|colors|c:s" => \$use_colors) or 
+        die "Unknown command line argument.\n";
+
+    $use_colors = 0 if $use_colors =~ m/^(never|no|off)$/;
+    $use_colors = 1 if $use_colors =~ m/^(always|yes|on)$/;
+    warn "unrecognized value for --color" unless $use_colors =~ /^[01]$/;
+};
 
 open STDERR, "/dev/null"
 	if $stderr_to_dev_null;
@@ -403,6 +419,7 @@ get_virsh_info;
 
 # generate output, adjust columns
 my @out = [];
+my @out_plain = [];
 my @maxw = ();
 my $line = 0;
 
@@ -427,7 +444,12 @@ for my $m (@minors_sorted) {
 		@used_by
 	];
 	for (my $c = 0; $c <  @{$out[$line]}; $c++) {
-		my $l =  length($out[$line][$c]) + 1;
+        # strip color codes for column width calculation
+		my $w =  $out[$line][$c];
+        $w =~ s/$ansi_color_re//og;
+
+		my $l =  length($w) + 1;
+        $out_plain[$line][$c] = $w;
 		$maxw[$c] = $l unless $maxw[$c] and $l < $maxw[$c];
 	}
 	++$line;
@@ -435,10 +457,11 @@ for my $m (@minors_sorted) {
 		$out[$line++] =  [ $t->{sync} ];
 	}
 }
-my @fmt = map { "%-${_}s" } @maxw;
-for (@out) {
-	for (my $c2 = 0; $c2 < @$_; $c2++) {
-		printf $fmt[$c2], $_->[$c2];
-	}
+for my $l (0 .. $#out) {
+    $_ = $out[$l];
+    for (my $c2 = 0; $c2 < @$_; $c2++) {
+        # printf columns don't know about escape codes, need to pad manually.
+        print $_->[$c2], ' ' x ($maxw[$c2] - length($out_plain[$l][$c2]));
+    }
 	print "\n";
 }
