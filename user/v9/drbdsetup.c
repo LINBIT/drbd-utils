@@ -332,6 +332,7 @@ struct option events_cmd_options[] = {
 	{ "timestamps", no_argument, 0, 'T' },
 	{ "statistics", no_argument, 0, 's' },
 	{ "now", no_argument, 0, 'n' },
+	{ "color", optional_argument, 0, 'c' },
 	{ }
 };
 
@@ -1519,6 +1520,19 @@ static bool update_timeouts(struct peer_devices_list *peer_devices, int elapsed)
 	return all_expired;
 }
 
+static bool parse_color_argument(void)
+{
+	if (!optarg || !strcmp(optarg, "always"))
+		opt_color = ALWAYS_COLOR;
+	else if (!strcmp(optarg, "never"))
+		opt_color = NEVER_COLOR;
+	else if (!strcmp(optarg, "auto"))
+		opt_color = AUTO_COLOR;
+	else
+		return 0;
+	return 1;
+}
+
 static bool opt_now;
 static bool opt_verbose;
 static bool opt_statistics;
@@ -1878,6 +1892,11 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 
 		case 'T':
 			opt_timestamps = true;
+			break;
+
+		case 'c':
+			if (!parse_color_argument())
+				print_usage_and_exit("unknown --color argument");
 			break;
 		}
 	}
@@ -2474,13 +2493,7 @@ static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
 			opt_statistics = true;
 			break;
 		case 'c':
-			if (!optarg || !strcmp(optarg, "always"))
-				opt_color = ALWAYS_COLOR;
-			else if (!strcmp(optarg, "never"))
-				opt_color = NEVER_COLOR;
-			else if (!strcmp(optarg, "auto"))
-				opt_color = AUTO_COLOR;
-			else
+			if (!parse_color_argument())
 				print_usage_and_exit("unknown --color argument");
 			break;
 		}
@@ -3420,8 +3433,8 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 			}
 			old = update_info(&key, &new, sizeof(new));
 			if (!old || new.i.res_role != old->i.res_role)
-				printf(" role:%s",
-				       drbd_role_str(new.i.res_role));
+				printf(" role:%s%s%s",
+						ROLE_COLOR_STRING(new.i.res_role, 1));
 			if (!old ||
 			    new.i.res_susp != old->i.res_susp ||
 			    new.i.res_susp_nod != old->i.res_susp_nod ||
@@ -3454,8 +3467,8 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 			}
 			old = update_info(&key, &new, sizeof(new));
 			if (!old || new.i.dev_disk_state != old->i.dev_disk_state)
-				printf(" disk:%s",
-				       drbd_disk_str(new.i.dev_disk_state));
+				printf(" disk:%s%s%s",
+						DISK_COLOR_STRING(new.i.dev_disk_state, 1));
 			if (opt_statistics) {
 				if (device_statistics_from_attrs(&new.s, info)) {
 					dbg(1, "device statistics missing\n");
@@ -3483,12 +3496,12 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 			old = update_info(&key, &new, sizeof(new));
 			if (!old ||
 			    new.i.conn_connection_state != old->i.conn_connection_state)
-				printf(" connection:%s",
-				       drbd_conn_str(new.i.conn_connection_state));
+				printf(" connection:%s%s%s",
+						CONN_COLOR_STRING(new.i.conn_connection_state));
 			if (!old ||
 			    new.i.conn_role != old->i.conn_role)
-				printf(" role:%s",
-				       drbd_role_str(new.i.conn_role));
+				printf(" role:%s%s%s",
+						ROLE_COLOR_STRING(new.i.conn_role, 0));
 			if (opt_statistics) {
 				if (connection_statistics_from_attrs(&new.s, info)) {
 					dbg(1, "connection statistics missing\n");
@@ -3515,11 +3528,11 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 			}
 			old = update_info(&key, &new, sizeof(new));
 			if (!old || new.i.peer_repl_state != old->i.peer_repl_state)
-				printf(" replication:%s",
-				       drbd_repl_str(new.i.peer_repl_state));
+				printf(" replication:%s%s%s",
+						REPL_COLOR_STRING(new.i.peer_repl_state));
 			if (!old || new.i.peer_disk_state != old->i.peer_disk_state)
-				printf(" peer-disk:%s",
-				       drbd_disk_str(new.i.peer_disk_state));
+				printf(" peer-disk:%s%s%s",
+						DISK_COLOR_STRING(new.i.peer_disk_state, 0));
 			if (!old ||
 			    new.i.peer_resync_susp_user != old->i.peer_resync_susp_user ||
 			    new.i.peer_resync_susp_peer != old->i.peer_resync_susp_peer ||
