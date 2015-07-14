@@ -100,6 +100,7 @@ fencing			{ DP; CP; return TK_DISK_OPTION;	}
 max-bio-bvecs		{ DP; CP; return TK_DISK_OPTION;	}
 disk-timeout		{ DP; CP; return TK_DISK_OPTION;	}
 read-balancing		{ DP; CP; return TK_DISK_OPTION;	}
+rs-discard-granularity	{ DP; CP; return TK_DISK_OPTION;	}
 use-bmbv		{ DP; CP; return TK_DISK_FLAG;		}
 disk-barrier		{ DP; CP; return TK_DISK_FLAG;		}
 disk-flushes		{ DP; CP; return TK_DISK_FLAG;		}

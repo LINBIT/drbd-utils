@@ -894,7 +894,9 @@ const char *read_balancing_map[] = {
 	  .unit = "bytes/second" },							\
 	{ "disk-timeout", NUMERIC(disk_timeout,	DISK_TIMEOUT),				\
 	  .unit = "1/10 seconds" },							\
-	{ "read-balancing", ENUM(read_balancing, READ_BALANCING) }			\
+	{ "read-balancing", ENUM(read_balancing, READ_BALANCING) },			\
+	{ "rs-discard-granularity",							\
+	  NUMERIC(rs_discard_granularity, RS_DISCARD_GRANULARITY) }			\
 
 #define CHANGEABLE_NET_OPTIONS								\
 	{ "protocol", ENUM_NOCASE(wire_protocol, PROTOCOL) },				\
