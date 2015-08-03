@@ -263,15 +263,15 @@ static void dump_connection(struct connection *conn)
 		} else {
 			printI("host %s", ha->name);
 			if (ha->parsed_address || (verbose && ha->address.addr))
-				dump_address(" address", &ha->address,
-					     ha->proxy ? "\n" : ";\n");
+				dump_address(" address", &ha->address, "");
 			else if (ha->parsed_port)
-				printf(" port %s%s\n", ha->address.port,
-					ha->proxy ? "" : ";");
+				printf(" port %s", ha->address.port);
 		}
 
 		if (ha->proxy)
-			dump_proxy_info("via ", ha->proxy);
+			dump_proxy_info(" via ", ha->proxy);
+		else
+			printf(";\n");
 	}
 
 	dump_options("net", &conn->net_options);
