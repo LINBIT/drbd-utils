@@ -1451,9 +1451,76 @@ static int adm_forget_peer(const struct cfg_ctx *ctx)
 static int adm_khelper(const struct cfg_ctx *ctx)
 {
 	struct d_resource *res = ctx->res;
+	struct d_volume *vol = ctx->vol;
 	int rv = 0;
 	char *sh_cmd;
+	char minor_string[8];
+	char volume_string[8];
 	char *argv[] = { "/bin/sh", "-c", NULL, NULL };
+
+	setenv("DRBD_CONF", config_save, 1);
+	setenv("DRBD_RESOURCE", res->name, 1);
+
+	if (vol) {
+		snprintf(minor_string, sizeof(minor_string), "%u", vol->device_minor);
+		snprintf(volume_string, sizeof(volume_string), "%u", vol->vnr);
+		setenv("DRBD_MINOR", minor_string, 1);
+		setenv("DRBD_VOLUME", volume_string, 1);
+		setenv("DRBD_LL_DISK", shell_escape(vol->disk), 1);
+	} else {
+		char *minor_list;
+		char *volume_list;
+		char *ll_list;
+		char *separator = "";
+		char *pos_minor;
+		char *pos_volume;
+		char *pos_ll;
+		int volumes = 0;
+		int minor_len, volume_len, ll_len = 0;
+		int n;
+
+		for_each_volume(vol, &res->me->volumes) {
+			volumes++;
+			ll_len += strlen(shell_escape(vol->disk)) + 1;
+		}
+
+		/* max minor number is 2**20 - 1, which is 7 decimal digits.
+		 * plus separator respective trailing zero. */
+		minor_len = volumes * 8 + 1;
+		volume_len = minor_len;
+		minor_list = alloca(minor_len);
+		volume_list = alloca(volume_len);
+		ll_list = alloca(ll_len);
+
+		pos_minor = minor_list;
+		pos_volume = volume_list;
+		pos_ll = ll_list;
+		for_each_volume(vol, &res->me->volumes) {
+#define append(name, fmt, v) do {						\
+			n = snprintf(pos_ ## name, name ## _len, "%s" fmt,	\
+					separator, v);				\
+			if (n >= name ## _len) {				\
+				/* "can not happen" */				\
+				err("buffer too small when generating the "	\
+					#name " list\n");			\
+				abort();					\
+				break;						\
+			}							\
+			name ## _len -= n;					\
+			pos_ ## name += n;					\
+			} while (0)
+
+			append(minor, "%d", vol->device_minor);
+			append(volume, "%d", vol->vnr);
+			append(ll, "%s", shell_escape(vol->disk));
+
+#undef append
+			separator = " ";
+		}
+		setenv("DRBD_MINOR", minor_list, 1);
+		setenv("DRBD_VOLUME", volume_list, 1);
+		setenv("DRBD_LL_DISK", ll_list, 1);
+	}
 
 	if ((sh_cmd = get_opt_val(&res->handlers, ctx->cmd->name, NULL))) {
 		argv[2] = sh_cmd;
