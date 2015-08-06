@@ -62,13 +62,7 @@
     <title>Commands</title>
 
     <variablelist>
-      <!-- FIXME: How to set variablelist.term.break.after and
-	   variablelist.term.separator so that commands are put on separate
-	   lines instead of comma separated?
-      -->
       <varlistentry>
-	<?dbfo variablelist.term.break.after="1" ?>
-	<?dbfo variablelist.term.separator="" ?>
 	<xi:include href="drbdsetup_attach.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
 	<!-- Attach a lower-level device to an existing replicated device. -->
 	<xi:include href="drbdsetup_disk-options.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
