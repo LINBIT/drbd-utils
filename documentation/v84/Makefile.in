@@ -54,7 +54,6 @@ MANPAGES       := drbdsetup.8 drbd.conf.5 drbd.8 drbdadm.8 drbdmeta.8
 ifeq ($(WITH_HEARTBEAT),yes)
 MANPAGES += drbddisk.8
 endif
-SOURCES        := $(wildcard *.xml)
 
 STYLESHEET_PREFIX ?= http://docbook.sourceforge.net/release/xsl/current
 MANPAGES_STYLESHEET ?= $(STYLESHEET_PREFIX)/manpages/docbook.xsl
@@ -73,8 +72,8 @@ DRBDSETUP_CMDS += attach connect disk-options net-options resource-options
 DRBDSETUP_CMDS += disconnect detach primary secondary verify invalidate invalidate-remote
 DRBDSETUP_CMDS += down wait-connect wait-sync role cstate dstate
 DRBDSETUP_CMDS += resize check-resize pause-sync resume-sync
-DRBDSETUP_CMDS += outdate show-gi get-gi show events
-DRBDSETUP_CMDS += suspend-io resume-io new-current-uuid
+DRBDSETUP_CMDS += outdate show-gi get-gi show events events2
+DRBDSETUP_CMDS += status suspend-io resume-io new-current-uuid
 
 make_doc := $(shell $(XSLTPROC)				\
 	$(XSLTPROC_MANPAGES_OPTIONS)			\
@@ -90,6 +89,8 @@ endif
 clean:
 	@echo "To clean the documentation: make doc-clean"
 
+.PHONY: all clean doc man doc-clean distclean
+.PHONY: install uninstall html pdf ps
 ifeq ($(WITH_84_SUPPORT),yes)
 doc:	man
 else
@@ -124,10 +125,23 @@ doc-clean: distclean
 .PHONY: FORCE
 FORCE:
 
-drbdsetup_xml-help_%.xml: ../../user/v84/drbdsetup.o
+# Don't try to re-make files tracked in git
+FILES_IN_GIT := # $(shell git ls-files)
+FILES_IN_GIT += Makefile.in drbd.conf.xml drbd.xml drbdadm.xml drbddisk.xml
+FILES_IN_GIT += drbdmeta.xml drbdsetup.xml xml-usage-to-docbook.xsl
+$(FILES_IN_GIT): ;
+
+
+drbdsetup_X.xml := $(patsubst %,drbdsetup_%.xml,$(DRBDSETUP_CMDS))
+drbdsetup_xml-help_X.xml := $(patsubst %,drbdsetup_xml-help_%.xml,$(DRBDSETUP_CMDS))
+
+$(drbdsetup_xml-help_X.xml): ../../user/v84/drbdsetup.o
+$(drbdsetup_X.xml): xml-usage-to-docbook.xsl
+
+drbdsetup_xml-help_%.xml:
 	../../user/v84/drbdsetup-84 xml-help $* > $@
 
-drbdsetup_%.xml: drbdsetup_xml-help_%.xml xml-usage-to-docbook.xsl
+drbdsetup_%.xml: drbdsetup_xml-help_%.xml
 	$(XSLTPROC) -o $@ xml-usage-to-docbook.xsl $<
 
 distclean:
@@ -162,10 +176,10 @@ ifeq ($(WITH_84_SUPPORT),yes)
 	done
 endif
 
-html:	$(SOURCES:.xml=.html)
+html:	$(MANPAGES:.8=.html)
 
-pdf:	$(SOURCES:.xml=.pdf)
+pdf:	$(MANPAGES:.8=.pdf)
 
-ps:	$(SOURCES:.xml=.ps)
+ps:	$(MANPAGES:.8=.ps)
 
-drbdsetup.8: drbdsetup.xml $(patsubst %,drbdsetup_%.xml,$(DRBDSETUP_CMDS))
+drbdsetup.8: drbdsetup.xml $(drbdsetup_X.xml)

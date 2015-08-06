@@ -49,7 +49,6 @@ CREATE_MAN_LINK ?= yes
 
 MANPAGES       := drbdsetup.8 drbd.conf.5 drbd.8 drbdadm.8 drbdmeta.8
 MANPAGES       += drbd-overview.8
-SOURCES        := $(wildcard *.xml)
 
 STYLESHEET_PREFIX ?= http://docbook.sourceforge.net/release/xsl/current
 MANPAGES_STYLESHEET ?= $(STYLESHEET_PREFIX)/manpages/docbook.xsl
@@ -88,12 +87,15 @@ endif
 clean:
 	@echo "To clean the documentation: make doc-clean"
 
+.PHONY: all clean doc man doc-clean distclean
+.PHONY: install uninstall html pdf ps
 doc:	man
 ifeq ($(WITH_84_SUPPORT),yes)
 MAN_LINK=8.4
 else
 MAN_LINK=9.0
 endif
+
 
 doc-clean: distclean
 
@@ -122,10 +124,24 @@ doc-clean: distclean
 .PHONY: FORCE
 FORCE:
 
-drbdsetup_xml-help_%.xml: ../../user/v9/drbdsetup.o
+# Don't try to re-make files tracked in git
+FILES_IN_GIT := # $(shell git ls-files)
+FILES_IN_GIT += Makefile.in drbd-overview.xml drbd.conf.xml.in drbd.conf.xsl
+FILES_IN_GIT += drbd.xml drbdadm.xml drbdmeta.xml drbdsetup-options.xml
+FILES_IN_GIT += drbdsetup.xml.in drbdsetup.xsl xml-usage-to-docbook.xsl
+$(FILES_IN_GIT): ;
+
+
+drbdsetup_X.xml := $(patsubst %,drbdsetup_%.xml,$(DRBDSETUP_CMDS))
+drbdsetup_xml-help_X.xml := $(patsubst %,drbdsetup_xml-help_%.xml,$(DRBDSETUP_CMDS))
+
+$(drbdsetup_xml-help_X.xml): ../../user/v9/drbdsetup.o
+$(drbdsetup_X.xml): xml-usage-to-docbook.xsl
+
+drbdsetup_xml-help_%.xml:
 	../../user/v9/drbdsetup xml-help $* > $@
 
-drbdsetup_%.xml: drbdsetup_xml-help_%.xml xml-usage-to-docbook.xsl
+drbdsetup_%.xml: drbdsetup_xml-help_%.xml
 	$(XSLTPROC) -o $@ xml-usage-to-docbook.xsl $<
 
 drbd.conf.xml: drbd.conf.xml.in drbd.conf.xsl drbdsetup-options.xml
@@ -169,10 +185,10 @@ uninstall:
 		rm -vf $(DESTDIR)$(mandir)/man$$s/$$f ; \
 	done
 
-html:	$(SOURCES:.xml=.html)
+html:	$(MANPAGES:.8=.html)
 
-pdf:	$(SOURCES:.xml=.pdf)
+pdf:	$(MANPAGES:.8=.pdf)
 
-ps:	$(SOURCES:.xml=.ps)
+ps:	$(MANPAGES:.8=.ps)
 
-drbdsetup.8: drbdsetup.xml $(patsubst %,drbdsetup_%.xml,$(DRBDSETUP_CMDS))
+drbdsetup.8: drbdsetup.xml $(drbdsetup_X.xml)
