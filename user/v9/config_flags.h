@@ -51,6 +51,7 @@ struct field_def {
 	bool argument_is_optional;
 	bool checked_in_postparse; /* Do not check in drbdadm_parse.c
 				      It gets checked and converted later*/
+	bool implicit_clamp;
 	const char *unit;
 };
 

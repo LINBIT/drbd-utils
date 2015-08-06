@@ -312,11 +312,21 @@ static enum check_codes numeric_check(struct field_def *field, const char *value
 	unsigned long long l;
 
 	e = new_strtoll(value, field->u.n.scale, &l);
-
-	return  e != MSE_OK ? CC_NOT_A_NUMBER :
-		l < field->u.n.min ? CC_TOO_SMALL :
-		l > field->u.n.max ? CC_TOO_BIG :
-		CC_OK;
+	if (e != MSE_OK)
+		return CC_NOT_A_NUMBER;
+	if (l < field->u.n.min) {
+		if (field->implicit_clamp)
+			l = field->u.n.min;
+		else
+			return CC_TOO_SMALL;
+	}
+	if (l > field->u.n.max) {
+		if (field->implicit_clamp)
+			l = field->u.n.max;
+		else
+			return CC_TOO_BIG;
+	}
+	return CC_OK;
 }
 
 struct field_class fc_numeric = {
@@ -649,7 +659,7 @@ const char *read_balancing_map[] = {
 	{ "md-flushes", BOOLEAN(md_flushes, MD_FLUSHES) },				\
 	{ "unplug-watermark", NUMERIC(unplug_watermark, UNPLUG_WATERMARK) },		\
 	{ "resync-after", NUMERIC(resync_after, MINOR_NUMBER), .checked_in_postparse = true}, \
-	{ "al-extents", NUMERIC(al_extents, AL_EXTENTS) },				\
+	{ "al-extents", NUMERIC(al_extents, AL_EXTENTS), .implicit_clamp = true, },	\
 	{ "al-updates", BOOLEAN(al_updates, AL_UPDATES) },				\
 	{ "disk-timeout", NUMERIC(disk_timeout,	DISK_TIMEOUT),				\
 	  .unit = "1/10 seconds" },							\
