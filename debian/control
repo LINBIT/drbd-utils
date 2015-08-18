@@ -2,8 +2,13 @@ Source: drbd-utils
 Section: admin
 Priority: extra
 Maintainer: DRBD dev <drbd-dev@lists.linbit.com>
-Uploaders: Philipp Reisner <philipp.reisner@linbit.com>, Lars Ellenberg <lars.ellenberg@linbit.com>
-Build-Depends: debhelper (>= 7), flex, xsltproc, docbook-xsl, dh-systemd
+Uploaders: Philipp Reisner <philipp.reisner@linbit.com>,
+           Lars Ellenberg <lars.ellenberg@linbit.com>
+Build-Depends: debhelper (>= 7),
+               dh-systemd,
+               docbook-xsl,
+               flex,
+               xsltproc
 Standards-Version: 3.9.5
 Homepage: http://www.drbd.org/
 Vcs-Browser: http://git.linbit.com/drbd-utils.git/
@@ -11,11 +16,14 @@ Vcs-Git: git://git.linbit.com/drbd-utils.git/
 
 Package: drbd-utils
 Architecture: linux-any
-Depends: debconf (>= 0.5), ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}
+Depends: debconf (>= 0.5),
+         ${misc:Depends},
+         ${perl:Depends},
+         ${shlibs:Depends}
 Breaks: drbd8-utils (<< 2:8.9.0)
 Replaces: drbd8-utils (<< 2:8.9.0)
 Suggests: heartbeat
-Recommends: heirloom-mailx|mailx
+Recommends: heirloom-mailx | mailx
 Description: RAID 1 over TCP/IP for Linux (user utilities)
  DRBD is a block device which is designed to build high availability
  clusters by providing a virtual shared device which keeps disks in
@@ -29,6 +37,7 @@ Description: RAID 1 over TCP/IP for Linux (user utilities)
 Package: drbd8-utils
 # build process will override epoch to 2:
 Architecture: linux-any
-Depends: drbd-utils (>= 8.9.0), ${misc:Depends}
+Depends: drbd-utils (>= 8.9.0),
+         ${misc:Depends}
 Description: transitional dummy package
  This is a transitional dummy package for drbd-utils. It can be removed safely.
