@@ -495,7 +495,8 @@ static void pe_field(struct field_def *field, enum check_codes e, char *value)
 	if (e == CC_NOT_AN_ENUM)
 		pe_valid_enums(field->u.e.map, field->u.e.size);
 
-	exit(E_CONFIG_INVALID);
+	if (config_valid <= 1)
+		config_valid = 0;
 }
 
 static void pe_options(struct context_def *options_def)
