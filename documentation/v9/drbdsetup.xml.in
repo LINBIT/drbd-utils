@@ -98,8 +98,6 @@
 	  <variablelist>
 	    <pick_drbdsetup_option name="al-extents"/>
 	    <pick_drbdsetup_option name="al-updates"/>
-	    <pick_drbdsetup_option name="c-delay-target"/>
-	    <pick_drbdsetup_option name="c-min-rate"/>
 	    <pick_drbdsetup_option name="disk-barrier"/>
 	    <pick_drbdsetup_option name="disk-timeout"/>
 	    <pick_drbdsetup_option name="fencing"/>
@@ -107,10 +105,36 @@
 	    <pick_drbdsetup_option name="on-io-error"/>
 	    <pick_drbdsetup_option name="read-balancing"/>
 	    <pick_drbdsetup_option name="resync-after"/>
-	    <pick_drbdsetup_option name="resync-rate"/>
 	    <pick_drbdsetup_option name="size"/> <!-- only for attach, not for disk-options? -->
           </variablelist>
         </listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_peer-device-options.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<!-- Remember the current size of a lower-level device. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>peer-device-options</secondary>
+	  </indexterm>
+
+	  <para>These are options that affect the <replaceable>peer</replaceable>'s device.
+	  </para>
+
+
+	  <variablelist>
+	    <pick_drbdsetup_option name="c-delay-target"/>
+	    <pick_drbdsetup_option name="c-fill-target"/>
+	    <pick_drbdsetup_option name="c-max-rate"/>
+	    <pick_drbdsetup_option name="c-min-rate"/>
+	    <pick_drbdsetup_option name="c-plan-ahead"/>
+	    <pick_drbdsetup_option name="resync-rate"/>
+	 </variablelist>
+
+	</listitem>
       </varlistentry>
 
       <varlistentry>
