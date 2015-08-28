@@ -1565,33 +1565,34 @@ static struct connection *parse_connection(enum pr_flags flags)
 
 void parse_connection_mesh(struct d_resource *res, enum pr_flags flags)
 {
+	struct mesh *mesh;
 	int token;
 
 	EXP('{');
+	mesh = calloc(1, sizeof(struct mesh));
+	STAILQ_INIT(&mesh->hosts);
+	STAILQ_INIT(&mesh->net_options);
+
 	while (1) {
 		token = yylex();
 		switch(token) {
 		case TK_HOSTS:
-			if (!STAILQ_EMPTY(&res->mesh)) {
-				err("%s:%d: only one 'connection-mesh' keyword is allowed\n",
-				    config_file, fline);
-				config_valid = 0;
-			}
-			parse_hosts(&res->mesh, ';');
+			parse_hosts(&mesh->hosts, ';');
 			break;
 		case TK_NET:
-			if (!STAILQ_EMPTY(&res->mesh_net_options)) {
+			if (!STAILQ_EMPTY(&mesh->net_options)) {
 				err("%s:%d: only one 'net' section allowed\n",
 				    config_file, fline);
 				config_valid = 0;
 			}
 			EXP('{');
-			res->mesh_net_options =
+			mesh->net_options =
 				__parse_options(&show_net_options_ctx,
 						&net_delegate,
 						(void *)flags);
 			break;
 		case '}':
+			insert_tail(&res->meshes, mesh);
 			return;
 		default:
 			pe_expected_got( "hosts | net | }", token);
@@ -1623,8 +1624,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 	STAILQ_INIT(&res->handlers);
 	STAILQ_INIT(&res->proxy_options);
 	STAILQ_INIT(&res->proxy_plugins);
-	STAILQ_INIT(&res->mesh);
-	STAILQ_INIT(&res->mesh_net_options);
+	STAILQ_INIT(&res->meshes);
 	res->name = res_name;
 	res->config_file = config_save;
 	res->start_line = line;

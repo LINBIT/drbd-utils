@@ -502,20 +502,21 @@ static void fake_startup_options(struct d_resource *res)
 
 static void dump_mesh(struct d_resource *res)
 {
-	struct d_name *h;
+	struct mesh *mesh;
 
-	if (STAILQ_EMPTY(&res->mesh))
-		return;
+	STAILQ_FOREACH(mesh, &res->meshes, link) {
+		struct d_name *h;
 
-	printI("connection-mesh {\n");
-	++indent;
-	printI("hosts");
-	STAILQ_FOREACH(h, &res->mesh, link)
-		printf(" %s", h->name);
-	printf(";\n");
-	dump_options("net", &res->mesh_net_options);
-	--indent;
-	printI("}\n");
+		printI("connection-mesh {\n");
+		++indent;
+		printI("hosts");
+		STAILQ_FOREACH(h, &mesh->hosts, link)
+			printf(" %s", h->name);
+		printf(";\n");
+		dump_options("net", &mesh->net_options);
+		--indent;
+		printI("}\n");
+	}
 }
 
 int adm_dump(const struct cfg_ctx *ctx)

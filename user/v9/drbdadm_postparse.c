@@ -700,14 +700,14 @@ static struct d_host_info *find_host_info_or_invalid(struct d_resource *res, cha
 	return host_info;
 }
 
-static void create_connections_from_mesh(struct d_resource *res)
+static void create_connections_from_mesh(struct d_resource *res, struct mesh *mesh)
 {
 	struct d_name *hname1, *hname2;
 	struct d_host_info *hi1, *hi2;
 	struct hname_address *ha;
 	struct connection *conn;
 
-	for_each_host(hname1, &res->mesh) {
+	for_each_host(hname1, &mesh->hosts) {
 		hi1 = find_host_info_or_invalid(res, hname1->name);
 		if (!hi1)
 			return;
@@ -723,7 +723,7 @@ static void create_connections_from_mesh(struct d_resource *res)
 			conn = alloc_connection();
 			conn->implicit = 1;
 
-			expand_opts(&res->mesh_net_options, &conn->net_options);
+			expand_opts(&mesh->net_options, &conn->net_options);
 
 			ha = alloc_hname_address();
 			ha->host_info = hi1;
@@ -920,6 +920,7 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 
 	for_each_resource(res, resources) {
 		struct d_host_info *host;
+		struct mesh *mesh;
 
 		if (!(flags & DRBDSETUP_SHOW)) {
 			for_each_connection(con, &res->connections)
@@ -930,7 +931,8 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 		if (!config_valid)
 			continue;
 
-		create_connections_from_mesh(res);
+		STAILQ_FOREACH(mesh, &res->meshes, link)
+			create_connections_from_mesh(res, mesh);
 		create_implicit_connections(res);
 		for_each_connection(con, &res->connections)
 			set_host_info_in_host_address_pairs(res, con);

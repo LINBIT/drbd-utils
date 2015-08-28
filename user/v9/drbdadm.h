@@ -177,6 +177,14 @@ struct connection
 };
 STAILQ_HEAD(connections, connection);
 
+struct mesh
+{
+	struct names hosts; /* parsed here. Expanded to connections in post_parse */
+	struct options net_options;
+	STAILQ_ENTRY(mesh) link;
+};
+STAILQ_HEAD(meshes, mesh);
+
 struct d_resource
 {
 	char* name;
@@ -188,8 +196,7 @@ struct d_resource
 	struct d_host_info* me;
 	struct hosts all_hosts;
 
-	struct names mesh; /* parsed here. Expanded to connections in post_parse */
-	struct options mesh_net_options;
+	struct meshes meshes;
 
 	struct options net_options; /* parsed here, inherited to connections */
 	struct options disk_options;
