@@ -264,3 +264,36 @@ resource drbd_9_mesh {
 		}
 	}
 }
+
+resource drbd_9_multi_path {
+	volume 0 {
+	       device minor 12;
+	       disk /dev/foo/bar3;
+	       meta-disk internal;
+	}
+
+	on alpha {
+		node-id 0;
+	}
+	on bravo {
+		node-id 1;
+	}
+
+	connection {
+		path {
+			host alpha address 192.168.41.1:7900;
+			host bravo address 192.168.41.2:7900;
+		}
+		path {
+			host alpha address 192.168.42.1:7900;
+			host bravo address 192.168.42.2:7900;
+		}
+		net {
+			transport rdma;
+			sndbuf-size 10M;
+			rcvbuf-size 10M;
+			max-buffers 20000;
+			protocol C;
+		}
+	}
+}

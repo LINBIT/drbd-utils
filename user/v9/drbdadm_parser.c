@@ -1525,6 +1525,37 @@ static struct path *path0(struct connection *conn)
 	return path;
 }
 
+static struct path *parse_path()
+{
+	struct path *path;
+	int hosts = 0, token;
+
+	path = alloc_path();
+	path->config_line = line;
+
+	EXP('{');
+	while (1) {
+		token = yylex();
+		switch(token) {
+		case TK_ADDRESS:
+		case TK_HOST:
+		case TK__THIS_HOST:
+		case TK__REMOTE_HOST:
+			insert_tail(&path->hname_address_pairs, parse_hname_address_pair(path, token));
+			if (++hosts >= 3) {
+				err("%s:%d: only two 'host' keywords per path allowed\n",
+				    config_file, fline);
+				config_valid = 0;
+			}
+			break;
+		case '}':
+			return path;
+		default:
+			pe_expected_got( "host | }", token);
+		}
+	}
+}
+
 static struct connection *parse_connection(enum pr_flags flags)
 {
 	struct connection *conn;
@@ -1590,6 +1621,9 @@ static struct connection *parse_connection(enum pr_flags flags)
 		case TK__IS_STANDALONE:
 			conn->is_standalone = 1;
 			EXP(';');
+			break;
+		case TK_PATH:
+			insert_tail(&conn->paths, parse_path());
 			break;
 		case '}':
 			return conn;

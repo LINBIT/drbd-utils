@@ -95,6 +95,7 @@ enum yytokentype {
 	TK_HOSTS,
 	TK_VIA,
 	TK_TEMPLATE_FILE,
+	TK_PATH,
 };
 
 typedef struct YYSTYPE {
