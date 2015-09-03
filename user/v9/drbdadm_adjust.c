@@ -199,6 +199,39 @@ static int addr_equal(struct d_address *a1, struct d_address *a2)
 		!strcmp(a1->af, a2->af);
 }
 
+static struct path *find_path_by_addrs(struct connection *conn, struct path *pattern)
+{
+	struct path *path;
+
+	for_each_path(path, &conn->paths) {
+		if (addr_equal(path->my_address, pattern->my_address) &&
+		    addr_equal(path->connect_to, pattern->connect_to))
+			return path;
+	}
+
+	return NULL;
+}
+
+static int paths_equal(struct connection *configured_conn, struct connection *running_conn)
+{
+	struct path *configured_path, *running_path;
+
+	for_each_path(configured_path, &configured_conn->paths) {
+
+		running_path = find_path_by_addrs(running_conn, configured_path);
+		if (!running_path)
+			return 0;
+		running_path->adj_seen = 1;
+	}
+
+	for_each_path(running_path, &running_conn->paths) {
+		if (!running_path->adj_seen)
+			return 0;
+	}
+
+	return 1;
+}
+
 static struct connection *matching_conn(struct connection *pattern, struct connections *pool)
 {
 	struct connection *conn;
@@ -324,6 +357,8 @@ static int proxy_reconf(const struct cfg_ctx *ctx, struct connection *running_co
 {
 	int reconn = 0;
 	struct connection *conn = ctx->conn;
+	struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
+	struct path *running_path = STAILQ_FIRST(&running_conn->paths); /* multiple paths via proxy, later! */
 	struct d_option* res_o, *run_o;
 	unsigned long long v1, v2, minimum;
 	char *plugin_changes[MAX_PLUGINS], *cp, *conn_name;
@@ -338,8 +373,8 @@ static int proxy_reconf(const struct cfg_ctx *ctx, struct connection *running_co
 	if (!running_conn)
 		goto redo_whole_conn;
 
-	res_o = find_opt(&conn->my_proxy->options, "memlimit");
-	run_o = find_opt(&running_conn->my_proxy->options, "memlimit");
+	res_o = find_opt(&path->my_proxy->options, "memlimit");
+	run_o = find_opt(&running_path->my_proxy->options, "memlimit");
 	v1 = res_o ? m_strtoll(res_o->value, 1) : 0;
 	v2 = run_o ? m_strtoll(run_o->value, 1) : 0;
 	minimum = v1 < v2 ? v1 : v2;
@@ -362,8 +397,8 @@ redo_whole_conn:
 	}
 
 
-	res_o = STAILQ_FIRST(&conn->my_proxy->plugins);
-	run_o = STAILQ_FIRST(&running_conn->my_proxy->plugins);
+	res_o = STAILQ_FIRST(&path->my_proxy->plugins);
+	run_o = STAILQ_FIRST(&running_path->my_proxy->plugins);
 	used = 0;
 	conn_name = proxy_connection_name(ctx->res, running_conn);
 	for(i=0; i<MAX_PLUGINS; i++)
@@ -640,8 +675,8 @@ void schedule_peer_device_options(const struct cfg_ctx *ctx)
 	} else if (!tmp_ctx.conn) {
 		STAILQ_FOREACH(peer_device, &tmp_ctx.vol->peer_devices, volume_link) {
 
-			if (!peer_device->connection->my_address || !peer_device->connection->connect_to)
-				continue;
+// ö			if (!peer_device->connection->my_address || !peer_device->connection->connect_to)
+//ö				continue;
 			if (STAILQ_EMPTY(&peer_device->pd_options))
 				continue;
 
@@ -717,13 +752,17 @@ int adm_adjust(const struct cfg_ctx *ctx)
 	if (running) {
 		for_each_connection(conn, &running->connections) {
 			struct connection *configured_conn = NULL;
+			struct path *configured_path;
+			struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
 			struct cfg_ctx tmp_ctx = { .res = ctx->res };
 			char *show_conn;
 			int r;
 
 			configured_conn = matching_conn(conn, &ctx->res->connections);
-			if (!configured_conn ||
-			    !configured_conn->peer_proxy || !configured_conn->peer_proxy)
+			if (!configured_conn)
+				continue;
+			configured_path = STAILQ_FIRST(&configured_conn->paths);
+			if (!configured_path->peer_proxy)
 				continue;
 
 			tmp_ctx.conn = configured_conn;
@@ -741,7 +780,7 @@ int adm_adjust(const struct cfg_ctx *ctx)
 
 			/* actually parse "drbd-proxy-ctl show" output */
 			yyin = m_popen(&pid, argv);
-			r = !parse_proxy_options_section(&conn->my_proxy);
+			r = !parse_proxy_options_section(&path->my_proxy);
 			can_do_proxy &= r;
 			fclose(yyin);
 
@@ -771,6 +810,7 @@ int adm_adjust(const struct cfg_ctx *ctx)
 
 	for_each_connection(conn, &ctx->res->connections) {
 		struct connection *running_conn = NULL;
+		struct path *path;
 		const struct cfg_ctx tmp_ctx = { .res = ctx->res, .conn = conn };
 
 		if (conn->ignore)
@@ -792,17 +832,11 @@ int adm_adjust(const struct cfg_ctx *ctx)
 			if (running_conn->is_standalone)
 				connect = true;
 
-			/* Ensure addresses are equal */
-			if (!running_conn->my_address || !running_conn->connect_to) {
-				new_path = true;
-				connect = true;
-				schedule_peer_device_options(&tmp_ctx);
-			} else if (!(addr_equal(running_conn->my_address, conn->my_address) &&
-				     addr_equal(running_conn->connect_to, conn->connect_to))) {
-
+			if (!paths_equal(conn, running_conn)) {
 				schedule_deferred_cmd(&del_path_cmd, &tmp_ctx, CFG_NET_PREP_DOWN);
 				new_path = true;
 				connect = true;
+				schedule_peer_device_options(&tmp_ctx);
 			}
 
 			if (!opts_equal(oc, conf_o, runn_o)) {
@@ -831,7 +865,8 @@ int adm_adjust(const struct cfg_ctx *ctx)
 			adjust_peer_devices(&tmp_ctx, conn, running_conn);
 		}
 
-		if (conn->my_proxy && can_do_proxy)
+		path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
+		if (path->my_proxy && can_do_proxy)
 			proxy_reconf(ctx, running_conn);
 	}
 

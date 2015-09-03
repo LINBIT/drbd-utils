@@ -242,21 +242,11 @@ static void dump_host_info(struct d_host_info *hi)
 	printI("}\n");
 }
 
-static void dump_connection(struct connection *conn)
+static void dump_hname_address_pairs(struct hname_address_pairs *hname_address_pairs)
 {
 	struct hname_address *ha;
-	struct peer_device *pd;
 
-	if (conn->implicit && !verbose)
-		return;
-
-	printI("connection");
-	if (conn->name)
-		printf(" %s", esc(conn->name));
-	printf(" {\n");
-	++indent;
-
-	STAILQ_FOREACH(ha, &conn->hname_address_pairs, link) {
+	STAILQ_FOREACH(ha, hname_address_pairs, link) {
 		if (ha->by_address || ha->faked_hostname) {
 			dump_address("address", &ha->address,
 				ssprintf("%s# on %s\n", ha->proxy ? " " : "; ", ha->name));
@@ -272,6 +262,34 @@ static void dump_connection(struct connection *conn)
 			dump_proxy_info(" via ", ha->proxy);
 		else
 			printf(";\n");
+	}
+}
+
+static void dump_connection(struct connection *conn)
+{
+	struct peer_device *pd;
+	struct path *path;
+
+	if (conn->implicit && !verbose)
+		return;
+
+	printI("connection");
+	if (conn->name)
+		printf(" %s", esc(conn->name));
+	printf(" {\n");
+	++indent;
+
+	path = STAILQ_FIRST(&conn->paths);
+	if (path->implicit && !verbose) {
+		dump_hname_address_pairs(&path->hname_address_pairs);
+	} else {
+		for_each_path(path, &conn->paths) {
+			printI("path {\n");
+			++indent;
+			dump_hname_address_pairs(&path->hname_address_pairs);
+			--indent;
+			printI("}\n");
+		}
 	}
 
 	dump_options("net", &conn->net_options);
@@ -440,18 +458,11 @@ static void dump_host_info_xml(struct d_host_info *hi)
 	printI("</host>\n");
 }
 
-static void dump_connection_xml(struct connection *conn)
+static void dump_hname_address_pairs_xml(struct hname_address_pairs *hname_address_pairs)
 {
 	struct hname_address *ha;
-	struct peer_device *pd;
 
-	if (conn->name)
-		printI("<connection name=\"%s\">\n", esc_xml(conn->name));
-	else
-		printI("<connection>\n");
-	++indent;
-
-	STAILQ_FOREACH(ha, &conn->hname_address_pairs, link) {
+	STAILQ_FOREACH(ha, hname_address_pairs, link) {
 		printI("<host name=\"%s\">", ha->name);
 		if (ha->proxy) {
 			printf("\n");
@@ -472,6 +483,32 @@ static void dump_connection_xml(struct connection *conn)
 			printI("</host>\n");
 		} else {
 			printf("</host>\n");
+		}
+	}
+}
+
+static void dump_connection_xml(struct connection *conn)
+{
+	struct peer_device *pd;
+	struct path *path;
+
+
+	if (conn->name)
+		printI("<connection name=\"%s\">\n", esc_xml(conn->name));
+	else
+		printI("<connection>\n");
+	++indent;
+
+	path = STAILQ_FIRST(&conn->paths);
+	if (path->implicit && !verbose) {
+		dump_hname_address_pairs_xml(&path->hname_address_pairs);
+	} else {
+		for_each_path(path, &conn->paths) {
+			printI("<path>\n");
+			++indent;
+			dump_hname_address_pairs_xml(&path->hname_address_pairs);
+			--indent;
+			printI("</path>\n");
 		}
 	}
 

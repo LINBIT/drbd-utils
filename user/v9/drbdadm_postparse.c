@@ -136,14 +136,16 @@ static bool generate_implicit_node_id(int *addr_hash, struct d_host_info **host_
 	return true;
 }
 
-static void set_host_info_in_host_address_pairs(struct d_resource *res, struct connection *con)
+static void _set_host_info_in_host_address_pairs(struct d_resource *res,
+						 struct connection *conn,
+						 struct path *path)
 {
 	struct hname_address *ha;
 	struct d_host_info *host_info;
 	int addr_hash[2], i = 0;
 	struct d_host_info *host_info_array[2];
 
-	STAILQ_FOREACH(ha, &con->hname_address_pairs, link) {
+	STAILQ_FOREACH(ha, &path->hname_address_pairs, link) {
 		if (ha->host_info) { /* Implicit connection have that already set. */
 			host_info = ha->host_info;
 			if (i == 2) {
@@ -169,8 +171,8 @@ static void set_host_info_in_host_address_pairs(struct d_resource *res, struct c
 			host_info = find_host_info_by_name(res, ha->name);
 		}
 		if (!host_info && !strcmp(ha->name, "_remote_host")) {
-			if (con->peer)
-				host_info = con->peer; /* With new format we create one for _peer_node_id */
+			if (conn->peer)
+				host_info = conn->peer; /* With new format we create one for _peer_node_id */
 			else
 				continue; /* Old drbdsetup does not houtput a host section */
 		}
@@ -216,7 +218,7 @@ static void set_host_info_in_host_address_pairs(struct d_resource *res, struct c
 		fline = ha->config_line;
 	}
 
-	if (con->implicit && i == 2 && !host_info_array[0]->node_id && !host_info_array[1]->node_id) {
+	if (conn->implicit && i == 2 && !host_info_array[0]->node_id && !host_info_array[1]->node_id) {
 		/* This is drbd-8.3 / drbd-8.4 compatibility, auto created node-id */
 		bool have_node_ids;
 
@@ -226,7 +228,8 @@ static void set_host_info_in_host_address_pairs(struct d_resource *res, struct c
 			/* That might be a config with equal node addresses, since it is
 			  127.0.0.1:xxx with a proxy... */
 			i = 0;
-			STAILQ_FOREACH(ha, &con->hname_address_pairs, link) {
+			path = STAILQ_FIRST(&conn->paths); /* there may only be one */
+			STAILQ_FOREACH(ha, &path->hname_address_pairs, link) {
 				if (!ha->host_info)
 					continue;
 
@@ -246,17 +249,28 @@ static void set_host_info_in_host_address_pairs(struct d_resource *res, struct c
 	}
 }
 
+static void set_host_info_in_host_address_pairs(struct d_resource *res, struct connection *conn)
+{
+	struct path *path;
+
+	for_each_path(path, &conn->paths)
+		_set_host_info_in_host_address_pairs(res, conn, path);
+}
+
 static bool test_proxy_on_host(struct d_resource* res, struct d_host_info *host)
 {
 	struct connection *conn;
+	struct path *path;
 	for_each_connection(conn, &res->connections) {
 		struct hname_address *ha;
 
-		STAILQ_FOREACH(ha, &conn->hname_address_pairs, link) {
-			if (!ha->proxy)
-				continue;
-			if (ha->host_info == host) {
-				return hostname_in_list(hostname, &ha->proxy->on_hosts);
+		for_each_path(path, &conn->paths) {
+			STAILQ_FOREACH(ha, &path->hname_address_pairs, link) {
+				if (!ha->proxy)
+					continue;
+				if (ha->host_info == host) {
+					return hostname_in_list(hostname, &ha->proxy->on_hosts);
+				}
 			}
 		}
 	}
@@ -321,23 +335,26 @@ void set_me_in_resource(struct d_resource* res, int match_on_proxy)
 		return;
 	}
 
-	/* set con->my_address in every connection */
+	/* set con->my_address in every path in every connection */
 	for_each_connection(conn, &res->connections) {
-		struct hname_address *h;
+		struct path *path;
+		struct hname_address *h = NULL;
 
-		STAILQ_FOREACH(h, &conn->hname_address_pairs, link) {
-			if (h->host_info == res->me)
-				break;
-		}
+		for_each_path(path, &conn->paths) {
+			STAILQ_FOREACH(h, &path->hname_address_pairs, link) {
+				if (h->host_info == res->me)
+					break;
+			}
 
-		if (h) {
-			h->used_as_me = 1;
-			if (!conn->my_address)
-				conn->my_address = h->address.addr ? &h->address : &res->me->address;
-			conn->my_proxy = h->proxy;
-		} else {
-			if (!conn->peer) /* Keep w/o addresses form "drbdsetup show" for adjust */
-				conn->ignore = 1;
+			if (h) {
+				h->used_as_me = 1;
+				if (!path->my_address)
+					path->my_address = h->address.addr ? &h->address : &res->me->address;
+				path->my_proxy = h->proxy;
+			} else {
+				if (!conn->peer) /* Keep w/o addresses form "drbdsetup show" for adjust */
+					conn->ignore = 1;
+			}
 		}
 	}
 }
@@ -347,9 +364,9 @@ static void set_peer_in_connection(struct d_resource* res, struct connection *co
 {
 	struct hname_address *host = NULL, *candidate = NULL;
 	struct d_host_info *host_info;
-	int nr_hosts = 0, candidates = 0;
+	struct path *path;
 
-	if (res->ignore || conn->ignore || conn->connect_to || conn->peer)
+	if (res->ignore || conn->ignore)
 		return;
 
 	/* me must be already set */
@@ -361,37 +378,46 @@ static void set_peer_in_connection(struct d_resource* res, struct connection *co
 		exit(E_THINKO);
 	}
 
-	STAILQ_FOREACH(host, &conn->hname_address_pairs, link) {
-		nr_hosts++;
-		if (!host->used_as_me) {
-			candidates++;
-			candidate = host;
-		}
-	}
+	for_each_path(path, &conn->paths) {
+		int nr_hosts = 0, candidates = 0;
 
-	if (nr_hosts == 1) {
-		if (peer_required) {
-			err("%s:%d: in connection in resource %s:\n"
-			    "\tMissing statement 'host <PEER> '.\n",
-			    res->config_file, conn->config_line, res->name);
-			config_valid = 0;
+		STAILQ_FOREACH(host, &path->hname_address_pairs, link) {
+			nr_hosts++;
+			if (!host->used_as_me) {
+				candidates++;
+				candidate = host;
+			}
 		}
+
+		if (nr_hosts < 2) {
+			if (peer_required) {
+				err("%s:%d: in connection in resource %s:\n"
+				    "\tMissing statement 'host <PEER> '.\n",
+				    res->config_file, conn->config_line, res->name);
+				config_valid = 0;
+			}
+			return;
+		}
+
+		if (candidates == 1 && nr_hosts == 2) {
+			if (conn->peer) {
+				host_info = conn->peer;
+			} else {
+				host_info = find_host_info_by_name(res, candidate->name);
+				conn->peer = host_info;
+			}
+			path->peer_address = candidate->address.addr ? &candidate->address : &host_info->address;
+			path->peer_proxy = candidate->proxy;
+			path->connect_to = path->my_proxy ? &path->my_proxy->inside : path->peer_address;
+			continue;
+		}
+
+		err("%s:%d: in connection in resource %s:\n"
+		    "\tBug in set_peer_in_connection()\n",
+		    res->config_file, conn->config_line, res->name);
+		config_valid = 0;
 		return;
 	}
-
-	if (candidates == 1 && nr_hosts == 2) {
-		host_info = find_host_info_by_name(res, candidate->name);
-		conn->peer = host_info;
-		conn->peer_address = candidate->address.addr ? &candidate->address : &host_info->address;
-		conn->peer_proxy = candidate->proxy;
-		conn->connect_to = conn->my_proxy ? &conn->my_proxy->inside : conn->peer_address;
-		return;
-	}
-
-	err("%s:%d: in connection in resource %s:\n"
-	    "\tBug in set_peer_in_connection()\n",
-	    res->config_file, conn->config_line, res->name);
-	config_valid = 0;
 }
 
 void create_implicit_net_options(struct connection *conn)
@@ -417,9 +443,13 @@ void set_peer_in_resource(struct d_resource* res, int peer_required)
 	int peers_addrs_set = 1;
 
 	for_each_connection(conn, &res->connections) {
+		struct path *path;
 		set_peer_in_connection(res, conn, peer_required);
-		if (!conn->peer_address)
-			peers_addrs_set = 0;
+
+		for_each_path(path, &conn->paths) {
+			if (!path->peer_address)
+				peers_addrs_set = 0;
+		}
 		create_implicit_net_options(conn);
 	}
 	res->peers_addrs_set = peers_addrs_set;
@@ -647,6 +677,7 @@ static struct hname_address *alloc_hname_address()
 static void create_implicit_connections(struct d_resource *res)
 {
 	struct connection *conn;
+	struct path *path;
 	struct hname_address *ha;
 	struct d_host_info *host_info;
 	int hosts = 0;
@@ -656,6 +687,9 @@ static void create_implicit_connections(struct d_resource *res)
 
 	conn = alloc_connection();
 	conn->implicit = 1;
+	path = alloc_path();
+	path->implicit = 1;
+	insert_tail(&conn->paths, path);
 
 	for_each_host(host_info, &res->all_hosts) {
 		if (++hosts == 3) {
@@ -676,7 +710,7 @@ static void create_implicit_connections(struct d_resource *res)
 				ha->faked_hostname = 1;
 				ha->parsed_address = 1; /* not true, but makes dump nicer */
 			}
-			STAILQ_INSERT_TAIL(&conn->hname_address_pairs, ha, link);
+			STAILQ_INSERT_TAIL(&path->hname_address_pairs, ha, link);
 		}
 	}
 
@@ -704,8 +738,6 @@ static void create_connections_from_mesh(struct d_resource *res, struct mesh *me
 {
 	struct d_name *hname1, *hname2;
 	struct d_host_info *hi1, *hi2;
-	struct hname_address *ha;
-	struct connection *conn;
 
 	for_each_host(hname1, &mesh->hosts) {
 		hi1 = find_host_info_or_invalid(res, hname1->name);
@@ -713,6 +745,10 @@ static void create_connections_from_mesh(struct d_resource *res, struct mesh *me
 			return;
 		hname2 = STAILQ_NEXT(hname1, link);
 		while (hname2) {
+			struct hname_address *ha;
+			struct connection *conn;
+			struct path *path;
+
 			hi2 = find_host_info_or_invalid(res, hname2->name);
 			if (!hi2)
 				return;
@@ -722,18 +758,21 @@ static void create_connections_from_mesh(struct d_resource *res, struct mesh *me
 
 			conn = alloc_connection();
 			conn->implicit = 1;
+			path = alloc_path();
+			path->implicit = 1;
+			insert_tail(&conn->paths, path);
 
 			expand_opts(&mesh->net_options, &conn->net_options);
 
 			ha = alloc_hname_address();
 			ha->host_info = hi1;
 			ha->name = STAILQ_FIRST(&hi1->on_hosts)->name;
-			STAILQ_INSERT_TAIL(&conn->hname_address_pairs, ha, link);
+			STAILQ_INSERT_TAIL(&path->hname_address_pairs, ha, link);
 
 			ha = alloc_hname_address();
 			ha->host_info = hi2;
 			ha->name = STAILQ_FIRST(&hi2->on_hosts)->name;
-			STAILQ_INSERT_TAIL(&conn->hname_address_pairs, ha, link);
+			STAILQ_INSERT_TAIL(&path->hname_address_pairs, ha, link);
 
 			STAILQ_INSERT_TAIL(&res->connections, conn, link);
 		skip:
@@ -759,15 +798,18 @@ static bool addresses_equal(struct d_address *addr1, struct d_address *addr2)
 static struct hname_address *find_hname_addr_in_res(struct d_resource *res, struct d_address *addr)
 {
 	struct hname_address *ha;
-	struct connection *con;
+	struct connection *conn;
+	struct path *path;
 
-	for_each_connection(con, &res->connections) {
-		STAILQ_FOREACH(ha, &con->hname_address_pairs, link) {
-			struct d_address *addr2;
-			addr2 = ha->address.addr ? &ha->address : &ha->host_info->address;
+	for_each_connection(conn, &res->connections) {
+		for_each_path(path, &conn->paths) {
+			STAILQ_FOREACH(ha, &path->hname_address_pairs, link) {
+				struct d_address *addr2;
+				addr2 = ha->address.addr ? &ha->address : &ha->host_info->address;
 
-			if (addresses_equal(addr, addr2))
-				return ha;
+				if (addresses_equal(addr, addr2))
+					return ha;
+			}
 		}
 	}
 
@@ -782,64 +824,78 @@ static void check_addr_conflict(struct d_resource *res, struct resources *resour
 {
 	struct d_resource *res2;
 	struct hname_address *ha1, *ha2;
-	struct connection *con;
+	struct connection *conn;
 
 	for_each_resource(res2, resources) {
 		if (res2 == res)
 			continue;
 
-		for_each_connection(con, &res->connections) {
-			struct d_address *addr[2];
-			int i = 0;
+		for_each_connection(conn, &res->connections) {
+			struct path *path;
 
-			STAILQ_FOREACH(ha1, &con->hname_address_pairs, link) {
-				addr[i] = ha1->address.addr ? &ha1->address : &ha1->host_info->address;
-				if (addr_scope_local(addr[i]->addr))
-					continue;
+			for_each_path(path, &conn->paths) {
+				struct d_address *addr[2];
+				int i = 0;
 
-				if (ha1->conflicts)
-					continue;
+				STAILQ_FOREACH(ha1, &path->hname_address_pairs, link) {
+					addr[i] = ha1->address.addr ? &ha1->address : &ha1->host_info->address;
+					if (addr_scope_local(addr[i]->addr))
+						continue;
 
-				ha2 = find_hname_addr_in_res(res2, addr[i]);
-				if (!ha2)
-					continue;
+					if (ha1->conflicts)
+						continue;
 
-				if (ha2->conflicts)
-					continue;
+					ha2 = find_hname_addr_in_res(res2, addr[i]);
+					if (!ha2)
+						continue;
 
-				fprintf(stderr, "%s:%d: in resource %s\n"
-					"    %s:%s:%s is also used %s:%d (resource %s)\n",
-					res->config_file, ha1->config_line, res->name,
-					addr[i]->af, addr[i]->addr, addr[i]->port,
-					res2->config_file, ha2->config_line, res2->name);
-				ha2->conflicts = 1;
-				ha1->conflicts = 1;
-				config_valid = 0;
-				i++;
-			}
-			if (i == 2 && addresses_equal(addr[0], addr[1]) && !addr_scope_local(addr[0]->addr)) {
-				err("%s:%d: in resource %s %s:%s:%s is used for both endpoints\n",
-				    res->config_file, con->config_line,
-				    res->name, addr[0]->af, addr[0]->addr,
-				    addr[0]->port);
-				config_valid = 0;
+					if (ha2->conflicts)
+						continue;
+
+					fprintf(stderr, "%s:%d: in resource %s\n"
+						"    %s:%s:%s is also used %s:%d (resource %s)\n",
+						res->config_file, ha1->config_line, res->name,
+						addr[i]->af, addr[i]->addr, addr[i]->port,
+						res2->config_file, ha2->config_line, res2->name);
+					ha2->conflicts = 1;
+					ha1->conflicts = 1;
+					config_valid = 0;
+					i++;
+				}
+				if (i == 2 && addresses_equal(addr[0], addr[1]) &&
+				    !addr_scope_local(addr[0]->addr)) {
+					err("%s:%d: in resource %s %s:%s:%s is used for both endpoints\n",
+					    res->config_file, conn->config_line,
+					    res->name, addr[0]->af, addr[0]->addr,
+					    addr[0]->port);
+					config_valid = 0;
+				}
 			}
 		}
 	}
 }
 
-static void must_have_two_hosts(struct d_resource *res, struct connection *con)
+static void _must_have_two_hosts(struct d_resource *res, struct path *path)
 {
 	struct hname_address *ha;
 	int i = 0;
 
-	STAILQ_FOREACH(ha, &con->hname_address_pairs, link)
+	STAILQ_FOREACH(ha, &path->hname_address_pairs, link)
 		i++;
 	if (i != 2) {
-		err("%s:%d: Resource %s: connection needs to have two endpoints\n",
-		    res->config_file, con->config_line, res->name);
+		err("%s:%d: Resource %s: %s needs to have two endpoints\n",
+		    path->implicit ? "connection" : "path",
+		    res->config_file, path->config_line, res->name);
 		config_valid = 0;
 	}
+}
+
+static void must_have_two_hosts(struct d_resource *res, struct connection *conn)
+{
+	struct path *path;
+
+	for_each_path(path, &conn->paths)
+		_must_have_two_hosts(res, path);
 }
 
 struct peer_device *find_peer_device(struct connection *conn, int vnr)
@@ -1050,13 +1106,16 @@ void expand_common(void)
 
 		/* inherit proxy options from resource to the proxies in the connections */
 		for_each_connection(conn, &res->connections) {
-			struct hname_address *ha;
-			STAILQ_FOREACH(ha, &conn->hname_address_pairs, link) {
-				if (!ha->proxy)
-					continue;
+			struct path *path;
+			for_each_path(path, &conn->paths) {
+				struct hname_address *ha;
+				STAILQ_FOREACH(ha, &path->hname_address_pairs, link) {
+					if (!ha->proxy)
+						continue;
 
-				expand_opts(&res->proxy_options, &ha->proxy->options);
-				expand_opts(&res->proxy_plugins, &ha->proxy->plugins);
+					expand_opts(&res->proxy_options, &ha->proxy->options);
+					expand_opts(&res->proxy_plugins, &ha->proxy->plugins);
+				}
 			}
 		}
 
@@ -1218,20 +1277,24 @@ static void ensure_proxy_sections(struct d_resource *res)
 	}
 
 	for_each_connection(conn, &res->connections) {
-		struct hname_address *ha;
-		proxy_sect = INIT;
+		struct path *path;
 
-		STAILQ_FOREACH(ha, &conn->hname_address_pairs, link) {
-			prev_proxy_sect = proxy_sect;
-			proxy_sect = ha->proxy ? HAVE : MISSING;
-			if (prev_proxy_sect == INIT)
-				continue;
-			if (prev_proxy_sect != proxy_sect) {
-				err("%s:%d: in connection in resource %s:\n"
-				    "Either all 'host' statements must have a proxy subsection, or none.\n",
-				    res->config_file, conn->config_line,
-				    res->name);
-				config_valid = 0;
+		for_each_path(path, &conn->paths) {
+			struct hname_address *ha;
+			proxy_sect = INIT;
+
+			STAILQ_FOREACH(ha, &path->hname_address_pairs, link) {
+				prev_proxy_sect = proxy_sect;
+				proxy_sect = ha->proxy ? HAVE : MISSING;
+				if (prev_proxy_sect == INIT)
+					continue;
+				if (prev_proxy_sect != proxy_sect) {
+					err("%s:%d: in connection in resource %s:\n"
+					    "Either all 'host' statements must have a proxy subsection, or none.\n",
+					    res->config_file, conn->config_line,
+					    res->name);
+					config_valid = 0;
+				}
 			}
 		}
 	}
