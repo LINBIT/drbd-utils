@@ -212,21 +212,27 @@ static struct path *find_path_by_addrs(struct connection *conn, struct path *pat
 	return NULL;
 }
 
-static int paths_equal(struct connection *configured_conn, struct connection *running_conn)
+static int adjust_paths(const struct cfg_ctx *ctx, struct connection *running_conn)
 {
+	struct connection *configured_conn = ctx->conn;
 	struct path *configured_path, *running_path;
+	struct cfg_ctx tmp_ctx = *ctx;
 
 	for_each_path(configured_path, &configured_conn->paths) {
-
 		running_path = find_path_by_addrs(running_conn, configured_path);
-		if (!running_path)
-			return 0;
-		running_path->adj_seen = 1;
+		if (!running_path) {
+			tmp_ctx.path = configured_path;
+			schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PREP_UP);
+		} else {
+			running_path->adj_seen = 1;
+		}
 	}
 
 	for_each_path(running_path, &running_conn->paths) {
-		if (!running_path->adj_seen)
-			return 0;
+		if (!running_path->adj_seen) {
+			tmp_ctx.path = running_path;
+			schedule_deferred_cmd(&del_path_cmd, &tmp_ctx, CFG_NET_PREP_DOWN);
+		}
 	}
 
 	return 1;
@@ -832,13 +838,6 @@ int adm_adjust(const struct cfg_ctx *ctx)
 			if (running_conn->is_standalone)
 				connect = true;
 
-			if (!paths_equal(conn, running_conn)) {
-				schedule_deferred_cmd(&del_path_cmd, &tmp_ctx, CFG_NET_PREP_DOWN);
-				new_path = true;
-				connect = true;
-				schedule_peer_device_options(&tmp_ctx);
-			}
-
 			if (!opts_equal(oc, conf_o, runn_o)) {
 				if (!opt_equal(oc, "transport", conf_o, runn_o)) {
 					/* disconnect implicit by del-peer */
@@ -859,6 +858,9 @@ int adm_adjust(const struct cfg_ctx *ctx)
 
 			if (new_path)
 				schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PREP_UP);
+			else
+				adjust_paths(&tmp_ctx, running_conn);
+
 			if (connect)
 				schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET_CONNECT);
 

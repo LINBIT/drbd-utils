@@ -272,6 +272,7 @@ struct adm_cmd {
 	unsigned int uc_dialog:1; /* May show usage count dialog */
 	unsigned int test_config:1; /* Allow -t option */
 	unsigned int disk_required:1; /* cmd needs vol->disk or vol->meta_[disk|index] */
+	unsigned int iterate_paths:1; /* cmd needs path set, eventually iterate over all */
 };
 
 struct cfg_ctx {
@@ -283,6 +284,8 @@ struct cfg_ctx {
 	struct d_volume *vol;
 
 	struct connection *conn;
+
+	struct path *path;
 
 	const struct adm_cmd *cmd;
 };

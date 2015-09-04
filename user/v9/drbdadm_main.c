@@ -316,8 +316,8 @@ int adm_adjust_wp(const struct cfg_ctx *ctx)
 /*  */ struct adm_cmd detach_cmd = {"detach", adm_drbdsetup, &detach_cmd_ctx, .takes_long = 1, ACF1_MINOR_ONLY };
 /*  */ struct adm_cmd new_peer_cmd = {"new-peer", adm_new_peer, &new_peer_cmd_ctx, ACF1_CONNECT};
 /*  */ struct adm_cmd del_peer_cmd = {"del-peer", adm_drbdsetup, &disconnect_cmd_ctx, ACF1_CONNECT};
-/*  */ struct adm_cmd new_path_cmd = {"new-path", adm_path, &path_cmd_ctx, ACF1_CONNECT};
-/*  */ struct adm_cmd del_path_cmd = {"del-path", adm_path, &path_cmd_ctx, ACF1_CONNECT};
+/*  */ struct adm_cmd new_path_cmd = {"new-path", adm_path, &path_cmd_ctx, ACF1_CONNECT .iterate_paths = 1};
+/*  */ struct adm_cmd del_path_cmd = {"del-path", adm_path, &path_cmd_ctx, ACF1_CONNECT .iterate_paths = 1};
 /*  */ struct adm_cmd connect_cmd = {"connect", adm_connect, &connect_cmd_ctx, ACF1_CONNECT};
 /*  */ struct adm_cmd net_options_cmd = {"net-options", adm_new_peer, &net_options_ctx, ACF1_CONNECT};
 /*  */ struct adm_cmd disconnect_cmd = {"disconnect", adm_drbdsetup, &disconnect_cmd_ctx, ACF1_DISCONNECT};
@@ -572,7 +572,10 @@ enum on_error { KEEP_RUNNING, EXIT_ON_FAIL };
 static int __call_cmd_fn(const struct cfg_ctx *ctx, enum on_error on_error)
 {
 	struct d_volume *vol = ctx->vol;
-	int rv;
+	bool iterate_paths;
+	int rv = 0;
+
+	iterate_paths = ctx->path ? 0 : ctx->cmd->iterate_paths;
 
 	if (ctx->cmd->disk_required &&
 	    (!vol->disk || !vol->meta_disk || !vol->meta_index)) {
@@ -584,10 +587,25 @@ static int __call_cmd_fn(const struct cfg_ctx *ctx, enum on_error on_error)
 		return rv;
 	}
 
-	rv = ctx->cmd->function(ctx);
-	if (rv >= 20) {
-		if (on_error == EXIT_ON_FAIL)
-			exit(rv);
+	if (iterate_paths) {
+		struct cfg_ctx tmp_ctx = *ctx;
+		struct path *path;
+
+		for_each_path(path, &tmp_ctx.conn->paths) {
+			tmp_ctx.path = path;
+			rv = tmp_ctx.cmd->function(&tmp_ctx);
+			if (rv >= 20) {
+				if (on_error == EXIT_ON_FAIL)
+					exit(rv);
+			}
+
+		}
+	} else {
+		rv = ctx->cmd->function(ctx);
+		if (rv >= 20) {
+			if (on_error == EXIT_ON_FAIL)
+				exit(rv);
+		}
 	}
 	return rv;
 }
@@ -1609,31 +1627,23 @@ static int adm_path(const struct cfg_ctx *ctx)
 {
 	struct d_resource *res = ctx->res;
 	struct connection *conn = ctx->conn;
-	struct path *path;
+	struct path *path = ctx->path;
 
 	char *argv[MAX_ARGS];
-	int argc, rv = 0;
+	int argc = 0;
 
-	for_each_path(path, &conn->paths) {
-		argc = 0;
+	argv[NA(argc)] = drbdsetup;
+	argv[NA(argc)] = (char *)ctx->cmd->name; /* add-path, del-path */
+	argv[NA(argc)] = ssprintf("%s", res->name);
+	argv[NA(argc)] = ssprintf("%s", conn->peer->node_id);
 
-		argv[NA(argc)] = drbdsetup;
-		argv[NA(argc)] = (char *)ctx->cmd->name; /* add-path, del-path */
-		argv[NA(argc)] = ssprintf("%s", res->name);
-		argv[NA(argc)] = ssprintf("%s", conn->peer->node_id);
+	argv[NA(argc)] = ssprintf_addr(path->my_address);
+	argv[NA(argc)] = ssprintf_addr(path->connect_to);
 
-		argv[NA(argc)] = ssprintf_addr(path->my_address);
-		argv[NA(argc)] = ssprintf_addr(path->connect_to);
+	add_setup_options(argv, &argc);
+	argv[NA(argc)] = 0;
 
-		add_setup_options(argv, &argc);
-		argv[NA(argc)] = 0;
-
-		rv = m_system_ex(argv, SLEEPS_SHORT, res->name);
-		if (rv)
-			break;
-	}
-
-	return rv;
+	return m_system_ex(argv, SLEEPS_SHORT, res->name);
 }
 
 void free_opt(struct d_option *item)
