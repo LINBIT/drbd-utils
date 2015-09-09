@@ -15,7 +15,7 @@
 #include <endian.h>
 
 #ifndef BITS_PER_LONG
-# define BITS_PER_LONG __WORDSIZE
+# define BITS_PER_LONG (__SIZEOF_LONG__ * 8)
 #endif
 
 /* linux/byteorder/swab.h */
