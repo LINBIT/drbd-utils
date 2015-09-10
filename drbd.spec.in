@@ -23,6 +23,7 @@
 # Conditionals
 # Invoke "rpmbuild --without <feature>" or "rpmbuild --with <feature>"
 # to disable or enable specific features
+%bcond_without manual
 %bcond_without udev
 %bcond_without pacemaker
 %bcond_with rgmanager
@@ -181,11 +182,14 @@ This packages includes the DRBD administration tools.
 %config(noreplace) %{_sysconfdir}/drbd.conf
 %dir %{_sysconfdir}/drbd.d
 %config(noreplace) %{_sysconfdir}/drbd.d/global_common.conf
+%if %{without manual}
+%else
 %{_mandir}/man8/drbd-*
 %{_mandir}/man8/drbdsetup-*
 %{_mandir}/man8/drbdadm-*
 %{_mandir}/man5/drbd.conf-*
 %{_mandir}/man8/drbdmeta-*
+%endif
 %doc scripts/drbd.conf.example
 %doc COPYING
 %doc ChangeLog
@@ -310,7 +314,10 @@ resource manager (in v1 compatibility mode).
 %{_sysconfdir}/ha.d/resource.d/drbdupper
 
 %defattr(-,root,root,-)
+%if %{without manual}
+%else
 %{_mandir}/man8/drbddisk-*
+%endif
 %endif # with heartbeat
 
 %if %{with bashcompletion}
@@ -352,11 +359,18 @@ autoconf
     %{?_tmpfilesdir:--with-tmpfilesdir=%{_tmpfilesdir}} \
     --with-initscripttype=%{initscripttype}
 make %{?_smp_mflags}
+%if %{without manual}
+%else
 make doc
+%endif
 
 %install
 rm -rf %{buildroot}
-make install DESTDIR=%{buildroot} CREATE_MAN_LINK=no
+make install-tools DESTDIR=%{buildroot} CREATE_MAN_LINK=no
+%if %{without manual}
+%else
+make install-doc DESTDIR=%{buildroot} CREATE_MAN_LINK=no
+%endif
 
 %if %{with sbinsymlinks}
 # Don't do this if you are already on a /sbin -=> /usr/sbin distro
@@ -380,10 +394,13 @@ rm -rf %{buildroot}
 %else
 chkconfig --add drbd
 %endif
+%if %{without manual}
+%else
 for f in drbd drbdadm drbdmeta drbdsetup; do
     ln -sf $f-8.4.8.gz %{_mandir}/man8/$f.8.gz
 done
 ln -sf drbd.conf-8.4.5.gz %{_mandir}/man5/drbd.conf.5.gz
+%endif
 %if %{without udev}
 for i in `seq 0 15` ; do
     test -b /dev/drbd$i || mknod -m 0660 /dev/drbd$i b 147 $i;

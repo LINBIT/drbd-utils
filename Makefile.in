@@ -45,7 +45,9 @@ WITH_84_SUPPORT = @WITH_84_SUPPORT@
 # and not in e.g. dash. I'm too lazy to fix it to be compatible.
 SHELL=/bin/bash
 
-SUBDIRS     = user/shared user/v9 user/v84 user/v83 scripts documentation/v83 documentation/v84 documentation/v9
+TOOLS_DIRS  = user/shared user/v9 user/v84 user/v83 scripts
+DOC_DIRS    = documentation/v83 documentation/v84 documentation/v9
+SUBDIRS     = $(TOOLS_DIRS) $(DOC_DIRS)
 
 REL_VERSION := $(shell $(SED) -ne '/^AC_INIT/{s/^[^,]*, *\([^,]*\) *,.*/\1/;p;q}' configure.ac)
 ifdef FORCE
@@ -69,7 +71,7 @@ all: check-submods configure tools
 
 .PHONY: all tools doc
 tools:
-	@ set -e; for i in $(SUBDIRS); do $(MAKE) -C $$i ; done
+	@ set -e; for i in $(TOOLS_DIRS); do $(MAKE) -C $$i ; done
 	@ echo -e "\n\tUserland tools build was successful."
 
 doc:
@@ -105,10 +107,13 @@ ifeq ($(WITH_84_SUPPORT),yes)
 	$(MAKE) -C documentation/v84 doc-clean
 endif
 
-install: install-tools
+install: install-tools install-doc
 
 install-tools:
-	@ set -e; for i in $(patsubst drbd,,$(SUBDIRS)); do $(MAKE) -C $$i install; done
+	@ set -e; for i in $(patsubst drbd,,$(TOOLS_DIRS)); do $(MAKE) -C $$i install; done
+
+install-doc:
+	@ set -e; for i in $(patsubst drbd,,$(DOC_DIRS)); do $(MAKE) -C $$i install; done
 
 .NOTPARALLEL clean:
 	@ set -e; for i in $(SUBDIRS); do $(MAKE) -C $$i clean; done
