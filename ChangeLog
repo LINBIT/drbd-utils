@@ -3,6 +3,19 @@ Latest:
  For even more detail, use "git log" or visit http://git.drbd.org/.
 
 
+8.9.4
+--------
+  * Add an autoconf switch for building without man pages
+  * Fix compatibility with the musl C library
+  * Introduce the concept of paths within a connection to the config file;
+    add support for paths to drbdadm adjust
+  * Allow multiple connection-mesh statements within one resource
+  * Document peer-device-options on the drbd-9.0 man pages
+  * increase the lower boundary for al-extents from 7 to 67; drbdadm clamps
+    al-extents to 67 implicitly if you configures something lower than 67
+  * Document the events2 command on the drbd-8.4 man page
+  * Fix environment variables for handlers
+
 8.9.3
 --------
   * Support for the new new-peer, add-path, connect, del-path, disconnect
