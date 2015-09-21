@@ -40,6 +40,7 @@ WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 WITH_83_SUPPORT = @WITH_83_SUPPORT@
 WITH_84_SUPPORT = @WITH_84_SUPPORT@
+WITH_MANUAL = @WITH_MANUAL@
 
 # for some reason some of the commands below only work correctly in bash,
 # and not in e.g. dash. I'm too lazy to fix it to be compatible.
@@ -67,7 +68,9 @@ ifeq ($(FDIST_VERSION),)
 FDIST_VERSION := $(DIST_VERSION)
 endif
 
-all: check-submods configure tools
+all-yes := check-submods configure tools
+all-$(WITH_MANUAL) += doc
+all: $(all-yes)
 
 .PHONY: all tools doc
 tools:
@@ -107,7 +110,9 @@ ifeq ($(WITH_84_SUPPORT),yes)
 	$(MAKE) -C documentation/v84 doc-clean
 endif
 
-install: install-tools install-doc
+install-yes := install-tools
+install-$(WITH_MANUAL) += install-doc
+install: $(install-yes)
 
 install-tools:
 	@ set -e; for i in $(patsubst drbd,,$(TOOLS_DIRS)); do $(MAKE) -C $$i install; done

@@ -355,22 +355,15 @@ autoconf
     %{?_without_bashcompletion} \
     %{?_without_83support} \
     %{?_without_84support} \
+    %{?_without_manual} \
     --with-initdir=%{_initddir} \
     %{?_tmpfilesdir:--with-tmpfilesdir=%{_tmpfilesdir}} \
     --with-initscripttype=%{initscripttype}
 make %{?_smp_mflags}
-%if %{without manual}
-%else
-make doc
-%endif
 
 %install
 rm -rf %{buildroot}
-make install-tools DESTDIR=%{buildroot} CREATE_MAN_LINK=no
-%if %{without manual}
-%else
-make install-doc DESTDIR=%{buildroot} CREATE_MAN_LINK=no
-%endif
+make install DESTDIR=%{buildroot} CREATE_MAN_LINK=no
 
 %if %{with sbinsymlinks}
 # Don't do this if you are already on a /sbin -=> /usr/sbin distro
