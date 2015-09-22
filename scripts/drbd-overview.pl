@@ -303,6 +303,17 @@ sub df_info
 	@{$t}{qw(mountpoint type size used avail use_percent)};
 }
 
+sub get_swap_info()
+{
+    open(my $fd, "< /proc/swaps") or return;
+	while (<$fd>) {
+        #  Filename                 Type            Size    Used    Priority
+        #  /dev/drbd100             partition       262140  0       -1
+		m{^/dev/drbd(\d+)\s+(\S+)\s+(\d+)\s+(\d+)} or next;
+		$drbd{$1}{df_info} = { type => 'swap', size => $3, used => $4, };
+	}
+}
+
 # sets $drbd{minor}->{xen_info}
 sub get_xen_info()
 {
@@ -413,6 +424,7 @@ slurp_drbdsetup if $DRBD_VERSION[0] >= 9;
 
 get_pv_info;
 get_df_info;
+get_swap_info;
 get_xen_info;
 get_virsh_info;
 
