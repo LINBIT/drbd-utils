@@ -15,7 +15,13 @@
 #include <endian.h>
 
 #ifndef BITS_PER_LONG
-# define BITS_PER_LONG (__SIZEOF_LONG__ * 8)
+# if defined(__SIZEOF_LONG__)
+#  define BITS_PER_LONG (__SIZEOF_LONG__ * 8)
+# elif defined(__WORDSIZE)
+#  define BITS_PER_LONG __WORDSIZE
+# else /* wtf is wrong with your libc headers? */
+#  error "neither BITS_PER_LONG, __SIZEOF_LONG__, nor __WORDSIZE defined"
+# endif
 #endif
 
 /* linux/byteorder/swab.h */
