@@ -1,7 +1,6 @@
 <drbdsetup_options>
   <drbdsetup_option name="al-extents">
-    <term>
-      <option>al-extents <replaceable>extents</replaceable></option>
+    <term xml:id="al-extents"><option>al-extents <replaceable>extents</replaceable></option>
     </term>
 
     <definition>
@@ -38,8 +37,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="al-updates">
-    <term>
-      <option>al-updates
+    <term xml:id="al-updates"><option>al-updates
 	<group choice="req" rep="norepeat">
 	  <arg choice="plain" rep="norepeat">yes</arg>
 	  <arg choice="plain" rep="norepeat">no</arg>
@@ -62,13 +60,13 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="c-delay-target">
-    <term><option>c-delay-target <replaceable>delay_target</replaceable></option></term>
+    <term xml:id="c-delay-target"><option>c-delay-target <replaceable>delay_target</replaceable></option></term>
 
-    <term><option>c-fill-target <replaceable>fill_target</replaceable></option></term>
+    <term xml:id="c-fill-target"><option>c-fill-target <replaceable>fill_target</replaceable></option></term>
 
-    <term><option>c-max-rate <replaceable>max_rate</replaceable></option></term>
+    <term xml:id="c-max-rate"><option>c-max-rate <replaceable>max_rate</replaceable></option></term>
 
-    <term><option>c-plan-ahead <replaceable>plan_time</replaceable></option></term>
+    <term xml:id="c-plan-ahead"><option>c-plan-ahead <replaceable>plan_time</replaceable></option></term>
 
     <definition>
       <para>Dynamically control the resync speed.  This mechanism is enabled by
@@ -103,7 +101,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="c-min-rate">
-    <term><option>c-min-rate <replaceable>min_rate</replaceable></option></term>
+    <term xml:id="c-min-rate"><option>c-min-rate <replaceable>min_rate</replaceable></option></term>
 
     <definition>
       <para>A node which is primary and sync-source has to schedule application
@@ -122,11 +120,11 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="disk-barrier">
-    <term><option>disk-barrier</option></term>
+    <term xml:id="disk-barrier"><option>disk-barrier</option></term>
 
-    <term><option>disk-flushes</option></term>
+    <term xml:id="disk-flushes"><option>disk-flushes</option></term>
 
-    <term><option>disk-drain</option></term>
+    <term xml:id="disk-drain"><option>disk-drain</option></term>
 
     <definition>
       <indexterm significance="normal">
@@ -211,8 +209,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="disk-timeout">
-    <term>
-      <option>disk-timeout</option>
+    <term xml:id="disk-timeout"> <option>disk-timeout</option>
     </term>
     <definition>
       <indexterm significance="normal">
@@ -256,7 +253,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="fencing">
-    <term><option>fencing <replaceable>fencing_policy</replaceable></option></term>
+    <term xml:id="fencing"><option>fencing <replaceable>fencing_policy</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -270,7 +267,7 @@
 
       <variablelist>
 	<varlistentry>
-	  <term><option>dont-care</option></term>
+	  <term xml:id="dont-care"><option>dont-care</option></term>
 
 	  <listitem>
 	    <para>No fencing actions are taken. This is the default policy.</para>
@@ -278,7 +275,7 @@
 	</varlistentry>
 
 	<varlistentry>
-	  <term><option>resource-only</option></term>
+	  <term xml:id="resource-only"><option>resource-only</option></term>
 
 	  <listitem>
 	    <para>If a node becomes a disconnected primary, it tries to fence the peer.
@@ -289,7 +286,7 @@
 	</varlistentry>
 
 	<varlistentry>
-	  <term><option>resource-and-stonith</option></term>
+	  <term xml:id="resource-and-stonith"><option>resource-and-stonith</option></term>
 
 	  <listitem>
 	    <para>If a node becomes a disconnected primary, it freezes all its IO operations
@@ -307,7 +304,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="md-flushes">
-    <term><option>md-flushes</option></term>
+    <term xml:id="md-flushes"><option>md-flushes</option></term>
 
     <definition>
       <indexterm significance="normal">
@@ -323,7 +320,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="on-io-error">
-    <term><option>on-io-error <replaceable>handler</replaceable></option></term>
+    <term xml:id="on-io-error"><option>on-io-error <replaceable>handler</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -335,7 +332,7 @@
 
 	<variablelist>
 	  <varlistentry>
-	    <term><option>pass_on</option></term>
+	    <term xml:id="pass_on"><option>pass_on</option></term>
 	    <listitem>
 	      <para>Change the disk status to Inconsistent, mark the failed
 	      block as inconsistent in the bitmap, and retry the I/O operation
@@ -343,14 +340,14 @@
 	    </listitem>
 	  </varlistentry>
 	  <varlistentry>
-	    <term><option>call-local-io-error</option></term>
+	    <term xml:id="call-local-io-error"><option>call-local-io-error</option></term>
 	    <listitem>
 	      <para>Call the <option>local-io-error</option> handler (see the
 	      <option>handlers</option> section).</para>
 	    </listitem>
 	  </varlistentry>
 	  <varlistentry>
-	    <term><option>detach</option></term>
+	    <term xml:id="detach"><option>detach</option></term>
 	    <listitem>
 	      <para>Detach the lower-level device and continue in diskless mode.
 	      </para>
@@ -362,8 +359,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="read-balancing">
-    <term>
-      <option>read-balancing <replaceable>policy</replaceable></option>
+    <term xml:id="read-balancing"><option>read-balancing <replaceable>policy</replaceable></option>
     </term>
     <definition>
       <indexterm significance="normal">
@@ -373,18 +369,18 @@
       <para>
 	Distribute read requests among cluster nodes as defined by
 	<replaceable>policy</replaceable>. The supported policies are
-	<option>prefer-local</option> (the default),
-	<option>prefer-remote</option>, <option>round-robin</option>,
-	<option>least-pending</option>, <option>when-congested-remote</option>,
-	<option>32K-striping</option>, <option>64K-striping</option>,
-	<option>128K-striping</option>, <option>256K-striping</option>,
-	<option>512K-striping</option> and <option>1M-striping</option>.</para>
+	<option xml:id="prefer-local">prefer-local</option> (the default),
+	<option xml:id="prefer-remote">prefer-remote</option>, <option xml:id="round-robin">round-robin</option>,
+	<option xml:id="least-pending">least-pending</option>, <option xml:id="when-congested-remote">when-congested-remote</option>,
+	<option xml:id="_32K-striping">32K-striping</option>, <option xml:id="_64K-striping">64K-striping</option>,
+	<option xml:id="_128K-striping">128K-striping</option>, <option xml:id="_256K-striping">256K-striping</option>,
+	<option xml:id="_512K-striping">512K-striping</option> and <option xml:id="_1M-striping">1M-striping</option>.</para>
 	<para>This option is available since DRBD 8.4.1.</para>
     </definition>
   </drbdsetup_option>
 
   <drbdsetup_option name="resync-after">
-      <term>
+      <term xml:id="resync-after">
 	<only-drbdsetup>
 	  <option>resync-after <replaceable>minor</replaceable></option>
 	</only-drbdsetup>
@@ -409,7 +405,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="resync-rate">
-    <term><option>resync-rate <replaceable>rate</replaceable></option></term>
+    <term xml:id="resync-rate"><option>resync-rate <replaceable>rate</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -428,7 +424,7 @@
   <drbdsetup_option name="size">
     <!-- NOTE: This description is neither used in drbd.conf.xml.in nor in
 	 drbdsetup.xml.in. -->
-    <term><option>size <replaceable>size</replaceable></option></term>
+    <term xml:id="size"><option>size <replaceable>size</replaceable></option></term>
 
     <definition>
       <para>Specify the size of the lower-level device explicitly instead of
@@ -456,7 +452,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="dialog-refresh">
-    <term><option>dialog-refresh <replaceable>time</replaceable></option></term>
+    <term xml:id="dialog-refresh"><option>dialog-refresh <replaceable>time</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -473,7 +469,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="disable-ip-verification">
-    <term><option>disable-ip-verification</option></term>
+    <term xml:id="disable-ip-verification"><option>disable-ip-verification</option></term>
 
     <definition>
       <indexterm significance="normal">
@@ -491,7 +487,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="usage-count">
-    <term><option>usage-count
+    <term xml:id="usage-count"><option>usage-count
 	<group choice="req" rep="norepeat">
 	  <arg choice="plain" rep="norepeat">yes</arg>
 	  <arg choice="plain" rep="norepeat">no</arg>
@@ -524,7 +520,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="after-sb-0pri">
-    <term><option>after-sb-0pri <replaceable>policy</replaceable></option></term>
+    <term xml:id="after-sb-0pri"><option>after-sb-0pri <replaceable>policy</replaceable></option></term>
 
     <definition>
       <indexterm significance="normal">
@@ -591,7 +587,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="after-sb-1pri">
-    <term><option>after-sb-1pri <replaceable>policy</replaceable></option></term>
+    <term xml:id="after-sb-1pri"><option>after-sb-1pri <replaceable>policy</replaceable></option></term>
 
     <definition>
       <indexterm significance="normal">
@@ -638,7 +634,7 @@
 	</varlistentry>
 
 	<varlistentry>
-	  <term><option>discard-secondary</option></term>
+	  <term xml:id="discard-secondary"><option>discard-secondary</option></term>
 
 	  <listitem>
 	    <para>Discard the data on the secondary node.</para>
@@ -646,13 +642,13 @@
 	</varlistentry>
 
 	<varlistentry>
-	  <term><option>call-pri-lost-after-sb</option></term>
+	  <term xml:id="call-pri-lost-after-sb"><option>call-pri-lost-after-sb</option></term>
 
 	  <listitem>
 	    <para>Always take the decision of the
 	    <option>after-sb-0pri</option> algorithm.  If the decision is to
 	    discard the data on the primary node, call the
-	    <option>pri-lost-after-sb</option> handler on the primary
+	    <option xml:id="pri-lost-after-sb">pri-lost-after-sb</option> handler on the primary
 	    node.</para>
 	  </listitem>
 	</varlistentry>
@@ -662,7 +658,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="after-sb-2pri">
-    <term><option>after-sb-2pri <replaceable>policy</replaceable></option></term>
+    <term xml:id="after-sb-2pri"><option>after-sb-2pri <replaceable>policy</replaceable></option></term>
 
     <definition>
       <indexterm significance="normal">
@@ -686,7 +682,7 @@
 	</varlistentry>
 
 	<varlistentry>
-	  <term><option>violently-as0p</option></term>
+	  <term xml:id="violently-as0p"><option>violently-as0p</option></term>
 
 	  <listitem>
 	    <para>See the <option>violently-as0p</option> policy for
@@ -709,7 +705,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="allow-two-primaries">
-    <term><option>allow-two-primaries</option></term>
+    <term xml:id="allow-two-primaries"><option>allow-two-primaries</option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -734,7 +730,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="always-asbp">
-    <term><option>always-asbp</option></term>
+    <term xml:id="always-asbp"><option>always-asbp</option></term>
     <!-- FIXME: this option does not mke any sense anymore. How can we fix this? -->
     <definition>
       <para>Normally the automatic after-split-brain policies are only used if current
@@ -748,7 +744,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="connect-int">
-    <term><option>connect-int <replaceable>time</replaceable></option></term>
+    <term xml:id="connect-int"><option>connect-int <replaceable>time</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -764,7 +760,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="cram-hmac-alg">
-    <term><option>cram-hmac-alg <replaceable>hash-algorithm</replaceable></option></term>
+    <term xml:id="cram-hmac-alg"><option>cram-hmac-alg <replaceable>hash-algorithm</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -782,7 +778,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="csums-alg">
-    <term><option>csums-alg <replaceable>hash-algorithm</replaceable></option></term>
+    <term xml:id="csum-alg"><option>csums-alg <replaceable>hash-algorithm</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -811,7 +807,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="csums-after-crash-only">
-    <term><option>csums-after-crash-only</option></term>
+    <term xml:id="csums-after-crash-only"><option>csums-after-crash-only</option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -831,7 +827,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="data-integrity-alg">
-    <term><option>data-integrity-alg </option> <replaceable>alg</replaceable></term>
+    <term xml:id="data-integrity-alg"><option>data-integrity-alg </option> <replaceable>alg</replaceable></term>
 
     <definition>
       <indexterm significance="normal">
@@ -858,7 +854,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="ko-count">
-    <term><option>ko-count <replaceable>number</replaceable></option></term>
+    <term xml:id="ko-count"><option>ko-count <replaceable>number</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -875,7 +871,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="max-buffers">
-    <term><option>max-buffers <replaceable>number</replaceable></option></term>
+	  <term xml:id="max-buffers"><option>max-buffers <replaceable>number</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -896,7 +892,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="max-epoch-size">
-    <term><option>max-epoch-size <replaceable>number</replaceable></option></term>
+    <term xml:id="max-epoch-size"><option>max-epoch-size <replaceable>number</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -911,11 +907,11 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="on-congestion">
-    <term><option>on-congestion <replaceable>policy</replaceable></option></term>
+    <term xml:id="on-congestion"><option>on-congestion <replaceable>policy</replaceable></option></term>
 
-    <term><option>congestion-fill <replaceable>threshold</replaceable></option></term>
+    <term xml:id="congestion-fill"><option>congestion-fill <replaceable>threshold</replaceable></option></term>
 
-    <term><option>congestion-extents
+    <term xml:id="congestion-extents"><option>congestion-extents
     <replaceable>threshold</replaceable></option></term>
 
     <definition>
@@ -953,7 +949,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="ping-int">
-    <term><option>ping-int <replaceable>interval</replaceable></option></term>
+    <term xml:id="ping-int"><option>ping-int <replaceable>interval</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -969,7 +965,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="ping-timeout">
-    <term><option>ping-timeout <replaceable>timeout</replaceable></option></term>
+    <term xml:id="ping-timeout"><option>ping-timeout <replaceable>timeout</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -985,7 +981,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="socket-check-timeout">
-    <term><option>socket-check-timeout <replaceable>timeout</replaceable></option></term>
+    <term xml:id="socket-check-timeout"><option>socket-check-timeout <replaceable>timeout</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -1007,7 +1003,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="protocol">
-    <term><option>protocol <replaceable>name</replaceable></option></term>
+    <term xml:id="protocol"><option>protocol <replaceable>name</replaceable></option></term>
 
     <definition>
       <indexterm significance="normal">
@@ -1020,7 +1016,7 @@
       protocols are:
         <variablelist>
 	  <varlistentry>
-	    <term><option>A</option></term>
+	    <term xml:id="A"><option>A</option></term>
 
 	    <listitem>
 	      <para>Writes to the DRBD device complete as soon as they have
@@ -1028,7 +1024,7 @@
 	    </listitem>
 	  </varlistentry>
 	  <varlistentry>
-	    <term><option>B</option></term>
+	    <term xml:id="B"><option>B</option></term>
 
 	    <listitem>
 	      <para>Writes to the DRBD device complete as soon as they have
@@ -1037,7 +1033,7 @@
 	    </listitem>
 	  </varlistentry>
 	  <varlistentry>
-	    <term><option>C</option></term>
+	    <term xml:id="C"><option>C</option></term>
 
 	    <listitem>
 	      <para>Writes to the DRBD device complete as soon as they have
@@ -1050,7 +1046,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="rcvbuf-size">
-    <term><option>rcvbuf-size <replaceable>size</replaceable></option></term>
+    <term xml:id="rcvbuf-size"><option>rcvbuf-size <replaceable>size</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -1065,7 +1061,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="rr-conflict">
-    <term><option>rr-conflict</option> <replaceable>policy</replaceable></term>
+    <term xml:id="rr-conflict"><option>rr-conflict</option> <replaceable>policy</replaceable></term>
 
     <definition>
       <indexterm significance="normal">
@@ -1080,7 +1076,7 @@
 
       <variablelist>
 	<varlistentry>
-	  <term><option>disconnect</option></term>
+	  <term xml:id="disconnect"><option>disconnect</option></term>
 
 	  <listitem>
 	    <para>No automatic resynchronization, simply disconnect.</para>
@@ -1088,7 +1084,7 @@
 	</varlistentry>
 
 	<varlistentry>
-	  <term><option>violently</option></term>
+	  <term xml:id="violently"><option>violently</option></term>
 
 	  <listitem>
 	    <para>Resync to the primary node is allowed, violating the assumption that data on
@@ -1098,7 +1094,7 @@
 	</varlistentry>
 
 	<varlistentry>
-	  <term><option>call-pri-lost</option></term>
+	  <term xml:id="call-pri-lost"><option>call-pri-lost</option></term>
 
 	  <listitem>
 	    <para>Call the <option>pri-lost</option> handler on one of the machines. The handler is
@@ -1113,7 +1109,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="shared-secret">
-    <term><option>shared-secret <replaceable>secret</replaceable></option></term>
+    <term xml:id="shared-secret"><option>shared-secret <replaceable>secret</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -1127,7 +1123,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="sndbuf-size">
-    <term><option>sndbuf-size <replaceable>size</replaceable></option></term>
+    <term xml:id="sndbuf-size"><option>sndbuf-size <replaceable>size</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -1144,7 +1140,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="tcp-cork">
-    <term><option>tcp-cork</option></term>
+    <term xml:id="tcp-cork"><option>tcp-cork</option></term>
 
     <definition>
       <indexterm significance="normal">
@@ -1162,7 +1158,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="timeout">
-    <term><option>timeout <replaceable>time</replaceable></option></term>
+    <term xml:id="timeout"><option>timeout <replaceable>time</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -1179,7 +1175,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="unplug-watermark">
-    <term><option>unplug-watermark <replaceable>number</replaceable></option></term>
+    <term xml:id="unplug-watermark"><option>unplug-watermark <replaceable>number</replaceable></option></term>
 
     <definition>
       <indexterm significance="normal">
@@ -1205,7 +1201,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="use-rle">
-    <term><option>use-rle</option></term>
+    <term xml:id="use-rle"><option>use-rle</option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -1231,7 +1227,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="verify-alg">
-    <term><option>verify-alg <replaceable>hash-algorithm</replaceable></option></term>
+    <term xml:id="verify-alg"><option>verify-alg <replaceable>hash-algorithm</replaceable></option></term>
 
     <definition>
       <para>Online verification (<command moreinfo="none">drbdadm
@@ -1249,7 +1245,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="discard-my-data">
-    <term><option>discard-my-data</option></term>
+    <term xml:id="discard-my-data"><option>discard-my-data</option></term>
 
     <definition>
       <para>Discard the local data and resynchronize with the peer that has the
@@ -1259,7 +1255,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="tentative">
-    <term><option>tentative</option></term>
+    <term xml:id="tentative"><option>tentative</option></term>
 
     <definition>
       <para>Only determine if a connection to the peer can be established and
@@ -1271,7 +1267,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="auto-promote">
-    <term><option>auto-promote <replaceable>bool-value</replaceable></option></term>
+    <term xml:id="auto-promote"><option>auto-promote <replaceable>bool-value</replaceable></option></term>
 
     <definition>
       <indexterm significance="normal">
@@ -1311,7 +1307,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="cpu-mask">
-    <term><option>cpu-mask <replaceable>cpu-mask</replaceable></option></term>
+    <term xml:id="cpu-mask"><option>cpu-mask <replaceable>cpu-mask</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -1327,7 +1323,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="on-no-data-accessible">
-    <term><option>on-no-data-accessible
+    <term xml:id="on-no-data-accessible"><option>on-no-data-accessible
 	<replaceable>policy</replaceable></option></term>
 
     <definition>
@@ -1337,13 +1333,13 @@
 
 	<variablelist>
 	  <varlistentry>
-	    <term><option>io-error</option></term>
+	    <term xml:id="io-error"><option>io-error</option></term>
 	    <listitem><para>
 		System calls fail with errno set to EIO.
 	    </para></listitem>
 	  </varlistentry>
 	  <varlistentry>
-	    <term><option>suspend-io</option></term>
+	    <term xml:id="suspend-io"><option>suspend-io</option></term>
 	    <listitem><para>
 		The resource suspends I/O.  I/O can be resumed by (re)attaching
 		the lower-level device, by connecting to a peer which has
@@ -1362,7 +1358,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="peer-ack-window">
-    <term><option>peer-ack-window <replaceable>value</replaceable></option></term>
+    <term xml:id="peer-ack-window"><option>peer-ack-window <replaceable>value</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -1401,7 +1397,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="peer-ack-delay">
-    <term><option>peer-ack-delay <replaceable>expiry-time</replaceable></option></term>
+    <term xml:id="peer-ack-delay"><option>peer-ack-delay <replaceable>expiry-time</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -1426,7 +1422,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="degr-wfc-timeout">
-    <term><option>degr-wfc-timeout <replaceable>timeout</replaceable></option></term>
+    <term xml:id="degr-wfc-timeout"><option>degr-wfc-timeout <replaceable>timeout</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -1453,7 +1449,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="outdated-wfc-timeout">
-    <term><option>outdated-wfc-timeout <replaceable>timeout</replaceable></option></term>
+    <term xml:id="outdated-wfc-timeout"><option>outdated-wfc-timeout <replaceable>timeout</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
@@ -1475,7 +1471,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="wait-after-sb">
-    <term><option>wait-after-sb</option></term>
+    <term xml:id="wait-after-sb"><option>wait-after-sb</option></term>
 
     <definition>
       <para>This parameter causes DRBD to continue waiting in the init
@@ -1485,7 +1481,7 @@
   </drbdsetup_option>
 
   <drbdsetup_option name="wfc-timeout">
-    <term><option>wfc-timeout <replaceable>timeout</replaceable></option></term>
+    <term xml:id="wfc-timeout"><option>wfc-timeout <replaceable>timeout</replaceable></option></term>
 
     <definition>
       <para><indexterm significance="normal">
