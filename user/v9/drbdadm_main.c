@@ -341,7 +341,7 @@ static struct adm_cmd wait_ci_cmd = {"wait-con-int", adm_wait_ci, .show_in_usage
 static struct adm_cmd role_cmd = {"role", adm_drbdsetup, ACF1_RESNAME};
 static struct adm_cmd cstate_cmd = {"cstate", adm_drbdsetup, ACF1_DISCONNECT};
 static struct adm_cmd dstate_cmd = {"dstate", adm_setup_and_meta, ACF1_MINOR_ONLY };
-static struct adm_cmd status_cmd = {"status", adm_drbdsetup, .show_in_usage = 1, .uc_dialog = 1};
+static struct adm_cmd status_cmd = {"status", adm_drbdsetup, .show_in_usage = 1, .uc_dialog = 1, .backend_res_name=1};
 static struct adm_cmd peer_device_options_cmd = {"peer-device-options", adm_peer_device,
 						 &peer_device_options_ctx, ACF1_PEER_DEVICE};
 static struct adm_cmd dump_cmd = {"dump", adm_dump, ACF1_DUMP};
@@ -3130,7 +3130,9 @@ int main(int argc, char **argv)
 		else if (cmd->res_name_required)
 			print_usage_and_exit(cmd, "No resource names specified", E_USAGE);
 	} else if (resource_names[0]) {
-		if (!cmd->res_name_required)
+		if (cmd->backend_res_name)
+			/* Okay */  ;
+		else if (!cmd->res_name_required)
 			err("This command will ignore resource names!\n");
 		else if (resource_names[1] && cmd->use_cached_config_file)
 			err("You should not use this command with multiple resources!\n");
