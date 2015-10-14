@@ -539,6 +539,32 @@
         </varlistentry>
 
         <varlistentry>
+          <term><option>--discard-zeroes-if-aligned <group choice="req" rep="norepeat">
+	     <arg choice="plain" rep="norepeat">yes</arg>
+	     <arg choice="plain" rep="norepeat">no</arg>
+	  </group></option></term>
+          <listitem>
+	    <para>
+	Setting <option>discard-zeroes-if-aligned</option> to <option>no</option>
+	will cause DRBD to always fall-back to zero-out on the receiving side,
+	and to not even announce discard capabilities on the Primary,
+	if the respective backend announces discard_zeroes_data=false.
+	</para><para>
+	Setting <option>discards-zeroes-if-aligned</option> to <option>yes</option>
+	will allow DRBD to use discards, and to announce discard_zeroes=true,
+	even on backends that announce discard_zeroes_data=false.
+	</para><para>
+	We used to ignore the discard_zeroes_data setting completely.
+	To not break established and expected behaviour,
+	the default value is <option>yes</option>.
+	</para><para>
+	This option is available since 8.4.7.
+	See also <citerefentry><refentrytitle>drbd.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>.
+	</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
           <term>
             <option>--read-balancing <replaceable>method</replaceable></option>
           </term>

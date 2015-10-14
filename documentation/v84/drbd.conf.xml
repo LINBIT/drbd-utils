@@ -296,6 +296,7 @@
             <option>c-plan-ahead</option>, <option>c-fill-target</option>,
             <option>c-delay-target</option>, <option>c-max-rate</option>,
             <option>c-min-rate</option>, <option>disk-timeout</option>,
+	    <option>discard-zeroes-if-aligned</option>,
 	    <option>read-balancing</option>.</para>
           </listitem>
         </varlistentry>
@@ -866,6 +867,66 @@
       <option>disk-timeout</option> is 0, which stands for an infinite timeout.
       Timeouts are specified in units of 0.1 seconds. This option is available
       since DRBD 8.3.12.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term xml:id="discard-zeroes-if-aligned"><option>discard-zeroes-if-aligned <group choice="req" rep="norepeat">
+	     <arg choice="plain" rep="norepeat">yes</arg>
+	     <arg choice="plain" rep="norepeat">no</arg>
+	  </group></option></term>
+          <listitem>
+	    <para>
+            <indexterm significance="normal">
+              <primary>drbd.conf</primary>
+              <secondary>discard-zeroes-if-aligned</secondary>
+            </indexterm>
+	There are several aspects to discard/trim/unmap support on linux
+	block devices.  Even if discard is supported in general, it may fail
+	silently, or may partially ignore discard requests.  Devices also
+	announce whether reading from unmapped blocks returns defined data
+	(usually zeroes), or undefined data (possibly old data, possibly
+	garbage).
+	</para><para>
+	If on different nodes, DRBD is backed by devices with differing discard
+	characteristics, discards may lead to data divergence (old data or
+	garbage left over on one backend, zeroes due to unmapped areas on the
+	other backend). Online verify would now potentially report tons of
+	spurious differences.  While probably harmless for most use cases
+	(fstrim on a file system), DRBD cannot have that.
+	</para><para>
+	To play safe, we have to disable discard support, if our local backend
+	(on a Primary) does not support "discard_zeroes_data=true".  We also have to
+	translate discards to explicit zero-out on the receiving side, unless
+	the receiving side (Secondary) supports "discard_zeroes_data=true",
+	thereby allocating areas what were supposed to be unmapped.
+	</para><para>
+	There are some devices (notably the LVM/DM thin provisioning) that are
+	capable of discard, but announce discard_zeroes_data=false.  In the case of
+	DM-thin, discards aligned to the chunk size will be unmapped, and
+	reading from unmapped sectors will return zeroes. However, unaligned
+	partial head or tail areas of discard requests will be silently ignored.
+	</para><para>
+	If we now add a helper to explicitly zero-out these unaligned partial
+	areas, while passing on the discard of the aligned full chunks, we
+	effectively achieve discard_zeroes_data=true on such devices.
+	</para><para>
+	Setting <option>discard-zeroes-if-aligned</option> to <option>yes</option>
+	will allow DRBD to use discards, and to announce discard_zeroes_data=true,
+	even on backends that announce discard_zeroes_data=false.
+	</para><para>
+	Setting <option>discard-zeroes-if-aligned</option> to <option>no</option>
+	will cause DRBD to always fall-back to zero-out on the receiving side,
+	and to not even announce discard capabilities on the Primary,
+	if the respective backend announces discard_zeroes_data=false.
+	</para><para>
+	We used to ignore the discard_zeroes_data setting completely.  To not
+	break established and expected behaviour, and suddenly cause fstrim on
+	thin-provisioned LVs to run out-of-space instead of freeing up space,
+	the default value is <option>yes</option>.
+	</para><para>
+	This option is available since 8.4.7.
+	</para>
           </listitem>
         </varlistentry>
 

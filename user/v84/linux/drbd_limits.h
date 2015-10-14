@@ -210,6 +210,13 @@
 #define DRBD_TCP_CORK_DEF	1
 #define DRBD_AL_UPDATES_DEF     1
 
+/* We used to ignore the discard_zeroes_data setting.
+ * To not change established (and expected) behaviour,
+ * by default assume that, for discard_zeroes_data=0,
+ * we can make that an effective discard_zeroes_data=1,
+ * if we only explicitly zero-out unaligned partial chunks. */
+#define DRBD_DISCARD_ZEROES_IF_ALIGNED_DEF 1
+
 #define DRBD_ALLOW_TWO_PRIMARIES_DEF	0
 #define DRBD_ALWAYS_ASBP_DEF	0
 #define DRBD_USE_RLE_DEF	1
