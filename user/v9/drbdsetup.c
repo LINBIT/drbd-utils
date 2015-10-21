@@ -2602,14 +2602,25 @@ static int dstate_cmd(struct drbd_cmd *cm, int argc, char **argv)
 {
 	struct devices_list *devices, *device;
 	bool found = false;
+	struct peer_devices_list *peer_devices, *peer_device;
 
 	devices = list_devices(NULL);
 	for (device = devices; device; device = device->next) {
 		if (device->minor != minor)
 			continue;
 
-		printf("%s\n", drbd_disk_str(device->info.dev_disk_state));
+		printf("%s", drbd_disk_str(device->info.dev_disk_state));
 		/* printf("%s/%s\n",drbd_disk_str(state.disk),drbd_disk_str(state.pdsk)); */
+
+		peer_devices = list_peer_devices(device->ctx.ctx_resource_name);
+		for (peer_device = peer_devices;
+				peer_device;
+				peer_device = peer_device->next) {
+
+			if (device->ctx.ctx_volume == peer_device->ctx.ctx_volume)
+				printf("/%s", drbd_disk_str(peer_device->info.peer_disk_state));
+		}
+		printf("\n");
 		found = true;
 		break;
 	}
