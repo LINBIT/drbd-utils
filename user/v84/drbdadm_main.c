@@ -2243,7 +2243,7 @@ static int adm_wait_c(struct cfg_ctx *ctx)
 			// one connect-interval? two?
 			timeout *= 2;
 		}
-		argv[argc++] = "-t";
+		argv[argc++] = "--wfc-timeout";
 		ssprintf(argv[argc], "%lu", timeout);
 		argc++;
 	} else {
