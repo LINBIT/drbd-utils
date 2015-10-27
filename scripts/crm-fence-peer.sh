@@ -780,6 +780,7 @@ fi
 
 # clean environment just in case.
 unset fencing_attribute id_prefix timeout dc_timeout unreachable_peer_is
+unset flock_timeout flock_required lock_dir lock_file
 CTS_mode=false
 suicide_on_failure_if_primary=false
 
@@ -843,6 +844,30 @@ while [[ $# != 0 ]]; do
 		dc_timeout=$2
 		shift
 		;;
+	--flock-required)
+		flock_required=true
+		;;
+	--flock-timeout=*)
+		flock_timeout=${1#*=}
+		;;
+	--flock-timeout)
+		flock_timeout=$2
+		shift
+		;;
+	--lock-dir=*)
+		lock_dir=${1#*=}
+		;;
+	--lock-dir)
+		lock_dir=$2
+		shift
+		;;
+	--lock-file=*)
+		lock_file=${1#*=}
+		;;
+	--lock-file)
+		lock_file=$2
+		shift
+		;;
 	--net-hickup=*|--network-hickup=*)
 		net_hickup_time=${1#*=}
 		;;
@@ -872,6 +897,25 @@ while [[ $# != 0 ]]; do
 	esac
 	shift
 done
+
+#
+# Sanitize lock_file and lock_dir
+#
+if [[ ${lock_dir:=/var/lock/drbd} != /* ]] ; then
+	echo WARNING "lock_dir needs to be an absolute path, not [$lock_dir]; using default."
+	lock_dir=/var/lock/drbd
+fi
+case $lock_file in
+"")	lock_file=$lock_dir/fence.${DRBD_RESOURCE//\//_} ;;
+NONE)	: ;;
+/*)	: ;;
+*)	lock_file=$lock_dir/$lock_file ;;
+esac
+if [[ $lock_file != NONE && $lock_file != $lock_dir/* ]]; then
+	lock_dir=${lock_file%/*}; : ${lock_dir:=/}
+	: == DEBUG == "override: lock_dir=$lock_dir to match lock_file=$lock_file"
+fi
+
 # DRBD_RESOURCE: from environment
 # master_id: parsed from cib
 
@@ -885,6 +929,11 @@ done
 : "== net_hickup_time     == ${net_hickup_time:=0}"
 : "== timeout             == ${timeout:=90}"
 : "== dc_timeout          == ${dc_timeout:=20}"
+: "== flock_timeout       == ${flock_timeout:=120}"
+: "== flock_required      == ${flock_required:=false}"
+: "== lock_file           == ${lock_file}"
+: "== lock_dir            == ${lock_dir}"
+
 
 # check envars normally passed in by drbdadm
 # TODO DRBD_CONF is also passed in.  we may need to use it in the
@@ -918,6 +967,24 @@ echo "invoked for $DRBD_RESOURCE${master_id:+" (master-id: $master_id)"}"
 # to be set by drbd_peer_fencing()
 drbd_fence_peer_exit_code=1
 
+got_flock=false
+if [[ $lock_file != NONE ]] ; then
+	test -d "$lock_dir"			||
+		mkdir -p -m 0700 "$lock_dir"	||
+		echo WARNING "mkdir -p $lock_dir failed"
+
+	if exec 9>"$lock_file" && flock --exclusive --timeout $flock_timeout 9
+	then
+		got_flock=true
+	else
+		echo WARNING "Could not get flock on $lock_file"
+		$flock_required && exit 1
+
+		# If I cannot get the lock file, I can at least still try to place the constraint
+	fi
+	: == DEBUG == $SECONDS seconds, got_flock=$got_flock ==
+fi
+
 case $PROG in
     crm-fence-peer.sh)
 	if drbd_peer_fencing fence; then
@@ -932,7 +999,7 @@ case $PROG in
 		: == DEBUG == $SECONDS seconds ==
 		exit 0
 	fi
-esac
+esac 9>&- # Don't want to "leak" the lock fd to child processes.
 
 # 1: unexpected error
 exit 1
