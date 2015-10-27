@@ -450,6 +450,18 @@ drbd_peer_fencing()
 	esac
 }
 
+double_check_after_fencing()
+{
+	set_states_from_proc_drbd
+	: == DEBUG == DRBD_peer=${DRBD_peer[*]} ===
+	: == DEBUG == DRBD_pdsk=${DRBD_pdsk[*]} ===
+	if $DRBD_pdsk_all_uptodate ; then
+		echo WARNING "All peer disks are UpToDate (again), trying to remove the constraint again."
+		remove_constraint && drbd_fence_peer_exit_code=1 rc=0
+		return
+	fi
+}
+
 guess_if_pacemaker_will_fence()
 {
 	# try to guess whether it is useful to wait and poll again,
@@ -992,6 +1004,7 @@ case $PROG in
 	if drbd_peer_fencing fence; then
 		: == DEBUG == $cibadmin_invocations cibadmin calls ==
 		: == DEBUG == $SECONDS seconds ==
+		[[ $drbd_fence_peer_exit_code = [347] ]] && double_check_after_fencing
 		exit $drbd_fence_peer_exit_code
 	fi
 	;;
