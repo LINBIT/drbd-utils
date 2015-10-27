@@ -245,15 +245,13 @@ try_place_constraint()
 
 	set_states_from_proc_drbd
 	: == DEBUG == DRBD_peer=${DRBD_peer[*]} ===
-	case "${DRBD_peer[*]}" in
-	*Secondary*|*Primary*)
-		# WTF? We are supposed to fence the peer,
-		# but the replication link is just fine?
-		echo WARNING "peer is not Unknown, did not place the constraint!"
+	: == DEBUG == DRBD_pdsk=${DRBD_pdsk[*]} ===
+	if $DRBD_pdsk_all_uptodate ; then
+		echo WARNING "All peer disks are UpToDate! Did not place the constraint."
 		rc=0
 		return
-		;;
-	esac
+	fi
+
 	: == DEBUG == CTS_mode=$CTS_mode ==
 	: == DEBUG == DRBD_disk_all_consistent=$DRBD_disk_all_consistent ==
 	: == DEBUG == DRBD_disk_all_uptodate=$DRBD_disk_all_uptodate ==
@@ -700,7 +698,7 @@ check_peer_node_reachable()
 
 set_states_from_proc_drbd()
 {
-	local IFS line lines i disk
+	local IFS line lines i disk pdsk
 	# DRBD_MINOR exported by drbdadm since 8.3.3
 	[[ $DRBD_MINOR ]] || DRBD_MINOR=$(drbdadm ${DRBD_CONF:+ -c "$DRBD_CONF"} sh-minor $DRBD_RESOURCE) || return
 
@@ -712,14 +710,14 @@ set_states_from_proc_drbd()
 	# We must not recurse into netlink,
 	# this may be a callback triggered by "drbdsetup primary".
 	# grep /proc/drbd instead
-	# This magic does not work, if 
-	#
 
 	DRBD_peer=()
 	DRBD_role=()
 	DRBD_disk=()
+	DRBD_pdsk=()
 	DRBD_disk_all_uptodate=true
 	DRBD_disk_all_consistent=true
+	DRBD_pdsk_all_uptodate=true
 
 	IFS=$'\n'
 	lines=($(sed -nre "/^ *$DRBD_MINOR: cs:/ { s/:/ /g; p; }" /proc/drbd))
@@ -730,8 +728,10 @@ set_states_from_proc_drbd()
 		set -- $line
 		DRBD_peer[i]=${5#*/}
 		DRBD_role[i]=${5%/*}
+		pdsk=${7#*/}
 		disk=${7%/*}
 		DRBD_disk[i]=${disk:-Unconfigured}
+		DRBD_pdsk[i]=${pdsk:-DUnknown}
 		case $disk in
 		UpToDate) ;;
 		Consistent)
@@ -740,9 +740,11 @@ set_states_from_proc_drbd()
 			DRBD_disk_all_uptodate=false
 			DRBD_disk_all_consistent=false ;;
 		esac
+		[[ $pdsk != UpToDate ]] && DRBD_pdsk_all_uptodate=false
 		let i++
 	done
 	if (( i = 0 )) ; then
+		DRBD_pdsk_all_uptodate=false
 		DRBD_disk_all_uptodate=false
 		DRBD_disk_all_consistent=false
 	fi
