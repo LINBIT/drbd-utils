@@ -442,9 +442,18 @@ drbd_peer_fencing()
 		;;
 	unfence)
 		if [[ -n $have_constraint ]]; then
-			# remove it based on that id
-			remove_constraint
+			set_states_from_proc_drbd
+			if $DRBD_disk_all_uptodate && $DRBD_pdsk_all_uptodate; then
+				# try to remove it based on that xml-id
+				remove_constraint
+			else
+				local w="My"
+				$DRBD_disk_all_uptodate && w="Peer's"
+				echo WARNING "$w disk(s) are NOT all UpToDate, leaving constraint in place."
+				return 1
+			fi
 		else
+			echo WARNING "No constraint in place, nothing to do."
 			return 0
 		fi
 	esac
