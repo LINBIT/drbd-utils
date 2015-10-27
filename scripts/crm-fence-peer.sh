@@ -101,7 +101,7 @@ fence_peer_init()
 # shoot it, just to be sure.
 #
 # --dc-timeout is how long we try to contact a DC before we give up.
-# This is neccessary, because placing the constraint will fail (with some
+# This is necessary, because placing the constraint will fail (with some
 # internal timeout) if no DC was available when we request the constraint.
 # Which is likely if the DC crashed. Then the surviving DRBD Primary needs
 # to wait for a new DC to be elected. Usually such election takes only
@@ -130,8 +130,8 @@ fence_peer_init()
 #
 #       If peer is still reachable according to the cib,
 #	we first poll the cib/try to confirm with crmadmin,
-#	until either crmadim confirms reachability, timeout has elapsed,
-#	or the peer becomes definetely unreachable.
+#	until either crmadmin confirms reachability, timeout has elapsed,
+#	or the peer becomes definitely unreachable.
 #
 #	This gives STONITH the chance to kill us.
 #	With "fencing resource-and-stontith;" this protects us against
@@ -172,8 +172,8 @@ fence_peer_init()
 #	without doing additional waiting.  If the peer is still reachable, we
 #	place the constraint - if the peer had better data, it should have a
 #	higher master score, and we should not have been asked to become
-#	primary.  If the peer is not reachable, we don't do anything, and drbd
-#	will refuse to be promoted. This is neccessary to avoid problems
+#	primary.  If the peer is not reachable, we don't do anything, and DRBD
+#	will refuse to be promoted. This is necessary to avoid problems
 #	With data diversion, in case this "crash" was due to a STONITH operation,
 #	maybe the reboot did not fix our cluster communications!
 #
@@ -213,6 +213,21 @@ check_cluster_properties()
 	crm_is_not_false $stonith_enabled && stonith_enabled=true || stonith_enabled=false
 }
 
+
+#
+# In case this is a two-node cluster (still common with
+# DRBD clusters) it does not have real quorum.
+# If it is configured to do STONITH, and reboot,
+# and after reboot that STONITHed node cluster comm is
+# still broken, it will shoot the still online node,
+# and try to go online with stale data.
+# Exactly what this "fence" handler should prevent.
+# But setting constraints in a cluster partition with
+# "no-quorum-policy=ignore" will usually succeed.
+#
+# So we need to differentiate between node reachable or
+# not, and DRBD "Consistent" or "UpToDate".
+#
 try_place_constraint()
 {
 	local peer_state
@@ -382,20 +397,6 @@ drbd_peer_fencing()
 </rsc_location>"
 		if [[ -z $have_constraint ]] ; then
 			# try to place it.
-
-			# interessting:
-			# In case this is a two-node cluster (still common with
-			# drbd clusters) it does not have real quorum.
-			# If it is configured to do stonith, and reboot,
-			# and after reboot that stonithed node cluster comm is
-			# still broken, it will shoot the still online node,
-			# and try to go online with stale data.
-			# Exactly what this "fence" hanler should prevent.
-			# But setting contraints in a cluster partition with
-			# "no-quorum-policy=ignore" will usually succeed.
-			#
-			# So we need to differentiate between node reachable or
-			# not, and DRBD "Consistent" or "UpToDate".
 
 			try_place_constraint && return
 
