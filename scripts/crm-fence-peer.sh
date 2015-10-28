@@ -374,12 +374,7 @@ drbd_peer_fencing()
 	get_cib_xml -Ql || return
 	fence_peer_init || return
 
-	case $1 in
-	fence)
-
-		local startup_fencing stonith_enabled
-		check_cluster_properties
-
+	if [[ $1 = fence ]] || $unfence_only_if_owner_match ; then
 		if [[ $fencing_attribute = "#uname" ]]; then
 			fencing_value=$HOSTNAME
 		elif ! fencing_value=$(crm_attribute -Q -t nodes -n $fencing_attribute 2>/dev/null); then
@@ -393,6 +388,14 @@ drbd_peer_fencing()
     <expression attribute=\"$fencing_attribute\" operation=\"ne\" value=\"$fencing_value\" id=\"$id_prefix-expr-$master_id\"/>
   </rule>
 </rsc_location>"
+	fi
+
+	case $1 in
+	fence)
+
+		local startup_fencing stonith_enabled
+		check_cluster_properties
+
 		if [[ -z $have_constraint ]] ; then
 			# try to place it.
 
@@ -444,8 +447,14 @@ drbd_peer_fencing()
 		if [[ -n $have_constraint ]]; then
 			set_states_from_proc_drbd
 			if $DRBD_disk_all_uptodate && $DRBD_pdsk_all_uptodate; then
-				# try to remove it based on that xml-id
-				remove_constraint
+				if $unfence_only_if_owner_match && [[ "$have_constraint" != "$(set +x; echo "$new_constraint" |
+					sed_rsc_location_suitable_for_string_compare "$id_prefix-$master_id")" ]]
+				then
+					echo WARNING "Constraint owner does not match, leaving constraint in place."
+				else
+					# try to remove it based on that xml-id
+					remove_constraint && echo INFO "Removed constraint '$id_prefix-$master_id'"
+				fi
 			else
 				local w="My"
 				$DRBD_disk_all_uptodate && w="Peer's"
@@ -453,7 +462,7 @@ drbd_peer_fencing()
 				return 1
 			fi
 		else
-			echo WARNING "No constraint in place, nothing to do."
+			$quiet || echo "No constraint in place, nothing to do."
 			return 0
 		fi
 	esac
@@ -804,6 +813,8 @@ fi
 # clean environment just in case.
 unset fencing_attribute id_prefix timeout dc_timeout unreachable_peer_is
 unset flock_timeout flock_required lock_dir lock_file
+quiet=false
+unfence_only_if_owner_match=false
 CTS_mode=false
 suicide_on_failure_if_primary=false
 
@@ -866,6 +877,12 @@ while [[ $# != 0 ]]; do
 	-d|--dc-timeout)
 		dc_timeout=$2
 		shift
+		;;
+	--quiet)
+		quiet=true
+		;;
+	--unfence-only-if-owner-match)
+		unfence_only_if_owner_match=true
 		;;
 	--flock-required)
 		flock_required=true
@@ -985,7 +1002,7 @@ fi
 # make sure it contains what we expect
 HOSTNAME=$(uname -n)
 
-echo "invoked for $DRBD_RESOURCE${master_id:+" (master-id: $master_id)"}"
+$quiet || echo "invoked for $DRBD_RESOURCE${master_id:+" (master-id: $master_id)"}"
 
 # to be set by drbd_peer_fencing()
 drbd_fence_peer_exit_code=1
