@@ -169,6 +169,7 @@ initial-split-brain    { DP; CP; return TK_HANDLER_OPTION;     }
 split-brain		{ DP; CP; return TK_HANDLER_OPTION;     }
 outdate-peer		{ DP; CP; return TK_HANDLER_OPTION;	}
 fence-peer		{ DP; CP; return TK_HANDLER_OPTION;	}
+unfence-peer		{ DP; CP; return TK_HANDLER_OPTION;	}
 local-io-error		{ DP; CP; return TK_HANDLER_OPTION;     }
 before-resync-target	{ DP; CP; return TK_HANDLER_OPTION;	}
 after-resync-target	{ DP; CP; return TK_HANDLER_OPTION;	}

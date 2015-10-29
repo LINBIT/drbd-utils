@@ -81,6 +81,13 @@ fi
 
 # Defaults
 OCF_RESKEY_drbdconf_default="/etc/drbd.conf"
+OCF_RESKEY_unfence_extra_args_default="--quiet --flock-required --flock-timeout 0 --unfence-only-if-owner-match"
+
+if ocf_is_true ${OCF_RESKEY_unfence_if_all_uptodate:=false}; then
+	unfence_if_all_uptodate=true
+else
+	unfence_if_all_uptodate=false
+fi
 
 # The passed in OCF_CRM_meta_notify_* environment
 # is not reliably with pacemaker up to at least
@@ -125,6 +132,7 @@ if ls_stat_is_dir_0700_root $DEBUG_LOG_DIR &&
    [[ -w "$DEBUG_LOG" && ! -L "$DEBUG_LOG" ]]
 then
 	USE_DEBUG_LOG=true
+	# PS4='+[`date +%F\ %T.%3N`] '
 	exec 9>>"$DEBUG_LOG"
 	date >&9
 	echo "$*" >&9
@@ -222,6 +230,34 @@ Allow to disable notifications without patching this resource agent.
 </longdesc>
 <shortdesc lang="en">ignore missing notify=true</shortdesc>
 <content type="boolean" default="false"/>
+</parameter>
+
+<parameter name="unfence_if_all_uptodate">
+<longdesc lang="en">
+If all volumes of this resource report to be UpToDate,
+call an unfence script hook, just in case some stale fencing constraint
+or similar is still around.
+<![CDATA[
+- With DRBD utils version <= 8.9.4, this is hardcoded to
+  /usr/lib/drbd/crm-unfence-peer.sh -r \$DRBD_RESOURCE
+- With DRBD utils version >= 8.9.5, this is dispatched to
+   \$DRBDADM unfence-peer \$DRBD_RESOURCE
+
+In any case, the hook itself is responsible to fetch
+\$OCF_RESKEY_unfence_extra_args from its environment.
+]]>
+</longdesc>
+<shortdesc lang="en">call unfence hook once fully UpToDate</shortdesc>
+<content type="boolean" default="false"/>
+</parameter>
+
+<parameter name="unfence_extra_args">
+<longdesc lang="en">
+This may be used to pass extra hints to the unfence hook.
+See description of unfence_if_all_uptodate.
+</longdesc>
+<shortdesc lang="en">Extra arguments for the unfence hook.</shortdesc>
+<content type="boolean" default="$OCF_RESKEY_unfence_extra_args_default"/>
 </parameter>
 </parameters>
 
@@ -346,6 +382,25 @@ drbd_set_status_variables() {
 	: == DEBUG == DRBD_DSTATE_REMOTE == ${DRBD_DSTATE_REMOTE[@]} ==
 }
 
+call_unfence()
+{
+	# It is easier to just call the crm-unfence-peer script, without
+	# duplicating part of its code here.  Also adding cibadmin calls to
+	# first check if such constraint does even exist would needlessly add
+	# even more load on the cib.
+
+	export OCF_RESKEY_unfence_extra_args
+	: ${OCF_RESKEY_unfence_extra_args:=$OCF_RESKEY_unfence_extra_args_default}
+
+	# The unfence-peer handler was introduced only in 8.9.5.
+	if (( DRBDADM_VERSION_CODE >= 0x080905 )) ; then
+		$DRBDADM unfence-peer $DRBD_RESOURCE
+	else
+		/usr/lib/drbd/crm-unfence-peer.sh -r $DRBD_RESOURCE
+	fi
+	: "unfence exit code: $?"
+}
+
 # This is not the only fencing mechanism.
 # But in addition to the drbd "fence-peer" handler, which should be configured,
 # and is expected to place some appropriate constraints, this is used to
@@ -442,8 +497,16 @@ drbd_update_master_score() {
 	# if all are UpToDate.
 	: == DEBUG == ${DRBD_ROLE_LOCAL[*]}/${DRBD_DSTATE_LOCAL[*]//UpToDate/ }/${DRBD_DSTATE_REMOTE[*]//UpToDate/ }/ ==
 	case ${DRBD_ROLE_LOCAL[*]}/${DRBD_DSTATE_LOCAL[*]//UpToDate/ }/${DRBD_DSTATE_REMOTE[*]//UpToDate/ }/ in
+	*Primary*/\ /\ /)
+		# I am Primary, all local disks are UpToDate,
+		# AND all peer disks are UpToDate
+		set_master_score $as_good_as_it_gets
+		: == DEBUG == unfence_if_all_uptodate=$unfence_if_all_uptodate
+		$unfence_if_all_uptodate && call_unfence
+		;;
 	*Primary*/\ /*/)
-		# I am Primary, all local disks are UpToDate
+		# I am Primary, all local disks are UpToDate,
+		# not so sure about the peer's disks
 		set_master_score $as_good_as_it_gets
 		;;
 	*/\ /*DUnknown*/)
@@ -936,7 +999,7 @@ drbd_validate_all () {
 	check_binary $DRBDSETUP
 	# XXX I really take cibadmin, sed, grep, etc. for granted.
 
-	local VERSION DRBD_KERNEL_VERSION_CODE=0
+	local VERSION DRBD_KERNEL_VERSION_CODE=0 DRBDADM_VERSION_CODE=0
 	if VERSION="$($DRBDADM --version 2>/dev/null)"; then
 		eval $VERSION
 	fi

@@ -430,6 +430,7 @@ struct adm_cmd cmds[] = {
 	{"pri-on-incon-degr", adm_khelper, DRBD_acf3_handler},
 	{"pri-lost-after-sb", adm_khelper, DRBD_acf3_handler},
 	{"fence-peer", adm_khelper, DRBD_acf3_res_handler},
+	{"unfence-peer", adm_khelper, DRBD_acf3_res_handler},
 	{"local-io-error", adm_khelper, DRBD_acf3_handler},
 	{"pri-lost", adm_khelper, DRBD_acf3_handler},
 	{"initial-split-brain", adm_khelper, DRBD_acf3_handler},

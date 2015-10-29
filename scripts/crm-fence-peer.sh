@@ -820,6 +820,7 @@ suicide_on_failure_if_primary=false
 
 # poor mans command line argument parsing,
 # allow for command line overrides
+set -- "$@" $OCF_RESKEY_unfence_extra_args
 while [[ $# != 0 ]]; do
 	case $1 in
 	--logfacility=*)
