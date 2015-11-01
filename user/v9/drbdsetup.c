@@ -3349,6 +3349,7 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 		[DRBD_CONNECTION_STATE] = "connection",
 		[DRBD_PEER_DEVICE_STATE] = "peer-device",
 		[DRBD_HELPER] = "helper",
+		[DRBD_PATH_STATE] = "path",
 	};
 	static uint32_t last_seq;
 	static bool last_seq_known;
@@ -3565,6 +3566,22 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 					print_peer_device_statistics(0, old ? &old->s : NULL,
 								     &new.s, nowrap_printf);
 			}
+			free(old);
+		} else
+			update_info(&key, NULL, 0);
+		break;
+	case DRBD_PATH_STATE:
+		if (action != NOTIFY_DESTROY) {
+			struct drbd_path_info new = {}, *old;
+
+			if (drbd_path_info_from_attrs(&new, info)) {
+				dbg(1, "path info missing\n");
+				goto nl_out;
+			}
+			old = update_info(&key, &new, sizeof(new));
+			if (!old || old->path_established != new.path_established)
+				printf(" established:%s",
+				       new.path_established ? "yes" : "no");
 			free(old);
 		} else
 			update_info(&key, NULL, 0);
