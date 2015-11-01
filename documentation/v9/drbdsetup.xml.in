@@ -156,8 +156,8 @@
       </varlistentry>
 
       <varlistentry>
-	<xi:include href="drbdsetup_connect.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
-	<!-- Connect a resource to a peer host. -->
+	<xi:include href="drbdsetup_new-peer.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<!-- Create a connection/peer within a resource. -->
 	<xi:include href="drbdsetup_net-options.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
 	<!-- Change the network options of a connection. -->
 
@@ -168,27 +168,14 @@
 	    <secondary>net</secondary>
 	  </indexterm>
 
-	  <para>The <option>connect</option> command connects a
-	  <replaceable>resource</replaceable> to a peer host.  The resource
+	  <para>The <option>new-peer</option> command creates a connection within
+          a <replaceable>resource</replaceable>. The resource
 	  must have been created with <command moreinfo="none">drbdsetup
 	  new-resource</command>.  The <option>net-options</option> command
-	  changes the network options of an existing connection.  In both
-	  commands, <replaceable>local_addr</replaceable> and
-	  <replaceable>remote_addr</replaceable> refer to the local and remote
-	  protocol, network address, and port in the format
-	  <optional><replaceable>address-family</replaceable>:</optional><replaceable>address</replaceable><optional>:<replaceable>port</replaceable></optional>.
-	  The address families <option>ipv4</option>,
-	  <option>ipv6</option>, <option>ssocks</option> (Dolphin Interconnect
-	  Solutions' "super sockets"), <option>sdp</option> (Infiniband Sockets
-	  Direct Protocol), and <option>sci</option> are supported
-	  (<option>sci</option> is an alias for <option>ssocks</option>).  If
-	  no address family is specified, <option>ipv4</option> is assumed. For
-	  all address families except <option>ipv6</option>, the
-	  <replaceable>address</replaceable> uses IPv4 address notation (for
-	  example, 1.2.3.4). For <option>ipv6</option>, the address is enclosed
-	  in brackets and uses IPv6 address notation (for example,
-	  [fd01:2345:6789:abcd::1]).  The <replaceable>port</replaceable>
-	  defaults to 7788.  Available options:</para>
+	  changes the network options of an existing connection. Before a
+	  connection can be activated with the <option>connect</option>
+	  command, at least one path need to added with the <option>new-path</option>
+	  command. Available options:</para>
 
 	  <variablelist>
 
@@ -219,11 +206,102 @@
 	    <pick_drbdsetup_option name="unplug-watermark"/>
 	    <pick_drbdsetup_option name="use-rle"/>
 	    <pick_drbdsetup_option name="verify-alg"/>
-	    <pick_drbdsetup_option name="discard-my-data"/>
-	    <pick_drbdsetup_option name="tentative"/>
 	  </variablelist>
 	</listitem>
       </varlistentry>
+
+
+      <varlistentry>
+	<xi:include href="drbdsetup_new-path.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<!-- Create a path to a peer (within a connection). -->
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>net</secondary>
+	  </indexterm>
+
+	  <para>The <option>new-path</option> command creates a path within
+          a <replaceable>connection</replaceable>. The connection
+	  must have been created with <command moreinfo="none">drbdsetup
+	  new-peer</command>. <replaceable>Local_addr</replaceable> and
+	  <replaceable>remote_addr</replaceable> refer to the local and remote
+	  protocol, network address, and port in the format
+	  <optional><replaceable>address-family</replaceable>:</optional><replaceable>address</replaceable><optional>:<replaceable>port</replaceable></optional>.
+	  The address families <option>ipv4</option>,
+	  <option>ipv6</option>, <option>ssocks</option> (Dolphin Interconnect
+	  Solutions' "super sockets"), <option>sdp</option> (Infiniband Sockets
+	  Direct Protocol), and <option>sci</option> are supported
+	  (<option>sci</option> is an alias for <option>ssocks</option>).  If
+	  no address family is specified, <option>ipv4</option> is assumed. For
+	  all address families except <option>ipv6</option>, the
+	  <replaceable>address</replaceable> uses IPv4 address notation (for
+	  example, 1.2.3.4). For <option>ipv6</option>, the address is enclosed
+	  in brackets and uses IPv6 address notation (for example,
+	  [fd01:2345:6789:abcd::1]).  The <replaceable>port</replaceable>
+	  defaults to 7788.</para>
+
+	</listitem>
+      </varlistentry>
+
+
+      <varlistentry>
+	<xi:include href="drbdsetup_connect.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<!-- Activate a connection. -->
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>net</secondary>
+	  </indexterm>
+
+	  <para>The <option>connect</option> command activates a connection.
+	  That means that the DRBD driver will bind and listen on all local
+	  addresses of the connection-'s paths. It will begin to try to establish
+	  one or more paths of the connection.  Available options: </para>
+
+	  <variablelist>
+	    <pick_drbdsetup_option name="tentative"/>
+	    <pick_drbdsetup_option name="discard-my-data"/>
+	  </variablelist>
+
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_del-peer.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<!-- Remove a connection/peer within a resource. -->
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>net</secondary>
+	  </indexterm>
+
+	  <para>The <option>del-peer</option> command removes a connection from
+          a <replaceable>resource</replaceable>.</para>
+
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_del-path.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<!-- Remove a connection/peer within a resource. -->
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>net</secondary>
+	  </indexterm>
+
+	  <para>The <option>del-path</option> command removes a path from
+          a <replaceable>connection</replaceable>. Please not that it fails if
+	  the path is necessary to keep a connected connection in tact. In order
+	  to remove all paths, disconnect the connection first.</para>
+
+	</listitem>
+      </varlistentry>
+
 
       <varlistentry>
 	<xi:include href="drbdsetup_cstate.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
@@ -237,7 +315,7 @@
 	  </indexterm>
 
 	  <para>Show the current state of a connection.  The connection is
-	  identified by its endpoints; see the <command
+	  identified by the node-id of the peer; see the <command
 	  moreinfo="none">drbdsetup connect</command> command.</para>
 	</listitem>
       </varlistentry>
@@ -305,7 +383,7 @@
 	  </indexterm>
 
 	  <para>Remove a connection to a peer host.  The connection is
-	  identified by its endpoints; see the <command
+	  identified by the node-id of the peer; see the <command
 	  moreinfo="none">drbdsetup connect</command> command.</para>
 	</listitem>
       </varlistentry>

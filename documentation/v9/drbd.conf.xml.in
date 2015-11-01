@@ -157,6 +157,7 @@ common
 global
 resource
    connection
+      path
       net
    connection-mesh
       net
@@ -211,11 +212,25 @@ resource
 
                 <secondary>connection</secondary>
               </indexterm> Define a connection between two hosts. This section
-              must contain two <option>host</option> parameters.
+              must contain two <option>host</option> parameters or multiple
+	      <option>path sections</option>.
               The optional <replaceable>name</replaceable> is
               used to refer to the connection in the system log and in other
               messages. If no name is specified, the peer's host name
               is used instead.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>path</option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>path</secondary>
+              </indexterm> Define a path between two hosts. This section
+              must contain two <option>host</option> parameters.</para>
           </listitem>
         </varlistentry>
 
@@ -477,6 +492,37 @@ resource
             If a port number is defined, this endpoint will use the specified
             port instead of the port defined in the <option>on</option>
             section.  Each <option>connection</option> section must contain
+            exactly two <option>host</option> parameters. Instead of two
+	    <option>host</option> parameters the connection may contain
+	    multiple <option>path</option> sections.</para>
+          </listitem>
+        </varlistentry>
+      </variablelist>
+    </refsect2>
+
+    <refsect2>
+      <title>Section <option>path</option> Parameters</title>
+
+      <variablelist>
+        <varlistentry>
+          <term><option>host <replaceable>name</replaceable></option>
+            <optional><option>address
+                <optional>address-family</optional>
+                <replaceable>address</replaceable></option></optional>
+            <optional><option>port
+                <replaceable>port-number</replaceable></option></optional></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>host</secondary>
+              </indexterm>
+            Defines an endpoint for a connection. Each <option>host</option>
+            statement refers to an <option>on</option> section in a resource.
+            If a port number is defined, this endpoint will use the specified
+            port instead of the port defined in the <option>on</option>
+            section.  Each <option>path</option> section must contain
             exactly two <option>host</option> parameters.</para>
           </listitem>
         </varlistentry>

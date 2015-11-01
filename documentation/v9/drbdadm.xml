@@ -298,8 +298,11 @@
           <para><indexterm significance="normal">
               <primary>drbdadm</primary>
 
-	      <secondary>connect</secondary> </indexterm> Connect a resource to
-	    a peer host.  See <citerefentry>
+	      <secondary>connect</secondary> </indexterm> Activate an exisiting
+	      connection to a peer. The connection needs to be created first
+	      with the <option>new-peer</option> command, and have at least
+	      one path created with the <option>new-path</option> command.
+	      See <citerefentry>
 	      <refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</manvolnum>
 	    </citerefentry> for details.
 	  </para>
