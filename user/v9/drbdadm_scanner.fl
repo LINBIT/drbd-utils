@@ -42,8 +42,8 @@ OPCHAR		[{};\[\]:]
 DQSTRING	\"([^\"\\\n]|\\[^\n]){0,255}\"
 LONG_DQSTRING	\"([^\"\\\n]|\\[^\n]){255}.
 ERR_DQSTRING	\"([^\"\\\n]|\\[^\n]){0,255}[\\\n]
-STRING		[a-zA-Z0-9/._-]{1,80}
-LONG_STRING	[a-zA-Z0-9/._-]{81}
+STRING		[a-zA-Z0-9/._-]{1,128}
+LONG_STRING	[a-zA-Z0-9/._-]{129}
 
 %%
 
