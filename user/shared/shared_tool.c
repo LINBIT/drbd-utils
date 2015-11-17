@@ -23,6 +23,7 @@
 #include <arpa/inet.h>
 #include <syslog.h>
 #include <fnmatch.h>
+#include <features.h>
 
 #include "config.h"
 #include "drbdadm.h"
@@ -307,7 +308,15 @@ int lk_bdev_load(const unsigned minor, struct bdev_info *bd)
 
 	/* GNU format extension: %as:
 	 * malloc buffer space for the resulting char */
-	rc = fscanf(fp, "%llu %as%[\n]uuid: %llx%[\n]",
+#define BDEV_FORMAT "%llu %as%[\n]uuid: %llx%[\n]"
+#ifdef __GLIBC_PREREQ
+#if __GLIBC_PREREQ(2, 7)
+#undef BDEV_FORMAT
+#define BDEV_FORMAT "%llu %ms%[\n]uuid: %llx%[\n]"
+#endif
+#endif
+
+	rc = fscanf(fp, BDEV_FORMAT,
 			&bd_size, &bd_name, nl,
 			&bd_uuid, nl);
 	/* rc == 5: successfully converted two lines.
