@@ -1648,7 +1648,6 @@ static int adm_path(const struct cfg_ctx *ctx)
 
 void free_opt(struct d_option *item)
 {
-	free(item->name);
 	free(item->value);
 	free(item);
 }
