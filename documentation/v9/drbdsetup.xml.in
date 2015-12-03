@@ -435,14 +435,12 @@
 	    by all changes to the state.</para>
 
 	  <para>The output format is meant to be human as well as machine
-	    readable.  Each line starts with the event number, which is
-	    followed by an asterisk if the event continues in the next line.
-	    The second word in each line indicates the kind of event:
+	    readable. The line starts with a word that indicates the kind of event:
 	    <option>exists</option> for an existing object;
 	    <option>create</option>, <option>destroy</option>, and
 	    <option>change</option> if an object is created, destroyed, or
 	    changed; or <option>call</option> or <option>response</option> if
-	    an event handler is called or it returns.  The third word indicates
+	    an event handler is called or it returns.  The second word indicates
 	    the object the event applies to: <option>resource</option>,
 	    <option>device</option>, <option>connection</option>,
 	    <option>peer-device</option>, <option>helper</option>, or a dash
