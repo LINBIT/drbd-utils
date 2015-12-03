@@ -100,7 +100,6 @@
 	    <pick_drbdsetup_option name="al-updates"/>
 	    <pick_drbdsetup_option name="disk-barrier"/>
 	    <pick_drbdsetup_option name="disk-timeout"/>
-	    <pick_drbdsetup_option name="fencing"/>
 	    <pick_drbdsetup_option name="md-flushes"/>
 	    <pick_drbdsetup_option name="on-io-error"/>
 	    <pick_drbdsetup_option name="read-balancing"/>
@@ -189,6 +188,7 @@
 	    <pick_drbdsetup_option name="csums-alg"/>
 	    <pick_drbdsetup_option name="csums-after-crash-only"/>
 	    <pick_drbdsetup_option name="data-integrity-alg"/>
+	    <pick_drbdsetup_option name="fencing"/>
 	    <pick_drbdsetup_option name="ko-count"/>
 	    <pick_drbdsetup_option name="max-buffers"/>
 	    <pick_drbdsetup_option name="max-epoch-size"/>
