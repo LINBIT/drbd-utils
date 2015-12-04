@@ -297,6 +297,7 @@
             <option>c-delay-target</option>, <option>c-max-rate</option>,
             <option>c-min-rate</option>, <option>disk-timeout</option>,
 	    <option>discard-zeroes-if-aligned</option>,
+	    <option>rs-discard-granularity</option>,
 	    <option>read-balancing</option>.</para>
           </listitem>
         </varlistentry>
@@ -949,6 +950,31 @@
 	      and <option>1M-striping</option>.</para>
 	      <para> The default value of is <option>prefer-local</option>.
 	      This option is available since 8.4.1.
+	      </para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term xml:id="rs-discard-granularity">
+            <option>rs-discard-granularity <replaceable>byte</replaceable></option>
+          </term>
+          <listitem>
+            <indexterm significance="normal">
+              <primary>drbd.conf</primary>
+              <secondary>rs-discard-granularity</secondary>
+            </indexterm>
+	    <para>
+	      When <option>rs-discard-granularity</option> is set to a non zero, positive
+	      value then DRBD tries to do a resync operation in requests of this size.
+	      In case such a block contains only zero bytes on the sync source node,
+	      the sync target node will issue a discard/trim/unmap command for
+	      the area.</para>
+	      <para>The value is constrained by the discard granularity of the backing
+	      block device. In case <option>rs-discard-granularity</option> is not a
+	      multiplier of the discard granularity of the backing block device DRBD
+	      rounds it up. The feature only gets active if the backing block device
+	      reads back zeroes after a discard command.</para>
+	      <para> The default value of is 0. This option is available since 8.4.7.
 	      </para>
           </listitem>
         </varlistentry>
