@@ -218,6 +218,9 @@ configure: configure.ac
 	autoheader
 	autoconf
 
+config.status: configure
+	@printf "\nYou need to call ./configure with appropriate arguments (again).\n\n"; exit 1
+
 tarball: check-submods check_all_committed distclean doc configure .filelist
 	$(MAKE) tgz
 
@@ -241,3 +244,7 @@ srpm: tgz drbd.spec
 		drbd.spec
 	@echo "You have now:" ; find `rpm -E "%_srcrpmdir"` -name *.src.rpm
 endif
+
+Makefile: Makefile.in config.status
+	./config.status Makefile
+

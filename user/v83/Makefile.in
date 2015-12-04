@@ -108,3 +108,7 @@ endif
 uninstall:
 	rm -f $(DESTDIR)/lib/drbd/drbdsetup-83
 	rm -f $(DESTDIR)/lib/drbd/drbdadm-83
+
+Makefile: Makefile.in ../../config.status
+	cd ../.. && ./config.status user/v83/Makefile
+

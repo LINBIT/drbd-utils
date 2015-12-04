@@ -133,3 +133,7 @@ spell:
 	for f in drbdadm_adjust.c drbdadm_main.c drbdadm_parser.c drbdadm_usage_cnt.c drbdmeta.c drbdsetup.c drbdtool_common.c; do \
 	 	aspell --save-repl --dont-backup --personal=./../documentation/aspell.en.per check $$f; \
 	done
+
+Makefile: Makefile.in ../../config.status
+	cd ../.. && ./config.status user/v9/Makefile
+

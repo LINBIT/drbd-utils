@@ -103,3 +103,7 @@ install:
 
 uninstall:
 	true
+
+Makefile: Makefile.in ../../config.status
+	cd ../.. && ./config.status user/shared/Makefile
+

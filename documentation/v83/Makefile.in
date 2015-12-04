@@ -144,5 +144,5 @@ pdf:	$(SOURCES:.xml=.pdf)
 
 ps:	$(SOURCES:.xml=.ps)
 
-
-
+Makefile: Makefile.in ../../config.status
+	cd ../.. && ./config.status documentation/v83/Makefile

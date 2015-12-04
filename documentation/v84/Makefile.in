@@ -183,3 +183,6 @@ pdf:	$(MANPAGES:.8=.pdf)
 ps:	$(MANPAGES:.8=.ps)
 
 drbdsetup.8: drbdsetup.xml $(drbdsetup_X.xml)
+
+Makefile: Makefile.in ../../config.status
+	cd ../.. && ./config.status documentation/v84/Makefile

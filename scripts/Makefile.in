@@ -165,3 +165,7 @@ endif
 	rm -f $(DESTDIR)$(sysconfdir)/bash_completion.d/drbdadm$(BASH_COMPLETION_SUFFIX)
 	rm -f $(DESTDIR)$(sbindir)/drbd-overview
 	! test -L $(DESTDIR)/sbin/rcdrbd || rm $(DESTDIR)/sbin/rcdrbd
+
+Makefile: Makefile.in ../config.status
+	cd .. && ./config.status scripts/Makefile
+
