@@ -142,7 +142,10 @@ sub abbreviate {
     my $col_post = ($w =~  s/$ansi_color_re$//o) ? $1 : "";
 
 # keep UPPERCase and a few lowercase characters.
-	1 while length($w) > $max && $w =~ s/([a-z]+)[a-z]/$1/g;
+# Make "Connecting" to "C'ing", to get it distinct from "Connected"
+	1 while length($w) > $max &&
+        ( $w =~ s/^(C)(onnecting)$/"$1'" . substr($2, 2-$max)/eg || # needs to cut 2 characters, because one is inserted again.
+          $w =~ s/([a-z]+)[a-z]/$1/g );
 
 	return $col_pre . substr($w, 0, $max) . $col_post;
 }
