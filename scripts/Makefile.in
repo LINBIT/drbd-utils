@@ -166,6 +166,12 @@ endif
 	rm -f $(DESTDIR)$(sbindir)/drbd-overview
 	! test -L $(DESTDIR)/sbin/rcdrbd || rm $(DESTDIR)/sbin/rcdrbd
 
+.PHONY: install uninstall clean distclean
+../../configure:
+	@echo "please (re-)run ./autogen.sh with appropriate arguments"; exit 1
+../../config.status: ../../configure
+	@echo "please (re-)run ./configure with appropriate arguments"; exit 1
+Makefile.in: ;
 Makefile: Makefile.in ../config.status
 	cd .. && ./config.status scripts/Makefile
 

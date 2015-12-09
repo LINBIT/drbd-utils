@@ -213,6 +213,7 @@ prepare_release:
 	$(MAKE) tarball
 	$(MAKE) tarball PRESERVE_DEBIAN=1
 
+configure.ac: ;
 configure: configure.ac
 	aclocal
 	autoheader
@@ -245,6 +246,7 @@ srpm: tgz drbd.spec
 	@echo "You have now:" ; find `rpm -E "%_srcrpmdir"` -name *.src.rpm
 endif
 
+Makefile.in: ;
 Makefile: Makefile.in config.status
 	./config.status Makefile
 

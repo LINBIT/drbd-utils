@@ -12,7 +12,7 @@ drbd_buildtag.o: ../shared/drbd_buildtag.c
 	rm -f $@.$$$$
 
 .drbdmeta_scanner.d: ../shared/drbdmeta_scanner.c
-all-dep = $(all-obj:%.o=.%.d)
+all-dep = $($(filter-out drbd_buildtag.o,$(all-obj)):%.o=.%.d)
 
 ifneq (,$(filter-out clean distclean,$(MAKECMDGOALS)))
 include $(all-dep)

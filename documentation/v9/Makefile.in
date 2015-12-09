@@ -195,5 +195,10 @@ ps:	$(MANPAGES:.8=.ps)
 drbdsetup.8: drbdsetup.xml $(drbdsetup_X.xml)
 
 
+.PHONY: install uninstall clean distclean
+../../configure:
+	@echo "please (re-)run ./autogen.sh with appropriate arguments"; exit 1
+../../config.status: ../../configure
+	@echo "please (re-)run ./configure with appropriate arguments"; exit 1
 Makefile: Makefile.in ../../config.status
 	cd ../.. && ./config.status documentation/v9/Makefile

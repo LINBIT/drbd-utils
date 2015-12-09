@@ -144,5 +144,10 @@ pdf:	$(SOURCES:.xml=.pdf)
 
 ps:	$(SOURCES:.xml=.ps)
 
+../../configure:
+	@echo "please (re-)run ./autogen.sh with appropriate arguments"; exit 1
+../../config.status: ../../configure
+	@echo "please (re-)run ./configure with appropriate arguments"; exit 1
+Makefile.in: ;
 Makefile: Makefile.in ../../config.status
 	cd ../.. && ./config.status documentation/v83/Makefile

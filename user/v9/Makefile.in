@@ -79,6 +79,7 @@ all-obj := $(drbdadm-obj) $(drbdsetup-obj) $(drbdmeta-obj)
 
 all: tools
 
+../shared_prereqs.mk: ;
 include ../shared_prereqs.mk
 
 tools: drbdadm drbdmeta drbdsetup
@@ -134,6 +135,12 @@ spell:
 	 	aspell --save-repl --dont-backup --personal=./../documentation/aspell.en.per check $$f; \
 	done
 
+.PHONY: install uninstall clean distclean spell
+../../configure:
+	@echo "please (re-)run ./autogen.sh with appropriate arguments"; exit 1
+../../config.status: ../../configure
+	@echo "please (re-)run ./configure with appropriate arguments"; exit 1
+Makefile.in: ;
 Makefile: Makefile.in ../../config.status
 	cd ../.. && ./config.status user/v9/Makefile
 
