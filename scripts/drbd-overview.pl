@@ -92,11 +92,6 @@ sub ll_dev_info {
 
 # sets $drbd{minor}->{state} and (and possibly ->{sync})
 sub slurp_proc_drbd_or_exit() {
-	unless (open(PD,$PROC_DRBD)) {
-		print "drbd not loaded\n";
-		exit 0;
-	}
-
 	$_=<PD>;
 	my ($DRBD_VERSION) = /version: ([\d\.]+)/;
 	@DRBD_VERSION = split(/\./, $DRBD_VERSION);
@@ -420,9 +415,14 @@ eval {
 open STDERR, "/dev/null"
 	if $stderr_to_dev_null;
 
-map_minor_to_resource_names;
+unless (open(PD,$PROC_DRBD)) {
+    print "drbd not loaded\n";
+    exit 0;
+}
 
+map_minor_to_resource_names;
 slurp_proc_drbd_or_exit;
+
 slurp_drbdsetup if $DRBD_VERSION[0] >= 9;
 
 get_pv_info;
