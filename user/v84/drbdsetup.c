@@ -1548,8 +1548,7 @@ static int generic_get_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 
 static void show_address(void* address, int addr_len)
 {
-	char buffer[INET6_ADDRSTRLEN];
-
+	char buffer[ADDRESS_STR_MAX];
 	sprint_address(buffer, address, addr_len);
 	printI("address\t\t\t%s;\n", buffer);
 }

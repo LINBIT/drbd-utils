@@ -60,6 +60,8 @@ extern const char *double_quote_string(const char *str);
 
 /* Also used by argument processing in drbdsetup */
 extern int nla_put_address(struct msg_buff *msg, int attrtype, const char *arg);
+/* INET6_ADDRSTRLEN + 'ipv6 []:54321 + possible scope + some */
+#define ADDRESS_STR_MAX 256
 extern void sprint_address(char *buffer, void *address, int addr_len);
 extern int get_af_ssocks(int warn_and_use_default);
 

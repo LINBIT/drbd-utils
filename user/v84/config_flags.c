@@ -526,10 +526,16 @@ void sprint_address(char *buffer, void *address, int addr_len)
 		       inet_ntoa(a.addr4.sin_addr),
 		       ntohs(a.addr4.sin_port));
 	} else if (a.addr.sa_family == AF_INET6) {
-		sprintf(buffer, "%s [%s]:%d",
-		       af_to_str(a.addr6.sin6_family),
-		       inet_ntop(a.addr6.sin6_family, &a.addr6.sin6_addr, buffer, INET6_ADDRSTRLEN),
-		       ntohs(a.addr6.sin6_port));
+		char buf2[ADDRESS_STR_MAX];
+		int n;
+		buf2[0] = 0;
+		getnameinfo(&a.addr, addr_len, buf2, sizeof(buf2),
+			NULL, 0, NI_NUMERICHOST|NI_NUMERICSERV);
+		n = snprintf(buffer, ADDRESS_STR_MAX, "%s [%s]:%d",
+			af_to_str(a.addr6.sin6_family), buf2,
+			ntohs(a.addr6.sin6_port));
+		assert(n > 0);
+		assert(n < ADDRESS_STR_MAX); /* there should be no need to truncate */
 	} else {
 		sprintf(buffer, "[unknown af=%d, len=%d]", a.addr.sa_family, addr_len);
 	}
@@ -537,8 +543,7 @@ void sprint_address(char *buffer, void *address, int addr_len)
 
 static const char *get_address(struct context_def *ctx, struct field_def *field, struct nlattr *nla)
 {
-	static char buffer[INET6_ADDRSTRLEN];
-
+	static char buffer[ADDRESS_STR_MAX];
 	sprint_address(buffer, nla_data(nla), nla_len(nla));
 
 	return buffer;
