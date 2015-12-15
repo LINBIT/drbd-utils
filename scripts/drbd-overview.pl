@@ -287,7 +287,7 @@ sub pv_info
 # sets $drbd{minor}->{df_info}
 sub get_df_info()
 {
-	for (`df -TPhl -x tmpfs`) {
+	for (`df -TPhl -x tmpfs --local`) {
 		#  Filesystem  Type  Size  Used  Avail  Use%  Mounted  on
 		m{^/dev/drbd(\d+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)} or next;
 		$drbd{$1}{df_info} = { type => $2, size => $3, used => $4,
