@@ -568,6 +568,7 @@ resource
 	<pick_drbdsetup_option name="read-balancing"/>
 	<pick_drbdsetup_option name="resync-after"/>
 	<pick_drbdsetup_option name="resync-rate"/>
+	<pick_drbdsetup_option name="rs-discard-granularity"/>
 	<pick_drbdsetup_option name="discard-zeroes-if-aligned"/>
 
 	<!-- <pick_drbdsetup_option name="size"/> -->

@@ -440,6 +440,31 @@
     </definition>
   </drbdsetup_option>
 
+  <drbdsetup_option name="rs-discard-granularity">
+    <term>
+      <option>rs-discard-granularity <replaceable>byte</replaceable></option>
+    </term>
+    <definition>
+      <indexterm significance="normal">
+        <primary>drbd.conf</primary>
+        <secondary>rs-discard-granularity</secondary>
+      </indexterm>
+      <para>
+        When <option>rs-discard-granularity</option> is set to a non zero, positive
+        value then DRBD tries to do a resync operation in requests of this size.
+        In case such a block contains only zero bytes on the sync source node,
+        the sync target node will issue a discard/trim/unmap command for
+        the area.</para>
+	<para>The value is constrained by the discard granularity of the backing
+	block device. In case <option>rs-discard-granularity</option> is not a
+	multiplier of the discard granularity of the backing block device DRBD
+	rounds it up. The feature only gets active if the backing block device
+	reads back zeroes after a discard command.</para>
+        <para> The default value of is 0. This option is available since 8.4.7.
+        </para>
+    </definition>
+  </drbdsetup_option>
+
   <drbdsetup_option name="resync-after">
       <term xml:id="resync-after">
 	<only-drbdsetup>
