@@ -105,6 +105,7 @@
 	    <pick_drbdsetup_option name="read-balancing"/>
 	    <pick_drbdsetup_option name="resync-after"/>
 	    <pick_drbdsetup_option name="size"/> <!-- only for attach, not for disk-options? -->
+	    <pick_drbdsetup_option name="discard-zeroes-if-aligned"/>
           </variablelist>
         </listitem>
       </varlistentry>
