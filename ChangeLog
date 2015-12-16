@@ -2,9 +2,8 @@ Latest:
 ------
  For even more detail, use "git log" or visit http://git.drbd.org/.
 
-8.9.5 rc1
+8.9.5
 --------
-
  * add support for new disk option 'rs-discard-granularity' (module v8.4.7)
  * add support for new disk option 'discard-zeroes-if-aligned' (module v8.4.7)
  * add support for v9 "path" commands
