@@ -1898,7 +1898,7 @@ fs-data role:Primary suspended:no
             <simpara>On <emphasis>both</emphasis> nodes, initialize meta data and configure the
             device.</simpara>
 
-            <simpara><command moreinfo="none">drbdadm create-md --force
+            <simpara><command moreinfo="none">drbdadm -- --force create-md
             <replaceable>res</replaceable></command></simpara>
           </listitem>
 
