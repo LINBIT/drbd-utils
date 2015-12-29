@@ -84,7 +84,7 @@ drbd_buildtag.c:
 		grep return $@ ;						\
 	fi ;									\
 	echo -e "\t\t\" build by $$USER@$$HOSTNAME, `date "+%F %T"`\";\n}";	\
-	mv --force $@.new $@
+	mv -f $@.new $@
 
 drbdmeta_scanner.c: drbdmeta_scanner.fl drbdmeta_parser.h
 	flex -s -odrbdmeta_scanner.c drbdmeta_scanner.fl
