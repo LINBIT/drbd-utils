@@ -548,14 +548,15 @@ int adm_create_md(const struct cfg_ctx *ctx)
 		max_peers_str = ssprintf("%d", max_peers);
 	}
 
+	/* drbdmeta does not understand "--max-peers=",
+	 * so we drop it from the option list here... */
+	if (b_opt_max_peers)
+		STAILQ_REMOVE(&backend_options, b_opt_max_peers, d_name, link);
+
 	tb = run_adm_drbdmeta(ctx, "read-dev-uuid");
 	device_uuid = strto_u64(tb,NULL,16);
 	free(tb);
 
-	/* drbdmeta create-md does not understand "--max-peers=",
-	 * so we drop it from the option list here... */
-	if (b_opt_max_peers)
-		STAILQ_REMOVE(&backend_options, b_opt_max_peers, d_name, link);
 	/* This is "drbdmeta ... create-md".
 	 * It implicitly adds all backend_options to the command line. */
 	rv = _adm_drbdmeta(ctx, SLEEPS_VERY_LONG, max_peers_str);
