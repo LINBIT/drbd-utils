@@ -681,8 +681,9 @@ void schedule_peer_device_options(const struct cfg_ctx *ctx)
 	} else if (!tmp_ctx.conn) {
 		STAILQ_FOREACH(peer_device, &tmp_ctx.vol->peer_devices, volume_link) {
 
-// ö			if (!peer_device->connection->my_address || !peer_device->connection->connect_to)
-//ö				continue;
+			if (!peer_device->connection->paths.stqh_first->my_address ||
+					!peer_device->connection->paths.stqh_first->connect_to)
+				continue;
 			if (STAILQ_EMPTY(&peer_device->pd_options))
 				continue;
 
