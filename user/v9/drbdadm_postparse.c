@@ -884,8 +884,8 @@ static void _must_have_two_hosts(struct d_resource *res, struct path *path)
 		i++;
 	if (i != 2) {
 		err("%s:%d: Resource %s: %s needs to have two endpoints\n",
-		    path->implicit ? "connection" : "path",
-		    res->config_file, path->config_line, res->name);
+		    res->config_file, path->config_line, res->name,
+		    path->implicit ? "connection" : "path");
 		config_valid = 0;
 	}
 }
