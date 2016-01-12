@@ -364,7 +364,7 @@ static int proxy_reconf(const struct cfg_ctx *ctx, struct connection *running_co
 	int reconn = 0;
 	struct connection *conn = ctx->conn;
 	struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
-	struct path *running_path = STAILQ_FIRST(&running_conn->paths); /* multiple paths via proxy, later! */
+	struct path *running_path; /* multiple paths via proxy, later! */
 	struct d_option* res_o, *run_o;
 	unsigned long long v1, v2, minimum;
 	char *plugin_changes[MAX_PLUGINS], *cp, *conn_name;
@@ -378,6 +378,8 @@ static int proxy_reconf(const struct cfg_ctx *ctx, struct connection *running_co
 
 	if (!running_conn)
 		goto redo_whole_conn;
+
+	running_path = STAILQ_FIRST(&running_conn->paths); /* multiple paths via proxy, later! */
 
 	res_o = find_opt(&path->my_proxy->options, "memlimit");
 	run_o = find_opt(&running_path->my_proxy->options, "memlimit");
@@ -870,7 +872,7 @@ int adm_adjust(const struct cfg_ctx *ctx)
 
 		path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
 		if (path->my_proxy && can_do_proxy)
-			proxy_reconf(ctx, running_conn);
+			proxy_reconf(&tmp_ctx, running_conn);
 	}
 
 
