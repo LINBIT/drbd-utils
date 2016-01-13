@@ -892,6 +892,7 @@ struct context_def handlers_ctx = {
 		{ "split-brain", .ops = &fc_string, .needs_double_quoting = true},
 		{ "outdate-peer", .ops = &fc_string, .needs_double_quoting = true},
 		{ "fence-peer", .ops = &fc_string, .needs_double_quoting = true},
+		{ "unfence-peer", .ops = &fc_string, .needs_double_quoting = true},
 		{ "local-io-error", .ops = &fc_string, .needs_double_quoting = true},
 		{ "before-resync-target", .ops = &fc_string, .needs_double_quoting = true},
 		{ "after-resync-target", .ops = &fc_string, .needs_double_quoting = true},

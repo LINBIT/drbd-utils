@@ -635,6 +635,19 @@ resource
         </varlistentry>
 
         <varlistentry>
+          <term><option>unfence-peer <replaceable>cmd</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>unfence-peer</secondary>
+              </indexterm> Called when a node should remove fencing constraints
+	      from other nodes.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
           <term><option>initial-split-brain <replaceable>cmd</replaceable></option></term>
 
           <listitem>
