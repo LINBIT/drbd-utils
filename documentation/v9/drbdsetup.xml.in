@@ -846,7 +846,7 @@
 	  </indexterm>
 
 	  <para>Resume I/O on a replicated device.  See the
-	  <option>--fencing</option> disk option.</para>
+	  <option>--fencing</option> net option.</para>
 	</listitem>
       </varlistentry>
 
