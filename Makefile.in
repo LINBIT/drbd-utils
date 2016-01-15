@@ -132,12 +132,11 @@ distclean:
 	rm -rf dist
 	rm -rf autom4te.cache
 	rm -f config.log
-	rm -f config.status
 
 EXTRA_CLEAN += Makefile user/Makefile user/v83/Makefile user/v84/Makefile user/v9/Makefile scripts/Makefile 
 EXTRA_CLEAN += documentation/Makefile documentation/v83/Makefile documentation/v84/Makefile documentation/v9/Makefile
 EXTRA_CLEAN += user/shared/config.h drbd.spec
-EXTRA_CLEAN += configure
+EXTRA_CLEAN += configure config.status
 extra-clean: distclean
 	rm -f $(EXTRA_CLEAN)
 
@@ -200,6 +199,8 @@ tgz:
 ifeq ($(FORCE),)
 tgz: check_changelogs_up2date doc
 endif
+
+tools doc tgz: check-submods
 
 .PHONY: check_all_committed prepare_release tarball
 check_all_committed:
