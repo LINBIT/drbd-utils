@@ -550,7 +550,7 @@ void compare_volume(struct d_volume *conf, struct d_volume *kern)
 		report_compare(1, "vol:%u minor differs: r=%u c=%u\n",
 			conf->vnr, kern->device_minor, conf->device_minor);
 
-	if (!disk_equal(conf, kern)) {
+	if (!disk_equal(conf, kern) || conf->adj_new_minor) {
 		conf->adj_attach = conf->disk != NULL;
 		conf->adj_detach = kern->disk != NULL;
 	}
@@ -696,6 +696,17 @@ void schedule_peer_device_options(const struct cfg_ctx *ctx)
 		err("vol and conn set in schedule_peer_devices_options()!");
 		exit(E_THINKO);
 	}
+}
+
+static struct d_volume *matching_volume(struct d_volume *conf_vol, struct volumes *kern_head)
+{
+	struct d_volume *vol;
+
+	for_each_volume(vol, kern_head) {
+		if (vol->vnr == conf_vol->vnr)
+			return vol;
+	}
+	return NULL;
 }
 
 /*
@@ -884,10 +895,16 @@ int adm_adjust(const struct cfg_ctx *ctx)
 	 * or is this just some attribute change? */
 	for_each_volume(vol, &ctx->res->me->volumes) {
 		struct cfg_ctx tmp_ctx = { .res = ctx->res, .vol = vol };
-		if (vol->adj_detach)
-			schedule_deferred_cmd(&detach_cmd, &tmp_ctx, CFG_DISK_PREP_DOWN);
-		if (vol->adj_del_minor)
-			schedule_deferred_cmd(&del_minor_cmd, &tmp_ctx, CFG_DISK_PREP_DOWN);
+		if (vol->adj_detach || vol->adj_del_minor) {
+			struct d_volume *kern_vol = matching_volume(vol, &running->me->volumes);
+			struct cfg_ctx k_ctx = tmp_ctx;
+			if (kern_vol != NULL)
+				k_ctx.vol = kern_vol;
+			if (vol->adj_detach)
+				schedule_deferred_cmd(&detach_cmd, &k_ctx, CFG_DISK_PREP_DOWN);
+			if (vol->adj_del_minor)
+				schedule_deferred_cmd(&del_minor_cmd, &k_ctx, CFG_DISK_PREP_DOWN);
+	        }
 		if (vol->adj_new_minor) {
 			schedule_deferred_cmd(&new_minor_cmd, &tmp_ctx, CFG_DISK_PREP_UP);
 			schedule_peer_device_options(&tmp_ctx);
