@@ -212,11 +212,13 @@ static struct path *find_path_by_addrs(struct connection *conn, struct path *pat
 	return NULL;
 }
 
-static int adjust_paths(const struct cfg_ctx *ctx, struct connection *running_conn)
+static bool adjust_paths(const struct cfg_ctx *ctx, struct connection *running_conn)
 {
 	struct connection *configured_conn = ctx->conn;
 	struct path *configured_path, *running_path;
 	struct cfg_ctx tmp_ctx = *ctx;
+	int nr_running = 0;
+	bool del_path = false;
 
 	for_each_path(configured_path, &configured_conn->paths) {
 		running_path = find_path_by_addrs(running_conn, configured_path);
@@ -229,13 +231,22 @@ static int adjust_paths(const struct cfg_ctx *ctx, struct connection *running_co
 	}
 
 	for_each_path(running_path, &running_conn->paths) {
+		nr_running++;
 		if (!running_path->adj_seen) {
 			tmp_ctx.path = running_path;
 			schedule_deferred_cmd(&del_path_cmd, &tmp_ctx, CFG_NET_PREP_DOWN);
+			del_path = true;
 		}
 	}
 
-	return 1;
+	if (nr_running == 1 && del_path) {
+		/* Deleting the last path fails is the connection is C_CONNECTING */
+		if (!running_conn->is_standalone)
+			schedule_deferred_cmd(&disconnect_cmd, &tmp_ctx, CFG_NET_DISCONNECT);
+		return true;
+	}
+
+	return false;
 }
 
 static struct connection *matching_conn(struct connection *pattern, struct connections *pool)
@@ -873,7 +884,7 @@ int adm_adjust(const struct cfg_ctx *ctx)
 			if (new_path)
 				schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PREP_UP);
 			else
-				adjust_paths(&tmp_ctx, running_conn);
+				connect |= adjust_paths(&tmp_ctx, running_conn);
 
 			if (connect)
 				schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET_CONNECT);

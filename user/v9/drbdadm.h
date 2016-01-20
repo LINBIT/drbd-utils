@@ -343,7 +343,9 @@ enum drbd_cfg_stage {
 	/* attach, disk-options, resize */
 	CFG_DISK,
 
-	/* down, disconnect, del-peer, proxy down */
+	/* disconnect */
+	CFG_NET_DISCONNECT,
+	/* down,  del-peer, proxy down, del-path */
 	CFG_NET_PREP_DOWN,
 	/* add-peer, add-path, proxy up */
 	CFG_NET_PREP_UP,

@@ -684,6 +684,7 @@ static char *drbd_cfg_stage_string[] = {
 	[CFG_DISK_PREP_DOWN] = "prepare disk",
 	[CFG_DISK_PREP_UP] = "prepare disk",
 	[CFG_DISK] = "adjust disk",
+	[CFG_NET_DISCONNECT] = "prepare net",
 	[CFG_NET_PREP_DOWN] = "prepare net",
 	[CFG_NET_PREP_UP] = "prepare net",
 	[CFG_NET] = "adjust net",
