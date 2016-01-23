@@ -779,12 +779,14 @@
 	<varlistentry>
 	  <term><option>call-pri-lost-after-sb</option></term>
 
-	  <listitem>
-	    <para>Call the <option>pri-lost-after-sb</option> handler on one of
-	    the machines. The handler is expected to reboot the machine, which
-	    brings the node into secondary role.</para>
-	  </listitem>
-	</varlistentry>
+    <listitem>
+      <para>Call the <option>pri-lost-after-sb</option> helper program on one
+        of the machines unless that machine can demote to secondary. The helper
+        program is expected to reboot the machine, which brings the node into
+        a secondary role. Which machine runs the helper program is determined
+        by the <option>after-sb-0pri</option> strategy.</para>
+    </listitem>
+  </varlistentry>
       </variablelist>
       <!-- FIXME: Refer to rr-conflict. -->
     </definition>
