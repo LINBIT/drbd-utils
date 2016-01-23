@@ -1421,8 +1421,12 @@
                 <term xml:id="call-pri-lost"><option>call-pri-lost</option></term>
 
                 <listitem>
-                  <para>Call the "pri-lost" helper program on one of the machines. This program is
-                  expected to reboot the machine, i.e. make it secondary.</para>
+                  <para>Call the <option>pri-lost-after-sb</option> helper
+                    program on one of the machines unless that machine can
+                    demote to secondary. The helper program is expected to
+                    reboot the machine, which brings the node into a secondary
+                    role. Which machine runs the helper program is determined
+                    by the <option>after-sb-0pri</option> strategy.</para>
                 </listitem>
               </varlistentry>
             </variablelist>
