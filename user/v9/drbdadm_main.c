@@ -329,7 +329,7 @@ static struct adm_cmd secondary_cmd = {"secondary", adm_drbdsetup, ACF1_RESNAME 
 static struct adm_cmd invalidate_cmd = {"invalidate", adm_invalidate, ACF1_MINOR_ONLY };
 static struct adm_cmd invalidate_remote_cmd = {"invalidate-remote", adm_drbdsetup, ACF1_PEER_DEVICE .takes_long = 1};
 static struct adm_cmd outdate_cmd = {"outdate", adm_outdate, ACF1_DEFAULT};
-/*  */ struct adm_cmd resize_cmd = {"resize", adm_resize, ACF1_DEFNET .disk_required = 1};
+/*  */ struct adm_cmd resize_cmd = {"resize", adm_resize, ACF1_DEFAULT .disk_required = 1};
 static struct adm_cmd verify_cmd = {"verify", adm_drbdsetup, ACF1_PEER_DEVICE};
 static struct adm_cmd pause_sync_cmd = {"pause-sync", adm_drbdsetup, ACF1_PEER_DEVICE};
 static struct adm_cmd resume_sync_cmd = {"resume-sync", adm_drbdsetup, ACF1_PEER_DEVICE};
