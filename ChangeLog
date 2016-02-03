@@ -2,6 +2,13 @@ Latest:
 ------
  For even more detail, use "git log" or visit http://git.drbd.org/.
 
+8.9.6
+--------
+ * Call "drbdsetup resize" only as often as necessary on "drbdadm resize"
+ * Disconnect connection first on single path deletion from connection
+ * Add unfence-peer handler
+ * Fix "drbdadm adjust" for proxy configurations
+
 8.9.5
 --------
  * add support for new disk option 'rs-discard-granularity' (module v8.4.7)
