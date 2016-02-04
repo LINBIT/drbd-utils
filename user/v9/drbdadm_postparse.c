@@ -1374,7 +1374,7 @@ static void validate_resource(struct d_resource *res, enum pp_flags flags)
 
 static int ctx_set_implicit_volume(struct cfg_ctx *ctx)
 {
-	struct d_volume *vol, *v;
+	struct d_volume *vol, *v = NULL;
 	int volumes = 0;
 
 	if (ctx->vol || !ctx->res)

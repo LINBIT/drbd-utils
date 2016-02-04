@@ -216,6 +216,8 @@ const char *ctx_arg_string(enum cfg_ctx_key key, enum usage_type ut)
 	default:
 		assert(0);
 	}
+
+	return "unknown argument";
 }
 
 struct drbd_cmd {
