@@ -18,7 +18,18 @@
 # X-Start-Before: heartbeat corosync
 # X-Stop-After:   heartbeat corosync
 # X-Interactive:  true
-# Short-Description:    Control drbd resources.
+# Short-Description:    Control DRBD resources.
+# Description:    Control all DRBD resources.
+#	You SHOULD NOT enable this init script
+#	when using a cluster manager such as Pacemaker.
+#	Start will try to:
+#	  load the DRBD driver module,
+#	  configure (bring up as Secondary) all DRBD resources as described in
+#	  the config file, and promote those resources where the
+#	  "become-primary-on" config statement matches.
+#	Stop will try to:
+#	  demote and unconfigure all DRBD resources described in the config
+#	  file, and remove the module.
 ### END INIT INFO
 
 DEFAULTFILE="/etc/default/drbd"
