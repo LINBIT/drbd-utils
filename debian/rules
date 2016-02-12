@@ -5,10 +5,9 @@
 
 PKG_VERSION=$(shell dpkg-parsechangelog | awk '/^Version:/ { print $$2 }')
 WITH_SYSTEMD=$(shell dh --list 2>/dev/null | sed -ne 's/^systemd$$/--with systemd/p')
-WITH_BASHCOMPL=$(shell dh --list 2>/dev/null | sed -ne 's/^bash-completion$$/--with bash-completion/p')
 
 %:
-	dh $@ --parallel $(WITH_SYSTEMD) $(WITH_BASHCOMPL)
+	dh $@ --parallel --with bash-completion $(WITH_SYSTEMD)
 
 override_dh_auto_clean:
 	dh_auto_clean
@@ -16,19 +15,13 @@ override_dh_auto_clean:
 
 configure_with = --prefix=/usr --localstatedir=/var --sysconfdir=/etc \
 		--sbindir=/usr/sbin --with-udev --with-xen \
-		--with-pacemaker --with-rgmanager --with-bashcompletion
+		--with-pacemaker --with-rgmanager --without-bashcompletion
 ifneq	($(WITH_SYSTEMD),)
 configure_with += --with-systemdunitdir=/lib/systemd/system \
 		--with-initscripttype=both
 # alternatively: --with-initscripttype=systemd,
 # if you want to drop the sysv script from the package. 
 # Need to adjust below, in that case.
-endif
-ifneq	($(WITH_BASHCOMPL),)
-# let dh_bash-completion handle it
-configure_with += --without-bashcompletion
-else
-configure_with += --with-bashcompletion
 endif
 
 override_dh_auto_configure:
