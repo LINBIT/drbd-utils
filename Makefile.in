@@ -170,7 +170,10 @@ check_changelogs_up2date:
 PNAME	:= drbd-utils
 .PHONY: .filelist
 .filelist:
-	@$(GIT) ls-files | sed '$(if $(PRESERVE_DEBIAN),,/^debian/d);s#^#$(PNAME)-$(DIST_VERSION)/#' | grep -v "gitignore" > .filelist
+	@set -e ; submodules=`$(GIT) submodule foreach --quiet 'echo $$path'`; \
+	$(GIT) ls-files | \
+		grep -vxF -e "$$submodules" | \
+		sed '$(if $(PRESERVE_DEBIAN),,/^debian/d);s#^#$(PNAME)-$(DIST_VERSION)/#' | grep -v "gitignore" > .filelist
 	@$(GIT) submodule foreach --quiet 'git ls-files | sed -e "s,^,$(PNAME)-$(DIST_VERSION)/$$path/,"' >> .filelist
 	@[ -s .filelist ] # assert there is something in .filelist now
 	@find documentation -name "[^.]*.[58]" -o -name "*.html" | \
