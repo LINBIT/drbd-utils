@@ -1578,6 +1578,7 @@ int adm_peer_device(const struct cfg_ctx *ctx)
 		argv[NA(argc)] = "--set-defaults";
 
 	make_options(argv[NA(argc)], &peer_device->pd_options);
+	add_setup_options(argv, &argc);
 	argv[NA(argc)] = 0;
 
 	return m_system_ex(argv, SLEEPS_SHORT, res->name);
