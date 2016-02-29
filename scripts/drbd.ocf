@@ -263,6 +263,7 @@ See description of unfence_if_all_uptodate.
 
 <actions>
 <action name="start"   timeout="240" />
+<action name="reload"  timeout="30" />
 <action name="promote"	 timeout="90" />
 <action name="demote"	timeout="90" />
 <action name="notify"	timeout="90" />
@@ -790,6 +791,32 @@ drbd_start() {
 	return $rc
 }
 
+drbd_reload() {
+	local rc
+	local status
+
+	rc=$OCF_ERR_GENERIC
+
+	drbd_status
+	status=$?
+
+	case "$status" in
+	$OCF_SUCCESS|$OCF_RUNNING_MASTER)
+		# Adjust resource just in case reload was requested manually
+		# Changes to resource parameters do not require this
+		do_drbdadm adjust $DRBD_RESOURCE
+		rc=$OCF_SUCCESS
+		;;
+	$OCF_NOT_RUNNING)
+		:
+		;;
+	esac
+	# Update score as adjust_master_score may be changed
+	drbd_update_master_score
+
+	return $rc
+}
+
 drbd_promote() {
 	local rc
 	local status
@@ -1186,6 +1213,9 @@ start)
 	;;
 stop)
 	drbd_stop
+	;;
+reload)
+	drbd_reload
 	;;
 notify)
 	drbd_notify
