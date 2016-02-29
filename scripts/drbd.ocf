@@ -294,7 +294,7 @@ do_cmd() {
 		ocf_log debug "$DRBD_RESOURCE: Command output: $cmd_out"
 	fi
 
-	echo "$cmd_out"
+	[ -n "$cmd_out" ] && echo "$cmd_out"
 
 	return $ret
 }
