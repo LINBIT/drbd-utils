@@ -325,6 +325,8 @@ extern int adm_create_md(const struct cfg_ctx *);
 extern int _adm_drbdmeta(const struct cfg_ctx *, int flags, char *argument);
 
 extern struct d_option *find_opt(struct options *base, const char *name);
+extern bool del_opt(struct options *base, const char * const name);
+
 /* stages of configuration, as performed on "drbdadm up"
  * or "drbdadm adjust":
  */

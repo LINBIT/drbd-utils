@@ -1090,6 +1090,19 @@ struct d_option *find_opt(struct options *base, const char *name)
 	return NULL;
 }
 
+bool del_opt(struct options *base, const char * const name)
+{
+	struct d_option *opt;
+
+	if ((opt = find_opt(base, name))) {
+		STAILQ_REMOVE(base, opt, d_option, link);
+		free_opt(opt);
+		return true;
+	}
+
+	return false;
+}
+
 int adm_new_minor(const struct cfg_ctx *ctx)
 {
 	char *argv[MAX_ARGS];
@@ -1613,12 +1626,15 @@ static int adm_new_peer(const struct cfg_ctx *ctx)
 	bool reset = (ctx->cmd == &net_options_defaults_cmd);
 
 	argv[NA(argc)] = drbdsetup;
-	argv[NA(argc)] = (char *)ctx->cmd->name; /* "connect", "net-options" */
+	argv[NA(argc)] = (char *)ctx->cmd->name; /* "new-peer", "net-options" */
 	argv[NA(argc)] = ssprintf("%s", res->name);
 	argv[NA(argc)] = ssprintf("%s", conn->peer->node_id);
 
 	if (reset)
 		argv[NA(argc)] = "--set-defaults";
+
+	if (!strncmp(ctx->cmd->name, "net-options", 11))
+		del_opt(&conn->net_options, "transport");
 
 	make_options(argv[NA(argc)], &conn->net_options);
 

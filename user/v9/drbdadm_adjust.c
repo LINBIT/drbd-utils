@@ -872,11 +872,7 @@ int adm_adjust(const struct cfg_ctx *ctx)
 					connect = true;
 					schedule_peer_device_options(&tmp_ctx);
 				} else {
-					struct d_option *opt;
-					if ((opt = find_opt(&tmp_ctx.conn->net_options, "transport"))) {
-						STAILQ_REMOVE(&tmp_ctx.conn->net_options, opt, d_option, link);
-						free_opt(opt);
-					}
+					del_opt(&tmp_ctx.conn->net_options, "transport");
 					schedule_deferred_cmd(&net_options_defaults_cmd, &tmp_ctx, CFG_NET);
 				}
 			}
