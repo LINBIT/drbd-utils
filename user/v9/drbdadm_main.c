@@ -1018,11 +1018,21 @@ static void add_setup_options(char **argv, int *argcp)
 	*argcp = argc;
 }
 
-#define make_option(ARG, OPT) do {					\
-	if(OPT->value)							\
-		ARG = ssprintf("--%s=%s", OPT->name, OPT->value);	\
-	else 								\
-		ARG = ssprintf("--%s", OPT->name);			\
+#define make_option(ARG, OPT) do {						\
+	struct d_name *b_opt; 							\
+	bool found = false; 							\
+	STAILQ_FOREACH(b_opt, &backend_options, link) {				\
+		if (!strncmp(OPT->name, b_opt->name+2, strlen(OPT->name))) {	\
+			found = true;						\
+			break; 							\
+		} 								\
+	} 									\
+	if (!found) {								\
+		if(OPT->value)							\
+			ARG = ssprintf("--%s=%s", OPT->name, OPT->value);	\
+		else  								\
+			ARG = ssprintf("--%s", OPT->name);			\
+	}									\
 } while (0)
 
 #define make_options(ARG, OPTIONS) do {					\
