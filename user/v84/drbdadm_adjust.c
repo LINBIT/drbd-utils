@@ -608,7 +608,7 @@ struct d_volume *compare_volumes(struct d_volume *conf, struct d_volume *kern)
 int adm_adjust(struct cfg_ctx *ctx)
 {
 	char* argv[20];
-	int pid,argc, i;
+	int pid, argc;
 	struct d_resource* running;
 	struct d_volume *vol;
 
@@ -626,7 +626,7 @@ int adm_adjust(struct cfg_ctx *ctx)
 
 	int can_do_proxy = 1;
 	char config_file_dummy[250];
-	char show_conn[128];
+	char *show_conn;
 	char *resource_name;
 
 	/* disable check_uniq, so it won't interfere
@@ -665,11 +665,7 @@ int adm_adjust(struct cfg_ctx *ctx)
 	if (ctx->res->me->proxy) {
 		line = 1;
 		resource_name = proxy_connection_name(ctx->res);
-		i=snprintf(show_conn, sizeof(show_conn), "show proxy-settings %s", resource_name);
-		if (i>= sizeof(show_conn)-1) {
-			err("connection name too long");
-			exit(E_THINKO);
-		}
+		m_asprintf(&show_conn, "show proxy-settings %s", resource_name);
 		sprintf(config_file_dummy,"drbd-proxy-ctl -c '%s'", show_conn);
 		config_file = config_file_dummy;
 
