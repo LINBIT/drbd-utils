@@ -2355,7 +2355,7 @@ int meta_apply_al(struct format *cfg, char **argv __attribute((unused)), int arg
 			if (err == -ENODATA)
 				return 1;
 			return 2;
-		} else if (is_v08(cfg)) {
+		} else if (is_v08(cfg) || is_v09(cfg)) {
 			fprintf(stderr, "Error ignored, no need to apply the AL\n");
 			re_initialize_anyways = 1;
 		}
