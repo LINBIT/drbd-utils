@@ -527,7 +527,7 @@ int adm_create_md(const struct cfg_ctx *ctx)
 	char *uri;
 	int send=0;
 	char *tb;
-	int rv,fd;
+	int rv, fd, verbose_tmp;
 	char *r, *max_peers_str = NULL;
 	struct d_name *b_opt_max_peers;
 	const char *opt_max_peers = "--max-peers=";
@@ -553,7 +553,10 @@ int adm_create_md(const struct cfg_ctx *ctx)
 	if (b_opt_max_peers)
 		STAILQ_REMOVE(&backend_options, b_opt_max_peers, d_name, link);
 
+	verbose_tmp = verbose;
+	verbose = 0;
 	tb = run_adm_drbdmeta(ctx, "read-dev-uuid");
+	verbose = verbose_tmp;
 	device_uuid = strto_u64(tb,NULL,16);
 	free(tb);
 

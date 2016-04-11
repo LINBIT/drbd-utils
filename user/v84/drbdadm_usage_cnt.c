@@ -711,10 +711,13 @@ int adm_create_md(struct cfg_ctx *ctx)
 	char *uri;
 	int send=0;
 	char *tb;
-	int rv,fd;
+	int rv, fd, verbose_tmp;
 	char *r;
 
+	verbose_tmp = verbose;
+	verbose = 0;
 	tb = run_admm_generic(ctx, "read-dev-uuid");
+	verbose = verbose_tmp;
 	device_uuid = strto_u64(tb,NULL,16);
 	free(tb);
 
