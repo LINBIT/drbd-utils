@@ -821,6 +821,7 @@ struct context_def resource_options_ctx = {
 		{ "twopc-timeout", NUMERIC(twopc_timeout, TWOPC_TIMEOUT) },
 		{ "twopc-retry-timeout", NUMERIC(twopc_retry_timeout, TWOPC_RETRY_TIMEOUT) },
 		{ "auto-promote-timeout", NUMERIC(auto_promote_timeout, AUTO_PROMOTE_TIMEOUT) },
+		{ "max-io-depth", NUMERIC(nr_requests, NR_REQUESTS) },
 		{ } },
 };
 
