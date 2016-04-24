@@ -295,7 +295,11 @@ extern char *canonify_path(char *path);
 extern int pushd(const char *path);
 extern void popd(int fd);
 
-extern int adm_adjust(const struct cfg_ctx *);
+enum {
+	ADJUST_DISK = 1,
+	ADJUST_NET = 2,
+};
+extern int _adm_adjust(const struct cfg_ctx *ctx, int flags);
 
 extern struct adm_cmd new_minor_cmd;
 extern struct adm_cmd new_resource_cmd;
@@ -321,6 +325,7 @@ extern struct adm_cmd proxy_conn_up_cmd;
 extern struct adm_cmd proxy_conn_plugins_cmd;
 extern struct adm_cmd proxy_reconf_cmd;
 
+struct d_name *find_backend_option(const char *opt_name);
 extern int adm_create_md(const struct cfg_ctx *);
 extern int _adm_drbdmeta(const struct cfg_ctx *, int flags, char *argument);
 

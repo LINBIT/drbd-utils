@@ -505,7 +505,7 @@ static char* run_adm_drbdmeta(const struct cfg_ctx *ctx, const char *arg_overrid
 	return buffer;
 }
 
-static struct d_name *find_backend_option(const char *opt_name)
+struct d_name *find_backend_option(const char *opt_name)
 {
 	struct d_name *b_opt;
 	const int str_len = strlen(opt_name);

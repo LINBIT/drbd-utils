@@ -883,6 +883,13 @@ struct context_def create_md_ctx = {
 		{ } },
 };
 
+struct context_def adjust_ctx = {
+	.fields = {
+		{ "do-disk", .ops = &fc_boolean, .u = { .b = { .def = true } } },
+		{ "do-net", .ops = &fc_boolean, .u = { .b = { .def = true } } },
+		{ } },
+};
+
 // only used by drbdadm's config file parser:
 struct context_def handlers_ctx = {
 	.fields = {

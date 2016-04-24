@@ -88,6 +88,7 @@ struct option *admopt = general_admopt;
 extern int yydebug;
 extern FILE *yyin;
 
+static int adm_adjust(const struct cfg_ctx *ctx);
 static int adm_new_minor(const struct cfg_ctx *ctx);
 static int adm_resource(const struct cfg_ctx *);
 static int adm_attach(const struct cfg_ctx *);
@@ -333,7 +334,7 @@ static struct adm_cmd outdate_cmd = {"outdate", adm_outdate, ACF1_DEFAULT};
 static struct adm_cmd verify_cmd = {"verify", adm_drbdsetup, ACF1_PEER_DEVICE};
 static struct adm_cmd pause_sync_cmd = {"pause-sync", adm_drbdsetup, ACF1_PEER_DEVICE};
 static struct adm_cmd resume_sync_cmd = {"resume-sync", adm_drbdsetup, ACF1_PEER_DEVICE};
-static struct adm_cmd adjust_cmd = {"adjust", adm_adjust, ACF1_RESNAME};
+static struct adm_cmd adjust_cmd = {"adjust", adm_adjust, &adjust_ctx, ACF1_RESNAME};
 static struct adm_cmd adjust_wp_cmd = {"adjust-with-progress", adm_adjust_wp, ACF1_RESNAME};
 static struct adm_cmd wait_c_cmd = {"wait-connect", adm_wait_c, ACF1_WAIT};
 static struct adm_cmd wait_sync_cmd = {"wait-sync", adm_wait_c, ACF1_WAIT};
@@ -765,6 +766,25 @@ int run_deferred_cmds(void)
 	if (adjust_with_progress)
 		printf("\n]\n");
 	return ret;
+}
+
+static int adm_adjust(const struct cfg_ctx *ctx)
+{
+	int adjust_flags = 0;
+	struct d_name *b_opt_skip_disk = find_backend_option("--do-disk=no");
+	struct d_name *b_opt_skip_net = find_backend_option("--do-net=no");
+
+	if (b_opt_skip_disk)
+		STAILQ_REMOVE(&backend_options, b_opt_skip_disk, d_name, link);
+	else
+		adjust_flags |= ADJUST_DISK;
+
+	if (b_opt_skip_net)
+		STAILQ_REMOVE(&backend_options, b_opt_skip_net, d_name, link);
+	else
+		adjust_flags |= ADJUST_NET;
+
+	return _adm_adjust(ctx, adjust_flags);
 }
 
 static int sh_nop(const struct cfg_ctx *ctx)

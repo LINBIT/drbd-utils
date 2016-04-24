@@ -829,7 +829,7 @@ static void adjust_disk(const struct cfg_ctx *ctx, struct d_resource* running)
 /*
  * CAUTION this modifies global static char * config_file!
  */
-int adm_adjust(const struct cfg_ctx *ctx)
+int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 {
 	char* argv[20];
 	int pid, argc;
@@ -932,12 +932,14 @@ int adm_adjust(const struct cfg_ctx *ctx)
 		schedule_deferred_cmd(&new_resource_cmd, ctx, CFG_PREREQ);
 	}
 
-	adjust_net(ctx, running, can_do_proxy);
+	if (adjust_flags & ADJUST_NET)
+		adjust_net(ctx, running, can_do_proxy);
 
 	if (do_res_options)
 		schedule_deferred_cmd(&res_options_defaults_cmd, ctx, CFG_RESOURCE);
 
-	adjust_disk(ctx, running);
+	if (adjust_flags & ADJUST_DISK)
+		adjust_disk(ctx, running);
 
 	return 0;
 }
