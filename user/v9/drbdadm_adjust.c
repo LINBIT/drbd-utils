@@ -720,112 +720,11 @@ static struct d_volume *matching_volume(struct d_volume *conf_vol, struct volume
 	return NULL;
 }
 
-/*
- * CAUTION this modifies global static char * config_file!
- */
-int adm_adjust(const struct cfg_ctx *ctx)
+
+static void
+adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, int can_do_proxy)
 {
-	char* argv[20];
-	int pid, argc;
-	struct d_resource* running;
-	struct d_volume *vol;
 	struct connection *conn;
-	struct volumes empty = STAILQ_HEAD_INITIALIZER(empty);
-
-	/* necessary per resource actions */
-	int do_res_options = 0;
-
-	/* necessary per volume actions are flagged
-	 * in the vol->adj_* members. */
-
-	int can_do_proxy = 1;
-	char config_file_dummy[250];
-
-	/* disable check_uniq, so it won't interfere
-	 * with parsing of drbdsetup show output */
-	config_valid = 2;
-
-	set_me_in_resource(ctx->res, true);
-	set_peer_in_resource(ctx->res, true);
-
-	/* setup error reporting context for the parsing routines */
-	line = 1;
-	sprintf(config_file_dummy,"drbdsetup show %s", ctx->res->name);
-	config_file = config_file_dummy;
-
-	argc = 0;
-	argv[argc++] = drbdsetup;
-	argv[argc++] = "show";
-	argv[argc++] = ctx->res->name;
-	argv[argc++] = NULL;
-
-	/* actually parse drbdsetup show output */
-	yyin = m_popen(&pid,argv);
-	running = parse_resource_for_adjust(ctx);
-	fclose(yyin);
-	waitpid(pid, 0, 0);
-
-	if (running) {
-		struct resources running_as_list;
-		STAILQ_INIT(&running_as_list);
-		insert_tail(&running_as_list, running);
-		post_parse(&running_as_list, DRBDSETUP_SHOW);
-
-		set_me_in_resource(running, DRBDSETUP_SHOW);
-		set_peer_in_resource(running, DRBDSETUP_SHOW);
-	}
-
-
-	/* Parse proxy settings, if this host has a proxy definition.
-	 * FIXME what about "zombie" proxy settings, if we remove proxy
-	 * settings from the config file without prior proxy-down, this won't
-	 * clean them from the proxy. */
-	if (running) {
-		for_each_connection(conn, &running->connections) {
-			struct connection *configured_conn = NULL;
-			struct path *configured_path;
-			struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
-			struct cfg_ctx tmp_ctx = { .res = ctx->res };
-			char *show_conn;
-			int r;
-
-			configured_conn = matching_conn(conn, &ctx->res->connections);
-			if (!configured_conn)
-				continue;
-			configured_path = STAILQ_FIRST(&configured_conn->paths);
-			if (!configured_path->peer_proxy)
-				continue;
-
-			tmp_ctx.conn = configured_conn;
-
-			line = 1;
-			m_asprintf(&show_conn, "show proxy-settings %s", proxy_connection_name(tmp_ctx.res, configured_conn));
-			sprintf(config_file_dummy, "drbd-proxy-ctl -c '%s'", show_conn);
-			config_file = config_file_dummy;
-
-			argc=0;
-			argv[argc++]=drbd_proxy_ctl;
-			argv[argc++]="-c";
-			argv[argc++]=show_conn;
-			argv[argc++]=0;
-
-			/* actually parse "drbd-proxy-ctl show" output */
-			yyin = m_popen(&pid, argv);
-			r = !parse_proxy_options_section(&path->my_proxy);
-			can_do_proxy &= r;
-			fclose(yyin);
-
-			waitpid(pid,0,0);
-		}
-	}
-
-	compare_volumes(&ctx->res->me->volumes, running ? &running->me->volumes : &empty);
-
-	if (running) {
-		do_res_options = !opts_equal(&resource_options_ctx, &ctx->res->res_options, &running->res_options);
-	} else {
-		schedule_deferred_cmd(&new_resource_cmd, ctx, CFG_PREREQ);
-	}
 
 	if (running) {
 		for_each_connection(conn, &running->connections) {
@@ -892,10 +791,12 @@ int adm_adjust(const struct cfg_ctx *ctx)
 		if (path->my_proxy && can_do_proxy)
 			proxy_reconf(&tmp_ctx, running_conn);
 	}
+}
 
 
-	if (do_res_options)
-		schedule_deferred_cmd(&res_options_defaults_cmd, ctx, CFG_RESOURCE);
+static void adjust_disk(const struct cfg_ctx *ctx, struct d_resource* running)
+{
+	struct d_volume *vol;
 
 	/* do we need to attach,
 	 * do we need to detach first,
@@ -923,6 +824,120 @@ int adm_adjust(const struct cfg_ctx *ctx)
 		if (vol->adj_resize)
 			schedule_deferred_cmd(&resize_cmd, &tmp_ctx, CFG_DISK);
 	}
+}
+
+/*
+ * CAUTION this modifies global static char * config_file!
+ */
+int adm_adjust(const struct cfg_ctx *ctx)
+{
+	char* argv[20];
+	int pid, argc;
+	struct d_resource* running;
+	struct volumes empty = STAILQ_HEAD_INITIALIZER(empty);
+
+	/* necessary per resource actions */
+	int do_res_options = 0;
+
+	/* necessary per volume actions are flagged
+	 * in the vol->adj_* members. */
+
+	int can_do_proxy = 1;
+	char config_file_dummy[250];
+
+	/* disable check_uniq, so it won't interfere
+	 * with parsing of drbdsetup show output */
+	config_valid = 2;
+
+	set_me_in_resource(ctx->res, true);
+	set_peer_in_resource(ctx->res, true);
+
+	/* setup error reporting context for the parsing routines */
+	line = 1;
+	sprintf(config_file_dummy,"drbdsetup show %s", ctx->res->name);
+	config_file = config_file_dummy;
+
+	argc = 0;
+	argv[argc++] = drbdsetup;
+	argv[argc++] = "show";
+	argv[argc++] = ctx->res->name;
+	argv[argc++] = NULL;
+
+	/* actually parse drbdsetup show output */
+	yyin = m_popen(&pid,argv);
+	running = parse_resource_for_adjust(ctx);
+	fclose(yyin);
+	waitpid(pid, 0, 0);
+
+	if (running) {
+		struct resources running_as_list;
+		STAILQ_INIT(&running_as_list);
+		insert_tail(&running_as_list, running);
+		post_parse(&running_as_list, DRBDSETUP_SHOW);
+
+		set_me_in_resource(running, DRBDSETUP_SHOW);
+		set_peer_in_resource(running, DRBDSETUP_SHOW);
+	}
+
+
+	/* Parse proxy settings, if this host has a proxy definition.
+	 * FIXME what about "zombie" proxy settings, if we remove proxy
+	 * settings from the config file without prior proxy-down, this won't
+	 * clean them from the proxy. */
+	if (running) {
+		struct connection *conn;
+		for_each_connection(conn, &running->connections) {
+			struct connection *configured_conn = NULL;
+			struct path *configured_path;
+			struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
+			struct cfg_ctx tmp_ctx = { .res = ctx->res };
+			char *show_conn;
+			int r;
+
+			configured_conn = matching_conn(conn, &ctx->res->connections);
+			if (!configured_conn)
+				continue;
+			configured_path = STAILQ_FIRST(&configured_conn->paths);
+			if (!configured_path->peer_proxy)
+				continue;
+
+			tmp_ctx.conn = configured_conn;
+
+			line = 1;
+			m_asprintf(&show_conn, "show proxy-settings %s", proxy_connection_name(tmp_ctx.res, configured_conn));
+			sprintf(config_file_dummy, "drbd-proxy-ctl -c '%s'", show_conn);
+			config_file = config_file_dummy;
+
+			argc=0;
+			argv[argc++]=drbd_proxy_ctl;
+			argv[argc++]="-c";
+			argv[argc++]=show_conn;
+			argv[argc++]=0;
+
+			/* actually parse "drbd-proxy-ctl show" output */
+			yyin = m_popen(&pid, argv);
+			r = !parse_proxy_options_section(&path->my_proxy);
+			can_do_proxy &= r;
+			fclose(yyin);
+
+			waitpid(pid,0,0);
+		}
+	}
+
+	compare_volumes(&ctx->res->me->volumes, running ? &running->me->volumes : &empty);
+
+	if (running) {
+		do_res_options = !opts_equal(&resource_options_ctx, &ctx->res->res_options, &running->res_options);
+	} else {
+		schedule_deferred_cmd(&new_resource_cmd, ctx, CFG_PREREQ);
+	}
+
+	adjust_net(ctx, running, can_do_proxy);
+
+	if (do_res_options)
+		schedule_deferred_cmd(&res_options_defaults_cmd, ctx, CFG_RESOURCE);
+
+	adjust_disk(ctx, running);
 
 	return 0;
 }
