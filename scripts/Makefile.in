@@ -65,7 +65,7 @@ endif
 # yes, debian apparently allows installing both types from the same package
 ifneq ($(initscripttype),sysv)		# "systemd" or "both"
 	install -d $(DESTDIR)$(systemdunitdir)
-	install -m 755 drbd.service $(DESTDIR)$(systemdunitdir)/
+	install -m 644 drbd.service $(DESTDIR)$(systemdunitdir)/
 	install -d $(DESTDIR)/lib/drbd/
 	install -m 755 drbd $(DESTDIR)/lib/drbd/
 	install -d $(DESTDIR)$(tmpfilesdir)/
