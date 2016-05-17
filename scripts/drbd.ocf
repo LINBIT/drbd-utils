@@ -133,12 +133,12 @@ if ls_stat_is_dir_0700_root $DEBUG_LOG_DIR &&
 then
 	USE_DEBUG_LOG=true
 	# PS4='+[`date +%F\ %T.%3N`] '
-	exec 9>>"$DEBUG_LOG"
-	date >&9
-	echo "$*" >&9
-	env | grep OCF_ | sort >&9
+	exec 8>>"$DEBUG_LOG"
+	date >&8
+	echo "$*" >&8
+	env | grep OCF_ | sort >&8
 else
-	exec 9>/dev/null
+	exec 8>/dev/null
 fi
 # end of debugging aid
 #######################################################################
@@ -1173,7 +1173,7 @@ usage)
 esac
 
 if $USE_DEBUG_LOG ; then
-	exec 2>&9
+	exec 2>&8
 	set -x
 fi
 
