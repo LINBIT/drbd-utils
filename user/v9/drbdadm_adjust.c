@@ -924,6 +924,9 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 		}
 	}
 
+	if (!running && verbose > 2)
+		err("New resource %s\n", ctx->res->name);
+
 	compare_volumes(&ctx->res->me->volumes, running ? &running->me->volumes : &empty);
 
 	if (running) {
