@@ -2110,6 +2110,9 @@ static int show_cmd(struct drbd_cmd *cm, int argc, char **argv)
 
 	resources_list = sort_resources(list_resources());
 
+	if (resources_list == NULL)
+		printf("# No currently configured DRBD found.\n");
+
 	for (resource = resources_list; resource; resource = resource->next) {
 		struct devices_list *devices, *device;
 		struct connections_list *connections, *connection;
@@ -2509,6 +2512,9 @@ static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	}
 
 	resources = sort_resources(list_resources());
+
+	if (resources == NULL)
+		printf("# No currently configured DRBD found.\n");
 
 	sigaction(SIGHUP, &sa, NULL);
 	sigaction(SIGINT, &sa, NULL);
