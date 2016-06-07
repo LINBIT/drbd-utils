@@ -2784,7 +2784,7 @@ int v07_md_initialize(struct format *cfg, int do_disk_writes,
  * caller knows he must move the meta data to actually find it. */
 void v08_check_for_resize(struct format *cfg)
 {
-	struct md_cpu md_08;
+	struct md_cpu md_test;
 	off_t flex_offset;
 	int found = 0;
 
@@ -2824,8 +2824,13 @@ void v08_check_for_resize(struct format *cfg)
 	/* If someone shrunk that device, I won't be able to read it! */
 	if (flex_offset < cfg->bd_size) {
 		PREAD(cfg, on_disk_buffer, 4096, flex_offset);
-		md_disk_08_to_cpu(&md_08, (struct md_on_disk_08*)on_disk_buffer);
-		found = is_valid_md(DRBD_V08, &md_08, DRBD_MD_INDEX_FLEX_INT, cfg->lk_bd.bd_size);
+		if (is_v08(cfg)) {
+			md_disk_08_to_cpu(&md_test, (struct md_on_disk_08*)on_disk_buffer);
+			found = is_valid_md(DRBD_V08, &md_test, DRBD_MD_INDEX_FLEX_INT, cfg->lk_bd.bd_size);
+		} else if (is_v09(cfg)) {
+			md_disk_09_to_cpu(&md_test, (struct meta_data_on_disk_9*)on_disk_buffer);
+			found = is_valid_md(DRBD_V09, &md_test, DRBD_MD_INDEX_FLEX_INT, cfg->lk_bd.bd_size);
+		}
 	}
 
 	if (verbose) {
@@ -2847,7 +2852,7 @@ void v08_check_for_resize(struct format *cfg)
 	}
 
 	if (found) {
-		if (cfg->lk_bd.bd_uuid && md_08.device_uuid != cfg->lk_bd.bd_uuid) {
+		if (cfg->lk_bd.bd_uuid && md_test.device_uuid != cfg->lk_bd.bd_uuid) {
 			fprintf(stderr, "Last known and found uuid differ!?\n"
 					X64(016)" != "X64(016)"\n",
 					cfg->lk_bd.bd_uuid, cfg->md.device_uuid);
@@ -2859,7 +2864,7 @@ void v08_check_for_resize(struct format *cfg)
 		}
 	}
 	if (found)
-		cfg->md = md_08;
+		cfg->md = md_test;
 	return;
 }
 
@@ -4457,7 +4462,7 @@ int v08_move_internal_md_after_resize(struct format *cfg)
 	/* we just read it in v08_check_for_resize().
 	 * no need to do it again, but ASSERT this. */
 	md_old = cfg->md;
-	ASSERT(is_valid_md(DRBD_V08, &md_old, DRBD_MD_INDEX_FLEX_INT, cfg->lk_bd.bd_size));
+	ASSERT(is_valid_md(format_version(cfg), &md_old, DRBD_MD_INDEX_FLEX_INT, cfg->lk_bd.bd_size));
 	old_offset = v07_style_md_get_byte_offset(DRBD_MD_INDEX_FLEX_INT, cfg->lk_bd.bd_size);
 
 	/* fix AL and bitmap offsets, populate byte offsets for the new location */
