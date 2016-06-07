@@ -1389,6 +1389,7 @@ void m_set_v9_uuid(struct md_cpu *md, int node_id, char **argv, int argc __attri
 		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_OUTDATED)) break;
 		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_FENCING)) break;
 		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_FULL_SYNC)) break;
+		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_DEVICE_SEEN)) break;
 	} while (0);
 }
 
