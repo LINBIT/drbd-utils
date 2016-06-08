@@ -9,6 +9,7 @@ Build-Depends: bash-completion,
                dh-systemd,
                docbook-xsl,
                flex,
+               udev,
                xsltproc
 Standards-Version: 3.9.5
 Homepage: http://www.drbd.org/
