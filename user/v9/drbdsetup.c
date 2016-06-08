@@ -49,6 +49,7 @@
 #include <libgen.h>
 #include <time.h>
 #include <search.h>
+#include <syslog.h>
 
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
@@ -1236,6 +1237,30 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		warn_print_excess_args(argc, argv, i);
 		rv = OTHER_ERROR;
 		goto error;
+	}
+
+	if (strcmp(cm->cmd, "new-minor") == 0) {
+/* HACK */
+/* hack around "sysfs: cannot create duplicate filename '/devices/virtual/bdi/147:0'"
+ * and subsequent NULL deref in kernel below add_disk(). */
+		struct stat sb;
+		char buf[PATH_MAX];
+		int i;
+		int c;
+		for (i = 0; i <= 2; i++) {
+			if (i == 0) c = snprintf(buf, PATH_MAX, "/sys/devices/virtual/block/drbd%u", minor);
+			if (i == 1) c = snprintf(buf, PATH_MAX, "/sys/devices/virtual/bdi/147:%u", minor);
+			if (i == 2) c = snprintf(buf, PATH_MAX, "/sys/block/drbd%u", minor);
+			if (c < PATH_MAX) {
+				if (lstat(buf, &sb) == 0) {
+					syslog(LOG_ERR, "new-minor %s %u %u: sysfs node '%s' (already? still?) exists\n",
+							objname, minor, global_ctx.ctx_volume, buf);
+					fprintf(stderr, "new-minor %s %u %u: sysfs node '%s' (already? still?) exists\n",
+							objname, minor, global_ctx.ctx_volume, buf);
+					return ERR_MINOR_OR_VOLUME_EXISTS;
+				}
+			}
+		}
 	}
 
 	for(;;) {
