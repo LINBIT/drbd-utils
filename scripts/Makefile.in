@@ -58,12 +58,14 @@ install: install-utils install-udev install-xen install-heartbeat install-pacema
 
 install-utils:
 	install -d $(DESTDIR)$(LIBDIR)
-ifneq ($(initscripttype),systemd)	# "sysv" or "both"
+# "sysv" or "both"
+ifeq ($(subst both,sysv,$(initscripttype)),sysv)
 	install -d $(DESTDIR)$(INITDIR)
 	install -m 755 drbd $(DESTDIR)$(INITDIR)/
 endif
 # yes, debian apparently allows installing both types from the same package
-ifneq ($(initscripttype),sysv)		# "systemd" or "both"
+# "systemd" or "both"
+ifeq ($(subst both,systemd,$(initscripttype)),systemd)
 	install -d $(DESTDIR)$(systemdunitdir)
 	install -m 644 drbd.service $(DESTDIR)$(systemdunitdir)/
 	install -d $(DESTDIR)/lib/drbd/
@@ -153,10 +155,12 @@ clean:
 distclean: clean
 
 uninstall:
-ifneq ($(initscripttype),systemd)	# "sysv" or "both"
+# "sysv" or "both"
+ifeq ($(subst both,sysv,$(initscripttype)),sysv)
 	rm -f $(DESTDIR)$(INITDIR)/drbd
 endif
-ifneq ($(initscripttype),sysv)		# "systemd" or "both"
+# "systemd" or "both"
+ifeq ($(subst both,systemd,$(initscripttype)),systemd)
 	rm -f $(DESTDIR)$(systemdunitdir)/drbd.service
 endif
 	rm -f $(DESTDIR)$(sysconfdir)/ha.d/resource.d/drbddisk

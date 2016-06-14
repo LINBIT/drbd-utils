@@ -125,8 +125,10 @@ Provides: drbd-utils = 8.3.16
 Conflicts: drbd < 8.3.6
 # These exist in centos extras:
 Conflicts: drbd82 drbd83
+%if %{initscripttype} == "sysv"
 @RPM_REQ_CHKCONFIG_POST@
 @RPM_REQ_CHKCONFIG_PREUN@
+%endif
 
 %description utils
 DRBD mirrors a block device over the network to another machine.
@@ -158,7 +160,8 @@ This packages includes the DRBD administration tools.
 %{_unitdir}/drbd.service
 %{_tmpfilesdir}/drbd.conf
 /lib/drbd/drbd
-%else
+%endif
+%if %{initscripttype} == "sysv"
 %{_initddir}/drbd
 %endif
 %{_sbindir}/drbd-overview
@@ -384,7 +387,8 @@ rm -rf %{buildroot}
 %post utils
 %if %{initscripttype} == "systemd"
 %systemd_post drbd.service
-%else
+%endif
+%if %{initscripttype} == "sysv"
 chkconfig --add drbd
 %endif
 %if %{without manual}
@@ -407,7 +411,8 @@ done
 rm -f %{_mandir}/man5/drbd.conf.5.gz
 %if %{initscripttype} == "systemd"
 %systemd_preun drbd.service
-%else
+%endif
+%if %{initscripttype} == "sysv"
 if [ $1 -eq 0 ]; then
         %{_initrddir}/drbd stop >/dev/null 2>&1
         /sbin/chkconfig --del drbd

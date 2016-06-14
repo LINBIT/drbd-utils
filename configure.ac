@@ -162,7 +162,7 @@ AC_SUBST(udevrulesdir)
 
 AC_ARG_WITH([initscripttype],
 	    [AS_HELP_STRING([--with-initscripttype=INIT_SCRIPT_TYPE],
-			    [Type of init script to install (sysv|systemd|both). [auto]])
+			    [Type of init script to install (sysv|systemd|both|none). [auto]])
 	    ])
 case "$with_initscripttype" in
 	"")
@@ -171,7 +171,7 @@ case "$with_initscripttype" in
 		else
 			initscripttype=sysv
 		fi ;;
-	sysv|systemd|both)
+	sysv|systemd|both|none)
 		initscripttype=$with_initscripttype ;;
 	*)
 		AC_MSG_ERROR([Illegal value -$with_initscripttype- for option --with-initscripttype]) ;;
