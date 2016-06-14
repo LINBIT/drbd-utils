@@ -135,8 +135,8 @@ then
 	# PS4='+[`date +%F\ %T.%3N`] '
 	exec 8>>"$DEBUG_LOG"
 	date >&8
-	echo "$*" >&8
-	env | grep OCF_ | sort >&8
+	echo "$0 $*" >&8
+	env | grep '^OCF_' | sort >&8
 else
 	exec 8>/dev/null
 fi
@@ -375,11 +375,11 @@ drbd_set_status_variables() {
 	[[ ${#DRBD_DSTATE_REMOTE[@]} != 0 ]] || DRBD_DSTATE_REMOTE=(DUnknown)
 
 
-	: == DEBUG == DRBD_ROLE_LOCAL    == ${DRBD_ROLE_LOCAL[@]} ==
-	: == DEBUG == DRBD_ROLE_REMOTE   == ${DRBD_ROLE_REMOTE[@]} ==
-	: == DEBUG == DRBD_CSTATE        == ${DRBD_CSTATE[@]} ==
-	: == DEBUG == DRBD_DSTATE_LOCAL  == ${DRBD_DSTATE_LOCAL[@]} ==
-	: == DEBUG == DRBD_DSTATE_REMOTE == ${DRBD_DSTATE_REMOTE[@]} ==
+	: == DEBUG == DRBD_ROLE_LOCAL    == "${DRBD_ROLE_LOCAL[@]}" ==
+	: == DEBUG == DRBD_ROLE_REMOTE   == "${DRBD_ROLE_REMOTE[@]}" ==
+	: == DEBUG == DRBD_CSTATE        == "${DRBD_CSTATE[@]}" ==
+	: == DEBUG == DRBD_DSTATE_LOCAL  == "${DRBD_DSTATE_LOCAL[@]}" ==
+	: == DEBUG == DRBD_DSTATE_REMOTE == "${DRBD_DSTATE_REMOTE[@]}" ==
 }
 
 call_unfence()
@@ -621,7 +621,7 @@ drbd_status() {
 	# done with maintenance-mode enabled.
 	# If someone does manually kill/remove only some of the volumes,
 	# we tolerate that here.
-	for dev in ${DRBD_DEVICES[@]} ""; do
+	for dev in "${DRBD_DEVICES[@]}" ""; do
 		test -b $dev && break
 	done
 	[[ $dev ]] || return $rc
@@ -701,7 +701,7 @@ figure_out_drbd_peer_uname()
 
 my_udevsettle()
 {
-	for dev in ${DRBD_DEVICES[@]}; do
+	for dev in "${DRBD_DEVICES[@]}"; do
 		while ! test -b $dev; do
 			sleep 1;
 		done
@@ -967,7 +967,7 @@ meta_expect()
 	local val=${!whatvar}
 	if [[ -n $val ]]; then
 		# [, not [[, or it won't work ;)
-		[ $val $op $expect ] && return
+		eval "[ $val $op $expect ]" && return
 	fi
 	ocf_log err "meta parameter misconfigured, expected $what $op $expect, but found ${val:-unset}."
 	exit $OCF_ERR_CONFIGURED

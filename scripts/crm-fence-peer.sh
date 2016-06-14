@@ -417,7 +417,7 @@ drbd_peer_fencing()
 			rc=0
 		elif [[ -n "$have_constraint" ]] ; then
 			# if this id already exists, but looks different, we may have lost a shootout
-			echo WARNING "constraint "$have_constraint" already exists"
+			echo WARNING "constraint $have_constraint already exists"
 			# anything != 0 will do;
 			# 21 happend to be "The object already exists" with my cibadmin
 			rc=21
@@ -488,7 +488,7 @@ guess_if_pacemaker_will_fence()
 	local x
 
 	# "return values:"
-	crmd= in_ccm= expected= join= will_fence=false
+	crmd='' in_ccm='' expected='' join='' will_fence=false
 
 	# Older pacemaker has an "ha" attribute, too.
 	# For stonith-enabled=false, the "crmd" attribute may stay "online",
@@ -573,8 +573,8 @@ check_peer_node_reachable()
 	nr_other_nodes=$#
 
 	while :; do
-		local state_lines= node_state=
-		local crmd= in_ccm= expected= join= will_fence= ha_dead=
+		local state_lines='' node_state='' crmd='' in_ccm=''
+		local expected='' join='' will_fence='' ha_dead=''
 
 		while :; do
 			local t=$SECONDS
@@ -773,7 +773,7 @@ set_states_from_proc_drbd()
 		[[ $pdsk != UpToDate ]] && DRBD_pdsk_all_uptodate=false
 		let i++
 	done
-	if (( i = 0 )) ; then
+	if (( i == 0 )) ; then
 		DRBD_pdsk_all_uptodate=false
 		DRBD_disk_all_uptodate=false
 		DRBD_disk_all_consistent=false
