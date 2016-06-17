@@ -201,6 +201,7 @@
 
   <refsect1>
     <title>Commands</title>
+    <variablelist>
       <varlistentry>
 	<term>adjust
 	  <arg choice="req" rep="norepeat"><replaceable>resource</replaceable></arg>
@@ -258,7 +259,6 @@
         </listitem>
       </varlistentry>
 
-    <variablelist>
       <varlistentry>
         <term>attach
 	  <arg choice="req" rep="norepeat"><replaceable>device</replaceable></arg>
