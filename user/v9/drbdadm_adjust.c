@@ -553,9 +553,7 @@ void compare_size(struct d_volume *conf, struct d_volume *kern)
 void compare_volume(struct d_volume *conf, struct d_volume *kern)
 {
 	conf->adj_new_minor = conf->device_minor != kern->device_minor;
-	/* Why only del-minor if attached?
-	 * Don't we need to always del-minor, and optionally detach first? */
-	conf->adj_del_minor = conf->adj_new_minor && kern->disk;
+	conf->adj_del_minor = conf->adj_new_minor;
 
 	if (conf->adj_new_minor)
 		report_compare(1, "vol:%u minor differs: r=%u c=%u\n",
