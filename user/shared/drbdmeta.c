@@ -3537,6 +3537,8 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 	int new_max_peers = 1;
 	int i;
 	int err;
+	char slots_seen[DRBD_NODE_ID_MAX] = { 0, };
+	int cur_slot;
 
 	if (argc > 0) {
 		yyin = fopen(argv[0],"r");
@@ -3617,22 +3619,30 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 			for (i = 0; i < DRBD_NODE_ID_MAX; i++) {
 				EXP(TK_PEER); EXP('[');
 				EXP(TK_NUM); EXP(']');
-				if (yylval.u64 != i) {
+				cur_slot = yylval.u64;
+				if (cur_slot < 0 || cur_slot >= DRBD_NODE_ID_MAX) {
 					fprintf(stderr, "Parse error in line %u: "
-						"Expected peer slot %d but found %d\n",
-						yylineno, i, (int)yylval.u64);
+						"Slot %d out of range\n",
+						yylineno, cur_slot);
 					exit(10);
 				}
+				if (slots_seen[cur_slot]) {
+					fprintf(stderr, "Parse error in line %u: "
+						"Peer slot %d defined multiple times\n",
+						yylineno, cur_slot);
+					exit(10);
+				}
+				slots_seen[cur_slot] = 1;
 				EXP('{');
 				EXP(TK_BITMAP_INDEX);
 				EXP(TK_NUM); EXP(';');
-				cfg->md.peers[i].bitmap_index = yylval.u64;
+				cfg->md.peers[cur_slot].bitmap_index = yylval.u64;
 				EXP(TK_BITMAP_UUID); EXP(TK_U64); EXP(';');
-				cfg->md.peers[i].bitmap_uuid = yylval.u64;
+				cfg->md.peers[cur_slot].bitmap_uuid = yylval.u64;
 				EXP(TK_BITMAP_DAGTAG); EXP(TK_U64); EXP(';');
-				cfg->md.peers[i].bitmap_dagtag = yylval.u64;
+				cfg->md.peers[cur_slot].bitmap_dagtag = yylval.u64;
 				EXP(TK_FLAGS); EXP(TK_U32); EXP(';');
-				cfg->md.peers[i].flags = (uint32_t)yylval.u64;
+				cfg->md.peers[cur_slot].flags = (uint32_t)yylval.u64;
 				EXP('}');
 			}
 			EXP(TK_HISTORY_UUIDS); EXP('{');
