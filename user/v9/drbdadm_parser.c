@@ -488,12 +488,17 @@ static void pe_field(struct field_def *field, enum check_codes e, char *value)
 		[CC_NOT_A_NUMBER] = "not a number",
 		[CC_TOO_SMALL] = "too small",
 		[CC_TOO_BIG] = "too big",
+		[CC_STR_TOO_LONG] = "too long",
 	};
-	err("%s:%u: Parse error: while parsing value ('%s') for %s. Value is %s.\n",
-	    config_file, line, value, field->name, err_strings[e]);
+	err("%s:%u: Parse error: while parsing value ('%.20s%s')\nfor %s. Value is %s.\n",
+	    config_file, line,
+		value, strlen(value) > 20 ? "..." : "",
+		field->name, err_strings[e]);
 
 	if (e == CC_NOT_AN_ENUM)
 		pe_valid_enums(field->u.e.map, field->u.e.size);
+	if (e == CC_STR_TOO_LONG)
+		err("max len: %u\n", field->u.s.max_len - 1);
 
 	if (config_valid <= 1)
 		config_valid = 0;

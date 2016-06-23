@@ -488,6 +488,10 @@ static void string_describe_xml(struct field_def *field)
 
 static enum check_codes string_check(struct field_def *field, const char *value)
 {
+	if (field->u.s.max_len) {
+		if (strlen(value) >= field->u.s.max_len)
+			return CC_STR_TOO_LONG;
+	}
 	return CC_OK;
 }
 
@@ -574,6 +578,10 @@ struct field_class fc_string = {
 	.nla_type = T_ ## f,								\
 	.ops = &fc_string,								\
 	.needs_double_quoting = true
+
+#define STRING_MAX_LEN(f, l)								\
+	STRING(f),									\
+	.u = { .s = { .max_len = l } } }
 
 /* ============================================================================================== */
 
@@ -685,7 +693,7 @@ const char *read_balancing_map[] = {
 	{ "ko-count", NUMERIC(ko_count, KO_COUNT) },					\
 	{ "allow-two-primaries", BOOLEAN(two_primaries, ALLOW_TWO_PRIMARIES) },		\
 	{ "cram-hmac-alg", STRING(cram_hmac_alg) },					\
-	{ "shared-secret", STRING(shared_secret) },					\
+	{ "shared-secret", STRING_MAX_LEN(shared_secret, SHARED_SECRET_MAX), 		\
 	{ "after-sb-0pri", ENUM(after_sb_0p, AFTER_SB_0P) },				\
 	{ "after-sb-1pri", ENUM(after_sb_1p, AFTER_SB_1P) },				\
 	{ "after-sb-2pri", ENUM(after_sb_2p, AFTER_SB_2P) },				\

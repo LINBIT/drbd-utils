@@ -14,6 +14,7 @@ enum check_codes {
 	CC_NOT_A_NUMBER,
 	CC_TOO_SMALL,
 	CC_TOO_BIG,
+	CC_STR_TOO_LONG,
 };
 
 struct field_class {
@@ -46,6 +47,9 @@ struct field_def {
 		struct {
 			bool def;
 		} b;  /* BOOLEAN */
+		struct {
+			unsigned max_len;
+		} s; /* string */
 	} u;
 	bool needs_double_quoting;
 	bool argument_is_optional;
