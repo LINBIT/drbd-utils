@@ -244,7 +244,7 @@ struct hsearch_data global_htable;
 void check_uniq_init(void)
 {
 	memset(&global_htable, 0, sizeof(global_htable));
-	if (!hcreate_r(256 * ((2 * 4) + 4), &global_htable)) {
+	if (!hcreate_r(16384 * ((2 * 4) + 4), &global_htable)) {
 		err("Insufficient memory.\n");
 		exit(E_EXEC_ERROR);
 	};
