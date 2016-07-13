@@ -1831,27 +1831,6 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 	return res;
 }
 
-struct d_resource* parse_resource_for_adjust(const struct cfg_ctx *ctx)
-{
-	int token;
-
-	token = yylex();
-	if (token != TK_RESOURCE)
-		return NULL;
-
-	token = yylex();
-	if (token != TK_STRING)
-		return NULL;
-
-	/* FIXME assert that string and ctx->res->name match? */
-
-	token = yylex();
-	if (token != '{')
-		return NULL;
-
-	return parse_resource(ctx->res->name, PARSE_FOR_ADJUST);
-}
-
 /* Returns the "previous" count, ie. 0 if this file wasn't seen before. */
 int was_file_already_seen(char *fn)
 {

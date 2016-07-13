@@ -824,13 +824,80 @@ static void adjust_disk(const struct cfg_ctx *ctx, struct d_resource* running)
 	}
 }
 
+bool drbdsetup_show_parsed = false;
+char config_file_drbdsetup_show[] = "drbdsetup show";
+struct resources running_config = STAILQ_HEAD_INITIALIZER(running_config);
+
+void parse_drbdsetup_show(void)
+{
+	char* argv[3];
+	int pid, argc;
+	int token;
+
+	if (drbdsetup_show_parsed)
+		return;
+
+	/* disable check_uniq, so it won't interfere
+	 * with parsing of drbdsetup show output */
+	config_valid = 2;
+
+	/* setup error reporting context for the parsing routines */
+	line = 1;
+	config_file = config_file_drbdsetup_show;
+
+	argc = 0;
+	argv[argc++] = drbdsetup;
+	argv[argc++] = "show";
+	argv[argc++] = NULL;
+
+	/* actually parse drbdsetup show output */
+	yyin = m_popen(&pid,argv);
+	for (;;) {
+		token = yylex();
+		if (token == 0)
+			break;
+
+		if (token != TK_RESOURCE)
+			break;
+
+		token = yylex();
+		if (token != TK_STRING)
+			break;
+
+		token = yylex();
+		if (token != '{')
+			break;
+
+		insert_tail(&running_config, parse_resource(yylval.txt, PARSE_FOR_ADJUST));
+	}
+	fclose(yyin);
+	waitpid(pid, 0, 0);
+
+	post_parse(&running_config, DRBDSETUP_SHOW);
+	drbdsetup_show_parsed = true;
+}
+
+struct d_resource *running_res_by_name(const char *name)
+{
+	struct d_resource *res;
+
+	if (!drbdsetup_show_parsed)
+		parse_drbdsetup_show();
+
+	for_each_resource(res, &running_config) {
+		if (strcmp(name, res->name) == 0)
+			return res;
+	}
+	return NULL;
+}
+
+
 /*
  * CAUTION this modifies global static char * config_file!
  */
 int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 {
-	char* argv[20];
-	int pid, argc;
+	char config_file_dummy[250];
 	struct d_resource* running;
 	struct volumes empty = STAILQ_HEAD_INITIALIZER(empty);
 	struct d_volume *vol;
@@ -842,42 +909,16 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 	 * in the vol->adj_* members. */
 
 	int can_do_proxy = 1;
-	char config_file_dummy[250];
-
-	/* disable check_uniq, so it won't interfere
-	 * with parsing of drbdsetup show output */
-	config_valid = 2;
 
 	set_me_in_resource(ctx->res, true);
 	set_peer_in_resource(ctx->res, true);
 
-	/* setup error reporting context for the parsing routines */
-	line = 1;
-	sprintf(config_file_dummy,"drbdsetup show %s", ctx->res->name);
-	config_file = config_file_dummy;
-
-	argc = 0;
-	argv[argc++] = drbdsetup;
-	argv[argc++] = "show";
-	argv[argc++] = ctx->res->name;
-	argv[argc++] = NULL;
-
-	/* actually parse drbdsetup show output */
-	yyin = m_popen(&pid,argv);
-	running = parse_resource_for_adjust(ctx);
-	fclose(yyin);
-	waitpid(pid, 0, 0);
+	running = running_res_by_name(ctx->res->name);
 
 	if (running) {
-		struct resources running_as_list;
-		STAILQ_INIT(&running_as_list);
-		insert_tail(&running_as_list, running);
-		post_parse(&running_as_list, DRBDSETUP_SHOW);
-
 		set_me_in_resource(running, DRBDSETUP_SHOW);
 		set_peer_in_resource(running, DRBDSETUP_SHOW);
 	}
-
 
 	/* Parse proxy settings, if this host has a proxy definition.
 	 * FIXME what about "zombie" proxy settings, if we remove proxy
@@ -892,6 +933,8 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 			struct cfg_ctx tmp_ctx = { .res = ctx->res };
 			char *show_conn;
 			int r;
+			int pid,argc;
+			char *argv[20];
 
 			configured_conn = matching_conn(conn, &ctx->res->connections);
 			if (!configured_conn)
