@@ -811,10 +811,6 @@ static void adjust_disk(const struct cfg_ctx *ctx, struct d_resource* running)
 			if (vol->adj_del_minor)
 				schedule_deferred_cmd(&del_minor_cmd, &k_ctx, CFG_DISK_PREP_DOWN);
 	        }
-		if (vol->adj_new_minor) {
-			schedule_deferred_cmd(&new_minor_cmd, &tmp_ctx, CFG_DISK_PREP_UP);
-			schedule_peer_device_options(&tmp_ctx);
-		}
 		if (vol->adj_attach)
 			schedule_deferred_cmd(&attach_cmd, &tmp_ctx, CFG_DISK);
 		if (vol->adj_disk_opts)
@@ -833,6 +829,7 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 	int pid, argc;
 	struct d_resource* running;
 	struct volumes empty = STAILQ_HEAD_INITIALIZER(empty);
+	struct d_volume *vol;
 
 	/* necessary per resource actions */
 	int do_res_options = 0;
@@ -933,14 +930,23 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 		schedule_deferred_cmd(&new_resource_cmd, ctx, CFG_PREREQ);
 	}
 
-	if (adjust_flags & ADJUST_NET)
-		adjust_net(ctx, running, can_do_proxy);
-
 	if (do_res_options)
 		schedule_deferred_cmd(&res_options_defaults_cmd, ctx, CFG_RESOURCE);
 
+	if (adjust_flags & ADJUST_NET)
+		adjust_net(ctx, running, can_do_proxy);
+
 	if (adjust_flags & ADJUST_DISK)
 		adjust_disk(ctx, running);
+
+	for_each_volume(vol, &ctx->res->me->volumes) {
+		if (vol->adj_new_minor) {
+			struct cfg_ctx tmp_ctx = { .res = ctx->res, .vol = vol };
+			schedule_deferred_cmd(&new_minor_cmd, &tmp_ctx, CFG_DISK_PREP_UP);
+			if (adjust_flags & ADJUST_NET && adjust_flags & ADJUST_DISK)
+				schedule_peer_device_options(&tmp_ctx);
+		}
+	}
 
 	return 0;
 }
