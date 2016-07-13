@@ -801,6 +801,10 @@ static void adjust_disk(const struct cfg_ctx *ctx, struct d_resource* running)
 	 * or is this just some attribute change? */
 	for_each_volume(vol, &ctx->res->me->volumes) {
 		struct cfg_ctx tmp_ctx = { .res = ctx->res, .vol = vol };
+
+		if (ctx->vol && vol != ctx->vol) /* In case we know the volume ignore all others. */
+			continue;
+
 		if (vol->adj_detach || vol->adj_del_minor) {
 			struct d_volume *kern_vol = matching_volume(vol, &running->me->volumes);
 			struct cfg_ctx k_ctx = tmp_ctx;
@@ -940,6 +944,9 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 		adjust_disk(ctx, running);
 
 	for_each_volume(vol, &ctx->res->me->volumes) {
+		if (ctx->vol && vol != ctx->vol) /* In case we know the volume ignore all others. */
+			continue;
+
 		if (vol->adj_new_minor) {
 			struct cfg_ctx tmp_ctx = { .res = ctx->res, .vol = vol };
 			schedule_deferred_cmd(&new_minor_cmd, &tmp_ctx, CFG_DISK_PREP_UP);

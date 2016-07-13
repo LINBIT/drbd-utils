@@ -334,7 +334,7 @@ static struct adm_cmd outdate_cmd = {"outdate", adm_outdate, ACF1_DEFAULT};
 static struct adm_cmd verify_cmd = {"verify", adm_drbdsetup, ACF1_PEER_DEVICE};
 static struct adm_cmd pause_sync_cmd = {"pause-sync", adm_drbdsetup, ACF1_PEER_DEVICE};
 static struct adm_cmd resume_sync_cmd = {"resume-sync", adm_drbdsetup, ACF1_PEER_DEVICE};
-static struct adm_cmd adjust_cmd = {"adjust", adm_adjust, &adjust_ctx, ACF1_RESNAME};
+static struct adm_cmd adjust_cmd = {"adjust", adm_adjust, &adjust_ctx, ACF1_RESNAME .vol_id_optional = 1};
 static struct adm_cmd adjust_wp_cmd = {"adjust-with-progress", adm_adjust_wp, ACF1_RESNAME};
 static struct adm_cmd wait_c_cmd = {"wait-connect", adm_wait_c, ACF1_WAIT};
 static struct adm_cmd wait_sync_cmd = {"wait-sync", adm_wait_c, ACF1_WAIT};
