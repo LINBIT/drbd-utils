@@ -546,8 +546,14 @@ static void inherit_volumes(struct volumes *from, struct d_host_info *host)
 		}
 		if (!t->device && s->device)
 			t->device = strdup(s->device);
-		if (t->device_minor == -1U && s->device_minor != -1U)
+		if (t->device_minor == -1U && s->device_minor != -1U) {
 			t->device_minor = s->device_minor;
+			STAILQ_FOREACH(h, &host->on_hosts, link) {
+				check_uniq("device-minor", "device-minor:%s:%u", h->name, t->device_minor);
+				if (t->device)
+					check_uniq("device", "device:%s:%s", h->name, t->device);
+			}
+		}
 		if (!t->meta_disk && s->meta_disk) {
 			t->meta_disk = strdup(s->meta_disk);
 			if (s->meta_index)
