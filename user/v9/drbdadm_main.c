@@ -770,19 +770,22 @@ int run_deferred_cmds(void)
 
 static int adm_adjust(const struct cfg_ctx *ctx)
 {
-	int adjust_flags = 0;
-	struct d_name *b_opt_skip_disk = find_backend_option("--do-disk=no");
-	struct d_name *b_opt_skip_net = find_backend_option("--do-net=no");
+	int adjust_flags = ADJUST_DISK | ADJUST_NET;
+	struct d_name *opt;
 
-	if (b_opt_skip_disk)
-		STAILQ_REMOVE(&backend_options, b_opt_skip_disk, d_name, link);
-	else
-		adjust_flags |= ADJUST_DISK;
+	opt = find_backend_option("--do-disk");
+	if (opt) {
+		STAILQ_REMOVE(&backend_options, opt, d_name, link);
+		if (strstr(opt->name, "=no"))
+			adjust_flags &= ~ADJUST_DISK;
+	}
 
-	if (b_opt_skip_net)
-		STAILQ_REMOVE(&backend_options, b_opt_skip_net, d_name, link);
-	else
-		adjust_flags |= ADJUST_NET;
+	opt = find_backend_option("--do-net");
+	if (opt) {
+		STAILQ_REMOVE(&backend_options, opt, d_name, link);
+		if (strstr(opt->name, "=no"))
+			adjust_flags &= ~ADJUST_NET;
+	}
 
 	return _adm_adjust(ctx, adjust_flags);
 }
