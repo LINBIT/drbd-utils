@@ -95,6 +95,7 @@ extern struct context_def peer_device_options_ctx;
 extern struct context_def handlers_ctx;
 extern struct context_def proxy_options_ctx;
 extern struct context_def startup_options_ctx;
+extern struct context_def wildcard_ctx;
 
 
 extern const char *double_quote_string(const char *str);

@@ -43,6 +43,7 @@
 #include "drbdtool_common.h"
 #include "drbd_endian.h"
 #include "linux/drbd.h"		/* only use DRBD_MAGIC from here! */
+#include "config_flags.h"
 
 #define HTTP_PORT 80
 #define HTTP_HOST "usage.drbd.org"
@@ -622,6 +623,7 @@ int adm_create_md(const struct cfg_ctx *ctx)
 
 		local_cmd.name = "write-dev-uuid";
 		local_ctx.cmd = &local_cmd;
+		local_cmd.drbdsetup_ctx = &wildcard_ctx;
 		_adm_drbdmeta(&local_ctx, SLEEPS_VERY_LONG, NULL);
 
 		free_names(&backend_options);
