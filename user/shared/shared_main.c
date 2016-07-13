@@ -229,6 +229,21 @@ void substitute_deprecated_cmd(char **c, char *deprecated,
 	}
 }
 
+pid_t my_fork(void)
+{
+	pid_t pid = -1;
+	int try;
+	for (try = 0; try < 10; try++) {
+		errno = 0;
+		pid = fork();
+		if (pid != -1 || errno != EAGAIN)
+			return pid;
+		err("fork: retry: Resource temporarily unavailable\n");
+		usleep(100 * 1000);
+	}
+	return pid;
+}
+
 void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd, int *ex)
 {
 	pid_t pid;
@@ -283,7 +298,7 @@ void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd
 		exit(E_EXEC_ERROR);
 	}
 
-	pid = fork();
+	pid = my_fork();
 	if (pid == -1) {
 		fprintf(stderr, "Can not fork\n");
 		exit(E_EXEC_ERROR);
