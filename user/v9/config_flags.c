@@ -897,8 +897,8 @@ struct context_def create_md_ctx = {
 
 struct context_def adjust_ctx = {
 	.fields = {
-		{ "do-disk", .ops = &fc_boolean, .u = { .b = { .def = true } } },
-		{ "do-net", .ops = &fc_boolean, .u = { .b = { .def = true } } },
+		{ "skip-disk", .argument_is_optional = true },
+		{ "skip-net", .argument_is_optional = true },
 		CONNECT_CMD_OPTIONS,
 		{ } },
 };

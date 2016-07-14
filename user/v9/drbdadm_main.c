@@ -773,18 +773,16 @@ static int adm_adjust(const struct cfg_ctx *ctx)
 	int adjust_flags = ADJUST_DISK | ADJUST_NET;
 	struct d_name *opt;
 
-	opt = find_backend_option("--do-disk");
+	opt = find_backend_option("--skip-disk");
 	if (opt) {
 		STAILQ_REMOVE(&backend_options, opt, d_name, link);
-		if (strstr(opt->name, "=no"))
-			adjust_flags &= ~ADJUST_DISK;
+		adjust_flags &= ~ADJUST_DISK;
 	}
 
-	opt = find_backend_option("--do-net");
+	opt = find_backend_option("--skip-net");
 	if (opt) {
 		STAILQ_REMOVE(&backend_options, opt, d_name, link);
-		if (strstr(opt->name, "=no"))
-			adjust_flags &= ~ADJUST_NET;
+		adjust_flags &= ~ADJUST_NET;
 	}
 
 	return _adm_adjust(ctx, adjust_flags);
