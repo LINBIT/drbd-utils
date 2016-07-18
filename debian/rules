@@ -41,7 +41,7 @@ ifneq	($(WITH_SYSTEMD),)
 endif
 
 override_dh_installinit:
-	dh_installinit -p drbd-utils --name=drbd --no-start
+	dh_installinit -p drbd-utils --name=drbd --no-start -- disable
 
 override_dh_gencontrol:
 	dh_gencontrol -Ndrbd8-utils
