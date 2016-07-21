@@ -1026,7 +1026,7 @@ static void find_drbdcmd(char **cmd, char **pathes)
 static bool is_valid_backend_option(const char* name, const struct context_def *context_def)
 {
 	const struct field_def *field;
-	/* options have a leading "--", while field names do not have that -> name + 2 */
+	int len_to_equal_sign_or_nul;
 
 	if (context_def == &wildcard_ctx)
 		return true;
@@ -1034,8 +1034,13 @@ static bool is_valid_backend_option(const char* name, const struct context_def *
 	if (!context_def || strlen(name) <= 2)
 		return false;
 
+	/* options have a leading "--", while field names do not have that */
+	name += 2;
+	/* compare only until first equal sign, if any */
+	len_to_equal_sign_or_nul = strcspn(name, "=");
+
 	for (field = context_def->fields; field->name; field++) {
-		if (!strcmp(name + 2, field->name))
+		if (!strncmp(name, field->name, len_to_equal_sign_or_nul))
 			return true;
 	}
 	return false;
