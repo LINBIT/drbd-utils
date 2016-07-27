@@ -1947,6 +1947,10 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 
 		peer_devices = list_peer_devices(res_name);
 
+		/* if there are no peer devices, we don't wait by definition */
+		if (!peer_devices)
+			return 0;
+
 		iov.iov_len = DEFAULT_MSG_SIZE;
 		iov.iov_base = malloc(iov.iov_len);
 		smsg = msg_new(DEFAULT_MSG_SIZE);
