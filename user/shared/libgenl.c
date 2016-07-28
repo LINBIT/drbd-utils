@@ -1,6 +1,7 @@
 #include "libgenl.h"
 
 #include <sys/types.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <time.h>
 #include <poll.h>
@@ -816,6 +817,135 @@ int nla_put(struct msg_buff *msg, int attrtype, int attrlen, const void *data)
 		return -EMSGSIZE;
 
 	__nla_put(msg, attrtype, attrlen, data);
+	return 0;
+}
+
+/* TODO add an architecture/platform blacklist */
+#define CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS 1
+
+#define IS_ALIGNED(x, a)                (((x) & ((typeof(x))(a) - 1)) == 0)
+/**
+ * nla_need_padding_for_64bit - test 64-bit alignment of the next attribute
+ * @msg: message buffer the message is stored in
+ *
+ * Return true if padding is needed to align the next attribute (nla_data()) to
+ * a 64-bit aligned area.
+ */
+static inline bool nla_need_padding_for_64bit(struct msg_buff *msg)
+{
+#ifndef CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS
+	/* The nlattr header is 4 bytes in size, that's why we test
+	 * if the msg->data _is_ aligned.  A NOP attribute, plus
+	 * nlattr header for next attribute, will make nla_data()
+	 * 8-byte aligned.
+	 */
+	if (IS_ALIGNED((unsigned long)msg_tail_pointer(msg), 8))
+		return true;
+#endif
+	return false;
+}
+
+/**
+ * nla_align_64bit - 64-bit align the nla_data() of next attribute
+ * @msg: message buffer the message is stored in
+ * @padattr: attribute type for the padding
+ *
+ * Conditionally emit a padding netlink attribute in order to make
+ * the next attribute we emit have a 64-bit aligned nla_data() area.
+ * This will only be done in architectures which do not have
+ * CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS defined.
+ *
+ * Returns zero on success or a negative error code.
+ */
+static inline int nla_align_64bit(struct msg_buff *msg, int padattr)
+{
+	if (nla_need_padding_for_64bit(msg) &&
+	    !nla_reserve(msg, padattr, 0))
+		return -EMSGSIZE;
+
+	return 0;
+}
+
+/**
+ * nla_total_size_64bit - total length of attribute including padding
+ * @payload: length of payload
+ */
+static inline int nla_total_size_64bit(int payload)
+{
+	return NLA_ALIGN(nla_attr_size(payload))
+#ifndef CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS
+		+ NLA_ALIGN(nla_attr_size(0))
+#endif
+		;
+}
+
+/**
+ * __nla_reserve_64bit - reserve room for attribute on the msg and align it
+ * @msg: message buffer to reserve room on
+ * @attrtype: attribute type
+ * @attrlen: length of attribute payload
+ * @padattr: attribute type for the padding
+ *
+ * Adds a netlink attribute header to a socket buffer and reserves
+ * room for the payload but does not copy it. It also ensure that this
+ * attribute will have a 64-bit aligned nla_data() area.
+ *
+ * The caller is responsible to ensure that the msg provides enough
+ * tailroom for the attribute header and payload.
+ */
+struct nlattr *__nla_reserve_64bit(struct msg_buff *msg, int attrtype,
+				   int attrlen, int padattr)
+{
+	if (nla_need_padding_for_64bit(msg))
+		nla_align_64bit(msg, padattr);
+
+	return __nla_reserve(msg, attrtype, attrlen);
+}
+
+/**
+ * __nla_put_64bit - Add a netlink attribute to a socket buffer and align it
+ * @msg: message buffer to add attribute to
+ * @attrtype: attribute type
+ * @attrlen: length of attribute payload
+ * @data: head of attribute payload
+ * @padattr: attribute type for the padding
+ *
+ * The caller is responsible to ensure that the msg provides enough
+ * tailroom for the attribute header and payload.
+ */
+void __nla_put_64bit(struct msg_buff *msg, int attrtype, int attrlen,
+		     const void *data, int padattr)
+{
+	struct nlattr *nla;
+
+	nla = __nla_reserve_64bit(msg, attrtype, attrlen, padattr);
+	memcpy(nla_data(nla), data, attrlen);
+}
+
+/**
+ * nla_put_64bit - Add a netlink attribute to a socket buffer and align it
+ * @msg: message buffer to add attribute to
+ * @attrtype: attribute type
+ * @attrlen: length of attribute payload
+ * @data: head of attribute payload
+ * @padattr: attribute type for the padding
+ *
+ * Returns -EMSGSIZE if the tailroom of the msg is insufficient to store
+ * the attribute header and payload.
+ */
+int nla_put_64bit(struct msg_buff *msg, int attrtype, int attrlen,
+		  const void *data, int padattr)
+{
+	size_t len;
+
+	if (nla_need_padding_for_64bit(msg))
+		len = nla_total_size_64bit(attrlen);
+	else
+		len = nla_total_size(attrlen);
+	if (unlikely(msg_tailroom(msg) < len))
+		return -EMSGSIZE;
+
+	__nla_put_64bit(msg, attrtype, attrlen, data, padattr);
 	return 0;
 }
 
