@@ -1,7 +1,7 @@
 [Unit]
 Description=DRBD -- please disable. Unless you are NOT using a cluster manager.
-Wants=network.target sshd.service
-After=network.target sshd.service
+Wants=network-online.target sshd.service
+After=network-online.target sshd.service
 
 [Service]
 Type=oneshot
