@@ -34,14 +34,18 @@ override_dh_install:
 	dh_install --fail-missing
 
 	# Place the initscript where dh_installinit can find it
-	mv $(CURDIR)/debian/drbd-utils/etc/init.d/drbd $(CURDIR)/debian/drbd-utils.drbd.init
+	# (yes, it may be missing; yes, modern debhelper would find it anyways)
+	-mv $(CURDIR)/debian/drbd-utils/etc/init.d/drbd $(CURDIR)/debian/drbd-utils.drbd.init
 ifneq	($(WITH_SYSTEMD),)
 	# Place the systemd service script ...
 	mv $(CURDIR)/debian/drbd-utils/lib/systemd/system/drbd.service $(CURDIR)/debian/ || :
 endif
 
+# do not stop/restart/start, no reason to reconfigure the kernel
+# just because we install/upgrade some tools
 override_dh_installinit:
-	dh_installinit -p drbd-utils --name=drbd --no-start -- disable
+	dh_installinit -p drbd-utils --name=drbd \
+		--no-restart-on-upgrade --no-start
 
 override_dh_gencontrol:
 	dh_gencontrol -Ndrbd8-utils
