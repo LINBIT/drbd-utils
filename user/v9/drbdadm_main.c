@@ -395,7 +395,7 @@ static struct adm_cmd khelper12_cmd = {"unfence-peer", adm_khelper, ACF3_RES_HAN
 
 static struct adm_cmd suspend_io_cmd = {"suspend-io", adm_drbdsetup, ACF4_ADVANCED  .backend_res_name = 0 };
 static struct adm_cmd resume_io_cmd = {"resume-io", adm_drbdsetup, ACF4_ADVANCED  .backend_res_name = 0 };
-static struct adm_cmd set_gi_cmd = {"set-gi", adm_drbdmeta, .disk_required = 1, .need_peer = 1, ACF4_ADVANCED_NEED_VOL};
+static struct adm_cmd set_gi_cmd = {"set-gi", adm_drbdmeta, &wildcard_ctx, .disk_required = 1, .need_peer = 1, ACF4_ADVANCED_NEED_VOL};
 static struct adm_cmd new_current_uuid_cmd = {"new-current-uuid", adm_drbdsetup, &new_current_uuid_cmd_ctx, ACF4_ADVANCED_NEED_VOL .backend_res_name = 0};
 static struct adm_cmd check_resize_cmd = {"check-resize", adm_chk_resize, ACF4_ADVANCED};
 
@@ -3047,7 +3047,8 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 				break;
 
 		field = NULL;
-		if (option[0] == '-' && option[1] == '-' && (*cmd)->drbdsetup_ctx) {
+		if (option[0] == '-' && option[1] == '-' && (*cmd)->drbdsetup_ctx &&
+		    (*cmd)->drbdsetup_ctx != &wildcard_ctx) {
 			for (field = (*cmd)->drbdsetup_ctx->fields; field->name; field++) {
 				if (strlen(field->name) == len - 2 &&
 				    !strncmp(option + 2, field->name, len - 2))
@@ -3056,7 +3057,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 			if (!field->name)
 				field = NULL;
 		}
-		if (!field) {
+		if (!field && (*cmd)->drbdsetup_ctx != &wildcard_ctx) {
 			err("%s: unrecognized option '%.*s'\n", progname, len, option);
 			goto help;
 		}
