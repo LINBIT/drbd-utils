@@ -244,6 +244,7 @@ static int get_af_ssocks(int warn);
 static void print_command_usage(struct drbd_cmd *cm, enum usage_type);
 static void print_usage_and_exit(const char* addinfo)
 		__attribute__ ((noreturn));
+static const char *resync_susp_str(struct peer_device_info *info);
 
 // command functions
 static int generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv);
@@ -348,6 +349,7 @@ static struct option status_cmd_options[] = {
 	{ "verbose", no_argument, 0, 'v' },
 	{ "statistics", no_argument, 0, 's' },
 	{ "color", optional_argument, 0, 'c' },
+	{ "json", no_argument, 0, 'j' },
 	{ }
 };
 
@@ -2310,6 +2312,135 @@ void print_connection_statistics(int indent,
 		wrap_printf(indent, " congested:%s", new->conn_congested ? "yes" : "no");
 }
 
+static void peer_device_status_json(struct peer_devices_list *peer_device)
+{
+	struct peer_device_statistics *s = &peer_device->statistics;
+
+	printf("        {\n"
+	       "          \"volume\": %d\n"
+	       "          \"replication-state\": \"%s\",\n"
+	       "          \"peer-disk-state\": \"%s\",\n"
+	       "          \"resync-suspended\": \"%s\",\n"
+	       "          \"received\": " U64 ",\n"
+	       "          \"sent\": " U64 ",\n"
+	       "          \"out-of-sync\": " U64 ",\n"
+	       "          \"pending\": " U32 ",\n"
+	       "          \"unacked\": " U32 "\n",
+	       peer_device->ctx.ctx_volume,
+	       drbd_repl_str(peer_device->info.peer_repl_state),
+	       drbd_disk_str(peer_device->info.peer_disk_state),
+	       resync_susp_str(&peer_device->info),
+	       (uint64_t)s->peer_dev_received / 2,
+	       (uint64_t)s->peer_dev_sent / 2,
+	       (uint64_t)s->peer_dev_out_of_sync / 2,
+	       s->peer_dev_pending,
+	       s->peer_dev_unacked);
+
+	if (peer_device->info.peer_repl_state >= L_SYNC_SOURCE &&
+	    peer_device->info.peer_repl_state <= L_PAUSED_SYNC_T)
+		printf("          \"resync-done\": %.2f,\n",
+		       100 * (1 - (double)peer_device->statistics.peer_dev_out_of_sync /
+			      (double)peer_device->device->statistics.dev_size));
+
+	printf("        }");
+}
+
+static void connection_status_json(struct connections_list *connection,
+				   struct peer_devices_list *peer_devices)
+{
+	struct peer_devices_list *peer_device;
+	int i = 0;
+
+	printf("    {\n"
+	       "      \"peer-node-id\": %d,\n"
+	       "      \"name\": \"%s\",\n"
+	       "      \"connection-state\": \"%s\", \n"
+	       "      \"congested\": %s\n"
+	       "      \"peer-role\": \"%s\",\n"
+	       "      \"peer_devices\": [\n",
+	       connection->ctx.ctx_peer_node_id,
+	       connection->ctx.ctx_conn_name,
+	       drbd_conn_str(connection->info.conn_connection_state),
+	       connection->statistics.conn_congested ? "true" : "false",
+	       drbd_role_str(connection->info.conn_role));
+
+	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next) {
+		if (connection->ctx.ctx_peer_node_id != peer_device->ctx.ctx_peer_node_id)
+			continue;
+		if (i)
+			puts(",");
+		peer_device_status_json(peer_device);
+		i++;
+	}
+	printf(" ]\n    }");
+}
+
+static void device_status_json(struct devices_list *device)
+{
+
+	printf("    {\n"
+	       "      \"volume\": %d\n"
+	       "      \"minor\": %d\n"
+	       "      \"disk-state:\": \"%s\"\n",
+	       device->ctx.ctx_volume,
+	       device->minor,
+	       drbd_disk_str(device->info.dev_disk_state));
+	if (device->statistics.dev_size != -1) {
+		struct device_statistics *s = &device->statistics;
+
+		printf("      \"size\": " U64 ",\n"
+		       "      \"read\": " U64 ",\n"
+		       "      \"written\": " U64 ",\n"
+		       "      \"al-writes\": " U64 ",\n"
+		       "      \"bm-writes\": " U64 ",\n"
+		       "      \"upper-pending\": " U32 ",\n"
+		       "      \"lower-pending\": " U32 "\n",
+		       (uint64_t)s->dev_size / 2,
+		       (uint64_t)s->dev_read / 2,
+		       (uint64_t)s->dev_write / 2,
+		       (uint64_t)s->dev_al_writes,
+		       (uint64_t)s->dev_bm_writes,
+		       s->dev_upper_pending,
+		       s->dev_lower_pending);
+	}
+	printf("    }");
+}
+
+static void resource_status_json(struct resources_list *resource)
+{
+	static const char *write_ordering_str[] = {
+		[WO_NONE] = "none",
+		[WO_DRAIN_IO] = "drain",
+		[WO_BDEV_FLUSH] = "flush",
+		[WO_BIO_BARRIER] = "barrier",
+	};
+
+	struct nlattr *nla;
+	int node_id = -1;
+	bool suspended =
+		resource->info.res_susp ||
+		resource->info.res_susp_nod ||
+		resource->info.res_susp_fen;
+
+	nla = nla_find_nested(resource->res_opts, __nla_type(T_node_id));
+	if (nla)
+		node_id = *(uint32_t *)nla_data(nla);
+
+	printf("{\n"
+	       "  \"name\": \"%s\"\n"
+	       "  \"node-id\": %d,\n"
+	       "  \"role\": \"%s\",\n"
+	       "  \"suspended\": %s,\n"
+	       "  \"write-ordering\": \"%s\",\n"
+	       "  \"devices\": [\n",
+	       resource->name,
+	       node_id,
+	       drbd_role_str(resource->info.res_role),
+	       suspended ? "true" : "false",
+	       write_ordering_str[resource->statistics.res_stat_write_ordering]);
+}
+
+
 void print_peer_device_statistics(int indent,
 				  struct peer_device_statistics *old,
 				  struct peer_device_statistics *new,
@@ -2520,6 +2651,7 @@ static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		.sa_flags = SA_RESETHAND,
 	};
 	bool found = false;
+	bool json = false;
 	int c;
 
 	optind = 0;  /* reset getopt_long() */
@@ -2540,6 +2672,9 @@ static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		case 'c':
 			if (!parse_color_argument())
 				print_usage_and_exit("unknown --color argument");
+			break;
+		case 'j':
+			json = true;
 			break;
 		}
 	}
@@ -2570,13 +2705,29 @@ static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
 
 		link_peer_devices_to_devices(peer_devices, devices);
 
-		resource_status(resource);
-		single_device = devices && !devices->next;
-		for (device = devices; device; device = device->next)
-			device_status(device, single_device);
-		for (connection = connections; connection; connection = connection->next)
-			connection_status(connection, peer_devices, single_device);
-		wrap_printf(0, "\n");
+		if (json) {
+			resource_status_json(resource);
+			for (device = devices; device; device = device->next) {
+				device_status_json(device);
+				if (device->next)
+					puts(",");
+			}
+			puts(" ],\n  \"connections\": [");
+			for (connection = connections; connection; connection = connection->next) {
+				connection_status_json(connection, peer_devices);
+				if (connection->next)
+					puts(",");
+			}
+			puts(" ]\n}");
+		} else {
+			resource_status(resource);
+			single_device = devices && !devices->next;
+			for (device = devices; device; device = device->next)
+				device_status(device, single_device);
+			for (connection = connections; connection; connection = connection->next)
+				connection_status(connection, peer_devices, single_device);
+			wrap_printf(0, "\n");
+		}
 
 		free_connections(connections);
 		free_devices(devices);
