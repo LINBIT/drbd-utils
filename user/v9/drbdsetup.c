@@ -2317,7 +2317,7 @@ static void peer_device_status_json(struct peer_devices_list *peer_device)
 	struct peer_device_statistics *s = &peer_device->statistics;
 
 	printf("        {\n"
-	       "          \"volume\": %d\n"
+	       "          \"volume\": %d,\n"
 	       "          \"replication-state\": \"%s\",\n"
 	       "          \"peer-disk-state\": \"%s\",\n"
 	       "          \"resync-suspended\": \"%s\",\n"
@@ -2355,7 +2355,7 @@ static void connection_status_json(struct connections_list *connection,
 	       "      \"peer-node-id\": %d,\n"
 	       "      \"name\": \"%s\",\n"
 	       "      \"connection-state\": \"%s\", \n"
-	       "      \"congested\": %s\n"
+	       "      \"congested\": %s,\n"
 	       "      \"peer-role\": \"%s\",\n"
 	       "      \"peer_devices\": [\n",
 	       connection->ctx.ctx_peer_node_id,
@@ -2379,9 +2379,9 @@ static void device_status_json(struct devices_list *device)
 {
 
 	printf("    {\n"
-	       "      \"volume\": %d\n"
-	       "      \"minor\": %d\n"
-	       "      \"disk-state:\": \"%s\"\n",
+	       "      \"volume\": %d,\n"
+	       "      \"minor\": %d,\n"
+	       "      \"disk-state:\": \"%s\",\n",
 	       device->ctx.ctx_volume,
 	       device->minor,
 	       drbd_disk_str(device->info.dev_disk_state));
@@ -2427,7 +2427,7 @@ static void resource_status_json(struct resources_list *resource)
 		node_id = *(uint32_t *)nla_data(nla);
 
 	printf("{\n"
-	       "  \"name\": \"%s\"\n"
+	       "  \"name\": \"%s\",\n"
 	       "  \"node-id\": %d,\n"
 	       "  \"role\": \"%s\",\n"
 	       "  \"suspended\": %s,\n"
@@ -2689,6 +2689,9 @@ static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	sigaction(SIGPIPE, &sa, NULL);
 	sigaction(SIGTERM, &sa, NULL);
 
+	if (json)
+		puts("[");
+
 	for (resource = resources; resource; resource = resource->next) {
 		struct devices_list *devices, *device;
 		struct connections_list *connections, *connection;
@@ -2719,6 +2722,8 @@ static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
 					puts(",");
 			}
 			puts(" ]\n}");
+			if (resource->next)
+				puts(",");
 		} else {
 			resource_status(resource);
 			single_device = devices && !devices->next;
@@ -2734,6 +2739,9 @@ static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		free_peer_devices(peer_devices);
 		found = true;
 	}
+
+	if (json)
+		puts("]\n");
 
 	free_resources(resources);
 	if (!found && strcmp(objname, "all")) {
