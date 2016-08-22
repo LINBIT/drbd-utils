@@ -179,7 +179,7 @@ static void _set_host_info_in_host_address_pairs(struct d_resource *res,
 
 		if (!host_info) {
 			err("%s:%d: in resource %s a hostname (\"%s\") is given\n"
-			    "with a \"host\" keyword, has no \"address\" keyword, and not matching\n"
+			    "with a \"host\" keyword, has no \"address\" keyword, and no matching\n"
 			    "host section (\"on\" keyword)\n",
 			    config_file, ha->config_line, res->name, ha->name);
 			config_valid = 0;
