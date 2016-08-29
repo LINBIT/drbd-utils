@@ -73,6 +73,7 @@ struct option general_admopt[] = {
 	{"verbose", no_argument, 0, 'v'},
 	{"config-file", required_argument, 0, 'c'},
 	{"config-to-test", required_argument, 0, 't'},
+	{"config-to-exclude", required_argument, 0, 'E'},
 	{"drbdsetup", required_argument, 0, 's'},
 	{"drbdmeta", required_argument, 0, 'm'},
 	{"drbd-proxy-ctl", required_argument, 0, 'p'},
@@ -127,6 +128,7 @@ static int adm_forget_peer(const struct cfg_ctx *);
 static int adm_peer_device(const struct cfg_ctx *);
 
 int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check);
+int was_file_already_seen(char *fn);
 
 static char *get_opt_val(struct options *, const char *, char *);
 
@@ -2932,6 +2934,10 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 			break;
 		case 't':
 			config_test = optarg;
+			break;
+		case 'E':
+			/* Remember as absolute name */
+			was_file_already_seen(optarg);
 			break;
 		case 's':
 			{
