@@ -792,6 +792,8 @@ static int adm_adjust(const struct cfg_ctx *ctx)
 
 static int sh_nop(const struct cfg_ctx *ctx)
 {
+	if (!config_valid)
+		return 10;
 	return 0;
 }
 
