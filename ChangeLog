@@ -2,6 +2,19 @@ Latest:
 ------
  For even more detail, use "git log" or visit http://git.drbd.org/.
 
+8.9.8
+--------
+ * fix a lot of regressions from allowing to pass command options
+   on the drbdadm adjust commandline. (filtering of backend options)
+ * wait-for-* return success if there are no peers
+ * naturally align 64 bit attributes in gennetlink packets
+ * improve systemd unit-file to wait for network-online.target
+ * return success for a resize to the same size even if a resync
+   does not allow as resize at this point in time
+ * improve sh-nop with --config-to-test with new --config-to-exclude
+   and correct exit code
+ * implemented --json for drbdsetup status
+
 8.9.7
 --------
  * allow to pass peer device options on the drbdadm command-line
