@@ -1262,32 +1262,6 @@
     </definition>
   </drbdsetup_option>
 
-  <drbdsetup_option name="unplug-watermark">
-    <term xml:id="unplug-watermark"><option>unplug-watermark <replaceable>number</replaceable></option></term>
-
-    <definition>
-      <indexterm significance="normal">
-	<primary>drbd.conf</primary>
-
-	<secondary>unplug-watermark</secondary>
-      </indexterm>
-
-      <para>Mainline kernels before version 2.6.39-rc1 use an explicit
-      plug / unplug mechanism to control when a block device starts processing
-      queued requests.  On those kernels, the <option>unplug-watermark</option>
-      parameter defines how many requests must be queued until a secondary
-      node starts processing them.  Some storage controllers perform best when
-      <option>unplug-watermark</option> is set to the same value as
-      <option>max-buffers</option>; others are more efficient with smaller
-      values. The default value for <option>unplug-watermark</option> is 128,
-      with a minimum of 16 and a maximum of 131072.</para>
-
-      <para>More recent kernels handle plugging and unplugging implicitly; on
-      those kernels, this parameter has no effect. Note that some distributions
-      have backported this feature to older kernel versions.</para>
-    </definition>
-  </drbdsetup_option>
-
   <drbdsetup_option name="use-rle">
     <term xml:id="use-rle"><option>use-rle</option></term>
 

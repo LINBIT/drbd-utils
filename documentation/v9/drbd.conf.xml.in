@@ -765,7 +765,6 @@ resource
         <pick_drbdsetup_option name="sndbuf-size"/>
         <pick_drbdsetup_option name="tcp-cork"/>
         <pick_drbdsetup_option name="timeout"/>
-        <pick_drbdsetup_option name="unplug-watermark"/>
         <pick_drbdsetup_option name="use-rle"/>
         <pick_drbdsetup_option name="verify-alg"/>
       </variablelist>
