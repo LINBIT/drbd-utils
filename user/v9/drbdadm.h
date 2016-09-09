@@ -299,6 +299,7 @@ extern void popd(int fd);
 enum {
 	ADJUST_DISK = 1,
 	ADJUST_NET = 2,
+	ADJUST_SKIP_CHECKED = 4,
 };
 extern int _adm_adjust(const struct cfg_ctx *ctx, int flags);
 
