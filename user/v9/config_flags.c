@@ -880,6 +880,7 @@ struct context_def peer_device_options_ctx = {
 		{ "c-fill-target", NUMERIC(c_fill_target, C_FILL_TARGET), .unit = "bytes" },
 		{ "c-max-rate", NUMERIC(c_max_rate, C_MAX_RATE), .unit = "bytes/second" },
 		{ "c-min-rate", NUMERIC(c_min_rate, C_MIN_RATE), .unit = "bytes/second" },
+		{ "bitmap", BOOLEAN(bitmap, BITMAP) },
 		{ } },
 };
 

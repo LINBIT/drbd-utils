@@ -437,6 +437,36 @@ void create_implicit_net_options(struct connection *conn)
 	insert_head(&conn->net_options, new_opt(strdup("_name"), strdup(value)));
 }
 
+static bool peer_diskless(struct peer_device *peer_device)
+{
+	struct d_volume *vol;
+
+	vol = volume_by_vnr(&peer_device->connection->peer->volumes, peer_device->volume->vnr);
+	return vol->disk == NULL;
+}
+
+
+static void add_no_bitmap_opt(struct d_resource *res)
+{
+	struct connection *conn;
+
+	if (res->no_bitmap_done)
+		return;
+
+	for_each_connection(conn, &res->connections) {
+		struct peer_device *peer_device;
+
+		if (conn->ignore)
+			continue;
+
+		STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
+			if (peer_device->connection->peer && peer_diskless(peer_device))
+				insert_tail(&peer_device->pd_options, new_opt("bitmap", "no"));
+		}
+	}
+	res->no_bitmap_done = 1;
+}
+
 void set_peer_in_resource(struct d_resource* res, int peer_required)
 {
 	struct connection *conn;
@@ -453,6 +483,9 @@ void set_peer_in_resource(struct d_resource* res, int peer_required)
 		create_implicit_net_options(conn);
 	}
 	res->peers_addrs_set = peers_addrs_set;
+
+	if (!(peer_required & DRBDSETUP_SHOW))
+		add_no_bitmap_opt(res);
 }
 
 void set_disk_in_res(struct d_resource *res)

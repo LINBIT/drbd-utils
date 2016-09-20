@@ -226,6 +226,7 @@ struct d_resource
 	unsigned int stacked:1;        /* Stacked on this node */
 	unsigned int stacked_on_one:1; /* Stacked either on me or on peer */
 	unsigned int peers_addrs_set:1; /* all peer addresses set */
+	unsigned int no_bitmap_done:1;
 
 	/* if a prerequisite command failed, don't try any further commands.
 	 * see run_deferred_cmds() */
@@ -347,8 +348,6 @@ enum drbd_cfg_stage {
 	CFG_DISK_PREP_DOWN,
 	/* new-minor */
 	CFG_DISK_PREP_UP,
-	/* attach, disk-options, resize */
-	CFG_DISK,
 
 	/* disconnect */
 	CFG_NET_DISCONNECT,
@@ -360,7 +359,11 @@ enum drbd_cfg_stage {
 	/* discard/set connection parameters */
 	CFG_NET,
 
+	/* peer device options */
 	CFG_PEER_DEVICE,
+
+	/* attach, disk-options, resize */
+	CFG_DISK,
 
 	/* actually start with connection attempts */
 	CFG_NET_CONNECT,
