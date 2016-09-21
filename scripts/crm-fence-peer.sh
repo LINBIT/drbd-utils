@@ -1,6 +1,8 @@
 #!/bin/bash
 #
 
+export LANG=C LC_ALL=C TZ=":/etc/localtime"
+
 sed_rsc_location_suitable_for_string_compare()
 {
 	# expected input: exactly one tag per line: "^[[:space:]]*<.*/?>$"
@@ -1003,7 +1005,12 @@ fi
 # make sure it contains what we expect
 HOSTNAME=$(uname -n)
 
-$quiet || echo "invoked for $DRBD_RESOURCE${master_id:+" (master-id: $master_id)"}"
+$quiet || {
+	for k in ${!DRBD_*} UP_TO_DATE_NODES; do printf "%s=%q " "$k" "${!k}"; done
+	printf '%q' "$0"
+	[[ $# != 0 ]] && printf ' %q' "$@"
+	printf '\n'
+}
 
 # to be set by drbd_peer_fencing()
 drbd_fence_peer_exit_code=1
