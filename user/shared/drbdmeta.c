@@ -3178,6 +3178,42 @@ void print_dump_header()
 	printf("\n#\n\n");
 }
 
+char *pretty_peer_md_flags(char *inbuf, unsigned int buf_size, unsigned int flags, const char *first_sep, const char *sep)
+{
+	static const char *flag_name[32] = {
+	/* MDF_PEER_CONNECTED   */ [0] = "connected",
+	/* MDF_PEER_OUTDATED    */ [1] = "<=outdated",
+	/* MDF_PEER_FENCING     */ [2] = "fencing",
+	/* MDF_PEER_FULL_SYNC   */ [3] = "full-sync",
+	/* MDF_PEER_DEVICE_SEEN */ [4] = "seen",
+	/* MDF_NODE_EXISTS      */ [16] = "exists",
+	};
+
+	char *buf = inbuf;
+	int n = buf_size;
+	int c;
+	int i;
+	const char *cur_sep = first_sep;
+
+	*buf = '\0';
+	for (i = 0; i < 32; i++) {
+		unsigned int f = 1U << i;
+		if ((flags & f) == 0)
+			continue;
+
+		if (flag_name[i])
+			c = snprintf(buf, n, "%s%s", cur_sep, flag_name[i]);
+		else
+			c = snprintf(buf, n, "%s0x%x=?", cur_sep, f);
+		cur_sep = sep;
+		if (c < 0 || c >= n)
+			break;
+		buf += c;
+		n -= c;
+	}
+	return inbuf;
+}
+
 int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc)
 {
 	int al_is_clean;
@@ -3272,6 +3308,7 @@ int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc
 		       cfg->md.current_uuid, cfg->md.flags);
 		for (i = 0; i < DRBD_NODE_ID_MAX; i++) {
 			struct peer_md_cpu *peer = &cfg->md.peers[i];
+			char flag_buf[80];
 
 			printf("peer[%d] {\n", i);
 			if (format_version(cfg) >= DRBD_V09) {
@@ -3280,10 +3317,12 @@ int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc
 			}
 			printf("    bitmap-uuid 0x"X64(016)";\n"
 			       "    bitmap-dagtag 0x"X64(016)";\n"
-			       "    flags 0x"X32(08)";\n",
+			       "    flags 0x"X32(08)";%s\n",
 			       peer->bitmap_uuid,
 			       peer->bitmap_dagtag,
-			       peer->flags);
+			       peer->flags,
+			       pretty_peer_md_flags(flag_buf, sizeof(flag_buf),
+					peer->flags, " # ", " | "));
 			printf("}\n");
 		}
 		printf("history-uuids {");
