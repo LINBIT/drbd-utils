@@ -173,7 +173,7 @@ resource stacked_multi_volume {
 
 resource drbd_9_two_connection {
 	volume 0 {
-	       device minor 10;
+	       device minor 19;
 	       disk /dev/foo/bar;
 	       meta-disk internal;
 	}
@@ -239,7 +239,7 @@ resource drbd_9_two_connection {
 
 resource drbd_9_mesh {
 	volume 0 {
-	       device minor 11;
+	       device minor 21;
 	       disk /dev/foo/bar2;
 	       meta-disk internal;
 	}
@@ -295,5 +295,26 @@ resource drbd_9_multi_path {
 			max-buffers 20000;
 			protocol C;
 		}
+	}
+}
+
+resource dless {
+	volume 0 {
+		device minor 99;
+		disk /dev/foo/bar4;
+		meta-disk internal;
+	}
+	on fat-tyre {
+		node-id 0;
+	}
+	on other {
+		node-id 1;
+		volume 0 {
+			disk none;
+		}
+	}
+	connection {
+		host fat-tyre address 10.43.9.50:7000;
+		host other address 10.43.9.51:7000;
 	}
 }
