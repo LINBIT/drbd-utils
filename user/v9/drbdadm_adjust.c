@@ -224,7 +224,7 @@ static bool adjust_paths(const struct cfg_ctx *ctx, struct connection *running_c
 		running_path = find_path_by_addrs(running_conn, configured_path);
 		if (!running_path) {
 			tmp_ctx.path = configured_path;
-			schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PREP_UP);
+			schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PATH);
 		} else {
 			running_path->adj_seen = 1;
 		}
@@ -748,7 +748,7 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, int can_do_pro
 			running_conn = matching_conn(conn, &running->connections);
 		if (!running_conn) {
 			schedule_deferred_cmd(&new_peer_cmd, &tmp_ctx, CFG_NET_PREP_UP);
-			schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PREP_UP);
+			schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PATH);
 			schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET_CONNECT);
 			schedule_peer_device_options(&tmp_ctx);
 		} else {
@@ -775,7 +775,7 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, int can_do_pro
 			}
 
 			if (new_path)
-				schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PREP_UP);
+				schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PATH);
 			else
 				connect |= adjust_paths(&tmp_ctx, running_conn);
 

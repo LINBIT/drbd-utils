@@ -353,8 +353,11 @@ enum drbd_cfg_stage {
 	CFG_NET_DISCONNECT,
 	/* down,  del-peer, proxy down, del-path */
 	CFG_NET_PREP_DOWN,
-	/* add-peer, add-path, proxy up */
+	/* add-peer, proxy up */
 	CFG_NET_PREP_UP,
+
+	/* add-path */
+	CFG_NET_PATH,
 
 	/* discard/set connection parameters */
 	CFG_NET,

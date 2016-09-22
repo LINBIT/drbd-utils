@@ -1995,7 +1995,7 @@ static int adm_up(const struct cfg_ctx *ctx)
 		tmp_ctx.conn = conn;
 
 		schedule_deferred_cmd(&new_peer_cmd, &tmp_ctx, CFG_NET_PREP_UP);
-		schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PREP_UP);
+		schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PATH);
 		schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET_CONNECT);
 
 		STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
