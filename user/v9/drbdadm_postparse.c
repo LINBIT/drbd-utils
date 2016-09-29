@@ -437,7 +437,7 @@ void create_implicit_net_options(struct connection *conn)
 	insert_head(&conn->net_options, new_opt(strdup("_name"), strdup(value)));
 }
 
-static bool peer_diskless(struct peer_device *peer_device)
+bool peer_diskless(struct peer_device *peer_device)
 {
 	struct d_volume *vol;
 

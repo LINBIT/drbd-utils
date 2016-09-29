@@ -520,7 +520,6 @@ struct d_name *find_backend_option(const char *opt_name)
 
 int adm_create_md(const struct cfg_ctx *ctx)
 {
-	struct connection *conn;
 	char answer[ANSWER_SIZE];
 	struct node_info ni;
 	uint64_t device_uuid=0;
@@ -537,11 +536,14 @@ int adm_create_md(const struct cfg_ctx *ctx)
 	if (b_opt_max_peers) {
 		max_peers_str = ssprintf("%s", b_opt_max_peers->name + strlen(opt_max_peers));
 	} else {
+		struct peer_device *peer_device;
 		int max_peers = 0;
 
-		for_each_connection(conn, &ctx->res->connections)
-			if (!conn->ignore)
-				max_peers++;
+		STAILQ_FOREACH(peer_device, &ctx->vol->peer_devices, volume_link) {
+			if (peer_device->connection->ignore || peer_diskless(peer_device))
+				continue;
+			max_peers++;
+		}
 
 		if (max_peers == 0)
 			max_peers = 1;
