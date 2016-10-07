@@ -1,0 +1,84 @@
+CXXFLAGS=-std=c++11 -I. -Icppdsaext/src -Wall -Werror --pedantic-errors -fPIC -O2 \
+-Wsign-compare -Wpointer-arith -Wswitch-default -Wswitch-enum -Wtype-limits \
+-Wmissing-declarations -Wshadow
+CXX=g++
+
+# variables set by configure
+DISTRO = @DISTRO@
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+localstatedir = @localstatedir@
+datarootdir = @datarootdir@
+datadir = @datadir@
+sbindir = @sbindir@
+sysconfdir = @sysconfigdir@
+BASH_COMPLETION_SUFFIX = @BASH_COMPLETION_SUFFIX@
+UDEV_RULE_SUFFIX = @UDEV_RULE_SUFFIX@
+INITDIR = @INITDIR@
+LIBDIR = @prefix@/lib/@PACKAGE_TARNAME@
+CC = @CC@
+CFLAGS = @CFLAGS@
+LDFLAGS = @LDFLAGS@
+LN_S = @LN_S@
+WITH_DRBD_MON=@WITH_DRBD_MON@
+
+# variables meant to be overridden from the make command line
+DESTDIR ?= /
+
+binaries := drbd_mon drbd_mon_test
+all: $(binaries)
+
+PHONY := all
+
+dsaext-obj := cppdsaext/src/dsaext.o
+
+l-obj := LiveStatus.o MessageLog.o CompactDisplay.o
+l-obj += DrbdResource.o DrbdRole.o DrbdVolume.o DrbdConnection.o
+l-obj += VolumesContainer.o StateFlags.o EventsIo.o EventsSourceSpawner.o
+l-obj += Args.o ConfigOption.o
+l-obj += StringTokenizer.o comparators.o utils.o
+
+ls-obj := livestatus_main.o $(l-obj) $(dsaext-obj)
+lst-obj := livestatus_main.o $(l-obj) $(dsaext-obj) DebugDisplay.o
+
+all-obj := $(sort $(ls-obj) $(lst-obj))
+local-obj := $(filter-out $(dsaext-obj),$(all-obj))
+local-dep := $(patsubst %.o,.%.d,$(local-obj))
+-include $(local-dep)
+
+$(dsaext-obj): $(basename $(dsaext-obj)).cpp $(basename $(dsaext-obj)).h
+
+drbd_mon: $(ls-obj)
+	$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) $^
+drbd_mon_test: $(lst-obj)
+	$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) $^
+
+# do not try to rebuild Makefile itself
+Makefile: ;
+
+.%.d: %.cpp
+	@set -e; rm -f $@; \
+	$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) $< > $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+	rm -f $@.$$$$
+
+install:
+ifeq ($(WITH_DRBD_MON),yes)
+		if getent group haclient > /dev/null 2> /dev/null ; then		\
+			install -g haclient -m 4750 drbd_mon $(DESTDIR)$(sbindir) ;	\
+		else									\
+			install -m 755 drbd_mon $(DESTDIR)$(sbindir) ;			\
+		fi									
+endif
+
+uninstall:
+	rm -f $(DESTDIR)$(sbindir)/drbd_mon
+	rm -f $(DESTDIR)/sbin/drbd_mon
+
+PHONY += clean distclean
+clean:
+	rm -f $(local-obj) $(binaries)
+distclean: clean
+	rm -f $(local-dep)
+
+.PHONY: $(PHONY)
