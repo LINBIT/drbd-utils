@@ -1248,7 +1248,7 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		struct stat sb;
 		char buf[PATH_MAX];
 		int i;
-		int c;
+		int c = 0;
 		for (i = 0; i <= 2; i++) {
 			if (i == 0) c = snprintf(buf, PATH_MAX, "/sys/devices/virtual/block/drbd%u", minor);
 			if (i == 1) c = snprintf(buf, PATH_MAX, "/sys/devices/virtual/bdi/147:%u", minor);
