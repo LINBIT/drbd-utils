@@ -11,7 +11,6 @@ static void bad_token(char*);
 #define CP yylval.txt=yytext
 #define YY_NO_INPUT 1
 #define YY_NO_UNPUT 1
-static void yyunput (int c, register char * yy_bp ) __attribute((unused));
 
 %}
 

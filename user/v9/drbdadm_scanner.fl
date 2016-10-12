@@ -20,7 +20,6 @@ void err_dqstring(char* text);
 
 #define YY_NO_INPUT 1
 #define YY_NO_UNPUT 1
-static void yyunput (int c, register char * yy_bp ) __attribute((unused));
 
 #ifndef YY_FLEX_SUBMINOR_VERSION
 #define MAX_INCLUDE_DEPTH 10
