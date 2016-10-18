@@ -1259,7 +1259,9 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 							objname, minor, global_ctx.ctx_volume, buf);
 					fprintf(stderr, "new-minor %s %u %u: sysfs node '%s' (already? still?) exists\n",
 							objname, minor, global_ctx.ctx_volume, buf);
-					return ERR_MINOR_OR_VOLUME_EXISTS;
+					rv = ERR_MINOR_OR_VOLUME_EXISTS;
+					desc = NULL;
+					goto error;
 				}
 			}
 		}
