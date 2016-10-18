@@ -3428,6 +3428,9 @@ static int event_key(char *key, int size, const char *name, unsigned minor,
 	char addr[ADDRESS_STR_MAX];
 	int ret, pos = 0;
 
+	if (!ctx)
+		return -1;
+
 	EVPRINT("%s", name);
 
 	if (ctx->ctx_resource_name)
