@@ -2761,6 +2761,17 @@ static int event_key(char *key, int size, const char *name, unsigned minor,
 		if (size)
 			size -= ret;
 	}
+	/* 8.4 drbd_cfg_context does not provide ctx->ctx_peer_node_id
+	 * check the corresponding name and fake it to 0 */
+	if (!strcmp(name, "connection") || !strcmp(name, "peer-device") || !strcmp(name, "helper")) {
+		ret = snprintf(key + pos, size,
+			      " peer-node-id:%d", 0);
+		if (ret < 0)
+			return ret;
+		pos += ret;
+		if (size)
+			size -= ret;
+	}
 	/* Always use "peer" as connection name,
 	 * and print it if ctx has peer address set.
 	 * Do not show IP address pairs */
