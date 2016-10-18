@@ -3411,84 +3411,48 @@ static int down_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	return rv;
 }
 
+#define _EVPRINT(checksize, fstr, ...) do { \
+	ret = snprintf(key + pos, size, fstr, __VA_ARGS__); \
+	if (ret < 0) \
+		return ret; \
+	pos += ret; \
+	if (size && checksize) \
+		size -= ret; \
+} while(0)
+#define EVPRINT(...) _EVPRINT(1, __VA_ARGS__)
+/* for llvm static analyzer */
+#define EVPRINT_NOSIZE(...) _EVPRINT(0, __VA_ARGS__)
 static int event_key(char *key, int size, const char *name, unsigned minor,
 		     struct drbd_cfg_context *ctx)
 {
 	char addr[ADDRESS_STR_MAX];
 	int ret, pos = 0;
 
-	ret = snprintf(key + pos, size,
-		       "%s", name);
-	if (ret < 0)
-		return ret;
-	pos += ret;
-	if (size)
-		size -= ret;
-	if (ctx->ctx_resource_name) {
-		ret = snprintf(key + pos, size,
-			       " name:%s", ctx->ctx_resource_name);
-		if (ret < 0)
-			return ret;
-		pos += ret;
-		if (size)
-			size -= ret;
-	}
-	if (ctx->ctx_peer_node_id != -1U) {
-		ret = snprintf(key + pos, size,
-			      " peer-node-id:%d", ctx->ctx_peer_node_id);
-		if (ret < 0)
-			return ret;
-		pos += ret;
-		if (size)
-			size -= ret;
-	}
-	if (ctx->ctx_conn_name_len) {
-		ret = snprintf(key + pos, size,
-			       " conn-name:%s", ctx->ctx_conn_name);
-		if (ret < 0)
-			return ret;
-		pos += ret;
-		if (size)
-			size -= ret;
-	}
+	EVPRINT("%s", name);
+
+	if (ctx->ctx_resource_name)
+		EVPRINT(" name:%s", ctx->ctx_resource_name);
+
+	if (ctx->ctx_peer_node_id != -1U)
+		EVPRINT(" peer-node-id:%d", ctx->ctx_peer_node_id);
+
+	if (ctx->ctx_conn_name_len)
+		EVPRINT(" conn-name:%s", ctx->ctx_conn_name);
+
 	if (ctx->ctx_my_addr_len &&
-	    address_str(addr, ctx->ctx_my_addr, ctx->ctx_my_addr_len)) {
-		ret = snprintf(key + pos, size,
-			      " local:%s", addr);
-		if (ret < 0)
-			return ret;
-		pos += ret;
-		if (size)
-			size -= ret;
-	}
+	    address_str(addr, ctx->ctx_my_addr, ctx->ctx_my_addr_len))
+		EVPRINT(" local:%s", addr);
+
 	if (ctx->ctx_peer_addr_len &&
-	    address_str(addr, ctx->ctx_peer_addr, ctx->ctx_peer_addr_len)) {
-		ret = snprintf(key + pos, size,
-			      " peer:%s", addr);
-		if (ret < 0)
-			return ret;
-		pos += ret;
-		if (size)
-			size -= ret;
-	}
-	if (ctx->ctx_volume != -1U) {
-		ret = snprintf(key + pos, size,
-			      " volume:%u", ctx->ctx_volume);
-		if (ret < 0)
-			return ret;
-		pos += ret;
-		if (size)
-			size -= ret;
-	}
-	if (minor != -1U) {
-		ret = snprintf(key + pos, size,
-			      " minor:%u", minor);
-		if (ret < 0)
-			return ret;
-		pos += ret;
-		/* if (size) */
-		/* 	size -= ret; */
-	}
+	    address_str(addr, ctx->ctx_peer_addr, ctx->ctx_peer_addr_len))
+		EVPRINT(" peer:%s", addr);
+
+	if (ctx->ctx_volume != -1U)
+		EVPRINT(" volume:%u", ctx->ctx_volume);
+
+	if (minor != -1U)
+		EVPRINT_NOSIZE(" minor:%u", minor);
+
 	return pos;
 }
 
