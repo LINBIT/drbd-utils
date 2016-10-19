@@ -114,7 +114,6 @@ static int sh_lres(const struct cfg_ctx *);
 static int sh_ll_dev(const struct cfg_ctx *);
 static int sh_md_dev(const struct cfg_ctx *);
 static int sh_md_idx(const struct cfg_ctx *);
-static int sh_status(const struct cfg_ctx *);
 static int adm_drbdmeta(const struct cfg_ctx *);
 static int adm_khelper(const struct cfg_ctx *);
 static int adm_setup_and_meta(const struct cfg_ctx *);
@@ -372,7 +371,6 @@ static struct adm_cmd sh_md_dev_cmd = {"sh-md-dev", sh_md_dev, ACF2_SHELL .disk_
 static struct adm_cmd sh_md_idx_cmd = {"sh-md-idx", sh_md_idx, ACF2_SHELL .disk_required = 1};
 static struct adm_cmd sh_ip_cmd = {"sh-ip", sh_ip, ACF2_SHELL};
 static struct adm_cmd sh_lr_of_cmd = {"sh-lr-of", sh_lres, ACF2_SHELL};
-static struct adm_cmd sh_status_cmd = {"sh-status", sh_status, ACF2_GEN_SHELL};
 
 static struct adm_cmd proxy_up_cmd = {"proxy-up", adm_proxy_up, ACF2_PROXY};
 static struct adm_cmd proxy_down_cmd = {"proxy-down", adm_proxy_down, ACF2_PROXY};
@@ -467,7 +465,6 @@ struct adm_cmd *cmds[] = {
 	&sh_md_idx_cmd,
 	&sh_ip_cmd,
 	&sh_lr_of_cmd,
-	&sh_status_cmd,
 
 	&proxy_up_cmd,
 	&proxy_down_cmd,
@@ -1445,67 +1442,6 @@ static int __adm_drbdsetup_silent(const struct cfg_ctx *ctx)
 		rw = write(fileno(stderr), buffer, s);
 
 	return rv;
-}
-
-int sh_status(const struct cfg_ctx *ctx)
-{
-	struct cfg_ctx tmp_ctx = *ctx;
-	struct d_resource *r;
-	struct d_volume *vol, *lower_vol;
-	int rv = 0;
-
-	if (!dry_run) {
-		printf("_drbd_version=%s\n_drbd_api=%u\n",
-		       shell_escape(PACKAGE_VERSION), API_VERSION);
-		printf("_config_file=%s\n\n\n", shell_escape(config_save));
-	}
-
-	for_each_resource(r, &config) {
-		if (r->ignore)
-			continue;
-		tmp_ctx.res = r;
-
-		printf("_conf_res_name=%s\n", shell_escape(r->name));
-		printf("_conf_file_line=%s:%u\n\n", shell_escape(r->config_file), r->start_line);
-		if (r->stacked && r->me->lower) {
-			printf("_stacked_on=%s\n", shell_escape(r->me->lower->name));
-			lower_vol = STAILQ_FIRST(&r->me->lower->me->volumes);
-		} else {
-			/* reset stuff */
-			printf("_stacked_on=\n");
-			printf("_stacked_on_device=\n");
-			printf("_stacked_on_minor=\n");
-			lower_vol = NULL;
-		}
-		/* TODO: remove this loop, have drbdsetup use dump
-		 * and optionally filter on resource name.
-		 * "stacked" information is not directly known to drbdsetup, though.
-		 */
-		for_each_volume(vol, &r->me->volumes) {
-			/* do not continue in this loop,
-			 * or lower_vol will get out of sync */
-			if (lower_vol) {
-				printf("_stacked_on_device=%s\n", shell_escape(lower_vol->device));
-				printf("_stacked_on_minor=%d\n", lower_vol->device_minor);
-			} else if (r->stacked && r->me->lower) {
-				/* ASSERT */
-				err("in %s: stacked volume[%u] without lower volume\n",
-				    r->name, vol->vnr);
-				abort();
-			}
-			printf("_conf_volume=%d\n", vol->vnr);
-
-			tmp_ctx.vol = vol;
-			rv = _adm_drbdsetup(&tmp_ctx, SLEEPS_SHORT);
-			if (rv)
-				return rv;
-
-			if (lower_vol)
-				lower_vol = STAILQ_NEXT(lower_vol, link);
-			/* vol is advanced by for_each_volume */
-		}
-	}
-	return 0;
 }
 
 static int adm_outdate(const struct cfg_ctx *ctx)
