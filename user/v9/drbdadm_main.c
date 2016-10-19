@@ -267,7 +267,7 @@ int adm_adjust_wp(const struct cfg_ctx *ctx)
 	.show_in_usage = 4,		\
 	.res_name_required = 1,		\
 	.backend_res_name = 1,		\
-	.iterate_volumes = 0,		\
+	.iterate_volumes = 1,		\
 	.vol_id_required = 1,		\
 	.verify_ips = 0,		\
 	.uc_dialog = 1,			\
