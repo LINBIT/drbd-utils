@@ -30,6 +30,7 @@ int include_stack_ptr = 0;
 %}
 
 %option noyywrap
+%option nounput
 
 NUM		[0-9]{1,8}[MKGs]?
 SNUMB		[0-9]{1,3}

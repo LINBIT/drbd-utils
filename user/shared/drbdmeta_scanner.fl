@@ -16,6 +16,7 @@ static void bad_token(char*);
 
 %option noyywrap
 %option yylineno
+%option nounput
 
 /* remember to avoid backing up.
  * tell user about bad/unexpected tokens. */
