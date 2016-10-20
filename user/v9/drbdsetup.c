@@ -1595,6 +1595,12 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 	}
 
 	if (cm->continuous_poll) {
+		/* also always (try to) listen to nlctrl notify,
+		 * so we have a chance to notice rmmod.  */
+		int id = GENL_ID_CTRL;
+		setsockopt(drbd_sock->s_fd, SOL_NETLINK, NETLINK_ADD_MEMBERSHIP,
+					&id, sizeof(id));
+
 		if (genl_join_mc_group(drbd_sock, "events") &&
 		    !kernel_older_than(2, 6, 23)) {
 			desc = "unable to join drbd events multicast group";
@@ -1738,12 +1744,14 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				.attrs = global_attrs,
 			};
 
+			dbg(3, "received type:%x\n", nlh->nlmsg_type);
 			if (nlh->nlmsg_type < NLMSG_MIN_TYPE) {
 				/* Ignore netlink control messages. */
 				continue;
 			}
 			if (nlh->nlmsg_type == GENL_ID_CTRL) {
 #ifdef HAVE_CTRL_CMD_DELMCAST_GRP
+				dbg(3, "received cmd:%x\n", info.genlhdr->cmd);
 				if (info.genlhdr->cmd == CTRL_CMD_DELMCAST_GRP) {
 					struct nlattr *nla =
 						nlmsg_find_attr(nlh, GENL_HDRLEN, CTRL_ATTR_FAMILY_ID);
@@ -4212,8 +4220,11 @@ int main(int argc, char **argv)
 	/* All non-option arguments now are in argv[optind .. argc - 1]. */
 	first_optind = optind;
 
-	if (cmd->continuous_poll && kernel_older_than(2, 6, 23))
+	if (cmd->continuous_poll && kernel_older_than(2, 6, 23)) {
+		/* with newer kernels, we need to use setsockopt NETLINK_ADD_MEMBERSHIP */
+		/* maybe more specific: (1 << GENL_ID_CTRL)? */
 		drbd_genl_family.nl_groups = -1;
+	}
 	drbd_sock = genl_connect_to_family(&drbd_genl_family);
 	if (!drbd_sock) {
 		fprintf(stderr, "Could not connect to 'drbd' generic netlink family\n");
