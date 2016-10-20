@@ -1637,7 +1637,7 @@ int adm_peer_device(const struct cfg_ctx *ctx)
 	char *argv[MAX_ARGS];
 	int argc = 0;
 
-	peer_device = find_peer_device(conn, vol->vnr);
+	peer_device = find_peer_device(res->me, conn, vol->vnr);
 	if (!peer_device) {
 		err("Could not find peer_device object!\n");
 		exit(E_THINKO);
