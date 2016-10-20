@@ -426,6 +426,9 @@ fi
 
 
 %changelog
+* Thu Oct 20 2016 Philipp Reisner <phil@linbit.com> - 8.9.9-1
+- New upstream release.
+
 * Tue Sep 06 2016 Philipp Reisner <phil@linbit.com> - 8.9.8-1
 - New upstream release.
 

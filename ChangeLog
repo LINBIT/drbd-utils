@@ -2,6 +2,18 @@ Latest:
 ------
  For even more detail, use "git log" or visit http://git.drbd.org/.
 
+8.9.9
+--------
+ * fix --skip-disk/--skip-net when used with more than one resource
+ * events2 of v8.4: Fake peer-node-ids to make it in-line with  v9
+ * fix drbdadm crashes in set-gi and new-current-uuid
+ * new peer_device option (--bitmap=no) to indicate that for this peer
+   no bitmap slot should be allocated in the meta-data; This is used
+   by all peers of a (configured) diskless node; saves bitmap-slots,
+   thus allows you to use smaller max-peers numbers, thus saves memory
+   and CPU resources
+ * removed sh-status from v9
+
 8.9.8
 --------
  * fix a lot of regressions from allowing to pass command options
