@@ -2663,7 +2663,7 @@ static void link_peer_devices_to_devices(struct peer_devices_list *peer_devices,
 	}
 }
 
-static void print_usage_and_exit(const char* addinfo);
+static void print_usage_and_exit(const char *addinfo);
 
 static int status_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 {
@@ -3459,7 +3459,7 @@ static void print_command_usage(const struct drbd_cmd *cm, enum usage_type ut)
 	}
 }
 
-static void print_usage_and_exit(const char* addinfo)
+static void print_usage_and_exit(const char *addinfo)
 {
 	size_t i;
 
@@ -3480,7 +3480,7 @@ static void print_usage_and_exit(const char* addinfo)
 	       API_VERSION, drbd_buildtag());
 	*/
 	if (addinfo)
-		printf("\n%s\n",addinfo);
+		printf("\n%s\n", addinfo);
 
 	exit(20);
 }
@@ -3582,7 +3582,7 @@ int main(int argc, char **argv)
 			} else
 				print_usage_and_exit("unknown command");
 		} else
-			print_usage_and_exit(0);
+			print_usage_and_exit(NULL);
 	}
 
 	/*
@@ -3596,7 +3596,7 @@ int main(int argc, char **argv)
 	}
 
 	if (argc < 2)
-		print_usage_and_exit(0);
+		print_usage_and_exit(NULL);
 
 	cmd = find_cmd_by_name(argv[1]);
 	if (!cmd)
@@ -3645,7 +3645,7 @@ int main(int argc, char **argv)
 		if (c == -1)
 			break;
 		if (c == '?' || c == ':')
-			print_usage_and_exit(0);
+			print_usage_and_exit(NULL);
 	}
 	/* All non-option arguments now are in argv[optind .. argc - 1]. */
 	first_optind = optind;

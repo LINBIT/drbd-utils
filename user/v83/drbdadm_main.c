@@ -2747,7 +2747,7 @@ struct adm_cmd *find_cmd(char *cmdname)
 		exit(0);
 	}
 	if (!strncmp("help", cmdname, 5))
-		print_usage_and_exit(0);
+		print_usage_and_exit(NULL);
 
 	/* R_PRIMARY / R_SECONDARY is not a state, but a role.  Whatever that
 	 * means, actually.  But anyways, we decided to start using _role_ as
@@ -2941,7 +2941,7 @@ int main(int argc, char **argv)
 	}
 
 	if (optind == argc)
-		print_usage_and_exit(0);
+		print_usage_and_exit(NULL);
 
 	if (cmd == NULL) {
 		fprintf(stderr, "Unknown command '%s'.\n", argv[optind]);

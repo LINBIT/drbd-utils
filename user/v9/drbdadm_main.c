@@ -2986,7 +2986,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 	}
 
 	if (help)
-		print_usage_and_exit(*cmd, 0, 0);
+		print_usage_and_exit(*cmd, NULL, 0);
 
 	if (*cmd == NULL) {
 		if (first_arg_index < argc) {
