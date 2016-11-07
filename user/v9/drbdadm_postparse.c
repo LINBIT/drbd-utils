@@ -78,13 +78,13 @@ void set_on_hosts_in_res(struct d_resource *res)
 
 						for_each_volume(vol, &host->volumes)
 							check_uniq("device-minor", "device-minor:%s:%u", h->name,
-                                                                  vol->device_minor);
+									vol->device_minor);
 
-                                               for_each_volume(vol, &host->volumes)
-                                                       if (vol->device)
-                                                               check_uniq("device", "device:%s:%s", h->name,
-                                                                          vol->device);
-                                       }
+						for_each_volume(vol, &host->volumes)
+							if (vol->device)
+								check_uniq("device", "device:%s:%s", h->name,
+										vol->device);
+					}
 				}
 
 			host->lower = l_res;
