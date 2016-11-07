@@ -57,6 +57,7 @@ SHELL=/bin/bash
 DESTDIR ?= /
 
 CFLAGS += -Wall -I../../drbd-headers -I.. -I.
+CFLAGS += $(EXTRA_CFLAGS)
 
 .PHONY: drbd_buildtag.c
 
