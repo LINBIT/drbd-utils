@@ -877,42 +877,31 @@ const char *esc_xml(char *str)
 	if (strchr(str, '"') || strchr(str, '\'') || strchr(str, '<') ||
 	    strchr(str, '>') || strchr(str, '&') || strchr(str, '\\')) {
 		while (*ue) {
-			if (*ue == '"' || *ue == '\\') {
-				*e++ = '\\';
-				if (e - buffer >= 1021) {
-					err("string too long.\n");
-					exit(E_SYNTAX);
-				}
-				*e++ = *ue++;
-			} else if (*ue == '\'' || *ue == '<' || *ue == '>'
-				   || *ue == '&') {
-				if (*ue == '\'' && e - buffer < 1017) {
-					strcpy(e, "&apos;");
-					e += 6;
-				} else if (*ue == '<' && e - buffer < 1019) {
-					strcpy(e, "&lt;");
-					e += 4;
-				} else if (*ue == '>' && e - buffer < 1019) {
-					strcpy(e, "&gt;");
-					e += 4;
-				} else if (*ue == '&' && e - buffer < 1018) {
-					strcpy(e, "&amp;");
-					e += 5;
-				} else {
-					err("string too long.\n");
-					exit(E_SYNTAX);
-				}
-				ue++;
-			} else {
-				*e++ = *ue++;
-				if (e - buffer >= 1022) {
-					err("string too long.\n");
-					exit(E_SYNTAX);
-				}
+
+#define SPECIAL(_ch, _repl) \
+			case _ch: \
+				if (e - buffer >= sizeof(buffer)-1-strlen(_repl)) goto too_long; \
+				strcpy(e, _repl); e += strlen(_repl); break;
+
+			switch (*ue) {
+				SPECIAL('\'', "&apos;");
+				SPECIAL('"',  "&quot;");
+				SPECIAL('<',  "&lt;");
+				SPECIAL('>',  "&gt;");
+				SPECIAL('&',  "&amp;");
+				default:
+				*e++ = *ue;
+				if (e - buffer >= 1022)
+					goto too_long;
 			}
+			ue++;
 		}
 		*e++ = '\0';
 		return buffer;
 	}
 	return str;
+
+too_long:
+	err("string too long.\n");
+	exit(E_SYNTAX);
 }
