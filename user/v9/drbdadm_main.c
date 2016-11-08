@@ -2868,7 +2868,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 			verbose++;
 			break;
 		case 'd':
-			dry_run++;
+			dry_run = 1;
 			break;
 		case 'c':
 			if (!strcmp(optarg, "-")) {
