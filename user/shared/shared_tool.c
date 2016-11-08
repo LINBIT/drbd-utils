@@ -878,17 +878,17 @@ const char *esc_xml(char *str)
 	    strchr(str, '>') || strchr(str, '&') || strchr(str, '\\')) {
 		while (*ue) {
 
-#define SPECIAL(_ch, _repl) \
+#define XML_ENCODE_SPECIAL(_ch, _repl) \
 			case _ch: \
 				if (e - buffer >= sizeof(buffer)-1-strlen(_repl)) goto too_long; \
 				strcpy(e, _repl); e += strlen(_repl); break;
 
 			switch (*ue) {
-				SPECIAL('\'', "&apos;");
-				SPECIAL('"',  "&quot;");
-				SPECIAL('<',  "&lt;");
-				SPECIAL('>',  "&gt;");
-				SPECIAL('&',  "&amp;");
+				XML_ENCODE_SPECIAL('\'', "&apos;");
+				XML_ENCODE_SPECIAL('"',  "&quot;");
+				XML_ENCODE_SPECIAL('<',  "&lt;");
+				XML_ENCODE_SPECIAL('>',  "&gt;");
+				XML_ENCODE_SPECIAL('&',  "&amp;");
 				default:
 				*e++ = *ue;
 				if (e - buffer >= 1022)
