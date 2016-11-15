@@ -64,7 +64,7 @@ endif
 
 PHONY += clean distclean
 clean:
-	rm -f $(local-obj) $(binaries)
+	rm -f $(local-obj) $(dsaext-obj) $(binaries)
 distclean: clean
 	rm -f $(local-dep)
 
