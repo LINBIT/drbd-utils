@@ -34,7 +34,9 @@ lst-obj := drbdmon_main.o $(l-obj) $(dsaext-obj) DebugDisplay.o
 all-obj := $(sort $(ls-obj) $(lst-obj))
 local-obj := $(filter-out $(dsaext-obj),$(all-obj))
 local-dep := $(patsubst %.o,.%.d,$(local-obj))
+ifeq ($(WITH_DRBDMON),yes)
 -include $(local-dep)
+endif
 
 $(dsaext-obj): $(basename $(dsaext-obj)).cpp $(basename $(dsaext-obj)).h
 
