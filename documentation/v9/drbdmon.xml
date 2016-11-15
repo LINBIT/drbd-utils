@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN"
+"http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
+<refentry id="re-drbdmon">
+	<refentryinfo>
+		<date>9 November 2016</date>
+
+		<productname>DRBD</productname>
+
+		<productnumber>9.0.0</productnumber>
+	</refentryinfo>
+
+	<refmeta>
+		<refentrytitle>drbdmon</refentrytitle>
+
+		<manvolnum>8</manvolnum>
+
+		<refmiscinfo class="manual">System Administration</refmiscinfo>
+	</refmeta>
+
+	<refnamediv>
+		<refname>drbdmon</refname>
+
+		<refpurpose>Monitor DRBD resources realtime<indexterm significance="normal">
+				<primary>drbdmon</primary>
+		</indexterm></refpurpose>
+	</refnamediv>
+
+	<refsynopsisdiv>
+		<cmdsynopsis sepchar=" ">
+			<command moreinfo="none">drbdmon</command>
+
+			<arg choice="opt" rep="repeat">options</arg>
+
+			<arg choice="opt" rep="norepeat">--<arg choice="opt"
+					rep="repeat"><replaceable>backend-options</replaceable></arg></arg>
+
+			<arg choice="req" rep="norepeat"><replaceable>command</replaceable></arg>
+
+			<arg choice="req" rep="repeat"><replaceable>context</replaceable></arg>
+
+		</cmdsynopsis>
+	</refsynopsisdiv>
+
+	<refsect1>
+		<title>Description</title>
+
+		<para>The <option>drbdmon</option> utility is used for monitoring volumes
+			and connections realtime, as defined in DRBD resource files. See <citerefentry>
+				<refentrytitle>drbd.conf</refentrytitle> <manvolnum>5</manvolnum>
+		</citerefentry> for more information. </para>
+
+	</refsect1>
+
+	<refsect1>
+		<title>Options</title>
+
+		<variablelist>
+			<varlistentry>
+				<term><option>-d</option>, <option>--dry-run</option></term>
+
+				<listitem>
+					<para>Show which commands <option>drbdmon</option> would execute
+						instead of actually executing them (for example, <command
+							moreinfo="none">drbdmon -d up <replaceable>resource</replaceable></command>).
+						This can be a useful way to learn how <command
+							moreinfo="none">drbdsetup</command> and <command
+							moreinfo="none">drbdmeta</command> are used.</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term><option>--ascii</option></term>
+
+				<listitem>
+					<para>Use only ascii characters (no Unicode).</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term><option>--no-header</option></term>
+				<listitem>
+					<para>Do not display the drbdmon header line</para>
+				</listitem>
+			</varlistentry>
+
+			<varlistentry>
+				<term><option>--no-hotkeys</option></term>
+				<listitem>
+					<para>Do not display the hotkeys line.</para>
+				</listitem>
+			</varlistentry>
+		</variablelist>
+
+		<refsect1>
+			<title>Commands</title>
+			<variablelist>
+				<varlistentry>
+					<term>c
+						<arg choice="req" rep="norepeat"><replaceable>device</replaceable></arg>
+					</term>
+
+					<listitem>
+						<para>Clear screen.</para>
+					</listitem>
+				</varlistentry>
+
+				<varlistentry>
+					<term>r
+					</term>
+					<listitem>
+						<para>Repaint display.</para>
+					</listitem>
+				</varlistentry>
+
+				<varlistentry>
+					<term>q
+					</term>
+					<listitem>
+						<para>Quit.</para>
+					</listitem>
+				</varlistentry>
+			</variablelist>
+		</refsect1>
+
+		<refsect1>
+			<title>Version</title>
+
+			<simpara>This document was revised for version 9.0.0 of the DRBD distribution.</simpara>
+		</refsect1>
+
+		<refsect1>
+			<title>Author</title>
+
+			<simpara>Written by Robert Altnoeder <email>robert.altnoeder@linbit.com</email> and Sam Leonard <email>sam@linbit.com</email></simpara>
+		</refsect1>
+
+		<refsect1>
+			<title>Reporting Bugs</title>
+
+			<simpara>Report bugs to <email>drbd-user@lists.linbit.com</email>.</simpara>
+		</refsect1>
+
+		<refsect1>
+			<title>Copyright</title>
+
+			<simpara>Copyright 2016 LINBIT Information Technologies, Robert Altnoeder, Sam Leonard.
+				This is free software; see the source for copying conditions. There is NO warranty; not even
+				for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.</simpara>
+		</refsect1>
+
+		<refsect1>
+			<title>See Also</title>
+
+			<para><citerefentry>
+					<refentrytitle>drbd.conf</refentrytitle>
+
+					<manvolnum>5</manvolnum>
+					</citerefentry>, <citerefentry>
+					<refentrytitle>drbd</refentrytitle>
+
+					<manvolnum>8</manvolnum>
+					</citerefentry>, <citerefentry>
+					<refentrytitle>drbddisk</refentrytitle>
+
+					<manvolnum>8</manvolnum>
+					</citerefentry>, <citerefentry>
+					<refentrytitle>drbdsetup</refentrytitle>
+
+					<manvolnum>8</manvolnum>
+					</citerefentry>, <citerefentry>
+					<refentrytitle>drbdmeta</refentrytitle>
+
+					<manvolnum>8</manvolnum>
+				</citerefentry> and the
+				<ulink url="http://www.drbd.org/"><citetitle>DRBD project web site</citetitle></ulink></para>
+		</refsect1>
+	</refsect1>
+</refentry>
