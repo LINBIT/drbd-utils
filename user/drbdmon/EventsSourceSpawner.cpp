@@ -11,7 +11,7 @@ extern "C"
     #include <errno.h>
 }
 
-const char* EventsSourceSpawner::EVENTS_PROGRAM = "/usr/sbin/drbdsetup";
+const char* EventsSourceSpawner::EVENTS_PROGRAM = "drbdsetup";
 const char* EventsSourceSpawner::EVENTS_PROGRAM_ARGS[] =
 {
     "drbdsetup",
@@ -117,8 +117,8 @@ int EventsSourceSpawner::spawn_source()
             checked_int_rc(posix_spawnattr_setflags(spawn_attr, POSIX_SPAWN_SETSIGDEF));
 
             // Attempt to spawn the events source program
-            int spawn_rc = posix_spawn(&spawned_pid, EVENTS_PROGRAM, pipe_init_actions, spawn_attr,
-                                       spawn_args, environ);
+            int spawn_rc = posix_spawnp(&spawned_pid, EVENTS_PROGRAM, pipe_init_actions, spawn_attr,
+                                        spawn_args, environ);
             if (spawn_rc != 0)
             {
                 spawned_pid = -1;
