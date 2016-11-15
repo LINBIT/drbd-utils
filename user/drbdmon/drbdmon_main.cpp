@@ -23,10 +23,11 @@ const char* ANSI_CLEAR = "\x1b[H\x1b[2J";
 
 static void reset_delay(struct timespec& delay);
 static void clear_screen();
+static bool adjust_ids(MessageLog* log, bool& ids_safe);
 
 int main(int argc, char* argv[])
 {
-    int exit_code = 0;
+    int exit_code {0};
 
     // Delay of 15 seconds for delayed restarts
     struct timespec delay;
@@ -39,6 +40,7 @@ int main(int argc, char* argv[])
 
     MessageLog* log {nullptr};
 
+    bool ids_safe {false};
     while (fin_action != DrbdMon::finish_action::TERMINATE &&
            fin_action != DrbdMon::finish_action::TERMINATE_NO_CLEAR)
     {
@@ -52,12 +54,19 @@ int main(int argc, char* argv[])
                 log = new MessageLog(LOG_CAPACITY);
             }
 
-            ls_instance = new DrbdMon(argc, argv, *log, fail_data);
-            ls_instance->run();
-            fin_action = ls_instance->get_fin_action();
-            if (fin_action != DrbdMon::finish_action::TERMINATE_NO_CLEAR)
+            if (ids_safe || adjust_ids(log, ids_safe))
             {
-                clear_screen();
+                ls_instance = new DrbdMon(argc, argv, *log, fail_data);
+                ls_instance->run();
+                fin_action = ls_instance->get_fin_action();
+                if (fin_action != DrbdMon::finish_action::TERMINATE_NO_CLEAR)
+                {
+                    clear_screen();
+                }
+            }
+            else
+            {
+                fin_action = DrbdMon::finish_action::TERMINATE;
             }
         }
         catch (std::bad_alloc& out_of_memory_exc)
@@ -131,4 +140,87 @@ static void clear_screen()
 {
     std::fputs(ANSI_CLEAR, stdout);
     std::fflush(stdout);
+}
+
+// @throws std::bad_alloc
+static bool adjust_ids(MessageLog* log, bool& ids_safe)
+{
+    try
+    {
+        // Get the user ids of the current process
+        uid_t real_user {0};
+        uid_t eff_user {0};
+        uid_t saved_user {0};
+        if (getresuid(&real_user, &eff_user, &saved_user) != 0)
+        {
+            throw SysException();
+        }
+
+        // Get the group ids of the current process
+        gid_t real_group {0};
+        gid_t eff_group {0};
+        gid_t saved_group {0};
+        if (getresgid(&real_group, &eff_group, &saved_group) != 0)
+        {
+            throw SysException();
+        }
+
+        // Set effective user id = real user id unless equal already
+        if (eff_user != real_user)
+        {
+            if (setresuid(-1, real_user, -1) != 0)
+            {
+                throw SysException();
+            }
+        }
+        // Set saved user id = real user id unless equal already
+        if (saved_user != real_user)
+        {
+            if (setresuid(-1, -1, real_user) != 0)
+            {
+                throw SysException();
+            }
+        }
+
+        // Set effective group id = real group id unless equal already
+        if (eff_group != real_group)
+        {
+            if (setresgid(-1, real_group, -1) != 0)
+            {
+                throw SysException();
+            }
+        }
+        // Set saved group id = real group id unless equal already
+        if (saved_group != real_group)
+        {
+            if (setresgid(-1, -1, real_group) != 0)
+            {
+                throw SysException();
+            }
+        }
+
+        // Cross-check adjusted set user & group ids
+        if (getresuid(&real_user, &eff_user, &saved_user) != 0 ||
+            getresgid(&real_group, &eff_group, &saved_group) != 0)
+        {
+            throw SysException();
+        }
+        if (real_user == eff_user || real_user == saved_user ||
+            real_group == eff_group || real_group == saved_group)
+        {
+            ids_safe = true;
+        }
+        else
+        {
+            throw SysException();
+        }
+    }
+    catch (SysException&)
+    {
+        log->add_entry(
+            MessageLog::log_level::ALERT,
+            "Adjusting the process' user/group ids failed"
+        );
+    }
+    return ids_safe;
 }

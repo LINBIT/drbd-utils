@@ -73,4 +73,19 @@ class ConfigurationException : public std::exception
     }
 };
 
+// Thrown to indicate a problem with the system configuration
+// (e.g., an illegal state of the operating system / runtime environment)
+class SysException : public std::exception
+{
+  public:
+    SysException() = default;
+    SysException(const SysException& orig) = default;
+    SysException& operator=(const SysException& orig) = default;
+    SysException(SysException&& orig) = default;
+    SysException& operator=(SysException&& orig) = default;
+    virtual ~SysException() noexcept
+    {
+    }
+};
+
 #endif	/* EXCEPTIONS_H */
