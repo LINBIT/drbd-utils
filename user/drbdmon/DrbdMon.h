@@ -20,7 +20,7 @@
 #include <Configurator.h>
 #include <comparators.h>
 
-class LiveStatus : public Configurable, public Configurator
+class DrbdMon : public Configurable, public Configurator
 {
   public:
     static const std::string PROGRAM_NAME;
@@ -55,9 +55,9 @@ class LiveStatus : public Configurable, public Configurator
 
     static const size_t MAX_LINE_LENGTH {1024};
 
-    // LiveStatus' normal behavior is to update the display only after
+    // DrbdMon' normal behavior is to update the display only after
     // all events have been read and no more events are pending.
-    // If new event lines arrive faster than LiveStatus can read them,
+    // If new event lines arrive faster than DrbdMon can read them,
     // so that there are always events pending, do still update the
     // display every MAX_EVENT_BUNDLE events
     static const uint32_t MAX_EVENT_BUNDLE {911};
@@ -80,12 +80,12 @@ class LiveStatus : public Configurable, public Configurator
     };
 
     // @throws std::bad_alloc
-    LiveStatus(int argc, char* argv[], MessageLog& log_ref, fail_info& fail_data_ref);
-    LiveStatus(const LiveStatus& orig) = delete;
-    LiveStatus& operator=(const LiveStatus& orig) = delete;
-    LiveStatus(LiveStatus&& orig) = default;
-    LiveStatus& operator=(LiveStatus&& orig) = delete;
-    virtual ~LiveStatus() noexcept;
+    DrbdMon(int argc, char* argv[], MessageLog& log_ref, fail_info& fail_data_ref);
+    DrbdMon(const DrbdMon& orig) = delete;
+    DrbdMon& operator=(const DrbdMon& orig) = delete;
+    DrbdMon(DrbdMon&& orig) = default;
+    DrbdMon& operator=(DrbdMon&& orig) = delete;
+    virtual ~DrbdMon() noexcept;
 
     // @throws std::bad_alloc
     virtual void run();
@@ -125,7 +125,7 @@ class LiveStatus : public Configurable, public Configurator
     }
     option_entry;
 
-    using OptionsMap = QTree<const std::string, LiveStatus::option_entry>;
+    using OptionsMap = QTree<const std::string, DrbdMon::option_entry>;
 
     const int    arg_count;
     char** const arg_values;
@@ -134,7 +134,7 @@ class LiveStatus : public Configurable, public Configurator
     HotkeysMap*   hotkeys_info  {nullptr};
     OptionsMap*   options       {nullptr};
     fail_info&    fail_data;
-    finish_action fin_action {LiveStatus::finish_action::RESTART_IMMED};
+    finish_action fin_action {DrbdMon::finish_action::RESTART_IMMED};
     MessageLog&   log;
     bool          shutdown      {false};
 

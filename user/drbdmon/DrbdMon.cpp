@@ -13,44 +13,44 @@ extern "C"
 #include <map_types.h>
 // https://github.com/raltnoeder/cppdsaext
 #include <dsaext.h>
-#include <LiveStatus.h>
+#include <DrbdMon.h>
 #include <utils.h>
 #include <CompactDisplay.h>
 #include <ConfigOption.h>
 #include <Args.h>
 
-const std::string LiveStatus::PROGRAM_NAME = "DRBD LiveStatus";
-const std::string LiveStatus::VERSION = "0.22";
+const std::string DrbdMon::PROGRAM_NAME = "DRBD DrbdMon";
+const std::string DrbdMon::VERSION = "0.22";
 
-const std::string LiveStatus::OPT_HELP_KEY = "help";
-const ConfigOption LiveStatus::OPT_HELP(true, OPT_HELP_KEY);
+const std::string DrbdMon::OPT_HELP_KEY = "help";
+const ConfigOption DrbdMon::OPT_HELP(true, OPT_HELP_KEY);
 
-const std::string LiveStatus::TOKEN_DELIMITER = " ";
+const std::string DrbdMon::TOKEN_DELIMITER = " ";
 
-const std::string LiveStatus::MODE_EXISTS  = "exists";
-const std::string LiveStatus::MODE_CREATE  = "create";
-const std::string LiveStatus::MODE_CHANGE  = "change";
-const std::string LiveStatus::MODE_DESTROY = "destroy";
+const std::string DrbdMon::MODE_EXISTS  = "exists";
+const std::string DrbdMon::MODE_CREATE  = "create";
+const std::string DrbdMon::MODE_CHANGE  = "change";
+const std::string DrbdMon::MODE_DESTROY = "destroy";
 
-const std::string LiveStatus::TYPE_RESOURCE    = "resource";
-const std::string LiveStatus::TYPE_CONNECTION  = "connection";
-const std::string LiveStatus::TYPE_DEVICE      = "device";
-const std::string LiveStatus::TYPE_PEER_DEVICE = "peer-device";
-const std::string LiveStatus::TYPE_SEPARATOR   = "-";
+const std::string DrbdMon::TYPE_RESOURCE    = "resource";
+const std::string DrbdMon::TYPE_CONNECTION  = "connection";
+const std::string DrbdMon::TYPE_DEVICE      = "device";
+const std::string DrbdMon::TYPE_PEER_DEVICE = "peer-device";
+const std::string DrbdMon::TYPE_SEPARATOR   = "-";
 
-const char LiveStatus::HOTKEY_QUIT       = 'q';
-const char LiveStatus::HOTKEY_REPAINT    = 'r';
-const char LiveStatus::HOTKEY_CLEAR_MSG  = 'c';
-const char LiveStatus::HOTKEY_REINIT     = 'R';
+const char DrbdMon::HOTKEY_QUIT       = 'q';
+const char DrbdMon::HOTKEY_REPAINT    = 'r';
+const char DrbdMon::HOTKEY_CLEAR_MSG  = 'c';
+const char DrbdMon::HOTKEY_REINIT     = 'R';
 
-const std::string LiveStatus::DESC_QUIT      = "Quit";
-const std::string LiveStatus::DESC_REPAINT   = "Repaint";
-const std::string LiveStatus::DESC_CLEAR_MSG = "Clear messages";
-const std::string LiveStatus::DESC_REINIT    = "Reinitialize";
+const std::string DrbdMon::DESC_QUIT      = "Quit";
+const std::string DrbdMon::DESC_REPAINT   = "Repaint";
+const std::string DrbdMon::DESC_CLEAR_MSG = "Clear messages";
+const std::string DrbdMon::DESC_REINIT    = "Reinitialize";
 
 
 // @throws std::bad_alloc
-LiveStatus::LiveStatus(int argc, char* argv[], MessageLog& log_ref, fail_info& fail_data_ref):
+DrbdMon::DrbdMon(int argc, char* argv[], MessageLog& log_ref, fail_info& fail_data_ref):
     arg_count(argc),
     arg_values(argv),
     fail_data(fail_data_ref),
@@ -69,7 +69,7 @@ LiveStatus::LiveStatus(int argc, char* argv[], MessageLog& log_ref, fail_info& f
     }
 }
 
-LiveStatus::~LiveStatus() noexcept
+DrbdMon::~DrbdMon() noexcept
 {
     // Cleanup resources map
     {
@@ -87,13 +87,13 @@ LiveStatus::~LiveStatus() noexcept
     }
 
     // Cleanup hotkeys map
-    // Keys/values in this map are static members of the LiveStatus class
+    // Keys/values in this map are static members of the DrbdMon class
     hotkeys_info->clear();
     delete hotkeys_info;
 }
 
 // @throws std::bad_alloc
-void LiveStatus::run()
+void DrbdMon::run()
 {
     PropsMap*               event_props     {nullptr};
     TermSize*               term_size       {nullptr};
@@ -187,8 +187,8 @@ void LiveStatus::run()
                                     // fall-through
                                 case SIGTERM:
                                     // terminate main loop
-                                    std::cerr << "LiveStatus: Received signal, exiting" << std::endl;
-                                    fin_action = LiveStatus::finish_action::TERMINATE;
+                                    std::cerr << "DrbdMon: Received signal, exiting" << std::endl;
+                                    fin_action = DrbdMon::finish_action::TERMINATE;
                                     shutdown = true;
                                     break;
                                 case SIGWINCH:
@@ -232,7 +232,7 @@ void LiveStatus::run()
                                 else
                                 if (c == HOTKEY_REINIT)
                                 {
-                                    fin_action = LiveStatus::finish_action::RESTART_IMMED;
+                                    fin_action = DrbdMon::finish_action::RESTART_IMMED;
                                     shutdown = true;
                                 }
                                 else
@@ -244,9 +244,9 @@ void LiveStatus::run()
                                 else
                                 if (c == HOTKEY_QUIT)
                                 {
-                                    fin_action = LiveStatus::finish_action::TERMINATE;
+                                    fin_action = DrbdMon::finish_action::TERMINATE;
                                     shutdown = true;
-                                    std::cerr << "LiveStatus: Quit command, exiting" << std::endl;
+                                    std::cerr << "DrbdMon: Quit command, exiting" << std::endl;
                                 }
                             }
                         }
@@ -257,7 +257,7 @@ void LiveStatus::run()
                     default:
                         log.add_entry(
                             MessageLog::log_level::ALERT,
-                            "LiveStatus: Internal error: Unexpected event type returned by EventsIo"
+                            "DrbdMon: Internal error: Unexpected event type returned by EventsIo"
                         );
                         break;
                 }
@@ -269,8 +269,8 @@ void LiveStatus::run()
                 MessageLog::log_level::ALERT,
                 "DRBD events source I/O error"
             );
-            fin_action = LiveStatus::finish_action::RESTART_DELAYED;
-            fail_data = LiveStatus::fail_info::EVENTS_IO;
+            fin_action = DrbdMon::finish_action::RESTART_DELAYED;
+            fail_data = DrbdMon::fail_info::EVENTS_IO;
         }
         catch (EventsSourceException&)
         {
@@ -278,8 +278,8 @@ void LiveStatus::run()
                 MessageLog::log_level::ALERT,
                 "DRBD events source failed"
             );
-            fin_action = LiveStatus::finish_action::RESTART_DELAYED;
-            fail_data = LiveStatus::fail_info::EVENTS_SOURCE;
+            fin_action = DrbdMon::finish_action::RESTART_DELAYED;
+            fail_data = DrbdMon::fail_info::EVENTS_SOURCE;
         }
         catch (EventsIoException&)
         {
@@ -287,8 +287,8 @@ void LiveStatus::run()
                 MessageLog::log_level::ALERT,
                 "DRBD events source I/O error"
             );
-            fin_action = LiveStatus::finish_action::RESTART_DELAYED;
-            fail_data = LiveStatus::fail_info::EVENTS_IO;
+            fin_action = DrbdMon::finish_action::RESTART_DELAYED;
+            fail_data = DrbdMon::fail_info::EVENTS_IO;
         }
         catch (EventException&)
         {
@@ -296,15 +296,15 @@ void LiveStatus::run()
                 MessageLog::log_level::ALERT,
                 "Received invalid DRBD events source data"
             );
-            fin_action = LiveStatus::finish_action::RESTART_DELAYED;
-            fail_data = LiveStatus::fail_info::GENERIC;
+            fin_action = DrbdMon::finish_action::RESTART_DELAYED;
+            fail_data = DrbdMon::fail_info::GENERIC;
         }
         catch (ConfigurationException&)
         {
             // A ConfigurationException is thrown to abort and exit
             // while configuring options
             // (--help uses this too)
-            fin_action = LiveStatus::finish_action::TERMINATE_NO_CLEAR;
+            fin_action = DrbdMon::finish_action::TERMINATE_NO_CLEAR;
         }
     }
     catch (std::bad_alloc&)
@@ -317,7 +317,7 @@ void LiveStatus::run()
 }
 
 // @throws std::bad_alloc, EventsMessageException, EventObjectException
-void LiveStatus::tokenize_event_message(std::string& event_line, PropsMap& event_props)
+void DrbdMon::tokenize_event_message(std::string& event_line, PropsMap& event_props)
 {
     try
     {
@@ -349,7 +349,7 @@ void LiveStatus::tokenize_event_message(std::string& event_line, PropsMap& event
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-void LiveStatus::process_event_message(
+void DrbdMon::process_event_message(
     std::string& event_mode,
     std::string& event_type,
     PropsMap& event_props
@@ -381,32 +381,32 @@ void LiveStatus::process_event_message(
         {
             // "exists -" line from drbdsetup
             // Report recovering from errors that triggered reinitialization
-            // of the LiveStatus instance
+            // of the DrbdMon instance
 
             switch (fail_data)
             {
-                case LiveStatus::fail_info::NONE:
+                case DrbdMon::fail_info::NONE:
                     // no-op
                     break;
-                case LiveStatus::fail_info::OUT_OF_MEMORY:
+                case DrbdMon::fail_info::OUT_OF_MEMORY:
                     log.add_entry(
                         MessageLog::log_level::INFO,
                         "Status tracking reestablished after out-of-memory condition"
                     );
                     break;
-                case LiveStatus::fail_info::EVENTS_IO:
+                case DrbdMon::fail_info::EVENTS_IO:
                     log.add_entry(
                         MessageLog::log_level::INFO,
                         "Events source I/O reestablished"
                     );
                     break;
-                case LiveStatus::fail_info::EVENTS_SOURCE:
+                case DrbdMon::fail_info::EVENTS_SOURCE:
                     log.add_entry(
                         MessageLog::log_level::INFO,
                         "Events source process respawned"
                     );
                     break;
-                case LiveStatus::fail_info::GENERIC:
+                case DrbdMon::fail_info::GENERIC:
                     // fall-through
                 default:
                     log.add_entry(
@@ -477,7 +477,7 @@ void LiveStatus::process_event_message(
  * Returns the action requested to be taken upon return from this class' run() method.
  * This method should be called only after run() has returned.
  */
-LiveStatus::finish_action LiveStatus::get_fin_action() const
+DrbdMon::finish_action DrbdMon::get_fin_action() const
 {
     return fin_action;
 }
@@ -489,7 +489,7 @@ LiveStatus::finish_action LiveStatus::get_fin_action() const
  * @param: event_props Property map to load the key == value mappings into
  */
 // @throws std::bad_alloc
-void LiveStatus::parse_event_props(StringTokenizer& tokens, PropsMap& event_props)
+void DrbdMon::parse_event_props(StringTokenizer& tokens, PropsMap& event_props)
 {
     while (tokens.has_next())
     {
@@ -520,7 +520,7 @@ void LiveStatus::parse_event_props(StringTokenizer& tokens, PropsMap& event_prop
 /**
  * Clears the event_props map and frees all its entries
  */
-void LiveStatus::clear_event_props(PropsMap& event_props)
+void DrbdMon::clear_event_props(PropsMap& event_props)
 {
     PropsMap::NodesIterator clear_iter(event_props);
     while (clear_iter.has_next())
@@ -533,7 +533,7 @@ void LiveStatus::clear_event_props(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc, EventMessageException
-void LiveStatus::create_connection(PropsMap& event_props)
+void DrbdMon::create_connection(PropsMap& event_props)
 {
     try
     {
@@ -572,7 +572,7 @@ void LiveStatus::create_connection(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc, EventMessageException
-void LiveStatus::create_device(PropsMap& event_props)
+void DrbdMon::create_device(PropsMap& event_props)
 {
     try
     {
@@ -603,7 +603,7 @@ void LiveStatus::create_device(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc, EventMessageException
-void LiveStatus::create_peer_device(PropsMap& event_props)
+void DrbdMon::create_peer_device(PropsMap& event_props)
 {
     try
     {
@@ -636,7 +636,7 @@ void LiveStatus::create_peer_device(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc, EventMessageException
-void LiveStatus::create_resource(PropsMap& event_props)
+void DrbdMon::create_resource(PropsMap& event_props)
 {
     DrbdResource* res {nullptr};
     std::string* res_name {nullptr};
@@ -671,7 +671,7 @@ void LiveStatus::create_resource(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-void LiveStatus::update_connection(PropsMap& event_props)
+void DrbdMon::update_connection(PropsMap& event_props)
 {
     DrbdResource& res = get_resource(event_props);
     DrbdConnection& conn = get_connection(res, event_props);
@@ -679,7 +679,7 @@ void LiveStatus::update_connection(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-void LiveStatus::update_device(PropsMap& event_props)
+void DrbdMon::update_device(PropsMap& event_props)
 {
     DrbdResource& res = get_resource(event_props);
     DrbdVolume& vol = get_device(dynamic_cast<VolumesContainer&> (res), event_props);
@@ -687,7 +687,7 @@ void LiveStatus::update_device(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-void LiveStatus::update_peer_device(PropsMap& event_props)
+void DrbdMon::update_peer_device(PropsMap& event_props)
 {
     DrbdResource& res = get_resource(event_props);
     DrbdConnection& conn = get_connection(res, event_props);
@@ -696,14 +696,14 @@ void LiveStatus::update_peer_device(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-void LiveStatus::update_resource(PropsMap& event_props)
+void DrbdMon::update_resource(PropsMap& event_props)
 {
     DrbdResource& res = get_resource(event_props);
     res.update(event_props);
 }
 
 // @throws std::bad_alloc, EventMessageException
-void LiveStatus::destroy_connection(PropsMap& event_props)
+void DrbdMon::destroy_connection(PropsMap& event_props)
 {
     try
     {
@@ -718,7 +718,7 @@ void LiveStatus::destroy_connection(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc, EventMessageException
-void LiveStatus::destroy_device(PropsMap& event_props)
+void DrbdMon::destroy_device(PropsMap& event_props)
 {
     try
     {
@@ -733,7 +733,7 @@ void LiveStatus::destroy_device(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc, EventMessageException
-void LiveStatus::destroy_peer_device(PropsMap& event_props)
+void DrbdMon::destroy_peer_device(PropsMap& event_props)
 {
     try
     {
@@ -767,7 +767,7 @@ void LiveStatus::destroy_peer_device(PropsMap& event_props)
 }
 
 // @throws EventMessageException
-void LiveStatus::destroy_resource(PropsMap& event_props)
+void DrbdMon::destroy_resource(PropsMap& event_props)
 {
     std::string* res_name = event_props.get(&DrbdResource::PROP_KEY_RES_NAME);
     if (res_name != nullptr)
@@ -787,7 +787,7 @@ void LiveStatus::destroy_resource(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-DrbdConnection& LiveStatus::get_connection(DrbdResource& res, PropsMap& event_props)
+DrbdConnection& DrbdMon::get_connection(DrbdResource& res, PropsMap& event_props)
 {
     DrbdConnection* conn {nullptr};
     std::string* conn_name = event_props.get(&DrbdConnection::PROP_KEY_CONN_NAME);
@@ -814,7 +814,7 @@ DrbdConnection& LiveStatus::get_connection(DrbdResource& res, PropsMap& event_pr
 }
 
 // @throws EventMessageException, EventObjectException
-DrbdVolume& LiveStatus::get_device(VolumesContainer& vol_con, PropsMap& event_props)
+DrbdVolume& DrbdMon::get_device(VolumesContainer& vol_con, PropsMap& event_props)
 {
     DrbdVolume* vol {nullptr};
     std::string* vol_nr_str = event_props.get(&DrbdVolume::PROP_KEY_VOL_NR);
@@ -846,7 +846,7 @@ DrbdVolume& LiveStatus::get_device(VolumesContainer& vol_con, PropsMap& event_pr
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-DrbdResource& LiveStatus::get_resource(PropsMap& event_props)
+DrbdResource& DrbdMon::get_resource(PropsMap& event_props)
 {
     DrbdResource* res {nullptr};
     std::string* res_name = event_props.get(&DrbdResource::PROP_KEY_RES_NAME);
@@ -873,7 +873,7 @@ DrbdResource& LiveStatus::get_resource(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc
-void LiveStatus::setup_hotkeys_info()
+void DrbdMon::setup_hotkeys_info()
 {
     hotkeys_info->append(&HOTKEY_QUIT, &DESC_QUIT);
     hotkeys_info->append(&HOTKEY_REPAINT, &DESC_REPAINT);
@@ -882,7 +882,7 @@ void LiveStatus::setup_hotkeys_info()
 
 // Frees resources
 // @throws std::bad_alloc
-void LiveStatus::cleanup(
+void DrbdMon::cleanup(
     GenericDisplay*         display,
     TermSize*               term_size,
     PropsMap*               event_props,
@@ -920,7 +920,7 @@ void LiveStatus::cleanup(
 }
 
 // @throws std::bad_alloc
-void LiveStatus::configure_options()
+void DrbdMon::configure_options()
 {
     Args* arg_list {nullptr};
     options = new OptionsMap(&comparators::compare_string);
@@ -1002,7 +1002,7 @@ void LiveStatus::configure_options()
     options_cleanup();
 }
 
-void LiveStatus::options_cleanup() noexcept
+void DrbdMon::options_cleanup() noexcept
 {
     if (options != nullptr)
     {
@@ -1017,13 +1017,13 @@ void LiveStatus::options_cleanup() noexcept
 }
 
 // @throws std::bad_alloc
-void LiveStatus::add_config_option(Configurable& owner, const ConfigOption& conf_option)
+void DrbdMon::add_config_option(Configurable& owner, const ConfigOption& conf_option)
 {
     if (options != nullptr)
     {
         try
         {
-            LiveStatus::option_entry* entry = new LiveStatus::option_entry { owner, conf_option };
+            DrbdMon::option_entry* entry = new DrbdMon::option_entry { owner, conf_option };
             options->insert(&conf_option.key, entry);
         }
         catch (dsaext::DuplicateInsertException&)
@@ -1037,19 +1037,19 @@ void LiveStatus::add_config_option(Configurable& owner, const ConfigOption& conf
 }
 
 // @throws std::bad_alloc
-void LiveStatus::announce_options(Configurator& collector)
+void DrbdMon::announce_options(Configurator& collector)
 {
     Configurable& owner = dynamic_cast<Configurable&> (*this);
     collector.add_config_option(owner, OPT_HELP);
 }
 
-void LiveStatus::options_help() noexcept
+void DrbdMon::options_help() noexcept
 {
-    // no-op; the LiveStatus instance does not have any configurable options at this time
+    // no-op; the DrbdMon instance does not have any configurable options at this time
 }
 
 // @throws std::bad_alloc
-void LiveStatus::set_flag(std::string& key)
+void DrbdMon::set_flag(std::string& key)
 {
     if (key == OPT_HELP.key)
     {
@@ -1064,7 +1064,7 @@ void LiveStatus::set_flag(std::string& key)
 }
 
 // @throws std::bad_alloc
-void LiveStatus::set_option(std::string& key, std::string& value)
+void DrbdMon::set_option(std::string& key, std::string& value)
 {
-    // no-op; the LiveStatus instance does not have any configurable options at this time
+    // no-op; the DrbdMon instance does not have any configurable options at this time
 }

@@ -1,5 +1,5 @@
 #include <Display.h>
-#include <LiveStatus.h>
+#include <DrbdMon.h>
 
 const char* Display::ANSI_CLEAR = "\x1b[f\x1b[0J\x1b[f";
 const char* Display::ANSI_CLEAR_LINE = "\x1b[K";
@@ -67,7 +67,7 @@ void Display::display_header() const
     if (show_header)
     {
         out << FORMAT_HEADER << ANSI_CLEAR_LINE <<
-            LiveStatus::PROGRAM_NAME << " v" << LiveStatus::VERSION
+            DrbdMon::PROGRAM_NAME << " v" << DrbdMon::VERSION
             << std::endl;
     }
 }

@@ -2,7 +2,7 @@
 #include <cstdio>
 
 #include <CompactDisplay.h>
-#include <LiveStatus.h>
+#include <DrbdMon.h>
 
 #include "ConfigOption.h"
 
@@ -156,7 +156,7 @@ void CompactDisplay::display_header() const
     if (show_header)
     {
         std::fprintf(stdout, "%s%s%s v%s\n", F_HEADER, ANSI_CLEAR_LINE,
-                     LiveStatus::PROGRAM_NAME.c_str(), LiveStatus::VERSION.c_str());
+                     DrbdMon::PROGRAM_NAME.c_str(), DrbdMon::VERSION.c_str());
     }
 }
 
@@ -660,9 +660,9 @@ void CompactDisplay::announce_options(Configurator& collector)
 
 void CompactDisplay::options_help() noexcept
 {
-    std::cerr << "LiveStatus display configuration options:" << std::endl;
+    std::cerr << "DrbdMon display configuration options:" << std::endl;
     std::cerr << "  --ascii          Use only ASCII characters (no Unicode)" << std::endl;
-    std::cerr << "  --no-header      Do not display the LiveStatus header line" << std::endl;
+    std::cerr << "  --no-header      Do not display the DrbdMon header line" << std::endl;
     std::cerr << "  --no-hotkeys     Do not display the hotkeys line" << std::endl;
     std::cerr << std::endl;
 }

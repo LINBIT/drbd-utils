@@ -1,5 +1,5 @@
 #include <DebugDisplay.h>
-#include <LiveStatus.h>
+#include <DrbdMon.h>
 
 DebugDisplay::DebugDisplay(
     ResourcesMap& resources_map_ref,
@@ -65,7 +65,7 @@ void DebugDisplay::status_display()
 
 void DebugDisplay::display_header() const
 {
-    std::fprintf(stdout, "%s DebugDisplay v%s\n\n", LiveStatus::PROGRAM_NAME.c_str(), LiveStatus::VERSION.c_str());
+    std::fprintf(stdout, "%s DebugDisplay v%s\n\n", DrbdMon::PROGRAM_NAME.c_str(), DrbdMon::VERSION.c_str());
 }
 
 void DebugDisplay::set_terminal_size(uint16_t size_x, uint16_t size_y)

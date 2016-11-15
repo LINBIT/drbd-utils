@@ -58,7 +58,7 @@ class EventObjectException : public EventException
     }
 };
 
-// Thrown to indicate that LiveStatus should abort configuring options
+// Thrown to indicate that DrbdMon should abort configuring options
 // and exit
 class ConfigurationException : public std::exception
 {

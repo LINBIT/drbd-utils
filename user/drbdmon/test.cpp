@@ -8,7 +8,7 @@
 #include <QTree.h>
 
 #include "comparators.h"
-#include "LiveStatus.h"
+#include "DrbdMon.h"
 #include "EventsSourceSpawner.h"
 #include "EventsIo.h"
 

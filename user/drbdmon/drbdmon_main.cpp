@@ -11,7 +11,7 @@ extern "C"
     #include <wait.h>
 }
 
-#include <LiveStatus.h>
+#include <DrbdMon.h>
 
 #include "MessageLog.h"
 
@@ -34,15 +34,15 @@ int main(int argc, char* argv[])
     reset_delay(delay);
     reset_delay(remaining);
 
-    LiveStatus::fail_info fail_data {LiveStatus::fail_info::NONE};
-    LiveStatus::finish_action fin_action {LiveStatus::finish_action::RESTART_DELAYED};
+    DrbdMon::fail_info fail_data {DrbdMon::fail_info::NONE};
+    DrbdMon::finish_action fin_action {DrbdMon::finish_action::RESTART_DELAYED};
 
     MessageLog* log {nullptr};
 
-    while (fin_action != LiveStatus::finish_action::TERMINATE &&
-           fin_action != LiveStatus::finish_action::TERMINATE_NO_CLEAR)
+    while (fin_action != DrbdMon::finish_action::TERMINATE &&
+           fin_action != DrbdMon::finish_action::TERMINATE_NO_CLEAR)
     {
-        LiveStatus* ls_instance {nullptr};
+        DrbdMon* ls_instance {nullptr};
         try
         {
             if (log == nullptr)
@@ -52,10 +52,10 @@ int main(int argc, char* argv[])
                 log = new MessageLog(LOG_CAPACITY);
             }
 
-            ls_instance = new LiveStatus(argc, argv, *log, fail_data);
+            ls_instance = new DrbdMon(argc, argv, *log, fail_data);
             ls_instance->run();
             fin_action = ls_instance->get_fin_action();
-            if (fin_action != LiveStatus::finish_action::TERMINATE_NO_CLEAR)
+            if (fin_action != DrbdMon::finish_action::TERMINATE_NO_CLEAR)
             {
                 clear_screen();
             }
@@ -63,8 +63,8 @@ int main(int argc, char* argv[])
         catch (std::bad_alloc& out_of_memory_exc)
         {
             clear_screen();
-            fin_action = LiveStatus::finish_action::RESTART_DELAYED;
-            fail_data = LiveStatus::fail_info::OUT_OF_MEMORY;
+            fin_action = DrbdMon::finish_action::RESTART_DELAYED;
+            fail_data = DrbdMon::fail_info::OUT_OF_MEMORY;
         }
 
         // Display any log messages
@@ -72,18 +72,18 @@ int main(int argc, char* argv[])
         {
             if (log->has_entries())
             {
-                std::fputs("** LiveStatus messages log\n\n", stdout);
+                std::fputs("** DrbdMon messages log\n\n", stdout);
                 log->display_messages(stderr);
                 fputc('\n', stdout);
             }
         }
 
-        if (fail_data == LiveStatus::fail_info::OUT_OF_MEMORY)
+        if (fail_data == DrbdMon::fail_info::OUT_OF_MEMORY)
         {
-            std::fputs("** LiveStatus: Out of memory, trying to restart\n", stdout);
+            std::fputs("** DrbdMon: Out of memory, trying to restart\n", stdout);
         }
 
-        // Deallocate the LiveStatus instance
+        // Deallocate the DrbdMon instance
         if (ls_instance != nullptr)
         {
             delete ls_instance;
@@ -98,9 +98,9 @@ int main(int argc, char* argv[])
         }
         while (child_pid > 0);
 
-        if (fin_action == LiveStatus::finish_action::RESTART_DELAYED)
+        if (fin_action == DrbdMon::finish_action::RESTART_DELAYED)
         {
-            std::fprintf(stdout, "** LiveStatus: Reinitializing in %u seconds\n",
+            std::fprintf(stdout, "** DrbdMon: Reinitializing in %u seconds\n",
                          static_cast<unsigned int> (delay.tv_sec));
             // Suspend to delay the restart
             while (nanosleep(&delay, &remaining) != 0)
@@ -110,9 +110,9 @@ int main(int argc, char* argv[])
             reset_delay(delay);
         }
         else
-        if (fin_action == LiveStatus::finish_action::RESTART_IMMED)
+        if (fin_action == DrbdMon::finish_action::RESTART_IMMED)
         {
-            std::fputs("** LiveStatus: Reinitializing immediately\n", stdout);
+            std::fputs("** DrbdMon: Reinitializing immediately\n", stdout);
         }
     }
 
