@@ -41,12 +41,13 @@ WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 WITH_83_SUPPORT = @WITH_83_SUPPORT@
 WITH_84_SUPPORT = @WITH_84_SUPPORT@
 WITH_MANUAL = @WITH_MANUAL@
+WITH_DRBDMON = @WITH_DRBDMON@
 
 # for some reason some of the commands below only work correctly in bash,
 # and not in e.g. dash. I'm too lazy to fix it to be compatible.
 SHELL=/bin/bash
 
-TOOLS_DIRS  = user/shared user/v9 user/v84 user/v83 scripts
+TOOLS_DIRS  = user/shared user/v9 user/v84 user/v83 scripts user/drbdmon
 DOC_DIRS    = documentation/v83 documentation/v84 documentation/v9
 SUBDIRS     = $(TOOLS_DIRS) $(DOC_DIRS)
 
@@ -133,7 +134,7 @@ distclean:
 	rm -rf autom4te.cache
 	rm -f config.log
 
-EXTRA_CLEAN += Makefile user/Makefile user/v83/Makefile user/v84/Makefile user/v9/Makefile scripts/Makefile 
+EXTRA_CLEAN += Makefile user/Makefile user/v83/Makefile user/v84/Makefile user/v9/Makefile scripts/Makefile user/drbdmon/Makefile
 EXTRA_CLEAN += documentation/Makefile documentation/v83/Makefile documentation/v84/Makefile documentation/v9/Makefile
 EXTRA_CLEAN += user/shared/config.h drbd.spec
 EXTRA_CLEAN += configure config.status
@@ -259,4 +260,3 @@ endif
 Makefile.in: ;
 Makefile: Makefile.in config.status
 	./config.status Makefile
-

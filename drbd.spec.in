@@ -35,6 +35,7 @@
 %bcond_without xen
 %bcond_without 83support
 %bcond_without 84support
+%bcond_without drbdmon
 %ifnarch %{ix86} x86_64
 %global _without_xen --without-xen
 %endif
@@ -62,6 +63,9 @@ BuildRequires: udev
 %endif
 %if %{with pacemaker}
 Requires: drbd-pacemaker = %{version}
+%endif
+%if %{with drbdmon}
+BuildRequires: gcc-c++
 %endif
 ## %if %{with rgmanager}
 ## ## No.
@@ -155,6 +159,9 @@ This packages includes the DRBD administration tools.
 %if %{with 84support}
 /lib/drbd/drbdsetup-84
 /lib/drbd/drbdadm-84
+%endif
+%if {with drbdmon}
+%{_sbindir}/drbdmon
 %endif
 %if %{initscripttype} == "systemd"
 %{_unitdir}/drbd.service
@@ -362,6 +369,7 @@ autoconf
     --with-initdir=%{_initddir} \
     %{?_tmpfilesdir:--with-tmpfilesdir=%{_tmpfilesdir}} \
     --with-initscripttype=%{initscripttype}
+    %{?_without_drbdmon}
 make %{?_smp_mflags}
 
 %install

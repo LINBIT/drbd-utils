@@ -1,0 +1,71 @@
+CXXFLAGS=-std=c++11 -I. -Icppdsaext/src -Wall -Werror --pedantic-errors -fPIC -O2 \
+-Wsign-compare -Wpointer-arith -Wswitch-default -Wswitch-enum -Wtype-limits \
+-Wmissing-declarations -Wshadow
+CXX = @CXX@
+
+# variables set by configure
+sbindir = @sbindir@
+WITH_DRBDMON=@WITH_DRBDMON@
+
+# variables meant to be overridden from the make command line
+DESTDIR ?= /
+
+binaries := drbdmon drbdmon_test
+
+ifeq ($(WITH_DRBDMON),yes)
+all: $(binaries)
+else
+all:
+endif
+
+PHONY := all
+
+dsaext-obj := cppdsaext/src/dsaext.o
+
+l-obj := DrbdMon.o MessageLog.o CompactDisplay.o
+l-obj += DrbdResource.o DrbdRole.o DrbdVolume.o DrbdConnection.o
+l-obj += VolumesContainer.o StateFlags.o EventsIo.o EventsSourceSpawner.o
+l-obj += Args.o ConfigOption.o
+l-obj += StringTokenizer.o comparators.o utils.o
+
+ls-obj := drbdmon_main.o $(l-obj) $(dsaext-obj)
+lst-obj := drbdmon_main.o $(l-obj) $(dsaext-obj) DebugDisplay.o
+
+all-obj := $(sort $(ls-obj) $(lst-obj))
+local-obj := $(filter-out $(dsaext-obj),$(all-obj))
+local-dep := $(patsubst %.o,.%.d,$(local-obj))
+-include $(local-dep)
+
+$(dsaext-obj): $(basename $(dsaext-obj)).cpp $(basename $(dsaext-obj)).h
+
+drbdmon: $(ls-obj)
+	$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) $^
+drbdmon_test: $(lst-obj)
+	$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) $^
+
+# do not try to rebuild Makefile itself
+Makefile: ;
+
+.%.d: %.cpp
+	@set -e; rm -f $@; \
+	$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) $< > $@.$$$$; \
+	sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+	rm -f $@.$$$$
+
+install:
+ifeq ($(WITH_DRBDMON),yes)
+	install -m 7550 drbdmon $(DESTDIR)$(sbindir)
+endif
+
+uninstall:
+ifeq ($(WITH_DRBDMON),yes)
+	rm -f $(DESTDIR)$(sbindir)/drbdmon
+endif
+
+PHONY += clean distclean
+clean:
+	rm -f $(local-obj) $(binaries)
+distclean: clean
+	rm -f $(local-dep)
+
+.PHONY: $(PHONY)

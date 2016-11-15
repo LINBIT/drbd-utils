@@ -42,6 +42,7 @@ WITH_XEN = @WITH_XEN@
 WITH_PACEMAKER = @WITH_PACEMAKER@
 WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
+WITH_DRBDMON=@WITH_DRBDMON@
 
 # variables meant to be overridden from the make command line
 DESTDIR ?= /
@@ -49,6 +50,9 @@ CREATE_MAN_LINK ?= yes
 
 MANPAGES       := drbdsetup.8 drbd.conf.5 drbd.8 drbdadm.8 drbdmeta.8
 MANPAGES       += drbd-overview.8
+ifeq ($(WITH_DRBDMON), yes)
+MANPAGES       += drbdmon.8
+endif
 
 STYLESHEET_PREFIX ?= http://docbook.sourceforge.net/release/xsl/current
 MANPAGES_STYLESHEET ?= $(STYLESHEET_PREFIX)/manpages/docbook.xsl
