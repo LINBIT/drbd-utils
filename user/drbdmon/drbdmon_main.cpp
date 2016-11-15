@@ -8,7 +8,7 @@
 extern "C"
 {
     #include <time.h>
-    #include <wait.h>
+    #include <sys/wait.h>
 }
 
 #include <DrbdMon.h>

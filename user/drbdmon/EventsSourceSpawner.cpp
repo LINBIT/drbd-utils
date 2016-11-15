@@ -7,7 +7,7 @@ extern "C"
     #include <signal.h>
     #include <spawn.h>
     #include <fcntl.h>
-    #include <wait.h>
+    #include <sys/wait.h>
     #include <errno.h>
 }
 
