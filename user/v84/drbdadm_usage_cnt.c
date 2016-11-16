@@ -534,7 +534,7 @@ static int make_get_request(char *uri) {
 static void url_encode(char* in, char* out)
 {
 	char *h = "0123456789abcdef";
-	char c;
+	unsigned char c;
 
 	while( (c = *in++) != 0 ) {
 		if( c == '\n' ) break;
