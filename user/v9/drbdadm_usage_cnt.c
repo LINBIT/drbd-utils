@@ -154,30 +154,31 @@ static void write_node_id(struct node_info *ni)
 
 static int read_node_id(struct node_info *ni)
 {
-	int rr,fd;
+	int rr;
+	int fd;
 	struct node_info_od on_disk;
 
-	fd = open(NODE_ID_FILE,O_RDONLY);
-	if( fd == -1) {
+	fd = open(NODE_ID_FILE, O_RDONLY);
+	if (fd == -1) {
 		return 0;
 	}
 
-	rr = read(fd,&on_disk, sizeof(on_disk)); 
-	if( rr != sizeof(on_disk) && rr != SVN_STYLE_OD ) {
+	rr = read(fd, &on_disk, sizeof(on_disk));
+	if (rr != sizeof(on_disk) && rr != SVN_STYLE_OD) {
 		close(fd);
 		return 0;
 	}
 
-	switch(be32_to_cpu(on_disk.magic)) {
+	switch (be32_to_cpu(on_disk.magic)) {
 	case DRBD_MAGIC:
-		ni->node_uuid    = be64_to_cpu(on_disk.ni.node_uuid);
+		ni->node_uuid = be64_to_cpu(on_disk.ni.node_uuid);
 		ni->rev.svn_revision = be32_to_cpu(on_disk.ni.rev.svn_revision);
-		memset(ni->rev.git_hash,0,GIT_HASH_BYTE);
+		memset(ni->rev.git_hash, 0, GIT_HASH_BYTE);
 		break;
 	case DRBD_MAGIC+1:
-		ni->node_uuid    = be64_to_cpu(on_disk.ni.node_uuid);
+		ni->node_uuid = be64_to_cpu(on_disk.ni.node_uuid);
 		ni->rev.svn_revision = 0;
-		memcpy(ni->rev.git_hash,on_disk.ni.rev.git_hash,GIT_HASH_BYTE);
+		memcpy(ni->rev.git_hash, on_disk.ni.rev.git_hash, GIT_HASH_BYTE);
 		break;
 	default:
 		return 0;
@@ -319,19 +320,20 @@ static int make_get_request(char *uri) {
 	return 0;
 }
 
-static void url_encode(char* in, char* out)
+static void url_encode(char *in, char *out)
 {
 	char *h = "0123456789abcdef";
 	unsigned char c;
 
-	while( (c = *in++) != 0 ) {
-		if( c == '\n' ) break;
-		if( ( 'a' <= c && c <= 'z' )
-		    || ( 'A' <= c && c <= 'Z' )
-		    || ( '0' <= c && c <= '9' )
-		    || c == '-' || c == '_' || c == '.' )
+	while ((c = *in++) != 0) {
+		if (c == '\n')
+			break;
+		if (('a' <= c && c <= 'z') ||
+		    ('A' <= c && c <= 'Z') ||
+		    ('0' <= c && c <= '9') ||
+		    c == '-' || c == '_' || c == '.')
 			*out++ = c;
-		else if( c == ' ' )
+		else if (c == ' ')
 			*out++ = '+';
 		else {
 			*out++ = '%';
