@@ -82,10 +82,11 @@ clean:
 .PHONY: all clean doc man doc-clean distclean
 .PHONY: install uninstall html pdf ps
 doc:	man
+ORIG_VERSION=9.0
 ifeq ($(WITH_84_SUPPORT),yes)
 MAN_LINK=8.4
 else
-MAN_LINK=9.0
+MAN_LINK=$(ORIG_VERSION)
 endif
 
 
@@ -163,9 +164,11 @@ install:
 	set -e; for f in $(MANPAGES) ; do \
 		s=$${f##*.}; \
 		b=$${f%.[0-9]}; \
-		install -v -D -m 644 $$f $(DESTDIR)$(mandir)/man$$s/$$b-9.0.$$s ; \
+		install -v -D -m 644 $$f $(DESTDIR)$(mandir)/man$$s/$$b-$(ORIG_VERSION).$$s ; \
 		if [ "$(CREATE_MAN_LINK)" = "yes" ]; then \
-			ln -sf $$b-$(MAN_LINK).$$s $(DESTDIR)$(mandir)/man$$s/$$f ; \
+			ML=$(MAN_LINK); \
+			if [ $$f = "drbdmon.8" ]; then ML=$(ORIG_VERSION); fi ; \
+			ln -sf $$b-$$ML.$$s $(DESTDIR)$(mandir)/man$$s/$$f ; \
 		fi \
 	done
 
@@ -173,7 +176,7 @@ uninstall:
 	@ set -e; for f in $(MANPAGES) ; do \
 		s=$${f##*.}; \
 		b=$${f%.[0-9]}; \
-		rm -vf $(DESTDIR)$(mandir)/man$$s/$$b-9.0.$$s ; \
+		rm -vf $(DESTDIR)$(mandir)/man$$s/$$b-$(ORIG_VERSION).$$s ; \
 		rm -vf $(DESTDIR)$(mandir)/man$$s/$$f ; \
 	done
 
