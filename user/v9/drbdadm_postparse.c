@@ -962,8 +962,14 @@ static void fixup_peer_devices(struct d_resource *res)
 		struct peer_device *peer_device;
 		struct hname_address *ha;
 		struct d_volume *vol;
-		struct path *some_path = STAILQ_FIRST(&conn->paths);
-		struct d_host_info *some_host = STAILQ_FIRST(&some_path->hname_address_pairs)->host_info;
+		struct path *some_path;
+		struct d_host_info *some_host;
+
+		some_path = STAILQ_FIRST(&conn->paths);
+		if (!some_path)
+			continue;
+
+		some_host = STAILQ_FIRST(&some_path->hname_address_pairs)->host_info;
 
 		STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
 
