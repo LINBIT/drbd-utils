@@ -9,11 +9,11 @@ extern "C"
 {
     #include <time.h>
     #include <sys/wait.h>
+    #include <signal.h>
 }
 
 #include <DrbdMon.h>
-
-#include "MessageLog.h"
+#include <MessageLog.h>
 
 // LOG_CAPACITY must be >= 1
 const size_t LOG_CAPACITY {30};
@@ -111,6 +111,21 @@ int main(int argc, char* argv[])
         {
             std::fprintf(stdout, "** DrbdMon: Reinitializing in %u seconds\n",
                          static_cast<unsigned int> (delay.tv_sec));
+
+            // Attempt to unblock signals before waiting, so one can
+            // easily exit the program immediately by hitting Ctrl-C,
+            // closing the terminal or sending a TERM signal
+            sigset_t signal_mask;
+            if (sigemptyset(&signal_mask) == 0)
+            {
+                // These calls are unchecked; if adding a signal fails,
+                // it cannot be fixed anyway
+                sigaddset(&signal_mask, SIGTERM);
+                sigaddset(&signal_mask, SIGINT);
+                sigaddset(&signal_mask, SIGHUP);
+                sigprocmask(SIG_UNBLOCK, &signal_mask, nullptr);
+            }
+
             // Suspend to delay the restart
             while (nanosleep(&delay, &remaining) != 0)
             {
