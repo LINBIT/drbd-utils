@@ -56,7 +56,7 @@ Makefile: ;
 
 install:
 ifeq ($(WITH_DRBDMON),yes)
-	install -m 7550 drbdmon $(DESTDIR)$(sbindir)
+	install -m 755 drbdmon $(DESTDIR)$(sbindir)
 endif
 
 uninstall:
