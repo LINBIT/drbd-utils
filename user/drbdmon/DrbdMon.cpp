@@ -20,7 +20,7 @@ extern "C"
 #include <Args.h>
 
 const std::string DrbdMon::PROGRAM_NAME = "DRBD DrbdMon";
-const std::string DrbdMon::VERSION = "0.22";
+const std::string DrbdMon::VERSION = "0.23";
 
 const std::string DrbdMon::OPT_HELP_KEY = "help";
 const ConfigOption DrbdMon::OPT_HELP(true, OPT_HELP_KEY);
