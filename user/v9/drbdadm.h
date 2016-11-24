@@ -50,6 +50,7 @@ struct d_address
 	char* addr;
 	char* port;
 	char* af;
+	int is_local_address:1;
 };
 
 struct d_proxy_info

@@ -709,6 +709,8 @@ static void __parse_address(struct d_address *a)
 	EXP(TK_INTEGER);
 	a->port = yylval.txt;
 	range_check(R_PORT, "port", yylval.txt);
+
+	a->is_local_address = addr_scope_local(a->addr);
 }
 
 static void parse_address(struct names *on_hosts, struct d_address *address)

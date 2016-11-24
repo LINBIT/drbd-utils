@@ -195,6 +195,7 @@ static void _set_host_info_in_host_address_pairs(struct d_resource *res,
 				if (host_info->address.addr && host_info->address.af) {
 					ha->address.addr = host_info->address.addr;
 					ha->address.af = host_info->address.af;
+					ha->address.is_local_address = host_info->address.is_local_address;
 				} else
 					have_address = false;
 			}
@@ -878,7 +879,7 @@ static void check_addr_conflict(struct d_resource *res, struct resources *resour
 
 				STAILQ_FOREACH(ha1, &path->hname_address_pairs, link) {
 					addr[i] = ha1->address.addr ? &ha1->address : &ha1->host_info->address;
-					if (addr_scope_local(addr[i]->addr))
+					if (addr[i]->is_local_address)
 						continue;
 
 					if (ha1->conflicts)
@@ -902,7 +903,7 @@ static void check_addr_conflict(struct d_resource *res, struct resources *resour
 					i++;
 				}
 				if (i == 2 && addresses_equal(addr[0], addr[1]) &&
-				    !addr_scope_local(addr[0]->addr)) {
+				    !addr[0]->is_local_address) {
 					err("%s:%d: in resource %s %s:%s:%s is used for both endpoints\n",
 					    res->config_file, conn->config_line,
 					    res->name, addr[0]->af, addr[0]->addr,
