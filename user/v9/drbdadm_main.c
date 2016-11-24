@@ -2639,12 +2639,19 @@ void verify_ips(struct d_resource *res)
 		return;
 
 	if (!have_ip(res->me->address.af, res->me->address.addr)) {
-		ENTRY e, *ep;
-		e.key = e.data = ep = NULL;
-		m_asprintf(&e.key, "%s:%s", res->me->address.addr, res->me->address.port);
-		hsearch_r(e, FIND, &ep, &global_htable);
+		ENTRY *e, *ep, *f;
+		e = calloc(1, sizeof *e);
+		if (!e) {
+			err("calloc: %m\n");
+			exit(E_EXEC_ERROR);
+		}
+		m_asprintf(&e->key, "%s:%s", res->me->address.addr, res->me->address.port);
+		f = tfind(e, &global_btree, btree_key_cmp);
+		free(e);
+		if (f)
+			ep = *(ENTRY **)f;
 		err("%s: in resource %s, on %s:\n\t""IP %s not found on this host.\n",
-		    ep ? (char *)ep->data : res->config_file, res->name,
+		    f ? (char *)ep->data : res->config_file, res->name,
 		    names_to_str(&res->me->on_hosts), res->me->address.addr);
 		if (INVALID_IP_IS_INVALID_CONF)
 			config_valid = 0;
@@ -3429,6 +3436,7 @@ int main(int argc, char **argv)
 	free(resource_names);
 	if (admopt != general_admopt)
 		free(admopt);
+	free_btrees();
 
 	return rv;
 }

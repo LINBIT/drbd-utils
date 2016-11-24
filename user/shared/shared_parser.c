@@ -38,8 +38,6 @@
 #include "drbdadm_parser.h"
 
 extern void my_parse(void);
-extern int vcheck_uniq(struct hsearch_data *ht, const char *what, const char *fmt, va_list ap);
-extern struct hsearch_data per_resource_htable;
 
 
 void save_parse_context(struct include_file_buffer *buffer, FILE *f, char *name)
@@ -73,30 +71,3 @@ void include_file(FILE *f, char *name)
 	my_parse();
 	restore_parse_context(&buffer);
 }
-
-int check_uniq(const char *what, const char *fmt, ...)
-{
-	int rv;
-	va_list ap;
-
-	va_start(ap, fmt);
-	rv = vcheck_uniq(&global_htable, what, fmt, ap);
-	va_end(ap);
-
-	return rv;
-}
-
-/* unique per resource */
-int check_upr(const char *what, const char *fmt, ...)
-{
-	int rv;
-	va_list ap;
-
-	va_start(ap, fmt);
-	rv = vcheck_uniq(&per_resource_htable, what, fmt, ap);
-	va_end(ap);
-
-	return rv;
-}
-
-

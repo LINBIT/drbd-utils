@@ -117,3 +117,4 @@ int yylex(void);
 void my_yypush_buffer_state(FILE *f);
 void yypop_buffer_state (void );
 void yyrestart(FILE *input_file);
+void free_btrees(void);

@@ -226,46 +226,53 @@ static void pperror(struct d_proxy_info *proxy, char *text)
  * for check_uniq: check uniqueness of
  * resource names, ip:port, node:disk and node:device combinations
  * as well as resource:section ...
- * hash table to test for uniqueness of these values...
- *  256  (max minors)
- *  *(
- *       2 (host sections) * 4 (res ip:port node:disk node:device)
- *     + 4 (other sections)
- *     + some more,
- *       if we want to check for scoped uniqueness of *every* option
- *   )
- *     since nobody (?) will actually use more than a dozen minors,
- *     this should be more than enough.
- *
+ * binary tree to test for uniqueness of these values...
  * Furthermore, the names of files that have been read are
  * registered here, to avoid reading the same file multiple times.
+ * IMPORTANT:
+ * It is fine to point key and value to the same object within one entry, that
+ * is handled by free_bt_node, BUT DON'T point to the same objects from
+ * multiple entries (double free).
  */
-struct hsearch_data global_htable;
-void check_uniq_init(void)
+
+void *global_btree = NULL;
+/* some settings need only be unique within one resource definition. */
+void *per_resource_btree = NULL;
+
+int btree_key_cmp(const void *a, const void *b)
 {
-	memset(&global_htable, 0, sizeof(global_htable));
-	if (!hcreate_r(16384 * ((2 * 4) + 4), &global_htable)) {
-		err("Insufficient memory.\n");
-		exit(E_EXEC_ERROR);
-	};
+	ENTRY *ka = (ENTRY*)a;
+	ENTRY *kb = (ENTRY*)b;
+
+	return strcmp((char*)ka->key, (char*)kb->key);
 }
 
-/* some settings need only be unique within one resource definition.
- * we need currently about 8 + (number of host) * 8 entries,
- * 200 should be much more than enough. */
-struct hsearch_data per_resource_htable;
+void free_bt_node(void *node)
+{
+	ENTRY *e = node;
+	/* creative users of the tree might point key and data to the same object */
+	if (e->key != e->data)
+		free(e->key);
+	free(e->data);
+	free(e);
+}
+
+void free_btrees(void)
+{
+	tdestroy(per_resource_btree, free_bt_node);
+	tdestroy(global_btree, free_bt_node);
+}
+
 void check_upr_init(void)
 {
 	static int created = 0;
 	if (config_valid >= 2)
 		return;
-	if (created)
-		hdestroy_r(&per_resource_htable);
-	memset(&per_resource_htable, 0, sizeof(per_resource_htable));
-	if (!hcreate_r(256, &per_resource_htable)) {
-		err("Insufficient memory.\n");
-		exit(E_EXEC_ERROR);
-	};
+	if (created) {
+		tdestroy(per_resource_btree, free_bt_node);
+	}
+	per_resource_btree = NULL;
+
 	created = 1;
 }
 
@@ -273,18 +280,24 @@ void check_upr_init(void)
  * strictly speaking we don't need to check for uniqueness of disk and device names,
  * but for uniqueness of their major:minor numbers ;-)
  */
-int vcheck_uniq(struct hsearch_data *ht, const char *what, const char *fmt, va_list ap)
+
+int vcheck_uniq(void **bt, const char *what, const char *fmt, va_list ap)
 {
 	int rv;
-	ENTRY e, *ep;
-	e.key = e.data = ep = NULL;
+	ENTRY *e, *f;
 
 	/* if we are done parsing the config file,
 	 * switch off this paranoia */
 	if (config_valid >= 2)
 		return 1;
 
-	rv = vasprintf(&e.key, fmt, ap);
+	e = calloc(1, sizeof *e);
+	if (!e) {
+		err("calloc: %m\n");
+		exit(E_THINKO);
+	}
+
+	rv = vasprintf(&e->key, fmt, ap);
 
 	if (rv < 0) {
 		err("vasprintf: %m\n");
@@ -295,29 +308,30 @@ int vcheck_uniq(struct hsearch_data *ht, const char *what, const char *fmt, va_l
 		err("Oops, unset argument in %s:%d.\n", __FILE__, __LINE__);
 		exit(E_THINKO);
 	}
-	m_asprintf((char **)&e.data, "%s:%u", config_file, fline);
-	hsearch_r(e, FIND, &ep, ht);
-	//err("FIND %s: %p\n", e.key, ep);
-	if (ep) {
+	m_asprintf((char **)&e->data, "%s:%u", config_file, fline);
+
+	f = tfind(e, bt, btree_key_cmp);
+	if (f) {
 		if (what) {
+			ENTRY *ep = *(ENTRY **)f;
 			err("%s: conflicting use of %s '%s' ...\n%s: %s '%s' first used here.\n",
-			    (char *)e.data, what, ep->key, (char *)ep->data, what, ep->key);
+			    (char *)e->data, what, ep->key, (char *)ep->data, what, ep->key);
 		}
-		free(e.key);
-		free(e.data);
+		free(e->key);
+		free(e->data);
+		free(e);
 		config_valid = 0;
 	} else {
-		//err("ENTER %s\t=>\t%s\n", e.key, (char *)e.data);
-		hsearch_r(e, ENTER, &ep, ht);
-		if (!ep) {
-			err("hash table entry (%s => %s) failed\n", e.key, (char *)e.data);
+		f = tsearch(e, bt, btree_key_cmp);
+		if (!f) {
+			err("tree entry (%s => %s) failed\n", e->key, (char *)e->data);
 			exit(E_THINKO);
 		}
-		ep = NULL;
+		f = NULL;
 	}
-	if (EXIT_ON_CONFLICT && ep)
+	if (EXIT_ON_CONFLICT && f)
 		exit(E_CONFIG_INVALID);
-	return !ep;
+	return !f;
 }
 
 static void pe_expected(const char *exp)
@@ -1836,39 +1850,34 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 /* Returns the "previous" count, ie. 0 if this file wasn't seen before. */
 int was_file_already_seen(char *fn)
 {
-	ENTRY e, *ep;
+	ENTRY *e;
 	char *real_path;
 
-	static int global_htable_init = 0;
-	if (!global_htable_init) {
-		check_uniq_init();
-		global_htable_init = 1;
+	e = calloc(1, sizeof *e);
+	if (!e) {
+		err("calloc %m\n");
+		exit(E_THINKO);
 	}
-
 
 	real_path = realpath(fn, NULL);
 	if (!real_path)
 		real_path = fn;
 
-	ep = NULL;
-	e.key = real_path;
-	e.data = real_path;
-	hsearch_r(e, FIND, &ep, &global_htable);
-	if (ep) {
+	e->key = real_path;
+	e->data = real_path;
+	if (tfind(e, &global_btree, btree_key_cmp)) {
 		/* Can be freed, it's just a queried key. */
 		if (real_path != fn)
 			free(real_path);
+		free(e);
 		return 1;
 	}
 
-	e.key = real_path;
-	e.data = real_path;
-	hsearch_r(e, ENTER, &ep, &global_htable);
-	if (!ep) {
-		err("hash table entry (%s => %s) failed\n", e.key, (char *)e.data);
+	if (!tsearch(e, &global_btree, btree_key_cmp)) {
+		err("tree entry (%s => %s) failed\n", e->key, (char *)e->data);
+		free(e);
 		exit(E_THINKO);
 	}
-
 
 	/* Must not be freed, because it's still referenced by the hash table. */
 	/* free(real_path); */
@@ -2021,4 +2030,29 @@ void my_parse(void)
 			pe_expected("global | common | resource | skip | include");
 		}
 	}
+}
+
+int check_uniq(const char *what, const char *fmt, ...)
+{
+	int rv;
+	va_list ap;
+
+	va_start(ap, fmt);
+	rv = vcheck_uniq(&global_btree, what, fmt, ap);
+	va_end(ap);
+
+	return rv;
+}
+
+/* unique per resource */
+int check_upr(const char *what, const char *fmt, ...)
+{
+	int rv;
+	va_list ap;
+
+	va_start(ap, fmt);
+	rv = vcheck_uniq(&per_resource_btree, what, fmt, ap);
+	va_end(ap);
+
+	return rv;
 }

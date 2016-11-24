@@ -2180,3 +2180,28 @@ void my_parse(void)
 		}
 	}
 }
+
+int check_uniq(const char *what, const char *fmt, ...)
+{
+	int rv;
+	va_list ap;
+
+	va_start(ap, fmt);
+	rv = vcheck_uniq(&global_htable, what, fmt, ap);
+	va_end(ap);
+
+	return rv;
+}
+
+/* unique per resource */
+int check_upr(const char *what, const char *fmt, ...)
+{
+	int rv;
+	va_list ap;
+
+	va_start(ap, fmt);
+	rv = vcheck_uniq(&per_resource_htable, what, fmt, ap);
+	va_end(ap);
+
+	return rv;
+}

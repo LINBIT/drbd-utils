@@ -421,6 +421,7 @@ extern char *_proxy_connection_name(char *conn_name, const struct d_resource *re
 	_proxy_connection_name(alloca(_proxy_connect_name_len(RES, CONN)), RES, CONN)
 extern struct d_resource *res_by_name(const char *name);
 extern struct d_host_info *find_host_info_by_name(struct d_resource* res, char *name);
+extern int btree_key_cmp(const void *a, const void *b);
 int parse_proxy_options_section(struct d_proxy_info **proxy);
 /* conn_name is optional and mostly for compatibility with dcmd */
 int do_proxy_conn_up(const struct cfg_ctx *ctx);
@@ -435,7 +436,7 @@ extern int config_valid;
 extern struct resources config;
 extern struct d_resource* common;
 extern int line, fline;
-extern struct hsearch_data global_htable;
+extern void *global_btree;
 
 extern int no_tty;
 extern int dry_run;
