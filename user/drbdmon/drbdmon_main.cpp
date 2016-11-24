@@ -220,8 +220,8 @@ static bool adjust_ids(MessageLog* log, bool& ids_safe)
         {
             throw SysException();
         }
-        if (real_user == eff_user || real_user == saved_user ||
-            real_group == eff_group || real_group == saved_group)
+        if (real_user == eff_user && real_user == saved_user &&
+            real_group == eff_group && real_group == saved_group)
         {
             ids_safe = true;
         }
