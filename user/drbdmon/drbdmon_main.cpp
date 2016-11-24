@@ -180,10 +180,23 @@ static bool adjust_ids(MessageLog* log, bool& ids_safe)
             throw SysException();
         }
 
-        // Set effective user id = real user id unless equal already
+        // Unless already equal, set effective user id = real user id, or
+        // if the real user id is root, then this program is probably setuid
+        // to some non-root account and being executed by root in an attempt
+        // to drop root privileges, therefore set the real user id to the
+        // effective user id in this case.
         if (eff_user != real_user)
         {
-            if (setresuid(-1, real_user, -1) != 0)
+            if (real_user == 0)
+            {
+                real_user = eff_user;
+            }
+            else
+            {
+                eff_user = real_user;
+            }
+
+            if (setresuid(real_user, eff_user, -1) != 0)
             {
                 throw SysException();
             }
@@ -191,16 +204,29 @@ static bool adjust_ids(MessageLog* log, bool& ids_safe)
         // Set saved user id = real user id unless equal already
         if (saved_user != real_user)
         {
-            if (setresuid(-1, -1, real_user) != 0)
+            // Set saved user id = real user id
+            saved_user = real_user;
+
+            if (setresuid(-1, -1, saved_user) != 0)
             {
                 throw SysException();
             }
         }
 
-        // Set effective group id = real group id unless equal already
+        // Analogous to adjusting the user ids, adjust the group ids to
+        // non-root if real group id and effective group id do not match
         if (eff_group != real_group)
         {
-            if (setresgid(-1, real_group, -1) != 0)
+            if (real_group == 0)
+            {
+                real_group = eff_group;
+            }
+            else
+            {
+                eff_group = real_group;
+            }
+
+            if (setresgid(real_group, eff_group, -1) != 0)
             {
                 throw SysException();
             }
@@ -208,7 +234,10 @@ static bool adjust_ids(MessageLog* log, bool& ids_safe)
         // Set saved group id = real group id unless equal already
         if (saved_group != real_group)
         {
-            if (setresgid(-1, -1, real_group) != 0)
+            // Set saved group id = real group id
+            saved_group = real_group;
+
+            if (setresgid(-1, -1, saved_group) != 0)
             {
                 throw SysException();
             }
