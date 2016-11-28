@@ -21,6 +21,7 @@
 
  */
 
+#define _GNU_SOURCE
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -30,6 +31,7 @@
 #include <assert.h>
 #include "drbdtool_common.h"
 #include "drbdadm.h"
+#include <search.h>
 
 static void inherit_volumes(struct volumes *from, struct d_host_info *host);
 static void check_volume_sets_equal(struct d_resource *, struct d_host_info *, struct d_host_info *);
@@ -835,6 +837,31 @@ static bool addresses_equal(struct d_address *addr1, struct d_address *addr2)
 	return true;
 }
 
+struct addrtree_entry {
+	struct d_address *da;
+	struct d_resource *res;
+};
+
+static void *addrtree = NULL;
+
+int addrtree_key_cmp(const void *a, const void *b)
+{
+	struct addrtree_entry *e1 = (struct addrtree_entry *)a;
+	struct addrtree_entry *e2 = (struct addrtree_entry *)b;
+	int ret = 0;
+
+	ret = strcmp(e1->da->addr, e2->da->addr);
+	if (ret)
+		return ret;
+
+	ret = strcmp(e1->da->port, e2->da->port);
+	if (ret)
+		return ret;
+
+	ret = strcmp(e1->da->af, e2->da->af);
+	return ret;
+}
+
 static struct hname_address *find_hname_addr_in_res(struct d_resource *res, struct d_address *addr)
 {
 	struct hname_address *ha;
@@ -860,19 +887,16 @@ static struct hname_address *find_hname_addr_in_res(struct d_resource *res, stru
    but may not be mentioned in any other resource. Also make sure that the two
    endpoints are not configured as the same.
  */
-static void check_addr_conflict(struct d_resource *res, struct resources *resources)
+static void check_addr_conflict(void *addrtree_root, struct resources *resources)
 {
-	struct d_resource *res2;
+	struct d_resource *res;
 	struct hname_address *ha1, *ha2;
 	struct connection *conn;
+	struct path *path;
+	struct addrtree_entry *e, *ep, *f;
 
-	for_each_resource(res2, resources) {
-		if (res2 == res)
-			continue;
-
+	for_each_resource(res, resources) {
 		for_each_connection(conn, &res->connections) {
-			struct path *path;
-
 			for_each_path(path, &conn->paths) {
 				struct d_address *addr[2];
 				int i = 0;
@@ -882,24 +906,38 @@ static void check_addr_conflict(struct d_resource *res, struct resources *resour
 					if (addr[i]->is_local_address)
 						continue;
 
-					if (ha1->conflicts)
-						continue;
+					e = malloc(sizeof *e);
+					if (!e) {
+						err("malloc: %m\n");
+						exit(E_EXEC_ERROR);
+					}
 
-					ha2 = find_hname_addr_in_res(res2, addr[i]);
-					if (!ha2)
-						continue;
+					e->da = addr[i];
+					e->res = res;
+					f = tfind(e, &addrtree_root, addrtree_key_cmp);
+					if (f) {
+						ep = *(struct addrtree_entry **)f;
+						if (ep->res != res) {
+							if (ha1->conflicts)
+								continue;
 
-					if (ha2->conflicts)
-						continue;
+							ha2 = find_hname_addr_in_res(ep->res, addr[i]);
+							if (!ha2)
+								continue;
 
-					fprintf(stderr, "%s:%d: in resource %s\n"
-						"    %s:%s:%s is also used %s:%d (resource %s)\n",
-						res->config_file, ha1->config_line, res->name,
-						addr[i]->af, addr[i]->addr, addr[i]->port,
-						res2->config_file, ha2->config_line, res2->name);
-					ha2->conflicts = 1;
-					ha1->conflicts = 1;
-					config_valid = 0;
+							if (ha2->conflicts)
+								continue;
+							fprintf(stderr, "%s:%d: in resource %s\n"
+									"    %s:%s:%s is also used %s:%d (resource %s)\n",
+									e->res->config_file, ha1->config_line, e->res->name,
+									addr[i]->af, addr[i]->addr, addr[i]->port,
+									ep->res->config_file, ha2->config_line, ep->res->name);
+							ha2->conflicts = 1;
+							ha1->conflicts = 1;
+							config_valid = 0;
+						}
+					} else
+						tsearch(e, &addrtree_root, addrtree_key_cmp);
 					i++;
 				}
 				if (i == 2 && addresses_equal(addr[0], addr[1]) &&
@@ -913,6 +951,10 @@ static void check_addr_conflict(struct d_resource *res, struct resources *resour
 			}
 		}
 	}
+
+	/* free element from tree, but not its members, they are pointers to list entries */
+	tdestroy(addrtree_root, free);
+	addrtree_root = NULL;
 }
 
 static void _must_have_two_hosts(struct d_resource *res, struct path *path)
@@ -1058,8 +1100,7 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 	}
 
 	if (config_valid) {
-		for_each_resource(res, resources)
-			check_addr_conflict(res, resources);
+		check_addr_conflict(addrtree, resources);
 	}
 
 	/* Needs "on_hosts" and host->lower already set */
