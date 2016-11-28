@@ -1,4 +1,4 @@
-============================================================================
+# ============================================================================
 #  http://www.gnu.org/software/autoconf-archive/ax_cxx_compile_stdcxx_11.html
 # ============================================================================
 #
@@ -32,8 +32,8 @@
 #   permitted in any medium without royalty provided the copyright notice
 #   and this notice are preserved. This file is offered as-is, without any
 #   warranty.
-#
+
 #serial 17
-#
+
 AX_REQUIRE_DEFINED([AX_CXX_COMPILE_STDCXX])
 AC_DEFUN([AX_CXX_COMPILE_STDCXX_11], [AX_CXX_COMPILE_STDCXX([11], [$1], [$2])])
