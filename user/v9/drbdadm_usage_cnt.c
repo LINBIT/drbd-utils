@@ -541,6 +541,8 @@ int adm_create_md(const struct cfg_ctx *ctx)
 		struct peer_device *peer_device;
 		int max_peers = 0;
 
+		set_peer_in_resource(ctx->res, true);
+
 		STAILQ_FOREACH(peer_device, &ctx->vol->peer_devices, volume_link) {
 			if (peer_device->connection->ignore || peer_diskless(peer_device))
 				continue;
