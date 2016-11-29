@@ -1,27 +1,27 @@
+#define DRBD_EVENT_SOCKET_STRING	"DRBD_EVENTS"
 #include "libgenl.h"
 
+#include <asm/byteorder.h>
 #include <sys/types.h>
-#include <stdbool.h>
 #include <unistd.h>
 #include <time.h>
 #include <poll.h>
+#include <cygwin/in.h>
+#include <w32api/wsipv6ok.h>
 
 int genl_join_mc_group(struct genl_sock *s, const char *name) {
-	int g_id;
-	int i;
+	// not support
+	int len = send(s->s_fd, DRBD_EVENT_SOCKET_STRING, strlen(DRBD_EVENT_SOCKET_STRING), 0);
 
-	BUG_ON(!s || !s->s_family);
-	for (i = 0; i < 32; i++) {
-		if (!s->s_family->mc_groups[i].id)
-			continue;
-		if (strcmp(s->s_family->mc_groups[i].name, name))
-			continue;
+#ifdef NL_PACKET_MSG
+    UTRACE("sending DRBD_EVENT_SOCKET_STRING. len(%d)\n", len);
+#endif
 
-		g_id = s->s_family->mc_groups[i].id;
-		return setsockopt(s->s_fd, SOL_NETLINK, NETLINK_ADD_MEMBERSHIP,
-				&g_id, sizeof(g_id));
+	if (len != strlen(DRBD_EVENT_SOCKET_STRING)) {
+		perror("send genl_join_mc_group error"); 
+		return -1;
 	}
-	return -2;
+	return len;
 }
 
 #define DO_OR_LOG_AND_FAIL(x) \
@@ -34,6 +34,28 @@ int genl_join_mc_group(struct genl_sock *s, const char *name) {
 		}						\
 	} while(0)
 
+int get_netlink_port()
+{
+    DWORD value, port = NETLINK_PORT;
+    HKEY hKey;
+    DWORD status;
+    DWORD type = REG_DWORD;
+    DWORD size = sizeof(DWORD);
+    const CHAR * registryPath = "SYSTEM\\CurrentControlSet\\Services\\drbd";
+    status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, registryPath, 0, KEY_ALL_ACCESS, &hKey);
+    if (status == ERROR_SUCCESS)
+    {
+        status = RegQueryValueEx(hKey, TEXT("netlink_tcp_port"), NULL, &type, (LPBYTE)&value, &size);
+        if (status == ERROR_SUCCESS)
+        {
+            port = value;
+        }
+    }
+
+    RegCloseKey(hKey);
+    return htons(port);
+}
+
 static struct genl_sock *genl_connect(__u32 nl_groups)
 {
 	struct genl_sock *s = calloc(1, sizeof(*s));
@@ -43,33 +65,25 @@ static struct genl_sock *genl_connect(__u32 nl_groups)
 	if (!s)
 		return NULL;
 
-	/* autobind; kernel is responsible to give us something unique
-	 * in bind() below. */
-	s->s_local.nl_pid = 0;
-	s->s_local.nl_family = AF_NETLINK;
-	/*
-	 * If we want to receive multicast traffic on this socket, kernels
-	 * before v2.6.23-rc1 require us to indicate which multicast groups we
-	 * are interested in in nl_groups.
-	 */
-	s->s_local.nl_groups = nl_groups;
-	s->s_peer.nl_family = AF_NETLINK;
 	/* start with some sane sequence number */
 	s->s_seq_expect = s->s_seq_next = time(0);
 
-	s->s_fd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_GENERIC);
-	if (s->s_fd == -1)
+	/* Create the windows TCP socket */
+	if ((s->s_fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+		perror("socket");
 		goto fail;
+	}
 
-	sock_len = sizeof(s->s_local);
-	DO_OR_LOG_AND_FAIL(setsockopt(s->s_fd, SOL_SOCKET, SO_SNDBUF, &bsz, sizeof(bsz)));
-	DO_OR_LOG_AND_FAIL(setsockopt(s->s_fd, SOL_SOCKET, SO_RCVBUF, &bsz, sizeof(bsz)));
-	DO_OR_LOG_AND_FAIL(bind(s->s_fd, (struct sockaddr*) &s->s_local, sizeof(s->s_local)));
-	DO_OR_LOG_AND_FAIL(getsockname(s->s_fd, (struct sockaddr*) &s->s_local, &sock_len));
+	struct sockaddr_in sendsocket;
+	memset(&sendsocket, 0, sizeof(sendsocket));
+	sendsocket.sin_family = AF_INET;
+	sendsocket.sin_addr.s_addr = inet_addr("127.0.0.1");
+    sendsocket.sin_port = get_netlink_port();
 
-	dbg(3, "bound socket to nl_pid:%u, my pid:%u, len:%u, sizeof:%u\n",
-		s->s_local.nl_pid, getpid(),
-		(unsigned)sock_len, (unsigned)sizeof(s->s_local));
+	if (connect(s->s_fd, (struct sockaddr *) &sendsocket, sizeof(sendsocket)) < 0) {
+		perror("connect");
+		return NULL;
+	}
 
 	return s;
 
@@ -101,7 +115,7 @@ int genl_send(struct genl_sock *s, struct msg_buff *msg)
 	n->nlmsg_len = msg->tail - msg->data;
 	n->nlmsg_flags |= NLM_F_REQUEST;
 	n->nlmsg_seq = s->s_seq_expect = s->s_seq_next++;
-	n->nlmsg_pid = s->s_local.nl_pid;
+	n->nlmsg_pid = getpid();
 
 #define LOCAL_DEBUG_LEVEL 3
 #if LOCAL_DEBUG_LEVEL <= DEBUG_LEVEL
@@ -110,6 +124,10 @@ int genl_send(struct genl_sock *s, struct msg_buff *msg)
 	dbg(LOCAL_DEBUG_LEVEL, "sending %smessage, pid:%u seq:%u, g.cmd/version:%u/%u",
 			n->nlmsg_type == GENL_ID_CTRL ? "ctrl " : "",
 			n->nlmsg_pid, n->nlmsg_seq, g->cmd, g->version);
+#ifdef NL_PACKET_MSG
+    UTRACE("len(%d), type(0x%x), pid(%d), seq(%d), flags(0x%x), cmd(%d), version(%d)\n",
+        n->nlmsg_len, n->nlmsg_type, n->nlmsg_pid, n->nlmsg_seq, n->nlmsg_flags, g->cmd, g->version);
+#endif
 #endif
 
 	return do_send(s->s_fd, msg->data, n->nlmsg_len);
@@ -159,7 +177,7 @@ retry:
 	else if (n < 0) {
 		if (errno == EINTR) {
 			dbg(3, "recvmsg() returned EINTR, retrying\n");
-			goto retry;
+            return -EINTR;
 		} else if (errno == EAGAIN) {
 			dbg(3, "recvmsg() returned EAGAIN, aborting\n");
 			return 0;
@@ -181,6 +199,8 @@ retry:
 		goto retry;
 	} else if (flags != 0) {
 		/* Buffer is big enough, do the actual reading */
+		struct nlmsghdr *nlh = (struct nlmsghdr *)iov->iov_base;
+		iov->iov_len = nlh->nlmsg_len; // resize to rx only one reaponse
 		flags = 0;
 		goto retry;
 	}
@@ -188,11 +208,6 @@ retry:
 	if (msg.msg_namelen != sizeof(struct sockaddr_nl))
 		return -E_RCV_NO_SOURCE_ADDR;
 
-	if (addr.nl_pid != 0) {
-		dbg(3, "ignoring message from sender pid %u != 0\n",
-				addr.nl_pid);
-		goto retry;
-	}
 	return n;
 }
 
@@ -223,10 +238,12 @@ int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int 
 			*err_desc = "truncated message in netlink reply";
 		return -E_RCV_MSG_TRUNC;
 	}
-
+#ifdef NL_PACKET_MSG
+    struct genlmsghdr * hdr = nlmsg_data(nlh);
+    UTRACE("len(%d), type(0x%x), flags(0x%x), seq(%d), pid(%d), cmd(%d), version(%d)\n",    
+        nlh->nlmsg_len, nlh->nlmsg_type, nlh->nlmsg_flags, nlh->nlmsg_seq, nlh->nlmsg_pid, hdr->cmd, hdr->version);
+#endif
 	if (s->s_seq_expect && nlh->nlmsg_seq != s->s_seq_expect) {
-		dbg(2, "sequence mismatch: 0x%x != 0x%x, type:%x flags:%x sportid:%x\n",
-			nlh->nlmsg_seq, s->s_seq_expect, nlh->nlmsg_type, nlh->nlmsg_flags, nlh->nlmsg_pid);
 		if (err_desc)
 			*err_desc = "sequence mismatch in netlink reply";
 		return -E_RCV_SEQ_MISMATCH;
@@ -272,6 +289,7 @@ static struct genl_family genl_ctrl = {
 struct genl_sock *genl_connect_to_family(struct genl_family *family)
 {
 	struct genl_sock *s = NULL;
+#ifndef _WIN32
 	struct msg_buff *msg;
 	struct nlmsghdr *nlh;
 	struct nlattr *nla;
@@ -286,12 +304,24 @@ struct genl_sock *genl_connect_to_family(struct genl_family *family)
 		dbg(1, "could not allocate genl message");
 		goto out;
 	}
+#endif
 
 	s = genl_connect(family->nl_groups);
 	if (!s) {
 		dbg(1, "error creating netlink socket");
+#ifndef _WIN32
 		goto out;
+#endif
 	}
+#ifdef _WIN32
+	else
+	{
+		s->s_family = family;
+	}
+	return s;
+#endif
+
+#ifndef _WIN32
 	genlmsg_put(msg, &genl_ctrl, 0, CTRL_CMD_GETFAMILY);
 
 	nla_put_string(msg, CTRL_ATTR_FAMILY_NAME, family->name);
@@ -373,6 +403,7 @@ out:
 	msg_free(msg);
 
 	return s;
+#endif
 }
 
 /*
@@ -387,7 +418,9 @@ out:
  */
 
 #include <string.h>
+#ifndef _WIN32
 #include <linux/types.h>
+#endif
 
 static __u16 nla_attr_minlen[NLA_TYPE_MAX+1] __read_mostly = {
 	[NLA_U8]	= sizeof(__u8),
@@ -819,135 +852,6 @@ int nla_put(struct msg_buff *msg, int attrtype, int attrlen, const void *data)
 		return -EMSGSIZE;
 
 	__nla_put(msg, attrtype, attrlen, data);
-	return 0;
-}
-
-/* TODO add an architecture/platform blacklist */
-#define CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS 1
-
-#define IS_ALIGNED(x, a)                (((x) & ((typeof(x))(a) - 1)) == 0)
-/**
- * nla_need_padding_for_64bit - test 64-bit alignment of the next attribute
- * @msg: message buffer the message is stored in
- *
- * Return true if padding is needed to align the next attribute (nla_data()) to
- * a 64-bit aligned area.
- */
-static inline bool nla_need_padding_for_64bit(struct msg_buff *msg)
-{
-#ifndef CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS
-	/* The nlattr header is 4 bytes in size, that's why we test
-	 * if the msg->data _is_ aligned.  A NOP attribute, plus
-	 * nlattr header for next attribute, will make nla_data()
-	 * 8-byte aligned.
-	 */
-	if (IS_ALIGNED((unsigned long)msg_tail_pointer(msg), 8))
-		return true;
-#endif
-	return false;
-}
-
-/**
- * nla_align_64bit - 64-bit align the nla_data() of next attribute
- * @msg: message buffer the message is stored in
- * @padattr: attribute type for the padding
- *
- * Conditionally emit a padding netlink attribute in order to make
- * the next attribute we emit have a 64-bit aligned nla_data() area.
- * This will only be done in architectures which do not have
- * CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS defined.
- *
- * Returns zero on success or a negative error code.
- */
-static inline int nla_align_64bit(struct msg_buff *msg, int padattr)
-{
-	if (nla_need_padding_for_64bit(msg) &&
-	    !nla_reserve(msg, padattr, 0))
-		return -EMSGSIZE;
-
-	return 0;
-}
-
-/**
- * nla_total_size_64bit - total length of attribute including padding
- * @payload: length of payload
- */
-static inline int nla_total_size_64bit(int payload)
-{
-	return NLA_ALIGN(nla_attr_size(payload))
-#ifndef CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS
-		+ NLA_ALIGN(nla_attr_size(0))
-#endif
-		;
-}
-
-/**
- * __nla_reserve_64bit - reserve room for attribute on the msg and align it
- * @msg: message buffer to reserve room on
- * @attrtype: attribute type
- * @attrlen: length of attribute payload
- * @padattr: attribute type for the padding
- *
- * Adds a netlink attribute header to a socket buffer and reserves
- * room for the payload but does not copy it. It also ensure that this
- * attribute will have a 64-bit aligned nla_data() area.
- *
- * The caller is responsible to ensure that the msg provides enough
- * tailroom for the attribute header and payload.
- */
-struct nlattr *__nla_reserve_64bit(struct msg_buff *msg, int attrtype,
-				   int attrlen, int padattr)
-{
-	if (nla_need_padding_for_64bit(msg))
-		nla_align_64bit(msg, padattr);
-
-	return __nla_reserve(msg, attrtype, attrlen);
-}
-
-/**
- * __nla_put_64bit - Add a netlink attribute to a socket buffer and align it
- * @msg: message buffer to add attribute to
- * @attrtype: attribute type
- * @attrlen: length of attribute payload
- * @data: head of attribute payload
- * @padattr: attribute type for the padding
- *
- * The caller is responsible to ensure that the msg provides enough
- * tailroom for the attribute header and payload.
- */
-void __nla_put_64bit(struct msg_buff *msg, int attrtype, int attrlen,
-		     const void *data, int padattr)
-{
-	struct nlattr *nla;
-
-	nla = __nla_reserve_64bit(msg, attrtype, attrlen, padattr);
-	memcpy(nla_data(nla), data, attrlen);
-}
-
-/**
- * nla_put_64bit - Add a netlink attribute to a socket buffer and align it
- * @msg: message buffer to add attribute to
- * @attrtype: attribute type
- * @attrlen: length of attribute payload
- * @data: head of attribute payload
- * @padattr: attribute type for the padding
- *
- * Returns -EMSGSIZE if the tailroom of the msg is insufficient to store
- * the attribute header and payload.
- */
-int nla_put_64bit(struct msg_buff *msg, int attrtype, int attrlen,
-		  const void *data, int padattr)
-{
-	size_t len;
-
-	if (nla_need_padding_for_64bit(msg))
-		len = nla_total_size_64bit(attrlen);
-	else
-		len = nla_total_size(attrlen);
-	if (unlikely(msg_tailroom(msg) < len))
-		return -EMSGSIZE;
-
-	__nla_put_64bit(msg, attrtype, attrlen, data, padattr);
 	return 0;
 }
 

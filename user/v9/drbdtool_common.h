@@ -84,6 +84,8 @@ struct version {
 	unsigned version_code;
 };
 
+// Windows km/miniport.h has a #define STRICT
+#undef STRICT
 enum driver_version_policy {
 	STRICT,
 	FALLBACK_TO_UTILS

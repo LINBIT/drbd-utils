@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <windows.h>
 #include <linux/socket.h>
 #include <linux/types.h>
 #include <linux/netlink.h>
@@ -1042,8 +1043,6 @@ static inline int genlmsg_total_size(int payload)
  * Some helpers to simplify communicating with a particular family
  */
 struct genl_sock {
-	struct sockaddr_nl	s_local;
-	struct sockaddr_nl	s_peer;
 	int			s_fd;
 	unsigned int		s_seq_next;
 	unsigned int		s_seq_expect;

@@ -2717,6 +2717,9 @@ int v07_style_md_open(struct format *cfg)
 		exit(10);
 	}
 
+#ifndef __CYGWIN__
+	/* Windows doesn't have these ramdisks.
+	 * Or at least no major/minor numbers. */
 	if (!opened_odirect &&
 	    (MAJOR(sb.st_rdev) != RAMDISK_MAJOR)) {
 		ioctl_err = ioctl(cfg->md_fd, BLKFLSBUF);
@@ -2726,6 +2729,7 @@ int v07_style_md_open(struct format *cfg)
 			fprintf(stderr, "ioctl(md_fd, BLKFLSBUF) returned %d, "
 					"we may read stale data\n", ioctl_err);
 	}
+#endif
 
 	if (cfg->ops->md_disk_to_cpu(cfg)) {
 		/* no valid meta data found.  but we want to initialize
