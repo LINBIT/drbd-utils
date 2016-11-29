@@ -1,7 +1,7 @@
 #ifndef TOOL_SHARED_H
 #define TOOL_SHARED_H
 
-#include <linux/fs.h>           /* for BLKGETSIZE64 */
+#include <cygwin/fs.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdbool.h>
