@@ -16,10 +16,14 @@ extern "C"
 #include <MessageLog.h>
 
 // LOG_CAPACITY must be >= 1
-const size_t LOG_CAPACITY {30};
+const size_t LOG_CAPACITY {10};
 
 // Clear screen escape sequence
 const char* ANSI_CLEAR = "\x1b[H\x1b[2J";
+
+// Delay of 3 seconds for delayed restarts
+static const time_t DELAY_SECS = 3;
+static const long DELAY_NANOSECS = 0;
 
 static void reset_delay(struct timespec& delay);
 static void clear_screen();
@@ -29,7 +33,6 @@ int main(int argc, char* argv[])
 {
     int exit_code {0};
 
-    // Delay of 15 seconds for delayed restarts
     struct timespec delay;
     struct timespec remaining;
     reset_delay(delay);
@@ -147,8 +150,8 @@ int main(int argc, char* argv[])
 
 static void reset_delay(struct timespec& delay)
 {
-    delay.tv_sec  = 15;
-    delay.tv_nsec =  0;
+    delay.tv_sec  = DELAY_SECS;
+    delay.tv_nsec = DELAY_NANOSECS;
 }
 
 static void clear_screen()
