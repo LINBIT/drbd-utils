@@ -1,4 +1,4 @@
-CXXFLAGS=-std=c++11 -I. -Icppdsaext/src -Wall -Werror --pedantic-errors -fPIC -O2 \
+CXXFLAGS=-std=c++11 -I. -I../shared -Icppdsaext/src -Wall -Werror --pedantic-errors -fPIC -O2 \
 -Wsign-compare -Wpointer-arith -Wswitch-default -Wswitch-enum -Wtype-limits \
 -Wmissing-declarations -Wshadow
 CXX = @CXX@

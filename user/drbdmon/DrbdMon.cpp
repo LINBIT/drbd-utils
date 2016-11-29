@@ -18,9 +18,10 @@ extern "C"
 #include <CompactDisplay.h>
 #include <ConfigOption.h>
 #include <Args.h>
+#include "config.h"
 
 const std::string DrbdMon::PROGRAM_NAME = "DRBD DrbdMon";
-const std::string DrbdMon::VERSION = "0.23";
+const std::string DrbdMon::VERSION = PACKAGE_VERSION;
 
 const std::string DrbdMon::OPT_HELP_KEY = "help";
 const ConfigOption DrbdMon::OPT_HELP(true, OPT_HELP_KEY);
