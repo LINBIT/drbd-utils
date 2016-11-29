@@ -8,6 +8,7 @@
 extern "C"
 {
     #include <errno.h>
+    #include <config.h>
 }
 
 #include <map_types.h>
@@ -18,7 +19,6 @@ extern "C"
 #include <CompactDisplay.h>
 #include <ConfigOption.h>
 #include <Args.h>
-#include "config.h"
 
 const std::string DrbdMon::PROGRAM_NAME = "DRBD DrbdMon";
 const std::string DrbdMon::VERSION = PACKAGE_VERSION;

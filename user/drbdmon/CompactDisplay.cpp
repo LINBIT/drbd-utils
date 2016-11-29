@@ -3,8 +3,7 @@
 
 #include <CompactDisplay.h>
 #include <DrbdMon.h>
-
-#include "ConfigOption.h"
+#include <ConfigOption.h>
 
 const std::string CompactDisplay::OPT_NO_HEADER_KEY("no-header");
 const std::string CompactDisplay::OPT_NO_HOTKEYS_KEY("no-hotkeys");

@@ -1,7 +1,5 @@
 #include <StateFlags.h>
 
-#include "CompactDisplay.h"
-
 bool StateFlags::has_mark_state() const
 {
     return (obj_state != StateFlags::state::NORM);
