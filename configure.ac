@@ -6,11 +6,14 @@ dnl License: GNU General Public License Version 2 (GPLv2)
 dnl Minimum autoconf version we require
 AC_PREREQ(2.53)
 
+dnl Include cpp feature testing macro
+dnl AC_CONFIG_MACRO_DIR([m4])
+dnl Using AC_CONFIG_MACRO_DIR([m4]) would be the correct way, but RHEL6 ships a broken autoconf
+m4_include([m4/AX_CXX_COMPILE_STDXX.m4])
+m4_include([m4/AX_CXX_COMPILE_STDXX_11.m4])
+
 dnl What we are, our version, who to bug in case of problems
 AC_INIT(DRBD, 8.9.9, [drbd-dev@lists.linbit.com])
-
-dnl Include cpp feature testing macro
-AC_CONFIG_MACRO_DIR([m4])
 
 dnl Sanitize $prefix. Autoconf does this by itself, but so late in the
 dnl generated configure script that the expansion does not occur until
