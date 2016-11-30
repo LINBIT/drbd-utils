@@ -1860,26 +1860,32 @@ int was_file_already_seen(char *fn)
 	}
 
 	real_path = realpath(fn, NULL);
-	if (!real_path)
-		real_path = fn;
+	if (!real_path) {
+		real_path = strdup(fn);
+		if (!real_path) {
+			err("strdup %m");
+			free(e);
+			exit(E_THINKO);
+		}
+	}
 
 	e->key = real_path;
 	e->data = real_path;
 	if (tfind(e, &global_btree, btree_key_cmp)) {
 		/* Can be freed, it's just a queried key. */
-		if (real_path != fn)
-			free(real_path);
+		free(real_path);
 		free(e);
 		return 1;
 	}
 
 	if (!tsearch(e, &global_btree, btree_key_cmp)) {
 		err("tree entry (%s => %s) failed\n", e->key, (char *)e->data);
+		free(real_path);
 		free(e);
 		exit(E_THINKO);
 	}
 
-	/* Must not be freed, because it's still referenced by the hash table. */
+	/* Must not be freed, because it's still referenced by the binary tree. */
 	/* free(real_path); */
 
 	return 0;
