@@ -40,6 +40,7 @@
 #include <poll.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/prctl.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <linux/sockios.h>
@@ -304,6 +305,7 @@ void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd
 		exit(E_EXEC_ERROR);
 	}
 	if (pid == 0) {
+		prctl(PR_SET_PDEATHSIG, SIGKILL);
 		/* Child: close reading end. */
 		close(pipe_fds[0]);
 		if (flags & RETURN_STDOUT_FD) {
