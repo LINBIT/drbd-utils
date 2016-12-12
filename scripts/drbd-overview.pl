@@ -228,10 +228,11 @@ sub slurp_drbdsetup() {
             my $minor = $f{minor};
             my $vol = $f{volume};
             $later{$res}{vol_minor}{$vol} = $minor;
-            $later{$res}{peers}{dstates}{$HOSTNAME}  = $f{disk};
+            $later{$res}{peers}{dstates}{$vol}{$HOSTNAME} = $f{disk};
         } elsif ($what eq "peer-device") {
             my $n = $f{"conn-name"};
-            $later{$res}{peers}{dstates}{$n} = $f{"peer-disk"};
+            my $vol = $f{volume};
+            $later{$res}{peers}{dstates}{$vol}{$n} = $f{"peer-disk"};
         } else {
             warn("unknown key $what\n");
         }
@@ -259,7 +260,7 @@ sub slurp_drbdsetup() {
 # role with all mixed together
             $v->{role} = shorten_list(\@h_incl, $peers->{states});
 
-            $v->{dstate} = shorten_list(\@h_incl, $peers->{dstates});
+            $v->{dstate} = shorten_list(\@h_incl, $peers->{dstates}{$vol2});
             $v->{conn} = shorten_list(\@h_incl, $peers->{conns});
         }
     }
