@@ -160,7 +160,7 @@ This packages includes the DRBD administration tools.
 /lib/drbd/drbdsetup-84
 /lib/drbd/drbdadm-84
 %endif
-%if {with drbdmon}
+%if %{with drbdmon}
 %{_sbindir}/drbdmon
 %endif
 %if %{initscripttype} == "systemd"
@@ -199,6 +199,9 @@ This packages includes the DRBD administration tools.
 %{_mandir}/man8/drbdadm-*
 %{_mandir}/man5/drbd.conf-*
 %{_mandir}/man8/drbdmeta-*
+%if %{with drbdmon}
+%{_mandir}/man8/drbdmon-*
+%endif
 %endif
 %doc scripts/drbd.conf.example
 %doc COPYING
@@ -405,6 +408,9 @@ for f in drbd drbdadm drbdmeta drbdsetup; do
     ln -sf $f-8.4.8.gz %{_mandir}/man8/$f.8.gz
 done
 ln -sf drbd.conf-8.4.5.gz %{_mandir}/man5/drbd.conf.5.gz
+%if %{with drbdmon}
+ln -sf drbdmon-9.0.8.gz %{_mandir}/man8/drbdmon.8.gz
+%endif
 %endif
 %if %{without udev}
 for i in `seq 0 15` ; do
@@ -417,6 +423,7 @@ for f in drbd drbdadm drbdmeta drbdsetup; do
     rm -f %{_mandir}/man8/$f.8.gz
 done
 rm -f %{_mandir}/man5/drbd.conf.5.gz
+rm -f %{_mandir}/man8/drbdmon.8.gz
 %if %{initscripttype} == "systemd"
 %systemd_preun drbd.service
 %endif
