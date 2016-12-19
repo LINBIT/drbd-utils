@@ -224,6 +224,9 @@ static int confirmed(const char *text)
  * Pending a "nice" implementation of replay_al_84 for striped activity log,
  * I chose a big buffer hopefully large enough to hold the whole activity log,
  * even with "large" number of stripes and stripe sizes.
+ *
+ * If you chose to change buffer_size, double check also fprintf_bm(),
+ * and how it calculates its chunk size.
  */
 const size_t buffer_size = 32 * 1024 * 1024;
 size_t pagesize; /* = sysconf(_SC_PAGESIZE) */
@@ -2473,10 +2476,25 @@ static void fprintf_bm(FILE *f, struct format *cfg, int peer_nr, const char* ind
 	unsigned int i; /* in-buffer offset */
 	unsigned int j;
 
+	/*
+	 * The code below is a bit "funky" (ugly, unreadable, not only) with
+	 * the modulos, and implicit offset modulo continuation on buffer wrap.
+	 * To work, it requires the "chunk size" that is read-in per iteration
+	 * to be a multiple of max_peer_size * 8 bytes, or it will be seriously
+	 * confused on buffer wrap.
+	 * IO-size should be a multiple of 4k anyways (because of O_DIRECT),
+	 * align on 4k * max_peers seems to be an easy enough fix for said confusion.
+	 * If you change buffer_size, double check this hackish reasoning as well. */
+	const size_t max_chunk_size = round_down(buffer_size, 4096 * max_peers);
+
+	ASSERT(buffer_size >= DRBD_PEERS_MAX * 4096);
+	ASSERT(max_chunk_size);
+
 	i = peer_nr;
 	r = peer_nr;
 	cw.le = 0; /* silence compiler warning */
 	fprintf(f, "{");
+
 
 	if (r < n)
 		goto start;
@@ -2484,13 +2502,13 @@ static void fprintf_bm(FILE *f, struct format *cfg, int peer_nr, const char* ind
 	while (r < n) {
 		/* need to read on first iteration,
 		 * and on buffer wrap */
-		if (i * sizeof(*bm) >= buffer_size) {
+		if (i * sizeof(*bm) >= max_chunk_size) {
 			size_t chunk;
-			i -= buffer_size / sizeof(*bm);
+			i -= max_chunk_size / sizeof(*bm);
 		start:
 			chunk = ALIGN((n - round_down(r, max_peers)) * sizeof(*bm), cfg->md_hard_sect_size);
-			if (chunk > buffer_size)
-				chunk = buffer_size;
+			if (chunk > max_chunk_size)
+				chunk = max_chunk_size;
 			ASSERT(chunk);
 			pread_or_die(cfg, on_disk_buffer,
 				chunk, bm_on_disk_off, "fprintf_bm");
@@ -2509,6 +2527,7 @@ next:
 			for (j = i; j < n_buffer && cw.le == bm[j].le; j += max_peers)
 				;
 			unsigned int tmp = round_down(j / max_peers - i / max_peers, WPL);
+
 			if (tmp > WPL) {
 				count += tmp;
 				r += tmp * max_peers;
@@ -2626,9 +2645,12 @@ int v07_style_md_open(struct format *cfg)
 	}
 
 	if (!S_ISBLK(sb.st_mode)) {
-		fprintf(stderr, "'%s' is not a block device!\n",
-			cfg->md_device_name);
-		exit(20);
+		if (!force) {
+			fprintf(stderr, "'%s' is not a block device!\n",
+				cfg->md_device_name);
+			exit(20);
+		}
+		cfg->bd_size = sb.st_size;
 	}
 
 	if (format_version(cfg) >= DRBD_V08) {
@@ -2646,7 +2668,8 @@ int v07_style_md_open(struct format *cfg)
 				cfg->md_hard_sect_size);
 	}
 
-	cfg->bd_size = bdev_size(cfg->md_fd);
+	if (!cfg->bd_size)
+		cfg->bd_size = bdev_size(cfg->md_fd);
 	/* check_for_existing_data() wants to read that much,
 	 * so having less than that doesn't make sense.
 	 * It's only 68kB anyway! */
