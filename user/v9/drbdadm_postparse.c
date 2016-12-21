@@ -848,7 +848,7 @@ struct addrtree_entry {
 
 static void *addrtree = NULL;
 
-int addrtree_key_cmp(const void *a, const void *b)
+static int addrtree_key_cmp(const void *a, const void *b)
 {
 	struct addrtree_entry *e1 = (struct addrtree_entry *)a;
 	struct addrtree_entry *e2 = (struct addrtree_entry *)b;
