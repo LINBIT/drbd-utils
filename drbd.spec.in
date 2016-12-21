@@ -371,7 +371,7 @@ autoconf
     %{?_without_manual} \
     --with-initdir=%{_initddir} \
     %{?_tmpfilesdir:--with-tmpfilesdir=%{_tmpfilesdir}} \
-    --with-initscripttype=%{initscripttype}
+    --with-initscripttype=%{initscripttype} \
     %{?_without_drbdmon}
 make %{?_smp_mflags}
 
