@@ -192,20 +192,13 @@ opt_equal(struct context_def *ctx, const char *opt_name, struct options *conf, s
 	return 1; /* Both not set */
 }
 
-static int addr_equal(struct d_address *a1, struct d_address *a2)
-{
-	return  !strcmp(a1->addr, a2->addr) &&
-		!strcmp(a1->port, a2->port) &&
-		!strcmp(a1->af, a2->af);
-}
-
 static struct path *find_path_by_addrs(struct connection *conn, struct path *pattern)
 {
 	struct path *path;
 
 	for_each_path(path, &conn->paths) {
-		if (addr_equal(path->my_address, pattern->my_address) &&
-		    addr_equal(path->connect_to, pattern->connect_to))
+		if (addresses_equal(path->my_address, pattern->my_address) &&
+		    addresses_equal(path->connect_to, pattern->connect_to))
 			return path;
 	}
 

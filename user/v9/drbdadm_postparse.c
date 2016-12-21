@@ -823,18 +823,22 @@ static void create_connections_from_mesh(struct d_resource *res, struct mesh *me
 	}
 }
 
-static bool addresses_equal(struct d_address *addr1, struct d_address *addr2)
+int addresses_cmp(struct d_address *addr1, struct d_address *addr2)
 {
-	if (strcmp(addr1->af, addr2->af))
-		return false;
+	int ret;
 
-	if (strcmp(addr1->addr, addr2->addr))
-		return false;
+	if ((ret = strcmp(addr1->addr, addr2->addr)))
+		return ret;
 
-	if (strcmp(addr1->port, addr2->port))
-		return false;
+	if ((ret = strcmp(addr1->port, addr2->port)))
+		return ret;
 
-	return true;
+	return strcmp(addr1->af, addr2->af);
+}
+
+bool addresses_equal(struct d_address *addr1, struct d_address *addr2)
+{
+	return !addresses_cmp(addr1, addr2);
 }
 
 struct addrtree_entry {
@@ -848,18 +852,8 @@ int addrtree_key_cmp(const void *a, const void *b)
 {
 	struct addrtree_entry *e1 = (struct addrtree_entry *)a;
 	struct addrtree_entry *e2 = (struct addrtree_entry *)b;
-	int ret = 0;
 
-	ret = strcmp(e1->da->addr, e2->da->addr);
-	if (ret)
-		return ret;
-
-	ret = strcmp(e1->da->port, e2->da->port);
-	if (ret)
-		return ret;
-
-	ret = strcmp(e1->da->af, e2->da->af);
-	return ret;
+	return addresses_cmp(e1->da, e2->da);
 }
 
 static struct hname_address *find_hname_addr_in_res(struct d_resource *res, struct d_address *addr)
