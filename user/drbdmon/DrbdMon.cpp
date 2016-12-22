@@ -249,6 +249,10 @@ void DrbdMon::run()
                                     shutdown = true;
                                     std::cerr << "DrbdMon: Quit command, exiting" << std::endl;
                                 }
+                                else
+                                {
+                                    display->key_pressed(c);
+                                }
                             }
                         }
                         break;

@@ -39,6 +39,7 @@ const char* CompactDisplay::F_RES_NAME   = "\x1b[0;4;32m";
 
 const char* CompactDisplay::F_CURSOR_POS = "\x1b[%u;%uH";
 const char* CompactDisplay::F_HOTKEY     = "\x1b[0;30;47m%c\x1b[0;37;44m %s \033[0m";
+const char* CompactDisplay::F_ALERT_HOTKEY = "\x1b[0;30;47m%c\x1b[1;33;41m %s \033[0m";
 
 const char* CompactDisplay::UTF8_PRIMARY   = "\xE2\x9A\xAB";
 const char* CompactDisplay::UTF8_SECONDARY = " "; // otherwise UTF-8 E2 9A AA
@@ -63,6 +64,16 @@ const char* CompactDisplay::ANSI_CLEAR_LINE = "\x1b[K";
 
 const char* CompactDisplay::ANSI_CURSOR_OFF = "\x1b[?25l";
 const char* CompactDisplay::ANSI_CURSOR_ON  = "\x1b[?25h";
+
+const char CompactDisplay::HOTKEY_PGUP = '<';
+const char CompactDisplay::HOTKEY_PGDN = '>';
+const char CompactDisplay::HOTKEY_PGZERO = '0';
+
+const std::string CompactDisplay::LABEL_MESSAGES = "Messages";
+const std::string CompactDisplay::LABEL_MONITOR  = "Monitor";
+const std::string CompactDisplay::LABEL_PGUP      = "PgUp";
+const std::string CompactDisplay::LABEL_PGDN      = "PgDn";
+const std::string CompactDisplay::LABEL_PGZERO    = "Pg0";
 
 const uint16_t CompactDisplay::MIN_SIZE_X =   40;
 const uint16_t CompactDisplay::MAX_SIZE_X = 1024;
@@ -103,6 +114,10 @@ CompactDisplay::CompactDisplay(
     // Hide the cursor
     std::fputs(ANSI_CURSOR_OFF, stdout);
     std::fflush(stdout);
+
+    hotkeys_info.append(&HOTKEY_PGZERO, &LABEL_PGZERO);
+    hotkeys_info.append(&HOTKEY_PGUP, &LABEL_PGUP);
+    hotkeys_info.append(&HOTKEY_PGDN, &LABEL_PGDN);
 }
 
 CompactDisplay::~CompactDisplay() noexcept
@@ -120,31 +135,42 @@ void CompactDisplay::clear()
     std::fflush(stdout);
 
     current_x = 0;
+    current_y = 0;
 }
 
 void CompactDisplay::status_display()
 {
+    uint32_t current_page = page;
+    page_start = (term_y - 4) * current_page;
+    page_end   = (term_y - 4) * (current_page + 1) - 1;
+
     prepare_flags();
     clear();
     display_header();
 
-    if (resources_map.get_size() >= 1)
+    if (log.has_entries() && dsp_msg_active)
     {
-        list_resources();
+        log.display_messages(stdout);
     }
     else
     {
-        std::fprintf(stdout, "%sNo active DRBD resources.%s\n", F_RES_NAME, F_RESET);
+        if (!log.has_entries())
+        {
+            dsp_msg_active = false;
+        }
+
+        if (resources_map.get_size() >= 1)
+        {
+            list_resources();
+        }
+        else
+        {
+            std::fprintf(stdout, "%sNo active DRBD resources.%s\n", F_RES_NAME, F_RESET);
+        }
     }
 
     // End line & flush, if not already done
     next_line();
-
-    if (log.has_entries())
-    {
-        std::fputc('\n', stdout);
-        log.display_messages(stdout);
-    }
 
     display_hotkeys_info();
     std::fflush(stdout);
@@ -156,6 +182,16 @@ void CompactDisplay::display_header() const
     {
         std::fprintf(stdout, "%s%s%s v%s\n", F_HEADER, ANSI_CLEAR_LINE,
                      DrbdMon::PROGRAM_NAME.c_str(), DrbdMon::VERSION.c_str());
+        if (enable_term_size && term_y > MIN_SIZE_Y && term_x > 15)
+        {
+            std::fprintf(stdout, F_CURSOR_POS, 2, static_cast<int> (term_x) - 15);
+            std::fputs(F_RESET, stdout);
+            std::fprintf(stdout, "Page %5lu\n", static_cast<long> (page) + 1);
+        }
+        else
+        {
+            std::fputc('\n', stdout);
+        }
     }
 }
 
@@ -170,7 +206,8 @@ void CompactDisplay::display_hotkeys_info() const
 
         HotkeysMap::NodesIterator hotkeys_iter(hotkeys_info);
         size_t count = hotkeys_iter.get_size();
-        for (size_t index = 0; index < count; ++index)
+        size_t index = 0;
+        while (index < count)
         {
             HotkeysMap::Node* node = hotkeys_iter.next();
             const char hotkey = *(node->get_key());
@@ -180,6 +217,24 @@ void CompactDisplay::display_hotkeys_info() const
                 std::fputc(' ', stdout);
             }
             std::fprintf(stdout, F_HOTKEY, hotkey, description.c_str());
+            ++index;
+        }
+        if (dsp_msg_active)
+        {
+            if (index > 0)
+            {
+                std::fputc(' ', stdout);
+            }
+            std::fprintf(stdout, F_HOTKEY, 'm', LABEL_MONITOR.c_str());
+        }
+        else
+        if (log.has_entries())
+        {
+            if (index > 0)
+            {
+                std::fputc(' ', stdout);
+            }
+            std::fprintf(stdout, F_ALERT_HOTKEY, 'm', LABEL_MESSAGES.c_str());
         }
         std::fprintf(stdout, F_CURSOR_POS, 1, 1);
     }
@@ -245,11 +300,12 @@ void CompactDisplay::list_resources()
 
         next_line();
         // Marker (1) + "RES:" (4) + RES_NAME_WIDTH + " " (1) + role icon (1) + ROLE_WIDTH
-        next_column(6 + RES_NAME_WIDTH + ROLE_WIDTH);
-
-        std::fprintf(stdout, "%s%s%sRES:%s%-*s%s %s%s%-*s%s",
-                     f_mark, mark_icon, f_res, F_RES_NAME, RES_NAME_WIDTH, res.get_name().c_str(), F_RESET,
-                     f_role, role_icon, ROLE_WIDTH, res.get_role_label(), F_RESET);
+        if (next_column(6 + RES_NAME_WIDTH + ROLE_WIDTH))
+        {
+            std::fprintf(stdout, "%s%s%sRES:%s%-*s%s %s%s%-*s%s",
+                         f_mark, mark_icon, f_res, F_RES_NAME, RES_NAME_WIDTH, res.get_name().c_str(), F_RESET,
+                         f_role, role_icon, ROLE_WIDTH, res.get_role_label(), F_RESET);
+        }
 
         increase_indent();
         list_volumes(res);
@@ -287,9 +343,11 @@ void CompactDisplay::list_connections(DrbdResource& res)
                 const std::string& conn_name = conn.get_name();
 
                 // Mark (1) + connection icon (1) + role icon (1) + name length
-                next_column(3 + conn_name.length());
-                std::fprintf(stdout, "%s%s%s%s%s%s%s",
-                             f_conn, mark_off, conn_good, f_role, role_icon, conn_name.c_str(), F_RESET);
+                if (next_column(3 + conn_name.length()))
+                {
+                    std::fprintf(stdout, "%s%s%s%s%s%s%s",
+                                 f_conn, mark_off, conn_good, f_role, role_icon, conn_name.c_str(), F_RESET);
+                }
             }
         }
     }
@@ -342,13 +400,14 @@ void CompactDisplay::list_connections(DrbdResource& res)
                 next_line();
                 // Mark (1) + connection icon (1) + role icon (1) + CONN_NAME_WIDTH +
                 // " " (1) + CONN_STATE_WIDTH + " " (1) + role icon (1) + ROLE_WIDTH
-                next_column(6 + CONN_NAME_WIDTH + CONN_STATE_WIDTH + ROLE_WIDTH);
-
-                std::fprintf(stdout, "%s%s%s%s%s%-*s%s %s%-*s%s %s%s%-*s%s",
-                             F_MARK, mark_on, f_conn, conn_icon, role_icon, CONN_NAME_WIDTH,
-                             conn.get_name().c_str(), F_RESET, f_conn_state, CONN_STATE_WIDTH,
-                             conn.get_connection_state_label(), F_RESET, f_role, role_icon,
-                             ROLE_WIDTH, conn.get_role_label(), F_RESET);
+                if (next_column(6 + CONN_NAME_WIDTH + CONN_STATE_WIDTH + ROLE_WIDTH))
+                {
+                    std::fprintf(stdout, "%s%s%s%s%s%-*s%s %s%-*s%s %s%s%-*s%s",
+                                 F_MARK, mark_on, f_conn, conn_icon, role_icon, CONN_NAME_WIDTH,
+                                 conn.get_name().c_str(), F_RESET, f_conn_state, CONN_STATE_WIDTH,
+                                 conn.get_connection_state_label(), F_RESET, f_role, role_icon,
+                                 ROLE_WIDTH, conn.get_role_label(), F_RESET);
+                }
 
                 increase_indent();
                 list_peer_volumes(conn);
@@ -460,20 +519,30 @@ void CompactDisplay::show_volume(DrbdVolume& vol, bool peer_volume, bool long_fo
             vol_entry_width += 1 + REPL_STATE_WIDTH;
         }
 
-        next_column(vol_entry_width);
-        std::fprintf(stdout, "%s%s%*ld", F_ALERT, disk_bad, VOL_NR_WIDTH, static_cast<long> (vol.get_volume_nr()));
+        bool show = next_column(vol_entry_width);
+
+        if (show)
+        {
+            std::fprintf(
+                stdout, "%s%s%*ld",
+                F_ALERT, disk_bad, VOL_NR_WIDTH, static_cast<long> (vol.get_volume_nr())
+            );
+        }
 
         // Hide the minor number of peer volumes, as it is always unknown
-        if (!peer_volume)
+        if (!peer_volume && show)
         {
             // Display minor number
             std::fprintf(stdout, ":%s%*ld", F_VOL_MINOR, MINOR_NR_WIDTH, static_cast<long> (vol.get_minor_nr()));
         }
 
         // Display disk state
-        std::fprintf(stdout, " %s %-*s%s", f_disk, DISK_STATE_WIDTH, vol.get_disk_state_label(), F_RESET);
+        if (show)
+        {
+            std::fprintf(stdout, " %s %-*s%s", f_disk, DISK_STATE_WIDTH, vol.get_disk_state_label(), F_RESET);
+        }
 
-        if (show_replication)
+        if (show_replication && show)
         {
             // Display replication state
             std::fprintf(stdout, " %s%-*s%s", f_repl, REPL_STATE_WIDTH,
@@ -490,12 +559,14 @@ void CompactDisplay::show_volume(DrbdVolume& vol, bool peer_volume, bool long_fo
         }
 
         // Disk icon (1) + VOL_NR_WIDTH + ":" (1) + MINOR_NR_WIDTH
-        next_column(2 + VOL_NR_WIDTH + MINOR_NR_WIDTH);
-        std::fprintf(stdout, "%s%s%s%s%*ld:%s%*ld%s",
-                     F_NORM, disk_good, F_RESET,
-                     f_vol, VOL_NR_WIDTH, static_cast<long> (vol.get_volume_nr()),
-                     F_VOL_MINOR, MINOR_NR_WIDTH, static_cast<long> (vol.get_minor_nr()),
-                     F_RESET);
+        if (next_column(2 + VOL_NR_WIDTH + MINOR_NR_WIDTH))
+        {
+            std::fprintf(stdout, "%s%s%s%s%*ld:%s%*ld%s",
+                         F_NORM, disk_good, F_RESET,
+                         f_vol, VOL_NR_WIDTH, static_cast<long> (vol.get_volume_nr()),
+                         F_VOL_MINOR, MINOR_NR_WIDTH, static_cast<long> (vol.get_minor_nr()),
+                         F_RESET);
+        }
     }
 }
 
@@ -556,21 +627,29 @@ void CompactDisplay::reset_positions()
 {
     reset_indent();
     current_x = 0;
+    current_y = 0;
 }
 
 void CompactDisplay::indent()
 {
-    for (uint16_t counter = 0; counter < indent_level; ++counter)
+    if (!(enable_term_size && term_y > MIN_SIZE_Y) ||
+        (current_y >= page_start && current_y <= page_end))
     {
-        std::fputs(indent_buffer, stdout);
+        for (uint16_t counter = 0; counter < indent_level; ++counter)
+        {
+            std::fputs(indent_buffer, stdout);
+        }
     }
     current_x += INDENT_STEP_SIZE * indent_level;
 }
 
-void CompactDisplay::next_column(uint16_t length)
+bool CompactDisplay::next_column(uint16_t length)
 {
-    if (enable_term_size)
+    bool display_flag = false;
+    if (enable_term_size && term_y > MIN_SIZE_Y)
     {
+        display_flag = current_y >= page_start && current_y <= page_end;
+
         // If this column is at the start of a new line,
         // print the indent
         if (current_x == 0)
@@ -585,12 +664,16 @@ void CompactDisplay::next_column(uint16_t length)
             uint16_t end_x = current_x + length + 1;
             if (end_x < term_x)
             {
-                std::fputc(' ', stdout);
+                if (display_flag)
+                {
+                    std::fputc(' ', stdout);
+                }
                 current_x = end_x;
             }
             else
             {
                 next_line();
+                display_flag = current_y >= page_start && current_y <= page_end;
                 indent();
                 current_x += length;
             }
@@ -598,6 +681,7 @@ void CompactDisplay::next_column(uint16_t length)
     }
     else
     {
+        display_flag = true;
         if (current_x == 0)
         {
             indent();
@@ -610,14 +694,20 @@ void CompactDisplay::next_column(uint16_t length)
             std::fputc(' ', stdout);
         }
     }
+    return display_flag;
 }
 
 void CompactDisplay::next_line()
 {
     if (current_x > 0)
     {
-        std::fputc('\n', stdout);
+        if (!(enable_term_size && term_y > MIN_SIZE_Y) ||
+            (current_y >= page_start && current_y <= page_end))
+        {
+            std::fputc('\n', stdout);
+        }
         current_x = 0;
+        ++current_y;
     }
 }
 
@@ -690,4 +780,38 @@ void CompactDisplay::set_option(std::string& key, std::string& value)
 {
     // no-op; the CompactDisplay instance does not have any options
     // with configurable values at this time
+}
+
+void CompactDisplay::key_pressed(const char key)
+{
+    switch (key)
+    {
+        case '>':
+            ++page;
+            status_display();
+            break;
+        case '<':
+            --page;
+            status_display();
+            break;
+        case 'm':
+            if (dsp_msg_active)
+            {
+                dsp_msg_active = false;
+            }
+            else
+            if (log.has_entries())
+            {
+                dsp_msg_active = true;
+            }
+            status_display();
+            break;
+        case '0':
+            page = 0;
+            status_display();
+            break;
+        default:
+            // no-op
+            break;
+    }
 }

@@ -28,6 +28,7 @@ class DebugDisplay : public GenericDisplay
     virtual void status_display() override;
     virtual void display_header() const override;
     virtual void set_terminal_size(uint16_t size_x, uint16_t size_y) override;
+    virtual void key_pressed(const char key) override;
 
   private:
     ResourcesMap& resources_map;

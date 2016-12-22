@@ -90,3 +90,7 @@ void DebugDisplay::display_hotkeys_info() const
     }
     std::fputc('\n', stdout);
 }
+
+void DebugDisplay::key_pressed(const char key)
+{
+}

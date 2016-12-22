@@ -54,6 +54,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
 
     static const char* F_CURSOR_POS;
     static const char* F_HOTKEY;
+    static const char* F_ALERT_HOTKEY;
 
     static const char* UTF8_PRIMARY;
     static const char* UTF8_SECONDARY;
@@ -77,6 +78,16 @@ class CompactDisplay : public GenericDisplay, public Configurable
     static const char* ANSI_CLEAR_LINE;
     static const char* ANSI_CURSOR_OFF;
     static const char* ANSI_CURSOR_ON;
+
+    static const char HOTKEY_PGUP;
+    static const char HOTKEY_PGDN;
+    static const char HOTKEY_PGZERO;
+
+    static const std::string LABEL_MESSAGES;
+    static const std::string LABEL_MONITOR;
+    static const std::string LABEL_PGUP;
+    static const std::string LABEL_PGDN;
+    static const std::string LABEL_PGZERO;
 
     static const uint16_t INDENT_STEP_SIZE;
 
@@ -126,6 +137,8 @@ class CompactDisplay : public GenericDisplay, public Configurable
     // @throws std::bad_alloc
     virtual void set_option(std::string& key, std::string& value) override;
 
+    virtual void key_pressed(const char key) override;
+
   private:
     void list_resources();
     void list_connections(DrbdResource& res);
@@ -138,7 +151,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
     void reset_indent();
     void reset_positions();
     void indent();
-    void next_column(uint16_t length);
+    bool next_column(uint16_t length);
     void next_line();
     void prepare_flags();
 
@@ -147,11 +160,17 @@ class CompactDisplay : public GenericDisplay, public Configurable
     MessageLog& log;
     HotkeysMap& hotkeys_info;
 
+    bool dsp_msg_active {false};
+    uint16_t page {0};
+    uint32_t page_start {0};
+    uint32_t page_end {0};
+
     uint16_t term_x {80};
     uint16_t term_y {25};
     char* indent_buffer {nullptr};
     uint16_t indent_level {0};
     uint16_t current_x {0};
+    uint32_t current_y {0};
     bool show_header {true};
     bool show_hotkeys {true};
     bool enable_term_size {true};
