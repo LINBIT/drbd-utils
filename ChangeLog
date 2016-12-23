@@ -2,7 +2,7 @@ Latest:
 ------
  For even more detail, use "git log" or visit http://git.drbd.org/.
 
-8.9.10rc1
+8.9.10
 --------
  * new drbdmon tool, which provides a compact overview about resources.
    In contrast to drbdsetup status it provides live monitoring.
