@@ -674,9 +674,11 @@ void schedule_peer_device_options(const struct cfg_ctx *ctx)
 		err("Call schedule_peer_devices_options() with vol or conn set!");
 		exit(E_THINKO);
 	} else if (!tmp_ctx.vol) {
-		STAILQ_FOREACH(peer_device, &tmp_ctx.conn->peer_devices, connection_link) {
-
-			if (STAILQ_EMPTY(&peer_device->pd_options))
+		struct d_host_info *me = ctx->res->me;
+		struct d_volume *vol;
+		for_each_volume(vol, &me->volumes) {
+			peer_device = find_peer_device(me, tmp_ctx.conn, vol->vnr);
+			if (!peer_device || STAILQ_EMPTY(&peer_device->pd_options))
 				continue;
 
 			tmp_ctx.vol = peer_device->volume;
