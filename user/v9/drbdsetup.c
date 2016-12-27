@@ -2391,7 +2391,7 @@ static void device_status_json(struct devices_list *device)
 	printf("    {\n"
 	       "      \"volume\": %d,\n"
 	       "      \"minor\": %d,\n"
-	       "      \"disk-state:\": \"%s\",\n",
+	       "      \"disk-state\": \"%s\",\n",
 	       device->ctx.ctx_volume,
 	       device->minor,
 	       drbd_disk_str(device->info.dev_disk_state));
