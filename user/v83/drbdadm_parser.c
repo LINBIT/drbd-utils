@@ -1663,7 +1663,7 @@ void include_stmt(char *str)
 			} else {
 				fprintf(stderr,
 					"%s:%d: Failed to open include file '%s'.\n",
-					config_file, line, yylval.txt);
+					config_file, line, glob_buf.gl_pathv[i]);
 				config_valid = 0;
 			}
 		}
@@ -1672,7 +1672,7 @@ void include_stmt(char *str)
 		if (!strchr(str, '?') && !strchr(str, '*') && !strchr(str, '[')) {
 			fprintf(stderr,
 				"%s:%d: Failed to open include file '%s'.\n",
-				config_file, line, yylval.txt);
+				config_file, line, str);
 			config_valid = 0;
 		}
 	} else {

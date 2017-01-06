@@ -1980,7 +1980,7 @@ void include_stmt(char *str)
 				fclose(f);
 			} else {
 				err("%s:%d: Failed to open include file '%s'.\n",
-				    config_save, line, yylval.txt);
+				    config_save, line, glob_buf.gl_pathv[i]);
 				config_valid = 0;
 			}
 		}
@@ -1988,7 +1988,7 @@ void include_stmt(char *str)
 	} else if (r == GLOB_NOMATCH) {
 		if (!strchr(str, '?') && !strchr(str, '*') && !strchr(str, '[')) {
 			err("%s:%d: Failed to open include file '%s'.\n",
-			    config_save, line, yylval.txt);
+			    config_save, line, str);
 			config_valid = 0;
 		}
 	} else {
