@@ -2707,9 +2707,12 @@ static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		struct connections_list *connections, *connection;
 		struct peer_devices_list *peer_devices = NULL;
 		bool single_device;
+		static bool jsonisfirst = true;
 
 		if (strcmp(objname, "all") && strcmp(objname, resource->name))
 			continue;
+		if (json)
+			jsonisfirst ? jsonisfirst = false : puts(",");
 
 		devices = list_devices(resource->name);
 		connections = sort_connections(list_connections(resource->name));
@@ -2732,8 +2735,6 @@ static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
 					puts(",");
 			}
 			puts(" ]\n}");
-			if (resource->next)
-				puts(",");
 		} else {
 			resource_status(resource);
 			single_device = devices && !devices->next;
