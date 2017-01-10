@@ -26,8 +26,6 @@
 /* have the <sys/....h> first, otherwise you get e.g. "redefined" types from
  * sys/types.h and other weird stuff */
 
-#define INITIALIZE_BITMAP 0
-
 #define _GNU_SOURCE
 #define _XOPEN_SOURCE 600
 #define _FILE_OFFSET_BITS 64
@@ -61,6 +59,11 @@
 #include "drbdmeta_parser.h"
 
 #include "config.h"
+
+/* BLKZEROOUT, available on linux-3.6 and later. */
+#ifndef BLKZEROOUT
+# define BLKZEROOUT	_IO(0x12,127)
+#endif
 
 extern FILE* yyin;
 YYSTYPE yylval;
@@ -1696,6 +1699,57 @@ void initialize_al(struct format *cfg)
 
 void check_for_existing_data(struct format *cfg);
 
+static void zeroout_bitmap(struct format *cfg)
+{
+	const size_t bitmap_bytes =
+		ALIGN(bm_bytes(&cfg->md, cfg->bd_size >> 9), cfg->md_hard_sect_size);
+	uint64_t range[2];
+	int err;
+
+	range[0] = cfg->bm_offset; /* start offset */
+	range[1] = bitmap_bytes; /* len */
+
+	fprintf(stderr,"initializing bitmap (%u KB) to all zero\n",
+		(unsigned int)(bitmap_bytes>>10));
+
+	err = ioctl(cfg->md_fd, BLKZEROOUT, &range);
+	if (!err)
+		return;
+
+	if (errno == ENOTTY) {
+		/* need to sector-align this for O_DIRECT.
+		 * "sector" here means hard-sect size, which may be != 512.
+		 * Note that even though ALIGN does round up, for sector sizes
+		 * of 512, 1024, 2048, 4096 Bytes, this will be fully within
+		 * the claimed meta data area, since we already align all
+		 * "interesting" parts of that to 4kB */
+		size_t i = bitmap_bytes;
+		off_t bm_on_disk_off = cfg->bm_offset;
+		unsigned int percent_done = 0;
+		unsigned int percent_last_report = 0;
+		size_t chunk;
+
+		memset(on_disk_buffer, 0x00, buffer_size);
+		while (i) {
+			chunk = buffer_size < i ? buffer_size : i;
+			pwrite_or_die(cfg, on_disk_buffer,
+				      chunk, bm_on_disk_off,
+				      "md_initialize_common:BM");
+			bm_on_disk_off += chunk;
+			i -= chunk;
+			percent_done = 100*(bitmap_bytes-i)/bitmap_bytes;
+			if (percent_done != percent_last_report) {
+				fprintf(stderr,"\r%u%%", percent_done);
+				percent_last_report = percent_done;
+			}
+		}
+		fprintf(stderr,"\r100%%\n");
+	} else {
+		PERROR("ioctl(%s) failed", cfg->md_device_name);
+		exit(10);
+	}
+}
+
 /* MAYBE DOES DISK WRITES!! */
 int md_initialize_common(struct format *cfg, int do_disk_writes)
 {
@@ -1717,42 +1771,15 @@ int md_initialize_common(struct format *cfg, int do_disk_writes)
 	}
 	initialize_al(cfg);
 
-	/* THINK
-	 * do we really need to initialize the bitmap? */
-	if (INITIALIZE_BITMAP) {
-		/* need to sector-align this for O_DIRECT.
-		 * "sector" here means hard-sect size, which may be != 512.
-		 * Note that even though ALIGN does round up, for sector sizes
-		 * of 512, 1024, 2048, 4096 Bytes, this will be fully within
-		 * the claimed meta data area, since we already align all
-		 * "interesting" parts of that to 4kB */
-		const size_t bm_bytes = ALIGN(cfg->bm_bytes, cfg->md_hard_sect_size);
-		size_t i = bm_bytes;
-		off_t bm_on_disk_off = cfg->bm_offset;
-		unsigned int percent_done = 0;
-		unsigned int percent_last_report = 0;
-		size_t chunk;
-		fprintf(stderr,"initializing bitmap (%u KB)\n",
-			(unsigned int)(bm_bytes>>10));
+	/* We initialize the bitmap to all 0 for the use case that someone
+	 * might use set-gi to pretend that the backend devices are completely
+	 * in sync. (I.e. thinly provisioned storage, all zeroes)
+	 *
+	 * In case it current UUID is left at UUID_JUST_CREATED the kernel
+	 * driver will set all bits to 1 when using it in a handshake...
+	 */
+	zeroout_bitmap(cfg);
 
-		memset(on_disk_buffer, 0xff, buffer_size);
-		while (i) {
-			chunk = buffer_size < i ? buffer_size : i;
-			pwrite_or_die(cfg, on_disk_buffer,
-				chunk, bm_on_disk_off,
-				"md_initialize_common:BM");
-			bm_on_disk_off += chunk;
-			i -= chunk;
-			percent_done = 100*(bm_bytes-i)/bm_bytes;
-			if (percent_done != percent_last_report) {
-				fprintf(stderr,"\r%u%%", percent_done);
-				percent_last_report = percent_done;
-			}
-		}
-		fprintf(stderr,"\r100%%\n");
-	} else {
-		fprintf(stderr,"NOT initializing bitmap\n");
-	}
 	return 0;
 }
 
