@@ -889,6 +889,8 @@ const char *read_balancing_map[] = {
 	{ "al-updates", BOOLEAN(al_updates, AL_UPDATES) },				\
 	{ "discard-zeroes-if-aligned",							\
 		BOOLEAN(discard_zeroes_if_aligned, DISCARD_ZEROES_IF_ALIGNED) },	\
+	{ "disable-write-same",								\
+		BOOLEAN(disable_write_same, DISABLE_WRITE_SAME) },			\
 	{ "c-plan-ahead", NUMERIC(c_plan_ahead, C_PLAN_AHEAD),				\
           .unit = "1/10 seconds" },							\
 	{ "c-delay-target", NUMERIC(c_delay_target, C_DELAY_TARGET),			\

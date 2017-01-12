@@ -844,6 +844,8 @@ const struct en_map quorum_map[] = {
 	{ "al-updates", BOOLEAN(al_updates, AL_UPDATES) },				\
 	{ "discard-zeroes-if-aligned",							\
 		BOOLEAN(discard_zeroes_if_aligned, DISCARD_ZEROES_IF_ALIGNED) },	\
+	{ "disable-write-same",								\
+		BOOLEAN(disable_write_same, DISABLE_WRITE_SAME) },			\
 	{ "disk-timeout", NUMERIC(disk_timeout,	DISK_TIMEOUT),				\
 	  .unit = "1/10 seconds" },							\
 	{ "read-balancing", ENUM(read_balancing, READ_BALANCING) },			\
