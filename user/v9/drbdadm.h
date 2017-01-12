@@ -443,6 +443,7 @@ extern void *global_btree;
 extern int no_tty;
 extern int dry_run;
 extern int verbose;
+extern int all_resources;
 extern char* drbdsetup;
 extern char* drbdmeta;
 extern char* drbd_proxy_ctl;
