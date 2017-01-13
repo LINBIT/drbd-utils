@@ -24,6 +24,12 @@
 	.nla_policy = p ## _nl_policy,							\
 	.nla_policy_size = ARRAY_SIZE(p ## _nl_policy)
 
+
+struct en_map {
+	const char *name;
+	int value;
+};
+
 /* ============================================================================================== */
 
 static int enum_string_to_int(const char **map, int size, const char *value,
@@ -341,6 +347,158 @@ struct field_class fc_numeric = {
 
 /* ---------------------------------------------------------------------------------------------- */
 
+static int enum_num_to_int(const struct en_map *map, int map_size, const char *value,
+	enum new_strtoll_errs *err_p)
+{
+	enum new_strtoll_errs e;
+	unsigned long long l;
+	int i;
+
+	if (!value) {
+		if (err_p)
+			*err_p = MSE_MISSING_NUMBER;
+		return -1;
+	}
+
+	for (i = 0; i < map_size; i++) {
+		if (!strcmp(value, map[i].name))
+			return map[i].value;
+	}
+
+	e = new_strtoll(value, 1, &l);
+	if (err_p)
+		*err_p = e;
+	return e == MSE_OK ? l : -1;
+}
+
+static bool enum_num_is_default(struct field_def *field, const char *value)
+{
+	int n;
+
+	n = enum_num_to_int(field->u.en.map, field->u.en.map_size, value, NULL);
+	return n == field->u.en.def;
+}
+
+static bool enum_num_is_equal(struct field_def *field, const char *a, const char *b)
+{
+	return !strcmp(a, b);
+}
+
+static const char *enum_num_to_string(struct field_def *field, int value)
+{
+	static char buffer[1 + 10 + 2];
+	int i;
+
+	for (i = 0; i < field->u.en.map_size; i++) {
+		if (value == field->u.en.map[i].value)
+			return field->u.en.map[i].name;
+	}
+
+	i = snprintf(buffer, sizeof(buffer), "%d", value);
+	assert(i < sizeof(buffer));
+
+	return buffer;
+}
+
+static const char *get_enum_num(struct context_def *ctx, struct field_def *field, struct nlattr *nla)
+{
+	int n;
+
+	assert(type_of_field(ctx, field) == NLA_U32);
+	n = nla_get_u32(nla);
+
+	return enum_num_to_string(field, n);
+}
+
+static bool put_enum_num(struct context_def *ctx, struct field_def *field,
+			struct msg_buff *msg, const char *value)
+{
+	int n;
+
+	n = enum_num_to_int(field->u.en.map, field->u.en.map_size, value, NULL);
+	if (n == -1)
+		return false;
+	assert(type_of_field(ctx, field) == NLA_U32);
+	nla_put_u32(msg, field->nla_type, n);
+	return true;
+}
+
+static int enum_num_usage(struct field_def *field, char *str, int size)
+{
+	const struct en_map *map = field->u.en.map;
+	char sep = '{';
+	int i, len = 0, l;
+
+	l = snprintf(str, size, "[--%s=", field->name);
+	len += l; size -= l;
+	for (i = 0; i < field->u.en.map_size; i++) {
+		l = snprintf(str + len, size, "%c%s", sep, map[i].name);
+		len += l; size -= l;
+		sep = '|';
+	}
+	assert (sep != '{');
+	l = snprintf(str + len, size, "}|(%d ... %d)]",
+		     field->u.en.min, field->u.en.max);
+	len += l;
+	/* size -= l; */
+	return len;
+}
+
+static void enum_num_describe_xml(struct field_def *field)
+{
+	const struct en_map *map = field->u.en.map;
+	int i;
+
+	printf("\t<option name=\"%s\" type=\"numeric-or-symbol\">\n"
+	       "\t\t<min>%d</min>\n"
+	       "\t\t<max>%d</max>\n"
+	       "\t\t<default>%s</default>\n",
+	       field->name,
+	       field->u.en.min,
+	       field->u.en.max,
+	       enum_num_to_string(field, field->u.en.def));
+
+	for (i = 0; i < field->u.en.map_size; i++)
+		printf("\t\t<symbol>%s</symbol>\n", map[i].name);
+
+	printf("\t</option>\n");
+}
+
+static enum check_codes enum_num_check(struct field_def *field, const char *value)
+{
+	enum new_strtoll_errs e = 777;
+	int n;
+
+	n = enum_num_to_int(field->u.en.map, field->u.en.map_size, value, &e);
+
+	if (n == -1 && e != MSE_OK)
+		return CC_NOT_AN_ENUM_NUM;
+
+	/* n positive, but e not touched -> it was a symbolic value, no range check */
+	if (e == 777)
+		return CC_OK;
+
+	if (n < field->u.en.min)
+		return CC_TOO_SMALL;
+
+	if (n > field->u.en.max)
+		return CC_TOO_BIG;
+
+	return CC_OK;
+}
+
+struct field_class fc_enum_num = {
+	.is_default = enum_num_is_default,
+	.is_equal = enum_num_is_equal,
+	.get = get_enum_num,
+	.put = put_enum_num,
+	.usage = enum_num_usage,
+	.describe_xml = enum_num_describe_xml,
+	.check = enum_num_check,
+};
+
+/* ---------------------------------------------------------------------------------------------- */
+
 static int boolean_string_to_int(const char *value)
 {
 	if (!value || !strcmp(value, "yes"))
@@ -582,6 +740,16 @@ struct field_class fc_string = {
 #define STRING_MAX_LEN(f, l)								\
 	STRING(f),									\
 	.u = { .s = { .max_len = l } } }
+
+#define ENUM_NUM(f, d, num_min, num_max)			\
+	.nla_type = T_ ## f,					\
+	.ops = &fc_enum_num,					\
+	.u = { .en = {						\
+		.map = f ## _map,				\
+		.map_size = ARRAY_SIZE(f ## _map),		\
+		.min = num_min,					\
+		.max = num_max,					\
+		.def = DRBD_ ## d ## _DEF, } }			\
 
 /* ============================================================================================== */
 

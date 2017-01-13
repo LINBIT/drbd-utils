@@ -503,6 +503,7 @@ static void pe_field(struct field_def *field, enum check_codes e, char *value)
 		[CC_TOO_SMALL] = "too small",
 		[CC_TOO_BIG] = "too big",
 		[CC_STR_TOO_LONG] = "too long",
+		[CC_NOT_AN_ENUM_NUM] = "not valid",
 	};
 	err("%s:%u: Parse error: while parsing value ('%.20s%s')\nfor %s. Value is %s.\n",
 	    config_file, line,
@@ -511,8 +512,10 @@ static void pe_field(struct field_def *field, enum check_codes e, char *value)
 
 	if (e == CC_NOT_AN_ENUM)
 		pe_valid_enums(field->u.e.map, field->u.e.size);
-	if (e == CC_STR_TOO_LONG)
+	else if (e == CC_STR_TOO_LONG)
 		err("max len: %u\n", field->u.s.max_len - 1);
+	/* else if (e == CC_NOT_AN_ENUM_NUM)
+	   pe_valid_enum_num((field->u.en.map, field->u.en.map_size); */
 
 	if (config_valid <= 1)
 		config_valid = 0;
