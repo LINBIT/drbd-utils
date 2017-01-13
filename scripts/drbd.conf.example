@@ -238,6 +238,9 @@ resource drbd_9_two_connection {
 }
 
 resource drbd_9_mesh {
+	options {
+		quorum majority;
+	}
 	volume 0 {
 	       device minor 21;
 	       disk /dev/foo/bar2;

@@ -826,6 +826,12 @@ const char *read_balancing_map[] = {
 	[RB_1M_STRIPING] = "1M-striping"
 };
 
+const struct en_map quorum_map[] = {
+	{ "off", QOU_OFF },
+	{ "majority", QOU_MAJORITY },
+	{ "all", QOU_ALL },
+};
+
 #define CHANGEABLE_DISK_OPTIONS								\
 	{ "on-io-error", ENUM(on_io_error, ON_IO_ERROR) },				\
 	/*{ "fencing", ENUM(fencing_policy, FENCING) },*/				\
@@ -1004,6 +1010,7 @@ struct context_def resource_options_ctx = {
 		{ "auto-promote-timeout", NUMERIC(auto_promote_timeout, AUTO_PROMOTE_TIMEOUT),
 		  .unit = "1/10 seconds"},
 		{ "max-io-depth", NUMERIC(nr_requests, NR_REQUESTS) },
+		{ "quorum", ENUM_NUM(quorum, QUORUM, 1, DRBD_PEERS_MAX) },
 		{ } },
 };
 

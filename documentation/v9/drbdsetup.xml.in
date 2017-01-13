@@ -671,6 +671,7 @@
 	    <pick_drbdsetup_option name="on-no-data-accessible"/>
 	    <pick_drbdsetup_option name="peer-ack-window"/>
 	    <pick_drbdsetup_option name="peer-ack-delay"/>
+	    <pick_drbdsetup_option name="quorum"/>
 	  </variablelist>
 	  </para>
 	</listitem>

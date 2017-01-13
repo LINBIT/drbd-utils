@@ -1560,4 +1560,31 @@
 	Also see the <option>degr-wfc-timeout</option> parameter.</para>
     </definition>
   </drbdsetup_option>
+
+  <drbdsetup_option name="quorum">
+    <term xml:id="quorum"><option>quorum <replaceable>value</replaceable></option>
+    </term>
+
+    <definition>
+      <para><indexterm significance="normal">
+	  <primary>drbd.conf</primary>
+
+	  <secondary>quorum</secondary>
+	  </indexterm> DRBD contains a quorum implementation. If it activated
+	  a cluster (partition) requires quorum in order to modify the replicated
+	  data set. That means a node in the cluster partition can only be
+	  promoted to primary if the cluster partition has primary.</para>
+
+	  <para>If a primary node should execute a write request, but the
+	  cluster partition has lost quorum, it will freeze the IO operation
+	  and invoke the <option>quorum-lost</option> handler. The handler
+	  might reboot the machine forcefully stop the service, or ignore
+	  the event by returning.</para>
+
+	  <para>The option's value might be set to <option>off</option>,
+	  <option>majority</option>, or <option>all</option>. It can be
+	  used with fencing or instead of fencing if the resource has more
+	  than two nodes with backing disks.</para>
+    </definition>
+  </drbdsetup_option>
 </drbdsetup_options>
