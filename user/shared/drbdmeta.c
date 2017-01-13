@@ -3895,6 +3895,7 @@ void md_convert_08_to_09(struct format *cfg)
 
 	cfg->md.flags &= ~(MDF_CONNECTED_IND | MDF_FULL_SYNC | MDF_PEER_OUT_DATED);
 
+	cfg->md.node_id = -1;
 	cfg->md.magic = DRBD_MD_MAGIC_09;
 	re_initialize_md_offsets(cfg);
 
