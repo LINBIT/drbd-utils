@@ -558,8 +558,9 @@ void compare_volume(struct d_volume *conf, struct d_volume *kern)
 	}
 
 	/* Do we need to resize?
-	 * Though, if we are already going to attach, skip the resize. */
-	if (!conf->adj_attach && !conf->adj_detach)
+	 * If we are going to attach, or we don't even have a local disk,
+	 * don't even compare the size. */
+	if (!conf->adj_attach && !conf->adj_detach && conf->disk != NULL)
 		compare_size(conf, kern);
 
 	/* is it sufficient to only adjust the disk options? */
