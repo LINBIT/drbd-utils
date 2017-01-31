@@ -400,15 +400,18 @@ static int read_node_id(struct node_info *ni)
 	return 1;
 }
 
+/* What we probably should do is use getaddrinfo_a(),
+ * instead of alarm() and siglongjump limited gethostbyname(),
+ * but I don't like implicit threads. */
 /* to interrupt gethostbyname,
  * we not only need a signal,
  * but also the long jump:
  * gethostbyname would otherwise just restart the syscall
  * and timeout again. */
-static jmp_buf timed_out;
+static sigjmp_buf timed_out;
 static void gethostbyname_timeout(int __attribute((unused)) signo)
 {
-	longjmp(timed_out, 1);
+	siglongjmp(timed_out, 1);
 }
 
 #define DNS_TIMEOUT 3	/* seconds */
@@ -418,24 +421,45 @@ struct hostent *my_gethostbyname(const char *name)
 	struct sigaction sa;
 	struct sigaction so;
 	struct hostent *h;
+	static int failed_once_already = 0;
+
+	if (failed_once_already)
+		return NULL;
 
 	alarm(0);
 	sa.sa_handler = &gethostbyname_timeout;
 	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = 0;
+	sa.sa_flags = SA_NODEFER;
 
 	sigaction(SIGALRM, &sa, &so);
 
-	if (!setjmp(timed_out)) {
+	if (!sigsetjmp(timed_out, 1)) {
+		struct hostent ret;
+		char buf[2048];
+		int my_h_errno;
+
 		alarm(DNS_TIMEOUT);
-		h = gethostbyname(name);
-	} else
+		/* h = gethostbyname(name);
+		 * If the resolver is unresponsive,
+		 * we may siglongjmp out of a "critical section" of gethostbyname,
+		 * still holding some glibc internal lock.
+		 * Any later attempt to call gethostbyname() would then deadlock
+		 * (last syscall would be futex(...))
+		 *
+		 * gethostbyname_r() apparently does not use any internal locks.
+		 * Even if unnecessary in our case, it feels less dirty.
+		 */
+		gethostbyname_r(name, &ret, buf, sizeof(buf), &h, &my_h_errno);
+	} else {
 		/* timed out, longjmp of SIGALRM jumped here */
 		h = NULL;
+	}
 
 	alarm(0);
 	sigaction(SIGALRM, &so, NULL);
 
+	if (h == NULL)
+		failed_once_already = 1;
 	return h;
 }
 
