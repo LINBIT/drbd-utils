@@ -8,6 +8,22 @@
 		<productname>DRBD</productname>
 
 		<productnumber>9.0.0</productnumber>
+		<author>
+			<personname>
+			<firstname>Robert</firstname>
+			<surname>Altnoeder</surname>
+			</personname>
+			<email>robert.altnoeder@linbit.com</email>
+			<contrib>Primary author of drbdmon</contrib>
+		</author>
+		<author>
+			<personname>
+			<firstname>Sam</firstname>
+			<surname>Leonard</surname>
+			</personname>
+			<email>sam@linbit.com</email>
+			<contrib>man page and build system integration</contrib>
+		</author>
 	</refentryinfo>
 
 	<refmeta>
@@ -130,12 +146,6 @@
 		</refsect1>
 
 		<refsect1>
-			<title>Author</title>
-
-			<simpara>Written by Robert Altnoeder <email>robert.altnoeder@linbit.com</email> and Sam Leonard <email>sam@linbit.com</email></simpara>
-		</refsect1>
-
-		<refsect1>
 			<title>Reporting Bugs</title>
 
 			<simpara>Report bugs to <email>drbd-user@lists.linbit.com</email>.</simpara>
@@ -144,7 +154,7 @@
 		<refsect1>
 			<title>Copyright</title>
 
-			<simpara>Copyright 2016 LINBIT Information Technologies, Robert Altnoeder, Sam Leonard.
+			<simpara>Copyright 2016-2017 LINBIT Information Technologies, Robert Altnoeder, Sam Leonard.
 				This is free software; see the source for copying conditions. There is NO warranty; not even
 				for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.</simpara>
 		</refsect1>
