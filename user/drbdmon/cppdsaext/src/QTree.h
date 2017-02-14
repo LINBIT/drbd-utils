@@ -1,10 +1,10 @@
 /**
  * Quick balanced binary search tree
  *
- * @version 2016-03-21_001
+ * @version 2017-02-14_001
  * @author  Robert Altnoeder (r.altnoeder@gmx.net)
  *
- * Copyright (C) 2012 - 2016 Robert ALTNOEDER
+ * Copyright (C) 2012 - 2017 Robert ALTNOEDER
  *
  * Redistribution and use in source and binary forms,
  * with or without modification, are permitted provided that
@@ -328,6 +328,7 @@ class QTree : public dsaext::Map<K, V>
         Node* ins_node = new Node(key, value);
         if (!insert_node_impl(ins_node))
         {
+            delete ins_node;
             throw dsaext::DuplicateInsertException();
         }
     }
