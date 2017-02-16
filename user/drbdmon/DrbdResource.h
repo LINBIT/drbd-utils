@@ -2,6 +2,7 @@
 #define	DRBDRESOURCE_H
 
 #include <new>
+#include <memory>
 #include <string>
 
 #include <VolumesContainer.h>
@@ -77,7 +78,7 @@ class DrbdResource : public VolumesContainer, public DrbdRole, private StateFlag
 
   private:
     const std::string name;
-    ConnectionsMap* conn_list;
+    std::unique_ptr<ConnectionsMap> conn_list;
     bool role_alert {false};
 };
 

@@ -7,7 +7,7 @@ const std::string DrbdResource::PROP_KEY_RES_NAME = "name";
 DrbdResource::DrbdResource(std::string& resource_name):
     name(resource_name)
 {
-    conn_list = new ConnectionsMap(&comparators::compare_string);
+    conn_list = std::unique_ptr<ConnectionsMap>(new ConnectionsMap(&comparators::compare_string));
 }
 
 DrbdResource::~DrbdResource() noexcept
@@ -20,7 +20,6 @@ DrbdResource::~DrbdResource() noexcept
         delete node->get_value();
     }
     conn_list->clear();
-    delete conn_list;
 }
 
 const std::string& DrbdResource::get_name() const
@@ -41,22 +40,9 @@ void DrbdResource::update(PropsMap& event_props)
 // @throws std::bad_alloc, dsaext::DuplicateInsertException
 void DrbdResource::add_connection(DrbdConnection* connection)
 {
-    std::string* conn_name {nullptr};
-    try
-    {
-        conn_name = new std::string(connection->get_name());
-        conn_list->insert(conn_name, connection);
-    }
-    catch (dsaext::DuplicateInsertException& dup_exc)
-    {
-        delete conn_name;
-        throw dup_exc;
-    }
-    catch (std::bad_alloc& out_of_memory_exc)
-    {
-        delete conn_name;
-        throw out_of_memory_exc;
-    }
+    std::unique_ptr<std::string> conn_name(new std::string(connection->get_name()));
+    conn_list->insert(conn_name.get(), connection);
+    static_cast<void> (conn_name.release());
 }
 
 DrbdConnection* DrbdResource::get_connection(const std::string& connection_name) const

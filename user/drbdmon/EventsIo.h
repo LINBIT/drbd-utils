@@ -2,6 +2,7 @@
 #define	EVENTSIO_H
 
 #include <new>
+#include <memory>
 #include <stdexcept>
 
 #include <exceptions.h>
@@ -79,14 +80,14 @@ class EventsIo
     int  current_event  {0};
     bool pending_events {false};
 
-    struct epoll_event* ctl_events   {nullptr};
-    struct epoll_event* fired_events {nullptr};
+    std::unique_ptr<struct epoll_event[]> ctl_events;
+    std::unique_ptr<struct epoll_event[]> fired_events;
 
-    struct signalfd_siginfo* signal_buffer {nullptr};
+    std::unique_ptr<signalfd_siginfo> signal_buffer;
 
     // Events processing
-    char*        events_buffer {nullptr};
-    std::string* event_line    {nullptr};
+    std::unique_ptr<char[]> events_buffer;
+    std::unique_ptr<std::string> event_line;
 
     size_t event_begin_pos {0};
     size_t events_length   {0};

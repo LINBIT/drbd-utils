@@ -4,7 +4,7 @@
 // @throws std::bad_alloc
 VolumesContainer::VolumesContainer()
 {
-    volume_list = new VolumesMap(&comparators::compare_uint16);
+    volume_list = std::unique_ptr<VolumesMap>(new VolumesMap(&comparators::compare_uint16));
 }
 
 VolumesContainer::~VolumesContainer() noexcept
@@ -17,29 +17,15 @@ VolumesContainer::~VolumesContainer() noexcept
         delete node->get_value();
     }
     volume_list->clear();
-    delete volume_list;
 }
 
 // @throws std::bad_alloc, dsaext::DuplicateInsertException
 void VolumesContainer::add_volume(DrbdVolume* volume)
 {
-    uint16_t* volume_key {nullptr};
-    try
-    {
-        volume_key = new uint16_t;
-        *volume_key = volume->get_volume_nr();
-        volume_list->insert(volume_key, volume);
-    }
-    catch (dsaext::DuplicateInsertException& dup_exc)
-    {
-        delete volume_key;
-        throw dup_exc;
-    }
-    catch (std::bad_alloc& out_of_memory_exc)
-    {
-        delete volume_key;
-        throw out_of_memory_exc;
-    }
+    std::unique_ptr<uint16_t> volume_key(new uint16_t);
+    *(volume_key.get()) = volume->get_volume_nr();
+    volume_list->insert(volume_key.get(), volume);
+    static_cast<void> (volume_key.release());
 }
 
 void VolumesContainer::remove_volume(uint16_t volume_nr)

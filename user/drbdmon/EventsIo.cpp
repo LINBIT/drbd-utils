@@ -49,15 +49,15 @@ EventsIo::EventsIo(int events_input_fd):
         }
 
         // Allocate poll event data structures
-        ctl_events = new struct epoll_event[CTL_SLOTS_COUNT];
-        static_cast<void> (std::memset(static_cast<void*> (ctl_events), 0,
+        ctl_events = std::unique_ptr<epoll_event[]>(new struct epoll_event[CTL_SLOTS_COUNT]);
+        static_cast<void> (std::memset(static_cast<void*> (ctl_events.get()), 0,
                                        sizeof (struct epoll_event) * CTL_SLOTS_COUNT));
-        fired_events = new struct epoll_event[CTL_SLOTS_COUNT];
-        static_cast<void> (std::memset(static_cast<void*> (fired_events), 0,
+        fired_events = std::unique_ptr<epoll_event[]>(new struct epoll_event[CTL_SLOTS_COUNT]);
+        static_cast<void> (std::memset(static_cast<void*> (fired_events.get()), 0,
                                        sizeof (struct epoll_event) * CTL_SLOTS_COUNT));
 
-        events_buffer = new char[MAX_LINE_LENGTH];
-        signal_buffer = new struct signalfd_siginfo;
+        events_buffer = std::unique_ptr<char[]>(new char[MAX_LINE_LENGTH]);
+        signal_buffer = std::unique_ptr<struct signalfd_siginfo>(new struct signalfd_siginfo);
 
         // Initialize the poll event data structures
         register_poll(events_fd, &(ctl_events[EVENTS_CTL_INDEX]), EPOLLIN);
@@ -66,9 +66,11 @@ EventsIo::EventsIo(int events_input_fd):
     }
     catch (EventsIoException&)
     {
+        // Cleanup modifies errno, so the relevant information must be cached
+        bool os_call_oom = (errno == ENOMEM);
         cleanup();
 
-        if (errno == ENOMEM)
+        if (os_call_oom)
         {
             throw std::bad_alloc();
         }
@@ -125,7 +127,7 @@ EventsIo::event EventsIo::wait_event()
             do
             {
                 errno = 0;
-                event_count = epoll_wait(poll_fd, fired_events, CTL_SLOTS_COUNT, -1);
+                event_count = epoll_wait(poll_fd, fired_events.get(), CTL_SLOTS_COUNT, -1);
                 if (event_count > 0)
                 {
                     pending_events = true;
@@ -192,7 +194,7 @@ int EventsIo::get_signal()
     ssize_t read_size = 0;
     do
     {
-        read_size = read(sig_fd, signal_buffer, sizeof (struct signalfd_siginfo));
+        read_size = read(sig_fd, signal_buffer.get(), sizeof (struct signalfd_siginfo));
         if (read_size == sizeof (struct signalfd_siginfo))
         {
             signal_id = static_cast<int> (signal_buffer->ssi_signo);
@@ -289,12 +291,11 @@ std::string* EventsIo::get_event_line()
     }
 
     line_pending = false;
-    return event_line;
+    return event_line.get();
 }
 
 void EventsIo::free_event_line()
 {
-    delete event_line;
     event_line = nullptr;
 }
 
@@ -305,16 +306,16 @@ bool EventsIo::prepare_line()
     {
         if (event_line != nullptr)
         {
-            delete event_line;
             event_line = nullptr;
         }
 
         bool have_line = false;
         size_t event_end_pos = 0;
         // Check for new complete lines in the buffer
+        char* input_data = events_buffer.get();
         for (size_t index = event_begin_pos; index < events_length; ++index)
         {
-            if (events_buffer[index] == '\n')
+            if (input_data[index] == '\n')
             {
                 have_line = true;
                 event_end_pos = index + 1;
@@ -330,7 +331,9 @@ bool EventsIo::prepare_line()
             }
             else
             {
-                event_line = new std::string(&(events_buffer[event_begin_pos]), event_end_pos - event_begin_pos - 1);
+                event_line = std::unique_ptr<std::string>(
+                    new std::string(&(input_data[event_begin_pos]), event_end_pos - event_begin_pos - 1)
+                );
                 line_pending = true;
             }
             event_begin_pos = event_end_pos;
@@ -348,7 +351,7 @@ bool EventsIo::prepare_line()
                 size_t dst_index = 0;
                 while (src_index < events_length)
                 {
-                    events_buffer[dst_index] = events_buffer[src_index];
+                    input_data[dst_index] = input_data[src_index];
                     ++src_index;
                     ++dst_index;
                 }
@@ -391,14 +394,6 @@ void EventsIo::cleanup() noexcept
     {
         close(poll_fd);
     }
-    delete[] ctl_events;
-    delete[] fired_events;
-
-    delete[] events_buffer;
-
-    // signal_buffer is a struct
-    delete   signal_buffer;
-    delete   event_line;
 
     if (events_fd != -1)
     {

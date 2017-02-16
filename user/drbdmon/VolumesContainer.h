@@ -2,6 +2,7 @@
 #define	VOLUMESCONTAINER_H
 
 #include <new>
+#include <memory>
 #include <cstdint>
 #include <string>
 
@@ -45,7 +46,7 @@ class VolumesContainer
     virtual VolumesIterator volumes_iterator();
 
   private:
-    VolumesMap* volume_list {nullptr};
+    std::unique_ptr<VolumesMap> volume_list;
 };
 
 #endif	/* VOLUMESCONTAINER_H */

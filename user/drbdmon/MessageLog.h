@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <new>
+#include <memory>
 #include <stdexcept>
 
 // https://github.com/raltnoeder/cppdsaext
@@ -90,9 +91,8 @@ class MessageLog
     struct timeval utc_time;
     struct tm time_fields;
 
-    entry** log_entries {nullptr};
-
-    char* date_buffer {nullptr};
+    std::unique_ptr<entry*[]> log_entries;
+    std::unique_ptr<char[]> date_buffer;
 
     void clear_impl() noexcept;
     bool format_date() noexcept;

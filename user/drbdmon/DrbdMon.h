@@ -2,6 +2,7 @@
 #define	LIVESTATUS_H
 
 #include <new>
+#include <memory>
 #include <cstdint>
 
 #include <map_types.h>
@@ -130,15 +131,16 @@ class DrbdMon : public Configurable, public Configurator
     const int    arg_count;
     char** const arg_values;
 
-    ResourcesMap* resources_map {nullptr};
-    HotkeysMap*   hotkeys_info  {nullptr};
-    OptionsMap*   options       {nullptr};
+    std::unique_ptr<ResourcesMap> resources_map;
+    std::unique_ptr<HotkeysMap>   hotkeys_info;
+    std::unique_ptr<OptionsMap>   options;
+
     fail_info&    fail_data;
     finish_action fin_action {DrbdMon::finish_action::RESTART_IMMED};
     MessageLog&   log;
     bool          shutdown      {false};
 
-    Configurable** configurables {nullptr};
+    std::unique_ptr<Configurable*[]> configurables {nullptr};
 
     // @throws std::bad_alloc, EventMessageException
     void create_connection(PropsMap& event_props);
@@ -198,11 +200,8 @@ class DrbdMon : public Configurable, public Configurator
     // Frees resources
     // @throws std::bad_alloc
     void cleanup(
-        GenericDisplay*         display,
-        TermSize*               term_size,
         PropsMap*               event_props,
-        EventsIo*               events_io,
-        EventsSourceSpawner*    events_source
+        EventsIo*               events_io
     );
 };
 

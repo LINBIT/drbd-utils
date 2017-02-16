@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <new>
 #include <stdexcept>
+#include <memory>
 
 extern "C"
 {
@@ -41,25 +42,24 @@ int main(int argc, char* argv[])
     DrbdMon::fail_info fail_data {DrbdMon::fail_info::NONE};
     DrbdMon::finish_action fin_action {DrbdMon::finish_action::RESTART_DELAYED};
 
-    MessageLog* log {nullptr};
+    std::unique_ptr<MessageLog> log;
 
     bool ids_safe {false};
     while (fin_action != DrbdMon::finish_action::TERMINATE &&
            fin_action != DrbdMon::finish_action::TERMINATE_NO_CLEAR)
     {
-        DrbdMon* ls_instance {nullptr};
         try
         {
             if (log == nullptr)
             {
                 // std::out_of_range exception not handled, as it is
                 // only thrown if LOG_CAPACITY < 1
-                log = new MessageLog(LOG_CAPACITY);
+                log = std::unique_ptr<MessageLog>(new MessageLog(LOG_CAPACITY));
             }
 
-            if (ids_safe || adjust_ids(log, ids_safe))
+            if (ids_safe || adjust_ids(log.get(), ids_safe))
             {
-                ls_instance = new DrbdMon(argc, argv, *log, fail_data);
+                std::unique_ptr<DrbdMon> ls_instance(new DrbdMon(argc, argv, *log, fail_data));
                 ls_instance->run();
                 fin_action = ls_instance->get_fin_action();
                 if (fin_action != DrbdMon::finish_action::TERMINATE_NO_CLEAR)
@@ -93,13 +93,6 @@ int main(int argc, char* argv[])
         if (fail_data == DrbdMon::fail_info::OUT_OF_MEMORY)
         {
             std::fputs("** DrbdMon: Out of memory, trying to restart\n", stdout);
-        }
-
-        // Deallocate the DrbdMon instance
-        if (ls_instance != nullptr)
-        {
-            delete ls_instance;
-            ls_instance = nullptr;
         }
 
         // Cleanup any zombie child processes
@@ -142,8 +135,6 @@ int main(int argc, char* argv[])
             std::fputs("** DrbdMon: Reinitializing immediately\n", stdout);
         }
     }
-
-    delete log;
 
     return exit_code;
 }

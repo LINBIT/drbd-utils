@@ -57,17 +57,8 @@ DrbdMon::DrbdMon(int argc, char* argv[], MessageLog& log_ref, fail_info& fail_da
     fail_data(fail_data_ref),
     log(log_ref)
 {
-    try
-    {
-        resources_map = new ResourcesMap(&comparators::compare_string);
-        hotkeys_info  = new HotkeysMap(&comparators::compare_char);
-    }
-    catch (std::bad_alloc&)
-    {
-        delete resources_map;
-        delete hotkeys_info;
-        throw;
-    }
+    resources_map = std::unique_ptr<ResourcesMap>(new ResourcesMap(&comparators::compare_string));
+    hotkeys_info  = std::unique_ptr<HotkeysMap>(new HotkeysMap(&comparators::compare_char));
 }
 
 DrbdMon::~DrbdMon() noexcept
@@ -83,43 +74,45 @@ DrbdMon::~DrbdMon() noexcept
             delete node->get_value();
         }
         resources_map->clear();
-        // Free the map itself
-        delete resources_map;
     }
 
     // Cleanup hotkeys map
     // Keys/values in this map are static members of the DrbdMon class
     hotkeys_info->clear();
-    delete hotkeys_info;
 }
 
 // @throws std::bad_alloc
 void DrbdMon::run()
 {
-    PropsMap*               event_props     {nullptr};
-    TermSize*               term_size       {nullptr};
-    CompactDisplay*         display_impl    {nullptr};
-    GenericDisplay*         display         {nullptr};
-    EventsSourceSpawner*    events_source   {nullptr};
-    EventsIo*               events_io       {nullptr};
+    std::unique_ptr<PropsMap>               event_props;
+    std::unique_ptr<TermSize>               term_size;
+    std::unique_ptr<GenericDisplay>         display;
+    std::unique_ptr<EventsSourceSpawner>    events_source;
+    std::unique_ptr<EventsIo>               events_io;
 
     try
     {
         setup_hotkeys_info();
         try
         {
-            event_props   = new PropsMap(&comparators::compare_string);
-            term_size     = new TermSize();
-            display_impl  = new CompactDisplay(std::cout, *resources_map, log, *hotkeys_info);
-            display       = dynamic_cast<GenericDisplay*> (display_impl);
+            event_props   = std::unique_ptr<PropsMap>(new PropsMap(&comparators::compare_string));
+            term_size     = std::unique_ptr<TermSize>(new TermSize());
 
-            configurables = new Configurable*[3];
+            // Create the display and keep a pointer of the implementation's type for later use
+            // as a configurable object
+            // Do not add anything that might throw between display_impl allocation and
+            // display interface unique_ptr initialization to ensure deallocation of the display
+            // object if the current scope is left
+            CompactDisplay* display_impl = new CompactDisplay(std::cout, *resources_map, log, *hotkeys_info);
+            display = std::unique_ptr<GenericDisplay>(dynamic_cast<GenericDisplay*> (display_impl));
+
+            configurables = std::unique_ptr<Configurable*[]>(new Configurable*[3]);
             configurables[0] = dynamic_cast<Configurable*> (this);
             configurables[1] = dynamic_cast<Configurable*> (display_impl);
             configurables[2] = nullptr;
             configure_options();
 
-            events_source = new EventsSourceSpawner();
+            events_source = std::unique_ptr<EventsSourceSpawner>(new EventsSourceSpawner());
 
             if (term_size->probe_terminal_size())
             {
@@ -127,7 +120,7 @@ void DrbdMon::run()
             }
 
             events_source->spawn_source();
-            events_io = new EventsIo(events_source->get_events_source_fd());
+            events_io = std::unique_ptr<EventsIo>(new EventsIo(events_source->get_events_source_fd()));
 
             // Cleanup any zombies that might not have been collected,
             // because SIGCHLD is blocked during reinitialization
@@ -314,11 +307,11 @@ void DrbdMon::run()
     }
     catch (std::bad_alloc&)
     {
-        cleanup(display, term_size, event_props, events_io, events_source);
+        cleanup(event_props.get(), events_io.get());
         throw;
     }
 
-    cleanup(display, term_size, event_props, events_io, events_source);
+    cleanup(event_props.get(), events_io.get());
 }
 
 // @throws std::bad_alloc, EventsMessageException, EventObjectException
@@ -503,20 +496,23 @@ void DrbdMon::parse_event_props(StringTokenizer& tokens, PropsMap& event_props)
         size_t split_index = prop_entry.find(":");
         if (split_index != std::string::npos)
         {
-            std::string* key = new std::string(prop_entry.substr(0, split_index));
+            std::unique_ptr<std::string> key(new std::string(prop_entry.substr(0, split_index)));
             ++split_index;
-            std::string* value = new std::string(prop_entry.substr(split_index, prop_entry.length() - split_index));
+            std::unique_ptr<std::string> value(
+                new std::string(prop_entry.substr(split_index, prop_entry.length() - split_index))
+            );
             try
             {
-                event_props.insert(key, value);
+                event_props.insert(key.get(), value.get());
+                static_cast<void> (key.release());
+                static_cast<void> (value.release());
             }
             catch (dsaext::DuplicateInsertException& dup_exc)
             {
                 // DEBUG: duplicate key, malformed event line
                 // Encountering this problem should possibly restart everything from scratch
+                // TODO: FIXME: Issue a message log warning
                 std::cerr << "DEBUG: WARNING: Malformed event line, duplicate key" << std::endl;
-                delete key;
-                delete value;
             }
         }
     }
@@ -544,30 +540,19 @@ void DrbdMon::create_connection(PropsMap& event_props)
     {
         DrbdResource& res = get_resource(event_props);
 
-        DrbdConnection* conn {nullptr};
         try
         {
-            conn = DrbdConnection::new_from_props(event_props);
+            std::unique_ptr<DrbdConnection> conn(DrbdConnection::new_from_props(event_props));
             conn->update(event_props);
-            res.add_connection(conn);
+            res.add_connection(conn.get());
+            static_cast<void> (conn.release());
         }
         catch (dsaext::DuplicateInsertException& dup_exc)
         {
-            delete conn;
             log.add_entry(
                 MessageLog::log_level::ALERT,
                 "Duplicate DRBD connection creation reported by the DRBD events source"
             );
-        }
-        catch (EventMessageException& msg_exc)
-        {
-            delete conn;
-            throw msg_exc;
-        }
-        catch (std::bad_alloc& out_of_memory_exc)
-        {
-            delete conn;
-            throw out_of_memory_exc;
         }
     }
     catch (EventObjectException& nonexistent_object_exc)
@@ -583,23 +568,10 @@ void DrbdMon::create_device(PropsMap& event_props)
     {
         DrbdResource& res = get_resource(event_props);
 
-        DrbdVolume* vol {nullptr};
-        try
-        {
-            vol = DrbdVolume::new_from_props(event_props);
-            vol->update(event_props);
-            res.add_volume(vol);
-        }
-        catch (EventMessageException& msg_exc)
-        {
-            delete vol;
-            throw msg_exc;
-        }
-        catch (std::bad_alloc& out_of_memory_exc)
-        {
-            delete vol;
-            throw out_of_memory_exc;
-        }
+        std::unique_ptr<DrbdVolume> vol(DrbdVolume::new_from_props(event_props));
+        vol->update(event_props);
+        res.add_volume(vol.get());
+        static_cast<void> (vol.release());
     }
     catch (EventObjectException& nonexistent_object_exc)
     {
@@ -615,24 +587,11 @@ void DrbdMon::create_peer_device(PropsMap& event_props)
         DrbdResource& res = get_resource(event_props);
         DrbdConnection& conn = get_connection(res, event_props);
 
-        DrbdVolume* vol {nullptr};
-        try
-        {
-            vol = DrbdVolume::new_from_props(event_props);
-            vol->update(event_props);
-            vol->set_connection(&conn);
-            conn.add_volume(vol);
-        }
-        catch (EventMessageException& msg_exc)
-        {
-            delete vol;
-            throw msg_exc;
-        }
-        catch (std::bad_alloc& out_of_memory_exc)
-        {
-            delete vol;
-            throw out_of_memory_exc;
-        }
+        std::unique_ptr<DrbdVolume> vol(DrbdVolume::new_from_props(event_props));
+        vol->update(event_props);
+        vol->set_connection(&conn);
+        conn.add_volume(vol.get());
+        static_cast<void> (vol.release());
     }
     catch (EventObjectException& nonexistent_object_exc)
     {
@@ -643,35 +602,21 @@ void DrbdMon::create_peer_device(PropsMap& event_props)
 // @throws std::bad_alloc, EventMessageException
 void DrbdMon::create_resource(PropsMap& event_props)
 {
-    DrbdResource* res {nullptr};
-    std::string* res_name {nullptr};
     try
     {
-        res = DrbdResource::new_from_props(event_props);
+        std::unique_ptr<DrbdResource> res(DrbdResource::new_from_props(event_props));
         res->update(event_props);
-        res_name = new std::string(res->get_name());
-        resources_map->insert(res_name, res);
+        std::unique_ptr<std::string> res_name(new std::string(res->get_name()));
+        resources_map->insert(res_name.get(), res.get());
+        static_cast<void> (res.release());
+        static_cast<void> (res_name.release());
     }
     catch (dsaext::DuplicateInsertException& dup_exc)
     {
-        delete res;
-        delete res_name;
         log.add_entry(
             MessageLog::log_level::ALERT,
             "Duplicate DRBD resource creation reported by the DRBD events source"
         );
-    }
-    catch (EventMessageException& msg_exc)
-    {
-        delete res;
-        delete res_name;
-        throw msg_exc;
-    }
-    catch (std::bad_alloc& out_of_memory_exc)
-    {
-        delete res;
-        delete res_name;
-        throw out_of_memory_exc;
     }
 }
 
@@ -888,21 +833,14 @@ void DrbdMon::setup_hotkeys_info()
 // Frees resources
 // @throws std::bad_alloc
 void DrbdMon::cleanup(
-    GenericDisplay*         display,
-    TermSize*               term_size,
     PropsMap*               event_props,
-    EventsIo*               events_io,
-    EventsSourceSpawner*    events_source
+    EventsIo*               events_io
 )
 {
     if (event_props != nullptr)
     {
         clear_event_props(*event_props);
     }
-
-    delete display;
-    delete term_size;
-    delete event_props;
 
     if (events_io != nullptr)
     {
@@ -918,17 +856,12 @@ void DrbdMon::cleanup(
             );
         }
     }
-    delete events_io;
-    delete events_source;
-
-    delete[] configurables;
 }
 
 // @throws std::bad_alloc
 void DrbdMon::configure_options()
 {
-    Args* arg_list {nullptr};
-    options = new OptionsMap(&comparators::compare_string);
+    options = std::unique_ptr<OptionsMap>(new OptionsMap(&comparators::compare_string));
 
     try
     {
@@ -941,7 +874,7 @@ void DrbdMon::configure_options()
         }
 
         {
-            arg_list = new Args(arg_count, arg_values);
+            std::unique_ptr<Args> arg_list(new Args(arg_count, arg_values));
             while (arg_list->has_next())
             {
                 std::string option_key(arg_list->next());
@@ -992,18 +925,15 @@ void DrbdMon::configure_options()
     }
     catch (ConfigurationException&)
     {
-        delete arg_list;
         options_cleanup();
         throw;
     }
     catch (std::bad_alloc&)
     {
-        delete arg_list;
         options_cleanup();
         throw;
     }
 
-    delete arg_list;
     options_cleanup();
 }
 
@@ -1016,8 +946,6 @@ void DrbdMon::options_cleanup() noexcept
         {
             delete cleanup_iter.next();
         }
-        delete options;
-        options = nullptr;
     }
 }
 
@@ -1028,8 +956,11 @@ void DrbdMon::add_config_option(Configurable& owner, const ConfigOption& conf_op
     {
         try
         {
-            DrbdMon::option_entry* entry = new DrbdMon::option_entry { owner, conf_option };
-            options->insert(&conf_option.key, entry);
+            std::unique_ptr<DrbdMon::option_entry> entry = std::unique_ptr<DrbdMon::option_entry>(
+                new DrbdMon::option_entry { owner, conf_option }
+            );
+            options->insert(&conf_option.key, entry.get());
+            static_cast<void> (entry.release());
         }
         catch (dsaext::DuplicateInsertException&)
         {

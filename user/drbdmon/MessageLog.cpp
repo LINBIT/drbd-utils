@@ -27,24 +27,13 @@ MessageLog::MessageLog(size_t entries):
         throw std::out_of_range(CAPACITY_ERROR);
     }
 
-    try
-    {
-        log_entries = new entry*[capacity];
-        date_buffer = new char[DATE_BUFFER_SIZE];
-    }
-    catch (std::bad_alloc&)
-    {
-        delete[] log_entries;
-        delete[] date_buffer;
-        throw;
-    }
+    log_entries = std::unique_ptr<entry*[]>(new entry*[capacity]);
+    date_buffer = std::unique_ptr<char[]>(new char[DATE_BUFFER_SIZE]);
 }
 
 MessageLog::~MessageLog() noexcept
 {
     clear_impl();
-    delete[] log_entries;
-    delete[] date_buffer;
 }
 
 bool MessageLog::has_entries() const
@@ -55,44 +44,37 @@ bool MessageLog::has_entries() const
 // @throws std::bad_alloc
 void MessageLog::add_entry(log_level level, std::string& message)
 {
-    std::string* message_copy {nullptr};
-    try
+    std::unique_ptr<std::string> message_copy;
+    if (format_date())
     {
-        if (format_date())
-        {
-            message_copy = new std::string(date_buffer);
-            *message_copy += message;
-        }
-        else
-        {
-            message_copy = new std::string(message);
-        }
-
-        if (filled)
-        {
-            delete log_entries[index]->message;
-            log_entries[index]->message = message_copy;
-            log_entries[index]->level = level;
-        }
-        else
-        {
-            log_entries[index] = new MessageLog::entry {level, message_copy};
-        }
-
-        ++index;
-        if (index >= capacity)
-        {
-            filled = true;
-            index = 0;
-        }
+        message_copy = std::unique_ptr<std::string>(new std::string(date_buffer.get()));
+        *message_copy += message;
     }
-    catch (std::bad_alloc&)
+    else
     {
-        if (message_copy != nullptr)
-        {
-            delete message_copy;
-        }
-        throw;
+        message_copy = std::unique_ptr<std::string>(new std::string(message));
+    }
+
+    if (filled)
+    {
+        delete log_entries[index]->message;
+        log_entries[index]->message = message_copy.release();
+        log_entries[index]->level = level;
+    }
+    else
+    {
+        // Keep unique_ptr ownership of message_copy while constructing the new
+        // entry, otherwise message_copy would not be deallocated if
+        // entry construction throws
+        log_entries[index] = new MessageLog::entry {level, message_copy.get()};
+        static_cast<void> (message_copy.release());
+    }
+
+    ++index;
+    if (index >= capacity)
+    {
+        filled = true;
+        index = 0;
     }
 }
 
@@ -163,7 +145,7 @@ bool MessageLog::format_date() noexcept
     {
         if (gmtime_r(&(utc_time.tv_sec), &time_fields) != nullptr)
         {
-            if (strftime(date_buffer, DATE_BUFFER_SIZE, DATE_FORMAT, &time_fields) == DATE_LENGTH)
+            if (strftime(date_buffer.get(), DATE_BUFFER_SIZE, DATE_FORMAT, &time_fields) == DATE_LENGTH)
             {
                 rc = true;
             }
