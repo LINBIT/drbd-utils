@@ -4,6 +4,7 @@
 #include <new>
 #include <stdexcept>
 
+#include <MessageLog.h>
 #include <exceptions.h>
 
 extern "C"
@@ -20,7 +21,7 @@ class EventsSourceSpawner
     static const int PIPE_READ_SIDE;
     static const int PIPE_WRITE_SIDE;
 
-    EventsSourceSpawner();
+    EventsSourceSpawner(MessageLog& logRef);
     virtual ~EventsSourceSpawner();
 
     EventsSourceSpawner(const EventsSourceSpawner& orig) = delete;
@@ -37,6 +38,8 @@ class EventsSourceSpawner
     // @throws EventsSourceException
     virtual void cleanup_child_processes();
   private:
+    MessageLog& log;
+
     void close_pipe();
 
     // @throws EventsSourceException

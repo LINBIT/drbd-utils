@@ -393,16 +393,19 @@ void EventsIo::cleanup() noexcept
     if (poll_fd != -1)
     {
         close(poll_fd);
+        poll_fd = -1;
     }
 
     if (events_fd != -1)
     {
         close(events_fd);
+        events_fd = -1;
     }
 
     if (sig_fd != -1)
     {
         close(sig_fd);
+        sig_fd = -1;
     }
 
     // stdin_fd is not closed

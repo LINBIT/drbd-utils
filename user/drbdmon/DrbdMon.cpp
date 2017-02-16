@@ -112,7 +112,7 @@ void DrbdMon::run()
             configurables[2] = nullptr;
             configure_options();
 
-            events_source = std::unique_ptr<EventsSourceSpawner>(new EventsSourceSpawner());
+            events_source = std::unique_ptr<EventsSourceSpawner>(new EventsSourceSpawner(log));
 
             if (term_size->probe_terminal_size())
             {
@@ -334,14 +334,18 @@ void DrbdMon::tokenize_event_message(std::string& event_line, PropsMap& event_pr
     }
     catch (EventMessageException& msg_exc)
     {
-        std::cerr << "DEBUG: EventMessageException: Malformed event message:\n" <<
-                  event_line << std::endl;
+        log.add_entry(
+            MessageLog::log_level::ALERT,
+            "Received event message was malformed"
+        );
         throw msg_exc;
     }
     catch (EventObjectException& obj_exc)
     {
-        std::cerr << "DEBUG: EventObjectException: Event message references nonexistent object:\n" <<
-                  event_line << std::endl;
+        log.add_entry(
+            MessageLog::log_level::ALERT,
+            "Received event referenced a nonexistent object"
+        );
         throw obj_exc;
     }
 }
@@ -512,7 +516,10 @@ void DrbdMon::parse_event_props(StringTokenizer& tokens, PropsMap& event_props)
                 // DEBUG: duplicate key, malformed event line
                 // Encountering this problem should possibly restart everything from scratch
                 // TODO: FIXME: Issue a message log warning
-                std::cerr << "DEBUG: WARNING: Malformed event line, duplicate key" << std::endl;
+                log.add_entry(
+                    MessageLog::log_level::WARN,
+                    "Duplicate key detected on drbdsetup events line"
+                );
             }
         }
     }

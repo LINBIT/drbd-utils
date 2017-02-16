@@ -24,7 +24,8 @@ const char* EventsSourceSpawner::EVENTS_PROGRAM_ARGS[] =
 const int EventsSourceSpawner::PIPE_READ_SIDE  = 0;
 const int EventsSourceSpawner::PIPE_WRITE_SIDE = 1;
 
-EventsSourceSpawner::EventsSourceSpawner()
+EventsSourceSpawner::EventsSourceSpawner(MessageLog& logRef):
+    log(logRef)
 {
 }
 
@@ -130,7 +131,10 @@ int EventsSourceSpawner::spawn_source()
             if (spawn_rc != 0)
             {
                 spawned_pid = -1;
-                // TODO: log spawn problem
+                log.add_entry(
+                    MessageLog::log_level::ALERT,
+                    "Spawning the events source process failed"
+                );
                 throw EventsSourceException();
             }
 
