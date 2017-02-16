@@ -12,6 +12,7 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include <errno.h>
 #include <signal.h>
 #include <stdio.h>
@@ -33,6 +34,10 @@
 #include "drbdtool_common.h"
 #include "shared_tool.h"
 #include "shared_main.h"
+
+#ifdef HAVE_GETENTROPY
+#include <sys/random.h>
+#endif
 
 const char* shell_escape(const char* s)
 {
@@ -333,20 +338,42 @@ out:
 	return rc;
 }
 
-void get_random_bytes(void* buffer, int len)
+bool random_by_dev_urandom(void *buffer, size_t len)
 {
 	int fd;
+	bool ok = true;
 
-	fd = open("/dev/urandom",O_RDONLY);
-	if( fd == -1) {
+	fd = open("/dev/urandom", O_RDONLY);
+	if (fd == -1) {
 		perror("Open of /dev/urandom failed");
-		exit(20);
+		return false;
 	}
-	if(read(fd,buffer,len) != len) {
-		fprintf(stderr,"Reading from /dev/urandom failed\n");
-		exit(20);
+
+	if (read(fd, buffer, len) != len) {
+		ok = false;
+		fprintf(stderr, "Reading from /dev/urandom failed\n");
 	}
 	close(fd);
+
+	return ok;
+}
+
+void get_random_bytes(void *buffer, size_t len)
+{
+	bool ok;
+
+#ifdef HAVE_GETENTROPY
+	ok = (getentropy(buffer, len) == 0);
+	if (ok)
+		return;
+
+	perror("Could not get random data from getentropy(). Fallback to /dev/urandom");
+	/* fallback to /dev/urandom */
+#endif
+	ok = random_by_dev_urandom(buffer, len);
+
+	if (!ok)
+		exit(20);
 }
 
 int m_asprintf(char **strp, const char *fmt, ...)

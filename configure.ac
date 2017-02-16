@@ -120,6 +120,9 @@ AC_SUBST(WITH_RGMANAGER)
 AC_SUBST(WITH_BASHCOMPLETION)
 AC_SUBST(WITH_MANUAL)
 
+dnl Check for functions
+AC_CHECK_FUNCS([getentropy])
+
 dnl Do we know where systemd unit files go?
 PKG_PROG_PKG_CONFIG
 AC_ARG_WITH([systemdunitdir],
