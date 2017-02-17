@@ -15,7 +15,11 @@ const int EventsIo::CTL_SLOTS_COUNT  = 3;
 
 // @throws std::bad_alloc, std::ios_base::failure
 EventsIo::EventsIo(int events_input_fd):
-    events_fd(events_input_fd)
+    events_fd(events_input_fd),
+    ctl_events(new struct epoll_event[CTL_SLOTS_COUNT]),
+    fired_events(new struct epoll_event[CTL_SLOTS_COUNT]),
+    signal_buffer(new struct signalfd_siginfo),
+    events_buffer(new char[MAX_LINE_LENGTH])
 {
     try
     {
@@ -48,18 +52,13 @@ EventsIo::EventsIo(int events_input_fd):
             throw EventsIoException();
         }
 
-        // Allocate poll event data structures
-        ctl_events = std::unique_ptr<epoll_event[]>(new struct epoll_event[CTL_SLOTS_COUNT]);
+        // Initialize poll event data structures
         static_cast<void> (std::memset(static_cast<void*> (ctl_events.get()), 0,
                                        sizeof (struct epoll_event) * CTL_SLOTS_COUNT));
-        fired_events = std::unique_ptr<epoll_event[]>(new struct epoll_event[CTL_SLOTS_COUNT]);
         static_cast<void> (std::memset(static_cast<void*> (fired_events.get()), 0,
                                        sizeof (struct epoll_event) * CTL_SLOTS_COUNT));
 
-        events_buffer = std::unique_ptr<char[]>(new char[MAX_LINE_LENGTH]);
-        signal_buffer = std::unique_ptr<struct signalfd_siginfo>(new struct signalfd_siginfo);
-
-        // Initialize the poll event data structures
+        // Register the epoll() events
         register_poll(events_fd, &(ctl_events[EVENTS_CTL_INDEX]), EPOLLIN);
         register_poll(sig_fd, &(ctl_events[SIG_CTL_INDEX]), EPOLLIN);
         register_poll(stdin_fd, &(ctl_events[STDIN_CTL_INDEX]), EPOLLIN);

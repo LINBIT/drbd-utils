@@ -5,9 +5,9 @@ const std::string DrbdResource::PROP_KEY_RES_NAME = "name";
 
 // @throws std::bad_alloc
 DrbdResource::DrbdResource(std::string& resource_name):
-    name(resource_name)
+    name(resource_name),
+    conn_list(new ConnectionsMap(&comparators::compare_string))
 {
-    conn_list = std::unique_ptr<ConnectionsMap>(new ConnectionsMap(&comparators::compare_string));
 }
 
 DrbdResource::~DrbdResource() noexcept

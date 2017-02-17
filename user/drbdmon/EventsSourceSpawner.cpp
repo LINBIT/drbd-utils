@@ -57,8 +57,8 @@ int EventsSourceSpawner::get_events_source_fd()
 // @throws std::bad_alloc, EventSourceException
 int EventsSourceSpawner::spawn_source()
 {
-    std::unique_ptr<posix_spawn_file_actions_t> pipe_init_actions_alloc;
-    std::unique_ptr<posix_spawnattr_t> spawn_attr_alloc;
+    const std::unique_ptr<posix_spawn_file_actions_t> pipe_init_actions_alloc(new posix_spawn_file_actions_t);
+    const std::unique_ptr<posix_spawnattr_t> spawn_attr_alloc(new posix_spawnattr_t);
 
     posix_spawn_file_actions_t* pipe_init_actions {nullptr};
     posix_spawnattr_t* spawn_attr {nullptr};
@@ -82,11 +82,8 @@ int EventsSourceSpawner::spawn_source()
 
         // Initialize the datastructures for posix_spawn())
         {
-            pipe_init_actions_alloc =
-                std::unique_ptr<posix_spawn_file_actions_t>(new posix_spawn_file_actions_t);
+            // Use direct pointers
             pipe_init_actions = pipe_init_actions_alloc.get();
-
-            spawn_attr_alloc = std::unique_ptr<posix_spawnattr_t>(new posix_spawnattr_t);
             spawn_attr = spawn_attr_alloc.get();
 
             // Initialize a copy of the spawn arguments

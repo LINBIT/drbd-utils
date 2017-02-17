@@ -78,7 +78,7 @@ class DrbdResource : public VolumesContainer, public DrbdRole, private StateFlag
 
   private:
     const std::string name;
-    std::unique_ptr<ConnectionsMap> conn_list;
+    const std::unique_ptr<ConnectionsMap> conn_list;
     bool role_alert {false};
 };
 

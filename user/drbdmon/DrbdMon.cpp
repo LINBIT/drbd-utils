@@ -54,11 +54,11 @@ const std::string DrbdMon::DESC_REINIT    = "Reinitialize";
 DrbdMon::DrbdMon(int argc, char* argv[], MessageLog& log_ref, fail_info& fail_data_ref):
     arg_count(argc),
     arg_values(argv),
+    resources_map(new ResourcesMap(&comparators::compare_string)),
+    hotkeys_info(new HotkeysMap(&comparators::compare_char)),
     fail_data(fail_data_ref),
     log(log_ref)
 {
-    resources_map = std::unique_ptr<ResourcesMap>(new ResourcesMap(&comparators::compare_string));
-    hotkeys_info  = std::unique_ptr<HotkeysMap>(new HotkeysMap(&comparators::compare_char));
 }
 
 DrbdMon::~DrbdMon() noexcept

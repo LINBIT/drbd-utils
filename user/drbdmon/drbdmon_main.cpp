@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
 
             if (ids_safe || adjust_ids(log.get(), ids_safe))
             {
-                std::unique_ptr<DrbdMon> ls_instance(new DrbdMon(argc, argv, *log, fail_data));
+                const std::unique_ptr<DrbdMon> ls_instance(new DrbdMon(argc, argv, *log, fail_data));
                 ls_instance->run();
                 fin_action = ls_instance->get_fin_action();
                 if (fin_action != DrbdMon::finish_action::TERMINATE_NO_CLEAR)

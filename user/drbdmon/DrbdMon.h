@@ -131,8 +131,9 @@ class DrbdMon : public Configurable, public Configurator
     const int    arg_count;
     char** const arg_values;
 
-    std::unique_ptr<ResourcesMap> resources_map;
-    std::unique_ptr<HotkeysMap>   hotkeys_info;
+    const std::unique_ptr<ResourcesMap> resources_map;
+    const std::unique_ptr<HotkeysMap>   hotkeys_info;
+
     std::unique_ptr<OptionsMap>   options;
 
     fail_info&    fail_data;

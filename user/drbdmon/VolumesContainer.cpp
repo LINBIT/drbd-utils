@@ -2,9 +2,9 @@
 #include <comparators.h>
 
 // @throws std::bad_alloc
-VolumesContainer::VolumesContainer()
+VolumesContainer::VolumesContainer():
+    volume_list(new VolumesMap(&comparators::compare_uint16))
 {
-    volume_list = std::unique_ptr<VolumesMap>(new VolumesMap(&comparators::compare_uint16));
 }
 
 VolumesContainer::~VolumesContainer() noexcept

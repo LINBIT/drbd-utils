@@ -46,7 +46,7 @@ class VolumesContainer
     virtual VolumesIterator volumes_iterator();
 
   private:
-    std::unique_ptr<VolumesMap> volume_list;
+    const std::unique_ptr<VolumesMap> volume_list;
 };
 
 #endif	/* VOLUMESCONTAINER_H */
