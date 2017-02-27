@@ -237,7 +237,11 @@ struct hostent *my_gethostbyname(const char *name)
 		 * gethostbyname_r() apparently does not use any internal locks.
 		 * Even if unnecessary in our case, it feels less dirty.
 		 */
+#ifdef __CYGWIN__
+		h = gethostbyname(name);
+#else
 		gethostbyname_r(name, &ret, buf, sizeof(buf), &h, &my_h_errno);
+#endif
 	} else {
 		/* timed out, longjmp of SIGALRM jumped here */
 		h = NULL;

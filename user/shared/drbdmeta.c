@@ -61,8 +61,10 @@
 #include "config.h"
 
 /* BLKZEROOUT, available on linux-3.6 and later. */
+#ifndef __CYGWIN__
 #ifndef BLKZEROOUT
 # define BLKZEROOUT	_IO(0x12,127)
+#endif
 #endif
 
 extern FILE* yyin;
@@ -1704,7 +1706,7 @@ static void zeroout_bitmap(struct format *cfg)
 	const size_t bitmap_bytes =
 		ALIGN(bm_bytes(&cfg->md, cfg->bd_size >> 9), cfg->md_hard_sect_size);
 	uint64_t range[2];
-	int err;
+	int err = 0;
 
 	range[0] = cfg->bm_offset; /* start offset */
 	range[1] = bitmap_bytes; /* len */
@@ -1712,10 +1714,14 @@ static void zeroout_bitmap(struct format *cfg)
 	fprintf(stderr,"initializing bitmap (%u KB) to all zero\n",
 		(unsigned int)(bitmap_bytes>>10));
 
+#ifdef __CYGWIN__
+	errno = ENOTTY;
+#else
 	err = ioctl(cfg->md_fd, BLKZEROOUT, &range);
 	if (!err)
 		return;
 
+#endif
 	if (errno == ENOTTY) {
 		/* need to sector-align this for O_DIRECT.
 		 * "sector" here means hard-sect size, which may be != 512.
