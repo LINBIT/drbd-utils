@@ -3228,6 +3228,7 @@ int main(int argc, char **argv)
 	}
 
 	assign_command_names_from_argv0(argv);
+	add_lib_drbd_to_path();
 
 	if (drbdsetup == NULL || drbdmeta == NULL || drbd_proxy_ctl == NULL) {
 		err("could not strdup argv[0].\n");

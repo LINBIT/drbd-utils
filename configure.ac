@@ -370,6 +370,8 @@ AH_TEMPLATE(DRBD_LOCK_DIR, [Local lock directory. Commonly
 AH_TEMPLATE(DRBD_CONFIG_DIR, [Local configuration directory. Commonly
 			   /etc or
 			   /usr/local/etc])
+AH_TEMPLATE(DRBD_BIN_DIR, [Installation directory. Commonly
+			   /cygdrive/c/Program Files/drbd])
 AH_TEMPLATE(DRBD_LEGACY_83, [Include support for drbd-8.3 kernel code])
 AH_TEMPLATE(DRBD_LEGACY_84, [Include support for drbd-8.4 kernel code])
 
@@ -377,11 +379,13 @@ AC_SUBST(DRBD_LIB_DIR, [$localstatedir/lib/$PACKAGE_TARNAME])
 AC_SUBST(DRBD_RUN_DIR, [$localstatedir/run/$PACKAGE_TARNAME])
 AC_SUBST(DRBD_LOCK_DIR, [$localstatedir/lock])
 AC_SUBST(DRBD_CONFIG_DIR, [$sysconfdir])
+AC_SUBST(DRBD_BIN_DIR, [$exec_prefix/bin])
 
 AC_DEFINE_UNQUOTED(DRBD_LIB_DIR, ["$DRBD_LIB_DIR"])
 AC_DEFINE_UNQUOTED(DRBD_RUN_DIR, ["$DRBD_RUN_DIR"])
 AC_DEFINE_UNQUOTED(DRBD_LOCK_DIR, ["$DRBD_LOCK_DIR"])
 AC_DEFINE_UNQUOTED(DRBD_CONFIG_DIR, ["$DRBD_CONFIG_DIR"])
+AC_DEFINE_UNQUOTED(DRBD_BIN_DIR, ["$DRBD_BIN_DIR"])
 
 if test "$WITH_83_SUPPORT" = "yes"; then
    AC_DEFINE(DRBD_LEGACY_83, [1])

@@ -340,7 +340,7 @@ void add_lib_drbd_to_path(void)
 {
 	char *new_path = NULL;
 	char *old_path = getenv("PATH");
-	static const char lib_drbd[]="/lib/drbd";
+	static const char lib_drbd[]= DRBD_BIN_DIR;
 
 	if (!old_path)
 		setenv("PATH", lib_drbd, 1);
