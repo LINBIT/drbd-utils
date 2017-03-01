@@ -4139,33 +4139,7 @@ static void print_usage_and_exit(const char *addinfo)
 
 static int modprobe_drbd(void)
 {
-	struct stat sb;
-	int ret, retries = 10;
-
-	ret = stat("/proc/drbd", &sb);
-	if (ret && errno == ENOENT) {
-		ret = system("/sbin/modprobe drbd");
-		if (ret != 0) {
-			fprintf(stderr, "Failed to modprobe drbd (%m)\n");
-			return 0;
-		}
-		for(;;) {
-			struct timespec ts = {
-				.tv_nsec = 1000000,
-			};
-
-			ret = stat("/proc/drbd", &sb);
-			if (!ret || retries-- == 0)
-				break;
-			nanosleep(&ts, NULL);
-		}
-	}
-	if (ret) {
-		fprintf(stderr, "Could not stat /proc/drbd: %m\n");
-		fprintf(stderr, "Make sure that the DRBD kernel module is installed "
-				"and can be loaded!\n");
-	}
-	return ret == 0;
+	return 1;
 }
 
 static void maybe_exec_legacy_drbdsetup(char **argv)
