@@ -275,6 +275,7 @@ const struct version *drbd_driver_version(enum driver_version_policy fallback)
 		free(version_txt);
 		return &__drbd_driver_version;
 	} else {
+#if 0
 		FILE *in = popen("modinfo -F version drbd", "r");
 		if (in) {
 			char buf[32];
@@ -285,6 +286,7 @@ const struct version *drbd_driver_version(enum driver_version_policy fallback)
 				return &__drbd_driver_version;
 			}
 		}
+#endif
 	}
 
 	if (fallback == FALLBACK_TO_UTILS)
