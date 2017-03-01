@@ -47,7 +47,17 @@ WITH_DRBDMON = @WITH_DRBDMON@
 # and not in e.g. dash. I'm too lazy to fix it to be compatible.
 SHELL=/bin/bash
 
+
+TOOLS_DIRS  := user/shared user/v9 scripts user/drbdmon
+DOC_DIRS    := documentation/v9
+ifeq ($(WITH_83_SUPPORT),yes)
+TOOLS_DIRS  += user/v83 scripts
+DOC_DIRS    = documentation/v83 
+endif
+ifeq ($(WITH_84_SUPPORT),yes)
+TOOLS_DIRS  = user/v84
 TOOLS_DIRS  = user/shared user/v9 user/v84 user/v83 scripts user/drbdmon
+endif
 DOC_DIRS    = documentation/v83 documentation/v84 documentation/v9
 SUBDIRS     = $(TOOLS_DIRS) $(DOC_DIRS)
 
