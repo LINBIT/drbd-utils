@@ -1874,6 +1874,11 @@ static int check_proxy(const struct cfg_ctx *ctx, int do_up)
 	struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
 	int rv;
 
+	if (STAILQ_NEXT(path, link)) {
+		err("Multiple paths in connection within proxy setup not allowed\n");
+		exit(E_CONFIG_INVALID);
+	}
+
 	if (!path->my_proxy) {
 		if (all_resources)
 			return 0;
