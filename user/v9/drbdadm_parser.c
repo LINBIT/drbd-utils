@@ -1650,6 +1650,11 @@ static struct connection *parse_connection(enum pr_flags flags)
 			insert_tail(&conn->paths, parse_path());
 			break;
 		case '}':
+			if (STAILQ_EMPTY(&conn->paths)) {
+				err("%s:%d: connection without a single path (maybe empty?) not allowed\n",
+						config_file, fline);
+				config_valid = 0;
+			}
 			return conn;
 		default:
 			pe_expected_got( "host | net | skip | }", token);
