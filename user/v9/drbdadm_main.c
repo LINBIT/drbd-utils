@@ -1766,6 +1766,10 @@ int do_proxy_conn_up(const struct cfg_ctx *ctx)
 
 	for_each_connection(conn, &ctx->res->connections) {
 		struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
+
+		if (!path->my_proxy || !path->peer_proxy)
+			continue;
+
 		conn_name = proxy_connection_name(ctx->res, conn);
 
 		argv[2] = ssprintf(
@@ -1801,6 +1805,10 @@ int do_proxy_conn_plugins(const struct cfg_ctx *ctx)
 
 	for_each_connection(conn, &ctx->res->connections) {
 		struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
+
+		if (!path->my_proxy || !path->peer_proxy)
+			continue;
+
 		conn_name = proxy_connection_name(ctx->res, conn);
 
 		argc = 0;
@@ -1845,6 +1853,11 @@ int do_proxy_conn_down(const struct cfg_ctx *ctx)
 
 	rv = 0;
 	for_each_connection(conn, &res->connections) {
+		struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
+
+		if (!path->my_proxy || !path->peer_proxy)
+			continue;
+
 		conn_name = proxy_connection_name(ctx->res, conn);
 		argv[2] = ssprintf("del connection %s", conn_name);
 
