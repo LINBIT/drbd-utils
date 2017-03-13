@@ -2334,6 +2334,8 @@ void print_connection_statistics(int indent,
 static void peer_device_status_json(struct peer_devices_list *peer_device)
 {
 	struct peer_device_statistics *s = &peer_device->statistics;
+	bool in_rsync = (peer_device->info.peer_repl_state >= L_SYNC_SOURCE &&
+			peer_device->info.peer_repl_state <= L_PAUSED_SYNC_T);
 
 	printf("        {\n"
 	       "          \"volume\": %d,\n"
@@ -2344,7 +2346,7 @@ static void peer_device_status_json(struct peer_devices_list *peer_device)
 	       "          \"sent\": " U64 ",\n"
 	       "          \"out-of-sync\": " U64 ",\n"
 	       "          \"pending\": " U32 ",\n"
-	       "          \"unacked\": " U32 "\n",
+	       "          \"unacked\": " U32 "%s\n",
 	       peer_device->ctx.ctx_volume,
 	       drbd_repl_str(peer_device->info.peer_repl_state),
 	       drbd_disk_str(peer_device->info.peer_disk_state),
@@ -2353,11 +2355,11 @@ static void peer_device_status_json(struct peer_devices_list *peer_device)
 	       (uint64_t)s->peer_dev_sent / 2,
 	       (uint64_t)s->peer_dev_out_of_sync / 2,
 	       s->peer_dev_pending,
-	       s->peer_dev_unacked);
+	       s->peer_dev_unacked,
+	       in_rsync ? "," : "");
 
-	if (peer_device->info.peer_repl_state >= L_SYNC_SOURCE &&
-	    peer_device->info.peer_repl_state <= L_PAUSED_SYNC_T)
-		printf("          \"resync-done\": %.2f,\n",
+	if (in_rsync)
+		printf("          \"resync-done\": %.2f\n",
 		       100 * (1 - (double)peer_device->statistics.peer_dev_out_of_sync /
 			      (double)peer_device->device->statistics.dev_size));
 
