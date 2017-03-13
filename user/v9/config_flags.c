@@ -1040,6 +1040,7 @@ struct context_def device_options_ctx = {
 	.nla_type = DRBD_NLA_DEVICE_CONF,
 	.fields = {
 		{ "max-bio-size", NUMERIC(max_bio_size, MAX_BIO_SIZE) },
+		{ "diskless", FLAG(intentional_diskless) },
 		{ } },
 };
 

@@ -142,8 +142,10 @@ const char *repl_state_color_stop(enum drbd_repl_state repl_state)
 			  is_local_repl_state(repl_state));
 }
 
-const char *disk_state_color_start(enum drbd_disk_state disk_state, bool local)
+const char *disk_state_color_start(enum drbd_disk_state disk_state, bool intentional, bool local)
 {
+	if (disk_state == D_DISKLESS && intentional)
+		disk_state = D_UP_TO_DATE;
 	return color_code(disk_state, disk_state_colors,
 			  ARRAY_SIZE(disk_state_colors), true, local);
 }

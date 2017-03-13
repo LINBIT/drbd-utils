@@ -269,6 +269,8 @@ static int disk_equal(struct d_volume *conf, struct d_volume *running)
 	if (conf->disk == NULL && running->disk == NULL)
 		return 1;
 	if (conf->disk == NULL) {
+		if (running->disk && !strcmp(running->disk, "none"))
+			return 1;
 		report_compare(1, "minor %u (vol:%u) %s missing from config\n",
 			running->device_minor, running->vnr, running->disk);
 		return 0;
@@ -810,7 +812,7 @@ static void adjust_disk(const struct cfg_ctx *ctx, struct d_resource* running)
 				schedule_deferred_cmd(&detach_cmd, &k_ctx, CFG_DISK_PREP_DOWN);
 			if (vol->adj_del_minor)
 				schedule_deferred_cmd(&del_minor_cmd, &k_ctx, CFG_DISK_PREP_DOWN);
-	        }
+		}
 		if (vol->adj_attach)
 			schedule_deferred_cmd(&attach_cmd, &tmp_ctx, CFG_DISK);
 		if (vol->adj_disk_opts)
