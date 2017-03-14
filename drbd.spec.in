@@ -163,11 +163,6 @@ This packages includes the DRBD administration tools.
 %if %{with drbdmon}
 %{_sbindir}/drbdmon
 %endif
-%if %{initscripttype} == "systemd"
-%{_unitdir}/drbd.service
-%{_tmpfilesdir}/drbd.conf
-/lib/drbd/drbd
-%endif
 %if %{initscripttype} == "sysv"
 %{_initddir}/drbd
 %endif
@@ -189,6 +184,11 @@ This packages includes the DRBD administration tools.
 %ghost %dir %{_var}/run/drbd
 
 %defattr(-,root,root,-)
+%if %{initscripttype} == "systemd"
+%{_unitdir}/drbd.service
+%{_tmpfilesdir}/drbd.conf
+/lib/drbd/drbd
+%endif
 %config(noreplace) %{_sysconfdir}/drbd.conf
 %dir %{_sysconfdir}/drbd.d
 %config(noreplace) %{_sysconfdir}/drbd.d/global_common.conf
