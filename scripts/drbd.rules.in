@@ -6,7 +6,12 @@ KERNEL!="drbd*", GOTO="drbd_end"
 IMPORT{program}="@sbindir@/drbdadm sh-udev minor-%m"
 
 # Use symlink from the environment if available
-ENV{SYMLINK}!="", SYMLINK="$env{SYMLINK}", GOTO="have_symlink"
+# some udev version thought it was a good idea to change a long established
+# default of string_escape=none to string_escape=replace :-/
+# therefore, recent enough drbdadm will no longer export space separated lists.
+ENV{SYMLINK_BY_DISK}!="", SYMLINK+="$env{SYMLINK_BY_DISK}"
+ENV{SYMLINK_BY_RES}!="", SYMLINK+="$env{SYMLINK_BY_RES}", GOTO="have_symlink"
+ENV{SYMLINK}!="", OPTIONS+="string_escape=none", SYMLINK="$env{SYMLINK}", GOTO="have_symlink"
 
 # Legacy rules for older DRBD 8.3 & 8.4 when drbdadm sh-udev did not yet export SYMLINK
 ENV{DISK}!="", SYMLINK+="drbd/by-disk/$env{DISK}"

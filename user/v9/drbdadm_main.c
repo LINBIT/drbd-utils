@@ -840,18 +840,31 @@ static int sh_udev(const struct cfg_ctx *ctx)
 	else
 		printf("DEVICE=drbd%u\n", vol->device_minor);
 
+	/* in case older udev rules are still in place,
+	 * but do not yet have the work-around for the
+	 * udev default change of "string_escape=none" -> "replace",
+	 * populate plain "SYMLINK" with just the "by-res" one. */
 	printf("SYMLINK=");
 	if (vol->implicit)
-		printf("drbd/by-res/%s", res->name);
+		printf("drbd/by-res/%s\n", res->name);
 	else
-		printf("drbd/by-res/%s/%u", res->name, vol->vnr);
+		printf("drbd/by-res/%s/%u\n", res->name, vol->vnr);
+
+	/* repeat, with _BY_RES */
+	printf("SYMLINK_BY_RES=");
+	if (vol->implicit)
+		printf("drbd/by-res/%s\n", res->name);
+	else
+		printf("drbd/by-res/%s/%u\n", res->name, vol->vnr);
+
+	/* and add the _BY_DISK one explicitly */
 	if (vol->disk) {
+		printf("SYMLINK_BY_DISK=");
 		if (!strncmp(vol->disk, "/dev/", 5))
-			printf(" drbd/by-disk/%s", vol->disk + 5);
+			printf("drbd/by-disk/%s\n", vol->disk + 5);
 		else
-			printf(" drbd/by-disk/%s", vol->disk);
+			printf("drbd/by-disk/%s\n", vol->disk);
 	}
-	printf("\n");
 
 	return 0;
 }
