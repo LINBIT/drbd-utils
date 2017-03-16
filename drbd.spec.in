@@ -441,6 +441,9 @@ fi
 
 
 %changelog
+* Thu Mar 16 2017 Roland Kammerer <roland.kammerer@linbit.com> - 8.9.11rc1-1
+- New upstream release.
+
 * Fri Dec 23 2016 Philipp Reisner <phil@linbit.com> - 8.9.10-1
 - New upstream release.
 
