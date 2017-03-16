@@ -49,6 +49,7 @@
 #include <getopt.h>
 #include <signal.h>
 #include <time.h>
+#include "linux/drbd.h"
 #include "linux/drbd_limits.h"
 #include "drbdtool_common.h"
 #include "drbdadm.h"
@@ -1563,6 +1564,29 @@ static int adm_forget_peer(const struct cfg_ctx *ctx)
 	return rv;
 }
 
+static void setenv_node_id_and_uname(struct d_resource *res)
+{
+	char key[sizeof("DRBD_NODE_ID_32")];
+	int i;
+	struct d_host_info *host;
+
+	for (i = 0; i < DRBD_NODE_ID_MAX; i++) {
+		snprintf(key, sizeof(key), "DRBD_NODE_ID_%u", i);
+		unsetenv(key);
+	}
+	for_each_host(host, &res->all_hosts) {
+		if (!host->node_id)
+			continue;
+		/* range check in post parse has already clamped this */
+		snprintf(key, sizeof(key), "DRBD_NODE_ID_%s", host->node_id);
+		setenv(key, names_to_str(&host->on_hosts), 1);
+	}
+
+	/* Maybe we will pass it in from kernel some day */
+	if (!getenv("DRBD_MY_NODE_ID"))
+		setenv("DRBD_MY_NODE_ID", res->me->node_id, 1);
+}
+
 static int adm_khelper(const struct cfg_ctx *ctx)
 {
 	struct d_resource *res = ctx->res;
@@ -1575,6 +1599,7 @@ static int adm_khelper(const struct cfg_ctx *ctx)
 
 	setenv("DRBD_CONF", config_save, 1);
 	setenv("DRBD_RESOURCE", res->name, 1);
+	setenv_node_id_and_uname(res);
 
 	if (vol) {
 		snprintf(minor_string, sizeof(minor_string), "%u", vol->device_minor);
