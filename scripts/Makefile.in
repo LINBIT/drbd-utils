@@ -119,6 +119,7 @@ ifeq ($(WITH_PACEMAKER),yes)
 	  $(LN_S) -f crm-fence-peer.sh crm-unfence-peer.sh ; )
 	mkdir -p $(DESTDIR)/usr/lib/ocf/resource.d/linbit
 	install -m 755 drbd.ocf $(DESTDIR)/usr/lib/ocf/resource.d/linbit/drbd
+	install -m 644 drbd.shellfuncs.sh $(DESTDIR)/usr/lib/ocf/resource.d/linbit/
 endif
 
 install-rgmanager:

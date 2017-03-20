@@ -98,7 +98,7 @@ fi
 # Disable.
 OCF_RESKEY_stop_outdates_secondary_default="false"
 
-  OCF_RESKEY_adjust_master_score_default="5 10 1000 10000"
+  OCF_RESKEY_adjust_master_score_default="0 10 1000 10000"
 #   ignored  |  Consistent    |  Unknown -'  |   |     |
 #   ignored  |  NOT UpToDate  |  UpToDate ---'   |     |
 # Secondary  |  UpToDate      |  unknown --------'     |
@@ -188,15 +188,21 @@ Space separated list of four master score adjustments for different scenarios:
 
 Numeric values are expected to be non-decreasing.
 
-Default are the previously hardcoded values.
-
-Set the first value to 0 (and configure proper fencing methods)
-to prevent pacemaker from trying to promote while it is unclear
-whether the data is really the most recent copy.
+The first value is 0 by default to prevent pacemaker from trying to promote
+while it is unclear whether the data is really the most recent copy.
 (DRBD knows it is "consistent", but is unsure about "uptodate"ness).
+Please configure proper fencing methods both in DRBD
+(fencing resource-and-stonith; appropriate (un)fence-peer handlers)
+AND in Pacemaker to make this work reliably.
 
 Advanced use: Adjust the other values to better fit into complex
 dependency score calculations.
+
+Intentionally diskless nodes ("Diskless Clients") with access to good data via
+some (or all) their peers will use the 3rd or 4th value (minus one) when they
+are (Secondary, not all peers up-to-date) or (ALL peers are up-to-date, or they
+are Primary themselves). This may need to change if this should become a
+frequent use case.
 </longdesc>
 <shortdesc lang="en">master score adjustments</shortdesc>
 <content type="string" default="${OCF_RESKEY_adjust_master_score_default}"/>
@@ -277,6 +283,40 @@ See description of unfence_if_all_uptodate.
 END
 }
 
+# either this pacemaker/lrmd combo does not know about ocf-exit-reason,
+# or this resource-agents version already does have ocf_exit_reason(),
+# or we define a short version of it here.
+if ! command -v ocf_exit_reason &> /dev/null ; then
+	if [[ -z $OCF_EXIT_REASON_PREFIX ]]; then
+		ocf_exit_reason() { ocf_log err "$*"; }
+	else
+		ocf_exit_reason() {
+			local fmt=$1 ; shift;
+			local msg=$(printf "$fmt" "$@")
+			>&2 printf "%s%s\n" "$OCF_EXIT_REASON_PREFIX" "$msg";
+		}
+	fi
+fi
+
+__drbd_exit_reason_set=""
+drbd_ocf_exit_reason()
+{
+	__drbd_exit_reason_set=1
+	ocf_exit_reason "$@"
+}
+
+if $USE_DEBUG_LOG ; then
+	dump_stack() { local i n=${#BASH_SOURCE[@]}; for (( i=1; i <= n; i+=1 )); do caller $i ; done; }
+	exit() {
+		local ex=${1:-$?}
+		if [[ -z $__drbd_exit_reason_set ]] ; then
+			set -- $(dump_stack)
+			drbd_ocf_exit_reason "exit %s at %s\n" "$ex" "$*"
+		fi
+		command exit "$ex"
+	}
+fi
+
 do_cmd() {
 	# Run a command, return its exit code, capture any output, and log
 	# everything if appropriate.
@@ -329,59 +369,13 @@ remove_master_score() {
 	do_cmd ${HA_SBIN_DIR}/crm_master -l reboot -D
 }
 
-_sh_status_process() {
-	# _volume not present should not happen,
-	# but may help make this agent work even if it talks to drbd 8.3.
-	: ${_volume:=0}
-	# not-yet-created volumes are reported as -1
-	(( _volume >= 0 )) || _volume=$[1 << 16]
-	DRBD_ROLE_LOCAL[$_volume]=${_role:-Unconfigured}
-	DRBD_ROLE_REMOTE[$_volume]=${_peer:-Unknown}
-	DRBD_CSTATE[$_volume]=$_cstate
-	DRBD_DSTATE_LOCAL[$_volume]=${_disk:-Unconfigured}
-	DRBD_DSTATE_REMOTE[$_volume]=${_pdsk:-DUnknown}
+source_drbd_shellfuncs()
+{
+	local dir=.
+	[[ $0 = */* ]] && dir=${0%/*}
+	source "$dir/drbd.shellfuncs.sh"
 }
-drbd_set_status_variables() {
-	# drbdsetup sh-status prints these values to stdout,
-	# and then prints _sh_status_process.
-	#
-	# if we eval that, we do not need several drbdadm/drbdsetup commands
-	# to figure out the various aspects of the state.
-	local _minor _res_name _known _cstate _role _peer _disk _pdsk
-	local _volume
-	local _flags_susp _flags_aftr_isp _flags_peer_isp _flags_user_isp
-	local _resynced_percent
-	local out
-
-	DRBD_ROLE_LOCAL=()
-	DRBD_ROLE_REMOTE=()
-	DRBD_CSTATE=()
-	DRBD_DSTATE_LOCAL=()
-	DRBD_DSTATE_REMOTE=()
-
-	if $DRBD_HAS_MULTI_VOLUME ; then
-		out="$($DRBDSETUP sh-status "$DRBD_RESOURCE")" && eval "$out"
-	else
-		# without "MULTI_VOLUME", the DRBD_DEVICES array
-		# should contain exactly one value
-		out="$($DRBDSETUP "$DRBD_DEVICES" sh-status)" && eval "$out"
-	fi
-
-	# if there was no output at all, or a weird output
-	# make sure the status arrays won't be empty.
-	[[ ${#DRBD_ROLE_LOCAL[@]}    != 0 ]] || DRBD_ROLE_LOCAL=(Unconfigured)
-	[[ ${#DRBD_ROLE_REMOTE[@]}   != 0 ]] || DRBD_ROLE_REMOTE=(Unknown)
-	[[ ${#DRBD_CSTATE[@]}        != 0 ]] || DRBD_CSTATE=(Unconfigured)
-	[[ ${#DRBD_DSTATE_LOCAL[@]}  != 0 ]] || DRBD_DSTATE_LOCAL=(Unconfigured)
-	[[ ${#DRBD_DSTATE_REMOTE[@]} != 0 ]] || DRBD_DSTATE_REMOTE=(DUnknown)
-
-
-	: == DEBUG == DRBD_ROLE_LOCAL    == "${DRBD_ROLE_LOCAL[@]}" ==
-	: == DEBUG == DRBD_ROLE_REMOTE   == "${DRBD_ROLE_REMOTE[@]}" ==
-	: == DEBUG == DRBD_CSTATE        == "${DRBD_CSTATE[@]}" ==
-	: == DEBUG == DRBD_DSTATE_LOCAL  == "${DRBD_DSTATE_LOCAL[@]}" ==
-	: == DEBUG == DRBD_DSTATE_REMOTE == "${DRBD_DSTATE_REMOTE[@]}" ==
-}
+source_drbd_shellfuncs
 
 call_unfence()
 {
@@ -441,8 +435,7 @@ maybe_outdate_self()
 	# e.g. post/promote of some other peer.
 	# Should not happen, fencing constraints should take care of that.
 	# But in case it does, scream out loud.
-	case "${DRBD_ROLE_LOCAL[*]}" in
-	*Primary*)
+	if $status_primary; then
 		# I am Primary.
 		# The other one is Primary (according to OCF_RESKEY_CRM_meta_notify_master_uname).
 		# But we cannot talk to each other :( (otherwise this function was not called)
@@ -451,7 +444,7 @@ maybe_outdate_self()
 
 		ocf_log crit "resource internal SPLIT BRAIN: both $HOSTNAME and $host are Primary for $DRBD_RESOURCE, but the replication link is down!"
 		return 1
-	esac
+	fi
 
 	# OK, I am not Primary, but there is an other node Primary
 	# Outdate myself
@@ -469,6 +462,8 @@ maybe_outdate_self()
 drbd_update_master_score() {
 	set -- $OCF_RESKEY_adjust_master_score
 	local only_consistent=$1 only_remote=$2 local_ok=$3 as_good_as_it_gets=$4
+
+
 	# NOTE
 	# there may be constraint scores from rules on role=Master,
 	# that in some ways can add to the node attribute based master score we
@@ -493,64 +488,86 @@ drbd_update_master_score() {
 	# 10000: Please promote me/keep me Primary.
 	#        I'm confident that my data is as good as it gets.
 	#
-	# For multi volume, we need to compare who is "better" a bit more sophisticated.
-	# The ${XXX[*]//UpToDate}, without being in double quotes, results in a single space,
-	# if all are UpToDate.
-	: == DEBUG == ${DRBD_ROLE_LOCAL[*]}/${DRBD_DSTATE_LOCAL[*]//UpToDate/ }/${DRBD_DSTATE_REMOTE[*]//UpToDate/ }/ ==
-	case ${DRBD_ROLE_LOCAL[*]}/${DRBD_DSTATE_LOCAL[*]//UpToDate/ }/${DRBD_DSTATE_REMOTE[*]//UpToDate/ }/ in
-	*Primary*/\ /\ /)
-		# I am Primary, all local disks are UpToDate,
-		# AND all peer disks are UpToDate
-		set_master_score $as_good_as_it_gets
-		: == DEBUG == unfence_if_all_uptodate=$unfence_if_all_uptodate
-		$unfence_if_all_uptodate && call_unfence
-		;;
-	*Primary*/\ /*/)
-		# I am Primary, all local disks are UpToDate,
-		# not so sure about the peer's disks
-		set_master_score $as_good_as_it_gets
-		;;
-	*/\ /*DUnknown*/)
-		# all local disks are UpToDate,
-		# but I'm not Primary,
-		# and I'm not sure about the peer's disk state(s).
-		# We may need to outdate ourselves?
-		# But if we outdate in a MONITOR, and are disconnected
-		# secondary because of a hard primary crash, before CRM noticed
-		# that there is no more master, we'd make us utterly useless!
-		# Trust that the primary will also notice the disconnect,
-		# and will place an appropriate fencing constraint via
-		# its fence-peer handler callback.
-		set_master_score  $local_ok
-		;;
-	*/\ /*/)
-		# We know something about our peer, which means that either the
-		# replication link is established, or it was not even
-		# consistent last time we talked to each other.
-		# Also all our local disks are UpToDate, which means even if we are
-		# currently synchronizing, we do so as SyncSource.
-		set_master_score $as_good_as_it_gets
-		;;
+	# TODO: separately configure the master score for diskless clients
+	# For now: if it is "intentionally" diskless, and has access to
+	# remote UpToDate, consider it slighly worse than "local_ok".
+	#
+	if	: "diskless client?"; $status_diskless_client ; then
+		if	: "primary and access to good data?" ;
+			$status_primary && $status_some_peer_all_up_to_date; then
 
-	*/*/\ /)
+			set_master_score $(( as_good_as_it_gets -1 ))
+		elif	: "ALL peer-disks up-to-date?"; $status_pdsk_all_up_to_date; then
+			set_master_score $(( as_good_as_it_gets -1 ))
+		elif	: "SOME peer-disks up-to-date?"; $status_some_peer_all_up_to_date ; then
+			set_master_score $(( local_ok - 1 ))
+		else	: "Diskless client, without access to good data :("
+			remove_master_score
+		fi
+
+	elif	: "all disks up-to-date?"; $status_disk_all_up_to_date ; then
+
+		if	: "primary?" ; $status_primary ; then
+
+			# I am Primary, all local disks are UpToDate
+			set_master_score $as_good_as_it_gets
+
+			if  : "all peer-disks up-to-date?"; $status_pdsk_all_up_to_date; then
+				# I am Primary, all local disks are UpToDate,
+				# AND all peer disks are UpToDate
+				: == DEBUG == unfence_if_all_uptodate=$unfence_if_all_uptodate
+				$unfence_if_all_uptodate && call_unfence
+
+			# else: not so sure about the peer's disks
+			fi
+		else : "Not primary."
+			if : "any peer-disk unknown?"; $status_pdsk_any_unknown ; then
+				# all local disks are UpToDate,
+				# but I'm not Primary,
+				# and I'm not sure about some peer's disk state(s).
+				# We may need to outdate ourselves?
+				# But if we outdate in a MONITOR, and are disconnected
+				# secondary because of a hard primary crash, before CRM noticed
+				# that there is no more master, we'd make us utterly useless!
+				# Trust that the primary will also notice the disconnect,
+				# and will place an appropriate fencing constraint via
+				# its fence-peer handler callback.
+				set_master_score  $local_ok
+			else : "all peer disk states known."
+				# We know something about our peer, which means that either the
+				# replication link is established, or it was not even
+				# consistent last time we talked to each other.
+				# Also all our local disks are UpToDate, which means even if we are
+				# currently synchronizing, we do so as SyncSource.
+				set_master_score $as_good_as_it_gets
+			fi
+		fi
+
+	elif	: "some peer with all peer-disks up-to-date?" ; $status_some_peer_all_up_to_date ; then
+
 		# At least one of our local disks is not up to date.
-		# But our peer is ALL OK.
+		# But at least one of our peers is ALL OK.
 		# We can expect to have access to useful
-		# data, but must expect degraded performance.
+		# data, but with possibly degraded performance,
+		# (some) reads need to fetch from the peer.
 		set_master_score $only_remote
-		;;
-
-	*/*Attaching*/*/|\
-	*/*Negotiating*/*/)
+	
+	elif	: "in transitional state?"; $status_disk_transitional_state ; then
 		# some transitional state.
 		# just don't do anything
-		: ;;
+		: "ignore"
 
-	Unconfigured*|\
-	*/*Diskless*/*/|\
-	*/*Failed*/*/|\
-	*/*Inconsistent*/*/|\
-	*/*Outdated*/*/)
+	elif	: "all disks consistent?" ; $status_disk_all_consistent ; then
+		# All local disks seem to be Consistent.
+		# They _may_ be up to date, or not.
+		# We hope that fencing mechanisms have put constraints in
+		# place, so we won't be promoted with stale data.
+		# But in case this was a cluster crash,
+		# at least allow _someone_ to be promoted.
+		set_master_score $only_consistent
+
+	else # not $status_disk_all_consistent and not $status_disk_transitional_state
+
 		# ALWAYS put the cluster in MAINTENANCE MODE
 		# if you add a volume to a live replication group,
 		# because the new volume will typically come up as Inconsistent
@@ -567,20 +584,7 @@ drbd_update_master_score() {
 		# negative master scores cause instance stop; restart cycle :(
 		# Hope that this will suffice.
 		remove_master_score
-		;;
-	*)
-		# All local disks seem to be Consistent.
-		# They _may_ be up to date, or not.
-		# We hope that fencing mechanisms have put constraints in
-		# place, so we won't be promoted with stale data.
-		# But in case this was a cluster crash,
-		# at least allow _someone_ to be promoted.
-		set_master_score $only_consistent
-		;;
-	esac
-
-	: "$OCF_SUCCESS = OCF_SUCCESS"
-	return $OCF_SUCCESS
+	fi
 }
 
 is_drbd_enabled() {
@@ -601,18 +605,6 @@ drbd_status() {
 	local dev
 	rc=$OCF_NOT_RUNNING
 
-	# NOT local! but "return values"
-	# since 8.4 supports multi volumes per resource,
-	# these are shell arrays.
-	#
-	# Initialize to "Unconfigured", in case this returns early.
-	# They will be re-initialized and properly populated in drbd_set_status_variables.
-	DRBD_ROLE_LOCAL=(Unconfigured)
-	DRBD_ROLE_REMOTE=(Unknown)
-	DRBD_CSTATE=(Unconfigured)
-	DRBD_DSTATE_LOCAL=(Unconfigured)
-	DRBD_DSTATE_REMOTE=(DUnknown)
-
 	is_drbd_enabled || return $rc
 
 	# Not running, if no block devices exist.
@@ -630,20 +622,13 @@ drbd_status() {
 	# ok, module is loaded, block device nodes exist.
 	# lets see the status
 	drbd_set_status_variables
-	case "${DRBD_ROLE_LOCAL[*]}" in
-	*Primary*)
-		rc=$OCF_RUNNING_MASTER
-		;;
-	*Secondary*)
-		rc=$OCF_SUCCESS
-		;;
-	*Unconfigured*)
+	if $status_unconfigured ; then
 		rc=$OCF_NOT_RUNNING
-		;;
-	*)
-		ocf_log err "Unexpected role(s) >>${DRBD_ROLE_LOCAL[*]}<<"
-		rc=$OCF_ERR_GENERIC
-	esac
+	elif $status_primary ; then
+		rc=$OCF_RUNNING_MASTER
+	else
+		rc=$OCF_SUCCESS
+	fi
 
 	return $rc
 }
@@ -667,7 +652,7 @@ drbd_monitor() {
 	fi
 
 	case $status in
-	(0) : "OCF_SUCCESS" ;;
+	(0) : "OCF_SUCCESS aka 'running/slave'" ;;
 	(1) : "OCF_ERR_GENERIC" ;;
 	(2) : "OCF_ERR_ARGS" ;;
 	(3) : "OCF_ERR_UNIMPLEMENTED" ;;
@@ -677,6 +662,8 @@ drbd_monitor() {
 	(7) : "OCF_NOT_RUNNING" ;;
 	(8) : "OCF_RUNNING_MASTER" ;;
 	(9) : "OCF_FAILED_MASTER" ;;
+	(190): "PCMK_OCF_DEGRADED" ;;
+	(191): "PCMK_OCF_DEGRADED_MASTER" ;;
 	(*) : " WTF? $status " ;;
 	esac
 
@@ -709,7 +696,8 @@ my_udevsettle()
 	done
 	return 0
 }
-create_device_udev_settle() {
+create_device_udev_settle()
+{
 	local dev
 	if $DRBD_HAS_MULTI_VOLUME; then
 		if do_drbdadm new-resource $DRBD_RESOURCE &&
@@ -725,7 +713,18 @@ create_device_udev_settle() {
 	fi
 }
 
-drbd_start() {
+do_attach()
+{
+	if $DRBD_IS_v9; then
+		# for diskless clients, this may be a no-op.
+		do_drbdadm adjust --skip-net $DRBD_RESOURCE
+	else
+		do_drbdadm attach $DRBD_RESOURCE
+	fi
+}
+
+drbd_start()
+{
 	local rc
 	local status
 	local first_try=true
@@ -768,7 +767,7 @@ drbd_start() {
 				# We cannot even create the objects
 				exit $OCF_ERR_GENERIC
 			fi
-			if ! do_drbdadm $DRBD_TO_PEER attach $DRBD_RESOURCE ; then
+			if ! do_attach; then
 				# If we cannot up it, even on the second try,
 				# it is unlikely to get better.  Don't wait for
 				# this operation to timeout, but short circuit
@@ -973,13 +972,11 @@ drbd_notify() {
 		drbd_set_status_variables
 		drbd_update_master_score
 
-		: == DEBUG == ${DRBD_DSTATE_REMOTE[*]} ==
-		case ${DRBD_DSTATE_REMOTE[*]} in
-		*DUnknown*)
-			# Still not communicating.
+		if : "any unknown peer device?"; $status_pdsk_any_unknown ; then
+			# Still not properly communicating.
 			# Maybe someone else is primary (too)?
 			maybe_outdate_self
-		esac
+		fi
 	esac
 
 	: "$OCF_SUCCESS = OCF_SUCCESS"
@@ -1014,12 +1011,24 @@ check_crm_feature_set()
 	(( a == 3 && b > 0 )) ||
 	(( a == 3 && b == 0 && c > 0 )) ||
 	ocf_log warn "You may be disappointed: This RA is intended for pacemaker 1.0 or better!"
+
+	PCMK_OCF_DEGRADED=$OCF_SUCCESS
+	PCMK_OCF_DEGRADED_MASTER=$OCF_RUNNING_MASTER
+
+	## pacemaker since crm_feature_set 3.0.10 knows about "degraded" states.
+	## But it does not work yet, because LRMD filters the exit codes...
+	# if (( a > 3 )) || (( a == 3 && b > 0 )) || (( a == 3 && b == 0 && c >= 10 )); then
+	# 	PCMK_OCF_DEGRADED=190
+	# 	PCMK_OCF_DEGRADED_MASTER=191
+	# fi
 }
 
 drbd_validate_all () {
 	DRBDADM="drbdadm"
 	DRBDSETUP="drbdsetup"
 	DRBD_HAS_MULTI_VOLUME=false
+	DRBD_HAS_EVENTS2=false
+	DRBD_IS_v9=false
 
 	# these will _exit_ if they don't find the binaries
 	check_binary $DRBDADM
@@ -1046,16 +1055,27 @@ drbd_validate_all () {
 		DRBD_HAS_MULTI_VOLUME=true
 	fi
 	if (( $DRBD_KERNEL_VERSION_CODE >= 0x090000 )) ; then
-		ocf_log err "This resource agent does (still) only support DRBD version 8.x"
-		exit $OCF_ERR_INSTALLED
+		# ocf_log err "This resource agent does (still) only support DRBD version 8.x"
+		# exit $OCF_ERR_INSTALLED
+
+		# "drbdsetup events2" is actually usable since 0x080407.
+		# But let's only use it for 9.
+		DRBD_HAS_EVENTS2=true
+		DRBD_IS_v9=true
 	fi
 	check_crm_feature_set
 
-	# Check clone and M/S options.
-	meta_expect clone-max -le 2
-	meta_expect clone-node-max = 1
-	meta_expect master-node-max = 1
-	meta_expect master-max -le 2
+	if [[ $__OCF_ACTION != stop ]] ; then
+		# Check clone and M/S options.
+		$DRBD_IS_v9 || meta_expect clone-max -le 2
+		meta_expect clone-node-max = 1
+		meta_expect master-node-max = 1
+
+		# don't try to bump this, even the DRBD 9 kernel module
+		# can not reliably handle more than two primaries yet,
+		# without risking data corruption.
+		meta_expect master-max -le 2
+	fi
 
 	# Rather than returning $OCF_ERR_CONFIGURED, we sometimes return
 	# $OCF_ERR_INSTALLED here: the local config may be broken, but some
@@ -1132,11 +1152,11 @@ drbd_validate_all () {
 	# check for master-max and allow-two-primaries on start|promote only,
 	# so it could be stopped still, if someone re-configured while running.
 	case $__OCF_ACTION:$OCF_RESKEY_CRM_meta_master_max in
-	start:2|promote:2)
+	start:[!01]|promote:[!01])
 		if ! $DRBDADM -d -v dump $DRBD_RESOURCE 2>/dev/null |
 			grep -q -Ee '^[[:space:]]*allow-two-primaries([[:space:]]+yes)?;$'
 		then
-			ocf_log err "master-max = 2, but DRBD resource $DRBD_RESOURCE does not allow-two-primaries."
+			ocf_log err "master-max > 1, but DRBD resource $DRBD_RESOURCE does not allow-two-primaries."
 			: "$OCF_ERR_CONFIGURED = OCF_ERR_CONFIGURED"
 			return $OCF_ERR_CONFIGURED
 		fi
@@ -1145,7 +1165,7 @@ drbd_validate_all () {
 	# detect whether notify is configured or not.
 	# for probes, the meta_notify* namespace is not exported.
 	case $__OCF_ACTION in
-	monitor|validate-all)
+	stop|monitor|validate-all)
 		:;;
 	*)
 		# Test if the environment variables for either the notify
