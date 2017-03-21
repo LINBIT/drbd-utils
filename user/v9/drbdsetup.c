@@ -1760,10 +1760,12 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 			};
 
 			dbg(3, "received type:%x\n", nlh->nlmsg_type);
+#if 0
 			if (nlh->nlmsg_type < NLMSG_MIN_TYPE) {
 				/* Ignore netlink control messages. */
 				continue;
 			}
+#endif
 			if (nlh->nlmsg_type == GENL_ID_CTRL) {
 #ifdef HAVE_CTRL_CMD_DELMCAST_GRP
 				dbg(3, "received cmd:%x\n", info.genlhdr->cmd);
@@ -1780,10 +1782,12 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				/* Ignore other generic netlink control messages. */
 				continue;
 			}
+#if 0
 			if (nlh->nlmsg_type != drbd_genl_family.id) {
 				/* Ignore messages for all other netlink families. */
 				continue;
 			}
+#endif
 
 			/* parse early, otherwise drbd_cfg_context_from_attrs
 			 * can not work */
