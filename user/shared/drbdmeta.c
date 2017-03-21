@@ -1074,7 +1074,14 @@ struct meta_cmd cmds[] = {
 void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, const char* tag)
 {
 	int fd = cfg->md_fd;
-	ssize_t c = pread(fd, buf, count, offset);
+	ssize_t c;
+
+	c = lseek(fd, offset, SEEK_SET);
+	if (c == offset)
+		c = read(fd, buf, count);
+	else
+		c = -1;
+
 	if (verbose >= 2) {
 		fflush(stdout);
 		fprintf(stderr, " %-26s: pread(%u, ...,%6lu,%12llu)\n", tag,
@@ -1157,7 +1164,11 @@ void pwrite_or_die(struct format *cfg, const void *buf, size_t count, off_t offs
 			fprintf_hex(stderr, offset, buf, count);
 		return;
 	}
-	c = pwrite(fd, buf, count, offset);
+	c = lseek(fd, offset, SEEK_SET);
+	if (c == offset)
+		c = write(fd, buf, count);
+	else
+		c = -1;
 	if (verbose >= 2) {
 		fflush(stdout);
 		fprintf(stderr, " %-26s: pwrite(%u, ...,%6lu,%12llu)\n", tag,
