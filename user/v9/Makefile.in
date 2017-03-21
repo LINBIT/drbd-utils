@@ -61,6 +61,7 @@ DESTDIR ?= /
 
 CFLAGS += -Wall -I../../drbd-headers -I.. -I. -I../shared
 CFLAGS += $(EXTRA_CFLAGS)
+CFLAGS += -D _WIN32=1
 
 drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_postparse.o \
 	      drbdadm_main.o drbdadm_adjust.o drbdadm_dump.o drbdtool_common.o \
