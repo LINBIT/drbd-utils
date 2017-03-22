@@ -2990,6 +2990,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 			printf("DRBDADM_BUILDTAG=%s\n", shell_escape(drbd_buildtag()));
 			printf("DRBDADM_API_VERSION=%u\n", API_VERSION);
 			printf("DRBD_KERNEL_VERSION_CODE=0x%06x\n", version_code_kernel());
+			printf("DRBD_KERNEL_VERSION=%s\n", escaped_version_code_kernel());
 			printf("DRBDADM_VERSION_CODE=0x%06x\n", version_code_userland());
 			printf("DRBDADM_VERSION=%s\n", shell_escape(PACKAGE_VERSION));
 			exit(0);

@@ -90,6 +90,7 @@ enum driver_version_policy {
 };
 extern const struct version *drbd_driver_version(enum driver_version_policy fallback);
 extern const struct version *drbd_utils_version(void);
+extern const char *escaped_version_code_kernel(void);
 extern int version_code_kernel(void);
 extern int version_code_userland(void);
 extern int version_equal(const struct version *rev1, const struct version *rev2);
