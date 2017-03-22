@@ -1570,21 +1570,33 @@
 	  <primary>drbd.conf</primary>
 
 	  <secondary>quorum</secondary>
-	  </indexterm> DRBD contains a quorum implementation. If it activated
-	  a cluster (partition) requires quorum in order to modify the replicated
-	  data set. That means a node in the cluster partition can only be
-	  promoted to primary if the cluster partition has primary.</para>
-
-	  <para>If a primary node should execute a write request, but the
-	  cluster partition has lost quorum, it will freeze the IO operation
-	  and invoke the <option>quorum-lost</option> handler. The handler
-	  might reboot the machine forcefully stop the service, or ignore
-	  the event by returning.</para>
+	  </indexterm> When activated a cluster partition requires quorum
+	  in order to modify the replicated data set. That means a node in
+	  the cluster partition can only be promoted to primary if the
+	  cluster partition has quorum.
+	  If a primary node should execute a write request, but the
+	  cluster partition has lost quorum, it will freeze IO and invoke
+	  the <option>quorum-lost</option> handler. The handler is intended
+	  for notification purposes, its return code is ignored.</para>
 
 	  <para>The option's value might be set to <option>off</option>,
-	  <option>majority</option>, or <option>all</option>. It can be
-	  used with fencing or instead of fencing if the resource has more
-	  than two nodes with backing disks.</para>
+	  <option>majority</option>, <option>all</option> or a numeric value. If you
+	  set it to a numeric value, make sure that the value is greater then half
+	  of your number of nodes.
+	  Quorum is a mechanism to avoid data divergence, it might be used instead
+	  of fencing when there are more than two repicas. It defaults to
+	  <option>off</option></para>
+
+	  <para>If all missing nodes are marked as outdated, a partition always has
+	  quorum, no matter how small it is. I.e. If you disconnect all secondary
+	  nodes gracefully a single primary continues to operate. In the moment a
+	  single secondary is lost, it has to be assumed that it forms a partition
+	  with all the missing outdated nodes. In case my partition might
+	  be smaller than the other, quorum is lost in this moment.</para>
+
+	  <para>The quorum implementation is available starting with the DRBD kernel
+	  driver version 9.0.7.</para>
+
     </definition>
   </drbdsetup_option>
 </drbdsetup_options>

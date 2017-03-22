@@ -2230,6 +2230,9 @@ static const char *susp_str(struct resource_info *info)
 		strcat(buffer, ",no-data" + (*buffer == 0));
 	if (info->res_susp_fen)
 		strcat(buffer, ",fencing" + (*buffer == 0));
+	if (info->res_susp_quorum)
+		strcat(buffer, ",quorum" + (*buffer == 0));
+
 	if (*buffer == 0)
 		strcat(buffer, "no");
 
@@ -2450,7 +2453,8 @@ static void resource_status_json(struct resources_list *resource)
 	bool suspended =
 		resource->info.res_susp ||
 		resource->info.res_susp_nod ||
-		resource->info.res_susp_fen;
+		resource->info.res_susp_fen ||
+		resource->info.res_susp_quorum;
 
 	nla = nla_find_nested(resource->res_opts, __nla_type(T_node_id));
 	if (nla)
@@ -2510,7 +2514,8 @@ void resource_status(struct resources_list *resource)
 	if (opt_verbose ||
 	    resource->info.res_susp ||
 	    resource->info.res_susp_nod ||
-	    resource->info.res_susp_fen)
+	    resource->info.res_susp_fen ||
+	    resource->info.res_susp_quorum)
 		wrap_printf(4, " suspended:%s", susp_str(&resource->info));
 	if (opt_statistics && opt_verbose) {
 		wrap_printf(4, "\n");
@@ -3690,7 +3695,8 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 			if (!old ||
 			    new.i.res_susp != old->i.res_susp ||
 			    new.i.res_susp_nod != old->i.res_susp_nod ||
-			    new.i.res_susp_fen != old->i.res_susp_fen)
+			    new.i.res_susp_fen != old->i.res_susp_fen ||
+			    new.i.res_susp_quorum != old->i.res_susp_quorum)
 				printf(" suspended:%s",
 				       susp_str(&new.i));
 			if (opt_statistics) {
