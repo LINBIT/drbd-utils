@@ -3,6 +3,22 @@
 
 export LANG=C LC_ALL=C TZ=":/etc/localtime"
 
+grep_rsc_location()
+{
+	# expected input: exactly one tag per line: "^[[:space:]]*<.*/?>$"
+	sed -ne '
+	# within the rsc_location constraint with that id,
+	/<rsc_location .*\bid="'"$1"'"/, /<\/rsc_location>/ {
+		# make sure expressions have their attributes ordered
+		# as we expect them later
+		s/\(<expression\)\( .*\)\( attribute="[^"]*"\)/\1\3\2/
+		s/\(<expression attribute="[^"]*"\)\( .*\)\( operation="[^"]*"\)/\1\3\2/
+		s/\(<expression attribute="[^"]*" operation="[^"]*"\)\( .*\)\( value="[^"]*"\)/\1\3\2/
+		p;
+		/<\/rsc_location>/q # done, if closing tag is found
+	}'
+}
+
 sed_rsc_location_suitable_for_string_compare()
 {
 	# expected input: exactly one tag per line: "^[[:space:]]*<.*/?>$"
@@ -12,6 +28,7 @@ sed_rsc_location_suitable_for_string_compare()
 		/<\/rsc_location>/q # done, if closing tag is found
 		s/^[[:space:]]*//   # trim spaces
 		s/ *\bid="[^"]*"//  # remove id tag
+		/^<!--/d # remove comments
 		# print each attribute on its own line, by
 		: attr
 		h # remember the current (tail of the) line
@@ -26,22 +43,148 @@ sed_rsc_location_suitable_for_string_compare()
 }
 
 cibadmin_invocations=0
-set_constraint()
-{
-	cibadmin_invocations=$(( $cibadmin_invocations + 1 ))
-	cibadmin -C -o constraints -X "$new_constraint"
-}
-
 remove_constraint()
 {
 	cibadmin_invocations=$(( $cibadmin_invocations + 1 ))
 	cibadmin -D -X "<rsc_location rsc=\"$master_id\" id=\"$id_prefix-$master_id\"/>"
 }
 
+restrict_existing_constraint_further()
+{
+	[[ ${#EXCLUDE_NODES[@]} != 0 ]] || return
+
+	new_constraint=$have_constraint
+
+	# compare with setup_new_constraint()
+	local i n a v
+	for i in "${!EXCLUDE_NODES[@]}"; do
+		n=${EXCLUDE_NODES[i]}
+		a=${ATTRIBUTES[i]:-}
+		if [[ -z "$a" ]] ; then
+			a=$fencing_attribute
+			if [[ $a = "#uname" ]]; then
+				v=$n
+			elif ! v=$(crm_attribute -Q -t nodes -N $n -n $a 2>/dev/null); then
+				# FALLBACK.
+				a="#uname"
+				v=$n
+			fi
+			ATTRIBUTES[i]=$a
+			VALUES[i]=$v
+		else
+			v=${VALUES[i]}
+		fi
+		# see grep_rsc_location(), which is supposed to fix the order of xml attributes
+		new_constraint=$(set +x; echo "$new_constraint" |
+			grep -v "<expression attribute=\"$a\" operation=\"ne\" value=\"$v\"")
+	done
+}
+
+create_or_modify_constraint()
+{
+	local DIR
+	local ex=1
+
+	DIR=$(mktemp -d)
+	cd "$DIR" || exit 1
+
+	cleanup()
+	{
+		trap - EXIT HUP INT QUIT TERM
+		local ex=$? sig=${1:-}
+		cd - && rm -rf "$DIR"
+		[[ $sig = EXIT ]] && exit $ex
+		[[ $sig ]] && kill -$sig $$
+	}
+
+	trap "cleanup EXIT" EXIT
+	trap "cleanup HUP" HUP
+	trap "cleanup INT" INT
+	trap "cleanup QUIT" QUIT
+	trap "cleanup TERM" TERM
+
+	local create_modify_replace="--modify --allow-create"
+	while :; do
+# ==================================================================
+		cibadmin -Q | tee cib.xml.orig > cib.xml
+		export CIB_file=cib.xml
+
+		set -- $( crm_mon -1nL "$id_prefix-$master_id" | sed -n \
+			-e '/^Current DC:.*partition with quorum/ { s/.*/quorum=1/p };' \
+			-e '1,/^Negative Location Constraints:/ d' \
+			-e '/^ *\([^[:space:]]*\)[[:space:]]prevents '"$master_id"' from running.*on '"$HOSTNAME"'$/ { s/.*/already_rejected/p }' )
+
+		if [[ $# != 1 || $1 != "quorum=1" ]] ; then
+			: "sorry, want a quorate partition, and not be rejected by constraint already"
+			break
+		fi
+
+		if [[ $ACTION = fence ]]; then
+			# fence should only restrict further, not lift restrictions.
+			# There may have been a race between multiple instances of this script.
+			have_constraint=$(grep_rsc_location "$id_prefix-$master_id" < $CIB_file)
+			if [[ -n "$have_constraint" ]] ; then
+				create_modify_replace="--replace"
+				restrict_existing_constraint_further
+			fi
+		fi
+
+		# comments seem to not work in any sane way yet :-(
+		# new_constraint=${new_constraint/>/$'>\n'"<!-- $ACTION at $start_time_utc on $HOSTNAME mask $UP_TO_DATE_NODES -->"}
+		cibadmin $create_modify_replace -o constraints -X "$new_constraint"
+
+		crm_diff=$(crm_diff -o $CIB_file.orig -n $CIB_file)
+		unset CIB_file
+# ==================================================================
+
+		cibadmin_invocations=$(( $cibadmin_invocations + 1 ))
+		echo "$crm_diff" | cibadmin --patch --xml-pipe
+		ex=$?
+		case $ex in
+		0)
+			: "0 ==> cib successfully changed"
+			break
+			;;
+
+		205)	: "205 aka pcmk_err_old_data ==> going to retry in a bit"
+			(( $SECONDS >= $timeout )) && break
+			sleep 1
+			continue
+			;;
+
+		*)	: "$ex ==> cib modify failed, giving up"
+			break
+			;;
+		esac
+	done
+	cleanup
+	unset -f cleanup
+	return $ex
+}
+
 cib_xml=""
+cib_xml_first_line=""
+crm_feature_set=""
+admin_epoch=""
+epoch=""
+num_updates=""
+have_quorum=""
 get_cib_xml() {
 	cibadmin_invocations=$(( $cibadmin_invocations + 1 ))
 	cib_xml=$( set +x; cibadmin "$@" )
+	cib_xml_first_line=${cib_xml%%>*}
+
+	set -- ${cib_xml_first_line}
+	local x
+	for x ; do
+	case $x in
+	crm_feature_set=*)	x=${x#*'="'}; x=${x%'"'}; crm_feature_set=$x ;;
+	admin_epoch=*)		x=${x#*'="'}; x=${x%'"'}; admin_epoch=$x ;;
+	epoch=*)		x=${x#*'="'}; x=${x%'"'}; epoch=$x ;;
+	num_updates=*)		x=${x#*'="'}; x=${x%'"'}; num_updates=$x ;;
+	have-quorum=*)		x=${x#*'="'}; x=${x%'"'}; have_quorum=$x ;;
+	esac
+	done
 }
 
 
@@ -72,8 +215,6 @@ fence_peer_init()
 		echo WARNING "drbd-fencing could not determine the master id of drbd resource $DRBD_RESOURCE"
 		return 1;
 	fi
-	have_constraint=$(set +x; echo "$cib_xml" |
-		sed_rsc_location_suitable_for_string_compare "$id_prefix-$master_id")
 	return 0
 }
 
@@ -187,7 +328,7 @@ fence_peer_init()
 # slightly different logic than crm_is_true
 crm_is_not_false()
 {
-	case $1 in
+	case ${1:-} in
 	no|n|false|0|off)
 		false ;;
 	*)
@@ -211,8 +352,8 @@ check_cluster_properties()
 		esac
 	done
 
-	crm_is_not_false $startup_fencing && startup_fencing=true || startup_fencing=false
-	crm_is_not_false $stonith_enabled && stonith_enabled=true || stonith_enabled=false
+	crm_is_not_false ${startup_fencing:-} && startup_fencing=true || startup_fencing=false
+	crm_is_not_false ${stonith_enabled:-} && stonith_enabled=true || stonith_enabled=false
 }
 
 
@@ -238,27 +379,41 @@ try_place_constraint()
 
 	while :; do
 		check_peer_node_reachable
-		[[ $peer_state != "reachable" ]] && break
+		! $all_excluded_peers_reachable && break
 		# if it really is still reachable, maybe the replication link
 		# recovers by itself, and we can get away without taking action?
 		(( $net_hickup_time > $SECONDS )) || break
 		sleep $(( net_hickup_time - SECONDS ))
 	done
 
-	set_states_from_proc_drbd
-	: == DEBUG == DRBD_peer=${DRBD_peer[*]} ===
-	: == DEBUG == DRBD_pdsk=${DRBD_pdsk[*]} ===
-	if $DRBD_pdsk_all_uptodate ; then
+	if $fail_if_no_quorum ; then
+		if [[ $have_quorum = 1 ]] ; then
+			# double check
+			have_quorum=$(crm_node --quorum -VVVVV)
+			[[ $have_quorum = 0 ]] && echo WARNING "Cib still had quorum, but no quorum according to crm_node --quorum"
+		fi
+		if [[ $have_quorum != 1 ]] ; then
+			echo WARNING "Found $cib_xml_first_line"
+			echo WARNING "I don't have quorum; did not place the constraint!"
+			rc=0
+			return
+		fi
+	fi
+
+	set_states_from_proc_drbd_or_events2
+	if : "all peer disks UpToDate?"; $status_pdsk_all_up_to_date ; then
 		echo WARNING "All peer disks are UpToDate! Did not place the constraint."
 		rc=0
 		return
 	fi
 
 	: == DEBUG == CTS_mode=$CTS_mode ==
-	: == DEBUG == DRBD_disk_all_consistent=$DRBD_disk_all_consistent ==
-	: == DEBUG == DRBD_disk_all_uptodate=$DRBD_disk_all_uptodate ==
-	: == DEBUG == $peer_state/${DRBD_disk[*]}/$unreachable_peer_is ==
-	if [[ ${#DRBD_disk[*]} = 0 ]]; then
+	: == DEBUG == status_disk_all_consistent=$status_disk_all_consistent ==
+	: == DEBUG == status_disk_all_up_to_date=$status_disk_all_up_to_date ==
+	: == DEBUG == all_excluded_peers_reachable=$all_excluded_peers_reachable ==
+	: == DEBUG == all_excluded_peers_fenced=$all_excluded_peers_fenced ==
+
+	if : "Unconfigured?" ; $status_unconfigured; then
 		# Someone called this script, without the corresponding drbd
 		# resource being configured. That's not very useful.
 		echo WARNING "could not determine my disk state: did not place the constraint!"
@@ -270,35 +425,38 @@ try_place_constraint()
 	# No, NOT fenced/Consistent:
 	# just because we have been able to shoot him
 	# does not make our data any better.
-	elif [[ $peer_state = reachable ]] && $DRBD_disk_all_consistent; then
-		#           = reachable ]] && $DRBD_disk_all_uptodate
+	elif : "all peers reachable and all local disks consistent?";
+		$all_excluded_peers_reachable && $status_disk_all_consistent; then
+		#                reachable && $status_disk_all_up_to_date
 		#	is implicitly handled here as well.
-		set_constraint &&
+		create_or_modify_constraint &&
 		drbd_fence_peer_exit_code=4 rc=0 &&
-		echo INFO "peer is $peer_state, my disk is ${DRBD_disk[*]}: placed constraint '$id_prefix-$master_id'"
+		echo INFO "peers are reachable, my disk is ${DRBD_disk[*]}: placed constraint '$id_prefix-$master_id'"
 
-	elif [[ $peer_state = fenced ]] && $DRBD_disk_all_uptodate ; then
-		set_constraint &&
+	elif : "all peers fenced (clean offline) and all local disks UpToDate?";
+		$all_excluded_peers_fenced && $status_disk_all_up_to_date ; then
+		create_or_modify_constraint &&
 		drbd_fence_peer_exit_code=7 rc=0 &&
-		echo INFO "peer is $peer_state, my disk is $DRBD_disk: placed constraint '$id_prefix-$master_id'"
+		echo INFO "peers are (node-level) fenced, my disk is ${DRBD_disk[*]}: placed constraint '$id_prefix-$master_id'"
 
 	# Peer is neither "reachable" nor "fenced" (above would have matched)
 	# So we just hit some timeout.
 	# As long as we are UpToDate, place the constraint and continue.
 	# If you don't like that, use a ridiculously high timeout,
 	# or patch this script.
-	elif $DRBD_disk_all_uptodate ; then
+	elif : "some peer UNCLEAN, but all local disks UpToDate?"; $status_disk_all_up_to_date ; then
 		# We could differentiate between unreachable,
 		# and DC-unreachable.  In the latter case, placing the
 		# constraint will fail anyways, and  drbd_fence_peer_exit_code
 		# will stay at "generic error".
-		set_constraint &&
+		create_or_modify_constraint &&
 		drbd_fence_peer_exit_code=5 rc=0 &&
-		echo INFO "peer is not reachable, my disk is UpToDate: placed constraint '$id_prefix-$master_id'"
+		echo INFO "some peer is still UNCLEAN, my disk is UpToDate: placed constraint '$id_prefix-$master_id' anyways"
 
 	# This block is reachable by operator intervention only
 	# (unless you are hacking this script and know what you are doing)
-	elif [[ $peer_state != reachable ]] && [[ $unreachable_peer_is = outdated ]] && $DRBD_disk_all_consistent; then
+	elif : "not all peers reachable, --unreachable-peer-is-outdated, all local disks consistent?";
+		! $all_excluded_peers_reachable && [[ $unreachable_peer_is = outdated ]] && $status_disk_all_consistent; then
 		# If the peer is not reachable, but we are only Consistent, we
 		# may need some way to still allow promotion.
 		# Easy way out: --force primary with drbdsetup.
@@ -307,15 +465,15 @@ try_place_constraint()
 		# to set the constraint.  Next promotion attempt will find the
 		# "correct" constraint, consider the peer as successfully
 		# fenced, and continue.
-		set_constraint &&
+		create_or_modify_constraint &&
 		drbd_fence_peer_exit_code=5 rc=0 &&
 		echo WARNING "peer is unreachable, my disk is only Consistent: --unreachable-peer-is-outdated FORCED constraint '$id_prefix-$master_id'" &&
 		echo WARNING "This MAY RISK DATA INTEGRITY"
 
-	# So I'm not UpToDate, and peer is not reachable.
+	# So I'm not UpToDate, and (some) peer is not reachable.
 	# Tell the module about "not reachable", and don't do anything else.
 	else
-		echo WARNING "peer is $peer_state, my disk is ${DRBD_disk[*]}: did not place the constraint!"
+		echo WARNING "some peer is UNCLEAN, my disk is not UpToDate, did not place the constraint!"
 		drbd_fence_peer_exit_code=5 rc=0
 		# I'd like to return 6 here, otherwise pacemaker will retry
 		# forever to promote, even though 6 is not strictly correct.
@@ -361,36 +519,182 @@ commit_suicide()
 	sleep 864000
 }
 
+setup_node_lists()
+{
+	EXCLUDE_NODES=()
+	INCLUDE_NODES=()
+	SKIP_NODES=()
+	ATTRIBUTES=()
+	VALUES=()
+
+	if [[ -z $UP_TO_DATE_NODES ]] ; then
+		setup_node_lists_8 || return
+	else
+		setup_node_lists_9 || return
+	fi
+}
+
+setup_node_lists_8()
+{
+	INCLUDE_NODES=( $HOSTNAME )
+	EXCLUDE_NODES=( $DRBD_PEER ) # not quoted, so may be empty array.
+}
+
+is_up_to_date_node() { (( (UP_TO_DATE_NODES & (1<<$1)) != 0 )); }
+
+setup_node_lists_9()
+{
+	local i k v
+
+	: === UP_TO_DATE_NODES = $UP_TO_DATE_NODES ===
+	if [[ $UP_TO_DATE_NODES != 0x[0-9a-fA-F]* ]] || [[ ${UP_TO_DATE_NODES#0x} == *[!0-9a-fA-F]* ]] ; then
+		echo WARNING "Unexpected input UP_TO_DATE_NODES=$UP_TO_DATE_NODES, expected 0x... hex mask"
+		return 1
+	fi
+
+	: === DRBD_MY_NODE_ID = $DRBD_MY_NODE_ID ===
+	case $DRBD_MY_NODE_ID in
+	[0-9]|[1-9][0-9]) : "looks OK" ;;
+	*)
+		echo WARNING "Unexpected input, DRBD_MY_NODE_ID=$DRBD_MY_NODE_ID should be a decimal number"
+		return 1
+	esac
+	if ! is_up_to_date_node $DRBD_MY_NODE_ID ; then
+		echo WARNING "I ($DRBD_MY_NODE_ID) am not a member of the UP_TO_DATE_NODES=$UP_TO_DATE_NODES set myself."
+		return 1
+	fi
+
+	k=DRBD_NODE_ID_$DRBD_MY_NODE_ID ; v=${!k}
+	[[ $HOSTNAME = $v ]] || echo WARNING "My node id ($DRBD_MY_NODE_ID) does not resolve to my hostname ($HOSTNAME) but to $v"
+
+	for i in {0..31}; do
+		k=DRBD_NODE_ID_$i ; v=${!k:-}
+		[[ $v ]] || continue
+
+		if is_up_to_date_node $i; then
+			INCLUDE_NODES[i]=$v
+		else
+			EXCLUDE_NODES[i]=$v
+		fi
+	done
+	return 0
+}
+
+have_expected_contraint()
+{
+	# do we have the exactly matching constraint already?
+	[[ "$have_constraint" = "$new_constraint" ]] && return 0
+
+	new_constraint_for_compare=$(set +x; echo "$new_constraint" |
+		sed_rsc_location_suitable_for_string_compare "$id_prefix-$master_id")
+	have_constraint_for_compare=$(set +x; echo "$have_constraint" |
+		sed_rsc_location_suitable_for_string_compare "$id_prefix-$master_id")
+
+	# do we have a semantically equivalent constraint?
+	[[ "$have_constraint_for_compare" = "$new_constraint_for_compare" ]] && return 0
+
+	return 1
+}
+
+_node_already_rejected()
+{
+	local node_name=$1
+
+	# Not so easy. May be a second link failure and fence action,
+	# and resulting update to that constraint, but may also be
+	# the result of a fencing shoot-out race.
+	# Are we still part of the allowed crowd?
+
+        # if we differ by more than number and content of expressions,
+        # that's not the "expected" constraint.
+        #[[ "$(set +x; echo "$have_constraint_for_compare" | grep -v '<expression')" != \
+        #   "$(set +x; echo "$new_constraint_for_compare" | grep -v '<expression')" ]] &&
+        #        return (what exactly?)
+	#
+	# allow for permutation in attribute order,
+	# but require "$my_attribute ne $my_value" to be present.
+	# ! echo "$have_constraint" |
+	# 	grep -Ee '<expression .*\<operation="ne"' |
+	# 	grep -Fe " attribute=\"$my_attribute\"" |
+	# 	grep -qFe " value=\"$my_value\"" \
+	#
+
+	# Maybe we better just ask crm_mon instead:
+	( set +x; echo "$cib_xml" | CIB_file=/proc/self/fd/0 crm_mon -1nL "$id_prefix-$master_id" |
+		grep -q "prevents $master_id from running .*\<on $node_name$" )
+}
+
+# you should call have_expected_contraint() first.
+existing_constraint_rejects_me()
+{
+	_node_already_rejected $HOSTNAME
+}
+
+setup_new_constraint()
+{
+	new_constraint="<rsc_location rsc=\"$master_id\" id=\"$id_prefix-$master_id\">"$'\n'
+	# double negation: do not run but with my data.
+	new_constraint+=" <rule role=\"$role\" score=\"-INFINITY\" id=\"$id_prefix-rule-$master_id\">"$'\n'
+
+	local i n a v
+	for i in "${!INCLUDE_NODES[@]}"; do
+		n=${INCLUDE_NODES[i]}
+		a=${ATTRIBUTES[i]:-}
+		if [[ -z "$a" ]] ; then
+			a=$fencing_attribute
+			if [[ $a = "#uname" ]]; then
+				v=$n
+			elif ! v=$(crm_attribute -Q -t nodes -N $n -n $a 2>/dev/null); then
+				# FALLBACK.
+				a="#uname"
+				v=$n
+			fi
+			ATTRIBUTES[i]=$a
+			VALUES[i]=$v
+		else
+			v=${VALUES[i]}
+		fi
+		[[ $i = $DRBD_MY_NODE_ID ]] && my_attribute=$a my_value=$v
+		# double negation: do not run but with my data.
+		new_constraint+="  <expression attribute=\"$a\" operation=\"ne\" value=\"$v\" id=\"$id_prefix-expr-$i-$master_id\"/>"$'\n'
+	done
+	new_constraint+=$' </rule>\n</rsc_location>\n'
+}
+
 # drbd_peer_fencing fence|unfence
 drbd_peer_fencing()
 {
+	# We are going to increase the cib timeout with every timeout,
+	# see get_cib_xml_from_dc().
+	# For the actual invocation, we use int(cibtimeout/10).
+	# scaled by 5 / 4 with each iteration,
+	# this results in a timeout sequence of 1 2 2 3 4 5 6 7 9 ... seconds 
+	local cibtimeout=18
+
 	local rc
-	# input to fence_peer_init:
-	# $DRBD_RESOURCE is set by command line of from environment.
-	# $id_prefix is set by command line or default.
-	# $master_id is set by command line or will be parsed from the cib.
-	# output of fence_peer_init:
-	local have_constraint new_constraint
+
+	local have_constraint
+	local have_constraint_for_compare
+	local had_constraint_on_entry
+	local new_constraint
+	local new_constraint_for_compare
+	local my_attribute my_value
 
 	# if I cannot query the local cib, give up
 	get_cib_xml -Ql || return
+
+	# input to fence_peer_init:
+	# $DRBD_RESOURCE is set by command line or from environment.
+	# $id_prefix is set by command line or default.
+	# $master_id is set by command line or will be parsed from the cib.
 	fence_peer_init || return
 
-	if [[ $1 = fence ]] || $unfence_only_if_owner_match ; then
-		if [[ $fencing_attribute = "#uname" ]]; then
-			fencing_value=$HOSTNAME
-		elif ! fencing_value=$(crm_attribute -Q -t nodes -n $fencing_attribute 2>/dev/null); then
-			fencing_attribute="#uname"
-			fencing_value=$HOSTNAME
-		fi
-		# double negation: do not run but with my data.
-		new_constraint="\
-<rsc_location rsc=\"$master_id\" id=\"$id_prefix-$master_id\">
-  <rule role=\"$role\" score=\"-INFINITY\" id=\"$id_prefix-rule-$master_id\">
-    <expression attribute=\"$fencing_attribute\" operation=\"ne\" value=\"$fencing_value\" id=\"$id_prefix-expr-$master_id\"/>
-  </rule>
-</rsc_location>"
+	if [[ $1 = fence ]] || [[ -n $UP_TO_DATE_NODES ]] || $unfence_only_if_owner_match ; then
+		setup_node_lists || return 1
+		setup_new_constraint
 	fi
+	have_constraint=$(set +x; echo "$cib_xml" | grep_rsc_location "$id_prefix-$master_id")
+	[[ -z $have_constraint ]] && had_constraint_on_entry=false || had_constraint_on_entry=true
 
 	case $1 in
 	fence)
@@ -398,28 +702,37 @@ drbd_peer_fencing()
 		local startup_fencing stonith_enabled
 		check_cluster_properties
 
-		if [[ -z $have_constraint ]] ; then
-			# try to place it.
+		if ! $had_constraint_on_entry ; then
 
+			# try to place it.
 			try_place_constraint && return
 
 			# maybe callback and operator raced for the same constraint?
 			# before we potentially trigger node level fencing
 			# or keep IO frozen, double check.
-			# try_place_constraint has updated cib_xml from DC
 
-			have_constraint=$(set +x; echo "$cib_xml" |
-				sed_rsc_location_suitable_for_string_compare "$id_prefix-$master_id")
+			get_cib_xml_from_dc
+			have_constraint=$(set +x; echo "$cib_xml" | grep_rsc_location "$id_prefix-$master_id")
 		fi
 
-		if [[ "$have_constraint" = "$(set +x; echo "$new_constraint" |
-			sed_rsc_location_suitable_for_string_compare "$id_prefix-$master_id")" ]]; then
-			echo INFO "suitable constraint already placed: '$id_prefix-$master_id'"
-			drbd_fence_peer_exit_code=4
-			rc=0
-		elif [[ -n "$have_constraint" ]] ; then
-			# if this id already exists, but looks different, we may have lost a shootout
-			echo WARNING "constraint $have_constraint already exists"
+		if [[ -n "$have_constraint" ]] ; then
+			if have_expected_contraint ; then
+				echo INFO "suitable constraint already placed: '$id_prefix-$master_id'"
+				drbd_fence_peer_exit_code=4
+				rc=0
+				return
+			fi
+
+			if existing_constraint_rejects_me; then
+				echo WARNING "constraint already exists, and rejects me: $have_constraint"
+			else
+				try_place_constraint && return
+				echo WARNING "constraint already exists, could not modify it: $have_constraint"
+				# TODO
+				# what about the exit status?
+				# am I allowed to continue, or not?
+			fi
+
 			# anything != 0 will do;
 			# 21 happend to be "The object already exists" with my cibadmin
 			rc=21
@@ -435,36 +748,45 @@ drbd_peer_fencing()
 			# at least we tried.
 			# maybe it was already in place?
 			echo WARNING "DATA INTEGRITY at RISK: could not place the fencing constraint!"
+
+			# actually, at risk only if we did not freeze IO locally, or allow to resume.
+			# which depends on the policies you set.
 		fi
 
 		# XXX policy decision:
 		if $suicide_on_failure_if_primary && [[ $drbd_fence_peer_exit_code != [3457] ]]; then
-			set_states_from_proc_drbd
-			[[ "${DRBD_role[*]}" = *Primary* ]] && commit_suicide
+			set_states_from_proc_drbd_or_events2
+			$status_primary && commit_suicide
 		fi
 
 		return $rc
 		;;
 	unfence)
 		if [[ -n $have_constraint ]]; then
-			set_states_from_proc_drbd
-			if $DRBD_disk_all_uptodate && $DRBD_pdsk_all_uptodate; then
-				if $unfence_only_if_owner_match && [[ "$have_constraint" != "$(set +x; echo "$new_constraint" |
-					sed_rsc_location_suitable_for_string_compare "$id_prefix-$master_id")" ]]
-				then
-					echo WARNING "Constraint owner does not match, leaving constraint in place."
-				else
+			set_states_from_proc_drbd_or_events2
+			# if $unfence_only_if_owner_match && ! have_expected_contraint ; then
+			if $unfence_only_if_owner_match && existing_constraint_rejects_me ; then
+				echo WARNING "Constraint owner does not match, leaving constraint in place."
+			else
+				if $status_disk_all_up_to_date && $status_pdsk_all_up_to_date; then
 					# try to remove it based on that xml-id
 					remove_constraint && echo INFO "Removed constraint '$id_prefix-$master_id'"
+				else
+					if have_expected_contraint; then
+						$quiet || echo "expected constraint still in place, nothing to do"
+					else
+						# only one of several possible peers was sync'ed up.
+						# allow that one, but not all, yet.
+						create_or_modify_constraint || echo WARNING "could not modify, leaving constraint in place."
+					fi
 				fi
-			else
-				local w="My"
-				$DRBD_disk_all_uptodate && w="Peer's"
-				echo WARNING "$w disk(s) are NOT all UpToDate, leaving constraint in place."
-				return 1
 			fi
 		else
-			$quiet || echo "No constraint in place, nothing to do."
+			if [[ ${#EXCLUDE_NODES[@]} != 0 ]] ; then
+				echo WARNING "No constraint in place, called for unfence, but (${EXCLUDE_NODES[*]}) still supposed to be excluded. Weird."
+			else
+				$quiet || echo "No constraint in place, nothing to do."
+			fi
 			return 0
 		fi
 	esac
@@ -472,10 +794,8 @@ drbd_peer_fencing()
 
 double_check_after_fencing()
 {
-	set_states_from_proc_drbd
-	: == DEBUG == DRBD_peer=${DRBD_peer[*]} ===
-	: == DEBUG == DRBD_pdsk=${DRBD_pdsk[*]} ===
-	if $DRBD_pdsk_all_uptodate ; then
+	set_states_from_proc_drbd_or_events2
+	if $status_pdsk_all_up_to_date ; then
 		echo WARNING "All peer disks are UpToDate (again), trying to remove the constraint again."
 		remove_constraint && drbd_fence_peer_exit_code=1 rc=0
 		return
@@ -538,7 +858,92 @@ guess_if_pacemaker_will_fence()
 	fi
 }
 
-# return value in $peer_state:
+# return values in
+#	$all_excluded_peers_reachable
+#	$all_excluded_peers_fenced
+check_peer_node_reachable()
+{
+	local full_timeout
+	local nr_other_nodes
+	local other_node_uname_attrs
+
+	# we have a cibadmin -Ql in cib_xml already
+	# filter out <node uname, but ignore type="ping" nodes,
+	# they don't run resources
+	other_node_uname_attrs=$(set +x; echo "$cib_xml" |
+		sed -e '/<node /!d; / type="ping"/d;s/^.* \(uname="[^"]*"\).*>$/\1/' |
+		grep -v -F uname=\"$HOSTNAME\")
+	set -- $other_node_uname_attrs
+	nr_other_nodes=$#
+
+	if [[ -z $UP_TO_DATE_NODES ]]; then
+		if [[ -z $DRBD_PEER ]] && [[ $nr_other_nodes = 1 ]]; then
+			# very unlikely: old DRBD, no DRBD_PEER passed in,
+			# but in fact only one other cluster node.
+			# Use that one as DRBD_PEER.
+			DRBD_PEER=${other_node_uname_attrs#uname=\"}
+			DRBD_PEER=${DRBD_PEER%\"}
+		fi
+		# This time, quoted.
+		# Yes, it may be empty, resulting in [0]="".
+		EXCLUDE_NODES=( "$DRBD_PEER" )
+	fi
+
+	get_cib_xml_from_dc || {
+		all_excluded_peers_reachable=false
+		all_excluded_peers_fenced=false
+		return
+	}
+
+	all_excluded_peers_reachable=true
+	all_excluded_peers_fenced=true
+
+	if [[ ${#EXCLUDE_NODES[@]} != 0 ]] ; then
+		for DRBD_PEER in "${EXCLUDE_NODES[@]}"; do
+			# If it is already rejected,
+			# we do not really care if it is currently reachable,
+			# or currently UNCLEAN or what not.
+			# What's done, is done.
+			_node_already_rejected $DRBD_PEER && continue
+
+			_check_peer_node_reachable $DRBD_PEER
+			[[ $peer_state != reachable ]] && all_excluded_peers_reachable=false
+			[[ $peer_state != fenced ]] && all_excluded_peers_fenced=false
+		done
+	fi
+}
+
+get_cib_xml_from_dc()
+{
+	while :; do
+		local t=$SECONDS
+		#
+		# Update our view of the cib, ask the DC this time.
+		# Timeout, in case no DC is available.
+		# Caution, some cibadmin (pacemaker 0.6 and earlier)
+		# apparently use -t use milliseconds, so will timeout
+		# many times until a suitably long timeout is reached
+		# by increasing below.
+		#
+		# Why not use the default timeout?
+		# Because that would unecessarily wait for 30 seconds
+		# or longer, even if the DC is re-elected right now,
+		# and available within the next second.
+		#
+		get_cib_xml -Q -t $(( cibtimeout/10 )) && return 0
+
+		# bash magic $SECONDS is seconds since shell invocation.
+		(( $SECONDS > $dc_timeout )) && return 1
+
+		# avoid busy loop
+		[[ $t = $SECONDS ]] && sleep 1
+
+		# try again, longer timeout.
+		let "cibtimeout = cibtimeout * 5 / 4"
+	done
+}
+
+# return value in $peer_state
 # DC-unreachable
 #	We have not been able to contact the DC.
 # fenced
@@ -554,60 +959,13 @@ guess_if_pacemaker_will_fence()
 #	cib does not say it was offline (or we don't know who the peer is)
 #	and we reached the timeout
 #
-check_peer_node_reachable()
+_check_peer_node_reachable()
 {
-	# we are going to increase the cib timeout with every timeout (see below).
-	# for the actual invocation, we use int(cibtimeout/10).
-	# scaled by 5 / 4 with each iteration,
-	# this results in a timeout sequence of 1 2 2 3 4 5 6 7 9 ... seconds 
-	local cibtimeout=18
-	local full_timeout
-	local nr_other_nodes
-	local other_node_uname_attrs
-
-	# we have a cibadmin -Ql in cib_xml already
-	# filter out <node uname, but ignore type="ping" nodes,
-	# they don't run resources
-	other_node_uname_attrs=$(set +x; echo "$cib_xml" |
-		sed -e '/<node /!d; / type="ping"/d;s/^.* \(uname="[^"]*"\).*>$/\1/' |
-		grep -v -F uname=\"$HOSTNAME\")
-	set -- $other_node_uname_attrs
-	nr_other_nodes=$#
-
+	DRBD_PEER=$1
 	while :; do
 		local state_lines='' node_state='' crmd='' in_ccm=''
 		local expected='' join='' will_fence='' ha_dead=''
 
-		while :; do
-			local t=$SECONDS
-			#
-			# Update our view of the cib, ask the DC this time.
-			# Timeout, in case no DC is available.
-			# Caution, some cibadmin (pacemaker 0.6 and earlier)
-			# apparently use -t use milliseconds, so will timeout
-			# many times until a suitably long timeout is reached
-			# by increasing below.
-			#
-			# Why not use the default timeout?
-			# Because that would unecessarily wait for 30 seconds
-			# or longer, even if the DC is re-elected right now,
-			# and available within the next second.
-			#
-			get_cib_xml -Q -t $(( cibtimeout/10 )) && break
-
-			# bash magic $SECONDS is seconds since shell invocation.
-			if (( $SECONDS > $dc_timeout )) ; then
-				# unreachable: cannot even reach the DC
-				peer_state="DC-unreachable"
-				return
-			fi
-
-			# avoid busy loop
-			[[ $t = $SECONDS ]] && sleep 1
-
-			# try again, longer timeout.
-			let "cibtimeout = cibtimeout * 5 / 4"
-		done
 		state_lines=$( set +x; echo "$cib_xml" | grep '<node_state ' |
 			grep -F -e "$other_node_uname_attrs" )
 
@@ -622,14 +980,6 @@ check_peer_node_reachable()
 				echo WARNING "CTS-mode: pretending that unseen node $DRBD_PEER was reachable"
 				return
 			fi
-		fi
-
-		# very unlikely: no DRBD_PEER passed in,
-		# but in fact only one other cluster node.
-		# Use that one as DRBD_PEER.
-		if [[ -z $DRBD_PEER ]] && [[ $nr_other_nodes = 1 ]]; then
-			DRBD_PEER=${other_node_uname_attrs#uname=\"}
-			DRBD_PEER=${DRBD_PEER%\"}
 		fi
 
 		if [[ -z $DRBD_PEER ]]; then
@@ -724,10 +1074,37 @@ check_peer_node_reachable()
 
 		# wait a bit before we poll the DC again
 		sleep 2
+		get_cib_xml_from_dc || {
+			# unreachable: cannot even reach the DC
+			peer_state="DC-unreachable"
+			return
+		}
 	done
 	# NOT REACHED
 }
 
+source_drbd_shellfuncs()
+{
+        local dir=.
+        [[ $0 = */* ]] && dir=${0%/*}
+        for dir in $dir /usr/lib/ocf/resource.d/linbit ; do
+		test -r "$dir/drbd.shellfuncs.sh" || continue
+                source "$dir/drbd.shellfuncs.sh" && return
+        done
+        echo WARNING "unable to source drbd.shellfuncs.sh"
+}
+source_drbd_shellfuncs
+
+set_states_from_proc_drbd_or_events2()
+{
+	if test -n $UP_TO_DATE_NODES ; then
+		_drbd_set_status_variables_from_events2
+	else
+		# fallback, in case someone tries to use this
+		# with older DRBD
+		set_states_from_proc_drbd
+	fi
+}
 set_states_from_proc_drbd()
 {
 	local IFS line lines i disk pdsk
@@ -739,17 +1116,18 @@ set_states_from_proc_drbd()
 	# ... and convert into regex:
 	IFS="|$IFS"; DRBD_MINOR="($*)"; IFS=${IFS#?}
 
-	# We must not recurse into netlink,
-	# this may be a callback triggered by "drbdsetup primary".
+	# in a fence-peer handler, at least on certain older DRBD versions,
+	# we must not recurse into netlink, this may be a synchronous callback
+	# triggered by "drbdsetup primary", while holding the genl_lock.
 	# grep /proc/drbd instead
 
-	DRBD_peer=()
-	DRBD_role=()
-	DRBD_disk=()
-	DRBD_pdsk=()
-	DRBD_disk_all_uptodate=true
-	DRBD_disk_all_consistent=true
-	DRBD_pdsk_all_uptodate=true
+	local DRBD_peer=()
+	local DRBD_role=()
+	DRBD_disk=()	# used in informational log lines later
+	local DRBD_pdsk=()
+	status_disk_all_up_to_date=true
+	status_disk_all_consistent=true
+	status_pdsk_all_up_to_date=true
 
 	IFS=$'\n'
 	lines=($(sed -nre "/^ *$DRBD_MINOR: cs:/ { s/:/ /g; p; }" /proc/drbd))
@@ -767,20 +1145,32 @@ set_states_from_proc_drbd()
 		case $disk in
 		UpToDate) ;;
 		Consistent)
-			DRBD_disk_all_uptodate=false ;;
+			status_disk_all_up_to_date=false ;;
 		*)
-			DRBD_disk_all_uptodate=false
-			DRBD_disk_all_consistent=false ;;
+			status_disk_all_up_to_date=false
+			status_disk_all_consistent=false ;;
 		esac
-		[[ $pdsk != UpToDate ]] && DRBD_pdsk_all_uptodate=false
+		[[ $pdsk != UpToDate ]] && status_pdsk_all_up_to_date=false
 		let i++
 	done
 	if (( i == 0 )) ; then
-		DRBD_pdsk_all_uptodate=false
-		DRBD_disk_all_uptodate=false
-		DRBD_disk_all_consistent=false
+		status_pdsk_all_up_to_date=false
+		status_disk_all_up_to_date=false
+		status_disk_all_consistent=false
 	fi
+	: == DEBUG == DRBD_role=${DRBD_role[*]} ===
+	: == DEBUG == DRBD_peer=${DRBD_peer[*]} ===
+	: == DEBUG == DRBD_pdsk=${DRBD_pdsk[*]} ===
+
+	status_primary=false
+	status_unconfigured=false
+	case ${DRBD_role[*]} in
+	*Primary*) status_primary=true ;;
+	*Secondary*) : "at least it is configured" ;;
+	*)	status_unconfigured=true ;;
+	esac
 }
+
 ############################################################
 
 # try to get possible output on stdout/err to syslog
@@ -819,10 +1209,11 @@ quiet=false
 unfence_only_if_owner_match=false
 CTS_mode=false
 suicide_on_failure_if_primary=false
+fail_if_no_quorum=true
 
 # poor mans command line argument parsing,
 # allow for command line overrides
-set -- "$@" $OCF_RESKEY_unfence_extra_args
+set -- "$@" ${OCF_RESKEY_unfence_extra_args:-}
 while [[ $# != 0 ]]; do
 	case $1 in
 	--logfacility=*)
@@ -948,7 +1339,7 @@ if [[ ${lock_dir:=/var/lock/drbd} != /* ]] ; then
 	echo WARNING "lock_dir needs to be an absolute path, not [$lock_dir]; using default."
 	lock_dir=/var/lock/drbd
 fi
-case $lock_file in
+case ${lock_file:-""} in
 "")	lock_file=$lock_dir/fence.${DRBD_RESOURCE//\//_} ;;
 NONE)	: ;;
 /*)	: ;;
@@ -1004,6 +1395,7 @@ fi
 
 # make sure it contains what we expect
 HOSTNAME=$(uname -n)
+start_time_utc=$(date --utc +%s_%F_%T)
 
 $quiet || {
 	for k in ${!DRBD_*} UP_TO_DATE_NODES; do printf "%s=%q " "$k" "${!k}"; done
@@ -1034,7 +1426,8 @@ if [[ $lock_file != NONE ]] ; then
 fi
 
 case $PROG in
-    crm-fence-peer.sh)
+    crm-fence-peer.*)
+	ACTION=fence
 	if drbd_peer_fencing fence; then
 		: == DEBUG == $cibadmin_invocations cibadmin calls ==
 		: == DEBUG == $SECONDS seconds ==
@@ -1042,7 +1435,8 @@ case $PROG in
 		exit $drbd_fence_peer_exit_code
 	fi
 	;;
-    crm-unfence-peer.sh)
+    crm-unfence-peer.*)
+	ACTION=unfence
 	if drbd_peer_fencing unfence; then
 		: == DEBUG == $cibadmin_invocations cibadmin calls ==
 		: == DEBUG == $SECONDS seconds ==
