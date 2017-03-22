@@ -87,6 +87,7 @@
 #include "config_flags.h"
 #include "wrap_printf.h"
 #include "drbdsetup_colors.h"
+#include "shared_tool.h"
 
 char *progname;
 
@@ -713,6 +714,7 @@ static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 {
 	struct stat sb;
 	int device_fd;
+	char *real_name;
 
 	if ((device_fd = open(arg,O_RDWR))==-1) {
 		PERROR("Can not open device '%s'", arg);
@@ -721,19 +723,31 @@ static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 
 	if (fstat(device_fd, &sb)) {
 		PERROR("fstat(%s) failed", arg);
+		close(device_fd);
 		return OTHER_ERROR;
 	}
 
 	if(!S_ISBLK(sb.st_mode)) {
 		fprintf(stderr, "%s is not a block device!\n", arg);
+		close(device_fd);
 		return OTHER_ERROR;
 	}
 
 	close(device_fd);
 
-	nla_put_string(msg, ad->nla_type, arg);
+	real_name = WindowsLowLevelDeviceName(arg);
+	if (!real_name) {
+		fprintf(stderr, "%s can't be translated to W32 kernel notation!\n", arg);
+		return OTHER_ERROR;
+	}
 
+	nla_put_string(msg, ad->nla_type, real_name);
+	free(real_name);
 	return NO_ERROR;
+
+err:
+	free(real_name);
+	return OTHER_ERROR;
 }
 
 static int conv_md_idx(struct drbd_argument *ad, struct msg_buff *msg,

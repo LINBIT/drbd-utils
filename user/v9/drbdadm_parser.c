@@ -960,6 +960,9 @@ int parse_volume_stmt(struct d_volume *vol, struct names* on_hosts, int token)
 	case TK_DISK:
 		token = yylex();
 		switch (token) {
+			// TODO: allow "L:" without quotes, too.
+			// as meta-disk, as disk, everywhere.
+			// Can't add ":" to TK_STRING, though - else IP addresses are seen as TK_STRING
 		case TK_STRING:
 			vol->disk = yylval.txt;
 			EXP(';');

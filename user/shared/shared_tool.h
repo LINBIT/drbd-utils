@@ -115,4 +115,7 @@ extern const char *esc_xml(char *str);
 extern const char *esc(char *str);
 
 
+extern char * WindowsLowLevelDeviceName(char *input);
+
+
 #endif
