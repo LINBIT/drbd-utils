@@ -264,6 +264,7 @@ Pacemaker High Availability cluster manager.
 %{_prefix}/lib/drbd/crm-unfence-peer.9.sh
 %{_prefix}/lib/drbd/stonith_admin-fence-peer.sh
 %{_prefix}/lib/ocf/resource.d/linbit/drbd
+%{_prefix}/lib/ocf/resource.d/linbit/drbd.shellfuncs.sh
 %endif # with pacemaker
 
 # Dependencies for drbd-rgmanager are particularly awful. On RHEL 5
