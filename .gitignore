@@ -22,10 +22,10 @@ documentation/Makefile
 user/v9/config.h
 user/v9/config.h.in
 user/v9/drbd_strings.[ch]
-user/v9/drbdadm
-user/v9/drbdmeta
+user/v9/drbdadm.exe
+user/v9/drbdmeta.exe
 user/v9/drbdmeta_scanner.c
-user/v9/drbdsetup
+user/v9/drbdsetup.exe
 
 user/v9/.*.d
 user/v9/Makefile
