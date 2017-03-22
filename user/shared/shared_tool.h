@@ -127,4 +127,7 @@ bool addresses_match(const char *af_1st, const char *addr_1st,
 
 
 
+extern char * WindowsLowLevelDeviceName(char *input);
+
+
 #endif
