@@ -2,7 +2,7 @@ Latest:
 ------
  For even more detail, use "git log" or visit http://git.drbd.org/.
 
-8.9.11rc1
+8.9.11
 --------
  * better integration of drbd-proxy in drbd9 scenarios
  * OCF resource agent and crm-fence-peer for drbd9
