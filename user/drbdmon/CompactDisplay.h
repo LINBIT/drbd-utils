@@ -85,6 +85,8 @@ class CompactDisplay : public GenericDisplay, public Configurable
 
     static const std::string LABEL_MESSAGES;
     static const std::string LABEL_MONITOR;
+    static const std::string LABEL_PROBLEMS;
+    static const std::string LABEL_STATUS;
     static const std::string LABEL_PGUP;
     static const std::string LABEL_PGDN;
     static const std::string LABEL_PGZERO;
@@ -140,7 +142,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
     virtual void key_pressed(const char key) override;
 
   private:
-    void list_resources();
+    bool list_resources();
     void list_connections(DrbdResource& res);
     void list_volumes(DrbdResource& res);
     void show_volume(DrbdVolume& vol, bool peer_volume, bool long_format);
@@ -161,6 +163,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
     HotkeysMap& hotkeys_info;
 
     bool dsp_msg_active {false};
+    bool dsp_problems_active {false};
     uint16_t page {0};
     uint32_t page_start {0};
     uint32_t page_end {0};

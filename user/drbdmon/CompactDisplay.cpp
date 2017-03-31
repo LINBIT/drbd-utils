@@ -69,11 +69,13 @@ const char CompactDisplay::HOTKEY_PGUP = '<';
 const char CompactDisplay::HOTKEY_PGDN = '>';
 const char CompactDisplay::HOTKEY_PGZERO = '0';
 
-const std::string CompactDisplay::LABEL_MESSAGES = "Messages";
-const std::string CompactDisplay::LABEL_MONITOR  = "Monitor";
-const std::string CompactDisplay::LABEL_PGUP      = "PgUp";
-const std::string CompactDisplay::LABEL_PGDN      = "PgDn";
-const std::string CompactDisplay::LABEL_PGZERO    = "Pg0";
+const std::string CompactDisplay::LABEL_MESSAGES    = "Messages";
+const std::string CompactDisplay::LABEL_MONITOR     = "Monitor";
+const std::string CompactDisplay::LABEL_PROBLEMS    = "Problems";
+const std::string CompactDisplay::LABEL_STATUS      = "Status";
+const std::string CompactDisplay::LABEL_PGUP        = "PgUp";
+const std::string CompactDisplay::LABEL_PGDN        = "PgDn";
+const std::string CompactDisplay::LABEL_PGZERO      = "Pg0";
 
 const uint16_t CompactDisplay::MIN_SIZE_X =   40;
 const uint16_t CompactDisplay::MAX_SIZE_X = 1024;
@@ -159,13 +161,17 @@ void CompactDisplay::status_display()
             dsp_msg_active = false;
         }
 
-        if (resources_map.get_size() >= 1)
+        bool resources_listed = list_resources();
+        if (!resources_listed)
         {
-            list_resources();
-        }
-        else
-        {
-            std::fprintf(stdout, "%sNo active DRBD resources.%s\n", F_RES_NAME, F_RESET);
+            if (dsp_problems_active)
+            {
+                std::fprintf(stdout, "%sNo resources with problems to display.%s\n", F_RES_NAME, F_RESET);
+            }
+            else
+            {
+                std::fprintf(stdout, "%sNo active DRBD resources.%s\n", F_RES_NAME, F_RESET);
+            }
         }
     }
 
@@ -219,6 +225,20 @@ void CompactDisplay::display_hotkeys_info() const
             std::fprintf(stdout, F_HOTKEY, hotkey, description.c_str());
             ++index;
         }
+
+        if (index > 0)
+        {
+            std::fputc(' ', stdout);
+        }
+        if (dsp_problems_active)
+        {
+            std::fprintf(stdout, F_HOTKEY, 'p', LABEL_STATUS.c_str());
+        }
+        else
+        {
+            std::fprintf(stdout, F_HOTKEY, 'p', LABEL_PROBLEMS.c_str());
+        }
+
         if (dsp_msg_active)
         {
             if (index > 0)
@@ -251,8 +271,10 @@ void CompactDisplay::prepare_flags()
     }
 }
 
-void CompactDisplay::list_resources()
+bool CompactDisplay::list_resources()
 {
+    bool resources_listed {false};
+
     // Reset columns tracking
     reset_positions();
 
@@ -262,56 +284,66 @@ void CompactDisplay::list_resources()
     {
         DrbdResource& res = *(res_iter.next());
 
-        // Setup view of the "RES:" label
-        const char* f_res = F_RES_NORM;
-        if (res.has_alert_state())
+        bool marked = res.has_mark_state();
+        // If the problem display is active, show only resources that
+        // are marked for having warnings or alerts
+        if (!dsp_problems_active || marked)
         {
-            f_res = F_ALERT;
-        }
-        else
-        if (res.has_warn_state())
-        {
-            f_res = F_WARN;
-        }
+            resources_listed = true;
 
-        // Setup view of the sub-object warning mark
-        const char* f_mark = F_RES_NORM;
-        const char* mark_icon = mark_off;
-        if (res.has_mark_state())
-        {
-            f_mark = F_MARK;
-            mark_icon = mark_on;
-        }
+            // Setup view of the "RES:" label
+            const char* f_res = F_RES_NORM;
+            if (res.has_alert_state())
+            {
+                f_res = F_ALERT;
+            }
+            else
+            if (res.has_warn_state())
+            {
+                f_res = F_WARN;
+            }
 
-        // Setup view of the resource's role
-        const char* f_role = F_SECONDARY;
-        const char* role_icon = sec_icon;
-        if (res.has_role_alert())
-        {
-            f_role = F_ALERT;
-            role_icon = " ";
-        }
-        else
-        if (res.get_role() == DrbdRole::resource_role::PRIMARY)
-        {
-            f_role = F_PRIMARY;
-            role_icon = pri_icon;
-        }
+            // Setup view of the sub-object warning mark
+            const char* f_mark = F_RES_NORM;
+            const char* mark_icon = mark_off;
+            if (res.has_mark_state())
+            {
+                f_mark = F_MARK;
+                mark_icon = mark_on;
+            }
 
-        next_line();
-        // Marker (1) + "RES:" (4) + RES_NAME_WIDTH + " " (1) + role icon (1) + ROLE_WIDTH
-        if (next_column(6 + RES_NAME_WIDTH + ROLE_WIDTH))
-        {
-            std::fprintf(stdout, "%s%s%sRES:%s%-*s%s %s%s%-*s%s",
-                         f_mark, mark_icon, f_res, F_RES_NAME, RES_NAME_WIDTH, res.get_name().c_str(), F_RESET,
-                         f_role, role_icon, ROLE_WIDTH, res.get_role_label(), F_RESET);
-        }
+            // Setup view of the resource's role
+            const char* f_role = F_SECONDARY;
+            const char* role_icon = sec_icon;
+            if (res.has_role_alert())
+            {
+                f_role = F_ALERT;
+                role_icon = " ";
+            }
+            else
+            if (res.get_role() == DrbdRole::resource_role::PRIMARY)
+            {
+                f_role = F_PRIMARY;
+                role_icon = pri_icon;
+            }
 
-        increase_indent();
-        list_volumes(res);
-        list_connections(res);
-        decrease_indent();
+            next_line();
+            // Marker (1) + "RES:" (4) + RES_NAME_WIDTH + " " (1) + role icon (1) + ROLE_WIDTH
+            if (next_column(6 + RES_NAME_WIDTH + ROLE_WIDTH))
+            {
+                std::fprintf(stdout, "%s%s%sRES:%s%-*s%s %s%s%-*s%s",
+                             f_mark, mark_icon, f_res, F_RES_NAME, RES_NAME_WIDTH, res.get_name().c_str(), F_RESET,
+                             f_role, role_icon, ROLE_WIDTH, res.get_role_label(), F_RESET);
+            }
+
+            increase_indent();
+            list_volumes(res);
+            list_connections(res);
+            decrease_indent();
+        }
     }
+
+    return resources_listed;
 }
 
 void CompactDisplay::list_connections(DrbdResource& res)
@@ -806,6 +838,16 @@ void CompactDisplay::key_pressed(const char key)
             }
             status_display();
             break;
+        case 'p':
+            if (dsp_problems_active)
+            {
+                dsp_problems_active = false;
+            }
+            else
+            {
+                dsp_problems_active = true;
+            }
+            // fall-through
         case '0':
             page = 0;
             status_display();
