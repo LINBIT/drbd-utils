@@ -4348,25 +4348,25 @@ void check_for_existing_data(struct format *cfg)
 }
 
 /* tries to guess what is in the on_disk_buffer */
-enum md_format detect_md(struct md_cpu *md, const uint64_t ll_size)
+enum md_format detect_md(struct md_cpu *md, const uint64_t ll_size, int index_format)
 {
 	struct md_cpu md_test;
 	enum md_format have = DRBD_UNKNOWN;
 
 	md_disk_07_to_cpu(&md_test, (struct md_on_disk_07*)on_disk_buffer);
-	if (is_valid_md(DRBD_V07, &md_test, DRBD_MD_INDEX_FLEX_INT, ll_size)) {
+	if (is_valid_md(DRBD_V07, &md_test, index_format, ll_size)) {
 		have = DRBD_V07;
 		*md = md_test;
 	}
 
 	md_disk_08_to_cpu(&md_test, (struct md_on_disk_08*)on_disk_buffer);
-	if (is_valid_md(DRBD_V08, &md_test, DRBD_MD_INDEX_FLEX_INT, ll_size)) {
+	if (is_valid_md(DRBD_V08, &md_test, index_format, ll_size)) {
 		have = DRBD_V08;
 		*md = md_test;
 	}
 
 	md_disk_09_to_cpu(&md_test, (struct meta_data_on_disk_9*)on_disk_buffer);
-	if (is_valid_md(DRBD_V09, &md_test, DRBD_MD_INDEX_FLEX_INT, ll_size)) {
+	if (is_valid_md(DRBD_V09, &md_test, index_format, ll_size)) {
 		have = DRBD_V09;
 		*md = md_test;
 	}
@@ -4406,7 +4406,7 @@ void check_internal_md_flavours(struct format * cfg) {
 
 	if (have == DRBD_UNKNOWN) {
 		PREAD(cfg, on_disk_buffer, 4096, flex_offset);
-		have = detect_md(&md_now, cfg->bd_size);
+		have = detect_md(&md_now, cfg->bd_size, DRBD_MD_INDEX_FLEX_INT);
 	}
 
 	if (have == DRBD_UNKNOWN)
@@ -4515,7 +4515,7 @@ void check_external_md_flavours(struct format * cfg) {
 	}
 
 	PREAD(cfg, on_disk_buffer, 4096, cfg->md_offset);
-	have = detect_md(&md_now, cfg->bd_size);
+	have = detect_md(&md_now, cfg->bd_size, DRBD_MD_INDEX_FLEX_EXT);
 
 	if (have == DRBD_UNKNOWN)
 		return;
