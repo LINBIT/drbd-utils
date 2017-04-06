@@ -1037,6 +1037,13 @@ static void fixup_peer_devices(struct d_resource *res)
 		STAILQ_FOREACH(ha, &some_path->hname_address_pairs, link) {
 			struct d_host_info *host = ha->host_info;
 
+			if (!host) {
+				err("%s:%d: Resource %s: reference to unknown host '%s'\n",
+					res->config_file, ha->config_line, res->name, ha->name);
+				config_valid = 0;
+				continue;
+			}
+
 			for_each_volume(vol, &host->volumes) {
 				peer_device = find_peer_device(host, conn, vol->vnr);
 				if (peer_device)
