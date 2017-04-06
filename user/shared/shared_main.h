@@ -90,6 +90,7 @@ struct d_globals
 	unsigned int cmd_timeout_medium;
 	unsigned int cmd_timeout_long;
 	int disable_ip_verification;
+	int udev_always_symlink_vnr;
 	int minor_count;
 	int dialog_refresh;
 	enum usage_count_type usage_count;

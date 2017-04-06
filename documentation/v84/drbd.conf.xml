@@ -472,6 +472,42 @@
         </varlistentry>
 
         <varlistentry>
+          <term xml:id="udev-always-use-vnr"><option>udev-always-use-vnr</option></term>
+
+          <listitem>
+            <indexterm significance="normal">
+              <primary>drbd.conf</primary>
+
+              <secondary>udev-always-use-vnr</secondary>
+            </indexterm>
+
+      <para>When udev asks drbdadm for a list of device related symlinks,
+      drbdadm would suggest symlinks with differing naming conventions,
+      depending on whether the resource has explicit
+      <literal>volume VNR { }</literal> definitions,
+      or only one single volume with the implicit volume number 0:
+      <programlisting><![CDATA[
+# implicit single volume without "volume 0 {}" block
+DEVICE=drbd<minor>
+SYMLINK_BY_RES=drbd/by-res/<resource-name>
+
+# explicit volume definition: volume VNR { }
+DEVICE=drbd<minor>
+SYMLINK_BY_RES=drbd/by-res/<resource-name>/VNR
+]]></programlisting>
+	</para>
+
+	<para>If you define this parameter in the global section,
+	drbdadm will always add the <literal>.../VNR</literal> part,
+	and will not care for whether the volume definition was implicit or explicit.
+	</para>
+
+	<para>For legacy backward compatibility, this is off by default,
+	but we do recommend to enable it.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
           <term xml:id="usage-count"><option>usage-count <replaceable>val</replaceable></option></term>
 
           <listitem>

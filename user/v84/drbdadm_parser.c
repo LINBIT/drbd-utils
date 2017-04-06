@@ -516,6 +516,9 @@ static void parse_global(void)
 		int token = yylex();
 		fline = line;
 		switch (token) {
+		case TK_UDEV_ALWAYS_USE_VNR:
+			global_options.udev_always_symlink_vnr = 1;
+			break;
 		case TK_DISABLE_IP_VERIFICATION:
 			global_options.disable_ip_verification = 1;
 			break;
@@ -1009,7 +1012,7 @@ struct d_volume *volume0(struct d_volume **volp)
 			return vol;
 
 		config_valid = 0;
-		err("%s:%d: Explicit and implicit volumes not allowed\n",
+		err("%s:%d: mixing explicit and implicit volumes is not allowed\n",
 		    config_file, line);
 		return vol;
 	}
@@ -1110,6 +1113,7 @@ void inherit_volumes(struct d_volume *from, struct d_host_info *host)
 			t = calloc(1, sizeof(struct d_volume));
 			t->device_minor = -1;
 			t->vnr = s->vnr;
+			t->implicit = s->implicit;
 			host->volumes = INSERT_SORTED(host->volumes, t, vnr);
 		}
 		if (!t->disk && s->disk) {
@@ -1148,13 +1152,22 @@ void check_volumes_complete(struct d_resource *res, struct d_host_info *host)
 {
 	struct d_volume *vol = host->volumes;
 	unsigned vnr = -1U;
+	bool any_implicit = false;
+	bool any_non_zero_vnr = false;
 	while (vol) {
 		if (vnr == -1U || vnr < vol->vnr)
 			vnr = vol->vnr;
 		else
 			err("internal error: in %s: unsorted volumes list\n", res->name);
+		any_implicit |= vol->implicit;
+		any_non_zero_vnr |= vol->vnr != 0;
 		check_volume_complete(res, host, vol);
 		vol = vol->next;
+	}
+	if (any_implicit && any_non_zero_vnr) {
+		err("%s:%d: in resource %s: you must not mix implicit any explicit volumes\n",
+		    config_file, line, res->name);
+		config_valid = 0;
 	}
 }
 
@@ -1199,6 +1212,15 @@ void check_volume_sets_equal(struct d_resource *res, struct d_host_info *host1, 
 			b = b->next;
 		}
 		if (a && b && a->vnr == b->vnr) {
+			if (a->implicit != b->implicit) {
+				err("%s:%d: in resource %s, on %s resp. %s: volume %d must not be implicit on one but not the other\n",
+				    config_file, line, res->name,
+				    names_to_str(host1->on_hosts),
+				    compare_stacked ? host1->lower->name : names_to_str(host2->on_hosts),
+				    a->vnr);
+				config_valid = 0;
+			}
+
 			a = a->next;
 			b = b->next;
 		}

@@ -82,6 +82,7 @@ include			{ DP; return TK_INCLUDE;		}
 handlers		{ DP; return TK_HANDLER;		}
 minor-count		{ DP; return TK_MINOR_COUNT;		}
 disable-ip-verification { DP; return TK_DISABLE_IP_VERIFICATION;}
+udev-always-use-vnr	{ DP; return TK_UDEV_ALWAYS_USE_VNR;	}
 dialog-refresh		{ DP; return TK_DIALOG_REFRESH;		}
 resource		{ DP; return TK_RESOURCE;		}
 meta-disk		{ DP; return TK_META_DISK;		}

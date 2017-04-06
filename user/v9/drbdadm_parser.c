@@ -399,6 +399,9 @@ static void parse_global(void)
 		int token = yylex();
 		fline = line;
 		switch (token) {
+		case TK_UDEV_ALWAYS_USE_VNR:
+			global_options.udev_always_symlink_vnr = 1;
+			break;
 		case TK_DISABLE_IP_VERIFICATION:
 			global_options.disable_ip_verification = 1;
 			break;
@@ -948,7 +951,7 @@ struct d_volume *volume0(struct volumes *volumes)
 			return vol;
 
 		config_valid = 0;
-		err("%s:%d: Explicit and implicit volumes not allowed\n",
+		err("%s:%d: mixing explicit and implicit volumes is not allowed\n",
 		    config_file, line);
 		return vol;
 	}
@@ -1760,9 +1763,12 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 			break;
 		case TK_DISK:
 			switch (token=yylex()) {
-			case TK_STRING:
+			case TK_STRING:{
 				/* open coded parse_volume_stmt() */
-				volume0(&res->volumes)->disk = yylval.txt;
+				struct d_volume *vol = volume0(&res->volumes);
+				vol->disk = yylval.txt;
+				vol->parsed_disk = 1;
+				}
 				EXP(';');
 				break;
 			case '{':
@@ -1772,7 +1778,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 				break;
 			default:
 				check_string_error(token);
-				pe_expected_got( "TK_STRING | {", token);
+				pe_expected_got("TK_STRING | {", token);
 			}
 			break;
 		case TK_NET:

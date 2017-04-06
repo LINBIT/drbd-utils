@@ -1059,7 +1059,7 @@ static int sh_udev(struct cfg_ctx *ctx)
 		return 1;
 	}
 
-	if (vol->implicit)
+	if (vol->implicit && !global_options.udev_always_symlink_vnr)
 		printf("RESOURCE=%s\n", res->name);
 	else
 		printf("RESOURCE=%s/%u\n", res->name, vol->vnr);

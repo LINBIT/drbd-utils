@@ -573,6 +573,7 @@ static void inherit_volumes(struct volumes *from, struct d_host_info *host)
 			t = alloc_volume();
 			t->device_minor = -1;
 			t->vnr = s->vnr;
+			t->implicit = s->implicit;
 			insert_volume(&host->volumes, t);
 		}
 		if (!t->disk && s->disk) {
@@ -684,6 +685,15 @@ static void check_volume_sets_equal(struct d_resource *res, struct d_host_info *
 			b = STAILQ_NEXT(b, link);
 		}
 		if (a && b && a->vnr == b->vnr) {
+			if (a->implicit != b->implicit) {
+				err("%s:%d: in resource %s, on %s resp. %s: volume %d must not be implicit on one but not the other\n",
+				    config_file, line, res->name,
+				    names_to_str(&host1->on_hosts),
+				    compare_stacked ? host1->lower->name : names_to_str(&host2->on_hosts),
+				    a->vnr);
+				config_valid = 0;
+			}
+
 			a = STAILQ_NEXT(a, link);
 			b = STAILQ_NEXT(b, link);
 		}
@@ -1051,18 +1061,31 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 	/* inherit volumes from resource level into the d_host_info objects */
 	for_each_resource(res, resources) {
 		struct d_host_info *host;
+		bool any_implicit = false;
+		bool any_non_zero_vnr = false;
 		for_each_host(host, &res->all_hosts) {
 			struct d_volume *vol;
+
 			inherit_volumes(&res->volumes, host);
 
-			for_each_volume(vol, &host->volumes)
+			for_each_volume(vol, &host->volumes) {
+				any_implicit |= vol->implicit;
+				any_non_zero_vnr |= vol->vnr != 0;
+
 				check_meta_disk(vol, host);
+			}
 
 			if (host->require_minor)
 				check_volumes_complete(res, host);
 		}
 
 		check_volumes_hosts(res);
+
+		if (any_implicit && any_non_zero_vnr) {
+			err("%s:%d: in resource %s: you must not mix implicit any explicit volumes\n",
+			    config_file, line, res->name);
+			config_valid = 0;
+		}
 	}
 
 	for_each_resource(res, resources)

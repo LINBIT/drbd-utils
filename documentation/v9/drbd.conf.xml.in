@@ -76,7 +76,12 @@
   <refsect1>
     <title>Example Configuration File</title>
     <para>
-      <programlisting format="linespecific">resource r0 {
+    <programlisting format="linespecific">
+global {
+	usage-count yes;
+	udev-always-use-vnr;
+}
+resource r0 {
       net {
 	      cram-hmac-alg sha1;
 	      shared-secret "FooFunFactory";
@@ -581,6 +586,7 @@ resource
         <pick_drbdsetup_option name="dialog-refresh"/>
         <pick_drbdsetup_option name="disable-ip-verification"/>
         <pick_drbdsetup_option name="usage-count"/>
+        <pick_drbdsetup_option name="udev-always-use-vnr"/>
       </variablelist>
     </refsect2>
 

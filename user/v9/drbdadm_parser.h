@@ -96,6 +96,7 @@ enum yytokentype {
 	TK_VIA,
 	TK_TEMPLATE_FILE,
 	TK_PATH,
+	TK_UDEV_ALWAYS_USE_VNR,
 };
 
 typedef struct YYSTYPE {

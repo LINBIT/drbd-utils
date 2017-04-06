@@ -85,6 +85,7 @@ connection		{ DP; return TK_CONNECTION;		}
 connection-mesh		{ DP; return TK_CONNECTION_MESH;	}
 minor-count		{ DP; return TK_MINOR_COUNT;		}
 disable-ip-verification { DP; return TK_DISABLE_IP_VERIFICATION;}
+udev-always-use-vnr	{ DP; return TK_UDEV_ALWAYS_USE_VNR;	}
 dialog-refresh		{ DP; return TK_DIALOG_REFRESH;		}
 resource		{ DP; return TK_RESOURCE;		}
 meta-disk		{ DP; return TK_META_DISK;		}

@@ -848,14 +848,14 @@ static int sh_udev(const struct cfg_ctx *ctx)
 	 * udev default change of "string_escape=none" -> "replace",
 	 * populate plain "SYMLINK" with just the "by-res" one. */
 	printf("SYMLINK=");
-	if (vol->implicit)
+	if (vol->implicit && !global_options.udev_always_symlink_vnr)
 		printf("drbd/by-res/%s\n", res->name);
 	else
 		printf("drbd/by-res/%s/%u\n", res->name, vol->vnr);
 
 	/* repeat, with _BY_RES */
 	printf("SYMLINK_BY_RES=");
-	if (vol->implicit)
+	if (vol->implicit && !global_options.udev_always_symlink_vnr)
 		printf("drbd/by-res/%s\n", res->name);
 	else
 		printf("drbd/by-res/%s/%u\n", res->name, vol->vnr);

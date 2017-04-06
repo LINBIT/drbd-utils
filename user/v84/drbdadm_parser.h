@@ -127,6 +127,8 @@ enum yytokentype {
 	TK_CMD_TIMEOUT_LONG,
 	TK_RES_OPTION,
 	TK_OPTIONS,
+	TK_UDEV_ALWAYS_USE_VNR,
+
 	TK__GROUPING_BASE = 0x1000,
 	TK_SYNCER_OLD_OPT = 0x2000, /* Might be or'ed to TK_[NET|DISK]_[OPTION|SWITCH] */
 	TK_PROXY_GROUP = 0x3000, /* Gets or'ed to some options */
