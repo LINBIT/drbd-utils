@@ -993,8 +993,8 @@ meta_expect()
 		# [, not [[, or it won't work ;)
 		eval "[ $val $op $expect ]" && return
 	fi
-	ocf_log err "meta parameter misconfigured, expected $what $op $expect, but found ${val:-unset}."
-	exit $OCF_ERR_CONFIGURED
+	ocf_exit_reason "%s" "meta parameter misconfigured, expected $what $op $expect, but found ${val:-unset}."
+	return $OCF_ERR_CONFIGURED
 }
 
 ls_stat_is_block_maj_147() {
@@ -1023,7 +1023,7 @@ check_crm_feature_set()
 	# fi
 }
 
-drbd_validate_all () {
+_drbd_validate_all () {
 	DRBDADM="drbdadm"
 	DRBDSETUP="drbdsetup"
 	DRBD_HAS_MULTI_VOLUME=false
@@ -1067,14 +1067,14 @@ drbd_validate_all () {
 
 	if [[ $__OCF_ACTION != stop ]] ; then
 		# Check clone and M/S options.
-		$DRBD_IS_v9 || meta_expect clone-max -le 2
-		meta_expect clone-node-max = 1
-		meta_expect master-node-max = 1
+		$DRBD_IS_v9 || meta_expect clone-max -le 2	|| return
+		meta_expect clone-node-max = 1			|| return
+		meta_expect master-node-max = 1			|| return
 
 		# don't try to bump this, even the DRBD 9 kernel module
 		# can not reliably handle more than two primaries yet,
 		# without risking data corruption.
-		meta_expect master-max -le 2
+		meta_expect master-max -le 2			|| return
 	fi
 
 	# Rather than returning $OCF_ERR_CONFIGURED, we sometimes return
@@ -1117,9 +1117,6 @@ drbd_validate_all () {
 		: "$OCF_ERR_CONFIGURED = OCF_ERR_CONFIGURED"
 		return $OCF_ERR_CONFIGURED
 	esac
-	# exporting this is useful for "drbdsetup show".
-	# and it makes it all a little bit more readable.
-	export DRBD_RESOURCE=$OCF_RESKEY_drbd_resource
 
 	# The resource should appear in the config file,
 	# otherwise something's fishy
@@ -1199,7 +1196,34 @@ drbd_validate_all () {
 	return $OCF_SUCCESS
 }
 
+drbd_validate_all () {
+	local ex
+	_drbd_validate_all && return
+	ex=$?
+
+	if [[ $__OCF_ACTION = stop ]] ; then
+		# try to avoid stop failure and subsequent node level fencing
+		# just because someone "accidentally" misconfigured this
+		ocf_log err "validate error '$ex' on stop! Trying 'drbdsetup down $DRBD_RESOURCE' directly to avoid fencing..."
+		if drbdsetup down "$DRBD_RESOURCE" ; then
+			ocf_log err "fencing of this node narrowly avoided. FIX YOUR SETUP!"
+			return $OCF_SUCCESS
+		else
+			ocf_log err "FIX YOUR SETUP! 'drbdsetup down $DRBD_RESOURCE' exit code $?; pacemaker may now try to 'recover' by fencing this node."
+			# give the logs some time to be persisted.
+			( exec sync ) </dev/null &> /dev/null &
+			sleep 5
+		fi
+	fi
+	return $ex
+}
+
+
 #######################################################################
+
+# exporting this is useful for "drbdsetup show".
+# and it makes it all a little bit more readable.
+export DRBD_RESOURCE=$OCF_RESKEY_drbd_resource
 
 if [ $# != 1 ]; then
 	drbd_usage
