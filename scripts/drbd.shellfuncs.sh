@@ -280,6 +280,7 @@ drbd_set_status_variables()
 {
 	# "return" values:
 	status_primary=false
+	status_diskless_client=false
 
 	# single peer, respectively aggregated
 	status_pdsk_all_up_to_date=false
@@ -307,6 +308,7 @@ drbd_set_status_variables()
 	fi
 
 	: == DEBUG == status_primary                      == $status_primary ==
+	: == DEBUG == status_diskless_client              == $status_diskless_client ==
 	: == DEBUG == status_disk_all_up_to_date          == $status_disk_all_up_to_date ==
 	: == DEBUG == status_disk_all_consistent          == $status_disk_all_consistent ==
 	: == DEBUG == status_disk_transitional_state      == $status_disk_transitional_state ==
