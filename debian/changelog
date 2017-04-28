@@ -1,3 +1,10 @@
+drbd-utils (8.9.11-2) unstable; urgency=medium
+
+  * fix for regression of drbd-8.4 pacemaker integration
+  * fix 8.4 compatibility of shipped global_common.conf
+
+ -- Lars Ellenberg <lars.ellenberg@linbit.com>  Fri, 28 Apr 2017 13:16:39 +0200
+
 drbd-utils (8.9.11-1) unstable; urgency=medium
 
   * New upstream release
