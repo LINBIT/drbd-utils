@@ -881,7 +881,7 @@ struct d_resource *running_res_by_name(const char *name)
 	static bool drbdsetup_show_parsed = false;
 	struct d_resource *res;
 
-	if (all_resources && !drbdsetup_show_parsed) {
+	if (adjust_more_than_one_resource && !drbdsetup_show_parsed) {
 		parse_drbdsetup_show(NULL); /* all in one go */
 		drbdsetup_show_parsed = true;
 	}
@@ -891,7 +891,7 @@ struct d_resource *running_res_by_name(const char *name)
 			return res;
 	}
 
-	if (!all_resources)
+	if (!adjust_more_than_one_resource)
 		return parse_drbdsetup_show(name);
 
 	return NULL;

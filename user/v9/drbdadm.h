@@ -444,6 +444,7 @@ extern int no_tty;
 extern int dry_run;
 extern int verbose;
 extern int all_resources;
+extern int adjust_more_than_one_resource;
 extern char* drbdsetup;
 extern char* drbdmeta;
 extern char* drbd_proxy_ctl;

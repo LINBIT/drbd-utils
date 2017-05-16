@@ -159,6 +159,10 @@ int do_verify_ips = 0;
 int do_register = 1;
 /* whether drbdadm was called with "all" instead of resource name(s) */
 int all_resources = 0;
+/* if we want to adjust more than one resource,
+ * instead of iteratively calling "drbdsetup show" for each of them,
+ * call "drbdsetup show" once for all of them. */
+int adjust_more_than_one_resource = 0;
 char *drbdsetup = NULL;
 char *drbdmeta = NULL;
 char *drbdadm_83 = NULL;
@@ -3238,6 +3242,7 @@ int main(int argc, char **argv)
 	char *env_drbd_nodename = NULL;
 	int is_dump_xml;
 	int is_dump;
+	int is_adjust;
 	struct cfg_ctx ctx = { };
 
 	initialize_err();
@@ -3279,6 +3284,7 @@ int main(int argc, char **argv)
 
 	is_dump_xml = (cmd == &dump_xml_cmd);
 	is_dump = (is_dump_xml || cmd == &dump_cmd);
+	is_adjust = (cmd == &adjust_cmd || cmd == &adjust_wp_cmd);
 
 	if (!resource_names[0]) {
 		if (is_dump)
@@ -3373,6 +3379,8 @@ int main(int argc, char **argv)
 				print_dump_xml_header();
 			else if (is_dump)
 				print_dump_header();
+			if (is_adjust)
+				adjust_more_than_one_resource = 1;
 
 			for_each_resource(res, &config) {
 				if (!is_dump && res->ignore)
@@ -3421,6 +3429,9 @@ int main(int argc, char **argv)
 					    resource_names[i]);
 					exit(E_USAGE);
 				}
+
+			if (is_adjust && resource_names[1])
+				adjust_more_than_one_resource = 1;
 
 			for (i = 0; resource_names[i]; i++) {
 				ctx.res = NULL;
