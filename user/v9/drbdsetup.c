@@ -4203,6 +4203,7 @@ int main(int argc, char **argv)
 {
 	struct drbd_cmd *cmd;
 	struct option *options;
+	const char *opts;
 	int c, rv = 0;
 	int longindex, first_optind;
 
@@ -4274,8 +4275,9 @@ int main(int argc, char **argv)
 	argc--;
 
 	options = make_longoptions(cmd);
+	opts = make_optstring(options);
 	for (;;) {
-		c = getopt_long(argc, argv, "(", options, &longindex);
+		c = getopt_long(argc, argv, opts, options, &longindex);
 		if (c == -1)
 			break;
 		if (c == '?' || c == ':')
