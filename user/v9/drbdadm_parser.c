@@ -276,12 +276,9 @@ void check_upr_init(void)
 	created = 1;
 }
 
-/* FIXME
- * strictly speaking we don't need to check for uniqueness of disk and device names,
- * but for uniqueness of their major:minor numbers ;-)
- */
-
-int vcheck_uniq(void **bt, const char *what, const char *fmt, va_list ap)
+int vcheck_uniq_file_line(
+	const char *file, const int line,
+	void **bt, const char *what, const char *fmt, va_list ap)
 {
 	int rv;
 	ENTRY *e, *f;
@@ -308,7 +305,7 @@ int vcheck_uniq(void **bt, const char *what, const char *fmt, va_list ap)
 		err("Oops, unset argument in %s:%d.\n", __FILE__, __LINE__);
 		exit(E_THINKO);
 	}
-	m_asprintf((char **)&e->data, "%s:%u", config_file, fline);
+	m_asprintf((char **)&e->data, "%s:%u", file, line);
 
 	f = tfind(e, bt, btree_key_cmp);
 	if (f) {
@@ -332,6 +329,11 @@ int vcheck_uniq(void **bt, const char *what, const char *fmt, va_list ap)
 	if (EXIT_ON_CONFLICT && f)
 		exit(E_CONFIG_INVALID);
 	return !f;
+}
+
+int vcheck_uniq(void **bt, const char *what, const char *fmt, va_list ap)
+{
+	return vcheck_uniq_file_line(config_file, fline, bt, what, fmt, ap);
 }
 
 static void pe_expected(const char *exp)
@@ -913,9 +915,11 @@ out:
 		return;
 
 	STAILQ_FOREACH(h, on_hosts, link) {
-		check_uniq("device-minor", "device-minor:%s:%u", h->name, vol->device_minor);
+		check_uniq_file_line(vol->v_config_file, vol->v_device_line,
+			"device-minor", "device-minor:%s:%u", h->name, vol->device_minor);
 		if (vol->device)
-			check_uniq("device", "device:%s:%s", h->name, vol->device);
+			check_uniq_file_line(vol->v_config_file, vol->v_device_line,
+				"device", "device:%s:%s", h->name, vol->device);
 	}
 }
 
@@ -959,6 +963,9 @@ struct d_volume *volume0(struct volumes *volumes)
 
 int parse_volume_stmt(struct d_volume *vol, struct names* on_hosts, int token)
 {
+	if (!vol->v_config_file)
+		vol->v_config_file = config_file;
+
 	switch (token) {
 	case TK_DISK:
 		token = yylex();
@@ -975,14 +982,17 @@ int parse_volume_stmt(struct d_volume *vol, struct names* on_hosts, int token)
 			pe_expected_got( "TK_STRING | {", token);
 		}
 		vol->parsed_disk = 1;
+		vol->v_disk_line = fline;
 		break;
 	case TK_DEVICE:
 		parse_device(on_hosts, vol);
 		vol->parsed_device = 1;
+		vol->v_device_line = fline;
 		break;
 	case TK_META_DISK:
 		parse_meta_disk(vol);
 		vol->parsed_meta_disk = 1;
+		vol->v_meta_disk_line = fline;
 		break;
 	case TK_FLEX_META_DISK:
 		EXP(TK_STRING);
@@ -996,6 +1006,7 @@ int parse_volume_stmt(struct d_volume *vol, struct names* on_hosts, int token)
 		}
 		EXP(';');
 		vol->parsed_meta_disk = 1;
+		vol->v_meta_disk_line = fline;
 		break;
 	case TK_SKIP:
 		parse_skip();
@@ -2059,6 +2070,18 @@ int check_uniq(const char *what, const char *fmt, ...)
 
 	va_start(ap, fmt);
 	rv = vcheck_uniq(&global_btree, what, fmt, ap);
+	va_end(ap);
+
+	return rv;
+}
+
+int check_uniq_file_line(const char *file, const int line, const char *what, const char *fmt, ...)
+{
+	int rv;
+	va_list ap;
+
+	va_start(ap, fmt);
+	rv = vcheck_uniq_file_line(file, line, &global_btree, what, fmt, ap);
 	va_end(ap);
 
 	return rv;

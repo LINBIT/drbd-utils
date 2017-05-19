@@ -96,6 +96,11 @@ struct d_volume
 	struct options pd_options; /* peer device options */
 	struct peer_devices peer_devices;
 
+	const char *v_config_file;
+	int v_device_line;
+	int v_disk_line;
+	int v_meta_disk_line;
+
 	/* Do not dump an explicit volume section */
 	unsigned int implicit :1 ;
 
@@ -391,6 +396,7 @@ enum pr_flags {
 };
 
 extern int check_uniq(const char *what, const char *fmt, ...);
+extern int check_uniq_file_line(const char *file, const int line, const char *what, const char *fmt, ...);
 extern struct d_resource* parse_resource_for_adjust(const struct cfg_ctx *ctx);
 extern struct d_resource* parse_resource(char*, enum pr_flags);
 extern void post_parse(struct resources *, enum pp_flags);

@@ -79,13 +79,14 @@ void set_on_hosts_in_res(struct d_resource *res)
 						struct d_volume *vol;
 
 						for_each_volume(vol, &host->volumes)
-							check_uniq("device-minor", "device-minor:%s:%u", h->name,
+							check_uniq_file_line(vol->v_config_file, vol->v_device_line,
+								"device-minor", "device-minor:%s:%u", h->name,
 									vol->device_minor);
 
 						for_each_volume(vol, &host->volumes)
 							if (vol->device)
-								check_uniq("device", "device:%s:%s", h->name,
-										vol->device);
+								check_uniq_file_line(vol->v_config_file, vol->v_device_line,
+									"device", "device:%s:%s", h->name, vol->device);
 					}
 				}
 
@@ -574,21 +575,28 @@ static void inherit_volumes(struct volumes *from, struct d_host_info *host)
 			t->device_minor = -1;
 			t->vnr = s->vnr;
 			t->implicit = s->implicit;
+			t->v_config_file = s->v_config_file;
+			t->v_device_line = s->v_device_line;
+			t->v_disk_line = s->v_disk_line;
+			t->v_meta_disk_line = s->v_meta_disk_line;
 			insert_volume(&host->volumes, t);
 		}
 		if (!t->disk && s->disk) {
 			t->disk = strdup(s->disk);
 			STAILQ_FOREACH(h, &host->on_hosts, link)
-				check_uniq("disk", "disk:%s:%s", h->name, t->disk);
+				check_uniq_file_line(t->v_config_file, t->v_disk_line,
+					"disk", "disk:%s:%s", h->name, t->disk);
 		}
 		if (!t->device && s->device)
 			t->device = strdup(s->device);
 		if (t->device_minor == -1U && s->device_minor != -1U) {
 			t->device_minor = s->device_minor;
 			STAILQ_FOREACH(h, &host->on_hosts, link) {
-				check_uniq("device-minor", "device-minor:%s:%u", h->name, t->device_minor);
+				check_uniq_file_line(t->v_config_file, t->v_device_line,
+					"device-minor", "device-minor:%s:%u", h->name, t->device_minor);
 				if (t->device)
-					check_uniq("device", "device:%s:%s", h->name, t->device);
+					check_uniq_file_line(t->v_config_file, t->v_device_line,
+						"device", "device:%s:%s", h->name, t->device);
 			}
 		}
 		if (!t->meta_disk && s->meta_disk) {
@@ -641,7 +649,8 @@ static void check_meta_disk(struct d_volume *vol, struct d_host_info *host)
 	if (strcmp(vol->meta_disk, "internal") != 0) {
 		/* index either some number, or "flexible" */
 		STAILQ_FOREACH(h, &host->on_hosts, link)
-			check_uniq("meta-disk", "%s:%s[%s]", h->name, vol->meta_disk, vol->meta_index);
+			check_uniq_file_line(vol->v_config_file, vol->v_meta_disk_line,
+				"meta-disk", "%s:%s[%s]", h->name, vol->meta_disk, vol->meta_index);
 	}
 }
 
