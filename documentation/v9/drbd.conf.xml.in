@@ -853,6 +853,7 @@ resource
         <pick_drbdsetup_option name="peer-ack-window"/>
         <pick_drbdsetup_option name="peer-ack-delay"/>
         <pick_drbdsetup_option name="quorum"/>
+        <pick_drbdsetup_option name="on-no-quorum"/>
       </variablelist>
     </refsect2>
 

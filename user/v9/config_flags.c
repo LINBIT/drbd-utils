@@ -802,9 +802,12 @@ const char *rr_conflict_map[] = {
 };
 
 const char *on_no_data_map[] = {
-	[OND_IO_ERROR]		= "io-error",
-	[OND_SUSPEND_IO]	= "suspend-io",
+	[OND_IO_ERROR] = "io-error",
+	[OND_SUSPEND_IO] = "suspend-io",
 };
+
+#define on_no_quorum_map on_no_data_map
+/* ONQ_XX == OND_XX */
 
 const char *on_congestion_map[] = {
 	[OC_BLOCK] = "block",
@@ -1013,6 +1016,7 @@ struct context_def resource_options_ctx = {
 		  .unit = "1/10 seconds"},
 		{ "max-io-depth", NUMERIC(nr_requests, NR_REQUESTS) },
 		{ "quorum", ENUM_NUM(quorum, QUORUM, 1, DRBD_PEERS_MAX) },
+		{ "on-no-quorum", ENUM(on_no_quorum, ON_NO_QUORUM) },
 		{ } },
 };
 

@@ -1608,14 +1608,16 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	  <primary>drbd.conf</primary>
 
 	  <secondary>quorum</secondary>
-	  </indexterm> When activated a cluster partition requires quorum
+	  </indexterm> When activated, a cluster partition requires quorum
 	  in order to modify the replicated data set. That means a node in
 	  the cluster partition can only be promoted to primary if the
 	  cluster partition has quorum.
 	  If a primary node should execute a write request, but the
-	  cluster partition has lost quorum, it will freeze IO and invoke
-	  the <option>quorum-lost</option> handler. The handler is intended
-	  for notification purposes, its return code is ignored.</para>
+	  cluster partition has lost quorum, it will freeze IO or reject
+	  the write request with an error (depending on the
+	  <option>on-no-quorum</option> setting). Upon loosing quorum a primary
+	  always invokes the <option>quorum-lost</option> handler. The handler is
+	  intended for notification purposes, its return code is ignored.</para>
 
 	  <para>The option's value might be set to <option>off</option>,
 	  <option>majority</option>, <option>all</option> or a numeric value. If you
@@ -1636,5 +1638,27 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	  driver version 9.0.7.</para>
 
     </definition>
+  </drbdsetup_option>
+
+  <drbdsetup_option name="on-no-quorum">
+    <term xml:id="on-no-quorum"><option>on-no-quorum <group choice="req" rep="norepeat">
+    <arg choice="plain" rep="norepeat">io-error</arg>
+    <arg choice="plain" rep="norepeat">suspend-io</arg>
+    </group>
+    </option></term>
+
+    <definition>
+      <para><indexterm significance="normal">
+	  <primary>drbd.conf</primary>
+
+	  <secondary>quorum</secondary>
+	  </indexterm> By default DRBD freezes IO on a device, that lost quorum.
+	  By setting the <option>on-no-quorum</option> to <option>io-error</option> it
+	  completes all IO operations with an error if quorum ist lost.</para>
+
+	  <para>The <option>on-no-quorum</option> options is available starting with the DRBD kernel
+	  driver version 9.0.8.</para>
+    </definition>
+
   </drbdsetup_option>
 </drbdsetup_options>
