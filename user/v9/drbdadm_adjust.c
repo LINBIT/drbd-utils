@@ -242,11 +242,13 @@ static bool adjust_paths(const struct cfg_ctx *ctx, struct connection *running_c
 	return false;
 }
 
-static struct connection *matching_conn(struct connection *pattern, struct connections *pool)
+static struct connection *matching_conn(struct connection *pattern, struct connections *pool, bool ret_me)
 {
 	struct connection *conn;
 
 	for_each_connection(conn, pool) {
+		if (ret_me && conn->me)
+			return conn;
 		if (conn->ignore)
 			continue;
 		if (!strcmp(pattern->peer->node_id, conn->peer->node_id))
@@ -726,7 +728,7 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, int can_do_pro
 		for_each_connection(conn, &running->connections) {
 			struct connection *configured_conn;
 
-			configured_conn = matching_conn(conn, &ctx->res->connections);
+			configured_conn = matching_conn(conn, &ctx->res->connections, true);
 			if (!configured_conn) {
 				struct cfg_ctx tmp_ctx = { .res = running, .conn = conn };
 				schedule_deferred_cmd(&del_peer_cmd, &tmp_ctx, CFG_NET_PREP_DOWN);
@@ -743,7 +745,7 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, int can_do_pro
 			continue;
 
 		if (running)
-			running_conn = matching_conn(conn, &running->connections);
+			running_conn = matching_conn(conn, &running->connections, false);
 		if (!running_conn) {
 			schedule_deferred_cmd(&new_peer_cmd, &tmp_ctx, CFG_NET_PREP_UP);
 			schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PATH);
@@ -942,7 +944,7 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 			int pid,argc;
 			char *argv[20];
 
-			configured_conn = matching_conn(conn, &ctx->res->connections);
+			configured_conn = matching_conn(conn, &ctx->res->connections, false);
 			if (!configured_conn)
 				continue;
 			configured_path = STAILQ_FIRST(&configured_conn->paths);

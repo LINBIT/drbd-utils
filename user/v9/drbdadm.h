@@ -189,6 +189,7 @@ struct connection
 	 * e.g., would a connection be enabled multiple times
 	 * this avoids direct maniuplation/restore of the ignore flag itself */
 	unsigned int ignore_tmp:1;
+	unsigned int me:1;
 	unsigned int implicit:1;
 	unsigned int is_standalone:1;
 	STAILQ_ENTRY(connection) link;

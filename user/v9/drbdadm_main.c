@@ -2186,6 +2186,7 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check)
 					goto found;
 
 				if (conn->peer && !strcmp(conn->peer->node_id, hi->node_id)) {
+					conn->me = true;
 					if (!set_ignore_flag(conn, check, false))
 						return 1;
 				}
@@ -2198,6 +2199,7 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check)
 					if (check == CTX_FIRST)
 						goto found;
 
+					conn->me = true;
 					if (!set_ignore_flag(conn, check, false))
 						return 1;
 				}
