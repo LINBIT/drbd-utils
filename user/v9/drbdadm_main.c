@@ -2223,7 +2223,6 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check)
 
 	if (0) {
 found:
-		printf("found it\n");
 		if (conn->ignore) {
 			err("Connection '%s' has the ignore flag set\n",
 			    conn_or_hostname);
