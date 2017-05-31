@@ -1055,9 +1055,6 @@ _drbd_validate_all () {
 		DRBD_HAS_MULTI_VOLUME=true
 	fi
 	if (( $DRBD_KERNEL_VERSION_CODE >= 0x090000 )) ; then
-		# ocf_log err "This resource agent does (still) only support DRBD version 8.x"
-		# exit $OCF_ERR_INSTALLED
-
 		# "drbdsetup events2" is actually usable since 0x080407.
 		# But let's only use it for 9.
 		DRBD_HAS_EVENTS2=true
