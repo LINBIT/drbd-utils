@@ -1,3 +1,9 @@
+drbd-utils (9.0.0-1) unstable; urgency=medium
+
+  * New upstream release
+
+ -- Lars Ellenberg <lars.ellenberg@linbit.com>  Fri, 02 Jun 2017 10:50:46 +0200
+
 drbd-utils (8.9.11-2) unstable; urgency=medium
 
   * fix for regression of drbd-8.4 pacemaker integration

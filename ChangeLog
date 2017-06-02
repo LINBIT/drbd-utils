@@ -1,6 +1,22 @@
 Latest:
 ------
- For even more detail, use "git log" or visit http://git.drbd.org/.
+ For even more detail, use "git log" or visit
+ http://git.linbit.com/drbd-utils.git
+
+9.0.0
+--------
+ * drbd udev: fix inconsistent inheritance of implicit volumes
+   To keep previous udev /dev/drbd/by-resource/... behavior,
+   you may need to set or unset/comment "global { udev-always-use-vnr; }",
+   see the shipped example global_common.conf
+ * Fix regressions of the out-of-the-box DRBD 8.4 experience
+   with our pacemaker DRBD Resource Agent and shipped example config files
+ * debian: don't "stop" drbd on upgrade of utils package
+ * DrbdMon: can now focus on "problem" resources by filtering-out "ok" ones
+ * v9: support new option on_no_quorum
+ * drbdadm: fix segfaults, improve error reporting
+ * adjust: fix deleting unrelated peer(s) on "adjust resource:specific-peer"
+ * drbdmeta create-md/convert: fix check for existing external meta-data
 
 8.9.11
 --------

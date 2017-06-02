@@ -444,6 +444,9 @@ fi
 
 
 %changelog
+* Fri Jun 02 2017 Lars Ellenberg <lars@linbit.com> - 9.0.0-1
+- New upstream release.
+
 * Fri Apr 28 2017 Lars Ellenberg <lars@linbit.com> - 8.9.11-2
 - fix for regression of drbd-8.4 pacemaker integration
 - fix 8.4 compatibility of shipped global_common.conf
