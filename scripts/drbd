@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# chkconfig: - 70 08
+# chkconfig: - 21 08
 # description: Loads and unloads the drbd module
 #
 # Copyright 2001-2013 LINBIT
