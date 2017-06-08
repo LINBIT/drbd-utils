@@ -100,7 +100,7 @@ class BSearch
 
         return result;
     }
-    
+
   private:
     compare_func compare_ptr;
 };
