@@ -7,6 +7,8 @@ const std::string DrbdVolume::PROP_KEY_MINOR       = "minor";
 const std::string DrbdVolume::PROP_KEY_DISK        = "disk";
 const std::string DrbdVolume::PROP_KEY_PEER_DISK   = "peer-disk";
 const std::string DrbdVolume::PROP_KEY_REPLICATION = "replication";
+const std::string DrbdVolume::PROP_KEY_CLIENT      = "client";
+const std::string DrbdVolume::PROP_KEY_PEER_CLIENT = "peer-client";
 
 const char* DrbdVolume::DS_LABEL_DISKLESS     = "Diskless";
 const char* DrbdVolume::DS_LABEL_ATTACHING    = "Attaching";
@@ -36,12 +38,17 @@ const char* DrbdVolume::RS_LABEL_AHEAD                = "Ahead";
 const char* DrbdVolume::RS_LABEL_BEHIND               = "Behind";
 const char* DrbdVolume::RS_LABEL_UNKNOWN              = "Unknown";
 
+const char* DrbdVolume::CS_LABEL_ENABLED              = "yes";
+const char* DrbdVolume::CS_LABEL_DISABLED             = "no";
+const char* DrbdVolume::CS_LABEL_UNKNOWN              = "unknown";
+
 DrbdVolume::DrbdVolume(uint16_t volume_nr) :
     vol_nr(volume_nr)
 {
     minor_nr = -1;
     vol_disk_state = DrbdVolume::disk_state::UNKNOWN;
     vol_repl_state = DrbdVolume::repl_state::UNKNOWN;
+    vol_client_state = DrbdVolume::client_state::UNKNOWN;
 }
 
 const uint16_t DrbdVolume::get_volume_nr() const
@@ -80,6 +87,17 @@ void DrbdVolume::update(PropsMap& event_props)
         {
             throw EventMessageException();
         }
+    }
+
+    std::string* prop_client = event_props.get(&PROP_KEY_CLIENT);
+    if (prop_client == nullptr)
+    {
+        prop_client = event_props.get(&PROP_KEY_PEER_CLIENT);
+    }
+
+    if (prop_client != nullptr)
+    {
+        vol_client_state = parse_client_state(*prop_client);
     }
 }
 
@@ -249,10 +267,16 @@ StateFlags::state DrbdVolume::update_state_flags()
     switch (vol_disk_state)
     {
         case DrbdVolume::disk_state::UP_TO_DATE:
-            // fall-through
+            // UpToDate disk, no alert
+            break;
         case DrbdVolume::disk_state::DISKLESS:
-            // UpToDate disk or diskless client
-            // no warning, no alert
+            // If the volume is not configured as a diskless DRBD client,
+            // then trigger a disk alert
+            if (vol_client_state != DrbdVolume::client_state::ENABLED)
+            {
+                disk_alert = true;
+                set_alert();
+            }
             break;
         case DrbdVolume::disk_state::UNKNOWN:
             if (connection == nullptr)
@@ -273,7 +297,6 @@ StateFlags::state DrbdVolume::update_state_flags()
                     set_alert();
                 }
             }
-
             break;
         case DrbdVolume::disk_state::ATTACHING:
             // fall-through
@@ -494,6 +517,29 @@ DrbdVolume::repl_state DrbdVolume::parse_repl_state(std::string& state_name)
     }
     else
     if (state_name != RS_LABEL_UNKNOWN)
+    {
+        throw EventMessageException();
+    }
+
+    return state;
+}
+
+// @throws EventMessageException
+DrbdVolume::client_state DrbdVolume::parse_client_state(std::string& value_str)
+{
+    DrbdVolume::client_state state = DrbdVolume::client_state::UNKNOWN;
+
+    if (value_str == CS_LABEL_DISABLED)
+    {
+        state = DrbdVolume::client_state::DISABLED;
+    }
+    else
+    if (value_str == CS_LABEL_ENABLED)
+    {
+        state = DrbdVolume::client_state::ENABLED;
+    }
+    else
+    if (value_str != CS_LABEL_UNKNOWN)
     {
         throw EventMessageException();
     }
