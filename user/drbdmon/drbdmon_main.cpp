@@ -26,8 +26,9 @@ const char* ANSI_CLEAR = "\x1b[H\x1b[2J";
 static const time_t DELAY_SECS = 3;
 static const long DELAY_NANOSECS = 0;
 
-static void reset_delay(struct timespec& delay);
-static void clear_screen();
+static void reset_delay(struct timespec& delay) noexcept;
+static void clear_screen() noexcept;
+static void cond_print_error_header(bool& error_header_printed) noexcept;
 static bool adjust_ids(MessageLog* log, bool& ids_safe);
 
 int main(int argc, char* argv[])
@@ -48,6 +49,7 @@ int main(int argc, char* argv[])
     while (fin_action != DrbdMon::finish_action::TERMINATE &&
            fin_action != DrbdMon::finish_action::TERMINATE_NO_CLEAR)
     {
+        bool error_header_printed {false};
         try
         {
             if (log == nullptr)
@@ -59,9 +61,9 @@ int main(int argc, char* argv[])
 
             if (ids_safe || adjust_ids(log.get(), ids_safe))
             {
-                const std::unique_ptr<DrbdMon> ls_instance(new DrbdMon(argc, argv, *log, fail_data));
-                ls_instance->run();
-                fin_action = ls_instance->get_fin_action();
+                const std::unique_ptr<DrbdMon> dm_instance(new DrbdMon(argc, argv, *log, fail_data));
+                dm_instance->run();
+                fin_action = dm_instance->get_fin_action();
                 if (fin_action != DrbdMon::finish_action::TERMINATE_NO_CLEAR)
                 {
                     clear_screen();
@@ -84,6 +86,7 @@ int main(int argc, char* argv[])
         {
             if (log->has_entries())
             {
+                cond_print_error_header(error_header_printed);
                 std::fputs("** DrbdMon messages log\n\n", stdout);
                 log->display_messages(stderr);
                 fputc('\n', stdout);
@@ -92,6 +95,7 @@ int main(int argc, char* argv[])
 
         if (fail_data == DrbdMon::fail_info::OUT_OF_MEMORY)
         {
+            cond_print_error_header(error_header_printed);
             std::fputs("** DrbdMon: Out of memory, trying to restart\n", stdout);
         }
 
@@ -105,6 +109,7 @@ int main(int argc, char* argv[])
 
         if (fin_action == DrbdMon::finish_action::RESTART_DELAYED)
         {
+            cond_print_error_header(error_header_printed);
             std::fprintf(stdout, "** DrbdMon: Reinitializing in %u seconds\n",
                          static_cast<unsigned int> (delay.tv_sec));
 
@@ -132,6 +137,7 @@ int main(int argc, char* argv[])
         else
         if (fin_action == DrbdMon::finish_action::RESTART_IMMED)
         {
+            cond_print_error_header(error_header_printed);
             std::fputs("** DrbdMon: Reinitializing immediately\n", stdout);
         }
     }
@@ -139,16 +145,25 @@ int main(int argc, char* argv[])
     return exit_code;
 }
 
-static void reset_delay(struct timespec& delay)
+static void reset_delay(struct timespec& delay) noexcept
 {
     delay.tv_sec  = DELAY_SECS;
     delay.tv_nsec = DELAY_NANOSECS;
 }
 
-static void clear_screen()
+static void clear_screen() noexcept
 {
     std::fputs(ANSI_CLEAR, stdout);
     std::fflush(stdout);
+}
+
+static void cond_print_error_header(bool& error_header_printed) noexcept
+{
+    if (!error_header_printed)
+    {
+        std::fprintf(stdout, "** DrbdMon v%s\n", DrbdMon::VERSION.c_str());
+        error_header_printed = true;
+    }
 }
 
 // @throws std::bad_alloc
