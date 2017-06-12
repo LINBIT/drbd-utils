@@ -181,7 +181,6 @@ void DrbdMon::run()
                                     // fall-through
                                 case SIGTERM:
                                     // terminate main loop
-                                    std::cerr << "DrbdMon: Received signal, exiting" << std::endl;
                                     fin_action = DrbdMon::finish_action::TERMINATE;
                                     shutdown = true;
                                     break;
@@ -240,7 +239,6 @@ void DrbdMon::run()
                                 {
                                     fin_action = DrbdMon::finish_action::TERMINATE;
                                     shutdown = true;
-                                    std::cerr << "DrbdMon: Quit command, exiting" << std::endl;
                                 }
                                 else
                                 {
