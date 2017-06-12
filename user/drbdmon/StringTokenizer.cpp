@@ -6,7 +6,7 @@ StringTokenizer::StringTokenizer(const std::string& tokens_line, const std::stri
 {
     length = line.length();
 
-    StringTokenizer::find_next_token();
+    find_next_token();
 }
 
 bool StringTokenizer::has_next()
@@ -27,7 +27,7 @@ std::string StringTokenizer::next()
     size_t cur_length = token_length;
 
     // Prepare next token substring parameters
-    StringTokenizer::find_next_token();
+    find_next_token();
 
     // Return current token
     return line.substr(cur_offset, cur_length);
