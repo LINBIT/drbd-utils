@@ -67,7 +67,7 @@ const char* CompactDisplay::ANSI_CURSOR_ON  = "\x1b[?25h";
 
 const char CompactDisplay::HOTKEY_PGUP = '<';
 const char CompactDisplay::HOTKEY_PGDN = '>';
-const char CompactDisplay::HOTKEY_PGZERO = '0';
+const char CompactDisplay::HOTKEY_PGZERO = '1';
 
 const std::string CompactDisplay::LABEL_MESSAGES    = "Messages";
 const std::string CompactDisplay::LABEL_MONITOR     = "Monitor";
@@ -75,7 +75,7 @@ const std::string CompactDisplay::LABEL_PROBLEMS    = "Problems";
 const std::string CompactDisplay::LABEL_STATUS      = "Status";
 const std::string CompactDisplay::LABEL_PGUP        = "PgUp";
 const std::string CompactDisplay::LABEL_PGDN        = "PgDn";
-const std::string CompactDisplay::LABEL_PGZERO      = "Pg0";
+const std::string CompactDisplay::LABEL_PGZERO      = "Pg1";
 
 const uint16_t CompactDisplay::MIN_SIZE_X =   40;
 const uint16_t CompactDisplay::MAX_SIZE_X = 1024;
@@ -848,7 +848,7 @@ void CompactDisplay::key_pressed(const char key)
                 dsp_problems_active = true;
             }
             // fall-through
-        case '0':
+        case '1':
             page = 0;
             status_display();
             break;
