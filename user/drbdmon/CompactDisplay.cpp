@@ -781,11 +781,11 @@ void CompactDisplay::announce_options(Configurator& collector)
 
 void CompactDisplay::options_help() noexcept
 {
-    std::cerr << "DrbdMon display configuration options:" << std::endl;
-    std::cerr << "  --ascii          Use only ASCII characters (no Unicode)" << std::endl;
-    std::cerr << "  --no-header      Do not display the DrbdMon header line" << std::endl;
-    std::cerr << "  --no-hotkeys     Do not display the hotkeys line" << std::endl;
-    std::cerr << std::endl;
+    std::fputs("DrbdMon display configuration options:\n", stderr);
+    std::fputs("  --ascii          Use only ASCII characters (no Unicode)\n", stderr);
+    std::fputs("  --no-header      Do not display the DrbdMon header line\n", stderr);
+    std::fputs("  --no-hotkeys     Do not display the hotkeys line\n", stderr);
+    std::fputc('\n', stderr);
 }
 
 // @throws std::bad_alloc
