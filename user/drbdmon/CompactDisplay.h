@@ -8,6 +8,11 @@
 #include <string>
 #include <cstdint>
 
+extern "C"
+{
+    #include <unistd.h>
+}
+
 #include <GenericDisplay.h>
 #include <map_types.h>
 #include <DrbdResource.h>
@@ -92,6 +97,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
     static const std::string LABEL_PGZERO;
 
     static const uint16_t INDENT_STEP_SIZE;
+    static const uint16_t OUTPUT_BUFFER_SIZE;
 
     static const uint16_t MIN_SIZE_X;
     static const uint16_t MAX_SIZE_X;
@@ -142,25 +148,12 @@ class CompactDisplay : public GenericDisplay, public Configurable
     virtual void key_pressed(const char key) override;
 
   private:
-    bool list_resources();
-    void list_connections(DrbdResource& res);
-    void list_volumes(DrbdResource& res);
-    void show_volume(DrbdVolume& vol, bool peer_volume, bool long_format);
-    void list_peer_volumes(DrbdConnection& conn);
-
-    void increase_indent();
-    void decrease_indent();
-    void reset_indent();
-    void reset_positions();
-    void indent();
-    bool next_column(uint16_t length);
-    void next_line();
-    void prepare_flags();
-
     ResourcesMap& resources_map;
     std::ostream& out;
     MessageLog& log;
     HotkeysMap& hotkeys_info;
+
+    int output_fd {STDOUT_FILENO};
 
     bool dsp_msg_active {false};
     bool dsp_problems_active {false};
@@ -170,8 +163,6 @@ class CompactDisplay : public GenericDisplay, public Configurable
 
     uint16_t term_x {80};
     uint16_t term_y {25};
-    char* indent_buffer {nullptr};
-    uint16_t indent_level {0};
     uint16_t current_x {0};
     uint32_t current_y {0};
     bool show_header {true};
@@ -187,6 +178,33 @@ class CompactDisplay : public GenericDisplay, public Configurable
     const char* disk_bad  {UTF8_DISK_BAD};
     const char* mark_off  {UTF8_MARK_OFF};
     const char* mark_on   {UTF8_MARK_ON};
+
+    uint16_t indent_level {0};
+    char* indent_buffer {nullptr};
+    std::unique_ptr<char[]> indent_buffer_mgr {nullptr};
+    char *output_buffer {nullptr};
+    std::unique_ptr<char[]> output_buffer_mgr {nullptr};
+
+    bool list_resources();
+    void list_connections(DrbdResource& res);
+    void list_volumes(DrbdResource& res);
+    void show_volume(DrbdVolume& vol, bool peer_volume, bool long_format);
+    void list_peer_volumes(DrbdConnection& conn);
+
+    void increase_indent();
+    void decrease_indent();
+    void reset_indent();
+    void reset_positions();
+    void indent();
+    bool next_column(uint16_t length);
+    void next_line();
+    void prepare_flags();
+
+    void write_char(const char ch) const noexcept;
+    void write_text(const char* text) const noexcept;
+    void write_fmt(const char* format, ...) const noexcept;
+
+    void write_buffer(const char* buffer, size_t length) const noexcept;
 };
 
 #endif	/* COMPACTDISPLAY_H */
