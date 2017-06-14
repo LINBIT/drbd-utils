@@ -8,6 +8,7 @@ class GenericDisplay
     {
     }
 
+    virtual void initial_display() = 0;
     virtual void status_display() = 0;
     virtual void display_header() const = 0;
     virtual void set_terminal_size(uint16_t size_x, uint16_t size_y) = 0;

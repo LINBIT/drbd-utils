@@ -86,7 +86,6 @@ void DrbdMon::run()
 {
     std::unique_ptr<PropsMap>               event_props;
     std::unique_ptr<TermSize>               term_size;
-    std::unique_ptr<GenericDisplay>         display;
     std::unique_ptr<EventsSourceSpawner>    events_source;
     std::unique_ptr<EventsIo>               events_io;
 
@@ -135,6 +134,9 @@ void DrbdMon::run()
                 log.add_entry(MessageLog::log_level::WARN, "Adjusting the terminal mode failed");
             }
 
+            // Show an initial display while reading the initial DRBD status
+            display->initial_display();
+
             while (!shutdown)
             {
                 EventsIo::event event_id = events_io->wait_event();
@@ -152,14 +154,17 @@ void DrbdMon::run()
                                     events_io->free_event_line();
                                     clear_event_props(*event_props);
                                     event_line = events_io->get_event_line();
-                                    if (update_counter >= MAX_EVENT_BUNDLE)
+                                    if (have_initial_state)
                                     {
-                                        display->status_display();
-                                        update_counter = 0;
-                                    }
-                                    else
-                                    {
-                                        ++update_counter;
+                                        if (update_counter >= MAX_EVENT_BUNDLE)
+                                        {
+                                            display->status_display();
+                                            update_counter = 0;
+                                        }
+                                        else
+                                        {
+                                            ++update_counter;
+                                        }
                                     }
                                 }
                             }
@@ -167,7 +172,10 @@ void DrbdMon::run()
                             {
                                 throw EventMessageException();
                             }
-                            display->status_display();
+                            if (have_initial_state)
+                            {
+                                display->status_display();
+                            }
                         }
                         break;
                     case EventsIo::event::SIGNAL:
@@ -415,6 +423,11 @@ void DrbdMon::process_event_message(
                     );
                     break;
             }
+
+            // Indicate that the initial state is available now
+            // (This can be used to disable display updates until an initial state is available)
+            have_initial_state = true;
+            display->status_display();
 
             // In case that multiple "exists -" lines are received,
             // which is actually not supposed to happen, avoid spamming

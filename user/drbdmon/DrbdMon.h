@@ -140,7 +140,9 @@ class DrbdMon : public Configurable, public Configurator
     finish_action fin_action {DrbdMon::finish_action::RESTART_IMMED};
     MessageLog&   log;
     bool          shutdown      {false};
+    bool          have_initial_state {false};
 
+    std::unique_ptr<GenericDisplay>  display {nullptr};
     std::unique_ptr<Configurable*[]> configurables {nullptr};
 
     // @throws std::bad_alloc, EventMessageException

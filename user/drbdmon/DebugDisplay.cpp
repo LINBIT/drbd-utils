@@ -16,6 +16,12 @@ DebugDisplay::~DebugDisplay() noexcept
 {
 }
 
+void DebugDisplay::initial_display()
+{
+    display_header();
+    std::fputs("Reading initial DRBD status\n", stdout);
+}
+
 void DebugDisplay::status_display()
 {
     display_header();

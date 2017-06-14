@@ -62,6 +62,7 @@ class Display : public GenericDisplay
     }
 
     virtual void clear();
+    virtual void initial_display() override;
     virtual void status_display() override;
     virtual void display_header() const override;
 

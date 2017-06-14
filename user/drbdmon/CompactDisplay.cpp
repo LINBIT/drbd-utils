@@ -130,7 +130,6 @@ CompactDisplay::CompactDisplay(
 
     // Hide the cursor
     write_text(ANSI_CURSOR_OFF);
-    std::fflush(stdout);
 
     hotkeys_info.append(&HOTKEY_PGZERO, &LABEL_PGZERO);
     hotkeys_info.append(&HOTKEY_PGUP, &LABEL_PGUP);
@@ -141,16 +140,39 @@ CompactDisplay::~CompactDisplay() noexcept
 {
     // Show the cursor
     write_text(ANSI_CURSOR_ON);
-    std::fflush(stdout);
 }
 
 void CompactDisplay::clear()
 {
     write_text(ANSI_CLEAR);
-    std::fflush(stdout);
 
     current_x = 0;
     current_y = 0;
+}
+
+void CompactDisplay::initial_display()
+{
+    clear();
+    display_header();
+
+    if (log.has_entries() && dsp_msg_active)
+    {
+        log.display_messages(stdout);
+    }
+    else
+    {
+        if (!log.has_entries())
+        {
+            dsp_msg_active = false;
+        }
+
+        write_fmt("%sReading initial DRBD status...%s\n", F_RES_NAME, F_RESET);
+    }
+
+    // End line
+    next_line();
+
+    display_hotkeys_info();
 }
 
 void CompactDisplay::status_display()
@@ -188,11 +210,10 @@ void CompactDisplay::status_display()
         }
     }
 
-    // End line & flush, if not already done
+    // End line
     next_line();
 
     display_hotkeys_info();
-    std::fflush(stdout);
 }
 
 void CompactDisplay::display_header() const
@@ -808,6 +829,7 @@ void CompactDisplay::options_help() noexcept
     std::fputs("  --no-header      Do not display the DrbdMon header line\n", stderr);
     std::fputs("  --no-hotkeys     Do not display the hotkeys line\n", stderr);
     std::fputc('\n', stderr);
+    std::fflush(stderr);
 }
 
 // @throws std::bad_alloc

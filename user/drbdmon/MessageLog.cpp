@@ -135,6 +135,7 @@ void MessageLog::display_messages(std::FILE* out) const
 
             std::fprintf(out, "    %s %s%s%s\n", mark, format, log_entry->message->c_str(), F_RESET);
         }
+        std::fflush(out);
     }
 }
 

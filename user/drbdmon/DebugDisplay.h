@@ -25,6 +25,7 @@ class DebugDisplay : public GenericDisplay
     DebugDisplay& operator=(DebugDisplay&& orig) = default;
     virtual ~DebugDisplay() noexcept;
 
+    virtual void initial_display() override;
     virtual void status_display() override;
     virtual void display_header() const override;
     virtual void set_terminal_size(uint16_t size_x, uint16_t size_y) override;

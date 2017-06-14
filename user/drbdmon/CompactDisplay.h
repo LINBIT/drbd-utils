@@ -127,6 +127,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
     virtual ~CompactDisplay() noexcept override;
 
     virtual void clear();
+    virtual void initial_display() override;
     virtual void status_display() override;
     virtual void display_header() const override;
     virtual void display_hotkeys_info() const;

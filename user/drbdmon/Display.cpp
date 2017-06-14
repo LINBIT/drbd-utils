@@ -1,3 +1,4 @@
+#include <GenericDisplay.h>
 #include <Display.h>
 #include <DrbdMon.h>
 
@@ -50,6 +51,12 @@ Display::Display(std::ostream& out_ref, ResourcesMap& resources_map_ref) :
 void Display::clear()
 {
     out << ANSI_CLEAR;
+}
+
+void Display::initial_display()
+{
+    clear();
+    out << "Reading initial DRBD status" << std::endl;
 }
 
 void Display::status_display()
