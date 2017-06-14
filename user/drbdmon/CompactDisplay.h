@@ -11,6 +11,7 @@
 extern "C"
 {
     #include <unistd.h>
+    #include <time.h>
 }
 
 #include <GenericDisplay.h>
@@ -113,6 +114,8 @@ class CompactDisplay : public GenericDisplay, public Configurable
     static const int DISK_STATE_WIDTH;
     static const int REPL_STATE_WIDTH;
 
+    static const uint32_t MAX_YIELD_LOOP;
+
     // @throws std::bad_alloc
     CompactDisplay(
         std::ostream& out_ref,
@@ -185,6 +188,9 @@ class CompactDisplay : public GenericDisplay, public Configurable
     std::unique_ptr<char[]> indent_buffer_mgr {nullptr};
     char *output_buffer {nullptr};
     std::unique_ptr<char[]> output_buffer_mgr {nullptr};
+
+    // 20 ms delay
+    struct timespec write_retry_delay {0, 20000000};
 
     bool list_resources();
     void list_connections(DrbdResource& res);

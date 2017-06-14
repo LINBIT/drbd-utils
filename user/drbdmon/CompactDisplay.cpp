@@ -104,6 +104,8 @@ const int CompactDisplay::REPL_STATE_WIDTH = 20;
 const uint16_t CompactDisplay::INDENT_STEP_SIZE     = 4;
 const uint16_t CompactDisplay::OUTPUT_BUFFER_SIZE   = 1024;
 
+const uint32_t CompactDisplay::MAX_YIELD_LOOP = 10;
+
 // @throws std::bad_alloc
 CompactDisplay::CompactDisplay(
     std::ostream& out_ref,
@@ -910,14 +912,26 @@ void CompactDisplay::key_pressed(const char key)
 void CompactDisplay::write_char(const char ch) const noexcept
 {
     // Repeat temporarily failing write() calls until the byte has been written
+    uint32_t loop_guard {0};
     while (write(output_fd, static_cast<const void*> (&ch), 1) != 1)
     {
         if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
         {
             break;
         }
-        // Attempt to yield to other processes before retrying
-        static_cast<void> (sched_yield());
+
+        if (loop_guard < MAX_YIELD_LOOP)
+        {
+            // Attempt to yield to other processes before retrying
+            static_cast<void> (sched_yield());
+            ++loop_guard;
+        }
+        else
+        {
+            // If yielding to other processes did not lead to any progress,
+            // suspend for a while
+            static_cast<void> (nanosleep(&write_retry_delay, nullptr));
+        }
     }
 }
 
@@ -962,6 +976,7 @@ void CompactDisplay::write_fmt(const char* format, ...) const noexcept
  */
 void CompactDisplay::write_buffer(const char* buffer, size_t length) const noexcept
 {
+    uint32_t loop_guard {0};
     ssize_t written {0};
     while (length > 0)
     {
@@ -972,14 +987,22 @@ void CompactDisplay::write_buffer(const char* buffer, size_t length) const noexc
             length -= written;
         }
         else
-        if (written == -1)
+        if (written == -1 && (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR))
         {
-            if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
-            {
-                break;
-            }
+            break;
+        }
+
+        if (loop_guard < MAX_YIELD_LOOP)
+        {
             // Attempt to yield to other processes before retrying
             static_cast<void> (sched_yield());
+            ++loop_guard;
+        }
+        else
+        {
+            // If yielding to other processes did not lead to any progress,
+            // suspend for a while
+            static_cast<void> (nanosleep(&write_retry_delay, nullptr));
         }
     }
 }
