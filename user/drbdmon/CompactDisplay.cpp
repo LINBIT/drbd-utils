@@ -992,17 +992,20 @@ void CompactDisplay::write_buffer(const char* buffer, size_t length) const noexc
             break;
         }
 
-        if (loop_guard < MAX_YIELD_LOOP)
+        if (written <= 0)
         {
-            // Attempt to yield to other processes before retrying
-            static_cast<void> (sched_yield());
-            ++loop_guard;
-        }
-        else
-        {
-            // If yielding to other processes did not lead to any progress,
-            // suspend for a while
-            static_cast<void> (nanosleep(&write_retry_delay, nullptr));
+            if (loop_guard < MAX_YIELD_LOOP)
+            {
+                // Attempt to yield to other processes before retrying
+                static_cast<void> (sched_yield());
+                ++loop_guard;
+            }
+            else
+            {
+                // If yielding to other processes did not lead to any progress,
+                // suspend for a while
+                static_cast<void> (nanosleep(&write_retry_delay, nullptr));
+            }
         }
     }
 }
