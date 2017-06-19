@@ -81,7 +81,13 @@ class DrbdMon : public Configurable, public Configurator
     };
 
     // @throws std::bad_alloc
-    DrbdMon(int argc, char* argv[], MessageLog& log_ref, fail_info& fail_data_ref);
+    DrbdMon(
+        int argc,
+        char* argv[],
+        MessageLog& log_ref,
+        fail_info& fail_data_ref,
+        const std::string* const node_name_ref
+    );
     DrbdMon(const DrbdMon& orig) = delete;
     DrbdMon& operator=(const DrbdMon& orig) = delete;
     DrbdMon(DrbdMon&& orig) = default;
@@ -139,8 +145,11 @@ class DrbdMon : public Configurable, public Configurator
     fail_info&    fail_data;
     finish_action fin_action {DrbdMon::finish_action::RESTART_IMMED};
     MessageLog&   log;
+    const std::string* const node_name;
+
     bool          shutdown      {false};
     bool          have_initial_state {false};
+
 
     std::unique_ptr<GenericDisplay>  display {nullptr};
     std::unique_ptr<Configurable*[]> configurables {nullptr};

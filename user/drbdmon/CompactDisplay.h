@@ -31,6 +31,10 @@ class CompactDisplay : public GenericDisplay, public Configurable
     static const std::string OPT_NO_HOTKEYS_KEY;
     static const std::string OPT_ASCII_KEY;
 
+    static const std::string HDR_SPACER;
+    static const std::string NODE_DSP_PREFIX;
+    static const std::string TRUNC_MARKER;
+
     static const ConfigOption OPT_NO_HEADER;
     static const ConfigOption OPT_NO_HOTKEYS;
     static const ConfigOption OPT_ASCII;
@@ -114,14 +118,15 @@ class CompactDisplay : public GenericDisplay, public Configurable
     static const int DISK_STATE_WIDTH;
     static const int REPL_STATE_WIDTH;
 
+    static const uint16_t MIN_NODENAME_DSP_LENGTH;
     static const uint32_t MAX_YIELD_LOOP;
 
     // @throws std::bad_alloc
     CompactDisplay(
-        std::ostream& out_ref,
         ResourcesMap& resources_map_ref,
         MessageLog&   log_ref,
-        HotkeysMap&   hotkeys_info_ref
+        HotkeysMap&   hotkeys_info_ref,
+        const std::string* const node_name_ref
     );
     CompactDisplay(const CompactDisplay& orig) = delete;
     CompactDisplay& operator=(const CompactDisplay& orig) = delete;
@@ -153,7 +158,6 @@ class CompactDisplay : public GenericDisplay, public Configurable
 
   private:
     ResourcesMap& resources_map;
-    std::ostream& out;
     MessageLog& log;
     HotkeysMap& hotkeys_info;
 
@@ -167,6 +171,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
 
     uint16_t term_x {80};
     uint16_t term_y {25};
+    uint16_t node_dsp_length {0};
     uint16_t current_x {0};
     uint32_t current_y {0};
     bool show_header {true};
@@ -188,6 +193,9 @@ class CompactDisplay : public GenericDisplay, public Configurable
     std::unique_ptr<char[]> indent_buffer_mgr {nullptr};
     char *output_buffer {nullptr};
     std::unique_ptr<char[]> output_buffer_mgr {nullptr};
+
+    std::unique_ptr<std::string> node_label {nullptr};
+    const std::string* const node_name;
 
     // 20 ms delay
     struct timespec write_retry_delay {0, 20000000};

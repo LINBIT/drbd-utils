@@ -11,6 +11,7 @@ extern "C"
     #include <time.h>
     #include <sys/wait.h>
     #include <signal.h>
+    #include <sys/utsname.h>
 }
 
 #include <DrbdMon.h>
@@ -28,8 +29,9 @@ static const long DELAY_NANOSECS = 0;
 
 static void reset_delay(struct timespec& delay) noexcept;
 static void clear_screen() noexcept;
-static void cond_print_error_header(bool& error_header_printed) noexcept;
+static void cond_print_error_header(bool& error_header_printed, const std::string* const node_name) noexcept;
 static bool adjust_ids(MessageLog* log, bool& ids_safe);
+static void query_node_name(std::unique_ptr<std::string>& node_name);
 
 int main(int argc, char* argv[])
 {
@@ -44,6 +46,7 @@ int main(int argc, char* argv[])
     DrbdMon::finish_action fin_action {DrbdMon::finish_action::RESTART_DELAYED};
 
     std::unique_ptr<MessageLog> log;
+    std::unique_ptr<std::string> node_name;
 
     bool ids_safe {false};
     while (fin_action != DrbdMon::finish_action::TERMINATE &&
@@ -59,9 +62,16 @@ int main(int argc, char* argv[])
                 log = std::unique_ptr<MessageLog>(new MessageLog(LOG_CAPACITY));
             }
 
+            if (node_name == nullptr)
+            {
+                query_node_name(node_name);
+            }
+
             if (ids_safe || adjust_ids(log.get(), ids_safe))
             {
-                const std::unique_ptr<DrbdMon> dm_instance(new DrbdMon(argc, argv, *log, fail_data));
+                const std::unique_ptr<DrbdMon> dm_instance(
+                    new DrbdMon(argc, argv, *log, fail_data, node_name.get())
+                );
                 dm_instance->run();
                 fin_action = dm_instance->get_fin_action();
                 if (fin_action != DrbdMon::finish_action::TERMINATE_NO_CLEAR)
@@ -86,7 +96,7 @@ int main(int argc, char* argv[])
         {
             if (log->has_entries())
             {
-                cond_print_error_header(error_header_printed);
+                cond_print_error_header(error_header_printed, node_name.get());
                 std::fputs("** DrbdMon messages log\n\n", stdout);
                 log->display_messages(stderr);
                 fputc('\n', stdout);
@@ -95,7 +105,7 @@ int main(int argc, char* argv[])
 
         if (fail_data == DrbdMon::fail_info::OUT_OF_MEMORY)
         {
-            cond_print_error_header(error_header_printed);
+            cond_print_error_header(error_header_printed, node_name.get());
             std::fputs("** DrbdMon: Out of memory, trying to restart\n", stdout);
         }
 
@@ -109,7 +119,7 @@ int main(int argc, char* argv[])
 
         if (fin_action == DrbdMon::finish_action::RESTART_DELAYED)
         {
-            cond_print_error_header(error_header_printed);
+            cond_print_error_header(error_header_printed, node_name.get());
             std::fprintf(stdout, "** DrbdMon: Reinitializing in %u seconds\n",
                          static_cast<unsigned int> (delay.tv_sec));
 
@@ -137,7 +147,7 @@ int main(int argc, char* argv[])
         else
         if (fin_action == DrbdMon::finish_action::RESTART_IMMED)
         {
-            cond_print_error_header(error_header_printed);
+            cond_print_error_header(error_header_printed, node_name.get());
             std::fputs("** DrbdMon: Reinitializing immediately\n", stdout);
         }
     }
@@ -157,11 +167,15 @@ static void clear_screen() noexcept
     std::fflush(stdout);
 }
 
-static void cond_print_error_header(bool& error_header_printed) noexcept
+static void cond_print_error_header(bool& error_header_printed, const std::string* const node_name) noexcept
 {
     if (!error_header_printed)
     {
         std::fprintf(stdout, "** DrbdMon v%s\n", DrbdMon::VERSION.c_str());
+        if (node_name != nullptr)
+        {
+            std::fprintf(stdout, "   Node %s\n", node_name->c_str());
+        }
         error_header_printed = true;
     }
 }
@@ -276,4 +290,15 @@ static bool adjust_ids(MessageLog* log, bool& ids_safe)
         );
     }
     return ids_safe;
+}
+
+// @throws std::bad_alloc
+static void query_node_name(std::unique_ptr<std::string>& node_name)
+{
+    std::unique_ptr<struct utsname> uname_buffer;
+    uname_buffer = std::unique_ptr<struct utsname>(new struct utsname);
+    if (uname(uname_buffer.get()) == 0)
+    {
+        node_name = std::unique_ptr<std::string>(new std::string(uname_buffer->nodename));
+    }
 }

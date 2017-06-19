@@ -51,13 +51,20 @@ const std::string DrbdMon::DESC_REINIT    = "Reinitialize";
 
 
 // @throws std::bad_alloc
-DrbdMon::DrbdMon(int argc, char* argv[], MessageLog& log_ref, fail_info& fail_data_ref):
+DrbdMon::DrbdMon(
+    int         argc,
+    char*       argv[],
+    MessageLog& log_ref,
+    fail_info&  fail_data_ref,
+    const std::string* const node_name_ref
+):
     arg_count(argc),
     arg_values(argv),
     resources_map(new ResourcesMap(&comparators::compare_string)),
     hotkeys_info(new HotkeysMap(&comparators::compare_char)),
     fail_data(fail_data_ref),
-    log(log_ref)
+    log(log_ref),
+    node_name(node_name_ref)
 {
 }
 
@@ -102,7 +109,9 @@ void DrbdMon::run()
             // Do not add anything that might throw between display_impl allocation and
             // display interface unique_ptr initialization to ensure deallocation of the display
             // object if the current scope is left
-            CompactDisplay* display_impl = new CompactDisplay(std::cout, *resources_map, log, *hotkeys_info);
+            CompactDisplay* display_impl = new CompactDisplay(
+                *resources_map, log, *hotkeys_info, node_name
+            );
             display = std::unique_ptr<GenericDisplay>(dynamic_cast<GenericDisplay*> (display_impl));
 
             configurables = std::unique_ptr<Configurable*[]>(new Configurable*[3]);

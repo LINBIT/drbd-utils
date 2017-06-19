@@ -19,6 +19,10 @@ const std::string CompactDisplay::OPT_NO_HEADER_KEY("no-header");
 const std::string CompactDisplay::OPT_NO_HOTKEYS_KEY("no-hotkeys");
 const std::string CompactDisplay::OPT_ASCII_KEY("ascii");
 
+const std::string CompactDisplay::HDR_SPACER(" | ");
+const std::string CompactDisplay::NODE_DSP_PREFIX("Node ");
+const std::string CompactDisplay::TRUNC_MARKER("...");
+
 const ConfigOption CompactDisplay::OPT_NO_HEADER(true, OPT_NO_HEADER_KEY);
 const ConfigOption CompactDisplay::OPT_NO_HOTKEYS(true, OPT_NO_HOTKEYS_KEY);
 const ConfigOption CompactDisplay::OPT_ASCII(true, OPT_ASCII_KEY);
@@ -104,19 +108,20 @@ const int CompactDisplay::REPL_STATE_WIDTH = 20;
 const uint16_t CompactDisplay::INDENT_STEP_SIZE     = 4;
 const uint16_t CompactDisplay::OUTPUT_BUFFER_SIZE   = 1024;
 
+const uint16_t CompactDisplay::MIN_NODENAME_DSP_LENGTH = 4;
 const uint32_t CompactDisplay::MAX_YIELD_LOOP = 10;
 
 // @throws std::bad_alloc
 CompactDisplay::CompactDisplay(
-    std::ostream& out_ref,
     ResourcesMap& resources_map_ref,
     MessageLog&   log_ref,
-    HotkeysMap&   hotkeys_info_ref
+    HotkeysMap&   hotkeys_info_ref,
+    const std::string* const node_name_ref
 ):
     resources_map(resources_map_ref),
-    out(out_ref),
     log(log_ref),
-    hotkeys_info(hotkeys_info_ref)
+    hotkeys_info(hotkeys_info_ref),
+    node_name(node_name_ref)
 {
     // Allocate and initialize the indent buffer
     indent_buffer_mgr = std::unique_ptr<char[]>(new char[INDENT_STEP_SIZE + 1]);
@@ -136,6 +141,9 @@ CompactDisplay::CompactDisplay(
     hotkeys_info.append(&HOTKEY_PGZERO, &LABEL_PGZERO);
     hotkeys_info.append(&HOTKEY_PGUP, &LABEL_PGUP);
     hotkeys_info.append(&HOTKEY_PGDN, &LABEL_PGDN);
+
+    node_label = std::unique_ptr<std::string>(new std::string(HDR_SPACER));
+    *node_label += NODE_DSP_PREFIX;
 }
 
 CompactDisplay::~CompactDisplay() noexcept
@@ -222,8 +230,53 @@ void CompactDisplay::display_header() const
 {
     if (show_header)
     {
-        write_fmt("%s%s%s v%s\n", F_HEADER, ANSI_CLEAR_LINE,
+        write_fmt("%s%s%s v%s", F_HEADER, ANSI_CLEAR_LINE,
                   DrbdMon::PROGRAM_NAME.c_str(), DrbdMon::VERSION.c_str());
+
+        if (node_name != nullptr)
+        {
+            if (enable_term_size)
+            {
+                // "%s v%s" format for PROGRAM_NAME and VERSION
+                uint16_t x_pos = DrbdMon::PROGRAM_NAME.length() + DrbdMon::VERSION.length() + 2;
+                if (term_x >= x_pos)
+                {
+                    uint16_t free_x = term_x - x_pos;
+                    size_t label_length = node_label->length();
+                    if (free_x >= label_length)
+                    {
+                        free_x -= label_length;
+                        size_t name_length = node_name->length();
+                        if (free_x > name_length)
+                        {
+                            // Entire node name fits on the header line
+                            write_text(node_label->c_str());
+                            write_text(node_name->c_str());
+                        }
+                        else
+                        {
+                            if (free_x > MIN_NODENAME_DSP_LENGTH + TRUNC_MARKER.length())
+                            {
+                                free_x -= TRUNC_MARKER.length() + 1;
+                                // Minimum node name length and truncation marker fit on the header line
+                                write_text(node_label->c_str());
+                                size_t write_length = free_x < name_length ? free_x : name_length;
+                                write_buffer(node_name->c_str(), write_length);
+                                write_text(TRUNC_MARKER.c_str());
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                write_text(node_label->c_str());
+                write_text(node_name->c_str());
+            }
+        }
+        write_char('\n');
+
+        // Print right-aligned page number if the terminal size is known
         if (enable_term_size && term_y > MIN_SIZE_Y && term_x > 15)
         {
             write_fmt(F_CURSOR_POS, 2, static_cast<int> (term_x) - 15);
