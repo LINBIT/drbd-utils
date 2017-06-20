@@ -561,7 +561,7 @@ void schedule_deferred_cmd(struct adm_cmd *cmd,
 			if (d->ctx.cmd == cmd &&
 			    d->ctx.res == ctx->res &&
 			    d->ctx.conn == ctx->conn &&
-			    d->ctx.vol == ctx->vol)
+			    d->ctx.vol->vnr == ctx->vol->vnr)
 				return;
 		}
 	}

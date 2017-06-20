@@ -661,7 +661,7 @@ adjust_peer_devices(const struct cfg_ctx *ctx, struct connection *conn, struct c
 		running_pd = matching_peer_device(peer_device, &running_conn->peer_devices);
 		tmp_ctx.vol = peer_device->volume;
 		if (!running_pd) {
-			schedule_deferred_cmd(cmd, &tmp_ctx, CFG_PEER_DEVICE);
+			schedule_deferred_cmd(cmd, &tmp_ctx, CFG_PEER_DEVICE | SCHEDULE_ONCE);
 			continue;
 		}
 		if (!opts_equal(oc, &peer_device->pd_options, &running_pd->pd_options))
