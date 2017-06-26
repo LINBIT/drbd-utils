@@ -410,7 +410,7 @@ int v06_validate_md(struct format *cfg)
 /*
  * -- DRBD 0.7 --------------------------------------
  */
-unsigned long bm_bytes(const struct md_cpu const *md, uint64_t sectors);
+unsigned long bm_bytes(const struct md_cpu * const md, uint64_t sectors);
 
 struct __packed md_on_disk_07 {
 	be_u64 la_kb;		/* last agreed size. */
@@ -442,7 +442,7 @@ void md_disk_07_to_cpu(struct md_cpu *cpu, const struct md_on_disk_07 *disk)
 	cpu->al_stripe_size_4k = 8;
 }
 
-void md_cpu_to_disk_07(struct md_on_disk_07 *disk, const struct md_cpu const *cpu)
+void md_cpu_to_disk_07(struct md_on_disk_07 *disk, const struct md_cpu * const cpu)
 {
 	int i;
 
@@ -458,7 +458,7 @@ void md_cpu_to_disk_07(struct md_on_disk_07 *disk, const struct md_cpu const *cp
 }
 
 int is_valid_md(enum md_format f,
-	const struct md_cpu const *md, const int md_index, const uint64_t ll_size)
+	const struct md_cpu * const md, const int md_index, const uint64_t ll_size)
 {
 	uint64_t md_size_sect;
 	const char *v = f_ops[f].name;
@@ -2442,7 +2442,7 @@ int meta_apply_al(struct format *cfg, char **argv __attribute((unused)), int arg
 	return err;
 }
 
-unsigned long bm_bytes(const struct md_cpu const *md, uint64_t sectors)
+unsigned long bm_bytes(const struct md_cpu * const md, uint64_t sectors)
 {
 	unsigned long long bm_bits;
 	unsigned long sectors_per_bit = md->bm_bytes_per_bit >> 9;
