@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <fcntl.h>
+#include <sys/sysmacros.h>
 
 #ifndef IN_IS_ADDR_LOOPBACK
 #define IN_IS_ADDR_LOOPBACK(a) ((htonl((a)->s_addr) & 0xff000000) == 0x7f000000)
