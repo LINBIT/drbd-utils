@@ -1260,7 +1260,7 @@ int adm_resize(const struct cfg_ctx *ctx)
 	int ex;
 
 	argv[NA(argc)] = drbdsetup;
-	argv[NA(argc)] = "resize";
+	argv[NA(argc)] = "resize"; /* first execute resize, even if called from check-resize context */
 	argv[NA(argc)] = ssprintf("%d", ctx->vol->device_minor);
 	opt = find_opt(&ctx->vol->disk_options, "size");
 	if (!opt)
@@ -1278,9 +1278,9 @@ int adm_resize(const struct cfg_ctx *ctx)
 	if (is_resize && !dry_run)
 		old_size = read_drbd_dev_size(ctx->vol->device_minor);
 
-	/* if this is not "resize", but "check-resize", be silent! */
-	silent = !strcmp(ctx->cmd->name, "check-resize") ? SUPRESS_STDERR : 0;
-	ex = m_system_ex(argv, SLEEPS_SHORT | silent, ctx->res->name);
+	/* if this is a "resize" triggered by "check-resize", be silent! */
+	silent = is_resize ? 0 : SUPRESS_STDERR;
+	ex = m_system_ex(argv, SLEEPS_LONG | silent, ctx->res->name);
 
 	if (ex && target_size) {
 		new_size = read_drbd_dev_size(ctx->vol->device_minor);
