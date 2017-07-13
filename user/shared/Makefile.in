@@ -59,20 +59,19 @@ DESTDIR ?= /
 CFLAGS += -Wall -I../../drbd-headers -I.. -I.
 CFLAGS += $(EXTRA_CFLAGS)
 
-.PHONY: drbd_buildtag.c
+.PHONY: drbd_buildtag.h drbd_buildtag.c
 
 all: drbdmeta_scanner.c drbd_buildtag.c
 
-drbd_buildtag.c:
+drbd_buildtag.h:
 	@set -e; exec > $@.new;							\
 	echo -e "/* automatically generated. DO NOT EDIT. */";			\
-	echo -e "#include <linux/drbd.h>";					\
-	echo -e "const char *drbd_buildtag(void)\n{";				\
 	if test -e ../../.git && GITHEAD=$$(git rev-parse HEAD); then		\
 		GITDIFF=$$(cd .. && git diff --name-only HEAD |			\
 			tr -s '\t\n' '  ' |					\
-			sed -e 's/^/ /;s/ *$$//');				\
-		echo -e "\treturn \"GIT-hash: $$GITHEAD$$GITDIFF\"";		\
+			sed -e 's/ *$$//');					\
+		echo -e "#define GITHASH \"$$GITHEAD\"";			\
+		echo -e "#define GITDIFF \"$$GITDIFF\"";			\
 	elif ! test -e $@ ; then						\
 		echo >&2 "$@ not found.";					\
 		test -e ../../.git &&						\
@@ -82,8 +81,17 @@ drbd_buildtag.c:
 		echo >&2 "Your DRBD source tree is broken. Unpack again.";	\
 		exit 1;								\
 	else									\
-		grep return $@ ;						\
+		grep GITHASH $@ ;						\
+		grep GITDIFF $@ ;						\
 	fi ;									\
+	mv -f $@.new $@
+
+drbd_buildtag.c: drbd_buildtag.h
+	@set -e; exec > $@.new;							\
+	echo -e "/* automatically generated. DO NOT EDIT. */";			\
+	echo -e "#include \"drbd_buildtag.h\"";					\
+	echo -e "const char *drbd_buildtag(void)\n{";				\
+	echo -e "\treturn \"GIT-hash: \" GITHASH GITDIFF";			\
 	echo -e "\t\t\" build by $$USER@$$HOSTNAME, `date "+%F %T"`\";\n}";	\
 	mv -f $@.new $@
 
@@ -95,7 +103,7 @@ drbdmeta_scanner.c: drbdmeta_scanner.fl drbdmeta_parser.h
 
 clean:
 	rm -f drbdmeta_scanner.c
-	! test -e ../../.git || rm -f drbd_buildtag.c
+	! test -e ../../.git || rm -f drbd_buildtag.[ch]
 
 distclean: clean
 
