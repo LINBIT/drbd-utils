@@ -45,28 +45,26 @@ const char* shell_escape(const char* s)
 	static char buffer[1024];
 	char *c = buffer;
 
-	*c = '\0';
-	if (s == NULL)
-		return buffer;
-
-	while (*s) {
-		if (buffer + sizeof(buffer) < c+2)
-			break;
-
-		switch(*s) {
-		/* set of 'clean' characters */
-		case '%': case '+': case '-': case '.': case '/':
-		case '0' ... '9':
-		case ':': case '=': case '@':
-		case 'A' ... 'Z':
-		case '_':
-		case 'a' ... 'z':
-			break;
-		/* escape everything else */
-		default:
-			*c++ = '\\';
+	if (s != NULL) {
+		/* reserve space for a possible escape character and
+		 * the terminating null character */
+		char *max_c = buffer + sizeof (buffer) - 2;
+		while (*s != '\0' && c < max_c) {
+			switch(*s) {
+			/* set of 'clean' characters */
+			case '%': case '+': case '-': case '.': case '/':
+			case '0' ... '9':
+			case ':': case '=': case '@':
+			case 'A' ... 'Z':
+			case '_':
+			case 'a' ... 'z':
+				break;
+			/* escape everything else */
+			default:
+				*c++ = '\\';
+			}
+			*c++ = *s++;
 		}
-		*c++ = *s++;
 	}
 	*c = '\0';
 	return buffer;
