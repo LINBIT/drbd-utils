@@ -9,6 +9,7 @@ extern "C"
 {
     #include <errno.h>
     #include <config.h>
+    #include <drbd_buildtag.h>
 }
 
 #include <map_types.h>
@@ -24,7 +25,9 @@ const std::string DrbdMon::PROGRAM_NAME = "DRBD DrbdMon";
 const std::string DrbdMon::VERSION = PACKAGE_VERSION;
 
 const std::string DrbdMon::OPT_HELP_KEY = "help";
+const std::string DrbdMon::OPT_VERSION_KEY = "version";
 const ConfigOption DrbdMon::OPT_HELP(true, OPT_HELP_KEY);
+const ConfigOption DrbdMon::OPT_VERSION(true, OPT_VERSION_KEY);
 
 const std::string DrbdMon::TOKEN_DELIMITER = " ";
 
@@ -43,6 +46,7 @@ const char DrbdMon::HOTKEY_QUIT       = 'q';
 const char DrbdMon::HOTKEY_REPAINT    = 'r';
 const char DrbdMon::HOTKEY_CLEAR_MSG  = 'c';
 const char DrbdMon::HOTKEY_REINIT     = 'R';
+const char DrbdMon::HOTKEY_VERSION    = 'V';
 
 const std::string DrbdMon::DESC_QUIT      = "Quit";
 const std::string DrbdMon::DESC_REPAINT   = "Repaint";
@@ -256,6 +260,14 @@ void DrbdMon::run()
                                 {
                                     fin_action = DrbdMon::finish_action::TERMINATE;
                                     shutdown = true;
+                                }
+                                else
+                                if (c == HOTKEY_VERSION)
+                                {
+                                    std::string version_info = PROGRAM_NAME + " v" + VERSION +
+                                        " (" + GITHASH + ")";
+                                    log.add_entry(MessageLog::log_level::INFO, version_info);
+                                    display->status_display();
                                 }
                                 else
                                 {
@@ -1004,11 +1016,16 @@ void DrbdMon::announce_options(Configurator& collector)
 {
     Configurable& owner = dynamic_cast<Configurable&> (*this);
     collector.add_config_option(owner, OPT_HELP);
+    collector.add_config_option(owner, OPT_VERSION);
 }
 
 void DrbdMon::options_help() noexcept
 {
-    // no-op; the DrbdMon instance does not have any configurable options at this time
+    std::fputs("DrbdMon configuration options:\n", stderr);
+    std::fputs("  --version        Display version information\n", stderr);
+    std::fputs("  --help           Display help\n", stderr);
+    std::fputc('\n', stderr);
+    std::fflush(stderr);
 }
 
 // @throws std::bad_alloc
@@ -1022,6 +1039,12 @@ void DrbdMon::set_flag(std::string& key)
             configurables[slot]->options_help();
             ++slot;
         }
+        throw ConfigurationException();
+    }
+    else
+    if (key == OPT_VERSION.key)
+    {
+        std::fprintf(stdout, "%s v%s (%s)\n", PROGRAM_NAME.c_str(), VERSION.c_str(), GITHASH);
         throw ConfigurationException();
     }
 }

@@ -30,7 +30,9 @@ class DrbdMon : public Configurable, public Configurator
     static const std::string TOKEN_DELIMITER;
 
     static const std::string OPT_HELP_KEY;
+    static const std::string OPT_VERSION_KEY;
     static const ConfigOption OPT_HELP;
+    static const ConfigOption OPT_VERSION;
 
     static const std::string TYPE_RESOURCE;
     static const std::string TYPE_CONNECTION;
@@ -47,6 +49,7 @@ class DrbdMon : public Configurable, public Configurator
     static const char HOTKEY_REPAINT;
     static const char HOTKEY_CLEAR_MSG;
     static const char HOTKEY_REINIT;
+    static const char HOTKEY_VERSION;
 
     static const std::string DESC_QUIT;
     static const std::string DESC_REPAINT;
