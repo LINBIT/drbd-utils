@@ -2844,7 +2844,7 @@ static int cstate_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	struct connections_list *connections, *connection;
 	bool found = false;
 
-	connections = list_connections(NULL);
+	connections = list_connections(objname);
 	for (connection = connections; connection; connection = connection->next) {
 		if (connection->ctx.ctx_peer_node_id != global_ctx.ctx_peer_node_id)
 			continue;
