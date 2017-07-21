@@ -3386,6 +3386,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 	}
 
 	if (setup_options) {
+		bool is_create_md = (*cmd)->name && !strcmp((*cmd)->name, "create-md");
 		/*
 		 * The drbdsetup options are command specific.  Make sure that only
 		 * setup options that this command recognizes are used.
@@ -3413,7 +3414,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 				if (!field->name)
 					field = NULL;
 			}
-			if (!field) {
+			if (!field && !is_create_md) {
 				err("%s: unrecognized option '%.*s'\n", progname, len, option);
 				goto help;
 			}
