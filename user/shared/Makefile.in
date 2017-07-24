@@ -92,7 +92,12 @@ drbd_buildtag.c: drbd_buildtag.h
 	echo -e "#include \"drbd_buildtag.h\"";					\
 	echo -e "const char *drbd_buildtag(void)\n{";				\
 	echo -e "\treturn \"GIT-hash: \" GITHASH GITDIFF";			\
-	echo -e "\t\t\" build by $$USER@$$HOSTNAME, `date "+%F %T"`\";\n}";	\
+	if [ -z "${WANT_DRBD_REPRODUCIBLE_BUILD}" ] || [ -z "${SOURCE_DATE_EPOCH}" ] ; then	\
+		buildinfo="build by $$USER@$$HOSTNAME, `date "+%F %T"`" ;			\
+	else											\
+		buildinfo="reproducible build, `date -u -d@${SOURCE_DATE_EPOCH} "+%F %T"`" ;	\
+	fi ;											\
+	echo -e "\t\t\" $$buildinfo\";\n}";							\
 	mv -f $@.new $@
 
 drbdmeta_scanner.c: drbdmeta_scanner.fl drbdmeta_parser.h
