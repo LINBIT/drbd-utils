@@ -1117,8 +1117,10 @@ static int check_error(int err_no, char *desc)
 static void warn_print_excess_args(int argc, char **argv, int i)
 {
 	fprintf(stderr, "Excess arguments:");
-	for (; i < argc; i++)
+	while (i < argc) {
 		fprintf(stderr, " %s", argv[i]);
+		++i;
+	}
 	printf("\n");
 }
 
@@ -1952,7 +1954,7 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		}
 	}
 	if (optind < argc) {
-		warn_print_excess_args(argc, argv, optind + 1);
+		warn_print_excess_args(argc, argv, optind);
 		return 20;
 	}
 
@@ -3442,8 +3444,8 @@ static int down_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	char *old_objname;
 	int rv = 0;
 
-	if(argc > 2) {
-		warn_print_excess_args(argc, argv, 2);
+	if (argc > 1) {
+		warn_print_excess_args(argc, argv, 1);
 		return OTHER_ERROR;
 	}
 

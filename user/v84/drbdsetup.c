@@ -769,8 +769,10 @@ static int print_config_error(int err_no, char *desc)
 static void warn_print_excess_args(int argc, char **argv, int i)
 {
 	fprintf(stderr, "Excess arguments:");
-	for (; i < argc; i++)
+	while (i < argc) {
 		fprintf(stderr, " %s", argv[i]);
+		++i;
+	}
 	printf("\n");
 }
 
@@ -2300,8 +2302,8 @@ static int down_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	int rv;
 	int success;
 
-	if(argc > 2) {
-		warn_print_excess_args(argc, argv, 2);
+	if(argc > 1) {
+		warn_print_excess_args(argc, argv, 1);
 		return OTHER_ERROR;
 	}
 

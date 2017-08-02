@@ -1060,8 +1060,10 @@ static int print_config_error(int err_no)
 static void warn_print_excess_args(int argc, char **argv, int i)
 {
 	fprintf(stderr, "Excess arguments:");
-	for (; i < argc; i++)
+	while (i < argc) {
 		fprintf(stderr, " %s", argv[i]);
+		++i;
+	}
 	printf("\n");
 }
 
