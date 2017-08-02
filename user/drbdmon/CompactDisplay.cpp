@@ -325,7 +325,8 @@ void CompactDisplay::display_hotkeys_info() const
         }
         else
         {
-            write_fmt(F_HOTKEY, 'p', LABEL_PROBLEMS.c_str());
+            const char* format = problem_alert ? F_ALERT_HOTKEY : F_HOTKEY;
+            write_fmt(format, 'p', LABEL_PROBLEMS.c_str());
         }
 
         if (dsp_msg_active)
@@ -351,12 +352,13 @@ void CompactDisplay::display_hotkeys_info() const
 
 void CompactDisplay::prepare_flags()
 {
+    problem_alert = false;
     ResourcesMap::ValuesIterator res_iter(resources_map);
     size_t res_count = res_iter.get_size();
     for (size_t res_index = 0; res_index < res_count; ++res_index)
     {
         DrbdResource& res = *(res_iter.next());
-        static_cast<void> (res.update_state_flags());
+        problem_alert |= res.update_state_flags() != StateFlags::state::NORM;
     }
 }
 

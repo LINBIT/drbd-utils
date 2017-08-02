@@ -165,6 +165,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
 
     bool dsp_msg_active {false};
     bool dsp_problems_active {false};
+    bool problem_alert {false};
     uint16_t page {0};
     uint32_t page_start {0};
     uint32_t page_end {0};
