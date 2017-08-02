@@ -61,6 +61,8 @@ class CompactDisplay : public GenericDisplay, public Configurable
     static const char* F_CONN_PRI_FG;
 
     static const char* F_RES_NAME;
+    static const char* F_RES_COUNT;
+    static const char* F_PRB_COUNT;
 
     static const char* F_CURSOR_POS;
     static const char* F_HOTKEY;
@@ -139,6 +141,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
     virtual void status_display() override;
     virtual void display_header() const override;
     virtual void display_hotkeys_info() const;
+    virtual void display_counts() const;
 
     virtual void set_terminal_size(uint16_t size_x, uint16_t size_y) override;
     virtual void set_utf8(bool enable);
@@ -166,6 +169,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
     bool dsp_msg_active {false};
     bool dsp_problems_active {false};
     bool problem_alert {false};
+    uint64_t problem_count {0};
     uint16_t page {0};
     uint32_t page_start {0};
     uint32_t page_end {0};

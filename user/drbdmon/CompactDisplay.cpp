@@ -50,6 +50,8 @@ const char* CompactDisplay::F_SECONDARY  = "\x1b[0;36m";
 const char* CompactDisplay::F_CONN_PRI_FG = "\x1b[1;36;44m";
 
 const char* CompactDisplay::F_RES_NAME   = "\x1b[0;4;32m";
+const char* CompactDisplay::F_RES_COUNT  = "\x1b[0;32mResources: %6llu\x1b[0m";
+const char* CompactDisplay::F_PRB_COUNT  = "\x1b[0;1;31m (%llu degraded)\x1b[0m";
 
 const char* CompactDisplay::F_CURSOR_POS = "\x1b[%u;%uH";
 const char* CompactDisplay::F_HOTKEY     = "\x1b[0;30;47m%c\x1b[0;37;44m %s \033[0m";
@@ -223,6 +225,8 @@ void CompactDisplay::status_display()
     // End line
     next_line();
 
+    display_counts();
+
     display_hotkeys_info();
 }
 
@@ -350,15 +354,33 @@ void CompactDisplay::display_hotkeys_info() const
     }
 }
 
+void CompactDisplay::display_counts() const
+{
+    if (enable_term_size)
+    {
+        write_fmt(F_CURSOR_POS, static_cast<int> (term_y - 1), 1);
+    }
+    write_fmt(F_RES_COUNT, static_cast<unsigned long long> (resources_map.get_size()));
+    if (problem_count > 0)
+    {
+        write_fmt(F_PRB_COUNT, static_cast<unsigned long long> (problem_count));
+    }
+}
+
 void CompactDisplay::prepare_flags()
 {
     problem_alert = false;
+    problem_count = 0;
     ResourcesMap::ValuesIterator res_iter(resources_map);
     size_t res_count = res_iter.get_size();
     for (size_t res_index = 0; res_index < res_count; ++res_index)
     {
         DrbdResource& res = *(res_iter.next());
-        problem_alert |= res.update_state_flags() != StateFlags::state::NORM;
+        if (res.update_state_flags() != StateFlags::state::NORM)
+        {
+            problem_alert = true;
+            ++problem_count;
+        }
     }
 }
 
