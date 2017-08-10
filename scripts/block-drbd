@@ -5,12 +5,16 @@
 #
 # This script implements the "drbd" VBD type. To use a DRBD resource
 # as a virtual block device, include a line similar to this in your
-# domU configuration:
+# domain xl.cfg(5) configuration:
 #
-# disk = [ 'drbd:myresource,xvda1,w' ]
+# disk = [ "vdev=vda,access=rw,script=block-drbd,target=myresource" ]
+#
+# The legacy xmdomain.cfg(5) configuration format is also supported
+#
+# disk = [ 'drbd:myresource,xvda,w' ]
 #
 # This will direct Xen to put the DRBD resource named 'myresource'
-# into the Primary role, and configure it as device xvda1 in your
+# into the Primary role, and configure it as device xvda in your
 # domU. You may use as many DRBD resources as you like. If you are
 # using DRBD in dual-Primary mode (available in DRBD versions 8.0 and
 # up), your DRBD-backed domU will be live migration capable. 
@@ -34,7 +38,6 @@
 #   made available read-only to multiple domU's, or be mounted
 #   read-only in the dom0 and be made available read-only to
 #   domU's. This is not supported by the 'drbd' VBD type.
-# - Tested, thus far, only on Debian etch with Xen 3.0.3.
 #
 # For more information about DRBD, visit http://www.drbd.org/.
 #   
@@ -246,6 +249,7 @@ case "$command" in
     if [ -n "$t" ]
     then
       p=$(xenstore_read "$XENBUS_PATH/params")
+      p=${p#drbd:}
       mode=$(xenstore_read "$XENBUS_PATH/mode")
     fi
 
@@ -280,7 +284,7 @@ case "$command" in
     case $t in 
       drbd|phy)
         p=$(xenstore_read "$XENBUS_PATH/params")
-        drbd_resource=$p
+        drbd_resource=${p#drbd:}
         drbd_role="$(drbdadm role $drbd_resource)"
         drbd_lrole="${drbd_role%%/*}"
         drbd_dev="$(drbdadm sh-dev $drbd_resource)"
