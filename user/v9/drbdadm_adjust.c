@@ -380,7 +380,7 @@ static int proxy_reconf(const struct cfg_ctx *ctx, struct connection *running_co
 	 * the few bytes + pointers is much more. */
 	char p_res[MAX_PLUGINS][MAX_PLUGIN_NAME],
 		 p_run[MAX_PLUGINS][MAX_PLUGIN_NAME];
-	int used, i, re_do;
+	int used, i;
 
 	reconn = 0;
 
@@ -456,7 +456,7 @@ redo_whole_conn:
 		} else {
 			/* If we get here, both lists have been filled in parallel, so we
 			 * can simply use the common counter. */
-			re_do = _is_plugin_in_list(res_o->name, p_run, p_res, i) ||
+			bool re_do = _is_plugin_in_list(res_o->name, p_run, p_res, i) ||
 				_is_plugin_in_list(run_o->name, p_res, p_run, i);
 			if (re_do) {
 				/* Plugin(s) were moved, not simple reconfigured.
