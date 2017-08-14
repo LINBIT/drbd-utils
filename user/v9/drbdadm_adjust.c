@@ -388,6 +388,8 @@ static int proxy_reconf(const struct cfg_ctx *ctx, struct connection *running_co
 		goto redo_whole_conn;
 
 	running_path = STAILQ_FIRST(&running_conn->paths); /* multiple paths via proxy, later! */
+	if (!running_path->my_proxy)
+		goto redo_whole_conn;
 
 	res_o = find_opt(&path->my_proxy->options, "memlimit");
 	run_o = find_opt(&running_path->my_proxy->options, "memlimit");
@@ -944,6 +946,8 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 			int pid,argc;
 			char *argv[20];
 
+			if (!path)
+				continue;
 			configured_conn = matching_conn(conn, &ctx->res->connections, false);
 			if (!configured_conn)
 				continue;
