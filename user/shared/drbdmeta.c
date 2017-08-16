@@ -1167,8 +1167,12 @@ void pwrite_or_die(struct format *cfg, const void *buf, size_t count, off_t offs
 	c = lseek(fd, offset, SEEK_SET);
 	if (c == offset)
 		c = write(fd, buf, count);
-	else
+	else {
+		if (c < 0)
+			perror("lseek");
+
 		c = -1;
+	}
 	if (verbose >= 2) {
 		fflush(stdout);
 		fprintf(stderr, " %-26s: pwrite(%u, ...,%6lu,%12llu)\n", tag,
@@ -1184,6 +1188,9 @@ void pwrite_or_die(struct format *cfg, const void *buf, size_t count, off_t offs
 			tag, strerror(errno));
 		exit(10);
 	} else if ((size_t)c != count) {
+		if (c < 0)
+			perror("write");
+
 		/* FIXME we might just now have corrupted the on-disk data */
 		fprintf(stderr,"confused in %s: expected to write %d bytes,"
 			" actually wrote %d\n", tag, (int)count, (int)c);
