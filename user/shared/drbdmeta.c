@@ -60,7 +60,12 @@
 
 #include "config.h"
 
-/* BLKZEROOUT, available on linux-3.6 and later. */
+/* BLKZEROOUT, available on linux-3.6 and later,
+ * and maybe backported to distribution kernels,
+ * even if they pretend to be older.
+ * Yes, we encountered a number of systems that already had it in their
+ * kernels, but not yet in the headers used to build userland stuff like this.
+ */
 #ifndef BLKZEROOUT
 # define BLKZEROOUT	_IO(0x12,127)
 #endif
@@ -1716,7 +1721,11 @@ static void zeroout_bitmap(struct format *cfg)
 	if (!err)
 		return;
 
-	if (errno == ENOTTY) {
+	PERROR("ioctl(%s, BLKZEROOUT, [%llu, %llu]) failed", cfg->md_device_name,
+			(unsigned long long)range[0], (unsigned long long)range[1]);
+	fprintf(stderr, "Using slow(er) fallback.\n");
+
+	{
 		/* need to sector-align this for O_DIRECT.
 		 * "sector" here means hard-sect size, which may be != 512.
 		 * Note that even though ALIGN does round up, for sector sizes
@@ -1744,9 +1753,6 @@ static void zeroout_bitmap(struct format *cfg)
 			}
 		}
 		fprintf(stderr,"\r100%%\n");
-	} else {
-		PERROR("ioctl(%s) failed", cfg->md_device_name);
-		exit(10);
 	}
 }
 
