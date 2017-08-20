@@ -712,14 +712,13 @@ static bool endpoints_equal(struct drbd_cfg_context *a, struct drbd_cfg_context 
 static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 			  struct drbd_genlmsghdr *dhdr, char* arg)
 {
-	struct stat sb;
-	char *real_name;
-
 #ifndef __CYGWIN__
-		/* Under Windows, we use a different disk name
+		/* Under Microsoft Windows, we use a different disk name
 		 * layout. The kernel itself checks wheter it is
 		 * a block device or not.
 		 */
+
+	struct stat sb;
 	int device_fd;
 
 	if ((device_fd = open(arg,O_RDWR))==-1) {
@@ -741,20 +740,14 @@ static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 
 	close(device_fd);
 #endif
+	/* TODO: #ifdef __CYGWIN__ we want to do simple conversions
+		as C: -> \\DosDevices\\C: and GUIDs to 
+		\\DosDevices\\Volume{<GUID>} for convenience.
+		Not needed for now.
+	*/
 
-	real_name = WindowsLowLevelDeviceName(arg);
-	if (!real_name) {
-		fprintf(stderr, "%s can't be translated to W32 kernel notation!\n", arg);
-		return OTHER_ERROR;
-	}
-
-	nla_put_string(msg, ad->nla_type, real_name);
-	free(real_name);
+	nla_put_string(msg, ad->nla_type, arg);
 	return NO_ERROR;
-
-err:
-	free(real_name);
-	return OTHER_ERROR;
 }
 
 static int conv_md_idx(struct drbd_argument *ad, struct msg_buff *msg,
