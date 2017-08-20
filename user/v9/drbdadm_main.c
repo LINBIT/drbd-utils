@@ -581,7 +581,7 @@ static int __call_cmd_fn(const struct cfg_ctx *ctx, enum on_error on_error)
 	iterate_paths = ctx->path ? 0 : ctx->cmd->iterate_paths;
 
 	if (ctx->cmd->disk_required &&
-	    (!vol->disk || !vol->meta_disk || !vol->meta_index)) {
+	    (!vol->disk || !vol->meta_disk || !vol->meta_index || !vol->win_disk)) {
 		rv = 10;
 		err("The %s command requires a local disk, but the configuration gives none.\n",
 		    ctx->cmd->name);
@@ -948,7 +948,9 @@ static void free_volume(struct d_volume *vol)
 
 	free(vol->device);
 	free(vol->disk);
+	free(vol->win_disk);
 	free(vol->meta_disk);
+	free(vol->win_meta_disk);
 	free(vol->meta_index);
 	free(vol);
 }
@@ -1121,13 +1123,13 @@ static int adm_attach(const struct cfg_ctx *ctx)
 	argv[NA(argc)] = (char *)ctx->cmd->name; /* "attach" : "disk-options"; */
 	argv[NA(argc)] = ssprintf("%d", vol->device_minor);
 	if (do_attach) {
-		assert(vol->disk != NULL);
-		assert(vol->disk[0] != '\0');
-		argv[NA(argc)] = vol->disk;
-		if (!strcmp(vol->meta_disk, "internal")) {
-			argv[NA(argc)] = vol->disk;
+		assert(vol->win_disk != NULL);
+		assert(vol->win_disk[0] != '\0');
+		argv[NA(argc)] = vol->win_disk;
+		if (!strcmp(vol->win_meta_disk, "internal")) {
+			argv[NA(argc)] = vol->win_disk;
 		} else {
-			argv[NA(argc)] = vol->meta_disk;
+			argv[NA(argc)] = vol->win_meta_disk;
 		}
 		argv[NA(argc)] = vol->meta_index;
 	}
