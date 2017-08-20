@@ -713,8 +713,14 @@ static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 			  struct drbd_genlmsghdr *dhdr, char* arg)
 {
 	struct stat sb;
-	int device_fd;
 	char *real_name;
+
+#ifndef __CYGWIN__
+		/* Under Windows, we use a different disk name
+		 * layout. The kernel itself checks wheter it is
+		 * a block device or not.
+		 */
+	int device_fd;
 
 	if ((device_fd = open(arg,O_RDWR))==-1) {
 		PERROR("Can not open device '%s'", arg);
@@ -734,6 +740,7 @@ static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 	}
 
 	close(device_fd);
+#endif
 
 	real_name = WindowsLowLevelDeviceName(arg);
 	if (!real_name) {
