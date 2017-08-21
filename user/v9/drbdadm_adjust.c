@@ -330,7 +330,7 @@ static void schedule_deferred_proxy_reconf(const struct cfg_ctx *ctx, char *text
 #define MAX_PLUGIN_NAME (16)
 
 /* The new name is appended to the alist. */
-int _is_plugin_in_list(char *string,
+bool _is_plugin_in_list(char *string,
 		char slist[MAX_PLUGINS][MAX_PLUGIN_NAME],
 		char alist[MAX_PLUGINS][MAX_PLUGIN_NAME],
 		int list_len)
@@ -354,7 +354,7 @@ int _is_plugin_in_list(char *string,
 
 	for(i=0; i<list_len && *slist; i++) {
 		if (strcmp(slist[i], copy) == 0)
-			return 1;
+			return true;
 	}
 
 	/* Not found, insert into list. */
@@ -363,7 +363,7 @@ int _is_plugin_in_list(char *string,
 		exit(E_CONFIG_INVALID);
 	}
 
-	return 0;
+	return false;
 }
 
 
