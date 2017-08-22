@@ -337,19 +337,13 @@ void CompactDisplay::display_hotkeys_info() const
 
         if (dsp_msg_active)
         {
-            if (index > 0)
-            {
-                write_char(' ');
-            }
+            write_char(' ');
             write_fmt(F_HOTKEY, 'm', LABEL_MONITOR.c_str());
         }
         else
         if (log.has_entries())
         {
-            if (index > 0)
-            {
-                write_char(' ');
-            }
+            write_char(' ');
             write_fmt(F_ALERT_HOTKEY, 'm', LABEL_MESSAGES.c_str());
         }
         write_fmt(F_CURSOR_POS, 1, 1);
