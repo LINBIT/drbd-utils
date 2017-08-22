@@ -77,8 +77,8 @@ void DrbdResource::clear_state_flags()
 
 StateFlags::state DrbdResource::update_state_flags()
 {
-    // Reset the state to normal
-    StateFlags::clear_state_flags();
+    StateFlags::state last_state = obj_state;
+
     role_alert = false;
 
     // Alert for unknown resource role
@@ -97,28 +97,49 @@ StateFlags::state DrbdResource::update_state_flags()
             break;
     }
 
-    // Check the resource's volumes
-    VolumesMap::ValuesIterator vol_iter = volumes_iterator();
-    size_t vol_count = vol_iter.get_size();
-    for (size_t vol_index = 0; vol_index < vol_count; ++vol_index)
+    // If the state may have improved, adjust to child objects status
+    if (last_state != StateFlags::state::NORM)
     {
-        DrbdVolume& vol = *(vol_iter.next());
-        if (vol.update_state_flags() != StateFlags::state::NORM)
-        {
-            set_mark();
-        }
+        static_cast<void> (child_state_flags_changed());
     }
 
-    // Check the resource's connections
-    ConnectionsMap::ValuesIterator conn_iter = connections_iterator();
-    size_t conn_count = conn_iter.get_size();
-    for (size_t conn_index = 0; conn_index < conn_count; ++conn_index)
+    return obj_state;
+}
+
+StateFlags::state DrbdResource::child_state_flags_changed()
+{
+    if (!role_alert)
     {
-        DrbdConnection& conn = *(conn_iter.next());
-        if (conn.update_state_flags() != StateFlags::state::NORM)
+        StateFlags::clear_state_flags();
+
+        // If any of the resource's volumes has marks/warnings/alerts, mark the resource
+        VolumesMap::ValuesIterator vol_iter = volumes_iterator();
+        size_t vol_count = vol_iter.get_size();
+        for (size_t vol_index = 0; vol_index < vol_count; ++vol_index)
         {
-            // Connections are in an abnormal state, mark this resource
-            set_mark();
+            DrbdVolume& vol = *(vol_iter.next());
+            if (vol.update_state_flags() != StateFlags::state::NORM)
+            {
+                set_mark();
+                break;
+            }
+        }
+
+        if (obj_state == StateFlags::state::NORM)
+        {
+            // If any of the resource's connections has marks/warnings/alerts, mark the resource
+            ConnectionsMap::ValuesIterator conn_iter = connections_iterator();
+            size_t conn_count = conn_iter.get_size();
+            for (size_t conn_index = 0; conn_index < conn_count; ++conn_index)
+            {
+                DrbdConnection& conn = *(conn_iter.next());
+                if (conn.update_state_flags() != StateFlags::state::NORM)
+                {
+                    // Connections are in an abnormal state, mark this resource
+                    set_mark();
+                    break;
+                }
+            }
         }
     }
 

@@ -132,6 +132,7 @@ class DrbdVolume : private StateFlags
     using StateFlags::get_state;
     virtual void clear_state_flags() override;
     virtual StateFlags::state update_state_flags() override;
+    virtual StateFlags::state child_state_flags_changed() override;
     virtual bool has_disk_alert();
     virtual bool has_replication_warning();
     virtual bool has_replication_alert();

@@ -67,6 +67,7 @@ class DrbdResource : public VolumesContainer, public DrbdRole, private StateFlag
     using StateFlags::get_state;
     virtual void clear_state_flags() override;
     virtual StateFlags::state update_state_flags() override;
+    virtual StateFlags::state child_state_flags_changed() override;
     virtual bool has_role_alert();
 
     // Creates (allocates and initializes) a new DrbdResource object from a map of properties

@@ -115,11 +115,13 @@ const uint32_t CompactDisplay::MAX_YIELD_LOOP = 10;
 
 // @throws std::bad_alloc
 CompactDisplay::CompactDisplay(
+    DrbdMon& drbdmon_ref,
     ResourcesMap& resources_map_ref,
     MessageLog&   log_ref,
     HotkeysMap&   hotkeys_info_ref,
     const std::string* const node_name_ref
 ):
+    drbdmon(drbdmon_ref),
     resources_map(resources_map_ref),
     log(log_ref),
     hotkeys_info(hotkeys_info_ref),
@@ -193,7 +195,7 @@ void CompactDisplay::status_display()
     page_start = (term_y - 4) * current_page;
     page_end   = (term_y - 4) * (current_page + 1) - 1;
 
-    prepare_flags();
+    problem_check();
     clear();
     display_header();
 
@@ -361,27 +363,16 @@ void CompactDisplay::display_counts() const
         write_fmt(F_CURSOR_POS, static_cast<int> (term_y - 1), 1);
     }
     write_fmt(F_RES_COUNT, static_cast<unsigned long long> (resources_map.get_size()));
-    if (problem_count > 0)
+
+    if (problem_alert)
     {
-        write_fmt(F_PRB_COUNT, static_cast<unsigned long long> (problem_count));
+        write_fmt(F_PRB_COUNT, static_cast<unsigned long long> (drbdmon.get_problem_count()));
     }
 }
 
-void CompactDisplay::prepare_flags()
+void CompactDisplay::problem_check()
 {
-    problem_alert = false;
-    problem_count = 0;
-    ResourcesMap::ValuesIterator res_iter(resources_map);
-    size_t res_count = res_iter.get_size();
-    for (size_t res_index = 0; res_index < res_count; ++res_index)
-    {
-        DrbdResource& res = *(res_iter.next());
-        if (res.update_state_flags() != StateFlags::state::NORM)
-        {
-            problem_alert = true;
-            ++problem_count;
-        }
-    }
+    problem_alert = drbdmon.get_problem_count() > 0;
 }
 
 bool CompactDisplay::list_resources()

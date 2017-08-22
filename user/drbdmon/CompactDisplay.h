@@ -24,6 +24,8 @@ extern "C"
 #include <Configurable.h>
 #include <ConfigOption.h>
 
+class DrbdMon;
+
 class CompactDisplay : public GenericDisplay, public Configurable
 {
   public:
@@ -125,6 +127,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
 
     // @throws std::bad_alloc
     CompactDisplay(
+        DrbdMon& drbdmon_ref,
         ResourcesMap& resources_map_ref,
         MessageLog&   log_ref,
         HotkeysMap&   hotkeys_info_ref,
@@ -160,6 +163,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
     virtual void key_pressed(const char key) override;
 
   private:
+    DrbdMon& drbdmon;
     ResourcesMap& resources_map;
     MessageLog& log;
     HotkeysMap& hotkeys_info;
@@ -169,7 +173,6 @@ class CompactDisplay : public GenericDisplay, public Configurable
     bool dsp_msg_active {false};
     bool dsp_problems_active {false};
     bool problem_alert {false};
-    uint64_t problem_count {0};
     uint16_t page {0};
     uint32_t page_start {0};
     uint32_t page_end {0};
@@ -218,7 +221,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
     void indent();
     bool next_column(uint16_t length);
     void next_line();
-    void prepare_flags();
+    void problem_check();
 
     void write_char(const char ch) const noexcept;
     void write_text(const char* text) const noexcept;

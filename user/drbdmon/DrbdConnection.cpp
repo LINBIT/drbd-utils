@@ -117,8 +117,8 @@ void DrbdConnection::clear_state_flags()
 
 StateFlags::state DrbdConnection::update_state_flags()
 {
-    // Reset the state to normal
-    StateFlags::clear_state_flags();
+    StateFlags::state last_state = obj_state;
+
     conn_alert = false;
     role_alert = false;
 
@@ -176,16 +176,33 @@ StateFlags::state DrbdConnection::update_state_flags()
             break;
     }
 
-    // Check the peer volumes
-    VolumesMap::ValuesIterator peer_vol_iter = volumes_iterator();
-    size_t peer_vol_count = peer_vol_iter.get_size();
-    for (size_t peer_vol_index = 0; peer_vol_index < peer_vol_count; ++peer_vol_index)
+    // If the state may have improved, adjust to child objects status
+    if (last_state != StateFlags::state::NORM)
     {
-        DrbdVolume& peer_vol = *(peer_vol_iter.next());
-        if (peer_vol.update_state_flags() != StateFlags::state::NORM)
+        static_cast<void> (child_state_flags_changed());
+    }
+
+    return obj_state;
+}
+
+StateFlags::state DrbdConnection::child_state_flags_changed()
+{
+    if (!(role_alert || conn_alert))
+    {
+        StateFlags::clear_state_flags();
+
+        // If any marks/warnings/alerts are set on peer volumes, mark the connection
+        VolumesMap::ValuesIterator peer_vol_iter = volumes_iterator();
+        size_t peer_vol_count = peer_vol_iter.get_size();
+        for (size_t peer_vol_index = 0; peer_vol_index < peer_vol_count; ++peer_vol_index)
         {
-            // Peer volumes are in an abnormal state, mark this connection
-            set_mark();
+            DrbdVolume& peer_vol = *(peer_vol_iter.next());
+            if (peer_vol.has_mark_state())
+            {
+                // Peer volume is in an abnormal state, mark this connection
+                set_mark();
+                break;
+            }
         }
     }
 

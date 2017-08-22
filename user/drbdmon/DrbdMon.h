@@ -127,6 +127,8 @@ class DrbdMon : public Configurable, public Configurator
     // @throws std::bad_alloc
     virtual void set_option(std::string& key, std::string& value) override;
 
+    virtual uint64_t get_problem_count() const noexcept;
+
   private:
     typedef struct option_entry_s
     {
@@ -153,6 +155,7 @@ class DrbdMon : public Configurable, public Configurator
     bool          shutdown      {false};
     bool          have_initial_state {false};
 
+    uint64_t problem_count {0};
 
     std::unique_ptr<GenericDisplay>  display {nullptr};
     std::unique_ptr<Configurable*[]> configurables {nullptr};
@@ -211,6 +214,8 @@ class DrbdMon : public Configurable, public Configurator
 
     // Frees the options map
     void options_cleanup() noexcept;
+
+    void problem_counter_update(StateFlags::state res_last_state, StateFlags::state res_new_state) noexcept;
 
     // Frees resources
     // @throws std::bad_alloc

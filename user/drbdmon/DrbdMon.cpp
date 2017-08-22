@@ -114,7 +114,7 @@ void DrbdMon::run()
             // display interface unique_ptr initialization to ensure deallocation of the display
             // object if the current scope is left
             CompactDisplay* display_impl = new CompactDisplay(
-                *resources_map, log, *hotkeys_info, node_name
+                *this, *resources_map, log, *hotkeys_info, node_name
             );
             display = std::unique_ptr<GenericDisplay>(dynamic_cast<GenericDisplay*> (display_impl));
 
@@ -583,7 +583,11 @@ void DrbdMon::create_connection(PropsMap& event_props)
         {
             std::unique_ptr<DrbdConnection> conn(DrbdConnection::new_from_props(event_props));
             conn->update(event_props);
+            static_cast<void> (conn->update_state_flags());
             res.add_connection(conn.get());
+            StateFlags::state res_last_state = res.get_state();
+            StateFlags::state res_new_state = res.child_state_flags_changed();
+            problem_counter_update(res_last_state, res_new_state);
             static_cast<void> (conn.release());
         }
         catch (dsaext::DuplicateInsertException& dup_exc)
@@ -609,7 +613,11 @@ void DrbdMon::create_device(PropsMap& event_props)
 
         std::unique_ptr<DrbdVolume> vol(DrbdVolume::new_from_props(event_props));
         vol->update(event_props);
+        static_cast<void> (vol->update_state_flags());
         res.add_volume(vol.get());
+        StateFlags::state res_last_state = res.get_state();
+        StateFlags::state res_new_state = res.child_state_flags_changed();
+        problem_counter_update(res_last_state, res_new_state);
         static_cast<void> (vol.release());
     }
     catch (EventObjectException& nonexistent_object_exc)
@@ -629,7 +637,12 @@ void DrbdMon::create_peer_device(PropsMap& event_props)
         std::unique_ptr<DrbdVolume> vol(DrbdVolume::new_from_props(event_props));
         vol->update(event_props);
         vol->set_connection(&conn);
+        static_cast<void> (vol->update_state_flags());
         conn.add_volume(vol.get());
+        static_cast<void> (conn.child_state_flags_changed());
+        StateFlags::state res_last_state = res.get_state();
+        StateFlags::state res_new_state = res.child_state_flags_changed();
+        problem_counter_update(res_last_state, res_new_state);
         static_cast<void> (vol.release());
     }
     catch (EventObjectException& nonexistent_object_exc)
@@ -645,8 +658,13 @@ void DrbdMon::create_resource(PropsMap& event_props)
     {
         std::unique_ptr<DrbdResource> res(DrbdResource::new_from_props(event_props));
         res->update(event_props);
+        static_cast<void> (res->update_state_flags());
         std::unique_ptr<std::string> res_name(new std::string(res->get_name()));
         resources_map->insert(res_name.get(), res.get());
+        if (res->has_mark_state() && problem_count < ~static_cast<uint64_t> (0))
+        {
+            ++problem_count;
+        }
         static_cast<void> (res.release());
         static_cast<void> (res_name.release());
     }
@@ -665,6 +683,18 @@ void DrbdMon::update_connection(PropsMap& event_props)
     DrbdResource& res = get_resource(event_props);
     DrbdConnection& conn = get_connection(res, event_props);
     conn.update(event_props);
+
+    // Adjust connection state flags
+    StateFlags::state conn_last_state = conn.get_state();
+    StateFlags::state conn_new_state = conn.update_state_flags();
+    if (conn_last_state != conn_new_state &&
+        (conn_last_state == StateFlags::state::NORM || conn_new_state == StateFlags::state::NORM))
+    {
+        // Connection state flags changed, adjust resource state flags
+        StateFlags::state res_last_state = res.get_state();
+        StateFlags::state res_new_state = res.child_state_flags_changed();
+        problem_counter_update(res_last_state, res_new_state);
+    }
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
@@ -673,6 +703,18 @@ void DrbdMon::update_device(PropsMap& event_props)
     DrbdResource& res = get_resource(event_props);
     DrbdVolume& vol = get_device(dynamic_cast<VolumesContainer&> (res), event_props);
     vol.update(event_props);
+
+    // Adjust volume state flags
+    StateFlags::state vol_last_state = vol.get_state();
+    StateFlags::state vol_new_state = vol.update_state_flags();
+    if (vol_last_state != vol_new_state &&
+        (vol_last_state == StateFlags::state::NORM || vol_new_state == StateFlags::state::NORM))
+    {
+        // Volume state flags changed, adjust resource state flags
+        StateFlags::state res_last_state = res.get_state();
+        StateFlags::state res_new_state = res.child_state_flags_changed();
+        problem_counter_update(res_last_state, res_new_state);
+    }
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
@@ -682,6 +724,25 @@ void DrbdMon::update_peer_device(PropsMap& event_props)
     DrbdConnection& conn = get_connection(res, event_props);
     DrbdVolume& vol = get_device(dynamic_cast<VolumesContainer&> (conn), event_props);
     vol.update(event_props);
+
+    // Adjust volume state flags
+    StateFlags::state vol_last_state = vol.get_state();
+    StateFlags::state vol_new_state = vol.update_state_flags();
+    if (vol_last_state != vol_new_state &&
+        (vol_last_state == StateFlags::state::NORM || vol_new_state == StateFlags::state::NORM))
+    {
+        // Volume state flags changed, adjust connection state flags
+        StateFlags::state conn_last_state = conn.get_state();
+        StateFlags::state conn_new_state = conn.child_state_flags_changed();
+        if (conn_last_state != conn_new_state &&
+            (conn_last_state == StateFlags::state::NORM || conn_new_state == StateFlags::state::NORM))
+        {
+            // Connection state flags changed, adjust resource state flags
+            StateFlags::state res_last_state = res.get_state();
+            StateFlags::state res_new_state = res.child_state_flags_changed();
+            problem_counter_update(res_last_state, res_new_state);
+        }
+    }
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
@@ -689,6 +750,10 @@ void DrbdMon::update_resource(PropsMap& event_props)
 {
     DrbdResource& res = get_resource(event_props);
     res.update(event_props);
+
+    StateFlags::state res_last_state = res.get_state();
+    StateFlags::state res_new_state = res.update_state_flags();
+    problem_counter_update(res_last_state, res_new_state);
 }
 
 // @throws std::bad_alloc, EventMessageException
@@ -697,8 +762,19 @@ void DrbdMon::destroy_connection(PropsMap& event_props)
     try
     {
         DrbdResource& res = get_resource(event_props);
-        DrbdConnection& conn = get_connection(res, event_props);
-        res.remove_connection(conn.get_name());
+        bool conn_marked = false;
+        {
+            DrbdConnection& conn = get_connection(res, event_props);
+            conn_marked = conn.has_mark_state();
+            res.remove_connection(conn.get_name());
+        }
+
+        if (conn_marked)
+        {
+            StateFlags::state res_last_state = res.get_state();
+            StateFlags::state res_new_state = res.child_state_flags_changed();
+            problem_counter_update(res_last_state, res_new_state);
+        }
     }
     catch (EventObjectException& nonexistent_object_exc)
     {
@@ -712,8 +788,19 @@ void DrbdMon::destroy_device(PropsMap& event_props)
     try
     {
         DrbdResource& res = get_resource(event_props);
-        DrbdVolume& vol = get_device(dynamic_cast<VolumesContainer&> (res), event_props);
-        res.remove_volume(vol.get_volume_nr());
+        bool vol_marked = false;
+        {
+            DrbdVolume& vol = get_device(dynamic_cast<VolumesContainer&> (res), event_props);
+            vol_marked = vol.has_mark_state();
+            res.remove_volume(vol.get_volume_nr());
+        }
+
+        if (vol_marked)
+        {
+            StateFlags::state res_last_state = res.get_state();
+            StateFlags::state res_new_state = res.child_state_flags_changed();
+            problem_counter_update(res_last_state, res_new_state);
+        }
     }
     catch (EventObjectException& nonexistent_object_exc)
     {
@@ -728,8 +815,12 @@ void DrbdMon::destroy_peer_device(PropsMap& event_props)
     {
         DrbdResource& res = get_resource(event_props);
         DrbdConnection& conn = get_connection(res, event_props);
-        // May report non-existing volume if required
-        static_cast<void> (get_device(dynamic_cast<VolumesContainer&> (conn), event_props));
+        bool peer_vol_marked = false;
+        {
+            // May report non-existing volume if required
+            DrbdVolume& peer_vol =  get_device(dynamic_cast<VolumesContainer&> (conn), event_props);
+            peer_vol_marked = peer_vol.has_mark_state();
+        }
 
         std::string* vol_nr_str = event_props.get(&DrbdVolume::PROP_KEY_VOL_NR);
         if (vol_nr_str != nullptr)
@@ -738,6 +829,13 @@ void DrbdMon::destroy_peer_device(PropsMap& event_props)
             {
                 uint16_t vol_nr = DrbdVolume::parse_volume_nr(*vol_nr_str);
                 conn.remove_volume(vol_nr);
+                if (peer_vol_marked)
+                {
+                    static_cast<void> (conn.child_state_flags_changed());
+                    StateFlags::state res_last_state = res.get_state();
+                    StateFlags::state res_new_state = res.child_state_flags_changed();
+                    problem_counter_update(res_last_state, res_new_state);
+                }
             }
             catch (NumberFormatException& nf_exc)
             {
@@ -764,6 +862,11 @@ void DrbdMon::destroy_resource(PropsMap& event_props)
         ResourcesMap::Node* node = resources_map->get_node(res_name);
         if (node != nullptr)
         {
+            DrbdResource* res = node->get_value();
+            if (res->has_mark_state() && problem_count > 0)
+            {
+                --problem_count;
+            }
             delete node->get_key();
             delete node->get_value();
             resources_map->remove_node(node);
@@ -1053,4 +1156,25 @@ void DrbdMon::set_flag(std::string& key)
 void DrbdMon::set_option(std::string& key, std::string& value)
 {
     // no-op; the DrbdMon instance does not have any configurable options at this time
+}
+
+
+uint64_t DrbdMon::get_problem_count() const noexcept
+{
+    return problem_count;
+}
+
+void DrbdMon::problem_counter_update(StateFlags::state res_last_state, StateFlags::state res_new_state) noexcept
+{
+    if (res_last_state == StateFlags::state::NORM && res_new_state != StateFlags::state::NORM &&
+        problem_count < ~static_cast<uint64_t> (0))
+    {
+        ++problem_count;
+    }
+    else
+    if (res_last_state != StateFlags::state::NORM && res_new_state == StateFlags::state::NORM &&
+        problem_count > 0)
+    {
+        --problem_count;
+    }
 }

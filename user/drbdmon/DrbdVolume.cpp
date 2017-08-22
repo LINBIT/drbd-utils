@@ -378,6 +378,13 @@ StateFlags::state DrbdVolume::update_state_flags()
     return obj_state;
 }
 
+StateFlags::state DrbdVolume::child_state_flags_changed()
+{
+    // No-op, the DrbdVolume does not have child objects
+
+    return StateFlags::state::NORM;
+}
+
 // @throws EventMessageException
 DrbdVolume::disk_state DrbdVolume::parse_disk_state(std::string& state_name)
 {

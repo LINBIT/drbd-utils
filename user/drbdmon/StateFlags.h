@@ -35,9 +35,10 @@ class StateFlags
     virtual state get_state() const;
     virtual void clear_state_flags();
     virtual state update_state_flags() = 0;
+    virtual state child_state_flags_changed() = 0;
 
   protected:
-    state obj_state {StateFlags::state::NORM};
+    state obj_state {StateFlags::state::ALERT};
 };
 
 #endif	/* STATEFLAGS_H */
