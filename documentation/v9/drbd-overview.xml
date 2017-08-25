@@ -21,6 +21,11 @@
     </cmdsynopsis>
   </refsynopsisdiv>
   <refsect1>
+    <title>DEPRECATION</title>
+    <simpara>This tool will be deprecated soon. Please consider using drbdtop.
+    </simpara>
+  </refsect1>
+  <refsect1>
     <title>Description</title>
     <para>
 drbd-overview offers an overview of the state of all configured DRBD resources.

@@ -413,6 +413,8 @@ eval {
     warn "unrecognized value for --color" unless $use_colors =~ /^[01]$/;
 };
 
+print STDERR "NOTE: drbd-overview will be deprecated soon.\nPlease consider using drbdtop.\n\n";
+
 open STDERR, "/dev/null"
 	if $stderr_to_dev_null;
 
