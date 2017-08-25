@@ -102,7 +102,7 @@ void report_compare(bool differs, const char *fmt, ...)
 	va_end(ap);
 }
 
-struct field_def *field_def_of(const char *opt_name, struct context_def *ctx)
+static struct field_def *field_def_of(const char *opt_name, struct context_def *ctx)
 {
 	struct field_def *field;
 
@@ -115,7 +115,7 @@ struct field_def *field_def_of(const char *opt_name, struct context_def *ctx)
 	abort();
 }
 
-static int is_equal(struct context_def *ctx, struct d_option *a, struct d_option *b)
+int is_equal(struct context_def *ctx, struct d_option *a, struct d_option *b)
 {
 	struct field_def *field = field_def_of(a->name, ctx);
 

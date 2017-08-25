@@ -31,11 +31,12 @@
 #include <assert.h>
 #include "drbdtool_common.h"
 #include "drbdadm.h"
+#include "config_flags.h"
 #include <search.h>
 
 static void inherit_volumes(struct volumes *from, struct d_host_info *host);
 static void check_volume_sets_equal(struct d_resource *, struct d_host_info *, struct d_host_info *);
-static void expand_opts(struct options *common, struct options *options);
+static void expand_opts(struct d_resource *, struct context_def *, struct options *, struct options *);
 
 static void append_names(struct names *head, struct names *to_copy)
 {
@@ -823,7 +824,7 @@ static void create_connections_from_mesh(struct d_resource *res, struct mesh *me
 			path->implicit = 1;
 			insert_tail(&conn->paths, path);
 
-			expand_opts(&mesh->net_options, &conn->net_options);
+			expand_opts(res, &show_net_options_ctx, &mesh->net_options, &conn->net_options);
 
 			ha = alloc_hname_address();
 			ha->host_info = hi1;
@@ -1134,15 +1135,34 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 		fixup_peer_devices(res);
 }
 
-static void expand_opts(struct options *common, struct options *options)
+static void expand_opts(struct d_resource *res, struct context_def *oc, struct options *common, struct options *options)
 {
-	struct d_option *option, *new_option;
+	struct d_option *option, *new_option, *existing_option;
 
 	STAILQ_FOREACH(option, common, link) {
-		if (!find_opt(options, option->name)) {
+		existing_option = find_opt(options, option->name);
+		if (!existing_option) {
 			new_option = new_opt(strdup(option->name),
 					     option->value ? strdup(option->value) : NULL);
+			new_option->inherited = true;
 			insert_head(options, new_option);
+		} else if (existing_option->inherited && oc != &wildcard_ctx) {
+			if (!is_equal(oc, existing_option, option)) {
+				err("%s:%d: in resource %s, "
+				    "ambiguous inheritance for option \"%s\".\n"
+				    "should be \"%s\" and \"%s\" at the same time\n.",
+				    res->config_file, res->start_line, res->name,
+				    option->name, existing_option->value, option->value);
+				config_valid = 0;
+			}
+			/* else {
+				err("%s:%d: WARNING: in resource %s, "
+				    "multiple inheritance for option \"%s\".\n"
+				    "with same value\n.",
+				    res->config_file, res->start_line, res->name,
+				    option->name, existing_option->value, option->value);
+                        }
+			*/
 		}
 	}
 }
@@ -1180,26 +1200,26 @@ void expand_common(void)
 			template = common;
 
 		if (template) {
-			expand_opts(&template->net_options, &res->net_options);
-			expand_opts(&template->disk_options, &res->disk_options);
-			expand_opts(&template->pd_options, &res->pd_options);
-			expand_opts(&template->startup_options, &res->startup_options);
-			expand_opts(&template->proxy_options, &res->proxy_options);
-			expand_opts(&template->handlers, &res->handlers);
-			expand_opts(&template->res_options, &res->res_options);
+			expand_opts(res, &show_net_options_ctx, &template->net_options, &res->net_options);
+			expand_opts(res, &disk_options_ctx, &template->disk_options, &res->disk_options);
+			expand_opts(res, &device_options_ctx, &template->pd_options, &res->pd_options);
+			expand_opts(res, &startup_options_ctx, &template->startup_options, &res->startup_options);
+			expand_opts(res, &proxy_options_ctx, &template->proxy_options, &res->proxy_options);
+			expand_opts(res, &handlers_ctx, &template->handlers, &res->handlers);
+			expand_opts(res, &resource_options_ctx, &template->res_options, &res->res_options);
 
 			if (template->stacked_timeouts)
 				res->stacked_timeouts = 1;
 
-			expand_opts(&template->proxy_plugins, &res->proxy_plugins);
+			expand_opts(res, &wildcard_ctx, &template->proxy_plugins, &res->proxy_plugins);
 		}
 
 		/* now that common disk options (if any) have been propagated to the
 		 * resource level, further propagate them to the volume level. */
 		for_each_host(h, &res->all_hosts) {
 			for_each_volume(vol, &h->volumes) {
-				expand_opts(&res->disk_options, &vol->disk_options);
-				expand_opts(&res->pd_options, &vol->pd_options);
+				expand_opts(res, &disk_options_ctx, &res->disk_options, &vol->disk_options);
+				expand_opts(res, &peer_device_options_ctx, &res->pd_options, &vol->pd_options);
 			}
 		}
 
@@ -1207,14 +1227,14 @@ void expand_common(void)
 		for_each_volume(vol, &res->volumes) {
 			for_each_host(h, &res->all_hosts) {
 				host_vol = volume_by_vnr(&h->volumes, vol->vnr);
-				expand_opts(&vol->disk_options, &host_vol->disk_options);
-				expand_opts(&vol->pd_options, &host_vol->pd_options);
+				expand_opts(res, &disk_options_ctx, &vol->disk_options, &host_vol->disk_options);
+				expand_opts(res, &peer_device_options_ctx, &vol->pd_options, &host_vol->pd_options);
 			}
 		}
 
 		/* inherit network options from resource objects into connection objects */
 		for_each_connection(conn, &res->connections)
-			expand_opts(&res->net_options, &conn->net_options);
+			expand_opts(res, &show_net_options_ctx, &res->net_options, &conn->net_options);
 
 		/* inherit proxy options from resource to the proxies in the connections */
 		for_each_connection(conn, &res->connections) {
@@ -1225,8 +1245,8 @@ void expand_common(void)
 					if (!ha->proxy)
 						continue;
 
-					expand_opts(&res->proxy_options, &ha->proxy->options);
-					expand_opts(&res->proxy_plugins, &ha->proxy->plugins);
+					expand_opts(res, &proxy_options_ctx, &res->proxy_options, &ha->proxy->options);
+					expand_opts(res, &wildcard_ctx, &res->proxy_plugins, &ha->proxy->plugins);
 				}
 			}
 		}
@@ -1239,7 +1259,7 @@ void expand_common(void)
 			struct path *some_path;
 
 			STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link)
-				expand_opts(&conn->pd_options, &peer_device->pd_options);
+				expand_opts(res, &peer_device_options_ctx, &conn->pd_options, &peer_device->pd_options);
 
 			some_path = STAILQ_FIRST(&conn->paths);
 			if (!some_path)
@@ -1250,7 +1270,7 @@ void expand_common(void)
 				for_each_volume(vol, &h->volumes) {
 					peer_device = find_peer_device(conn, vol->vnr);
 
-					expand_opts(&vol->pd_options, &peer_device->pd_options);
+					expand_opts(res, &peer_device_options_ctx, &vol->pd_options, &peer_device->pd_options);
 				}
 			}
 		}

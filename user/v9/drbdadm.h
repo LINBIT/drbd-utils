@@ -41,6 +41,7 @@ struct d_option
 	unsigned int mentioned  :1 ; // for the adjust command.
 	unsigned int is_escaped :1 ;
 	unsigned int adj_skip :1;
+	unsigned int inherited :1;
 };
 
 STAILQ_HEAD(options, d_option);
@@ -311,6 +312,7 @@ enum {
 	ADJUST_SKIP_CHECKED = 4,
 };
 extern int _adm_adjust(const struct cfg_ctx *ctx, int flags);
+extern int is_equal(struct context_def *ctx, struct d_option *a, struct d_option *b);
 
 extern struct adm_cmd new_minor_cmd;
 extern struct adm_cmd new_resource_cmd;
