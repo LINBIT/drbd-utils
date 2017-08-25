@@ -1683,7 +1683,7 @@ int adm_peer_device(const struct cfg_ctx *ctx)
 	char *argv[MAX_ARGS];
 	int argc = 0;
 
-	peer_device = find_peer_device(res->me, conn, vol->vnr);
+	peer_device = find_peer_device(conn, vol->vnr);
 	if (!peer_device) {
 		err("Could not find peer_device object!\n");
 		exit(E_THINKO);
@@ -2009,7 +2009,7 @@ static int adm_up(const struct cfg_ctx *ctx)
 				continue;
 
 			tmp2_ctx = tmp_ctx;
-			tmp2_ctx.vol = peer_device->volume;
+			tmp2_ctx.vol = volume_by_vnr(&conn->peer->volumes, peer_device->vnr);
 			schedule_deferred_cmd(&peer_device_options_cmd, &tmp2_ctx, CFG_PEER_DEVICE);
 		}
 	}

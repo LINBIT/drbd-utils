@@ -652,16 +652,16 @@ static struct peer_device *matching_peer_device(struct peer_device *pattern, str
 }
 
 static void
-adjust_peer_devices(const struct cfg_ctx *ctx, struct connection *conn, struct connection *running_conn)
+adjust_peer_devices(const struct cfg_ctx *ctx, struct connection *running_conn)
 {
 	struct adm_cmd *cmd = &peer_device_options_defaults_cmd;
 	struct context_def *oc = &peer_device_options_ctx;
 	struct peer_device *peer_device, *running_pd;
 	struct cfg_ctx tmp_ctx = *ctx;
 
-	STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
+	STAILQ_FOREACH(peer_device, &ctx->conn->peer_devices, connection_link) {
 		running_pd = matching_peer_device(peer_device, &running_conn->peer_devices);
-		tmp_ctx.vol = peer_device->volume;
+		tmp_ctx.vol = volume_by_vnr(&ctx->conn->peer->volumes, peer_device->vnr);
 		if (!running_pd) {
 			schedule_deferred_cmd(cmd, &tmp_ctx, CFG_PEER_DEVICE | SCHEDULE_ONCE);
 			continue;
@@ -684,23 +684,21 @@ void schedule_peer_device_options(const struct cfg_ctx *ctx)
 		struct d_host_info *me = ctx->res->me;
 		struct d_volume *vol;
 		for_each_volume(vol, &me->volumes) {
-			peer_device = find_peer_device(me, tmp_ctx.conn, vol->vnr);
+			peer_device = find_peer_device(tmp_ctx.conn, vol->vnr);
 			if (!peer_device || STAILQ_EMPTY(&peer_device->pd_options))
 				continue;
 
-			tmp_ctx.vol = peer_device->volume;
+			tmp_ctx.vol = vol;
 			schedule_deferred_cmd(cmd, &tmp_ctx, CFG_PEER_DEVICE | SCHEDULE_ONCE);
 		}
 	} else if (!tmp_ctx.conn) {
-		STAILQ_FOREACH(peer_device, &tmp_ctx.vol->peer_devices, volume_link) {
-
-			if (!peer_device->connection->paths.stqh_first->my_address ||
-					!peer_device->connection->paths.stqh_first->connect_to)
-				continue;
-			if (STAILQ_EMPTY(&peer_device->pd_options))
+		struct connection *conn;
+		for_each_connection(conn, &ctx->res->connections) {
+			peer_device = find_peer_device(conn, tmp_ctx.vol->vnr);
+			if (!peer_device || STAILQ_EMPTY(&peer_device->pd_options))
 				continue;
 
-			tmp_ctx.conn = peer_device->connection;
+			tmp_ctx.conn = conn;
 			schedule_deferred_cmd(cmd, &tmp_ctx, CFG_PEER_DEVICE | SCHEDULE_ONCE);
 		}
 	} else {
@@ -784,7 +782,7 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, int can_do_pro
 			if (connect)
 				schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET_CONNECT);
 
-			adjust_peer_devices(&tmp_ctx, conn, running_conn);
+			adjust_peer_devices(&tmp_ctx, running_conn);
 		}
 
 		path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */

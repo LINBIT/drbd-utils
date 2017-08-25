@@ -544,6 +544,18 @@ struct d_name *find_backend_option(const char *opt_name)
 	return NULL;
 }
 
+static bool peer_completely_diskless(struct d_host_info *peer)
+{
+	struct d_volume *vol;
+
+	for_each_volume(vol, &peer->volumes) {
+		if (vol->disk)
+			return false;
+	}
+
+	return true;
+}
+
 int adm_create_md(const struct cfg_ctx *ctx)
 {
 	char answer[ANSWER_SIZE];
@@ -562,15 +574,17 @@ int adm_create_md(const struct cfg_ctx *ctx)
 	if (b_opt_max_peers) {
 		max_peers_str = ssprintf("%s", b_opt_max_peers->name + strlen(opt_max_peers));
 	} else {
-		struct peer_device *peer_device;
+		struct connection *conn;
 		int max_peers = 0;
 
 		set_peer_in_resource(ctx->res, true);
 
-		STAILQ_FOREACH(peer_device, &ctx->vol->peer_devices, volume_link) {
-			if (peer_device->connection->ignore || peer_diskless(peer_device))
+		for_each_connection(conn, &ctx->res->connections) {
+			if (conn->ignore)
 				continue;
-			max_peers++;
+
+			if (!peer_completely_diskless(conn->peer))
+				max_peers++;
 		}
 
 		if (max_peers == 0)

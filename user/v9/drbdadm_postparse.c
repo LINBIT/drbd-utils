@@ -445,7 +445,7 @@ bool peer_diskless(struct peer_device *peer_device)
 {
 	struct d_volume *vol;
 
-	vol = volume_by_vnr(&peer_device->connection->peer->volumes, peer_device->volume->vnr);
+	vol = volume_by_vnr(&peer_device->connection->peer->volumes, peer_device->vnr);
 	return vol->disk == NULL;
 }
 
@@ -993,18 +993,13 @@ static void must_have_two_hosts(struct d_resource *res, struct connection *conn)
 		_must_have_two_hosts(res, path);
 }
 
-struct peer_device *find_peer_device(struct d_host_info *host, struct connection *conn, int vnr)
+struct peer_device *find_peer_device(struct connection *conn, int vnr)
 {
 	struct peer_device *peer_device;
-	struct d_volume *vol;
 
 	STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
-		if (peer_device->vnr == vnr) {
-			for_each_volume(vol, &host->volumes) {
-				if (vol == peer_device->volume)
-					return peer_device;
-			}
-		}
+		if (peer_device->vnr == vnr)
+			return peer_device;
 	}
 
 	return NULL;
@@ -1025,46 +1020,30 @@ static void fixup_peer_devices(struct d_resource *res)
 		if (!some_path)
 			continue;
 
-		some_host = STAILQ_FIRST(&some_path->hname_address_pairs)->host_info;
-
 		STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
-
-			vol = volume_by_vnr(&some_host->volumes, peer_device->vnr);
-			if (!vol) {
-				err("%s:%d: Resource %s: There is a reference to a volume %d that"
-				    "is not known in this resource\n",
-				    res->config_file, peer_device->config_line, res->name,
-				    peer_device->vnr);
-				config_valid = 0;
+			STAILQ_FOREACH(ha, &some_path->hname_address_pairs, link) {
+				struct d_host_info *host = ha->host_info;
+				vol = volume_by_vnr(&host->volumes, peer_device->vnr);
+				if (!vol) {
+					err("%s:%d: Resource %s: There is a reference to a volume %d that"
+					    "is not known in this resource\n",
+					    res->config_file, peer_device->config_line, res->name,
+					    peer_device->vnr);
+					config_valid = 0;
+				}
 			}
-			peer_device->volume = vol;
-			STAILQ_INSERT_TAIL(&vol->peer_devices, peer_device, volume_link);
 		}
 
-		/* Take the first path, iterate over hname_address_pairs, take the host_info.
-		   this is the way to get hold of the two hosts of a connection. */
-		STAILQ_FOREACH(ha, &some_path->hname_address_pairs, link) {
-			struct d_host_info *host = ha->host_info;
-
-			if (!host) {
-				err("%s:%d: Resource %s: reference to unknown host '%s'\n",
-					res->config_file, ha->config_line, res->name, ha->name);
-				config_valid = 0;
+		some_host = STAILQ_FIRST(&some_path->hname_address_pairs)->host_info;
+		for_each_volume(vol, &some_host->volumes) {
+			peer_device = find_peer_device(conn, vol->vnr);
+			if (peer_device)
 				continue;
-			}
-
-			for_each_volume(vol, &host->volumes) {
-				peer_device = find_peer_device(host, conn, vol->vnr);
-				if (peer_device)
-					continue;
-				peer_device = alloc_peer_device();
-				peer_device->vnr = vol->vnr;
-				peer_device->implicit = 1;
-				peer_device->connection = conn;
-				peer_device->volume = vol;
-				STAILQ_INSERT_TAIL(&conn->peer_devices, peer_device, connection_link);
-				STAILQ_INSERT_TAIL(&vol->peer_devices, peer_device, volume_link);
-			}
+			peer_device = alloc_peer_device();
+			peer_device->vnr = vol->vnr;
+			peer_device->implicit = 1;
+			peer_device->connection = conn;
+			STAILQ_INSERT_TAIL(&conn->peer_devices, peer_device, connection_link);
 		}
 	}
 }
@@ -1256,9 +1235,23 @@ void expand_common(void)
 		   tie the peer_device options from the volume to peer_devices */
 		for_each_connection(conn, &res->connections) {
 			struct peer_device *peer_device;
-			STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
+			struct hname_address *ha;
+			struct path *some_path;
+
+			STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link)
 				expand_opts(&conn->pd_options, &peer_device->pd_options);
-				expand_opts(&peer_device->volume->pd_options, &peer_device->pd_options);
+
+			some_path = STAILQ_FIRST(&conn->paths);
+			if (!some_path)
+				continue;
+
+			STAILQ_FOREACH(ha, &some_path->hname_address_pairs, link) {
+				h = ha->host_info;
+				for_each_volume(vol, &h->volumes) {
+					peer_device = find_peer_device(conn, vol->vnr);
+
+					expand_opts(&vol->pd_options, &peer_device->pd_options);
+				}
 			}
 		}
 	}
