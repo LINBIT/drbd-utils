@@ -2645,6 +2645,33 @@ static void clip_effective_size_and_bm_bytes(struct format *cfg)
 	cfg->bm_bytes = bm_bytes(&cfg->md, cfg->md.effective_size);
 }
 
+#ifdef __CYGWIN__
+
+/* TODO: this should really go into a separate file */
+
+#include <windows.h>
+
+int open_windows_device(const char *win_dev_name, int flags)
+{
+	HANDLE h;
+	DWORD status;
+
+	h = CreateFile(win_dev_name, GENERIC_READ | GENERIC_WRITE, 0,
+		       NULL, OPEN_EXISTING, 0, NULL);
+	if (h == INVALID_HANDLE_VALUE) {
+		status = GetLastError();
+		fprintf(stderr, "CreateFile(%s) failed: status is %d\n", 
+			win_dev_name, status);
+		return -1;
+	}
+
+printf("CreateFile(%s) succeeded.\n", win_dev_name);
+/* TODO: make this a CygWin fd */
+	return -1;
+}
+
+#endif
+
 int v07_style_md_open(struct format *cfg)
 {
 	struct stat sb;
@@ -2663,7 +2690,11 @@ int v07_style_md_open(struct format *cfg)
 		open_flags |= O_EXCL;
 
  retry:
+#ifdef __CYGWIN__
+	cfg->md_fd = open_windows_device(cfg->md_device_name, open_flags);
+#else
 	cfg->md_fd = open(cfg->md_device_name, open_flags );
+#endif
 
 	if (cfg->md_fd == -1) {
 		int save_errno = errno;
