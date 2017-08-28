@@ -343,6 +343,7 @@ struct option events_cmd_options[] = {
 	{ "timestamps", no_argument, 0, 'T' },
 	{ "statistics", no_argument, 0, 's' },
 	{ "now", no_argument, 0, 'n' },
+	{ "poll", no_argument, 0, 'p' },
 	{ "color", optional_argument, 0, 'c' },
 	{ }
 };
@@ -1577,6 +1578,7 @@ static bool parse_color_argument(void)
 }
 
 static bool opt_now;
+static bool opt_poll;
 static bool opt_verbose;
 static bool opt_statistics;
 static bool opt_timestamps;
@@ -1927,6 +1929,10 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 			opt_now = true;
 			break;
 
+		case 'p':
+			opt_poll = true;
+			break;
+
 		case 's':
 			opt_verbose = true;
 			opt_statistics = true;
@@ -2010,6 +2016,21 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		timeout_ms = 120000; /* normal "get" request, or "show" */
 
 	err = generic_get(cm, timeout_ms, peer_devices);
+	if (cm->show_function == &print_notifications &&
+			opt_now && opt_poll) { /* events2 --now --poll */
+		while ( (c = fgetc(stdin)) != EOF) {
+			switch (c) {
+			case 'n': /* now */
+				err = generic_get(cm, timeout_ms, peer_devices);
+				break;
+			case '\n':
+				break;
+			default:
+				goto out_polling;
+			}
+		}
+out_polling:;
+	}
 
 	free_peer_devices(peer_devices);
 
