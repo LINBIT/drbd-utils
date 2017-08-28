@@ -2690,11 +2690,12 @@ int v07_style_md_open(struct format *cfg)
 		open_flags |= O_EXCL;
 
  retry:
-#ifdef __CYGWIN__
+/* #ifdef __CYGWIN__
 	cfg->md_fd = open_windows_device(cfg->md_device_name, open_flags);
 #else
+*/
 	cfg->md_fd = open(cfg->md_device_name, open_flags );
-#endif
+/* #endif */
 
 	if (cfg->md_fd == -1) {
 		int save_errno = errno;
