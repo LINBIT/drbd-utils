@@ -2695,7 +2695,8 @@ printf("length is %d\n", filename_u.Length);
  
     /* call NtOpenFile */
 	HANDLE file = NULL;
-	NTSTATUS stat = NtOpenFileStruct(&file, FILE_WRITE_DATA, &obja, NULL, 0, 0);
+	IO_STATUS_BLOCK io_status_block;
+	NTSTATUS stat = NtOpenFileStruct(&file, FILE_WRITE_DATA, &obja, &io_status_block, 0, 0);
 	if(NT_SUCCESS(stat)) {
 		printf("File successfully opened.\n");
 	} else {
