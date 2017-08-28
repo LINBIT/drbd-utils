@@ -2657,17 +2657,17 @@ static void clip_effective_size_and_bm_bytes(struct format *cfg)
 
 int open_windows_device(const char *win_dev_name, int flags)
 {
-	typedef NTSTATUS  (__stdcall *NT_OPEN_FILE)(OUT PHANDLE FileHandle, IN ACCESS_MASK DesiredAccess, IN POBJECT_ATTRIBUTES ObjectAttributes, OUT PIO_STATUS_BLOCK IoStatusBlock, IN ULONG ShareAccess, IN ULONG OpenOptions);
-	NT_OPEN_FILE NtOpenFileStruct;
+	typedef NTSTATUS  (__stdcall *NT_CREATE_FILE)(OUT PHANDLE FileHandle, IN ACCESS_MASK DesiredAccess, IN POBJECT_ATTRIBUTES ObjectAttributes, OUT PIO_STATUS_BLOCK IoStatusBlock, IN PLARGE_INTEGER AllocationSize, IN ULONG FileAttributes, IN ULONG ShareAccess, IN ULONG CreateDisposition, IN ULONG CreateOptions, IN PVOID EaBuffer, IN ULONG EaLength);
+	NT_CREATE_FILE NtCreateFileStruct;
  
     /* load the ntdll.dll */
 	HMODULE hModule = LoadLibrary("ntdll.dll");
-	NtOpenFileStruct = (NT_OPEN_FILE)GetProcAddress(hModule, "NtOpenFile");
-	if(NtOpenFileStruct == NULL) {
+	NtCreateFileStruct = (NT_CREATE_FILE)GetProcAddress(hModule, "NtCreateFile");
+	if(NtCreateFileStruct == NULL) {
 		fprintf(stderr, "Error: could not find the function NtOpenFile in library ntdll.dll.");
 		exit(-1);
 	}
-	printf("NtOpenFile is located at 0x%p in ntdll.dll.\n", NtOpenFileStruct);
+	printf("NtCreateFile is located at 0x%p in ntdll.dll.\n", NtCreateFileStruct);
  
 	WCHAR win_dev_utf16[1024];
 	int ret = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, win_dev_name, strlen(win_dev_name), win_dev_utf16, sizeof(win_dev_utf16));
@@ -2685,9 +2685,10 @@ printf("ret is %d\n", ret);
     /* create the string in the right format */
 	UNICODE_STRING filename_u;
 	filename_u.Buffer = win_dev_utf16;
-	filename_u.Length = wcslen(win_dev_utf16);
+	filename_u.Length = wcslen(win_dev_utf16)*sizeof(win_dev_utf16[0]);
 printf("length is %d\n", filename_u.Length);
-	filename_u.MaximumLength = sizeof(win_dev_utf16)-1;
+	filename_u.MaximumLength = (sizeof(win_dev_utf16)-1)*sizeof(win_dev_utf16[0]);
+//	filename_u.MaximumLength = wcslen(win_dev_utf16)+1;
  
     /* initialize OBJECT_ATTRIBUTES */
 	OBJECT_ATTRIBUTES obja;
@@ -2696,7 +2697,7 @@ printf("length is %d\n", filename_u.Length);
     /* call NtOpenFile */
 	HANDLE file = NULL;
 	IO_STATUS_BLOCK io_status_block;
-	NTSTATUS stat = NtOpenFileStruct(&file, FILE_WRITE_DATA, &obja, &io_status_block, 0, 0);
+	NTSTATUS stat = NtCreateFileStruct(&file, FILE_READ_DATA, &obja, &io_status_block, NULL, 0, 7, FILE_OPEN, 0, NULL, 0);
 	if(NT_SUCCESS(stat)) {
 		printf("File successfully opened.\n");
 	} else {
