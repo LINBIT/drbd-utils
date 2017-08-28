@@ -709,6 +709,25 @@ static bool endpoints_equal(struct drbd_cfg_context *a, struct drbd_cfg_context 
 }
 #endif
 
+#ifdef __CYGWIN__
+
+static int is_guid(const char *arg)
+{
+	int i;
+#define GUID_MASK "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+	for (i=0;arg[i] != '\0';i++) {
+		if (GUID_MASK[i] == 'x' && !isxdigit(arg[i]))
+			return 0;
+		if (GUID_MASK[i] == '-' && arg[i] != '-')
+			return 0;
+	}
+	return arg[i] == '\0';
+#undef GUID_MASK
+}
+
+#endif
+
 static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 			  struct drbd_genlmsghdr *dhdr, char* arg)
 {
@@ -740,13 +759,32 @@ static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 
 	close(device_fd);
 #endif
-	/* TODO: #ifdef __CYGWIN__ we want to do simple conversions
+
+#ifdef __CYGWIN__
+
+	/* #ifdef __CYGWIN__ we want to do simple conversions
 		as C: -> \\DosDevices\\C: and GUIDs to 
 		\\DosDevices\\Volume{<GUID>} for convenience.
-		Not needed for now.
 	*/
 
+	char device[1024];
+	size_t n;
+
+	if (isalpha(arg[0]) && arg[1] == ':' && arg[2] == '\0') {
+		n = snprintf(device, sizeof(device), "\\DosDevices\\%s", arg);
+	} else if (is_guid(arg)) {
+		n = snprintf(device, sizeof(device), "\\DosDevices\\Volume{%s}", arg);
+	} else {
+		n = snprintf(device, sizeof(device), "%s", arg);
+	}
+	if (n >= sizeof(device)) {
+		fprintf(stderr, "Device name too long: %s (%zd), please report this.\n", arg, n);
+		return OTHER_ERROR;
+	}
+	nla_put_string(msg, ad->nla_type, device);
+#else
 	nla_put_string(msg, ad->nla_type, arg);
+#endif
 	return NO_ERROR;
 }
 
