@@ -2670,14 +2670,11 @@ int open_windows_device(const char *win_dev_name, int flags)
 	printf("NtOpenFile is located at 0x%p in ntdll.dll.\n", NtOpenFileStruct);
  
 	WCHAR win_dev_utf16[1024];
-	size_t num_characters;
-	int ret = mbtowcs_s(&num_characters, win_dev_utf16, sizeof(win_dev_utf16), win_dev_name, _TRUNCATE);
-	if (ret != 0) {
-		fprintf(stderr, "Couldn't convert %s to unicode UTF-16: error is %x\n", win_dev_name, ret);
+	int ret = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, win_dev_name, -1, win_dev_utf16, sizeof(win_dev_utf16));
+	if (ret == 0) {
+		printf("Couldn't convert %s to unicode UTF-16: error is %x\n", win_dev_name, ret);
 		return -1;
 	}
-
-printf("num_characters is %zd, ret is %d\n", num_characters, ret);
 
     /* create the string in the right format */
 	UNICODE_STRING filename_u;
