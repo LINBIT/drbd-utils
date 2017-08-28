@@ -2649,24 +2649,56 @@ static void clip_effective_size_and_bm_bytes(struct format *cfg)
 
 /* TODO: this should really go into a separate file */
 
+#include <stdio.h>
 #include <windows.h>
+#include <winternl.h>
+#include <stdlib.h>
+#include <string.h>
 
 int open_windows_device(const char *win_dev_name, int flags)
 {
-	HANDLE h;
-	DWORD status;
-
-	h = CreateFile(win_dev_name, GENERIC_READ | GENERIC_WRITE, 0,
-		       NULL, OPEN_EXISTING, 0, NULL);
-	if (h == INVALID_HANDLE_VALUE) {
-		status = GetLastError();
-		fprintf(stderr, "CreateFile(%s) failed: status is %d\n", 
-			win_dev_name, status);
+	typedef NTSTATUS  (__stdcall *NT_OPEN_FILE)(OUT PHANDLE FileHandle, IN ACCESS_MASK DesiredAccess, IN POBJECT_ATTRIBUTES ObjectAttributes, OUT PIO_STATUS_BLOCK IoStatusBlock, IN ULONG ShareAccess, IN ULONG OpenOptions);
+	NT_OPEN_FILE NtOpenFileStruct;
+ 
+    /* load the ntdll.dll */
+	HMODULE hModule = LoadLibrary("ntdll.dll");
+	NtOpenFileStruct = (NT_OPEN_FILE)GetProcAddress(hModule, "NtOpenFile");
+	if(NtOpenFileStruct == NULL) {
+		fprintf(stderr, "Error: could not find the function NtOpenFile in library ntdll.dll.");
+		exit(-1);
+	}
+	printf("NtOpenFile is located at 0x%p in ntdll.dll.\n", NtOpenFileStruct);
+ 
+	WCHAR win_dev_utf16[1024];
+	size_t num_characters;
+	int ret = mbtowcs_s(&num_characters, win_dev_utf16, sizeof(win_dev_utf16), win_dev_name, _TRUNCATE);
+	if (ret != 0) {
+		fprintf(stderr, "Couldn't convert %s to unicode UTF-16: error is %x\n", win_dev_name, ret);
 		return -1;
 	}
 
-printf("CreateFile(%s) succeeded.\n", win_dev_name);
-/* TODO: make this a CygWin fd */
+printf("num_characters is %zd, ret is %d\n", num_characters, ret);
+
+    /* create the string in the right format */
+	UNICODE_STRING filename_u;
+	filename_u.Buffer = win_dev_utf16;
+	filename_u.Length = wcslen(win_dev_utf16);
+	filename_u.MaximumLength = sizeof(win_dev_utf16)-1;
+ 
+    /* initialize OBJECT_ATTRIBUTES */
+	OBJECT_ATTRIBUTES obja;
+	InitializeObjectAttributes(&obja, &filename_u, OBJ_CASE_INSENSITIVE, NULL, NULL);
+ 
+    /* call NtOpenFile */
+	HANDLE file = NULL;
+	NTSTATUS stat = NtOpenFileStruct(&file, FILE_WRITE_DATA, &obja, NULL, 0, 0);
+	if(NT_SUCCESS(stat)) {
+		printf("File successfully opened.\n");
+	} else {
+		printf("File could not be opened.\n");
+	}
+
+/* TODO: make this a CygWin fd .. or replace read/write by ReadFile/WriteFile */
 	return -1;
 }
 
@@ -2690,12 +2722,11 @@ int v07_style_md_open(struct format *cfg)
 		open_flags |= O_EXCL;
 
  retry:
-/* #ifdef __CYGWIN__
+#ifdef __CYGWIN__
 	cfg->md_fd = open_windows_device(cfg->md_device_name, open_flags);
 #else
-*/
 	cfg->md_fd = open(cfg->md_device_name, open_flags );
-/* #endif */
+#endif
 
 	if (cfg->md_fd == -1) {
 		int save_errno = errno;
