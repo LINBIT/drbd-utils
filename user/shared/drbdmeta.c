@@ -2670,16 +2670,23 @@ int open_windows_device(const char *win_dev_name, int flags)
 	printf("NtOpenFile is located at 0x%p in ntdll.dll.\n", NtOpenFileStruct);
  
 	WCHAR win_dev_utf16[1024];
-	int ret = MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, win_dev_name, -1, win_dev_utf16, sizeof(win_dev_utf16));
+	int ret = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, win_dev_name, strlen(win_dev_name), win_dev_utf16, sizeof(win_dev_utf16));
 	if (ret == 0) {
 		printf("Couldn't convert %s to unicode UTF-16: error is %x\n", win_dev_name, ret);
 		return -1;
 	}
+printf("ret is %d\n", ret);
+	win_dev_utf16[ret] = 0;
+
+	int i;
+	for (i=0; win_dev_utf16[i] != 0; i++)
+		printf("%d(%c) ", win_dev_utf16[i], win_dev_utf16[i]);
 
     /* create the string in the right format */
 	UNICODE_STRING filename_u;
 	filename_u.Buffer = win_dev_utf16;
 	filename_u.Length = wcslen(win_dev_utf16);
+printf("length is %d\n", filename_u.Length);
 	filename_u.MaximumLength = sizeof(win_dev_utf16)-1;
  
     /* initialize OBJECT_ATTRIBUTES */
@@ -2692,7 +2699,7 @@ int open_windows_device(const char *win_dev_name, int flags)
 	if(NT_SUCCESS(stat)) {
 		printf("File successfully opened.\n");
 	} else {
-		printf("File could not be opened.\n");
+		printf("File could not be opened (status = %x).\n", stat);
 	}
 
 /* TODO: make this a CygWin fd .. or replace read/write by ReadFile/WriteFile */
