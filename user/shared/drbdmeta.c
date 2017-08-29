@@ -2712,7 +2712,14 @@ printf("length is %d\n", filename_u.Length);
 		fprintf(stderr, "Failed to get disk geometry: error is %d\n", GetLastError());
 		return -1;
 	}
-	printf("%d bytes per sector, total size %lld\n", geometry.Geometry.BytesPerSector, geometry.DiskSize.QuadPart);
+	printf("%d bytes per sector, total disk size %lld\n", geometry.Geometry.BytesPerSector, geometry.DiskSize.QuadPart);
+
+	PARTITION_INFORMATION_EX partition_info;
+	if (DeviceIoControl(hdisk, IOCTL_DISK_GET_PARTITION_INFO_EX, NULL, 0, &partition_info, sizeof(partition_info), &ret_bytes, NULL) == 0) {
+		fprintf(stderr, "Failed to get partition info: error is %d\n", GetLastError());
+		return -1;
+	}
+	printf("partition size %lld\n", partition_info.PartitionLength.QuadPart);
 
 	return -1;
 }
