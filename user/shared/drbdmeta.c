@@ -2771,7 +2771,7 @@ printf("length is %d\n", filename_u.Length);
     /* call NtCreateFile */
 	HANDLE hdisk = NULL;
 	IO_STATUS_BLOCK io_status_block;
-	NTSTATUS stat = NtCreateFileStruct(&hdisk, FILE_GENERIC_READ | FILE_GENERIC_WRITE, &obja, &io_status_block, NULL, FILE_ATTRIBUTE_NORMAL, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_OPEN, 0, NULL, 0);
+	NTSTATUS stat = NtCreateFileStruct(&hdisk, FILE_GENERIC_READ | FILE_GENERIC_WRITE, &obja, &io_status_block, NULL, FILE_ATTRIBUTE_NORMAL, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT, NULL, 0);
 	if(NT_SUCCESS(stat)) {
 		printf("File successfully opened.\n");
 	} else {
