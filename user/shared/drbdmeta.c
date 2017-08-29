@@ -60,6 +60,12 @@
 
 #include "config.h"
 
+#ifdef __CYGWIN__
+#include <windows.h>
+#include <winternl.h>
+#include <wchar.h>
+#endif
+
 /* BLKZEROOUT, available on linux-3.6 and later. */
 #ifndef __CYGWIN__
 #ifndef BLKZEROOUT
@@ -311,7 +317,12 @@ struct format {
 	int lock_fd;
 	int drbd_fd;		/* no longer used!   */
 	int ll_fd;		/* not yet used here */
+#ifdef __CYGWIN__
+	HANDLE disk_handle;
+#else
 	int md_fd;
+#endif
+
 	int md_hard_sect_size;
 
 
@@ -1073,14 +1084,22 @@ struct meta_cmd cmds[] = {
  * or do we want to duplicate the error handling everywhere? */
 void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, const char* tag)
 {
-	int fd = cfg->md_fd;
 	ssize_t c;
+
+#ifdef __CYGWIN__
+	int fd = -1;
+
+	printf("Will use ReadFile...\n");
+	c = -1;	
+#else
+	int fd = cfg->md_fd;
 
 	c = lseek(fd, offset, SEEK_SET);
 	if (c == offset)
 		c = read(fd, buf, count);
 	else
 		c = -1;
+#endif
 
 	if (verbose >= 2) {
 		fflush(stdout);
@@ -1105,6 +1124,10 @@ void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, con
 	if (verbose > 10)
 		fprintf_hex(stderr, offset, buf, count);
 }
+
+#ifdef min
+#undef min
+#endif
 
 #define min(x,y) ((x) < (y) ? (x) : (y))
 #define min3(x,y,z) (min(min(x,y),z))
@@ -1151,8 +1174,14 @@ void validate_offsets_or_die(struct format *cfg, size_t count, off_t offset, con
 static unsigned n_writes = 0;
 void pwrite_or_die(struct format *cfg, const void *buf, size_t count, off_t offset, const char* tag)
 {
-	int fd = cfg->md_fd;
 	ssize_t c;
+#ifdef __CYGWIN__
+	int fd = -1;
+
+	printf("Will use WriteFile...\n");
+	c = -1;	
+#else
+	int fd = cfg->md_fd;
 
 	validate_offsets_or_die(cfg, count, offset, tag);
 
@@ -1173,6 +1202,7 @@ void pwrite_or_die(struct format *cfg, const void *buf, size_t count, off_t offs
 
 		c = -1;
 	}
+#endif
 	if (verbose >= 2) {
 		fflush(stdout);
 		fprintf(stderr, " %-26s: pwrite(%u, ...,%6lu,%12llu)\n", tag,
@@ -1518,6 +1548,11 @@ int v06_parse(struct format *cfg, char **argv, int argc, int *ai)
 
 int v06_md_open(struct format *cfg)
 {
+#ifdef __CYGWIN__
+	fprintf(stderr, "v06_md_open: Not supported with Cygwin.\n");
+	return -1;
+#else
+
 	struct stat sb;
 
 	cfg->md_fd = open(cfg->md_device_name, O_RDWR);
@@ -1543,10 +1578,18 @@ int v06_md_open(struct format *cfg)
 	}
 
 	return VALID_MD_FOUND;
+#endif
 }
 
 int generic_md_close(struct format *cfg)
 {
+#ifdef __CYGWIN__
+	if (CloseHandle(cfg->disk_handle) == 0) {
+		fprintf(stderr, "CloseHandle() failed, error is %d\n", GetLastError());
+		return -1;
+	}
+	return 0;
+#else
 	/* On /dev/ram0 we may not use O_SYNC for some kernels (eg. RHEL6 2.6.32),
 	 * and fsync() returns EIO, too. So we don't do error checking here. */
 	fsync(cfg->md_fd);
@@ -1555,6 +1598,7 @@ int generic_md_close(struct format *cfg)
 		return -1;
 	}
 	return 0;
+#endif
 }
 
 int v06_md_initialize(struct format *cfg,
@@ -2645,17 +2689,13 @@ static void clip_effective_size_and_bm_bytes(struct format *cfg)
 	cfg->bm_bytes = bm_bytes(&cfg->md, cfg->md.effective_size);
 }
 
+
+
 #ifdef __CYGWIN__
 
 /* TODO: this should really go into a separate file */
 
-#include <stdio.h>
-#include <windows.h>
-#include <winternl.h>
-#include <stdlib.h>
-#include <string.h>
-
-int open_windows_device(const char *win_dev_name, int flags)
+int open_windows_device(struct format *cfg)
 {
 	typedef NTSTATUS  (__stdcall *NT_CREATE_FILE)(OUT PHANDLE FileHandle, IN ACCESS_MASK DesiredAccess, IN POBJECT_ATTRIBUTES ObjectAttributes, OUT PIO_STATUS_BLOCK IoStatusBlock, IN PLARGE_INTEGER AllocationSize, IN ULONG FileAttributes, IN ULONG ShareAccess, IN ULONG CreateDisposition, IN ULONG CreateOptions, IN PVOID EaBuffer, IN ULONG EaLength);
 	NT_CREATE_FILE NtCreateFileStruct;
@@ -2665,14 +2705,14 @@ int open_windows_device(const char *win_dev_name, int flags)
 	NtCreateFileStruct = (NT_CREATE_FILE)GetProcAddress(hModule, "NtCreateFile");
 	if(NtCreateFileStruct == NULL) {
 		fprintf(stderr, "Error: could not find the function NtOpenFile in library ntdll.dll.");
-		exit(-1);
+		return -1;
 	}
 	printf("NtCreateFile is located at 0x%p in ntdll.dll.\n", NtCreateFileStruct);
  
 	WCHAR win_dev_utf16[1024];
-	int ret = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, win_dev_name, strlen(win_dev_name), win_dev_utf16, sizeof(win_dev_utf16));
+	int ret = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, cfg->md_device_name, strlen(cfg->md_device_name), win_dev_utf16, sizeof(win_dev_utf16));
 	if (ret == 0) {
-		printf("Couldn't convert %s to unicode UTF-16: error is %x\n", win_dev_name, ret);
+		printf("Couldn't convert %s to unicode UTF-16: error is %x\n", cfg->md_device_name, ret);
 		return -1;
 	}
 printf("ret is %d\n", ret);
@@ -2721,13 +2761,23 @@ printf("length is %d\n", filename_u.Length);
 	}
 	printf("partition size %lld\n", partition_info.PartitionLength.QuadPart);
 
-	return -1;
+	cfg->disk_handle = hdisk;
+	cfg->md_hard_sect_size = geometry.Geometry.BytesPerSector;
+	cfg->bd_size = partition_info.PartitionLength.QuadPart;
+
+	return 0;
 }
 
 #endif
 
 int v07_style_md_open(struct format *cfg)
 {
+#ifdef __CYGWIN__
+	if (open_windows_device(cfg) < 0) {
+		fprintf(stderr, "Could not open Windows device %s\n", cfg->md_device_name);
+		exit(20);
+	}
+#else
 	struct stat sb;
 	unsigned int hard_sect_size = 0;
 	int ioctl_err;
@@ -2744,11 +2794,7 @@ int v07_style_md_open(struct format *cfg)
 		open_flags |= O_EXCL;
 
  retry:
-#ifdef __CYGWIN__
-	cfg->md_fd = open_windows_device(cfg->md_device_name, open_flags);
-#else
 	cfg->md_fd = open(cfg->md_device_name, open_flags );
-#endif
 
 	if (cfg->md_fd == -1) {
 		int save_errno = errno;
@@ -2806,6 +2852,8 @@ int v07_style_md_open(struct format *cfg)
 
 	if (!cfg->bd_size)
 		cfg->bd_size = bdev_size(cfg->md_fd);
+#endif
+
 	/* check_for_existing_data() wants to read that much,
 	 * so having less than that doesn't make sense.
 	 * It's only 68kB anyway! */
