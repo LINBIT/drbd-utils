@@ -1099,6 +1099,7 @@ void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, con
 		fprintf(stderr, "Could not set file pointer to position %zd using SetFilePointerEx, error is %d\n", offset, GetLastError());
 		exit(10);
 	}
+/* TODO: Use NtReadFile() */
 	if (ReadFile(cfg->disk_handle, buf, count, &bytes_read, NULL) == 0) {
 		fprintf(stderr, "Could not read %zd bytes from position %zd using ReadFile, error is %d\n", count, offset, GetLastError());
 		exit(10);
@@ -2754,7 +2755,7 @@ printf("length is %d\n", filename_u.Length);
     /* call NtOpenFile */
 	HANDLE hdisk = NULL;
 	IO_STATUS_BLOCK io_status_block;
-	NTSTATUS stat = NtCreateFileStruct(&hdisk, FILE_READ_DATA | FILE_WRITE_DATA, &obja, &io_status_block, NULL, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_OPEN, 0, NULL, 0);
+	NTSTATUS stat = NtCreateFileStruct(&hdisk, FILE_GENERIC_READ | FILE_GENERIC_WRITE, &obja, &io_status_block, NULL, FILE_ATTRIBUTE_NORMAL, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_OPEN, 0, NULL, 0);
 	if(NT_SUCCESS(stat)) {
 		printf("File successfully opened.\n");
 	} else {
