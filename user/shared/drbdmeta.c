@@ -2695,16 +2695,25 @@ printf("length is %d\n", filename_u.Length);
 	InitializeObjectAttributes(&obja, &filename_u, OBJ_CASE_INSENSITIVE, NULL, NULL);
  
     /* call NtOpenFile */
-	HANDLE file = NULL;
+	HANDLE hdisk = NULL;
 	IO_STATUS_BLOCK io_status_block;
-	NTSTATUS stat = NtCreateFileStruct(&file, FILE_READ_DATA, &obja, &io_status_block, NULL, 0, 7, FILE_OPEN, 0, NULL, 0);
+	NTSTATUS stat = NtCreateFileStruct(&hdisk, FILE_READ_DATA, &obja, &io_status_block, NULL, 0, 7, FILE_OPEN, 0, NULL, 0);
 	if(NT_SUCCESS(stat)) {
 		printf("File successfully opened.\n");
 	} else {
 		printf("File could not be opened (status = %x).\n", stat);
+		return -1;
 	}
 
-/* TODO: make this a CygWin fd .. or replace read/write by ReadFile/WriteFile */
+	DISK_GEOMETRY_EX geometry;
+	DWORD ret_bytes;
+
+	if (DeviceIoControl(hdisk, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, 0, &geometry, sizeof(geometry), &ret_bytes, NULL) == 0) {
+		fprintf(stderr, "Failed to get disk geometry: error is %d\n", GetLastError());
+		return -1;
+	}
+	printf("%d bytes per sector, total size %lld\n", geometry.Geometry.BytesPerSector, geometry.DiskSize.QuadPart);
+
 	return -1;
 }
 
