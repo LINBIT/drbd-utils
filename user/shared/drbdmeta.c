@@ -1085,29 +1085,45 @@ struct meta_cmd cmds[] = {
 void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, const char* tag)
 {
 #ifdef __CYGWIN__
-	DWORD bytes_read;
 	LARGE_INTEGER win_offset;
-
-	win_offset.QuadPart = offset;
+	NTSTATUS status;
+	typedef NTSTATUS  (__stdcall *NT_READ_FILE)(
+		 _In_     HANDLE           FileHandle,
+		_In_opt_ HANDLE           Event,
+		_In_opt_ PIO_APC_ROUTINE  ApcRoutine,
+		_In_opt_ PVOID            ApcContext,
+		_Out_    PIO_STATUS_BLOCK IoStatusBlock,
+		_Out_    PVOID            Buffer,
+		_In_     ULONG            Length,
+		_In_opt_ PLARGE_INTEGER   ByteOffset,
+		_In_opt_ PULONG           Key
+	);
+	NT_READ_FILE NtReadFileStruct;
+	IO_STATUS_BLOCK io_status_block;
 
 	if (verbose >= 2) {
 		fflush(stdout);
-		fprintf(stderr, " %-26s: ReadFile(%p, ...,%6lu,%12llu)\n", tag,
+		fprintf(stderr, " %-26s: NtReadFile(%p, ...,%6lu,%12llu)\n", tag,
 			cfg->disk_handle, (unsigned long)count, (unsigned long long)offset);
 	}
-	if (SetFilePointerEx(cfg->disk_handle, win_offset, NULL, FILE_BEGIN) == 0) {
-		fprintf(stderr, "Could not set file pointer to position %zd using SetFilePointerEx, error is %d\n", offset, GetLastError());
+
+    /* load the ntdll.dll */
+	HMODULE hModule = LoadLibrary("ntdll.dll");
+	NtReadFileStruct = (NT_READ_FILE)GetProcAddress(hModule, "NtReadFile");
+	if(NtReadFileStruct == NULL) {
+		fprintf(stderr, "Error: could not find the function NtReadFile in library ntdll.dll.");
 		exit(10);
 	}
-/* TODO: Use NtReadFile() */
-	if (ReadFile(cfg->disk_handle, buf, count, &bytes_read, NULL) == 0) {
-		fprintf(stderr, "Could not read %zd bytes from position %zd using ReadFile, error is %d\n", count, offset, GetLastError());
+printf("NtReadFile is located at 0x%p in ntdll.dll.\n", NtReadFileStruct);
+
+	win_offset.QuadPart = offset;
+	status = NtReadFileStruct(cfg->disk_handle, NULL, NULL, NULL, &io_status_block, buf, count, &win_offset, NULL);
+
+	if (!NT_SUCCESS(status)) {
+		fprintf(stderr, "Could not read %zd bytes from position %zd using NtReadFile, status is %x\n", count, offset, status);
 		exit(10);
 	}
-	if (bytes_read != count) {
-		fprintf(stderr, "Read %d bytes from position %zd using ReadFile, expected %zd bytes error is %d\n", bytes_read, offset, count, GetLastError());
-		exit(10);
-	}
+printf("io status block information: %lld\n", io_status_block.Information);
 #else
 	ssize_t c;
 	int fd = cfg->md_fd;
@@ -2722,7 +2738,7 @@ int open_windows_device(struct format *cfg)
 	HMODULE hModule = LoadLibrary("ntdll.dll");
 	NtCreateFileStruct = (NT_CREATE_FILE)GetProcAddress(hModule, "NtCreateFile");
 	if(NtCreateFileStruct == NULL) {
-		fprintf(stderr, "Error: could not find the function NtOpenFile in library ntdll.dll.");
+		fprintf(stderr, "Error: could not find the function NtCreateFile in library ntdll.dll.");
 		return -1;
 	}
 	printf("NtCreateFile is located at 0x%p in ntdll.dll.\n", NtCreateFileStruct);
@@ -2752,7 +2768,7 @@ printf("length is %d\n", filename_u.Length);
 	OBJECT_ATTRIBUTES obja;
 	InitializeObjectAttributes(&obja, &filename_u, OBJ_CASE_INSENSITIVE, NULL, NULL);
  
-    /* call NtOpenFile */
+    /* call NtCreateFile */
 	HANDLE hdisk = NULL;
 	IO_STATUS_BLOCK io_status_block;
 	NTSTATUS stat = NtCreateFileStruct(&hdisk, FILE_GENERIC_READ | FILE_GENERIC_WRITE, &obja, &io_status_block, NULL, FILE_ATTRIBUTE_NORMAL, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_OPEN, 0, NULL, 0);
