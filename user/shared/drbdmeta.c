@@ -1084,14 +1084,31 @@ struct meta_cmd cmds[] = {
  * or do we want to duplicate the error handling everywhere? */
 void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, const char* tag)
 {
-	ssize_t c;
-
 #ifdef __CYGWIN__
-	int fd = -1;
+	DWORD bytes_read;
+	LARGE_INTEGER win_offset;
 
-	printf("Will use ReadFile...\n");
-	c = -1;	
+	win_offset.QuadPart = offset;
+
+	if (verbose >= 2) {
+		fflush(stdout);
+		fprintf(stderr, " %-26s: ReadFile(%p, ...,%6lu,%12llu)\n", tag,
+			cfg->disk_handle, (unsigned long)count, (unsigned long long)offset);
+	}
+	if (SetFilePointerEx(cfg->disk_handle, win_offset, NULL, FILE_BEGIN) == 0) {
+		fprintf(stderr, "Could not set file pointer to position %zd using SetFilePointerEx, error is %d\n", offset, GetLastError());
+		exit(10);
+	}
+	if (ReadFile(cfg->disk_handle, buf, count, &bytes_read, NULL) == 0) {
+		fprintf(stderr, "Could not read %zd bytes from position %zd using ReadFile, error is %d\n", count, offset, GetLastError());
+		exit(10);
+	}
+	if (bytes_read != count) {
+		fprintf(stderr, "Read %d bytes from position %zd using ReadFile, expected %zd bytes error is %d\n", bytes_read, offset, count, GetLastError());
+		exit(10);
+	}
 #else
+	ssize_t c;
 	int fd = cfg->md_fd;
 
 	c = lseek(fd, offset, SEEK_SET);
@@ -1099,7 +1116,6 @@ void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, con
 		c = read(fd, buf, count);
 	else
 		c = -1;
-#endif
 
 	if (verbose >= 2) {
 		fflush(stdout);
@@ -1121,6 +1137,7 @@ void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, con
 			tag, (int)count, (int)c);
 		exit(10);
 	}
+#endif
 	if (verbose > 10)
 		fprintf_hex(stderr, offset, buf, count);
 }
@@ -2737,7 +2754,7 @@ printf("length is %d\n", filename_u.Length);
     /* call NtOpenFile */
 	HANDLE hdisk = NULL;
 	IO_STATUS_BLOCK io_status_block;
-	NTSTATUS stat = NtCreateFileStruct(&hdisk, FILE_READ_DATA, &obja, &io_status_block, NULL, 0, 7, FILE_OPEN, 0, NULL, 0);
+	NTSTATUS stat = NtCreateFileStruct(&hdisk, FILE_READ_DATA | FILE_WRITE_DATA, &obja, &io_status_block, NULL, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, FILE_OPEN, 0, NULL, 0);
 	if(NT_SUCCESS(stat)) {
 		printf("File successfully opened.\n");
 	} else {
