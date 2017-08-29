@@ -3,6 +3,21 @@ Latest:
  For even more detail, use "git log" or visit
  http://git.linbit.com/drbd-utils.git
 
+9.1.0
+--------
+ * allow events2 --now polling
+ * fix ambiguous inheritance for peer-device-options
+ * fixup fallback path for BLKZEROOUT for older kernels
+ * fix v9 proxy support
+ * modernized XEN scripts
+ * reproducible builds support
+ * create-md --force for v8.4 (for compat to v9)
+ * fix cstate output
+ * resize: give resize more time (same as attach)
+ * drbdmon: peer-device status, version info, node name
+ * "drbdadm status" for v8.4
+ * set peer-device-options only once
+
 9.0.0
 --------
  * drbd udev: fix inconsistent inheritance of implicit volumes
