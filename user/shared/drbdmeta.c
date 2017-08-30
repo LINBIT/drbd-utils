@@ -436,6 +436,16 @@ typedef NTSTATUS  (__stdcall *NT_WRITE_FILE)(
 
 static NT_WRITE_FILE NtWriteFileFn;
 
+typedef NTSTATUS (__stdcall *NT_SET_INFORMATION_FILE) (
+  _In_  HANDLE                 FileHandle,
+  _Out_ PIO_STATUS_BLOCK       IoStatusBlock,
+  _In_  PVOID                  FileInformation,
+  _In_  ULONG                  Length,
+  _In_  FILE_INFORMATION_CLASS FileInformationClass
+);
+
+static NT_SET_INFORMATION_FILE NtSetInformationFileFn;
+
 int LoadWinNtAPIFunctionPointers(void)
 {
     /* load the ntdll.dll */
@@ -457,6 +467,11 @@ int LoadWinNtAPIFunctionPointers(void)
 	NtWriteFileFn = (NT_WRITE_FILE)GetProcAddress(hModule, "NtWriteFile");
 	if(NtWriteFileFn == NULL) {
 		fprintf(stderr, "Error: could not find the function NtWriteFile in library ntdll.dll.");
+		return -1;
+	}
+	NtSetInformationFileFn = (NT_SET_INFORMATION_FILE)GetProcAddress(hModule, "NtSetInformationFile");
+	if(NtSetInformationFileFn == NULL) {
+		fprintf(stderr, "Error: could not find the function NtSetInformationFile in library ntdll.dll.");
 		return -1;
 	}
 	return 0;
@@ -1158,9 +1173,9 @@ struct meta_cmd cmds[] = {
 void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, const char* tag)
 {
 #ifdef __CYGWIN__
-	LARGE_INTEGER win_offset;
 	NTSTATUS status;
 	IO_STATUS_BLOCK io_status_block;
+	FILE_POSITION_INFORMATION pos;
 
 	if (verbose >= 2) {
 		fflush(stdout);
@@ -1168,16 +1183,23 @@ void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, con
 			cfg->disk_handle, (unsigned long)count, (unsigned long long)offset);
 	}
 
-	win_offset.QuadPart = offset;
-	status = NtReadFileFn(cfg->disk_handle, NULL, NULL, NULL, &io_status_block, buf, count, &win_offset, NULL);
+	pos.CurrentByteOffset.QuadPart = offset;
+	status = NtSetInformationFileFn(cfg->disk_handle, &io_status_block, &pos, sizeof(pos), FilePositionInformation);
+	if (!NT_SUCCESS(status)) {
+		fprintf(stderr, "Could not set file position to %zd using NtSetInformationFileFn, status is %x\n", offset, status);
+		return;
+//		exit(10);
+	}
+
+	status = NtReadFileFn(cfg->disk_handle, NULL, NULL, NULL, &io_status_block, buf, count, NULL, NULL);
 
 	if (!NT_SUCCESS(status)) {
 		fprintf(stderr, "Could not read %zd bytes from position %zd using NtReadFile, status is %x, read %lld bytes\n", count, offset, status, io_status_block.Information);
-		exit(10);
+//		exit(10);
 	}
 	if (io_status_block.Information != count) {
 		fprintf(stderr, "Short read: NtReadFile returned %lld bytes read, expected %zd bytes\n", io_status_block.Information, count);
-		exit(10);
+//		exit(10);
 	}
 #else
 	ssize_t c;
@@ -2894,6 +2916,16 @@ int open_windows_device(struct format *cfg)
 	cfg->md_hard_sect_size = geometry.Geometry.BytesPerSector;
 	cfg->bd_size = partition_info.PartitionLength.QuadPart;
 
+{
+char buf[4096];
+int i;
+for (i=1024;i<=4096;i+=512) {
+pread_or_die(cfg, buf, i-512, cfg->bd_size-i, "Test");
+}
+for (i=512;i<=4096;i+=512) {
+pread_or_die(cfg, buf, i, cfg->bd_size-i-512, "Test");
+}
+}
 	return 0;
 }
 
