@@ -391,94 +391,6 @@ struct __packed md_on_disk_06 {
 	be_u32 magic;
 };
 
-
-#ifdef __CYGWIN__
-
-typedef NTSTATUS  (__stdcall *NT_CREATE_FILE)(
-	_Out_    PHANDLE            FileHandle,
-	_In_     ACCESS_MASK        DesiredAccess,
-	_In_     POBJECT_ATTRIBUTES ObjectAttributes,
-	_Out_    PIO_STATUS_BLOCK   IoStatusBlock,
-	_In_opt_ PLARGE_INTEGER     AllocationSize,
-	_In_     ULONG              FileAttributes,
-	_In_     ULONG              ShareAccess,
-	_In_     ULONG              CreateDisposition,
-	_In_     ULONG              CreateOptions,
-	_In_     PVOID              EaBuffer,
-	_In_     ULONG              EaLength
-);
-static NT_CREATE_FILE NtCreateFileFn;
-
-typedef NTSTATUS  (__stdcall *NT_READ_FILE)(
-	 _In_     HANDLE           FileHandle,
-	_In_opt_ HANDLE           Event,
-	_In_opt_ PIO_APC_ROUTINE  ApcRoutine,
-	_In_opt_ PVOID            ApcContext,
-	_Out_    PIO_STATUS_BLOCK IoStatusBlock,
-	_Out_    PVOID            Buffer,
-	_In_     ULONG            Length,
-	_In_opt_ PLARGE_INTEGER   ByteOffset,
-	_In_opt_ PULONG           Key
-);
-static NT_READ_FILE NtReadFileFn;
- 
-typedef NTSTATUS  (__stdcall *NT_WRITE_FILE)(
-	_In_     HANDLE           FileHandle,
-	_In_opt_ HANDLE           Event,
-	_In_opt_ PIO_APC_ROUTINE  ApcRoutine,
-	_In_opt_ PVOID            ApcContext,
-	_Out_    PIO_STATUS_BLOCK IoStatusBlock,
-	_In_     PVOID            Buffer,
-	_In_     ULONG            Length,
-	_In_opt_ PLARGE_INTEGER   ByteOffset,
-	_In_opt_ PULONG           Key
-);
-
-static NT_WRITE_FILE NtWriteFileFn;
-
-typedef NTSTATUS (__stdcall *NT_SET_INFORMATION_FILE) (
-  _In_  HANDLE                 FileHandle,
-  _Out_ PIO_STATUS_BLOCK       IoStatusBlock,
-  _In_  PVOID                  FileInformation,
-  _In_  ULONG                  Length,
-  _In_  FILE_INFORMATION_CLASS FileInformationClass
-);
-
-static NT_SET_INFORMATION_FILE NtSetInformationFileFn;
-
-int LoadWinNtAPIFunctionPointers(void)
-{
-    /* load the ntdll.dll */
-	HMODULE hModule = LoadLibrary("ntdll.dll");
-	if (hModule == NULL) {
-		fprintf(stderr, "Couldn't open ntdll.dll. Sure this is a Windows machine?\n");
-		return -1;
-	}
-	NtCreateFileFn = (NT_CREATE_FILE)GetProcAddress(hModule, "NtCreateFile");
-	if(NtCreateFileFn == NULL) {
-		fprintf(stderr, "Error: could not find the function NtCreateFile in library ntdll.dll.");
-		return -1;
-	}
-	NtReadFileFn = (NT_READ_FILE)GetProcAddress(hModule, "NtReadFile");
-	if(NtReadFileFn == NULL) {
-		fprintf(stderr, "Error: could not find the function NtReadFile in library ntdll.dll.");
-		return -1;
-	}
-	NtWriteFileFn = (NT_WRITE_FILE)GetProcAddress(hModule, "NtWriteFile");
-	if(NtWriteFileFn == NULL) {
-		fprintf(stderr, "Error: could not find the function NtWriteFile in library ntdll.dll.");
-		return -1;
-	}
-	NtSetInformationFileFn = (NT_SET_INFORMATION_FILE)GetProcAddress(hModule, "NtSetInformationFile");
-	if(NtSetInformationFileFn == NULL) {
-		fprintf(stderr, "Error: could not find the function NtSetInformationFile in library ntdll.dll.");
-		return -1;
-	}
-	return 0;
-}
- 
-#endif
-
 void md_disk_06_to_cpu(struct md_cpu *cpu, const struct md_on_disk_06 *disk)
 {
 	int i;
@@ -1178,10 +1090,6 @@ void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, con
 
 	win_offset.QuadPart = offset;
 
-	NTSTATUS status;
-	IO_STATUS_BLOCK io_status_block;
-	FILE_POSITION_INFORMATION pos;
-
 	if (verbose >= 2) {
 		fflush(stdout);
 		fprintf(stderr, " %-26s: ReadFile(%p, ...,%6lu,%12llu)\n", tag,
@@ -1288,13 +1196,12 @@ void pwrite_or_die(struct format *cfg, const void *buf, size_t count, off_t offs
 	validate_offsets_or_die(cfg, count, offset, tag);
 
 #ifdef __CYGWIN__
+	DWORD bytes_written;
 	LARGE_INTEGER win_offset;
-	NTSTATUS status;
-	IO_STATUS_BLOCK io_status_block;
 
 	++n_writes;
 	if (dry_run) {
-		fprintf(stderr, " %-26s: NtWriteFile(%p, ...,%6lu,%12llu) SKIPPED DUE TO DRY-RUN\n",
+		fprintf(stderr, " %-26s: WriteFile(%p, ...,%6lu,%12llu) SKIPPED DUE TO DRY-RUN\n",
 			tag, cfg->disk_handle, (unsigned long)count, (unsigned long long)offset);
 		if (verbose > 10)
 			fprintf_hex(stderr, offset, buf, count);
@@ -1302,19 +1209,23 @@ void pwrite_or_die(struct format *cfg, const void *buf, size_t count, off_t offs
 	}
 	if (verbose >= 2) {
 		fflush(stdout);
-		fprintf(stderr, " %-26s: NtWriteFile(%p, ...,%6lu,%12llu)\n", tag,
+		fprintf(stderr, " %-26s: WriteFile(%p, ...,%6lu,%12llu)\n", tag,
 			cfg->disk_handle, (unsigned long)count, (unsigned long long)offset);
 	}
 
 	win_offset.QuadPart = offset;
-	status = NtWriteFileFn(cfg->disk_handle, NULL, NULL, NULL, &io_status_block, (void*) buf, count, &win_offset, NULL);
-
-	if (!NT_SUCCESS(status)) {
-		fprintf(stderr, "Could not write %zd bytes from position %zd using NtWriteFile, status is %x, wrote %lld bytes\n", count, offset, status, io_status_block.Information);
+	if (SetFilePointerEx(cfg->disk_handle, win_offset, NULL, FILE_BEGIN) == 
+0) {
+		fprintf(stderr, "Could not set file pointer to position %zd using SetFilePointerEx, error is %d\n", offset, GetLastError());
 		exit(10);
 	}
-	if (io_status_block.Information != count) {
-		fprintf(stderr, "Short write: NtWriteFile returned %lld bytes written, expected %zd bytes\n", io_status_block.Information, count);
+	if (WriteFile(cfg->disk_handle, buf, count, &bytes_written, NULL) == 0) {
+		fprintf(stderr, "Could not write %zd bytes from position %zd using ReadFile, error is %d\n", count, offset, GetLastError());
+		exit(10);
+	}
+	if (bytes_written != count) {
+		fprintf(stderr, "Wrote %d bytes from position %zd using WriteFile, expected %zd bytes error is %d\n", bytes_written, offset, count, GetLastError());
+		fprintf(stderr, "Is this a NTFS partition?\n");
 		exit(10);
 	}
 #else
@@ -2831,15 +2742,15 @@ static void clip_effective_size_and_bm_bytes(struct format *cfg)
 
 /* TODO: this should really go into a separate file */
 
-/* Uses NTDLL.DLL API (NtCreateFile) to open the disk. We do not
+/* Uses Win32 API (CreateFile) to open the disk. We do not
  * use CygWin (UNIX type: /dev/sdXN) API, since that follows the
  * symbolic links in \\Device\\Harddisk<n>\\Partition<n> which
  * changes between reboots (\\Device\\Harddisk0 becomes
  * \\Device\\Harddisk1 and vice versa). That way, we allow the
- * user to use GUIDs (\\DosDevices\\Volumes{<GID>}) or drive letters
- * (\\DosDevices\\x:), in addtion to specifying 
- * \\Device\\HarddiskVolume<n> (which is usually where all those
- * symbolic links point to).
+ * user to use GUIDs (\\\\.\\Volumes{<GID>}) or drive letters
+ * (\\\\.\\x:). Specifying \\Device\\HarddiskVolume<n> directly
+ * does not work, but it is not needed. Most recommended way
+ * is to use the GUIDs.
  *
  * This function writes results directly into the cfg passed as
  * a parameter.
@@ -2847,68 +2758,21 @@ static void clip_effective_size_and_bm_bytes(struct format *cfg)
 
 int open_windows_device(struct format *cfg)
 {
-	WCHAR win_dev_utf16[1024];
-	UNICODE_STRING filename_u;
-	int ret;
-
-	OBJECT_ATTRIBUTES obja;
 	HANDLE hdisk = NULL;
-	IO_STATUS_BLOCK io_status_block;
 
 	DISK_GEOMETRY_EX geometry;
 	DWORD ret_bytes;
 	PARTITION_INFORMATION_EX partition_info;
-	NTSTATUS stat;
 
-	
-
-/*
-	ret = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, cfg->md_device_name, strlen(cfg->md_device_name), win_dev_utf16, sizeof(win_dev_utf16));
-	if (ret == 0) {
-		printf("Couldn't convert %s to unicode UTF-16: error is %x\n", cfg->md_device_name, GetLastError());
-		return -1;
-	}
-	win_dev_utf16[ret] = 0;
-
-	filename_u.Buffer = win_dev_utf16;
-	filename_u.Length = wcslen(win_dev_utf16)*sizeof(win_dev_utf16[0]);
-	filename_u.MaximumLength = (sizeof(win_dev_utf16)-1)*sizeof(win_dev_utf16[0]);
- 
-	InitializeObjectAttributes(&obja, &filename_u, OBJ_CASE_INSENSITIVE, NULL, NULL);
-	stat = NtCreateFileFn(
-		&hdisk, 
-		FILE_GENERIC_READ | FILE_GENERIC_WRITE, 
-		&obja, 
-		&io_status_block, 
-		NULL, 
-		FILE_ATTRIBUTE_NORMAL, 
+	hdisk = CreateFile(
+		cfg->md_device_name, 
+		GENERIC_READ | GENERIC_WRITE, 
 		FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, 
-		FILE_OPEN, 
+		NULL, 
+		OPEN_EXISTING, 
 		FILE_SYNCHRONOUS_IO_NONALERT, 
-		NULL, 
-		0
+		NULL
 	);
-	stat = NtCreateFileFn(
-		&hdisk, 
-		0xC0100000,
-		&obja, 
-		&io_status_block, 
-		NULL, 
-		0, 
-		7,
-		1,
-		0x4028,
-		NULL, 
-		0
-	);
-	if(!NT_SUCCESS(stat)) {
-		printf("NtCreateFile: File %s could not be opened (status = %x).\n", cfg->md_device_name, stat);
-		printf("Please keep in mind that file name should be an NT-internal object name (such as\n\\Device\\HarddiskVolume<n> or \\DosDevices\\D:)\n");
-		return -1;
-	}
-*/
-
-	hdisk = CreateFile(cfg->md_device_name, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_SYNCHRONOUS_IO_NONALERT, NULL);
 	if (hdisk == INVALID_HANDLE_VALUE) {
 		fprintf(stderr, "Couldn't open disk %s with CreateFile: Error is %d\n", cfg->md_device_name, GetLastError());
 		return -1;
@@ -5561,13 +5425,6 @@ int main(int argc, char **argv)
 			command->name);
 		exit(10);
 	}
-
-#ifdef __CYGWIN__
-	if (LoadWinNtAPIFunctionPointers() < 0) {
-		fprintf(stderr, "Couldn't get function pointers to NTDLL.DLL, giving up.\n");
-		exit(10);
-	}
-#endif
 
 	rv = command->function(cfg, argv + ai, argc - ai);
 	if (minor_attached)
