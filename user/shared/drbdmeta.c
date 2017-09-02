@@ -1173,33 +1173,35 @@ struct meta_cmd cmds[] = {
 void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, const char* tag)
 {
 #ifdef __CYGWIN__
+	DWORD bytes_read;
+	LARGE_INTEGER win_offset;
+
+	win_offset.QuadPart = offset;
+
 	NTSTATUS status;
 	IO_STATUS_BLOCK io_status_block;
 	FILE_POSITION_INFORMATION pos;
 
 	if (verbose >= 2) {
 		fflush(stdout);
-		fprintf(stderr, " %-26s: NtReadFile(%p, ...,%6lu,%12llu)\n", tag,
+		fprintf(stderr, " %-26s: ReadFile(%p, ...,%6lu,%12llu)\n", tag,
 			cfg->disk_handle, (unsigned long)count, (unsigned long long)offset);
 	}
-
-	pos.CurrentByteOffset.QuadPart = offset;
-	status = NtSetInformationFileFn(cfg->disk_handle, &io_status_block, &pos, sizeof(pos), FilePositionInformation);
-	if (!NT_SUCCESS(status)) {
-		fprintf(stderr, "Could not set file position to %zd using NtSetInformationFileFn, status is %x\n", offset, status);
+	if (SetFilePointerEx(cfg->disk_handle, win_offset, NULL, FILE_BEGIN) == 
+0) {
+		fprintf(stderr, "Could not set file pointer to position %zd using SetFilePointerEx, error is %d\n", offset, GetLastError());
 		return;
-//		exit(10);
+		exit(10);
 	}
-
-	status = NtReadFileFn(cfg->disk_handle, NULL, NULL, NULL, &io_status_block, buf, count, NULL, NULL);
-
-	if (!NT_SUCCESS(status)) {
-		fprintf(stderr, "Could not read %zd bytes from position %zd using NtReadFile, status is %x, read %lld bytes\n", count, offset, status, io_status_block.Information);
-//		exit(10);
+	if (ReadFile(cfg->disk_handle, buf, count, &bytes_read, NULL) == 0) {
+		fprintf(stderr, "Could not read %zd bytes from position %zd using ReadFile, error is %d\n", count, offset, GetLastError());
+		return;
+		exit(10);
 	}
-	if (io_status_block.Information != count) {
-		fprintf(stderr, "Short read: NtReadFile returned %lld bytes read, expected %zd bytes\n", io_status_block.Information, count);
-//		exit(10);
+	if (bytes_read != count) {
+		fprintf(stderr, "Read %d bytes from position %zd using ReadFile, expected %zd bytes error is %d\n", bytes_read, offset, count, GetLastError());
+		return;
+		exit(10);
 	}
 #else
 	ssize_t c;
@@ -2860,6 +2862,9 @@ int open_windows_device(struct format *cfg)
 	PARTITION_INFORMATION_EX partition_info;
 	NTSTATUS stat;
 
+	
+
+/*
 	ret = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, cfg->md_device_name, strlen(cfg->md_device_name), win_dev_utf16, sizeof(win_dev_utf16));
 	if (ret == 0) {
 		printf("Couldn't convert %s to unicode UTF-16: error is %x\n", cfg->md_device_name, GetLastError());
@@ -2872,7 +2877,6 @@ int open_windows_device(struct format *cfg)
 	filename_u.MaximumLength = (sizeof(win_dev_utf16)-1)*sizeof(win_dev_utf16[0]);
  
 	InitializeObjectAttributes(&obja, &filename_u, OBJ_CASE_INSENSITIVE, NULL, NULL);
- 
 	stat = NtCreateFileFn(
 		&hdisk, 
 		FILE_GENERIC_READ | FILE_GENERIC_WRITE, 
@@ -2886,9 +2890,29 @@ int open_windows_device(struct format *cfg)
 		NULL, 
 		0
 	);
+	stat = NtCreateFileFn(
+		&hdisk, 
+		0xC0100000,
+		&obja, 
+		&io_status_block, 
+		NULL, 
+		0, 
+		7,
+		1,
+		0x4028,
+		NULL, 
+		0
+	);
 	if(!NT_SUCCESS(stat)) {
 		printf("NtCreateFile: File %s could not be opened (status = %x).\n", cfg->md_device_name, stat);
 		printf("Please keep in mind that file name should be an NT-internal object name (such as\n\\Device\\HarddiskVolume<n> or \\DosDevices\\D:)\n");
+		return -1;
+	}
+*/
+
+	hdisk = CreateFile(cfg->md_device_name, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_SYNCHRONOUS_IO_NONALERT, NULL);
+	if (hdisk == INVALID_HANDLE_VALUE) {
+		fprintf(stderr, "Couldn't open disk %s with CreateFile: Error is %d\n", cfg->md_device_name, GetLastError());
 		return -1;
 	}
 
@@ -2917,14 +2941,16 @@ int open_windows_device(struct format *cfg)
 	cfg->bd_size = partition_info.PartitionLength.QuadPart;
 
 {
-char buf[4096];
+char buf[8192];
 int i;
 for (i=1024;i<=4096;i+=512) {
-pread_or_die(cfg, buf, i-512, cfg->bd_size-i, "Test");
+pread_or_die(cfg, buf, i-512, cfg->bd_size-i+512, "Test");
 }
 for (i=512;i<=4096;i+=512) {
 pread_or_die(cfg, buf, i, cfg->bd_size-i-512, "Test");
 }
+pread_or_die(cfg, buf, 4096, cfg->bd_size-8192, "Test");
+pread_or_die(cfg, buf, 8192, cfg->bd_size-8192, "Test");
 }
 	return 0;
 }
