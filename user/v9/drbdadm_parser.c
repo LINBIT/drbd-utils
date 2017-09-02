@@ -987,18 +987,6 @@ int parse_volume_stmt(struct d_volume *vol, struct names* on_hosts, int token)
 		vol->parsed_disk = 1;
 		vol->v_disk_line = fline;
 		break;
-	case TK_WINDISK:
-		token = yylex();
-		switch (token) {
-		case TK_STRING:
-			vol->win_disk = yylval.txt;
-			EXP(';');
-			break;
-		default:
-			check_string_error(token);
-			pe_expected_got( "TK_STRING | {", token);
-		}
-		break;
 	case TK_DEVICE:
 		parse_device(on_hosts, vol);
 		vol->parsed_device = 1;
@@ -1008,18 +996,6 @@ int parse_volume_stmt(struct d_volume *vol, struct names* on_hosts, int token)
 		parse_meta_disk(vol);
 		vol->parsed_meta_disk = 1;
 		vol->v_meta_disk_line = fline;
-		break;
-	case TK_META_WINDISK:
-		token = yylex();
-		switch (token) {
-		case TK_STRING:
-			vol->win_meta_disk = yylval.txt;
-			EXP(';');
-			break;
-		default:
-			check_string_error(token);
-			pe_expected_got( "TK_STRING | {", token);
-		}
 		break;
 	case TK_FLEX_META_DISK:
 		EXP(TK_STRING);
