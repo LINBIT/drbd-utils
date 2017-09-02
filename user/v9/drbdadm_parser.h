@@ -40,7 +40,6 @@ enum yytokentype {
 	TK_STACKED,
 	TK_NET,
 	TK_DISK,
-	TK_WINDISK,
 	TK_SKIP,
 	TK_SYNCER, /* depricated after 8.3 */
 	TK_STARTUP,
@@ -53,7 +52,6 @@ enum yytokentype {
 	TK_DEVICE,
 	TK_MINOR,
 	TK_META_DISK,
-	TK_META_WINDISK,
 	TK_FLEX_META_DISK,
 	TK_NODE_ID,
 	TK_MINOR_COUNT,

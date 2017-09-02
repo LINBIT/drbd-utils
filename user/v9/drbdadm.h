@@ -87,9 +87,7 @@ struct d_volume
 	char* device;
 	unsigned device_minor;
 	char* disk;
-	char* win_disk;
 	char* meta_disk;
-	char* win_meta_disk;
 	char* meta_index;
 	int meta_major;
 	int meta_minor;
