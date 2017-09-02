@@ -1190,17 +1190,15 @@ void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, con
 	if (SetFilePointerEx(cfg->disk_handle, win_offset, NULL, FILE_BEGIN) == 
 0) {
 		fprintf(stderr, "Could not set file pointer to position %zd using SetFilePointerEx, error is %d\n", offset, GetLastError());
-		return;
 		exit(10);
 	}
 	if (ReadFile(cfg->disk_handle, buf, count, &bytes_read, NULL) == 0) {
 		fprintf(stderr, "Could not read %zd bytes from position %zd using ReadFile, error is %d\n", count, offset, GetLastError());
-		return;
 		exit(10);
 	}
 	if (bytes_read != count) {
 		fprintf(stderr, "Read %d bytes from position %zd using ReadFile, expected %zd bytes error is %d\n", bytes_read, offset, count, GetLastError());
-		return;
+		fprintf(stderr, "Is this a NTFS partition?\n");
 		exit(10);
 	}
 #else
@@ -2940,18 +2938,6 @@ int open_windows_device(struct format *cfg)
 	cfg->md_hard_sect_size = geometry.Geometry.BytesPerSector;
 	cfg->bd_size = partition_info.PartitionLength.QuadPart;
 
-{
-char buf[8192];
-int i;
-for (i=1024;i<=4096;i+=512) {
-pread_or_die(cfg, buf, i-512, cfg->bd_size-i+512, "Test");
-}
-for (i=512;i<=4096;i+=512) {
-pread_or_die(cfg, buf, i, cfg->bd_size-i-512, "Test");
-}
-pread_or_die(cfg, buf, 4096, cfg->bd_size-8192, "Test");
-pread_or_die(cfg, buf, 8192, cfg->bd_size-8192, "Test");
-}
 	return 0;
 }
 
