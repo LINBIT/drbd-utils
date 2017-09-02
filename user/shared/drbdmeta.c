@@ -2740,7 +2740,20 @@ static void clip_effective_size_and_bm_bytes(struct format *cfg)
 
 #ifdef __CYGWIN__
 
-/* TODO: this should really go into a separate file */
+static int is_guid(const char *arg)
+{
+        int i;
+#define GUID_MASK "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+        for (i=0;arg[i] != '\0';i++) {
+                if (GUID_MASK[i] == 'x' && !isxdigit(arg[i]))
+                        return 0;
+                if (GUID_MASK[i] == '-' && arg[i] != '-')
+                        return 0;
+        }
+        return arg[i] == '\0';
+#undef GUID_MASK
+}
 
 /* Uses Win32 API (CreateFile) to open the disk. We do not
  * use CygWin (UNIX type: /dev/sdXN) API, since that follows the
@@ -2756,16 +2769,35 @@ static void clip_effective_size_and_bm_bytes(struct format *cfg)
  * a parameter.
  */
 
-int open_windows_device(struct format *cfg)
+HANDLE open_windows_device(const char *arg)
 {
 	HANDLE hdisk = NULL;
 
-	DISK_GEOMETRY_EX geometry;
-	DWORD ret_bytes;
-	PARTITION_INFORMATION_EX partition_info;
+        /* We want to do simple conversions
+                as C: -> \\\\.\\C: and GUIDs to 
+                \\\\.\\Volume{<GUID>} for convenience.
+        */
 
+        char device[1024];
+        size_t n;
+
+        if (isalpha(arg[0]) && arg[1] == ':' && arg[2] == '\0') {
+                n = snprintf(device, sizeof(device), "\\\\.\\%s", arg);
+        } else if (is_guid(arg)) {
+                n = snprintf(device, sizeof(device), "\\\\.\\Volume{%s}", arg);
+        } else {
+                n = snprintf(device, sizeof(device), "%s", arg);
+        }
+        if (n >= sizeof(device)) {
+                fprintf(stderr, "Device name too long: %s (%zd), please report this.\n", arg, n);
+                return INVALID_HANDLE_VALUE;
+        }
+
+	if (verbose > 2) {
+		fprintf(stderr, "Converted %s to %s\n", arg, device);
+	}
 	hdisk = CreateFile(
-		cfg->md_device_name, 
+		device, 
 		GENERIC_READ | GENERIC_WRITE, 
 		FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, 
 		NULL, 
@@ -2774,15 +2806,21 @@ int open_windows_device(struct format *cfg)
 		NULL
 	);
 	if (hdisk == INVALID_HANDLE_VALUE) {
-		fprintf(stderr, "Couldn't open disk %s with CreateFile: Error is %d\n", cfg->md_device_name, GetLastError());
-		return -1;
+		fprintf(stderr, "Couldn't open disk %s with CreateFile: Error is %d\n", device, GetLastError());
 	}
+	return hdisk;
+}
 
 	/* Now, get the disk parameters (sector size and total size) */
 
+static int get_windows_device_geometry(HANDLE hdisk, int *md_hard_sect_size, uint64_t *bd_size)
+{
+	DISK_GEOMETRY_EX geometry;
+	DWORD ret_bytes;
+	PARTITION_INFORMATION_EX partition_info;
+
 	if (DeviceIoControl(hdisk, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, 0, &geometry, sizeof(geometry), &ret_bytes, NULL) == 0) {
 		fprintf(stderr, "Failed to get disk geometry: error is %d\n", GetLastError());
-		CloseHandle(hdisk);
 		return -1;
 	}
 	if (verbose >= 1) {
@@ -2791,16 +2829,14 @@ int open_windows_device(struct format *cfg)
 
 	if (DeviceIoControl(hdisk, IOCTL_DISK_GET_PARTITION_INFO_EX, NULL, 0, &partition_info, sizeof(partition_info), &ret_bytes, NULL) == 0) {
 		fprintf(stderr, "Failed to get partition info: error is %d\n", GetLastError());
-		CloseHandle(hdisk);
 		return -1;
 	}
 	if (verbose >= 1) {
 		printf("partition size %lld\n", partition_info.PartitionLength.QuadPart);
 	}
 
-	cfg->disk_handle = hdisk;
-	cfg->md_hard_sect_size = geometry.Geometry.BytesPerSector;
-	cfg->bd_size = partition_info.PartitionLength.QuadPart;
+	*md_hard_sect_size = geometry.Geometry.BytesPerSector;
+	*bd_size = partition_info.PartitionLength.QuadPart;
 
 	return 0;
 }
@@ -2810,7 +2846,13 @@ int open_windows_device(struct format *cfg)
 int v07_style_md_open(struct format *cfg)
 {
 #ifdef __CYGWIN__
-	if (open_windows_device(cfg) < 0) {
+	cfg->disk_handle = open_windows_device(cfg->md_device_name);
+	if (cfg->disk_handle == INVALID_HANDLE_VALUE) {
+		fprintf(stderr, "Could not open Windows device %s\n", cfg->md_device_name);
+		exit(20);
+	}
+	if (get_windows_device_geometry(cfg->disk_handle, &cfg->md_hard_sect_size, &cfg->bd_size) < 0) {
+		CloseHandle(cfg->disk_handle);
 		fprintf(stderr, "Could not open Windows device %s\n", cfg->md_device_name);
 		exit(20);
 	}
