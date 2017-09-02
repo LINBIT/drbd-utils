@@ -581,9 +581,9 @@ static int __call_cmd_fn(const struct cfg_ctx *ctx, enum on_error on_error)
 	iterate_paths = ctx->path ? 0 : ctx->cmd->iterate_paths;
 
 	if (ctx->cmd->disk_required &&
-	    (!vol->disk || !vol->meta_disk || !vol->meta_index || !vol->win_disk || !vol->win_meta_disk)) {
+	    (!vol->disk || !vol->meta_disk || !vol->meta_index || !vol->win_disk)) {
 		rv = 10;
-		err("The %s command requires a local disk, but the configuration gives none (note for WDRBD you also have to specify win-disk and win-meta-disk for now).\n",
+		err("The %s command requires a local disk, but the configuration gives none.\n",
 		    ctx->cmd->name);
 		if (on_error == EXIT_ON_FAIL)
 			exit(rv);
