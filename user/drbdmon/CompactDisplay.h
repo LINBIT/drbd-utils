@@ -70,6 +70,12 @@ class CompactDisplay : public GenericDisplay, public Configurable
     static const char* F_HOTKEY;
     static const char* F_ALERT_HOTKEY;
 
+    static const char* F_PAGE;
+    static const int   PAGE_POS_R;
+    static const char* F_GOTO_PAGE;
+    static const int   GOTO_PAGE_POS_R;
+    static const int   GOTO_PAGE_CURSOR_POS;
+
     static const char* UTF8_PRIMARY;
     static const char* UTF8_SECONDARY;
     static const char* UTF8_CONN_GOOD;
@@ -95,7 +101,13 @@ class CompactDisplay : public GenericDisplay, public Configurable
 
     static const char HOTKEY_PGUP;
     static const char HOTKEY_PGDN;
-    static const char HOTKEY_PGZERO;
+    static const char HOTKEY_PGONE;
+
+    static const char KEY_BACKSPACE;
+    static const char KEY_CTRL_H;
+    static const char KEY_NEWLINE;
+    static const char KEY_ENTER;
+    static const char KEY_ESC;
 
     static const std::string LABEL_MESSAGES;
     static const std::string LABEL_MONITOR;
@@ -163,6 +175,12 @@ class CompactDisplay : public GenericDisplay, public Configurable
     virtual void key_pressed(const char key) override;
 
   private:
+    enum class input_mode : uint16_t
+    {
+        HOTKEYS,
+        PAGE_NR
+    };
+
     DrbdMon& drbdmon;
     ResourcesMap& resources_map;
     MessageLog& log;
@@ -176,6 +194,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
     uint16_t page {0};
     uint32_t page_start {0};
     uint32_t page_end {0};
+    uint32_t goto_page {0};
 
     uint16_t term_x {80};
     uint16_t term_y {25};
@@ -185,6 +204,8 @@ class CompactDisplay : public GenericDisplay, public Configurable
     bool show_header {true};
     bool show_hotkeys {true};
     bool enable_term_size {true};
+
+    input_mode mode { input_mode::HOTKEYS };
 
     bool enable_utf8 {true};
     const char* pri_icon  {UTF8_PRIMARY};
@@ -208,6 +229,8 @@ class CompactDisplay : public GenericDisplay, public Configurable
     // 20 ms delay
     struct timespec write_retry_delay {0, 20000000};
 
+    void page_nav_display() const;
+    void page_nav_cursor() const;
     bool list_resources();
     void list_connections(DrbdResource& res);
     void list_volumes(DrbdResource& res);

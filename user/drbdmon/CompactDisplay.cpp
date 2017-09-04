@@ -6,6 +6,7 @@
 #include <ConfigOption.h>
 
 #include <cstring>
+#include <cctype>
 #include <cstdio>
 #include <cstdarg>
 
@@ -57,6 +58,12 @@ const char* CompactDisplay::F_CURSOR_POS = "\x1b[%u;%uH";
 const char* CompactDisplay::F_HOTKEY     = "\x1b[0;30;47m%c\x1b[0;37;44m %s \033[0m";
 const char* CompactDisplay::F_ALERT_HOTKEY = "\x1b[0;30;47m%c\x1b[1;33;41m %s \033[0m";
 
+const char* CompactDisplay::F_PAGE       = "Page: %5llu\n";
+const int   CompactDisplay::PAGE_POS_R   = 15;
+const char* CompactDisplay::F_GOTO_PAGE  = "\x1b[1;37m[Go to page: %5llu]\x1b[0m";
+const int   CompactDisplay::GOTO_PAGE_POS_R = 37;
+const int   CompactDisplay::GOTO_PAGE_CURSOR_POS = 17;
+
 const char* CompactDisplay::UTF8_PRIMARY   = "\xE2\x9A\xAB";
 const char* CompactDisplay::UTF8_SECONDARY = " "; // otherwise UTF-8 E2 9A AA
 const char* CompactDisplay::UTF8_CONN_GOOD = "\xE2\x87\x84";
@@ -83,7 +90,13 @@ const char* CompactDisplay::ANSI_CURSOR_ON  = "\x1b[?25h";
 
 const char CompactDisplay::HOTKEY_PGUP = '<';
 const char CompactDisplay::HOTKEY_PGDN = '>';
-const char CompactDisplay::HOTKEY_PGZERO = '1';
+const char CompactDisplay::HOTKEY_PGONE = '!';
+
+const char CompactDisplay::KEY_BACKSPACE = 127;
+const char CompactDisplay::KEY_CTRL_H    = 8;
+const char CompactDisplay::KEY_NEWLINE   = '\n';
+const char CompactDisplay::KEY_ENTER     = '\r';
+const char CompactDisplay::KEY_ESC       = 0x1B;
 
 const std::string CompactDisplay::LABEL_MESSAGES    = "Messages";
 const std::string CompactDisplay::LABEL_MONITOR     = "Monitor";
@@ -142,7 +155,7 @@ CompactDisplay::CompactDisplay(
     // Hide the cursor
     write_text(ANSI_CURSOR_OFF);
 
-    hotkeys_info.append(&HOTKEY_PGZERO, &LABEL_PGZERO);
+    hotkeys_info.append(&HOTKEY_PGONE, &LABEL_PGZERO);
     hotkeys_info.append(&HOTKEY_PGUP, &LABEL_PGUP);
     hotkeys_info.append(&HOTKEY_PGDN, &LABEL_PGDN);
 
@@ -158,6 +171,11 @@ CompactDisplay::~CompactDisplay() noexcept
 
 void CompactDisplay::clear()
 {
+    if (mode == input_mode::PAGE_NR)
+    {
+        // Page navigation may have turned the cursor on
+        write_text(ANSI_CURSOR_OFF);
+    }
     write_text(ANSI_CLEAR);
 
     current_x = 0;
@@ -187,6 +205,10 @@ void CompactDisplay::initial_display()
     next_line();
 
     display_hotkeys_info();
+    if (mode == input_mode::PAGE_NR)
+    {
+        page_nav_cursor();
+    }
 }
 
 void CompactDisplay::status_display()
@@ -230,6 +252,10 @@ void CompactDisplay::status_display()
     display_counts();
 
     display_hotkeys_info();
+    if (mode == input_mode::PAGE_NR)
+    {
+        page_nav_cursor();
+    }
 }
 
 void CompactDisplay::display_header() const
@@ -283,16 +309,39 @@ void CompactDisplay::display_header() const
         write_char('\n');
 
         // Print right-aligned page number if the terminal size is known
-        if (enable_term_size && term_y > MIN_SIZE_Y && term_x > 15)
+        if (enable_term_size)
         {
-            write_fmt(F_CURSOR_POS, 2, static_cast<int> (term_x) - 15);
+            if (mode == input_mode::PAGE_NR)
+            {
+                page_nav_display();
+            }
+            write_fmt(F_CURSOR_POS, 2, static_cast<int> (term_x) - PAGE_POS_R);
             write_text(F_RESET);
-            write_fmt("Page %5lu\n", static_cast<long> (page) + 1);
+            write_fmt(F_PAGE, static_cast<unsigned long long> (page) + 1);
         }
         else
         {
             write_char('\n');
         }
+    }
+}
+
+void CompactDisplay::page_nav_display() const
+{
+    if (enable_term_size)
+    {
+        write_fmt(F_CURSOR_POS, 2, static_cast<int> (term_x) - GOTO_PAGE_POS_R);
+        write_text(F_RESET);
+        write_fmt(F_GOTO_PAGE, static_cast<unsigned long long> (goto_page) > 0 ? goto_page : 1);
+    }
+}
+
+void CompactDisplay::page_nav_cursor() const
+{
+    if (enable_term_size)
+    {
+        write_fmt(F_CURSOR_POS, 2, static_cast<int> (term_x) - GOTO_PAGE_POS_R + GOTO_PAGE_CURSOR_POS);
+        write_fmt(ANSI_CURSOR_ON);
     }
 }
 
@@ -926,11 +975,11 @@ void CompactDisplay::key_pressed(const char key)
 {
     switch (key)
     {
-        case '>':
+        case HOTKEY_PGDN:
             ++page;
             status_display();
             break;
-        case '<':
+        case HOTKEY_PGUP:
             --page;
             status_display();
             break;
@@ -956,12 +1005,67 @@ void CompactDisplay::key_pressed(const char key)
                 dsp_problems_active = true;
             }
             // fall-through
-        case '1':
+        case HOTKEY_PGONE:
             page = 0;
             status_display();
             break;
         default:
-            // no-op
+            if (isdigit(key) != 0)
+            {
+                uint32_t digit = static_cast<unsigned char> (key) - static_cast<unsigned char> ('0');
+                if (mode == input_mode::HOTKEYS && enable_term_size)
+                {
+                    goto_page = digit;
+                    mode = input_mode::PAGE_NR;
+                    page_nav_display();
+                    page_nav_cursor();
+                }
+                else
+                if (mode == input_mode::PAGE_NR)
+                {
+                    uint32_t new_goto_page = (goto_page * 10) + digit;
+                    if (new_goto_page <= static_cast<uint32_t> (1) << 16)
+                    {
+                        goto_page = new_goto_page;
+                        page_nav_display();
+                        page_nav_cursor();
+                    }
+                }
+            }
+            else
+            if (mode == input_mode::PAGE_NR)
+            {
+                if (key == KEY_BACKSPACE || key == KEY_CTRL_H)
+                {
+                    goto_page = goto_page / 10;
+                    page_nav_display();
+                    page_nav_cursor();
+                }
+                else
+                if (key == KEY_NEWLINE || key == KEY_ENTER)
+                {
+                    if (goto_page > 0)
+                    {
+                        --goto_page;
+                    }
+                    if (goto_page < static_cast<uint32_t> (1) << 16)
+                    {
+                        page = goto_page;
+                        goto_page = 0;
+                    }
+                    mode = input_mode::HOTKEYS;
+                    write_text(ANSI_CURSOR_OFF);
+                    status_display();
+                }
+                else
+                if (key == KEY_ESC)
+                {
+                    goto_page = 0;
+                    mode = input_mode::HOTKEYS;
+                    write_text(ANSI_CURSOR_OFF);
+                    status_display();
+                }
+            }
             break;
     }
 }
