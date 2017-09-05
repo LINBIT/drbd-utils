@@ -384,8 +384,34 @@ void DrbdMon::process_event_message(
     PropsMap& event_props
 )
 {
-    if (event_mode == MODE_EXISTS || event_mode == MODE_CREATE)
+    bool is_exists_event = event_mode == MODE_EXISTS;
+    if (is_exists_event || event_mode == MODE_CREATE)
     {
+        if (is_exists_event)
+        {
+            if (have_initial_state)
+            {
+                // Received an 'exists' event after the 'exists -' line that finishes current state reporting
+                log.add_entry(
+                    MessageLog::log_level::ALERT,
+                    "The events source generated an out-of-sync 'exists' event"
+                );
+                throw EventMessageException();
+            }
+        }
+        else
+        {
+            if (!have_initial_state)
+            {
+                // Received a 'create' event before all 'exists' events have been received
+                log.add_entry(
+                    MessageLog::log_level::ALERT,
+                    "The events source generated an out-of-sync 'create' event"
+                );
+                throw EventMessageException();
+            }
+        }
+
         if (event_type == TYPE_CONNECTION)
         {
             create_connection(event_props);
@@ -459,6 +485,17 @@ void DrbdMon::process_event_message(
     else
     if (event_mode == MODE_CHANGE)
     {
+        if (!have_initial_state)
+        {
+            // Received a 'change' event before all 'exists' events have been received
+            // This is a known bug in some versions of drbdsetup
+            log.add_entry(
+                MessageLog::log_level::ALERT,
+                "The events source generated an out-of-sync 'change' event"
+            );
+            throw EventMessageException();
+        }
+
         if (event_type == TYPE_CONNECTION)
         {
             update_connection(event_props);
@@ -483,6 +520,16 @@ void DrbdMon::process_event_message(
     else
     if (event_mode == MODE_DESTROY)
     {
+        if (!have_initial_state)
+        {
+            // Received a 'destroy' event before all 'exists' events have been received
+            log.add_entry(
+                MessageLog::log_level::ALERT,
+                "The events source generated an out-of-sync 'destroy' event"
+            );
+            throw EventMessageException();
+        }
+
         if (event_type == TYPE_CONNECTION)
         {
             destroy_connection(event_props);
