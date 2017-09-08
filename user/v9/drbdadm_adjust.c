@@ -695,7 +695,7 @@ void schedule_peer_device_options(const struct cfg_ctx *ctx)
 		struct connection *conn;
 		for_each_connection(conn, &ctx->res->connections) {
 			peer_device = find_peer_device(conn, tmp_ctx.vol->vnr);
-			if (!peer_device || STAILQ_EMPTY(&peer_device->pd_options))
+			if (!peer_device || STAILQ_EMPTY(&peer_device->pd_options) || !conn->peer)
 				continue;
 
 			tmp_ctx.conn = conn;
