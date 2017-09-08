@@ -3,6 +3,10 @@ Latest:
  For even more detail, use "git log" or visit
  http://git.linbit.com/drbd-utils.git
 
+9.1.1
+--------
+ * Fix regression in "drbdadm adjust" for v9
+
 9.1.0
 --------
  * allow events2 --now polling
