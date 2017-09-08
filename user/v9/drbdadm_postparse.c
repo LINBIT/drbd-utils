@@ -1012,7 +1012,6 @@ static void fixup_peer_devices(struct d_resource *res)
 
 	for_each_connection(conn, &res->connections) {
 		struct peer_device *peer_device;
-		struct hname_address *ha;
 		struct d_volume *vol;
 		struct path *some_path;
 		struct d_host_info *some_host;
@@ -1020,20 +1019,6 @@ static void fixup_peer_devices(struct d_resource *res)
 		some_path = STAILQ_FIRST(&conn->paths);
 		if (!some_path)
 			continue;
-
-		STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
-			STAILQ_FOREACH(ha, &some_path->hname_address_pairs, link) {
-				struct d_host_info *host = ha->host_info;
-				vol = volume_by_vnr(&host->volumes, peer_device->vnr);
-				if (!vol) {
-					err("%s:%d: Resource %s: There is a reference to a volume %d that"
-					    "is not known in this resource\n",
-					    res->config_file, peer_device->config_line, res->name,
-					    peer_device->vnr);
-					config_valid = 0;
-				}
-			}
-		}
 
 		some_host = STAILQ_FIRST(&some_path->hname_address_pairs)->host_info;
 		for_each_volume(vol, &some_host->volumes) {
