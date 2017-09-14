@@ -19,6 +19,7 @@ Vcs-Git: git://git.linbit.com/drbd-utils.git/
 Package: drbd-utils
 Architecture: linux-any
 Depends: debconf (>= 0.5),
+         mount,
          ${misc:Depends},
          ${perl:Depends},
          ${shlibs:Depends}
