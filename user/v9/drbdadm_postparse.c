@@ -1024,12 +1024,14 @@ static void fixup_peer_devices(struct d_resource *res)
 		STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
 			STAILQ_FOREACH(ha, &some_path->hname_address_pairs, link) {
 				struct d_host_info *host = ha->host_info;
+				if (!strcmp("_remote_host", ha->name)) /* && PARSE_FOR_ADJUST */
+					continue; /* no on section for _remote_host in show output! */
 				vol = volume_by_vnr(&host->volumes, peer_device->vnr);
 				if (!vol) {
-					err("%s:%d: Resource %s: There is a reference to a volume %d that"
-					    "is not known in this resource\n",
+					err("%s:%d: Resource %s: There is a reference to a volume %d that "
+					    "is not known in this resource on host %s\n",
 					    res->config_file, peer_device->config_line, res->name,
-					    peer_device->vnr);
+					    peer_device->vnr, ha->name);
 					config_valid = 0;
 				}
 			}
