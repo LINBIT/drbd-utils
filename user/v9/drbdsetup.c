@@ -2432,12 +2432,14 @@ static void device_status_json(struct devices_list *device)
 	       "      \"volume\": %d,\n"
 	       "      \"minor\": %d,\n"
 	       "      \"disk-state\": \"%s\",\n"
-	       "      \"client\": \"%s\"%s\n",
+	       "      \"client\": \"%s\",\n"
+	       "      \"quorum\": \"%s\"%s\n",
 	       device->ctx.ctx_volume,
 	       device->minor,
 	       drbd_disk_str(disk_state),
-			 intentional_diskless_str(&device->info),
-			 d_statistics ? "," : "");
+	       intentional_diskless_str(&device->info),
+	       device->info.dev_has_quorum ? "true" : "false",
+	       d_statistics ? "," : "");
 
 	if (d_statistics) {
 		struct device_statistics *s = &device->statistics;
@@ -2561,9 +2563,13 @@ static void device_status(struct devices_list *device, bool single_device)
 		    disk_state_color_start(disk_state, intentional_diskless, true),
 		    drbd_disk_str(disk_state),
 		    disk_state_color_stop(disk_state, true));
-	if (disk_state == D_DISKLESS && opt_verbose) {
+	if (disk_state == D_DISKLESS && opt_verbose)
 		wrap_printf(indent, " client:%s", intentional_diskless_str(&device->info));
-	}
+	if (opt_verbose || !device->info.dev_has_quorum)
+		wrap_printf(indent, " quorum:%s%s%s",
+			    quorum_color_start(device->info.dev_has_quorum),
+			    device->info.dev_has_quorum ? "yes" : "no",
+			    quorum_color_stop(device->info.dev_has_quorum));
 	indent = 6;
 	if (device->statistics.dev_size != -1) {
 		if (opt_statistics)
@@ -3746,11 +3752,13 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 				goto nl_out;
 			}
 			old = update_info(&key, &new, sizeof(new));
-			if (!old || new.i.dev_disk_state != old->i.dev_disk_state) {
+			if (!old || new.i.dev_disk_state != old->i.dev_disk_state ||
+			    new.i.dev_has_quorum != old->i.dev_has_quorum) {
 				bool intentional = new.i.is_intentional_diskless == 1;
 				printf(" disk:%s%s%s",
 						DISK_COLOR_STRING(new.i.dev_disk_state, intentional, true));
 				printf(" client:%s", intentional_diskless_str(&new.i));
+				printf(" quorum:%s", new.i.dev_has_quorum ? "yes" : "no");
 			}
 			if (opt_statistics) {
 				if (device_statistics_from_attrs(&new.s, info)) {
