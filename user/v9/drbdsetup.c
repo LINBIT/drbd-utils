@@ -2573,7 +2573,7 @@ static void device_status(struct devices_list *device, bool single_device)
 	wrap_printf(indent, "\n");
 }
 
-static const char *_intentionall_diskless_str(unsigned char intentional_diskless) {
+static const char *_intentional_diskless_str(unsigned char intentional_diskless) {
 	switch (intentional_diskless) {
 		case 0:
 			return "no";
@@ -2586,11 +2586,11 @@ static const char *_intentionall_diskless_str(unsigned char intentional_diskless
 
 static const char *intentional_diskless_str(struct device_info *info)
 {
-	return _intentionall_diskless_str(info->is_intentional_diskless);
+	return _intentional_diskless_str(info->is_intentional_diskless);
 }
 
 static const char *peer_intentional_diskless_str(struct peer_device_info *info) {
-	return _intentionall_diskless_str(info->peer_is_intentional_diskless);
+	return _intentional_diskless_str(info->peer_is_intentional_diskless);
 }
 
 static const char *resync_susp_str(struct peer_device_info *info)
