@@ -21,10 +21,31 @@ if [[ -z "$DRBD_RESOURCE" || -z "$DRBD_LL_DISK" ]]; then
 fi
 
 PROG=$(basename $0)
-exec > >(exec 2>&- ; logger -t "$PROG[$$]" -p local5.info) 2>&1
+
+redirect_to_logger()
+{
+	local lf=${1:-local5}
+	case $lf in
+	# do we want to exclude some?
+	auth|authpriv|cron|daemon|ftp|kern|lpr|mail|news|syslog|user|uucp|local[0-7])
+		: OK ;;
+	*)
+		echo >&2 "invalid logfacility: $lf"
+		return
+		;;
+	esac
+
+	exec > >( exec 1>&- 2>&- logger -t "$PROG[$$]" -p $lf.info ) 2>&1
+}
+
+if [[ $- != *x* ]]; then
+	# you may override with --logfacility below
+	redirect_to_logger local5
+fi
+
 echo "invoked for $DRBD_RESOURCE/$DRBD_VOLUME (drbd$DRBD_MINOR)"
 
-TEMP=$(getopt -o p:a:nv --long percent:,additional:,disconnect-on-error,verbose -- "$@")
+TEMP=$(getopt -o p:a:l:nv --long percent:,additional:,logfacility:,disconnect-on-error,verbose -- "$@")
 
 if [ $? != 0 ]; then
 	echo "getopt failed"
@@ -87,6 +108,10 @@ while true; do
 		;;
 	-v|--verbose)
 		BE_VERBOSE=1
+		;;
+	-l|--logfacility)
+		redirect_to_logger $2
+		shift
 		;;
 	--)
 		break

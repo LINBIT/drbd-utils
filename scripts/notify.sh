@@ -7,15 +7,54 @@
 # try to get possible output on stdout/err to syslog
 PROG=${0##*/}
 
-# Funky redirection to avoid logger feeding its own output to itself accidentally.
-# Funky double exec to avoid an intermediate sub-shell.
-# Sometimes, the sub-shell lingers around, keeps file descriptors open,
-# and logger then won't notice the main script has finished,
-# forever waiting for further input.
-# The second exec replaces the subshell, and logger will notice directly
-# when its stdin is closed once the main script exits.
-# This avoids the spurious logger processes.
-exec > >( exec 1>&- 2>&- logger -t "$PROG[$$]" -p local5.info) 2>&1
+redirect_to_logger()
+{
+	local lf=${1:-local5}
+	case $lf in
+	# do we want to exclude some?
+	auth|authpriv|cron|daemon|ftp|kern|lpr|mail|news|syslog|user|uucp|local[0-7])
+		: OK ;;
+	*)
+		echo >&2 "invalid logfacility: $lf"
+		return
+		;;
+	esac
+
+	# Funky redirection to avoid logger feeding its own output to itself accidentally.
+	# Funky double exec to avoid an intermediate sub-shell.
+	# Sometimes, the sub-shell lingers around, keeps file descriptors open,
+	# and logger then won't notice the main script has finished,
+	# forever waiting for further input.
+	# The second exec replaces the subshell, and logger will notice directly
+	# when its stdin is closed once the main script exits.
+	# This avoids the spurious logger processes.
+	exec > >( exec 1>&- 2>&- logger -t "$PROG[$$]" -p $lf.info ) 2>&1
+}
+
+if [[ $- != *x* ]]; then
+	# you may override with --logfacility below
+	redirect_to_logger local5
+fi
+
+TEMP=$(getopt -o l: --long logfacility: -- "$@")
+eval set -- "$TEMP"
+while [[ $# != 0 ]]; do
+	case $1 in
+	-l|--logfacility)
+		redirect_to_logger $2
+		shift
+		;;
+	--)
+		;;
+	*)
+		RECIPIENT=${1:-root}
+		;;
+	esac
+	shift
+done
+
+# Default to sending email to root, unless otherwise specified
+: ${RECIPIENT:=root}
 
 if [[ $DRBD_VOLUME ]]; then
 	pretty_print="$DRBD_RESOURCE/$DRBD_VOLUME (drbd$DRBD_MINOR)"
@@ -24,9 +63,6 @@ else
 fi
 
 echo "invoked for $pretty_print"
-
-# Default to sending email to root, unless otherwise specified
-RECIPIENT=${1:-root}
 
 # check arguments specified on command line
 if [ -z "$RECIPIENT" ]; then
