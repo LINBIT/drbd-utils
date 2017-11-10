@@ -1056,6 +1056,15 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 	struct d_resource *res;
 	struct connection *con;
 
+	if (flags & MATCH_ON_PROXY)
+		for_each_resource(res, resources)
+			if (STAILQ_FIRST(&res->meshes)) {
+				err("%s:%d: in resource %s: Do not mix connection-mesh and proxy.\n"
+						"Please use explicit connection sections.\n",
+						config_file, line, res->name);
+				config_valid = 0;
+			}
+
 	/* inherit volumes from resource level into the d_host_info objects */
 	for_each_resource(res, resources) {
 		struct d_host_info *host;
