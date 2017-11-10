@@ -1396,6 +1396,7 @@ void m_set_v9_uuid(struct md_cpu *md, int node_id, char **argv, int argc __attri
 		if (!m_strsep_bit(str, &md->flags, MDF_CRASHED_PRIMARY)) break;
 		if (!m_strsep_bit(str, &md->flags, MDF_AL_CLEAN)) break;
 		if (!m_strsep_bit(str, &md->flags, MDF_AL_DISABLED)) break;
+		if (!m_strsep_bit(str, &md->flags, MDF_PRIMARY_LOST_QUORUM)) break;
 		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_CONNECTED)) break;
 		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_OUTDATED)) break;
 		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_FENCING)) break;
