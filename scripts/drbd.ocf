@@ -492,6 +492,14 @@ drbd_update_master_score() {
 	# For now: if it is "intentionally" diskless, and has access to
 	# remote UpToDate, consider it slighly worse than "local_ok".
 	#
+	if : "have quorum?"; $status_have_quorum ; then
+		: "quorate, evaluate status in more detail below"
+	else
+		: "NOT quorate, should not be master."
+		remove_master_score
+		return
+	fi
+
 	if	: "diskless client?"; $status_diskless_client ; then
 		if	: "primary and access to good data?" ;
 			$status_primary && $status_some_peer_all_up_to_date; then
