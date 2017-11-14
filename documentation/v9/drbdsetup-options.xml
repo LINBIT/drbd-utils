@@ -1611,7 +1611,8 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	  </indexterm> When activated, a cluster partition requires quorum
 	  in order to modify the replicated data set. That means a node in
 	  the cluster partition can only be promoted to primary if the
-	  cluster partition has quorum.
+	  cluster partition has quorum. Every node with a disk directly
+	  connected to the node that should be promoted counts.
 	  If a primary node should execute a write request, but the
 	  cluster partition has lost quorum, it will freeze IO or reject
 	  the write request with an error (depending on the
@@ -1634,9 +1635,43 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	  with all the missing outdated nodes. In case my partition might
 	  be smaller than the other, quorum is lost in this moment.</para>
 
+	  <para>In case you want to allow permanently diskless nodes to
+	  gain quorum it is recommendet to not use <option>majority</option> or
+	  <option>all</option>. It is recommended to specify an absolute number,
+	  since DBRD's heuristic to determine the complete number of diskfull
+	  nodes in the cluster is unreliable.</para>
+
 	  <para>The quorum implementation is available starting with the DRBD kernel
 	  driver version 9.0.7.</para>
+    </definition>
+  </drbdsetup_option>
 
+  <drbdsetup_option name="quorum-minimum-redundancy">
+    <term xml:id="quorum-minimum-redundancy"><option>quorum-minimum-redundancy <replaceable>value</replaceable></option>
+    </term>
+
+    <definition>
+      <para><indexterm significance="normal">
+	  <primary>drbd.conf</primary>
+
+	  <secondary>quorum-minimum-redundancy</secondary>
+	  </indexterm> This option sets the minimal required number of nodes with
+	  an UpToDate disk to allow the partition to gain quorum. This is a different
+          requirement than the plain <option>quorum</option> option expresses.</para>
+
+	  <para>The option's value might be set to <option>off</option>,
+	  <option>majority</option>, <option>all</option> or a numeric value. If you
+	  set it to a numeric value, make sure that the value is greater then half
+	  of your number of nodes.</para>
+
+	  <para>In case you want to allow permanently diskless nodes to
+	  gain quorum it is recommendet to not use <option>majority</option> or
+	  <option>all</option>. It is recommended to specify an absolute number,
+	  since DBRD's heuristic to determine the complete number of diskfull
+	  nodes in the cluster is unreliable.</para>
+
+	  <para>This option is available starting with the DRBD kernel
+	  driver version 9.0.10.</para>
     </definition>
   </drbdsetup_option>
 

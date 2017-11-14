@@ -835,6 +835,8 @@ const struct en_map quorum_map[] = {
 	{ "all", QOU_ALL },
 };
 
+#define quorum_min_redundancy_map quorum_map
+
 #define CHANGEABLE_DISK_OPTIONS								\
 	{ "on-io-error", ENUM(on_io_error, ON_IO_ERROR) },				\
 	/*{ "fencing", ENUM(fencing_policy, FENCING) },*/				\
@@ -1017,6 +1019,7 @@ struct context_def resource_options_ctx = {
 		{ "max-io-depth", NUMERIC(nr_requests, NR_REQUESTS) },
 		{ "quorum", ENUM_NUM(quorum, QUORUM, 1, DRBD_PEERS_MAX) },
 		{ "on-no-quorum", ENUM(on_no_quorum, ON_NO_QUORUM) },
+		{ "quorum-minimum-redundancy", ENUM_NUM(quorum_min_redundancy, QUORUM, 1, DRBD_PEERS_MAX) },
 		{ } },
 };
 
