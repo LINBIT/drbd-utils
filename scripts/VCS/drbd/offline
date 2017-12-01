@@ -1,0 +1,13 @@
+#!/bin/sh
+# FileOnOff Offline script
+# Expects Resource Name
+#
+# Copyright (C) 2017 LINBIT HA-Solutions GmbH
+# Roland Kammerer <roland.kammerer@linbit.com>
+###
+
+. ${VCS_HOME}/bin/drbd_inc.sh
+RESNAME=$1
+
+${DRBDADM} secondary "${RESNAME}"
+exit 0

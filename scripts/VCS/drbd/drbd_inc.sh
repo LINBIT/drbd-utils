@@ -1,0 +1,1 @@
+DRBDADM="/sbin/drbdadm"
