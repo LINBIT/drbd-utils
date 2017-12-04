@@ -718,7 +718,7 @@ void CompactDisplay::show_volume(DrbdVolume& vol, bool peer_volume, bool long_fo
             vol_entry_width += 1 + REPL_STATE_WIDTH;
         }
 
-        if (quorum_alert)
+        if (quorum_alert && debug_view)
         {
             vol_entry_width += 1 + QUORUM_ALERT_WIDTH;
         }
@@ -757,7 +757,7 @@ void CompactDisplay::show_volume(DrbdVolume& vol, bool peer_volume, bool long_fo
                 );
             }
 
-            if (quorum_alert)
+            if (quorum_alert && debug_view)
             {
                 write_fmt(" %s", QUORUM_ALERT);
             }
@@ -1008,6 +1008,11 @@ void CompactDisplay::key_pressed(const char key)
             break;
         case HOTKEY_PGUP:
             --page;
+            status_display();
+            break;
+        case '%':
+            // Toggle debug view
+            debug_view = !debug_view;
             status_display();
             break;
         case 'm':
