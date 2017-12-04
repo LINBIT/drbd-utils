@@ -3,6 +3,16 @@ Latest:
  For even more detail, use "git log" or visit
  http://git.linbit.com/drbd-utils.git
 
+9.2.0rc1
+--------
+ * initial vertias cluster agent support
+ * quorum integration (including agents)
+ * improve drbd9 (mesh)/drbd-proxy integration
+ * pull fixups from 9.1.1 branch
+ * switch to github
+ * drbdmon: page naviagation
+ * debian: add mount as dependency
+
 9.1.0
 --------
  * allow events2 --now polling
