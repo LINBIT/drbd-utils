@@ -98,7 +98,7 @@ This is a virtual package, installing the full DRBD userland suite.
 %defattr(-,root,root,-)
 %doc COPYING
 %doc ChangeLog
-%doc README
+%doc README.md
 
 %package utils
 Summary: Management utilities for DRBD
@@ -206,7 +206,7 @@ This packages includes the DRBD administration tools.
 %doc scripts/drbd.conf.example
 %doc COPYING
 %doc ChangeLog
-%doc README
+%doc README.md
 
 %ifarch %{ix86} x86_64
 %if %{with xen}
