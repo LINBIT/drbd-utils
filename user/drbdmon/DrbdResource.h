@@ -69,6 +69,7 @@ class DrbdResource : public VolumesContainer, public DrbdRole, private StateFlag
     virtual StateFlags::state update_state_flags() override;
     virtual StateFlags::state child_state_flags_changed() override;
     virtual bool has_role_alert();
+    virtual bool has_quorum_alert();
 
     // Creates (allocates and initializes) a new DrbdResource object from a map of properties
     //
@@ -81,6 +82,7 @@ class DrbdResource : public VolumesContainer, public DrbdRole, private StateFlag
     const std::string name;
     const std::unique_ptr<ConnectionsMap> conn_list;
     bool role_alert {false};
+    bool quorum_alert {false};
 };
 
 #endif	/* DRBDRESOURCE_H */

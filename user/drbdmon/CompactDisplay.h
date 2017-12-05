@@ -59,6 +59,9 @@ class CompactDisplay : public GenericDisplay, public Configurable
     static const char* F_CONN_NORM;
     static const char* F_PRIMARY;
     static const char* F_SECONDARY;
+    static const char* QUORUM_ALERT;
+
+    static const int QUORUM_ALERT_WIDTH;
 
     static const char* F_CONN_PRI_FG;
 

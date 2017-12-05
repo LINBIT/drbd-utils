@@ -66,6 +66,7 @@ class DrbdVolume : private StateFlags
     static const std::string PROP_KEY_REPLICATION;
     static const std::string PROP_KEY_CLIENT;
     static const std::string PROP_KEY_PEER_CLIENT;
+    static const std::string PROP_KEY_QUORUM;
 
     static const char* DS_LABEL_DISKLESS;
     static const char* DS_LABEL_ATTACHING;
@@ -98,6 +99,10 @@ class DrbdVolume : private StateFlags
     static const char* CS_LABEL_ENABLED;
     static const char* CS_LABEL_DISABLED;
     static const char* CS_LABEL_UNKNOWN;
+
+    static const char* QU_LABEL_PRESENT;
+    static const char* QU_LABEL_LOST;
+
 
     explicit DrbdVolume(uint16_t volume_nr);
     DrbdVolume(const DrbdVolume& orig) = delete;
@@ -136,6 +141,7 @@ class DrbdVolume : private StateFlags
     virtual bool has_disk_alert();
     virtual bool has_replication_warning();
     virtual bool has_replication_alert();
+    virtual bool has_quorum_alert();
 
     // Creates (allocates and initializes) a new DrbdVolume object from a map of properties
     //
@@ -159,6 +165,9 @@ class DrbdVolume : private StateFlags
     // @throws EventMessageException
     static client_state parse_client_state(std::string& value_str);
 
+    // @throws EventMessageException
+    static bool parse_quorum_state(std::string& value_str);
+
   private:
     const uint16_t vol_nr;
     int32_t minor_nr {-1};
@@ -166,9 +175,10 @@ class DrbdVolume : private StateFlags
     repl_state vol_repl_state;
     client_state vol_client_state;
     DrbdConnection* connection {nullptr};
-    bool disk_alert {false};
-    bool repl_warn  {false};
-    bool repl_alert {false};
+    bool disk_alert     {false};
+    bool repl_warn      {false};
+    bool repl_alert     {false};
+    bool quorum_alert   {false};
 };
 
 #endif	/* DRBDVOLUME_H */

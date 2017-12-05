@@ -9,6 +9,7 @@ const std::string DrbdVolume::PROP_KEY_PEER_DISK   = "peer-disk";
 const std::string DrbdVolume::PROP_KEY_REPLICATION = "replication";
 const std::string DrbdVolume::PROP_KEY_CLIENT      = "client";
 const std::string DrbdVolume::PROP_KEY_PEER_CLIENT = "peer-client";
+const std::string DrbdVolume::PROP_KEY_QUORUM      = "quorum";
 
 const char* DrbdVolume::DS_LABEL_DISKLESS     = "Diskless";
 const char* DrbdVolume::DS_LABEL_ATTACHING    = "Attaching";
@@ -41,6 +42,9 @@ const char* DrbdVolume::RS_LABEL_UNKNOWN              = "Unknown";
 const char* DrbdVolume::CS_LABEL_ENABLED              = "yes";
 const char* DrbdVolume::CS_LABEL_DISABLED             = "no";
 const char* DrbdVolume::CS_LABEL_UNKNOWN              = "unknown";
+
+const char* DrbdVolume::QU_LABEL_PRESENT              = "yes";
+const char* DrbdVolume::QU_LABEL_LOST                 = "no";
 
 DrbdVolume::DrbdVolume(uint16_t volume_nr) :
     vol_nr(volume_nr)
@@ -98,6 +102,12 @@ void DrbdVolume::update(PropsMap& event_props)
     if (prop_client != nullptr)
     {
         vol_client_state = parse_client_state(*prop_client);
+    }
+
+    std::string* prop_quorum = event_props.get(&PROP_KEY_QUORUM);
+    if (prop_quorum != nullptr)
+    {
+        quorum_alert = !parse_quorum_state(*prop_quorum);
     }
 }
 
@@ -247,6 +257,11 @@ bool DrbdVolume::has_replication_alert()
     return repl_alert;
 }
 
+bool DrbdVolume::has_quorum_alert()
+{
+    return quorum_alert;
+}
+
 void DrbdVolume::clear_state_flags()
 {
     disk_alert = false;
@@ -258,6 +273,7 @@ void DrbdVolume::clear_state_flags()
 StateFlags::state DrbdVolume::update_state_flags()
 {
     // Reset the state to normal
+    // quorum_alert is set directly by update()
     StateFlags::clear_state_flags();
     disk_alert = false;
     repl_warn  = false;
@@ -373,6 +389,12 @@ StateFlags::state DrbdVolume::update_state_flags()
             repl_alert = true;
             set_alert();
             break;
+    }
+
+    // Set alert status on the volume if the quorum has been lost
+    if (quorum_alert)
+    {
+        set_alert();
     }
 
     return obj_state;
@@ -553,6 +575,25 @@ DrbdVolume::client_state DrbdVolume::parse_client_state(std::string& value_str)
 
     return state;
 }
+
+// @throws EventMessageException
+bool DrbdVolume::parse_quorum_state(std::string& value_str)
+{
+    bool quorum_present {false};
+
+    if (value_str == QU_LABEL_PRESENT)
+    {
+        quorum_present = true;
+    }
+    else
+    if (value_str != QU_LABEL_LOST)
+    {
+        throw EventMessageException();
+    }
+
+    return quorum_present;
+}
+
 
 // @throws NumberFormatException
 uint16_t DrbdVolume::parse_volume_nr(std::string& value_str)

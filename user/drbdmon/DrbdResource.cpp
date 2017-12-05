@@ -69,9 +69,15 @@ bool DrbdResource::has_role_alert()
     return role_alert;
 }
 
+bool DrbdResource::has_quorum_alert()
+{
+    return quorum_alert;
+}
+
 void DrbdResource::clear_state_flags()
 {
     role_alert = false;
+    quorum_alert = false;
     StateFlags::clear_state_flags();
 }
 
@@ -80,6 +86,7 @@ StateFlags::state DrbdResource::update_state_flags()
     StateFlags::state last_state = obj_state;
 
     role_alert = false;
+    quorum_alert = false;
 
     // Alert for unknown resource role
     switch (role)
@@ -108,37 +115,41 @@ StateFlags::state DrbdResource::update_state_flags()
 
 StateFlags::state DrbdResource::child_state_flags_changed()
 {
-    if (!role_alert)
-    {
-        StateFlags::clear_state_flags();
+    StateFlags::clear_state_flags();
 
-        // If any of the resource's volumes has marks/warnings/alerts, mark the resource
-        VolumesMap::ValuesIterator vol_iter = volumes_iterator();
-        size_t vol_count = vol_iter.get_size();
-        for (size_t vol_index = 0; vol_index < vol_count; ++vol_index)
+    // quorum_alert depends on the state of the resource's volumes
+    quorum_alert = false;
+
+    // If any of the resource's volumes has marks/warnings/alerts, mark the resource
+    VolumesMap::ValuesIterator vol_iter = volumes_iterator();
+    size_t vol_count = vol_iter.get_size();
+    for (size_t vol_index = 0; vol_index < vol_count; ++vol_index)
+    {
+        DrbdVolume& vol = *(vol_iter.next());
+        if (vol.update_state_flags() != StateFlags::state::NORM)
         {
-            DrbdVolume& vol = *(vol_iter.next());
-            if (vol.update_state_flags() != StateFlags::state::NORM)
+            set_mark();
+        }
+        if (vol.has_quorum_alert())
+        {
+            quorum_alert = true;
+            set_alert();
+        }
+    }
+
+    if (obj_state == StateFlags::state::NORM)
+    {
+        // If any of the resource's connections has marks/warnings/alerts, mark the resource
+        ConnectionsMap::ValuesIterator conn_iter = connections_iterator();
+        size_t conn_count = conn_iter.get_size();
+        for (size_t conn_index = 0; conn_index < conn_count; ++conn_index)
+        {
+            DrbdConnection& conn = *(conn_iter.next());
+            if (conn.update_state_flags() != StateFlags::state::NORM)
             {
+                // Connections are in an abnormal state, mark this resource
                 set_mark();
                 break;
-            }
-        }
-
-        if (obj_state == StateFlags::state::NORM)
-        {
-            // If any of the resource's connections has marks/warnings/alerts, mark the resource
-            ConnectionsMap::ValuesIterator conn_iter = connections_iterator();
-            size_t conn_count = conn_iter.get_size();
-            for (size_t conn_index = 0; conn_index < conn_count; ++conn_index)
-            {
-                DrbdConnection& conn = *(conn_iter.next());
-                if (conn.update_state_flags() != StateFlags::state::NORM)
-                {
-                    // Connections are in an abnormal state, mark this resource
-                    set_mark();
-                    break;
-                }
             }
         }
     }

@@ -45,6 +45,9 @@ const char* CompactDisplay::F_VOL_MINOR  = "\x1b[0;4;36m";
 const char* CompactDisplay::F_CONN_NORM  = "\x1b[0;37;44m";
 const char* CompactDisplay::F_PRIMARY    = "\x1b[1;36m";
 const char* CompactDisplay::F_SECONDARY  = "\x1b[0;36m";
+const char* CompactDisplay::QUORUM_ALERT = "\x1b[1;33;41mQUORUM LOST\x1b[0m";
+
+const int CompactDisplay::QUORUM_ALERT_WIDTH = 11;
 
 // Foreground color for the 'Primary' role highlighting
 // of connections (peer resource role)
@@ -485,6 +488,15 @@ bool CompactDisplay::list_resources()
                 );
             }
 
+            // Show quorum alert warning
+            if (res.has_quorum_alert())
+            {
+                if (next_column(1 + QUORUM_ALERT_WIDTH))
+                {
+                    write_fmt(" %s", QUORUM_ALERT);
+                }
+            }
+
             increase_indent();
             list_volumes(res);
             list_connections(res);
@@ -685,6 +697,8 @@ void CompactDisplay::show_volume(DrbdVolume& vol, bool peer_volume, bool long_fo
             }
         }
 
+        bool quorum_alert = vol.has_quorum_alert();
+
         next_line();
 
         // Disk icon (1) + VOL_NR_WIDTH + " " (1) + DISK_STATE_WIDTH
@@ -702,6 +716,11 @@ void CompactDisplay::show_volume(DrbdVolume& vol, bool peer_volume, bool long_fo
             // Add in replication state fields
             // " " (1) + REPL_STATE_WIDTH
             vol_entry_width += 1 + REPL_STATE_WIDTH;
+        }
+
+        if (quorum_alert)
+        {
+            vol_entry_width += 1 + QUORUM_ALERT_WIDTH;
         }
 
         bool show = next_column(vol_entry_width);
@@ -727,13 +746,21 @@ void CompactDisplay::show_volume(DrbdVolume& vol, bool peer_volume, bool long_fo
             write_fmt(" %s %-*s%s", f_disk, DISK_STATE_WIDTH, vol.get_disk_state_label(), F_RESET);
         }
 
-        if (show_replication && show)
+        if (show)
         {
-            // Display replication state
-            write_fmt(
-                " %s%-*s%s", f_repl, REPL_STATE_WIDTH,
-                vol.get_replication_state_label(), F_RESET
-            );
+            if (show_replication)
+            {
+                // Display replication state
+                write_fmt(
+                    " %s%-*s%s", f_repl, REPL_STATE_WIDTH,
+                    vol.get_replication_state_label(), F_RESET
+                );
+            }
+
+            if (quorum_alert)
+            {
+                write_fmt(" %s", QUORUM_ALERT);
+            }
         }
     }
     else

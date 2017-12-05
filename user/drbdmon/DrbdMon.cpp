@@ -752,16 +752,12 @@ void DrbdMon::update_device(PropsMap& event_props)
     vol.update(event_props);
 
     // Adjust volume state flags
-    StateFlags::state vol_last_state = vol.get_state();
-    StateFlags::state vol_new_state = vol.update_state_flags();
-    if (vol_last_state != vol_new_state &&
-        (vol_last_state == StateFlags::state::NORM || vol_new_state == StateFlags::state::NORM))
-    {
-        // Volume state flags changed, adjust resource state flags
-        StateFlags::state res_last_state = res.get_state();
-        StateFlags::state res_new_state = res.child_state_flags_changed();
-        problem_counter_update(res_last_state, res_new_state);
-    }
+    static_cast<void> (vol.update_state_flags());
+
+    // Volume state flags changed, adjust resource state flags
+    StateFlags::state res_last_state = res.get_state();
+    StateFlags::state res_new_state = res.child_state_flags_changed();
+    problem_counter_update(res_last_state, res_new_state);
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
