@@ -15,6 +15,12 @@ for f in drbd drbdadm drbdmeta drbdsetup; do
 done
 ln -sf drbd.conf-$MANVERSION.5.gz /usr/share/man/man5/drbd.conf.5.gz
 
+# ja man pages
+for f in drbd drbdadm drbdmeta drbdsetup; do
+	ln -sf $f-$MANVERSION.8.gz /usr/share/man/ja/man8/$f.8.gz
+done
+ln -sf drbd.conf-$MANVERSION.5.gz /usr/share/man/ja/man5/drbd.conf.5.gz
+
 # compat: we used to live in /sbin/
 # there may be many hardcoded /sbin/drbd* out there,
 # including variants of our own scripts.

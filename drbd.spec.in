@@ -353,6 +353,45 @@ management utility.
 %config %{_sysconfdir}/bash_completion.d/drbdadm*
 %endif # with bashcompletion
 
+%if %{without manual}
+%else
+%package man-ja
+Summary: Japanese man pages for DRBD
+Group: System Environment/Base
+Requires: drbd-utils = %{version}-%{release}
+@RPM_REQ_BASH_COMPLETION@
+@RPM_SUBPACKAGE_NOARCH@
+
+%description man-ja
+This package contains Japanese man pages for DRBD.
+
+%files man-ja
+%defattr(-,root,root,-)
+%{_mandir}/ja/man8/drbd-*
+%{_mandir}/ja/man8/drbdsetup-*
+%{_mandir}/ja/man8/drbdadm-*
+%{_mandir}/ja/man5/drbd.conf-*
+%{_mandir}/ja/man8/drbdmeta-*
+# %if %{with drbdmon}
+# %{_mandir}/ja/man8/drbdmon-*
+# %endif
+
+%post man-ja
+for f in drbd drbdadm drbdmeta drbdsetup; do
+    ln -sf $f-8.4.8.gz %{_mandir}/ja/man8/$f.8.gz
+done
+ln -sf drbd.conf-8.4.5.gz %{_mandir}/ja/man5/drbd.conf.5.gz
+#%if %{with drbdmon}
+#ln -sf drbdmon-9.0.8.gz %{_mandir}/ja/man8/drbdmon.8.gz
+#%endif
+
+%preun man-ja
+for f in drbd drbdadm drbdmeta drbdsetup; do
+    rm -f %{_mandir}/ja/man8/$f.8.gz
+done
+rm -f %{_mandir}/ja/man5/drbd.conf.5.gz
+rm -f %{_mandir}/ja/man8/drbdmon.8.gz
+%endif # without manual
 
 %prep
 %setup -q -n drbd-utils-%{version}
