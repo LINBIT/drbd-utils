@@ -1,0 +1,39 @@
+#!/bin/sh
+# FileOnOff Monitor script
+# Expects Resource Name
+#
+# Copyright (C) 2017 LINBIT HA-Solutions GmbH
+# Roland Kammerer <roland.kammerer@linbit.com>
+###
+
+. ${VCS_HOME}/bin/drbd_inc.sh
+RESNAME=$1
+
+ST=$( ${DRBDADM} cstate "${RESNAME}" )
+CS=${ST%/*}
+case $CS in
+	Connected)
+		ST=$( ${DRBDADM} dstate "${RESNAME}" )
+		DS=${ST%/*}
+		case $DS in
+			UpToDate)
+				exit 110 # perfect situation
+				;;
+			Inconsistent)
+				if [ -n "$( ${DRBDSETUP} events2 --now "${RESNAME}" | grep "peer-device.*name:${RESNAME}.*replication:SyncTarget.*")" ]; then
+					exit 101 # connected + SyncTarget, so can become Primary
+				fi
+				exit 100 # offline
+				;;
+			*)
+				exit 100 # offline
+				;;
+		esac
+		;;
+	StandAlone)
+		exit 100 # offline
+		;;
+	*)
+		exit 99 # unknown
+		;;
+esac
