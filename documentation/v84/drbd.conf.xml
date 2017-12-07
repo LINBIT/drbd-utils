@@ -40,7 +40,7 @@
     the file <option>/etc/drbd.d/global_common.conf</option>, the second one all file with a
     <option>.res</option> suffix.</para>
 
-    <para><example>
+    <para>
         <title>A small example.res file</title>
 
         <programlisting format="linespecific">resource r0 {
@@ -69,12 +69,12 @@
 		address   10.1.1.32:7789;
 	}
 }</programlisting>
-      </example>In this example, there is a single DRBD resource (called r0) which uses protocol C
+      In this example, there is a single DRBD resource (called r0) which uses protocol C
     for the connection between its devices. It contains a single volume which runs on host
     <replaceable>alice</replaceable> uses <replaceable>/dev/drbd1</replaceable> as devices for its
     application, and <replaceable>/dev/sda7</replaceable> as low-level storage for the data. The
     IP addresses are used to specify the networking interfaces to be used. An eventually running
-    resync process should use about 10MByte/second of IO bandwidth. This sync-rate statement is
+    resync process should use about 10MByte/second of IO bandwidth. This resync-rate statement is
     valid for volume 0, but would also be valid for further volumes. In this example it assigns
     full 10MByte/second to each volume.</para>
 
@@ -1661,7 +1661,7 @@ SYMLINK_BY_RES=drbd/by-res/<resource-name>/VNR
             (clean) or set (dirty), a simple run-length encoding scheme can considerably reduce
             the network traffic necessary for the bitmap exchange.</para>
 
-            <para>For backward compatibilty reasons, and because on fast links this possibly does
+            <para>For backward compatibility reasons, and because on fast links this possibly does
             not improve transfer time but consumes cpu cycles, this defaults to off.</para>
           </listitem>
         </varlistentry>

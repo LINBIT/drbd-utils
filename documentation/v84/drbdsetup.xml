@@ -365,14 +365,14 @@
             <para>In some special circumstances the device mapper stack manages to pass BIOs to
             DRBD that violate the constraints that are set forth by DRBD's merge_bvec() function
             and which have more than one bvec. A known example is: phys-disk -&gt; DRBD -&gt; LVM
-            -&gt; Xen -&gt; missaligned partition (63) -&gt; DomU FS. Then you might see "bio
+            -&gt; Xen -&gt; misaligned partition (63) -&gt; DomU FS. Then you might see "bio
             would need to, but cannot, be split:" in the Dom0's kernel log.</para>
 
             <para>The best workaround is to proper align the partition within the VM (E.g. start
             it at sector 1024). That costs 480 KiB of storage. Unfortunately the default of most
             Linux partitioning tools is to start the first partition at an odd number (63).
             Therefore most distributions install helpers for virtual linux machines will end up
-            with missaligned partitions. The second best workaround is to limit DRBD's max bvecs
+            with misaligned partitions. The second best workaround is to limit DRBD's max bvecs
             per BIO (i.e., the <option>max-bio-bvecs</option> option) to 1, but that might cost
             performance.</para>
 
@@ -1119,7 +1119,7 @@
           <replaceable>hash-alg</replaceable></option></term>
 
           <listitem>
-            <para>A resync process sends all marked data blocks form the source to the destination
+            <para>A resync process sends all marked data blocks from the source to the destination
             node, as long as no <option>csums-alg</option> is given. When one is specified the
             resync process exchanges hash values of all marked blocks first, and sends only those
             data blocks over, that have different hash values.</para>
