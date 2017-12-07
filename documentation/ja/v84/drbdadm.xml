@@ -1,0 +1,545 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
+<refentry id="re-drbdadm">
+  <refentryinfo>
+    <date>6 May 2011</date>
+
+    <productname>DRBD</productname>
+
+    <productnumber>8.4.0</productnumber>
+  </refentryinfo>
+
+  <refmeta>
+    <refentrytitle>drbdadm</refentrytitle>
+
+    <manvolnum>8</manvolnum> <refmiscinfo class="manual">システム管理</refmiscinfo> </refmeta> <refnamediv> <refname>drbdadm</refname> <refpurpose>DRBD の高レベル管理ツール<indexterm significance="normal">
+        <primary>drbdadm</primary>
+      </indexterm></refpurpose> </refnamediv> <refsynopsisdiv> <cmdsynopsis sepchar=" "> <command moreinfo="none">drbdadm</command> <arg choice="opt" rep="norepeat">-d</arg> <arg choice="opt" rep="norepeat">-c<arg choice="req" rep="norepeat"><replaceable>file</replaceable></arg></arg> <arg choice="opt" rep="norepeat">-t<arg choice="req" rep="norepeat"><replaceable>file</replaceable></arg></arg> <arg choice="opt" rep="norepeat">-s<arg choice="req" rep="norepeat"><replaceable>cmd</replaceable></arg></arg> <arg choice="opt" rep="norepeat">-m<arg choice="req" rep="norepeat"><replaceable>cmd</replaceable></arg></arg> <arg choice="opt" rep="norepeat">-S</arg> <arg choice="opt" rep="norepeat">-h<arg choice="req" rep="norepeat"><replaceable>host</replaceable></arg></arg> <arg choice="opt" rep="norepeat">--<arg choice="req" rep="norepeat"><replaceable>backend-options</replaceable></arg></arg> <arg choice="req" rep="norepeat"><replaceable>command</replaceable></arg> <group choice="opt" rep="norepeat"> <arg choice="req" rep="norepeat">all</arg> <arg choice="req" rep="repeat"><replaceable>resource<arg choice="opt" rep="norepeat">/volume&gt;</arg></replaceable></arg> </group> </cmdsynopsis> </refsynopsisdiv>
+
+  <refsect1>
+    <title>Description</title>
+
+    <para><option>Drbdadm</option> は DRBD プログラム群の中で高レベルの管理ツールである。<option>Drbdadm</option> は <option>drbdsetup</option> と <option>drbdmeta</option> の上位レベルのインタフェースである。これは、<option>ifconfig</option> の <option>ifup</option>/<option>ifdown</option> コマンドに対する関係と同様である。<option>Drbdadm</option> は設定ファイルを読み込んで、 <option>drbdsetup</option> や <option>drbdmeta</option> を呼び出してコマンドを実行する。</para>
+
+    <para><option>Drbdadm</option> は全リソース、リソース中のボリュームに対して操作が行える。サブコマンドには次のものがある。 <option>attach</option>, <option>detach</option>, <option>primary</option>, <option>secondary</option>, <option>invalidate</option>, <option>invalidate-remote</option>, <option>outdate</option>, <option>resize</option>, <option>verify</option>, <option>pause-sync</option>, <option>resume-sync</option>, <option>role</option>, <option>csytate</option>, <option>dstate</option>, <option>create-md</option>, <option>show-gi</option>, <option>get-gi</option>, <option>dump-md</option>, <option>wipe-md</option> 。これらは全リソースとボリュームに対して機能する。</para>
+
+    <para>リソースレベルのみのコマンドには次のものである。 <option>connect</option>, <option>disconnect</option>, <option>up</option>, <option>down</option>, <option>wait-connect</option> and <option>dump</option>。</para>
+  </refsect1>
+
+  <refsect1>
+    <title>Options</title>
+
+    <variablelist>
+      <varlistentry>
+        <term><option>-d</option>, <option>--dry-run</option></term>
+
+        <listitem>
+          <para>実行する <option>drbdsetup</option> コマンドを標準出力に書き出すが、実際にコマンドは実行しない。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-c</option>, <option>--config-file</option>
+        <replaceable>file</replaceable></term>
+
+        <listitem>
+          <para>drbdadm が使う設定ファイルを指定する。このパラメータを省略すると、 <option>/etc/drbd-84.conf</option>, <option>/etc/drbd-83.conf</option>, <option>/etc/drbd-08.conf</option>, <option>/etc/drbd.conf</option> が参照される。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-t</option>, <option>--config-to-test</option>
+        <replaceable>file</replaceable></term>
+
+        <listitem>
+          <para>drbdadm にチェックさせる設定ファイルを指定する。dump コマンドまたは sh-nop コマンドと共に使用する場合のみ有効である。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-s</option>, <option>--drbdsetup</option>
+        <replaceable>file</replaceable></term>
+
+        <listitem>
+          <para><option>drbdsetup</option> プログラムのフルパスを指定する。省略すると、自身のコマンド配置場所配下と、$PATH が参照される。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-m</option>, <option>--drbdmeta</option>
+        <replaceable>file</replaceable></term>
+
+        <listitem>
+          <para><option>drbdmeta</option> プログラムのフルパスを指定する。省略すると、自身のコマンド配置場所配下と、$PATH が参照される。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-S</option>, <option>--stacked</option></term>
+
+        <listitem>
+          <para>積み重ねた上位リソースに対する操作を指示する場合に指定する。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>-P</option>, <option>--peer</option></term>
+
+        <listitem>
+          <para>どの対向ノードと接続するかを指定する。リソースの定義に3台以上のホストを指定した場合にのみ必要である。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--</option> <replaceable>backend-options</replaceable></term>
+
+        <listitem>
+          <para>二重ハイフンの後に続くオプションはすべて <replaceable>backend-options</replaceable> として認識される。これらはバックエンドコマンドに渡される。つまり <option>drbdsetup</option>、<option>drbdmeta</option>、<option>drbd-proxy-ctl</option> などに渡される。</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsect1>
+
+  <refsect1>
+    <title>Commands</title>
+
+    <variablelist>
+      <varlistentry>
+        <term>attach</term>
+
+        <listitem>
+          <para>DRBD リソースに対応する低レベルのローカルブロックデバイスを接続する。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>detach</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>detach</secondary>
+            </indexterm>DRBD リソースデバイスから下位ストレージデバイスを切り離す。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>connect</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>connect</secondary>
+            </indexterm>リソースデバイスに対するネットワーク設定を有効にする。対応する接続先がすでに設定されていれば、2 台の DRBD デバイスは相互に接続される。リソース定義中に 3 台以上のホストを指定してある場合、接続先ホストを指定するために <option>--peer</option> も指定する必要がある。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>disconnect</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>disconnect</secondary>
+            </indexterm>リソースに対するネットワーク設定を無効にする。デバイスは当然ながらスタンドアローン状態になる。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>syncer</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>syncer</secondary>
+            </indexterm>デバイスの再同期に関するパラメータを読み込む。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>up</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>up</secondary>
+            </indexterm>attach と connect の両方を実行するショートカット。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>down</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>down</secondary>
+            </indexterm>attach と connect の両方を実行するショートカット。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>primary</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>primary</secondary>
+            </indexterm>リソースのデバイスをプライマリ状態に昇格する。DRBD が管理するデバイスにファイルシステムを作成したりそれをマウントする前に、必ずこのコマンドを実行する必要がある。 
+</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>secondary</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>secondary</secondary>
+            </indexterm>デバイスをセカンダリ状態に切り替える。接続された DRBD デバイスペアのどちらか一方しかプライマリ状態になれないので、このコマンドが必要である(設定ファイル中に <option>allow-two-primaries</option> が明示的に指定されている場合を除く)。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>invalidate</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>invalidate</secondary>
+            </indexterm><emphasis>ローカル</emphasis>下位デバイスが不整合になったと DRBD に判断させる。したがって、両デバイスが同期状態になるよう、DRBD はすべてのブロックを他方のノードからコピーする。このとき、レプリケーションリンクを確率させておく必要があり、そうでないと disconnected Secondary の状態になる。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>invalidate-remote</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>invalidate-remote</secondary>
+            </indexterm>invalidate コマンドに似ているが、<emphasis>対向</emphasis>ノードの下位デバイスが非同期状態になったとみなす。したがって、ローカルノードのデータが他ノードにコピーされる。このとき、レプリケーションリンクを確率させておく必要があり、そうでないと disconnected Primary の状態になる。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>resize</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>resize</secondary>
+            </indexterm>DRBD にディスクサイズ関連の状態を再評価させ、必要ならデバイスのサイズを変更する。例えば両ノードで下位デバイスのサイズを拡張した場合には、どちらか一方のノードでこのコマンドを実行した後で、DRBD は新しいサイズを受け入れる。新しいストレージ領域は同期される必要があるため、最低でも 1 つのプライマリノードが存在する場合にのみ、このコマンドは機能する。</para>
+
+	  <para><option>--size</option> オプションは DRBD デバイスで使用できるサイズのオンライン縮小に使用される。ファイルシステムがこの操作によって破損しないことはユーザ責任において確認する。</para>
+
+          <para><option>--assume-peer-has-space</option> オプションは、現在対向ノードに接続されていないデバイスのサイズ変更ができる。対向ノードのディスクサイズを同様に変更しないと、以降接続が失敗するので注意すること。</para>
+
+	  <para><option>--assume-clean</option> オプションは、既存のデバイスのサイズを変更し、新しい領域の同期を回避できる。空のストレージをデバイスに追加する場合に有用である。例:<programlisting format="linespecific">
+# drbdadm -- --assume-clean resize r0</programlisting>
+          </para>
+	  <para><option>--al-stripes</option> と <option>--al-stripe-size-kB</option> オプションはオンラインでアクティビティログのレイアウトを変更する。内部メタデータの場合には、同時に、下位デバイスのユーザーに見えるサイズ(<option>--size</option> を使用して)の縮小、または拡大が必要である。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>check-resize</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>check-resize</secondary>
+            </indexterm>内部メタデータの移動のために drbdmeta を呼び出す。DRBD の停止中に下位デバイスのサイズが変更された場合、次回の <option>attach</option> コマンドが成功するように、メタデータをデバイスの最後に移動する必要がある。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>create-md</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>create-md</secondary>
+            </indexterm>メタデータ領域を初期化する。DRBD リソースを初めて利用する場合、オンラインにする前にこのコマンドを実行する必要がある。問題が起きた場合には、次のマニュアルを参照：<citerefentry>
+              <refentrytitle>drbdmeta</refentrytitle>
+
+              <manvolnum>8</manvolnum>
+            </citerefentry></para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>get-gi</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>get-gi</secondary>
+            </indexterm>データ世代識別子の情報を簡潔なテキスト情報として表示する。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>show-gi</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>show-gi</secondary>
+            </indexterm>データ世代識別子の情報を、説明テキストとともにテキスト情報として表示する。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>dump-md</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>dump-md</secondary>
+            </indexterm>メタデータの全内容をテキスト形式でダンプする。ダンプにはビットマップとアクティビティログも含まれる。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>outdate</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>outdate</secondary>
+            </indexterm>メタデータに outdated フラグをたてる。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>adjust</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>adjust</secondary>
+            </indexterm>設定ファイルの設定値にしたがってデバイスの設定状態を調整する。実際に実行する前に、あらかじめ dry-run モードを実行して、得られた出力を吟味すべきである。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>wait-connect</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>wait-connect</secondary>
+            </indexterm>他ノードのデバイスと接続するまで待機する。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>role</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>role</secondary>
+            </indexterm>自機および対向ノードのデバイスの現在の役割を &quot;自機/対向ノード&quot; の形式で表示する。例、 Primary/Secondary</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>state</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>state</secondary>
+            </indexterm>廃止された &quot;role&quot; の別名。前項を参照。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>cstate</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>cstate</secondary>
+            </indexterm>両ノードのデバイスの接続状態を表示する。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>dump</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>dump</secondary>
+            </indexterm>設定ファイルを解析して標準出力に出力する。設定ファイルの構文上の修正を行うときに有用である。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>outdate</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>outdate</secondary>
+            </indexterm>ノードのデータ状態を outdated(無効) にする。通常は、他ノードの fence-peer ハンドラによってセットされる。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>verify</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>verify</secondary>
+            </indexterm>オンライン照合を開始する。両ノードのデータが比較され、不整合がないか検査される。進行状況は <filename moreinfo="none">/proc/drbd</filename> に表示される。非同期ブロックが見つかった場合でも、再同期は<emphasis>自動的には行われない</emphasis>。同期するには、検査の終了後に <command moreinfo="none">disconnect</command> してから <command moreinfo="none">connect</command> する。</para>
+
+          <para>drbd.conf マニュアルページのデータ整合性に関する説明も参照のこと。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>pause-sync</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>pause-sync</secondary>
+            </indexterm>ローカルメタデータの一時停止フラグをセットして、進行中の再同期を一時停止する。再開させるには、ローカルと他ノードの両方の一時停止フラグをクリアする必要がある。下位デバイスの RAID を再構成している場合などに、一時的に DRBD の再同期を停止できる。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>resume-sync</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>resume-sync</secondary>
+            </indexterm>自機の一時停止フラグをクリアする。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>new-current-uuid</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>new-current-uuid</secondary>
+            </indexterm>新しいカレント UUID を生成し、他のすべての UUID をローテートする。</para>
+
+          <para>初期同期時間を短縮するためにこのコマンドを利用できる。詳細については <option>drbdsetup</option> マニュアルページを参照。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>dstate</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>dstate</secondary>
+            </indexterm>下位デバイスの同期状況を表示する。(local/peer)</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>hidden-commands</term>
+
+        <listitem>
+          <para>このマニュアルに記載されていない全部のコマンドを表示する。</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsect1>
+
+  <refsect1>
+    <title>Version</title>
+
+    <simpara>このドキュメントは DRBD バージョン 8.4.0 向けに改訂されている。</simpara>
+  </refsect1>
+
+  <refsect1>
+    <title>Author</title>
+
+    <simpara>Written by Philipp Reisner <email>philipp.reisner@linbit.com</email> and Lars
+    Ellenberg <email>lars.ellenberg@linbit.com</email></simpara>
+  </refsect1>
+
+  <refsect1>
+    <title>Reporting Bugs</title>
+
+    <simpara>Report bugs to <email>drbd-user@lists.linbit.com</email>.</simpara>
+  </refsect1>
+
+  <refsect1>
+    <title>Copyright</title>
+
+    <simpara>Copyright 2001-2011 LINBIT Information Technologies, Philipp Reisner, Lars Ellenberg.
+    This is free software; see the source for copying conditions. There is NO warranty; not even
+    for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.</simpara>
+  </refsect1>
+
+  <refsect1>
+    <title>See Also</title>
+
+    <para><citerefentry>
+        <refentrytitle>drbd.conf</refentrytitle>
+
+        <manvolnum>5</manvolnum>
+      </citerefentry>, <citerefentry>
+        <refentrytitle>drbd</refentrytitle>
+
+        <manvolnum>8</manvolnum>
+      </citerefentry>, <citerefentry>
+        <refentrytitle>drbddisk</refentrytitle>
+
+        <manvolnum>8</manvolnum>
+      </citerefentry>, <citerefentry>
+        <refentrytitle>drbdsetup</refentrytitle>
+
+        <manvolnum>8</manvolnum>
+      </citerefentry>, <citerefentry>
+        <refentrytitle>drbdmeta</refentrytitle>
+
+        <manvolnum>8</manvolnum>
+      </citerefentry> and the
+      <ulink url="http://www.drbd.org/"><citetitle>DRBD project web site</citetitle></ulink></para>
+
+  </refsect1>
+</refentry>

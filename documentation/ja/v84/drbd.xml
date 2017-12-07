@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
+<refentry id="re-drbd">
+  <refnamediv> <refname>drbd</refname> <refpurpose>DRBD の起動と停止スクリプト</refpurpose> </refnamediv> <refentryinfo> <productname>DRBD</productname> <productnumber>8.3.2</productnumber>
+    <date>15 Oct 2008</date>
+  </refentryinfo>
+  <refmeta>
+    <refentrytitle>drbd</refentrytitle>
+    <manvolnum>8</manvolnum>
+    <refmiscinfo class="manual">System Administration</refmiscinfo>
+  </refmeta>
+  <refsynopsisdiv>
+    <cmdsynopsis sepchar=" ">
+      <command moreinfo="none">/etc/init.d/drbd</command>
+      <arg choice="opt" rep="norepeat">
+        <replaceable>resource</replaceable>
+      </arg>
+      <arg choice="req" rep="norepeat">
+        <group choice="plain" rep="norepeat">
+          <arg choice="req" rep="norepeat">start</arg>
+          <arg choice="req" rep="norepeat">stop</arg>
+          <arg choice="req" rep="norepeat">status</arg>
+          <arg choice="req" rep="norepeat">reload</arg>
+          <arg choice="req" rep="norepeat">restart</arg>
+          <arg choice="req" rep="norepeat">force-reload</arg>
+        </group>
+      </arg>
+    </cmdsynopsis>
+  </refsynopsisdiv>
+  <refsect1>
+    <title>Introduction</title>
+    <para>System V スタイルの init システムで drbd を起動および停止するには、 <option>/etc/init.d/drbd</option> スクリプトを使用する。</para>
+    <para><option>/etc/init.d/drbd</option> を使用するには、 drbd 構成ファイルにリソース、ホスト、その他の設定オプションを定義する必要がある。詳細については <option>/etc/drbd.conf</option> を参照。<replaceable>resource</replaceable> を省略すると、構成ファイルにリストされているすべてのリソースが構成される。</para>
+    <para>このスクリプトは、<quote>Do you want to abort waiting for other server and make this one primary?</quote> と尋ねるかもしれない。
+  </para>
+    <para>他のノードを修復できないことが確かな場合は、<quote>yes</quote> でこの質問に答える。</para>
+  </refsect1>
+  <refsect1>
+    <title>Version</title>
+    <simpara>このドキュメントは DRBD バージョン 8.3.2 向けに改訂されている。</simpara>
+  </refsect1>
+  <refsect1>
+    <title>Author</title>
+    <simpara>    Written by Philipp Reisner <email>philipp.reisner@linbit.com</email>
+            and Lars Ellenberg <email>lars.ellenberg@linbit.com</email>.
+  </simpara>
+  </refsect1>
+  <refsect1>
+    <title>Reporting Bugs</title>
+    <simpara>    Report bugs to <email>drbd-user@lists.linbit.com</email>.
+  </simpara>
+  </refsect1>
+  <refsect1>
+    <title>Copyright</title>
+    <simpara>Copyright 2001-2008 LINBIT Information Technologies,
+Philipp Reisner, Lars Ellenberg. This  is  free software;
+see the source for copying conditions.  There is NO warranty;
+not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  </simpara>
+  </refsect1>
+  <refsect1>
+    <title>See Also</title>
+    <para><citerefentry><refentrytitle>drbd.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
+    <citerefentry><refentrytitle>drbddisk</refentrytitle><manvolnum>8</manvolnum></citerefentry>,
+    <citerefentry><refentrytitle>drbdsetup</refentrytitle><manvolnum>8</manvolnum></citerefentry><citerefentry><refentrytitle>drbdadm</refentrytitle><manvolnum>8</manvolnum></citerefentry><ulink url="http://www.drbd.org/"><citetitle>DRBD Homepage</citetitle></ulink></para>
+  </refsect1>
+</refentry>
