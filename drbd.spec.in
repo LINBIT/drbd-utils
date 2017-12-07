@@ -358,8 +358,6 @@ management utility.
 %package man-ja
 Summary: Japanese man pages for DRBD
 Group: System Environment/Base
-Requires: drbd-utils = %{version}-%{release}
-@RPM_REQ_BASH_COMPLETION@
 @RPM_SUBPACKAGE_NOARCH@
 
 %description man-ja
@@ -372,6 +370,9 @@ This package contains Japanese man pages for DRBD.
 %{_mandir}/ja/man8/drbdadm-*
 %{_mandir}/ja/man5/drbd.conf-*
 %{_mandir}/ja/man8/drbdmeta-*
+%if %{with heartbeat}
+%{_mandir}/ja/man8/drbddisk-*
+%endif
 # %if %{with drbdmon}
 # %{_mandir}/ja/man8/drbdmon-*
 # %endif
