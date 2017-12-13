@@ -13,8 +13,8 @@ Build-Depends: bash-completion,
                xsltproc
 Standards-Version: 3.9.5
 Homepage: http://www.drbd.org/
-Vcs-Browser: http://git.linbit.com/drbd-utils.git/
-Vcs-Git: git://git.linbit.com/drbd-utils.git/
+Vcs-Browser: https://github.com/LINBIT/drbd-utils
+Vcs-Git: https://github.com/LINBIT/drbd-utils.git
 
 Package: drbd-utils
 Architecture: linux-any

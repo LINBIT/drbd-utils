@@ -11,8 +11,8 @@ Uploaders: Philipp Reisner <philipp.reisner@linbit.com>, Lars Ellenberg <lars.el
 Build-Depends: debhelper (>= 7), flex, xsltproc, docbook-xsl, udev
 Standards-Version: 3.9.5
 Homepage: http://www.drbd.org/
-Vcs-Browser: http://git.linbit.com/drbd-utils.git/
-Vcs-Git: git://git.linbit.com/drbd-utils.git/
+Vcs-Browser: https://github.com/LINBIT/drbd-utils
+Vcs-Git: https://github.com/LINBIT/drbd-utils.git
 
 Package: drbd-utils
 Architecture: linux-any
