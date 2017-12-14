@@ -3,8 +3,9 @@ Latest:
  For even more detail, use "git log" or visit
  http://git.linbit.com/drbd-utils.git
 
-9.2.0rc1
+9.2.0rc2
 --------
+ * Japanese man pages
  * initial vertias cluster agent support
  * quorum integration (including agents)
  * improve drbd9 (mesh)/drbd-proxy integration
