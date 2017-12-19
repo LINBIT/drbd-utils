@@ -7,20 +7,26 @@
 ###
 
 . ${VCS_HOME}/bin/drbd_inc.sh
-RESNAME=$1
+RESNAME=$1; shift;
+. $VCS_HOME/bin/ag_i18n_inc.sh
 
-ST=$( ${DRBDADM} cstate "${RESNAME}" )
+VCSAG_SET_ENVS $RESNAME
+
+VCSAG_GET_ATTR_VALUE "ResName" -1 1 "$@"
+DRBDRESNAME=${VCSAG_ATTR_VALUE}
+
+ST=$( ${DRBDADM} cstate "${DRBDRESNAME}" )
 CS=${ST%/*}
 case $CS in
 	Connected)
-		ST=$( ${DRBDADM} dstate "${RESNAME}" )
+		ST=$( ${DRBDADM} dstate "${DRBDRESNAME}" )
 		DS=${ST%/*}
 		case $DS in
 			UpToDate)
 				exit 110 # perfect situation
 				;;
 			Inconsistent)
-				if [ -n "$( ${DRBDSETUP} events2 --now "${RESNAME}" | grep "peer-device.*name:${RESNAME}.*replication:SyncTarget.*")" ]; then
+				if [ -n "$( ${DRBDSETUP} events2 --now "${DRBDRESNAME}" | grep "peer-device.*name:${DRBDRESNAME}.*replication:SyncTarget.*")" ]; then
 					exit 101 # connected + SyncTarget, so can become Primary
 				fi
 				exit 100 # offline
@@ -30,10 +36,7 @@ case $CS in
 				;;
 		esac
 		;;
-	StandAlone)
-		exit 100 # offline
-		;;
 	*)
-		exit 99 # unknown
+		exit 100 # offline
 		;;
 esac

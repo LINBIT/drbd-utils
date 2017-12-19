@@ -7,7 +7,13 @@
 ###
 
 . ${VCS_HOME}/bin/drbd_inc.sh
-RESNAME=$1
+RESNAME=$1; shift;
+. $VCS_HOME/bin/ag_i18n_inc.sh
 
-${DRBDADM} adjust "${RESNAME}"
+VCSAG_SET_ENVS $RESNAME
+
+VCSAG_GET_ATTR_VALUE "ResName" -1 1 "$@"
+DRBDRESNAME=${VCSAG_ATTR_VALUE}
+
+${DRBDADM} primary "${DRBDRESNAME}"
 exit 0
