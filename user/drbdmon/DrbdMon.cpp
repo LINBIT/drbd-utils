@@ -626,24 +626,21 @@ void DrbdMon::create_connection(PropsMap& event_props)
     {
         DrbdResource& res = get_resource(event_props);
 
-        try
-        {
-            std::unique_ptr<DrbdConnection> conn(DrbdConnection::new_from_props(event_props));
-            conn->update(event_props);
-            static_cast<void> (conn->update_state_flags());
-            res.add_connection(conn.get());
-            StateFlags::state res_last_state = res.get_state();
-            StateFlags::state res_new_state = res.child_state_flags_changed();
-            problem_counter_update(res_last_state, res_new_state);
-            static_cast<void> (conn.release());
-        }
-        catch (dsaext::DuplicateInsertException& dup_exc)
-        {
-            log.add_entry(
-                MessageLog::log_level::ALERT,
-                "Duplicate DRBD connection creation reported by the DRBD events source"
-            );
-        }
+        std::unique_ptr<DrbdConnection> conn(DrbdConnection::new_from_props(event_props));
+        conn->update(event_props);
+        static_cast<void> (conn->update_state_flags());
+        res.add_connection(conn.get());
+        StateFlags::state res_last_state = res.get_state();
+        StateFlags::state res_new_state = res.child_state_flags_changed();
+        problem_counter_update(res_last_state, res_new_state);
+        static_cast<void> (conn.release());
+    }
+    catch (dsaext::DuplicateInsertException& dup_exc)
+    {
+        log.add_entry(
+            MessageLog::log_level::ALERT,
+            "Duplicate DRBD connection creation reported by the DRBD events source"
+        );
     }
     catch (EventObjectException& nonexistent_object_exc)
     {
@@ -666,6 +663,13 @@ void DrbdMon::create_device(PropsMap& event_props)
         StateFlags::state res_new_state = res.child_state_flags_changed();
         problem_counter_update(res_last_state, res_new_state);
         static_cast<void> (vol.release());
+    }
+    catch (dsaext::DuplicateInsertException& dup_exc)
+    {
+        log.add_entry(
+            MessageLog::log_level::ALERT,
+            "Duplicate DRBD device (volume) creation reported by the DRBD events source"
+        );
     }
     catch (EventObjectException& nonexistent_object_exc)
     {
@@ -691,6 +695,13 @@ void DrbdMon::create_peer_device(PropsMap& event_props)
         StateFlags::state res_new_state = res.child_state_flags_changed();
         problem_counter_update(res_last_state, res_new_state);
         static_cast<void> (vol.release());
+    }
+    catch (dsaext::DuplicateInsertException& dup_exc)
+    {
+        log.add_entry(
+            MessageLog::log_level::ALERT,
+            "Duplicate DRBD peer device (peer volume) creation reported by the DRBD events source"
+        );
     }
     catch (EventObjectException& nonexistent_object_exc)
     {
