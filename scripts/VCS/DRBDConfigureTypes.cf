@@ -1,4 +1,4 @@
-type FileOnOff (
-	static str ArgList[] = { ResName };
-	str ResName;
+type DRBDConfigure (
+	static str ArgList[] = { ResName }
+	str ResName
 )

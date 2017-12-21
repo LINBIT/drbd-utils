@@ -1,30 +1,35 @@
 #!/bin/sh
-# FileOnOff Monitor script
-# Expects Resource Name
+# DRBDPrimary monitor entry point
+# Expects DRBD Resource Name in ResName attribute
 #
+# License: GPL-2.0
 # Copyright (C) 2017 LINBIT HA-Solutions GmbH
 # Roland Kammerer <roland.kammerer@linbit.com>
+# Lars Ellenberg <lars.ellenberg@linbit.com>
 ###
 
-. ${VCS_HOME}/bin/drbd_inc.sh
-RESNAME=$1; shift;
-. $VCS_HOME/bin/ag_i18n_inc.sh
+LINBITvcsag_bin=/opt/LINBITvcsag/bin
+drbd_inc=$LINBITvcsag_bin/drbd_inc.sh
 
-VCSAG_SET_ENVS $RESNAME
+. $drbd_inc || { >&2 echo "$0: Failed to source $drbd_inc"; exit 1; }
 
-VCSAG_GET_ATTR_VALUE "ResName" -1 1 "$@"
-DRBDRESNAME=${VCSAG_ATTR_VALUE}
+drbd_resource_state=$( ${DRBDSETUP} events2 --now "${DRBDRESNAME}" )
+VCSAG_LOGDBG_MSG 3 "drbd_resource_state: $drbd_resource_state"
 
-ST=$( ${DRBDADM} role "${DRBDRESNAME}" )
-ROLE=${ST%/*}
-case $ROLE in
-	Primary)
-		exit 101 # online (101 as a start, inc confidence later)
+role_from_drbd_state "$drbd_resource_state"
+role=$?
+
+case $role in
+	$DRBD_ROLE_PRI)
+		confidence_from_drbd_state "$drbd_resource_state"
+		confidence=$?
+		exit $confidence
 		;;
-	Secondary)
-		exit 100 # offline
+	$DRBD_ROLE_SEC)
+		exit $VCSAG_RES_OFFLINE
 		;;
 	*)
-		exit 99 # unknown
+		VCSAG_LOG_MSG E "Unknown role for $DRBDRESNAME, did you forget to link with a DRBDConfigure type resource?" 0
+		exit $VCSAG_RES_OFFLINE
 		;;
 esac

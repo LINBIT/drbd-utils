@@ -1,19 +1,34 @@
 #!/bin/sh
-# FileOnOff Offline script
-# Expects Resource Name
+# DRBDPrimary offline entry point
+# Expects DRBD Resource Name in ResName attribute
 #
+# License: GPL-2.0
 # Copyright (C) 2017 LINBIT HA-Solutions GmbH
 # Roland Kammerer <roland.kammerer@linbit.com>
+# Lars Ellenberg <lars.ellenberg@linbit.com>
 ###
 
-. ${VCS_HOME}/bin/drbd_inc.sh
-RESNAME=$1; shift;
-. $VCS_HOME/bin/ag_i18n_inc.sh
+LINBITvcsag_bin=/opt/LINBITvcsag/bin
+drbd_inc=$LINBITvcsag_bin/drbd_inc.sh
 
-VCSAG_SET_ENVS $RESNAME
+. $drbd_inc || { >&2 echo "$0: Failed to source $drbd_inc"; exit 1; }
 
-VCSAG_GET_ATTR_VALUE "ResName" -1 1 "$@"
-DRBDRESNAME=${VCSAG_ATTR_VALUE}
+drbd_resource_state=$( ${DRBDSETUP} events2 --now "${DRBDRESNAME}" )
+VCSAG_LOGDBG_MSG 3 "drbd_resource_state: $drbd_resource_state"
 
-${DRBDADM} secondary "${DRBDRESNAME}"
-exit 0
+role_from_drbd_state "$drbd_resource_state"
+role=$?
+
+case $role in
+	$DRBD_ROLE_UNNKOWN)
+		VCSAG_LOGDBG_MSG 1 "apparently not even up" 0
+		;;
+	$DRBD_ROLE_SEC)
+		VCSAG_LOGDBG_MSG 1 "already secondary" 0
+		;;
+	$DRBD_ROLE_PRI)
+		VCSAG_LOGDBG_MSG 1 "trying to demote" 0
+		${DRBDADM} secondary "${DRBDRESNAME}" || exit $VCSAG_EP_FAILED
+		;;
+esac
+exit $VCSAG_EP_DONE

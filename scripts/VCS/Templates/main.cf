@@ -1,0 +1,66 @@
+include "types.cf"
+include "DRBDConfigureTypes.cf"
+include "DRBDPrimaryTypes.cf"
+
+cluster linbittestcluster (
+	UserNames = { admin = OoJaijegaolaiJaebi }
+	Administrators = { admin }
+	)
+
+system linbit01 (
+	)
+
+system linbit02 (
+	)
+
+group DRBDGrp (
+	SystemList = { linbit01 = 0, linbit02 = 1 }
+	Parallel = 1
+	AutoStartList = { linbit01, linbit02 }
+	)
+
+	DRBDConfigure r0conf (
+		ResName = r0
+		)
+
+
+
+	// resource dependency tree
+	//
+	//	group DRBDGrp
+	//	{
+	//	DRBDConfigure r0conf
+	//	}
+
+
+group DRBDPriGrp (
+	SystemList = { linbit01 = 0, linbit02 = 1 }
+	AutoStartList = { linbit01, linbit02 }
+	)
+
+	DRBDPrimary r0primary (
+		ResName = r0
+		)
+
+	Mount r0mount (
+		MountPoint = "/mnt/r0"
+		BlockDevice = "/dev/drbd0"
+		FSType = ext4
+		FsckOpt = "-y"
+		)
+
+	requires group DRBDGrp online local hard
+	r0mount requires r0primary
+
+
+	// resource dependency tree
+	//
+	//	group DRBDPriGrp
+	//	{
+	//	Mount r0mount
+	//	    {
+	//	    DRBDPrimary r0primary
+	//	    }
+	//	}
+
+
