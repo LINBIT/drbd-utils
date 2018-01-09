@@ -65,7 +65,7 @@ On all systems,
 #   hatype -modify $agent SourceFile "./${agent}Types.cf"
 #   hatype -modify $agent AgentDirectory "$LINBITvcsag/bin/$agent"
 #   hatype -modify $agent ArgList ResName
-#   hatype -add $agent ResName -string
+#   haattr -add $agent ResName -string
 # done
 # haconf -dump -makero
 ```
