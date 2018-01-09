@@ -47,8 +47,8 @@ On all systems,
 - Copy `DRBDConfigure`, `DRBDPrimary`, and `drbd_inc.sh` to `/opt/LINBITvcsag/bin/`
 - Change directory to these directories and create the necessary symlinks:
 ```
-# cd /opt/LINBIT/vcsag/bin/DRBDConfigure && ln -s ${VCS_HOME}/bin/Script51Agent DRBDConfigureAgent
-# cd /opt/LINBIT/vcsag/bin/DRBDPrimary && ln -s ${VCS_HOME}/bin/Script51Agent DRBDPrimaryAgent
+# cd /opt/LINBITvcsag/bin/DRBDConfigure && ln -s ${VCS_HOME}/bin/Script51Agent DRBDConfigureAgent
+# cd /opt/LINBITvcsag/bin/DRBDPrimary && ln -s ${VCS_HOME}/bin/Script51Agent DRBDPrimaryAgent
 ```
 - Make the types known to VCS:
 ```
