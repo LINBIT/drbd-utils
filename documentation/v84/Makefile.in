@@ -163,11 +163,9 @@ ifeq ($(WITH_84_SUPPORT),yes)
 	done
 endif
 
-html:	$(MANPAGES:.8=.html)
-
-pdf:	$(MANPAGES:.8=.pdf)
-
-ps:	$(MANPAGES:.8=.ps)
+html:	$(addsuffix .html,$(basename $(MANPAGES)))
+pdf:	$(addsuffix .pdf,$(basename $(MANPAGES)))
+ps:	$(addsuffix .ps,$(basename $(MANPAGES)))
 
 drbdsetup.8: drbdsetup.xml $(drbdsetup_X.xml)
 
