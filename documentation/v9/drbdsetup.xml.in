@@ -7,11 +7,11 @@
   &drbdsetup_options;
 
   <refentryinfo>
-    <date>3 December 2011</date>
+    <date>17 January 2018</date>
 
     <productname>DRBD</productname>
 
-    <productnumber>9.0.0</productnumber>
+    <productnumber>9.0.x</productnumber>
   </refentryinfo>
 
   <refmeta>
@@ -1225,7 +1225,7 @@ drbd0 node-id:1 role:Primary suspended:no
   <refsect1>
     <title>Copyright</title>
 
-    <simpara>Copyright 2001-2012 LINBIT Information Technologies, Philipp Reisner, Lars Ellenberg.
+    <simpara>Copyright 2001-2018 LINBIT Information Technologies, Philipp Reisner, Lars Ellenberg.
     This is free software; see the source for copying conditions. There is NO warranty; not even
     for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.</simpara>
   </refsect1>
@@ -1239,10 +1239,6 @@ drbd0 node-id:1 role:Primary suspended:no
         <manvolnum>5</manvolnum>
       </citerefentry>, <citerefentry>
         <refentrytitle>drbd</refentrytitle>
-
-        <manvolnum>8</manvolnum>
-      </citerefentry>, <citerefentry>
-        <refentrytitle>drbddisk</refentrytitle>
 
         <manvolnum>8</manvolnum>
       </citerefentry>, <citerefentry>
