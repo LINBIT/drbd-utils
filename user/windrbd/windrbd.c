@@ -31,7 +31,7 @@ int assign_drive_letter(int minor, const char *drive)
 
 	wprintf(L"Assigning drive letter %ls to minor %d (device %ls)\n", t_drive, minor, t_device);
 
-	ret = DefineDosDevice(DDD_RAW_TARGET_PATH, t_device, t_drive);
+	ret = DefineDosDevice(DDD_RAW_TARGET_PATH, t_drive, t_device);
 	if (!ret) {
 		int err;
 		err = GetLastError();
