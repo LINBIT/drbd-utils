@@ -1,6 +1,19 @@
+Note: We are currently under development, the final version
+won't require the patch and the separate make in windrbd and
+the DESTDIR. It will also be integrated in the master branch
+of drbd-utils.
+
 To compile this under Cygwin (tested with Windows 7), do
 
 ./autogen.sh
 ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --without-83support --without-84support --without-drbdmon
 make
+# (should checkout drbd-headers at eaea20, TODO: check if that works)
+cd drbd-headers
+patch -p 1 < ../0001-windrbd-intentional-diskless-flag.patch
+cd ..
+make
 make install DESTDIR=""
+cd user/windrbd
+make
+make install
