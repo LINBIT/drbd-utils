@@ -1,0 +1,6 @@
+To compile this under Cygwin (tested with Windows 7), do
+
+./autogen.sh
+./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --without-83support --without-84support --without-drbdmon
+make
+make install DESTDIR=""
