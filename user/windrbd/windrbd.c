@@ -13,8 +13,7 @@ void usage_and_exit(void)
 
 int assign_drive_letter(int minor, const char *drive)
 {
-	LPTSTR t_device, t_drive;
-	int device_len, drive_len;
+	wchar_t t_device[100], t_drive[100];
 	BOOL ret;
 
 	if (!isalpha(drive[0])) {
@@ -27,20 +26,8 @@ int assign_drive_letter(int minor, const char *drive)
 			usage_and_exit();
 		}
 	}
-	device_len = swprintf(NULL, 0, L"\\Device\\Drbd%d", minor)+1;
-	drive_len = swprintf(NULL, 0, L"%s", drive)+1;
-
-	t_device = malloc(device_len * sizeof(*t_device));
-	if (t_device == NULL) {
-		fprintf(stderr, "Sorry out of memory.\n");
-	}
-	t_drive = malloc(drive_len * sizeof(*t_drive));
-	if (t_drive == NULL) {
-		fprintf(stderr, "Sorry out of memory.\n");
-	}
-
-	swprintf(t_device, device_len, L"\\Device\\Drbd%d", minor);
-	swprintf(t_drive, drive_len, L"%s", drive);
+	swprintf(t_device, sizeof(t_device) / sizeof(*t_device) -1, L"\\Device\\Drbd%d", minor);
+	swprintf(t_drive, sizeof(t_drive) / sizeof(*t_drive) -1, L"%s", drive);
 
 	wprintf(L"Assigning drive letter %ls to minor %d (device %ls)\n", t_drive, minor, t_device);
 
