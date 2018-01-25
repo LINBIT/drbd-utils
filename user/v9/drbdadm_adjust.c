@@ -720,7 +720,7 @@ static struct d_volume *matching_volume(struct d_volume *conf_vol, struct volume
 
 
 static void
-adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, int can_do_proxy)
+adjust_net(const struct cfg_ctx *ctx, struct d_resource* running)
 {
 	struct connection *conn;
 
@@ -786,7 +786,8 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, int can_do_pro
 		}
 
 		path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
-		if (path->my_proxy && can_do_proxy)
+		if (path->my_proxy && !path->can_not_do_proxy &&
+		    hostname_in_list(hostname, &path->my_proxy->on_hosts))
 			proxy_reconf(&tmp_ctx, running_conn);
 	}
 }
@@ -916,8 +917,6 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 	/* necessary per volume actions are flagged
 	 * in the vol->adj_* members. */
 
-	int can_do_proxy = 1;
-
 	set_me_in_resource(ctx->res, true);
 	set_peer_in_resource(ctx->res, true);
 
@@ -940,7 +939,6 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 			struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
 			struct cfg_ctx tmp_ctx = { .res = ctx->res };
 			char *show_conn;
-			int r;
 			int pid,argc;
 			char *argv[20];
 
@@ -968,8 +966,7 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 
 			/* actually parse "drbd-proxy-ctl show" output */
 			yyin = m_popen(&pid, argv);
-			r = !parse_proxy_options_section(&path->my_proxy);
-			can_do_proxy &= r;
+			configured_path->can_not_do_proxy = parse_proxy_options_section(&path->my_proxy);
 			fclose(yyin);
 
 			waitpid(pid,0,0);
@@ -991,7 +988,7 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 		schedule_deferred_cmd(&res_options_defaults_cmd, ctx, CFG_RESOURCE);
 
 	if (adjust_flags & ADJUST_NET)
-		adjust_net(ctx, running, can_do_proxy);
+		adjust_net(ctx, running);
 
 	if (adjust_flags & ADJUST_DISK)
 		adjust_disk(ctx, running);
