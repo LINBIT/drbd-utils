@@ -3,6 +3,10 @@ Latest:
  For even more detail, use "git log" or visit
  http://git.linbit.com/drbd-utils.git
 
+9.2.1
+--------
+ * fix drbdadm adjust when proxy is not local
+
 9.2.0
 --------
  * Japanese man pages
