@@ -357,7 +357,7 @@ static struct adm_cmd dump_xml_cmd = {"dump-xml", adm_dump_xml, ACF1_DUMP};
 static struct adm_cmd create_md_cmd = {"create-md", adm_create_md, &create_md_ctx, ACF1_MINOR_ONLY };
 static struct adm_cmd show_gi_cmd = {"show-gi", adm_setup_and_meta, ACF1_PEER_DEVICE .disk_required = 1};
 static struct adm_cmd get_gi_cmd = {"get-gi", adm_setup_and_meta, ACF1_PEER_DEVICE .disk_required = 1};
-static struct adm_cmd dump_md_cmd = {"dump-md", adm_drbdmeta, ACF1_MINOR_ONLY };
+static struct adm_cmd dump_md_cmd = {"dump-md", adm_drbdmeta, &dump_md_ctx, ACF1_MINOR_ONLY };
 static struct adm_cmd wipe_md_cmd = {"wipe-md", adm_drbdmeta, ACF1_MINOR_ONLY };
 static struct adm_cmd apply_al_cmd = {"apply-al", adm_drbdmeta, ACF1_MINOR_ONLY };
 static struct adm_cmd forget_peer_cmd = {"forget-peer", adm_forget_peer, ACF1_DISCONNECT };
