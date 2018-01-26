@@ -113,6 +113,20 @@ struct d_host_info *find_host_info_by_name(struct d_resource* res, char *name)
 	return NULL;
 }
 
+static struct d_host_info *find_host_info_by_ha(struct d_resource* res, struct hname_address *ha)
+{
+	struct d_host_info *host;
+
+	if (!ha->faked_hostname)
+		return find_host_info_by_name(res, ha->name);
+
+	for_each_host(host, &res->all_hosts)
+		if (!strcmp(ha->name, names_to_str_c(&host->on_hosts, '_')))
+			return host;
+
+	return NULL;
+}
+
 static struct d_host_info *find_host_info_by_address(struct d_resource* res, struct d_address *address)
 {
 	struct d_host_info *host;
@@ -172,7 +186,7 @@ static void _set_host_info_in_host_address_pairs(struct d_resource *res,
 			/* The name will be used for nice comments only ... */
 			ha->name = strdup(names_to_str_c(&host_info->on_hosts, '_'));
 		} else {
-			host_info = find_host_info_by_name(res, ha->name);
+			host_info = find_host_info_by_ha(res, ha);
 		}
 		if (!host_info && !strcmp(ha->name, "_remote_host")) {
 			if (conn->peer)
@@ -408,7 +422,14 @@ static void set_peer_in_connection(struct d_resource* res, struct connection *co
 			if (conn->peer) {
 				host_info = conn->peer;
 			} else {
-				host_info = find_host_info_by_name(res, candidate->name);
+				host_info = find_host_info_by_ha(res, candidate);
+				if (!host_info) {
+					err("%s:%d: in connection in resource %s:\n"
+					    "\tCan not find host_info for %s\n",
+					    res->config_file, conn->config_line, res->name, candidate->name);
+					config_valid = 0;
+					return;
+				}
 				conn->peer = host_info;
 			}
 			path->peer_address = candidate->address.addr ? &candidate->address : &host_info->address;
