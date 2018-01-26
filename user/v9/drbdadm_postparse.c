@@ -514,9 +514,9 @@ void set_peer_in_resource(struct d_resource* res, int peer_required)
 		add_no_bitmap_opt(res);
 }
 
-void set_disk_in_res(struct d_resource *res)
+void set_stacked_disk_in_res(struct d_resource *res)
 {
-	struct d_host_info *host;
+	struct d_host_info *host, *lower_host;
 	struct d_volume *a, *b;
 
 	if (res->ignore)
@@ -526,41 +526,40 @@ void set_disk_in_res(struct d_resource *res)
 		if (!host->lower)
 			continue;
 
-		if (host->lower->ignore)
-			continue;
+		for_each_host(lower_host, &host->lower->all_hosts) {
+			check_volume_sets_equal(res, host, lower_host);
+			if (!config_valid)
+				/* don't even bother for broken config. */
+				continue;
 
-		check_volume_sets_equal(res, host, host->lower->me);
-		if (!config_valid)
-			/* don't even bother for broken config. */
-			continue;
-
-		/* volume lists are sorted on vnr */
-		a = STAILQ_FIRST(&host->volumes);
-		b = STAILQ_FIRST(&host->lower->me->volumes);
-		while (a) {
-			while (b && a->vnr > b->vnr) {
-				/* Lower resource has more volumes.
-				 * Probably unusual, but we decided
-				 * that it should be legal.
-				 * Skip those that do not match */
-				b = STAILQ_NEXT(b, link);
-			}
-			if (a && b && a->vnr == b->vnr) {
-				if (b->device)
-					m_asprintf(&a->disk, "%s", b->device);
-				else
-					m_asprintf(&a->disk, "/dev/drbd%u", b->device_minor);
-				/* stacked implicit volumes need internal meta data, too */
-				if (!a->meta_disk)
-					m_asprintf(&a->meta_disk, "internal");
-				if (!a->meta_index)
-					m_asprintf(&a->meta_index, "internal");
-				a = STAILQ_NEXT(a, link);
-				b = STAILQ_NEXT(b, link);
-			} else {
-				/* config_invalid should have been set
-				 * by check_volume_sets_equal */
-				assert(0);
+			/* volume lists are sorted on vnr */
+			a = STAILQ_FIRST(&host->volumes);
+			b = STAILQ_FIRST(&lower_host->volumes);
+			while (a) {
+				while (b && a->vnr > b->vnr) {
+					/* Lower resource has more volumes.
+					 * Probably unusual, but we decided
+					 * that it should be legal.
+					 * Skip those that do not match */
+					b = STAILQ_NEXT(b, link);
+				}
+				if (a && b && a->vnr == b->vnr) {
+					if (b->device)
+						m_asprintf(&a->disk, "%s", b->device);
+					else
+						m_asprintf(&a->disk, "/dev/drbd%u", b->device_minor);
+					/* stacked implicit volumes need internal meta data, too */
+					if (!a->meta_disk)
+						m_asprintf(&a->meta_disk, "internal");
+					if (!a->meta_index)
+						m_asprintf(&a->meta_index, "internal");
+					a = STAILQ_NEXT(a, link);
+					b = STAILQ_NEXT(b, link);
+				} else {
+					/* config_invalid should have been set
+					 * by check_volume_sets_equal */
+					assert(0);
+				}
 			}
 		}
 	}
@@ -1161,7 +1160,7 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 	// Needs "me" set already
 	for_each_resource(res, resources)
 		if (res->stacked_on_one)
-			set_disk_in_res(res);
+			set_stacked_disk_in_res(res);
 
 	for_each_resource(res, resources)
 		fixup_peer_devices(res);
