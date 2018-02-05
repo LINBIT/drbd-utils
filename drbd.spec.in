@@ -353,6 +353,7 @@ management utility.
 %config %{_sysconfdir}/bash_completion.d/drbdadm*
 %endif # with bashcompletion
 
+%if %{with 84support}
 %if %{without manual}
 %else
 %package man-ja
@@ -393,6 +394,7 @@ done
 rm -f %{_mandir}/ja/man5/drbd.conf.5.gz
 rm -f %{_mandir}/ja/man8/drbdmon.8.gz
 %endif # without manual
+%endif # with 84support
 
 %prep
 %setup -q -n drbd-utils-%{version}
