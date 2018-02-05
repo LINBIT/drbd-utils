@@ -192,8 +192,7 @@ This packages includes the DRBD administration tools.
 %config(noreplace) %{_sysconfdir}/drbd.conf
 %dir %{_sysconfdir}/drbd.d
 %config(noreplace) %{_sysconfdir}/drbd.d/global_common.conf
-%if %{without manual}
-%else
+%if %{with manual}
 %{_mandir}/man8/drbd-*
 %{_mandir}/man8/drbdsetup-*
 %{_mandir}/man8/drbdadm-*
@@ -330,8 +329,7 @@ resource manager (in v1 compatibility mode).
 %{_sysconfdir}/ha.d/resource.d/drbdupper
 
 %defattr(-,root,root,-)
-%if %{without manual}
-%else
+%if %{with manual}
 %{_mandir}/man8/drbddisk-*
 %endif
 %endif # with heartbeat
@@ -354,8 +352,7 @@ management utility.
 %endif # with bashcompletion
 
 %if %{with 84support}
-%if %{without manual}
-%else
+%if %{with manual}
 %package man-ja
 Summary: Japanese man pages for DRBD
 Group: System Environment/Base
@@ -373,7 +370,7 @@ This package contains Japanese man pages for DRBD.
 %{_mandir}/ja/man8/drbdmeta-*
 %if %{with heartbeat}
 %{_mandir}/ja/man8/drbddisk-*
-%endif
+%endif # with heartbeat
 # %if %{with drbdmon}
 # %{_mandir}/ja/man8/drbdmon-*
 # %endif
@@ -393,7 +390,7 @@ for f in drbd drbdadm drbdmeta drbdsetup; do
 done
 rm -f %{_mandir}/ja/man5/drbd.conf.5.gz
 rm -f %{_mandir}/ja/man8/drbdmon.8.gz
-%endif # without manual
+%endif # with manual
 %endif # with 84support
 
 %prep
@@ -447,8 +444,7 @@ rm -rf %{buildroot}
 %if %{initscripttype} == "sysv"
 chkconfig --add drbd
 %endif
-%if %{without manual}
-%else
+%if %{with manual}
 for f in drbd drbdadm drbdmeta drbdsetup; do
     ln -sf $f-8.4.8.gz %{_mandir}/man8/$f.8.gz
 done
