@@ -559,8 +559,8 @@ void compare_volume(struct d_volume *conf, struct d_volume *kern)
 			conf->vnr, kern->device_minor, conf->device_minor);
 
 	if (!disk_equal(conf, kern) || conf->adj_new_minor) {
-		conf->adj_attach = conf->disk != NULL;
-		conf->adj_detach = kern->disk != NULL;
+		conf->adj_attach = conf->disk != NULL && strcmp(conf->disk, "none");
+		conf->adj_detach = kern->disk != NULL && strcmp(kern->disk, "none");
 	}
 
 	/* Do we need to resize?
