@@ -28,6 +28,9 @@ if [ $? != $VCSAG_SUCCESS ]; then
 fi
 DRBDRESNAME=${VCSAG_ATTR_VALUE}
 
+# does it need "--stacked"?
+$DRBDADM --stacked sh-dev $DRBDRESNAME >/dev/null 2>&1 && DRBDADM="$DRBDADM --stacked"
+
 confidence_from_drbd_state()
 {
 	local drbd_resource_state=$1
