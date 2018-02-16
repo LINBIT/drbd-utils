@@ -3,6 +3,15 @@ Latest:
  For even more detail, use "git log" or visit
  http://git.linbit.com/drbd-utils.git
 
+9.2.2
+--------
+ * support to pass force option to dump md
+ * fix setting peers/disks in v9 stacked setups
+ * fix rpm build bug when built without 8.4 support
+ * retrofit rpm release date
+ * fix v9 adjust that converts permanent diskless to diskfull
+ * allow stacked setups in VCS clusters
+
 9.2.0
 --------
  * Japanese man pages

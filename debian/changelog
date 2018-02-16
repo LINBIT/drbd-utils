@@ -1,3 +1,9 @@
+drbd-utils (9.2.2-1) unstable; urgency=medium
+
+  * New upstream release
+
+ -- Roland Kammerer <roland.kammerer@linbit.com>  Fri, 16 Feb 2018 15:25:36 +0100
+
 drbd-utils (9.2.0-1) unstable; urgency=medium
 
   * New upstream release

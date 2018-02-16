@@ -482,6 +482,10 @@ fi
 
 
 %changelog
+* Fri Feb 16 2018 Roland Kammerer <roland.kammerer@linbit.com> - 9.2.2-1
+- fixes mainly for stacked v9 setups
+- minor packaging fixes
+
 * Fri Dec 22 2017 Roland Kammerer <roland.kammerer@linbit.com> - 9.2.0-1
 - New upstream release.
 
