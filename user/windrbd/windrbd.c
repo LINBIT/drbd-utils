@@ -5,6 +5,8 @@
 #include <windows.h>
 #include <wchar.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -25,6 +27,9 @@ void usage_and_exit(void)
 	fprintf(stderr, "		(You cannot use it as backing device after doing that)\n");
 	fprintf(stderr, "	windrbd filesystem-state <drive-letter>\n");
 	fprintf(stderr, "		Shows the current filesystem state (windows, windrbd, other)\n");
+	fprintf(stderr, "	windrbd log-server [<log-file>]\n");
+	fprintf(stderr, "		Logs windrbd kernel messages to stdout (and optionally to\n");
+	fprintf(stderr, "		log-file)\n");
 
 	exit(1);
 }
@@ -193,7 +198,8 @@ static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 	return 0;
 }
 
-int log_server_op(const char *logfile)
+
+int log_server_op(const char *log_file)
 {
 	int s = socket(AF_INET, SOCK_DGRAM, 0);
 	if (s < 0) {
@@ -209,6 +215,12 @@ int log_server_op(const char *logfile)
 		perror("bind");
 		return 1;
 	}
+	int fd = -1;
+	if (log_file != NULL) {
+		if ((fd = open(log_file, O_WRONLY | O_CREAT | O_SYNC | O_APPEND, 0664)) < 0)
+			perror("open (ignored)");
+	}
+
 		/* See printk routine. We split lines longer than that. */
 	char buf[512];
 	ssize_t len;
@@ -217,6 +229,10 @@ int log_server_op(const char *logfile)
 	printf("Press Ctrl-C to stop.\n");
 	while ((len = recv(s, buf, sizeof(buf), 0)) >= 0) {
 		write(1, buf, len);
+		if (fd >= 0) {
+			if (write(fd, buf, len) < 0)
+				perror("write (ignored)");
+		}
 	}
 	perror("recv");
 	return 1;
@@ -230,6 +246,7 @@ int main(int argc, char ** argv)
 		usage_and_exit();
 	}
 	op = argv[1];
+
 	if (strcmp(op, "assign-drive-letter") == 0) {
 		if (argc != 4) {
 			usage_and_exit();
