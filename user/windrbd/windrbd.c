@@ -4,6 +4,12 @@
 #include <string.h>
 #include <windows.h>
 #include <wchar.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 
 void usage_and_exit(void)
 {
@@ -187,6 +193,35 @@ static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 	return 0;
 }
 
+int log_server_op(const char *logfile)
+{
+	int s = socket(AF_INET, SOCK_DGRAM, 0);
+	if (s < 0) {
+		perror("socket");
+		return 1;
+	}
+	struct sockaddr_in my_addr;
+	my_addr.sin_family = AF_INET;
+	my_addr.sin_port = htons(514);
+	my_addr.sin_addr.s_addr = 0;
+
+	if (bind(s, (struct sockaddr*)&my_addr, sizeof(my_addr)) < 0) {
+		perror("bind");
+		return 1;
+	}
+		/* See printk routine. We split lines longer than that. */
+	char buf[512];
+	ssize_t len;
+
+	printf("Waiting for log messages from windrbd kernel driver.\n");
+	printf("Press Ctrl-C to stop.\n");
+	while ((len = recv(s, buf, sizeof(buf), 0)) >= 0) {
+		write(1, buf, len);
+	}
+	perror("recv");
+	return 1;
+}
+
 int main(int argc, char ** argv)
 {
 	const char *op;
@@ -236,6 +271,14 @@ int main(int argc, char ** argv)
 		const char *drive = argv[2];
 
 		return patch_bootsector_op(drive, FILESYSTEM_STATE);
+	}
+	if (strcmp(op, "log-server") == 0) {
+		if (argc < 2 || argc > 3) {
+			usage_and_exit();
+		}
+		const char *log_file = argv[2];
+
+		return log_server_op(log_file);
 	}
 
 	usage_and_exit();
