@@ -143,6 +143,41 @@ enum filesystem_ops {
 	HIDE_FILESYSTEM, SHOW_FILESYSTEM, FILESYSTEM_STATE
 };
 
+static int remount_volume(const char *drive)
+{
+	check_drive_letter(drive);
+
+	wchar_t mount_point[10];
+	wchar_t guid[80];
+	int err;
+	
+	swprintf(mount_point, sizeof(mount_point) / sizeof(*mount_point) -1, L"%s\\", drive);
+	if (GetVolumeNameForVolumeMountPoint(mount_point, guid, sizeof(guid) / sizeof(*guid) - 1) == 0) {
+		err = GetLastError();
+		fprintf(stderr, "Couldn't get volume mount point for drive %s, err = %d\n", drive, err);
+		return 1;
+	}
+
+wprintf(L"GUID of drive letter %ls is %ls\n", mount_point, guid);
+
+	if (DeleteVolumeMountPoint(mount_point) == 0) {
+		err = GetLastError();
+		fprintf(stderr, "Couldn't delete volume mount point for drive %s, err = %d\n", drive, err);
+		return 1;
+	}
+printf("Mount point %s deleted.\n", drive);
+#if 0
+	if (SetVolumeMountPoint(mount_point, guid) == 0) {
+		err = GetLastError();
+		fprintf(stderr, "Couldn't set volume mount point for drive %s, err = %d\n", drive, err);
+		return 1;
+	}
+printf("Mount point %s set.\n", drive);
+#endif
+
+	return 0;
+}
+	
 static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 {
 	check_drive_letter(drive);
@@ -156,6 +191,7 @@ static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 	int err;
 	DWORD bytes_read, bytes_written;
 	int px;
+	int patched;
 
         ret = ReadFile(h, buf, sizeof(buf), &bytes_read,  NULL);
 	if (!ret || bytes_read != sizeof(buf)) {
@@ -174,7 +210,7 @@ static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 		else
 			printf("Nothing I recognize on drive %s\n", drive);
 	} else {
-		if (patch_boot_sector(buf, op == SHOW_FILESYSTEM, 0))
+		if ((patched = patch_boot_sector(buf, op == SHOW_FILESYSTEM, 0)))
 			printf("Filesystem on drive %s %s\n", drive, op == HIDE_FILESYSTEM ? "prepared for use with windrbd." : "reverted to be used directly (you might have to reboot before you can use it).");
 		else
 			fprintf(stderr, "No %s found on %s\n", op == HIDE_FILESYSTEM ? "Windows filesystem" : "windrbd backing device", drive);
@@ -191,6 +227,14 @@ static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 
 			CloseHandle(h);
 			return 1;
+		}
+		if (patched && op == HIDE_FILESYSTEM) {
+			if (remount_volume(drive) != 0) {
+				fprintf(stderr, "Couldn't remount volume, please reboot before using this drive (%s)\n", drive);
+
+				CloseHandle(h);
+				return 1;
+			}
 		}
 	}
 
