@@ -12,6 +12,7 @@
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 void usage_and_exit(void)
 {
@@ -143,13 +144,33 @@ enum filesystem_ops {
 	HIDE_FILESYSTEM, SHOW_FILESYSTEM, FILESYSTEM_STATE
 };
 
+static int run_command(const char *command, char *args[])
+{
+	int ret;
+
+	switch (fork()) {
+	case 0:	
+		execvp(command, args);
+		exit(1);
+	case -1:
+		perror("fork");
+		return 1;
+	default:
+		wait(&ret);
+		return ret;
+	}
+}
+
 static int remount_volume(const char *drive)
 {
 	check_drive_letter(drive);
 
 	wchar_t mount_point[10];
 	wchar_t guid[80];
+	char guid_ascii[80];
 	int err;
+	char *args[4];
+	int i;
 	
 	swprintf(mount_point, sizeof(mount_point) / sizeof(*mount_point) -1, L"%s\\", drive);
 	if (GetVolumeNameForVolumeMountPoint(mount_point, guid, sizeof(guid) / sizeof(*guid) - 1) == 0) {
@@ -158,24 +179,50 @@ static int remount_volume(const char *drive)
 		return 1;
 	}
 
-wprintf(L"GUID of drive letter %ls is %ls\n", mount_point, guid);
+// wprintf(L"GUID of drive letter %ls is %ls\n", mount_point, guid);
 
+	args[0] = "mountvol";
+	args[1] = (char*)drive;
+	args[2] = "/p";
+	args[3] = NULL;
+
+	if (run_command("mountvol", args) != 0) {
+		fprintf(stderr, "Failed to run mountvol\n");
+		return 1;
+	}
+	for (i=0; guid[i] != 0; i++) {
+		guid_ascii[i] = guid[i];
+	}
+	guid_ascii[i] = '\0';
+// printf("GUID of drive letter %s is %s\n", drive, guid_ascii);
+	args[2] = guid_ascii;
+	if (run_command("mountvol", args) != 0) {
+		fprintf(stderr, "Failed to run mountvol\n");
+		return 1;
+	}
+	return 0;
+
+#if 0
 	if (DeleteVolumeMountPoint(mount_point) == 0) {
 		err = GetLastError();
 		fprintf(stderr, "Couldn't delete volume mount point for drive %s, err = %d\n", drive, err);
 		return 1;
 	}
+
 printf("Mount point %s deleted.\n", drive);
-#if 0
+printf("Press enter to continue.\n");
+char x[10];
+fgets(x, sizeof(x)-1, stdin);
+
 	if (SetVolumeMountPoint(mount_point, guid) == 0) {
 		err = GetLastError();
 		fprintf(stderr, "Couldn't set volume mount point for drive %s, err = %d\n", drive, err);
 		return 1;
 	}
 printf("Mount point %s set.\n", drive);
-#endif
 
 	return 0;
+#endif
 }
 	
 static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
