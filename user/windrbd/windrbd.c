@@ -258,7 +258,7 @@ static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 			printf("Nothing I recognize on drive %s\n", drive);
 	} else {
 		if ((patched = patch_boot_sector(buf, op == SHOW_FILESYSTEM, 0)))
-			printf("Filesystem on drive %s %s\n", drive, op == HIDE_FILESYSTEM ? "prepared for use with windrbd." : "reverted to be used directly (you might have to reboot before you can use it).");
+			printf("Filesystem on drive %s %s\n", drive, op == HIDE_FILESYSTEM ? "prepared for use with windrbd (for now you should reboot, windrbd might blue screen when using the disk without a reboot)." : "reverted to be used directly (you might have to reboot before you can use it).");
 		else
 			fprintf(stderr, "No %s found on %s\n", op == HIDE_FILESYSTEM ? "Windows filesystem" : "windrbd backing device", drive);
 
