@@ -811,6 +811,14 @@ static struct d_host_info *find_host_info_or_invalid(struct d_resource *res, cha
 		    "There is no 'on' section for hostname '%s' named in the connection-mesh\n",
 		    res->config_file, res->start_line, res->name, name);
 		config_valid = 0;
+	} else if (host_info->proxy_compat_only && config_valid) {
+		err("%s:%d: in resource %s:\n\t"
+		    "There is a drbd-8.x proxy config syntax within an 'on' section and you are using\n\t"
+		    "the 'mesh' keyword from drbd-9.x syntax. That does not work together.\n\n\t"
+		    "Use an explicit connection to configure a proxy and omit that pair of hosts\n\t"
+		    "from the mesh.\n",
+		    res->config_file, host_info->config_line, res->name);
+		config_valid = 0;
 	}
 
 	return host_info;
@@ -1075,15 +1083,6 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 {
 	struct d_resource *res;
 	struct connection *con;
-
-	if (flags & MATCH_ON_PROXY)
-		for_each_resource(res, resources)
-			if (STAILQ_FIRST(&res->meshes)) {
-				err("%s:%d: in resource %s: Do not mix connection-mesh and proxy.\n"
-						"Please use explicit connection sections.\n",
-						config_file, line, res->name);
-				config_valid = 0;
-			}
 
 	/* inherit volumes from resource level into the d_host_info objects */
 	for_each_resource(res, resources) {
