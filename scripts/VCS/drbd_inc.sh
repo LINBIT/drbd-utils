@@ -53,7 +53,7 @@ confidence_from_drbd_state()
 		0/0::0/0)
 			# should not happen
 			return 100 ;; # $VCSAG_RES_OFFLINE
-		0/0::*)	
+		0/0::*)
 			# perfect, all local and remote are uptodate
 			return 110 ;; # $VCSAG_RES_ONLINE
 		0/*::*/0)
