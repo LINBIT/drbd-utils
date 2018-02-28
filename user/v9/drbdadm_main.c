@@ -126,6 +126,9 @@ static int adm_invalidate(const struct cfg_ctx *);
 static int __adm_drbdsetup_silent(const struct cfg_ctx *ctx);
 static int adm_forget_peer(const struct cfg_ctx *);
 static int adm_peer_device(const struct cfg_ctx *);
+static int do_proxy_conn_up(const struct cfg_ctx *ctx);
+static int do_proxy_conn_down(const struct cfg_ctx *ctx);
+static int do_proxy_conn_plugins(const struct cfg_ctx *ctx);
 
 int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check);
 int was_file_already_seen(char *fn);
@@ -525,9 +528,9 @@ struct adm_cmd *cmds[] = {
 	&peer_device_options_ctx,
 	ACF1_CONNECT
 };
-/*  */ struct adm_cmd proxy_conn_down_cmd = { "", do_proxy_conn_down, ACF1_DEFAULT};
-/*  */ struct adm_cmd proxy_conn_up_cmd = { "", do_proxy_conn_up, ACF1_DEFAULT};
-/*  */ struct adm_cmd proxy_conn_plugins_cmd = { "", do_proxy_conn_plugins, ACF1_DEFAULT};
+/*  */ struct adm_cmd proxy_conn_down_cmd = { "", do_proxy_conn_down, ACF2_PROXY };
+/*  */ struct adm_cmd proxy_conn_up_cmd = { "", do_proxy_conn_up, ACF2_PROXY };
+/*  */ struct adm_cmd proxy_conn_plugins_cmd = { "", do_proxy_conn_plugins, ACF2_PROXY };
 
 static const struct adm_cmd invalidate_setup_cmd = {
 	"invalidate",
@@ -1801,117 +1804,87 @@ char *_proxy_connection_name(char *conn_name, const struct d_resource *res, cons
 	return conn_name;
 }
 
-int do_proxy_conn_up(const struct cfg_ctx *ctx)
+static int do_proxy_conn_up(const struct cfg_ctx *ctx)
 {
 	char *argv[4] = { drbd_proxy_ctl, "-c", NULL, NULL };
-	struct connection *conn;
+	struct connection *conn = ctx->conn;
+	struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
 	char *conn_name;
-	int rv;
 
-	rv = 0;
+	if (!path->my_proxy || !path->peer_proxy)
+		return 0;
 
-	for_each_connection(conn, &ctx->res->connections) {
-		struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
+	conn_name = proxy_connection_name(ctx->res, conn);
 
-		if (!path->my_proxy || !path->peer_proxy)
-			continue;
+	argv[2] = ssprintf(
+		"add connection %s %s:%s %s:%s %s:%s %s:%s",
+		conn_name,
+		path->my_proxy->inside.addr,
+		path->my_proxy->inside.port,
+		path->peer_proxy->outside.addr,
+		path->peer_proxy->outside.port,
+		path->my_proxy->outside.addr,
+		path->my_proxy->outside.port,
+		path->my_address->addr,
+		path->my_address->port);
 
-		conn_name = proxy_connection_name(ctx->res, conn);
-
-		argv[2] = ssprintf(
-				"add connection %s %s:%s %s:%s %s:%s %s:%s",
-				conn_name,
-				path->my_proxy->inside.addr,
-				path->my_proxy->inside.port,
-				path->peer_proxy->outside.addr,
-				path->peer_proxy->outside.port,
-				path->my_proxy->outside.addr,
-				path->my_proxy->outside.port,
-				path->my_address->addr,
-				path->my_address->port);
-
-		rv = m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
-		if (rv)
-			break;
-	}
-	return rv;
+	return m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
 }
 
-int do_proxy_conn_plugins(const struct cfg_ctx *ctx)
+static int do_proxy_conn_plugins(const struct cfg_ctx *ctx)
 {
-	struct connection *conn;
+	struct connection *conn = ctx->conn;
+	struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
 	char *argv[MAX_ARGS];
 	char *conn_name;
 	int argc = 0;
 	struct d_option *opt;
-	int counter;
-	int rv;
+	int counter = 0;
 
-	rv = 0;
+	if (!path->my_proxy || !path->peer_proxy)
+		return 0;
 
-	for_each_connection(conn, &ctx->res->connections) {
-		struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
+	conn_name = proxy_connection_name(ctx->res, conn);
 
-		if (!path->my_proxy || !path->peer_proxy)
-			continue;
-
-		conn_name = proxy_connection_name(ctx->res, conn);
-
-		argc = 0;
-		argv[NA(argc)] = drbd_proxy_ctl;
-		STAILQ_FOREACH(opt, &path->my_proxy->options, link) {
-			argv[NA(argc)] = "-c";
-			argv[NA(argc)] = ssprintf("set %s %s %s",
-					opt->name, conn_name, opt->value);
-		}
-
-		counter = 0;
-		/* Don't send the "set plugin ... END" line if no plugins are defined
-		 * - that's incompatible with the drbd proxy version 1. */
-		if (!STAILQ_EMPTY(&path->my_proxy->plugins)) {
-			STAILQ_FOREACH(opt, &path->my_proxy->plugins, link) {
-				argv[NA(argc)] = "-c";
-				argv[NA(argc)] = ssprintf("set plugin %s %d %s",
-						conn_name, counter, opt->name);
-				counter++;
-			}
-			argv[NA(argc)] = ssprintf("set plugin %s %d END", conn_name, counter);
-		}
-
-		argv[NA(argc)] = 0;
-		if (argc > 2)
-			rv = m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
-		if (rv)
-			break;
+	argc = 0;
+	argv[NA(argc)] = drbd_proxy_ctl;
+	STAILQ_FOREACH(opt, &path->my_proxy->options, link) {
+		argv[NA(argc)] = "-c";
+		argv[NA(argc)] = ssprintf("set %s %s %s",
+					  opt->name, conn_name, opt->value);
 	}
 
-	return rv;
+	/* Don't send the "set plugin ... END" line if no plugins are defined
+	 * - that's incompatible with the drbd proxy version 1. */
+	if (!STAILQ_EMPTY(&path->my_proxy->plugins)) {
+		STAILQ_FOREACH(opt, &path->my_proxy->plugins, link) {
+			argv[NA(argc)] = "-c";
+			argv[NA(argc)] = ssprintf("set plugin %s %d %s",
+						  conn_name, counter, opt->name);
+			counter++;
+		}
+		argv[NA(argc)] = ssprintf("set plugin %s %d END", conn_name, counter);
+	}
+
+	argv[NA(argc)] = 0;
+	return argc > 2 ? m_system_ex(argv, SLEEPS_SHORT, ctx->res->name) : 0;
 }
 
-int do_proxy_conn_down(const struct cfg_ctx *ctx)
+static int do_proxy_conn_down(const struct cfg_ctx *ctx)
 {
 	struct d_resource *res = ctx->res;
-	struct connection *conn;
+	struct connection *conn = ctx->conn;
+	struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
 	char *conn_name;
 	char *argv[4] = { drbd_proxy_ctl, "-c", NULL, NULL};
-	int rv;
 
+	if (!path->my_proxy || !path->peer_proxy)
+		return 0;
 
-	rv = 0;
-	for_each_connection(conn, &res->connections) {
-		struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
+	conn_name = proxy_connection_name(ctx->res, conn);
+	argv[2] = ssprintf("del connection %s", conn_name);
 
-		if (!path->my_proxy || !path->peer_proxy)
-			continue;
-
-		conn_name = proxy_connection_name(ctx->res, conn);
-		argv[2] = ssprintf("del connection %s", conn_name);
-
-		rv = m_system_ex(argv, SLEEPS_SHORT, res->name);
-		if (rv)
-			break;
-	}
-	return rv;
+	return m_system_ex(argv, SLEEPS_SHORT, res->name);
 }
 
 static int check_proxy(const struct cfg_ctx *ctx, int do_up)
