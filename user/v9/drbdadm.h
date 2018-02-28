@@ -196,6 +196,9 @@ struct connection
 	unsigned int me:1;
 	unsigned int implicit:1;
 	unsigned int is_standalone:1;
+	/* on_cmdline is set it was explicity asked for on the command line.
+	   Not set if only found by iterating over all connextions in resource */
+	unsigned int on_cmdline:1;
 	STAILQ_ENTRY(connection) link;
 };
 STAILQ_HEAD(connections, connection);

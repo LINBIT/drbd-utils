@@ -1899,15 +1899,16 @@ static int check_proxy(const struct cfg_ctx *ctx, int do_up)
 	}
 
 	if (!path->my_proxy) {
-		if (all_resources)
-			return 0;
-		err("%s:%d: In resource '%s',no proxy config for connection %sfrom '%s' to '%s'%s.\n",
-		    ctx->res->config_file, conn->config_line, ctx->res->name,
-		    conn->name ? ssprintf("'%s' (", conn->name) : "",
-		    hostname,
-		    names_to_str(&conn->peer->on_hosts),
-		    conn->name ? ")" : "");
-		exit(E_CONFIG_INVALID);
+		if (conn->on_cmdline) {
+			err("%s:%d: In resource '%s', no proxy config for connection %sfrom '%s' to '%s'%s.\n",
+			    ctx->res->config_file, conn->config_line, ctx->res->name,
+			    conn->name ? ssprintf("'%s' (", conn->name) : "",
+			    hostname,
+			    names_to_str(&conn->peer->on_hosts),
+			    conn->name ? ")" : "");
+			exit(E_CONFIG_INVALID);
+		}
+		return 0;
 	}
 
 	if (!hostname_in_list(hostname, &path->my_proxy->on_hosts)) {
@@ -2155,8 +2156,11 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check)
 					return -ENOENT;
 				}
 
-				if (conn->peer == hi && check == CTX_FIRST)
-					goto found;
+				if (conn->peer == hi) {
+					conn->on_cmdline = 1;
+					if (check == CTX_FIRST)
+						goto found;
+				}
 
 				if (conn->peer && !strcmp(conn->peer->node_id, hi->node_id)) {
 					conn->me = true;
