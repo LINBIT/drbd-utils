@@ -160,8 +160,6 @@ int adjust_with_progress = 0;
 bool help;
 int do_verify_ips = 0;
 int do_register = 1;
-/* whether drbdadm was called with "all" instead of resource name(s) */
-int all_resources = 0;
 /* if we want to adjust more than one resource,
  * instead of iteratively calling "drbdsetup show" for each of them,
  * call "drbdsetup show" once for all of them. */
@@ -1912,19 +1910,21 @@ static int check_proxy(const struct cfg_ctx *ctx, int do_up)
 	}
 
 	if (!hostname_in_list(hostname, &path->my_proxy->on_hosts)) {
-		if (all_resources)
-			return 0;
-		err("The proxy config in resource %s is not for %s.\n",
-		    ctx->res->name, hostname);
-		exit(E_CONFIG_INVALID);
+		if (conn->on_cmdline) {
+			err("The proxy config in resource %s is not for %s.\n",
+			    ctx->res->name, hostname);
+			exit(E_CONFIG_INVALID);
+		}
+		return 0;
 	}
 
 	if (!path->peer_proxy) {
-		err("There is no proxy config for the peer in resource %s.\n",
-		    ctx->res->name);
-		if (all_resources)
-			return 0;
-		exit(E_CONFIG_INVALID);
+		if (conn->on_cmdline) {
+			err("There is no proxy config for the peer in resource %s.\n",
+			    ctx->res->name);
+			exit(E_CONFIG_INVALID);
+		}
+		return 0;
 	}
 
 
@@ -3265,9 +3265,7 @@ int main(int argc, char **argv)
 	is_adjust = (cmd == &adjust_cmd || cmd == &adjust_wp_cmd);
 
 	if (!resource_names[0]) {
-		if (is_dump)
-			all_resources = 1;
-		else if (cmd->res_name_required)
+		if (!is_dump && cmd->res_name_required)
 			print_usage_and_exit(cmd, "No resource names specified", E_USAGE);
 	} else if (resource_names[0]) {
 		if (cmd->backend_res_name)
@@ -3343,7 +3341,6 @@ int main(int argc, char **argv)
 			/* either no resource arguments at all,
 			 * but command is dump / dump-xml, so implicit "all",
 			 * or an explicit "all" argument is given */
-			all_resources = 1;
 			if (!is_dump)
 				die_if_no_resources();
 			/* verify ips first, for all of them */
