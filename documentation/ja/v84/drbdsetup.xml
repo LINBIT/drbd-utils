@@ -284,7 +284,7 @@
           <term><option>--max-bio-bvecs</option></term>
 
           <listitem>
-            <para>ある特別な環境において、デバイスマッパースタックは、複数の bvec を持つ制約に違反する BIO を merge_bvec（） 関数の４番目の引数に設定し DRBD に渡す。 例えば、物理ディスク → DRBD → LVM → Xen → 誤ったパーティション(63) → DomU FS の場合です。Dom0 のカーネルログには、 &quot;bio would need to, but cannot, be split:&quot; と記録される。</para>
+            <para>ある特別な環境において、デバイスマッパースタックは、複数の bvec を持つ制約に違反する BIO を merge_bvec（） 関数の４番目の引数に設定し DRBD に渡す。 例えば、物理ディスク → DRBD → LVM → Xen → 誤ったパーティション(63) → DomU FS の場合である。Dom0 のカーネルログには、 &quot;bio would need to, but cannot, be split:&quot; と記録される。</para>
 
             <para>最も良い回避方法は、VM の内部にパーティションを適切に配置する (例えば、セクタ 1024 から開始する) ことである。これは、ストレージ領域を 480 KiB を消費する。残念ながら、ほとんどの Linux パーティションツールは、奇数 (63) でパーティションを開始する。そのため、ほとんどのディストリビューションは、仮想 Linux マシンにインストールを行うと、誤ったパーティションで終了してしまう。第 2 の回避方法は、 BIO あたりの最大 DRBD bvecs (= <option>max-bio-bvecs</option>) を 1 にすることである。しかし、パフォーマンスは低下する。</para>
 
@@ -389,7 +389,7 @@
 	     <arg choice="plain" rep="norepeat">no</arg>
 	  </group></option></term>
           <listitem>
-	    <para><option> discard-zeroes-if-aligned </option> を <option>no</option> に設定すると、それぞれのバックエンドが discard_zeroes_data = false をアナウンスする場合、DRBD は常に受信側でゼロアウトにフォールバックし、プライマリ側では discard に関して通知しない。</para><para><option> discard-zeroes-if-aligned </option> を <option>yes</option> に設定すると、 discard_zeroes_data = false を通知するバックエンドであっても DRBD は discard を使用し、 discard_zeroes_data = true を通知する。</para><para>私たちは、 discard_zeroes_data 設定を完全に無視していました。確立し、期待された動作を壊さないためのデフォルト値は <option>yes</option> です。</para><para>このオプションは 8.4.7 から有効である。追加の制限と必要な準備については、次のマニュアルを参照:<citerefentry><refentrytitle>drbd.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>.
+	    <para><option> discard-zeroes-if-aligned </option> を <option>no</option> に設定すると、それぞれのバックエンドが discard_zeroes_data = false をアナウンスする場合、DRBD は常に受信側でゼロアウトにフォールバックし、プライマリ側では discard に関して通知しない。</para><para><option> discard-zeroes-if-aligned </option> を <option>yes</option> に設定すると、 discard_zeroes_data = false を通知するバックエンドであっても DRBD は discard を使用し、 discard_zeroes_data = true を通知する。</para><para>私たちは、 discard_zeroes_data 設定を完全に無視していました。確立し、期待された動作を壊さないためのデフォルト値は <option>yes</option> である。</para><para>このオプションは 8.4.7 から有効である。追加の制限と必要な準備については、次のマニュアルを参照:<citerefentry><refentrytitle>drbd.conf</refentrytitle><manvolnum>5</manvolnum></citerefentry>.
 	</para>
           </listitem>
         </varlistentry>
@@ -400,7 +400,7 @@
           </term>
           <listitem>
 	    <para>読み込みリクエストの負荷分散で使用できる <replaceable>methods</replaceable> は <option>prefer-local</option>, <option>prefer-remote</option>, <option>round-robin</option>, <option>least-pending</option>, <option>when-congested-remote</option>, <option>32K-striping</option>, <option>64K-striping</option>, <option>128K-striping</option>, <option>256K-striping</option>, <option>512K-striping</option>, <option>1M-striping</option> である。</para>
-	      <para>デフォルトは <option>prefer-local</option> です。このオプションは 8.4.1 から有効である。</para>
+	      <para>デフォルトは <option>prefer-local</option> である。このオプションは 8.4.1 から有効である。</para>
           </listitem>
         </varlistentry>
 
@@ -452,7 +452,7 @@
           <replaceable>time</replaceable></option></term>
 
           <listitem>
-            <para>対向ノードにただちに接続できない場合、DRBD は接続を繰り返し試行する。このパラメータは試行間隔を指定する。The default value is 10. 単位は秒である。</para>
+            <para>対向ノードにただちに接続できない場合、DRBD は接続を繰り返し試行する。このパラメータは試行間隔を指定する。デフォルト値は 10 である。単位は秒である。</para>
           </listitem>
         </varlistentry>
 
@@ -461,7 +461,7 @@
           <replaceable>time</replaceable></option></term>
 
           <listitem>
-            <para>DRBD デバイス間の TCP/IP 接続があり、対向ノードから <replaceable>time</replaceable> 秒の間に何も通信が行われなかった場合、 DRBD は死活確認のためキープアライブパケットを生成する。The default value is 10. 単位は秒である。</para>
+            <para>DRBD デバイス間の TCP/IP 接続があり、対向ノードから <replaceable>time</replaceable> 秒の間に何も通信が行われなかった場合、 DRBD は死活確認のためキープアライブパケットを生成する。デフォルト値は 10 である。単位は秒である。</para>
           </listitem>
         </varlistentry>
 
@@ -1268,7 +1268,7 @@
 	    <secondary>status</secondary>
 	  </indexterm>
 
-	  <para>リソースの全ての有効な設定情報を表示する。出力は、構成されたリソースごとに 1 つの段落で構成される。各段落は、リソースごとに 1 行、各デバイスに 1 行、接続ごとに 1 行が続きます。デバイスと接続行はインテンドされます。各接続行は、対向ノードのデバイスごとに 1 行、これらは接続行に対してインテンドされます。</para>
+	  <para>リソースの全ての有効な設定情報を表示する。出力は、構成されたリソースごとに 1 つの段落で構成される。各段落は、リソースごとに 1 行、各デバイスに 1 行、接続ごとに 1 行が続くデバイスと接続行はインテンドされる。各接続行は、対向ノードのデバイスごとに 1 行、これらは接続行に対してインテンドされる。</para>
 
 	  <para>長い行は端末の幅で折り返され、どの行に属しているかを示すためにインデントされる。利用可能なオプション: <variablelist>
 	      <varlistentry>

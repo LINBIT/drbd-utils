@@ -626,7 +626,7 @@ SYMLINK_BY_RES=drbd/by-res/<resource-name>/VNR
               <primary>drbd.conf</primary> <secondary>max-bio-bvecs</secondary>。
             </indexterm>
 
-            <para>ある特別な環境において、デバイスマッパースタックは、複数の bvec を持つ制約に違反する BIO を merge_bvec（） 関数の４番目の引数に設定し DRBD に渡す。 例えば、物理ディスク → DRBD → LVM → Xen → 誤ったパーティション(63) → DomU FS の場合です。Dom0 のカーネルログには、 &quot;bio would need to, but cannot, be split:&quot; と記録される。</para>
+            <para>ある特別な環境において、デバイスマッパースタックは、複数の bvec を持つ制約に違反する BIO を merge_bvec（） 関数の４番目の引数に設定し DRBD に渡す。 例えば、物理ディスク → DRBD → LVM → Xen → 誤ったパーティション(63) → DomU FS の場合である。Dom0 のカーネルログには、 &quot;bio would need to, but cannot, be split:&quot; と記録される。</para>
 
             <para>最も良い回避方法は、VM の内部にパーティションを適切に配置する (例えば、セクタ 1024 から開始する) ことである。これは、ストレージ領域を 480 KiB を消費する。残念ながら、ほとんどの Linux パーティションツールは、奇数 (63) でパーティションを開始する。そのため、ほとんどのディストリビューションは、仮想 Linux マシンにインストールを行うと、誤ったパーティションで終了してしまう。第 2 の回避方法は、 BIO あたりの最大 DRBD bvecs (= <option>max-bio-bvecs</option>) を 1 にすることである。しかし、パフォーマンスは低下する。</para>
 
@@ -669,7 +669,7 @@ SYMLINK_BY_RES=drbd/by-res/<resource-name>/VNR
             <indexterm significance="normal">
               <primary>drbd.conf</primary>
               <secondary>discard-zeroes-if-aligned</secondary>
-            </indexterm>Linux のブロックデバイスで discard/trim/unmap のサポートにはいくつかの側面があります。discard が一般的にサポートされていても、暗黙に失敗したり、discard 要求を部分的に無視したりすることがあります。デバイスは、また、マップされていないブロックからの読み込みが、定義済みのデータ（通常はゼロ）、未定義のデータ（おそらく古いデータか、ゴミ）のどちらを返すか通知します。</para><para>異なるノードで DRBD が discard 特性が異なるデバイスによって構成されている場合、discard はデータの不一致（古いデータまたはゴミが 1 つのバックエンドに残り、別のバックエンドではゼロが残る）の原因となります。オンライン照合は、数多くの偽の差異を報告する可能性があります。たぶんほとんどのユースケース （ファイルシステム上の fstrim） では無害ですが、DRBD はそれを持つことはできません。</para><para>安全に動作させるには、ローカルのバックエンド（プライマリ上）が &quot;discard_zeroes_data=true&quot; をサポートしていない場合、 discard のサポートを無効にする必要があります。受信側（セカンダリ）がマップされていなかった領域を割り当て、 &quot;discard_zeroes_data = true&quot; をサポートしていない場合、受信側で discard を明示的にゼロに変換する必要があります。</para><para>discard をサポートしているのに、discard_zeroes_data = false をアナウンスするデバイス（特に LVM/DM シンプロビジョニング）があります。DM-thin の場合、チャンクサイズに合わせた discard はマップされず、マッピングされていないセクタからの読み込みはゼロを返します。ただし、discard 要求のアライメントされていない部分ヘッドまたはテール領域は暗黙に無視されます。</para><para>整列したフル・チャンクの discard をパスし、これらの整列していない部分領域を明示的にゼロ・アウトするヘルパーを追加すると、そのようなデバイスでは discard_zeroes_data = true を効果的に達成します。</para><para><option> discard-zeroes-if-aligned </option> を <option>yes</option> に設定すると、 discard_zeroes_data = false を通知するバックエンドであっても DRBD は discard を使用し、 discard_zeroes_data = true を通知する。</para><para><option> discard-zeroes-if-aligned </option> を <option>no</option> に設定すると、それぞれのバックエンドが discard_zeroes_data = false をアナウンスする場合、DRBD は常に受信側でゼロアウトにフォールバックし、プライマリ側では discard に関して通知しない。</para><para>私たちは、 discard_zeroes_data 設定を完全に無視していました。確立し、期待された動作を壊さず、シンプロビジョニング LV の fstrim がスペースを解放する代わりにスペースを使い果たさないためのデフォルト値は <option>yes</option> です。</para><para>このオプションは 8.4.7 から有効である。</para>
+            </indexterm>Linux のブロックデバイスで discard/trim/unmap のサポートにはいくつかの側面がある。discard が一般的にサポートされていても、暗黙に失敗したり、discard 要求を部分的に無視したりすることがある。デバイスは、また、マップされていないブロックからの読み込みが、定義済みのデータ（通常はゼロ）、未定義のデータ（おそらく古いデータか、ゴミ）のどちらを返すか通知する。</para><para>異なるノードで DRBD が discard 特性が異なるデバイスによって構成されている場合、discard はデータの不一致（古いデータまたはゴミが 1 つのバックエンドに残り、別のバックエンドではゼロが残る）の原因となる。オンライン照合は、数多くの偽の差異を報告する可能性がある。たぶんほとんどのユースケース （ファイルシステム上の fstrim） では無害であるが、DRBD はそれを持つことはできません。</para><para>安全に動作させるには、ローカルのバックエンド（プライマリ上）が &quot;discard_zeroes_data=true&quot; をサポートしていない場合、 discard のサポートを無効にする必要がある。受信側（セカンダリ）がマップされていなかった領域を割り当て、 &quot;discard_zeroes_data = true&quot; をサポートしていない場合、受信側で discard を明示的にゼロに変換する必要がある。</para><para>discard をサポートしているのに、discard_zeroes_data = false をアナウンスするデバイス（特に LVM/DM シンプロビジョニング）がある。DM-thin の場合、チャンクサイズに合わせた discard はマップされず、マッピングされていないセクタからの読み込みはゼロを返す。ただし、discard 要求のアライメントされていない部分ヘッドまたはテール領域は暗黙に無視される。</para><para>整列したフル・チャンクの discard をパスし、これらの整列していない部分領域を明示的にゼロ・アウトするヘルパーを追加すると、そのようなデバイスでは discard_zeroes_data = true を効果的に達成する。</para><para><option> discard-zeroes-if-aligned </option> を <option>yes</option> に設定すると、 discard_zeroes_data = false を通知するバックエンドであっても DRBD は discard を使用し、 discard_zeroes_data = true を通知する。</para><para><option> discard-zeroes-if-aligned </option> を <option>no</option> に設定すると、それぞれのバックエンドが discard_zeroes_data = false をアナウンスする場合、DRBD は常に受信側でゼロアウトにフォールバックし、プライマリ側では discard に関して通知しない。</para><para>私たちは、 discard_zeroes_data 設定を完全に無視していました。確立し、期待された動作を壊さず、シンプロビジョニング LV の fstrim がスペースを解放する代わりにスペースを使い果たさないためのデフォルト値は <option>yes</option> である。</para><para>このオプションは 8.4.7 から有効である。</para>
           </listitem>
         </varlistentry>
 
@@ -683,7 +683,7 @@ SYMLINK_BY_RES=drbd/by-res/<resource-name>/VNR
               <secondary>read-balancing</secondary>
             </indexterm>
 	    <para>読み込みリクエストの負荷分散で使用できる <replaceable>methods</replaceable> は <option>prefer-local</option>, <option>prefer-remote</option>, <option>round-robin</option>, <option>least-pending</option>, <option>when-congested-remote</option>, <option>32K-striping</option>, <option>64K-striping</option>, <option>128K-striping</option>, <option>256K-striping</option>, <option>512K-striping</option>, <option>1M-striping</option> である。</para>
-	      <para>デフォルトは <option>prefer-local</option> です。このオプションは 8.4.1 から有効である。</para>
+	      <para>デフォルトは <option>prefer-local</option> である。このオプションは 8.4.1 から有効である。</para>
           </listitem>
         </varlistentry>
 
