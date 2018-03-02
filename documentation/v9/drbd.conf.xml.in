@@ -588,7 +588,7 @@ resource
 
     <refsect2>
       <title>Section <option>peer-device-options</option> Parameters</title>
-      <para>Please not that you open the section with the <option>disk</option> keyword.</para>
+      <para>Please note that you open the section with the <option>disk</option> keyword.</para>
       <variablelist>
 	<pick_drbdsetup_option name="c-delay-target"/>
 	<pick_drbdsetup_option name="c-min-rate"/>

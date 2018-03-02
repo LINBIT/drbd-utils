@@ -296,7 +296,7 @@
 	  </indexterm>
 
 	  <para>The <option>del-path</option> command removes a path from
-          a <replaceable>connection</replaceable>. Please not that it fails if
+          a <replaceable>connection</replaceable>. Please note that it fails if
 	  the path is necessary to keep a connected connection in tact. In order
 	  to remove all paths, disconnect the connection first.</para>
 

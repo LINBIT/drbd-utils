@@ -383,7 +383,7 @@
           <para><indexterm significance="normal">
               <primary>drbdadm</primary>
               <secondary>disk-options</secondary>
-	      </indexterm> Cange the disk options of an attached lower-level
+	      </indexterm> Change the disk options of an attached lower-level
 	      device.  See <citerefentry>
 		<refentrytitle>drbdsetup</refentrytitle>
 		<manvolnum>8</manvolnum> </citerefentry> for details.

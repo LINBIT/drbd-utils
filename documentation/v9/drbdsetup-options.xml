@@ -1534,7 +1534,7 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	when the system went down.  This parameter is usually set to a
 	value smaller than <option>wfc-timeout</option>.  The
 	assumption here is that peers which were unreachable before a
-	reboot are less likely to be be reachable after the reboot, so
+	reboot are less likely to be reachable after the reboot, so
 	waiting is less likely to help.</para>
 
       <para>The timeout is specified in seconds. The default value is 0,
@@ -1622,7 +1622,7 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 
 	  <para>The option's value might be set to <option>off</option>,
 	  <option>majority</option>, <option>all</option> or a numeric value. If you
-	  set it to a numeric value, make sure that the value is greater then half
+	  set it to a numeric value, make sure that the value is greater than half
 	  of your number of nodes.
 	  Quorum is a mechanism to avoid data divergence, it might be used instead
 	  of fencing when there are more than two repicas. It defaults to
@@ -1661,7 +1661,7 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 
 	  <para>The option's value might be set to <option>off</option>,
 	  <option>majority</option>, <option>all</option> or a numeric value. If you
-	  set it to a numeric value, make sure that the value is greater then half
+	  set it to a numeric value, make sure that the value is greater than half
 	  of your number of nodes.</para>
 
 	  <para>In case you want to allow permanently diskless nodes to
