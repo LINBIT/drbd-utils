@@ -351,7 +351,6 @@ management utility.
 %config %{_sysconfdir}/bash_completion.d/drbdadm*
 %endif # with bashcompletion
 
-%if %{with 84support}
 %if %{with manual}
 %package man-ja
 Summary: Japanese man pages for DRBD
@@ -369,20 +368,22 @@ This package contains Japanese man pages for DRBD.
 %{_mandir}/ja/man5/drbd.conf-*
 %{_mandir}/ja/man8/drbdmeta-*
 %if %{with heartbeat}
+%if %{with 84support}
 %{_mandir}/ja/man8/drbddisk-*
+%endif
 %endif # with heartbeat
-# %if %{with drbdmon}
-# %{_mandir}/ja/man8/drbdmon-*
-# %endif
+%if %{with drbdmon}
+%{_mandir}/ja/man8/drbdmon-*
+%endif
 
 %post man-ja
 for f in drbd drbdadm drbdmeta drbdsetup; do
     ln -sf $f-8.4.8.gz %{_mandir}/ja/man8/$f.8.gz
 done
 ln -sf drbd.conf-8.4.5.gz %{_mandir}/ja/man5/drbd.conf.5.gz
-#%if %{with drbdmon}
-#ln -sf drbdmon-9.0.8.gz %{_mandir}/ja/man8/drbdmon.8.gz
-#%endif
+%if %{with drbdmon}
+ln -sf drbdmon-9.0.8.gz %{_mandir}/ja/man8/drbdmon.8.gz
+%endif
 
 %preun man-ja
 for f in drbd drbdadm drbdmeta drbdsetup; do
@@ -391,7 +392,6 @@ done
 rm -f %{_mandir}/ja/man5/drbd.conf.5.gz
 rm -f %{_mandir}/ja/man8/drbdmon.8.gz
 %endif # with manual
-%endif # with 84support
 
 %prep
 %setup -q -n drbd-utils-%{version}

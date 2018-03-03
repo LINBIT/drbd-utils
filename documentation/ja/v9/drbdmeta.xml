@@ -1,0 +1,171 @@
+<?xml version="1.0"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
+<refentry id="re-drbdmeta">
+  <refentryinfo>
+    <date>6 December 2012</date>
+    <productname>DRBD</productname>
+    <productnumber>9.0.0</productnumber>
+  </refentryinfo>
+  <refmeta>
+    <refentrytitle>drbdmeta</refentrytitle>
+    <manvolnum>8</manvolnum> <refmiscinfo class="manual">System Administration</refmiscinfo> </refmeta> <refnamediv> <refname>drbdmeta</refname> <refpurpose>ディスク上の DRBD メタデータを操作する<indexterm significance="normal">
+      <primary>drbdmeta</primary>
+    </indexterm> </refpurpose> </refnamediv> <refsynopsisdiv> <cmdsynopsis sepchar=" "> <command moreinfo="none">drbdmeta</command> <arg choice="opt" rep="norepeat">--force</arg> <arg choice="opt" rep="norepeat">--ignore-sanity-checks</arg> <arg choice="req" rep="norepeat"> <replaceable>device</replaceable> </arg> <group choice="req" rep="norepeat"> <arg choice="plain" rep="norepeat">v06 <replaceable>minor</replaceable></arg> <arg choice="plain" rep="norepeat">v07 <replaceable>meta_dev index</replaceable></arg> <arg choice="plain" rep="norepeat">v08 <replaceable>meta_dev index</replaceable></arg> <arg choice="plain" rep="norepeat">v09 <replaceable>meta_dev index</replaceable></arg> </group> <arg choice="req" rep="norepeat"> <replaceable>command</replaceable> </arg> <arg choice="opt" rep="repeat"> <replaceable>cmd args</replaceable> </arg> </cmdsynopsis> </refsynopsisdiv>
+  <refsect1>
+    <title>Description</title>
+    <para><option>drbdmeta</option> ユーティリティは、 DRBD のディスク上のメタデータの作成、表示、および変更に使用される。ユーザは通常、 <option>drbdmeta</option> でなく、DRBD に対してより高度なインタフェースを提供する <option>drbdadm</option> ユーティリティを通して使用する。(<option>drbdadm</option> が <option>drbdmeta</option>  をどのように使うかを表示するには <option>drbdadm</option> の <option>--dry-run</option> オプションを使用する。)</para>
+
+    <para>このユーティリティは、カーネルが現在使用していないデバイスのみで使用できる。</para>
+
+    <para>最初の引数 （<replaceable>device</replaceable>） は、ボリュームに関連付けられている drbd デバイスを指定する。 そのボリュームに関連付けられているデバイスがない場合 <quote>-</quote> を指定する。drbd デバイスが指定されている場合、 <option>drbdmeta</option> ユーティリティは、アクティブボリュームのメタデータが破壊されないよう、drbd デバイスにボリュームが現在、接続されていないことを確認する。</para>
+
+    <para>2番目の引数は、使用するメタデータのバージョンを指定する （v06、v07、v08、v09）。ほとんどのメタデータバージョンでは、3番目の引数 （<replaceable>meta_dev</replaceable>） は、メタデータを含むデバイスを指定する。この引数は<replaceable>device</replaceable> と同じにできる。第 4 引数 （<replaceable>index</replaceable>） は次のいづれかのキーワードである: <option>internal</option> （内部メタデータ用）、 <option>flex-internal</option> （v07 の場合、可変サイズのメタデータ、そうでない場合、デフォルトは固定サイズの内部メタデータ）、 <option>flex-external</option> （可変サイズの外部メタデータ）、数値メタデータインデックス（固定サイズの外部メタデータ）。次のコマンドの <option>meta-disk</option> パラメータを参照: <citerefentry>
+	<refentrytitle>drbd.conf</refentrytitle> <manvolnum>5</manvolnum> </citerefentry>。</para>
+  </refsect1>
+  <refsect1>
+    <title>Options</title>
+    <variablelist>
+      <varlistentry>
+        <term>--force</term>
+        <listitem>
+          <para><indexterm significance="normal"><primary>drbdmeta</primary><secondary>--force</secondary></indexterm>drbdmeta が尋ねるすべての質問に対する答えを yes とする。</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>--ignore-sanity-checks</term>
+        <listitem>
+          <para><indexterm significance="normal"><primary>drbdmeta</primary><secondary>--ignore-sanity-checks</secondary></indexterm>通常、<option>drbdmeta</option> はメタデータデバイスに書き込む前に健全性チェックを実行する。たとえば、デバイスにファイルシステムが含まれているように見える場合、書き込むことによってファイルシステムを破壊することを拒否する。これらのチェックを無視するには、このオプションを使用する。</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsect1>
+  <refsect1>
+    <title>Commands</title>
+    <variablelist>
+      <varlistentry>
+	<term><option>create-md</option> <arg choice="opt" rep="norepeat"><option>--peer-max-bio-size=</option><replaceable>val</replaceable></arg> (メタデータバージョン v06、 v07、v08) </term>
+	<term><option>create-md</option> <arg choice="req" rep="norepeat">number-of-bitmap-slots</arg> <arg choice="opt" rep="norepeat"><option>--peer-max-bio-size=</option><replaceable>val</replaceable></arg> <arg choice="opt" rep="norepeat"><option>--al-stripes=</option><replaceable>val</replaceable></arg> <arg choice="opt" rep="norepeat"><option>--al-stripe-size-kB=</option><replaceable>val</replaceable></arg> (メタデータバージョン v09)</term>
+        <listitem>
+	  <para><indexterm significance="normal"><primary>drbdmeta</primary><secondary>create-md</secondary></indexterm>メタデータを初期化する。これは、 DRBD リソースを接続する前に必要である。<option>drbdmeta</option> デバイス上で古いバージョンの DRBD メタデータが見つかると、そのフォーマットを変換する必要があるかどうかを尋ねる。</para>
+
+	  <para><option>drbdadm</option> が device に対して <option>drbdmeta</option> の <option>create-md</option> コマンドを呼びだすと, <replaceable>number-of-bitmap-slots</replaceable> 引数をリソース内の対向ノード数にセットする。追加のビットマップスロット （将来的に対向ノードを追加できるようにする） を予約するには、 代わりに <option>drbdmeta</option> を直接呼び出す。</para>
+
+	  <para>デバイスが最初に対向ノードに接続される前に使用される場合、DRBD は対向ノードがデフォルトで 4KiB リクエストしか処理できないとみなす。<option>--peer-max-bio-size</option> オプションにより柔軟な値を設定できる。このデバイスが接続する DRBD のバージョンがわかっている場合は、これを使用する。DRBD は、バージョン 8.3.8 以降 32 KiB の 最大 bio サイズ、バージョン 8.3.9 以降は 128 KiB、バージョン 8.4.0 以降は 1 MiB の最大 bio サイズをサポートする。</para>
+	  <para>6433 以上のアクティビティログのエクステントを使用したい場合、またはストライプド RAID 上で使用する場合には、ストライプ数 (<option>--al-stripes</option>、デフォルトは 1) とストライプのサイズ(<option>--al-stripe-size-kB</option>、デフォルトは32)を指定することが可能。単に大きなオンディスクのリングバッファを使用する場合には、ストライプ
+    数を1にし、サイズを次のように拡大する。 : <?linebreak?> <command>drbdmeta 0 v08 /dev/vg23/lv42 internal create-md --al-stripe-size 1M</command>
+	  </para>
+	  <para>ボトルネックの単一の「スピンドル」になるのを避けるため、ストライプ数を増やし、オンディスクのアクティビティログ処理のインターリーブ対応の構成する。&quot;stripe-size&quot; で指定するものは、いわゆる「チャンクサイズ」または「粒度」あるいは「ストライプユニット」である。つまり、次の「スピンドル」への最短のステップとなる。
+<?linebreak?> <command>drbdmeta 0 v08 /dev/vg23/lv42 internal create-md --al-stripes 7 --al-stripe-size 64</command>
+	  </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+	<term><option>get-gi</option>
+	  <arg rep="norepeat"><option>--node-id=</option><replaceable>id</replaceable></arg>
+        </term>
+        <listitem>
+	  <para><indexterm significance="normal"><primary>drbdmeta</primary><secondary>get-gi</secondary></indexterm>特定の接続上のデバイスのデータ世代識別子を表示する。DRBD バージョン 9.0.0 以降は複数の対向ノードをサポートする。 <replaceable>node-id</replaceable> オプションを使用して、表示する対向ノードのデータ世代識別子を定義する。</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+	<term><option>show-gi</option>
+	  <arg rep="norepeat"><option>--node-id=</option><replaceable>id</replaceable></arg>
+        </term>
+        <listitem>
+          <para><indexterm significance="normal"><primary>drbdmeta</primary><secondary>show-gi</secondary></indexterm><option>get-gi</option> に似ているが、説明テキストとともに表示する。</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+	<term><option>dump-md</option></term>
+        <listitem>
+	  <para><indexterm significance="normal"><primary>drbdmeta</primary><secondary>dump-md</secondary></indexterm>ビットマップおよびアクティビティログを含むデバイスのメタデータをテキスト形式でダンプする。</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>outdate</option></term>
+        <listitem>
+	  <para>下位デバイスのデータ内容が「無効」であるとマークする。次のマニュアルを参照: <citerefentry> <refentrytitle>drbdsetup</refentrytitle>
+	      <manvolnum>8</manvolnum> </citerefentry></para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>dstate</option></term>
+        <listitem>
+	  <para>下位デバイスの現在のディスク状態を表示する。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>check-resize</option></term>
+        <listitem>
+          <para><indexterm significance="normal"><primary>drbdmeta</primary><secondary>check-resize</secondary></indexterm>下位デバイスのデバイスサイズと最後に認識されたデバイスサイズを調べる（<option>drbdsetup check-resize</option> により <option>/var/lib/drbd/drbd-minor-<replaceable>minor</replaceable>.lkbd</option> にセーブされる）。内部メタデータの場合、下位レベルのデバイスのサイズが変更され、メタデータが前の位置にある場合は、メタデータをブロックデバイスの最後の新しい位置に移動する。</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>apply-al</option></term>
+        <listitem>
+          <para><indexterm significance="normal"><primary>drbdmeta</primary><secondary>apply-al</secondary></indexterm>指定したデバイスのアクティビティログを適用する。デバイスがカーネルによって再び接続される前にこれが必要である。</para>
+        </listitem>
+      </varlistentry>
+
+    </variablelist>
+  </refsect1>
+  <refsect1>
+    <title>Expert commands</title>
+    <para><option>drbdmeta</option> ユーティリティを使用してメタデータを微調整することができる。これはメタデータの破壊やデータそのものの破損につながる可能性がある。細心の注意を払って使用すること。</para>
+    <variablelist>
+      <varlistentry>
+        <term><option>set-gi</option> <replaceable>gi</replaceable>
+	  <arg rep="norepeat"><option>--node-id=</option><replaceable>id</replaceable></arg>
+        </term>
+        <listitem>
+          <para><indexterm significance="normal"><primary>drbdmeta</primary><secondary>set-gi </secondary></indexterm>世代識別子を設定する。<replaceable>gi</replaceable> 引数にはバージョン 0.6 および 0.7 では世代カウンタを、バージョン 8.x では UUID を指定する。<option>get-gi</option> の出力と同じ文法を指定できる。DRBD バージョン 9.0.0 以降は複数の対向ノードをサポートする。 <replaceable>--node-id</replaceable>  オプションを使用して、設定する対向ノードのデータ世代識別子を定義する。<!-- FIXME: only the bitmap value taken? or current overwritten, too? -->
+	</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>restore-md</option> <replaceable>dump_file</replaceable></term>
+        <listitem>
+          <para><indexterm significance="normal"><primary>drbdmeta</primary><secondary>restore-md </secondary></indexterm>デバイスのメタデータを <replaceable>dump_file</replaceable> の内容に置き換える。 ダンプファイルのフォーマットは、 <option>dump-md</option> コマンドの出力で定義される。</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </refsect1>
+  <refsect1>
+    <title>Version</title>
+    <simpara>このドキュメントは DRBD バージョン 9.0.0 向けに改訂されている。</simpara>
+  </refsect1>
+  <refsect1>
+    <title>Author</title>
+    <simpara>Written by Philipp Reisner <email>philipp.reisner@linbit.com</email>
+            and Lars Ellenberg <email>lars.ellenberg@linbit.com</email>.
+    </simpara>
+  </refsect1>
+  <refsect1>
+    <title>Reporting Bugs</title>
+    <simpara>Report bugs to <email>drbd-user@lists.linbit.com</email>.
+    </simpara>
+  </refsect1>
+  <refsect1>
+    <title>Copyright</title>
+    <simpara>Copyright 2001-2008,2012 LINBIT Information Technologies,
+Philipp Reisner, Lars Ellenberg. This  is  free software;
+see the source for copying conditions.  There is NO warranty;
+not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    </simpara>
+  </refsect1>
+  <refsect1>
+    <title>See Also</title>
+    <para>
+      <citerefentry>
+        <refentrytitle>drbdadm</refentrytitle>
+        <manvolnum>8</manvolnum>
+      </citerefentry>
+      <citerefentry>
+        <refentrytitle>drbd.conf</refentrytitle>
+        <manvolnum>5</manvolnum>
+      </citerefentry>
+    </para>
+  </refsect1>
+</refentry>

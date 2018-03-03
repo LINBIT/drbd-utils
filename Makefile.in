@@ -48,7 +48,7 @@ WITH_DRBDMON = @WITH_DRBDMON@
 SHELL=/bin/bash
 
 TOOLS_DIRS  = user/shared user/v9 user/v84 user/v83 scripts user/drbdmon
-DOC_DIRS    = documentation/v83 documentation/v84 documentation/v9 documentation/ja/v84
+DOC_DIRS    = documentation/v83 documentation/v84 documentation/v9 documentation/ja/v84 documentation/ja/v9
 SUBDIRS     = $(TOOLS_DIRS) $(DOC_DIRS)
 
 REL_VERSION := $(shell $(SED) -ne '/^AC_INIT/{s/^[^,]*, *\([^,]*\) *,.*/\1/;p;q}' configure.ac)
@@ -80,6 +80,7 @@ tools:
 
 doc:
 	$(MAKE) -C documentation/v9 doc
+	$(MAKE) -C documentation/ja/v9 doc
 ifeq ($(WITH_83_SUPPORT),yes)
 	$(MAKE) -C documentation/v83 doc
 endif
@@ -105,6 +106,7 @@ check-submods:
 .PHONY:	doc-clean install install-tools clean distclean extra-clean uninstall
 doc-clean:
 	$(MAKE) -C documentation/v9 doc-clean
+	$(MAKE) -C documentation/ja/v9 doc-clean
 ifeq ($(WITH_83_SUPPORT),yes)
 	$(MAKE) -C documentation/v83 doc-clean
 endif
@@ -137,7 +139,7 @@ distclean:
 	rm -f config.log
 
 EXTRA_CLEAN += Makefile user/Makefile user/v83/Makefile user/v84/Makefile user/v9/Makefile scripts/Makefile user/drbdmon/Makefile
-EXTRA_CLEAN += documentation/Makefile documentation/v83/Makefile documentation/v84/Makefile documentation/v9/Makefile documentation/ja/v84/Makefile
+EXTRA_CLEAN += documentation/Makefile documentation/v83/Makefile documentation/v84/Makefile documentation/v9/Makefile documentation/ja/v84/Makefile documentation/ja/v9/Makefile
 EXTRA_CLEAN += user/shared/config.h drbd.spec
 EXTRA_CLEAN += configure config.status
 extra-clean: distclean

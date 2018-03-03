@@ -1,0 +1,793 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd"
+[
+<!ENTITY drbdsetup_options SYSTEM "drbdsetup-options.xml">
+]>
+<refentry id="re-drbdconf">
+  &drbdsetup_options;
+
+
+  <refentryinfo>
+    <date>17 January 2018</date>
+
+    <productname>DRBD</productname>
+
+    <productnumber>9.0.x</productnumber>
+  </refentryinfo>
+
+  <refmeta>
+    <refentrytitle>drbd.conf</refentrytitle>
+
+    <manvolnum>5</manvolnum> <refmiscinfo class="manual">Configuration Files</refmiscinfo> </refmeta> <refnamediv> <refname>drbd.conf</refname> <refpurpose>DRBD 構成ファイル<indexterm significance="normal">
+        <primary>drbd.conf</primary>
+      </indexterm></refpurpose> </refnamediv>
+
+  <refsect1>
+    <title>Introduction</title>
+
+    <para>DRBD は、データをクラスタのすべてのノードに複製するブロックデバイスを実装する。実際のデータおよび関連するメタデータは、通常、各クラスタノードの「通常の」ブロックデバイスに格納される。</para>
+
+    <para>複製されたブロックデバイスは、 デフォルトで <option>/dev/drbd<replaceable>minor</replaceable></option> で呼ばれる。それらはリソースにグループ化され、リソースごとに 1 つ以上のデバイスが含まる。リソース内のデバイス間のレプリケーションは、時間順に行われる。DRBD では、リソース内のデバイスを <emphasis>volumes</emphasis> で参照する。</para>
+
+    <para>DRBD 9 では、2 つ以上のクラスタノード間でリソースを複製できる。クラスタノード間の接続はポイントツーポイントリンクであり、TCP または TCP のようなプロトコルを使用する。すべてのノードを直接接続する必要がある。</para>
+
+    <para>DRBD は、カーネルと相互作用し、基本的な操作を実行する低レベルのユーザー空間コンポーネント （<option>drbdsetup</option>、 <option>drbdmeta</option>） 、DRBD の構成を理解、処理し、それを低レベルコンポーネントの基本操作に変換する高レベルのユーザー空間コンポーネント（<option>drbdadm</option>）、およびカーネルコンポーネントで構成される。</para>
+
+    <para>デフォルトの DRBD 構成は、 <option>/etc/drbd.conf</option> とそこからインクルードされる追加のファイル、通常は、 <option>/etc/drbd.d/</option> の <option>global_common.conf</option>, すべての <option><replaceable>*</replaceable>.res</option> ファイルから成り立つ。各リソースを <option><replaceable>*</replaceable>.res</option> ファイルで別々に定義することは有用である。</para>
+
+    <para>構成ファイルは、各クラスタノードがクラスタ構成全体で同一のコピーを含むことができるように設計されている。各ノードのホスト名によって、構成のどの部分が適用されるかが決まる<option>uname -n</option>）。すべてのノードのクラスタ構成を同期させておくことを推奨する。手動でノードをすべてのノードにコピーするか、 <option>csync2</option> または同様のツールそ使用する。</para>
+  </refsect1>
+
+  <refsect1>
+    <title>設定ファイルの例</title>
+    <para>
+    <programlisting format="linespecific">
+global {
+	usage-count yes;
+	udev-always-use-vnr;
+}
+resource r0 {
+      net {
+	      cram-hmac-alg sha1;
+	      shared-secret &quot;FooFunFactory&quot;;
+      }
+      volume 0 {
+	      device    /dev/drbd1;
+	      disk      /dev/sda7;
+	      meta-disk internal;
+      }
+      on alice {
+	      node-id   0;
+	      address   10.1.1.31:7000;
+      }
+      on bob {
+	      node-id   1;
+	      address   10.1.1.32:7000;
+      }
+      connection {
+	      host      alice  port 7000;
+	      host      bob    port 7000;
+	      net {
+			protocol C;
+	      }
+      }
+}</programlisting>この例では、ボリューム番号が 0 の単一の複製デバイスが含まれるリソース <option>r0</option> を定義する。このリソースは、ホスト <option>alice</option>, <option>bob</option> 間で複製され、それぞれ IPv4 アドレス <option>10.1.1.31</option>, <option>10.1.1.32</option>、ノード識別子 0, 1 を持つ。両方のホストで複製されたデバイスは <option>/dev/drbd1</option> で呼び出され、実際のデータとメタデータは下位のデバイス <option>/dev/sda7</option> に格納される。ホスト間の接続はプロトコル C を使用する。</para>
+
+    <para>詳しくは <ulink url="http://www.drbd.org/users-guide/"><citetitle>DRBD User's Guide</citetitle></ulink> を参照。</para>
+
+  </refsect1>
+
+  <refsect1>
+    <title>File Format</title>
+
+    <para>DRBD 構成ファイルはセクションで構成され、セクションには他のセクションとパラメータが含まれる。各セクションは、1 つ以上のキーワード、場合によってはセクション名、開始ブレース（<quote>{</quote>）、セクションの内容、および閉じ括弧（<quote>}</quote>） で構成される。セクション内のパラメータは、キーワード、1 つ以上のキーワードまたは値、セミコロン（<quote>;</quote>） で構成される。</para>
+
+    <para>一部のパラメータ値には、素の数値が指定されたときに適用されるデフォルトのスケールがある（たとえば、Kilo は数値の1024倍）。このようなデフォルトのスケールは、接尾辞を使用して上書きすることができる。（メガの場合は M）。共通の接尾語 K = 2^10 = 1024, M = 1024 K, G = 1024 M はサポートされている。</para>
+
+    <para>コメントはハッシュ記号で始まり（<quote>＃</quote>）、行の最後までコメントとみなされる。さらに、どのセクションにもキーワード <option>skip</option> 接頭辞を付けることができ、セクションおよびすべてのサブセクションを無効にするのに使用できる。。</para>
+
+    <para>追加ファイルは <option>include <replaceable>file-pattern</replaceable></option> キーワードでインクルードできる。サポートされている形式は <citerefentry><refentrytitle>glob</refentrytitle><manvolnum>7</manvolnum></citerefentry> マニュアルを参照。インクルード形式はセクションの外部でのみ許可される。</para>
+
+    <para>次のセクションが定義されている（インデントはどのコンテキストにあるかを示す）。<programlisting>
+common
+   [disk]
+   [handlers]
+   [net]
+   [options]
+   [startup]
+global
+resource
+   connection
+      path
+      net
+        volume
+           peer-device-options
+      [peer-device-options]
+   connection-mesh
+      net
+   [disk]
+   floating
+   handlers
+   [net]
+   on
+      volume
+         disk
+         [disk]
+   options
+   stacked-on-top-of
+   startup</programlisting>角括弧 [] 内のセクションは、設定の他の部分にも影響する。 <option>common</option> セクションはすべてのリソースに適用される。<option>resource</option> または <option>on</option> 内の <option>disk</option> セクションは、そのリソース内のすべてのボリュームに適用される。<option>resource</option> 内の<option>net</option> セクションはそのリソースのすべての接続に適用される。これにより、各リソース、接続、またはボリュームに対して同じオプションを繰り返すのを避けることができる。オプションは <option>resource</option>, <option>connection</option>, <option>on</option>, <option>volume</option> セクションでオーバーライドできる。</para>
+
+    <para><option>peer-device-options</option> は <option>resync-rate</option>, <option>c-plan-ahead</option>, <option>c-delay-target</option>, <option>c-fill-target</option>, <option>c-max-rate</option>, <option>c-min-rate</option> のどれかである. 後方互換性のため、disk オプションセクションでも指定できる。それらはすべての関連する接続に継​​承される。<option>connection</option> レベルでそれらが与えられた場合、その接続上のすべてのボリュームに継承される。<option>peer-device-options</option> セクションは <option>disk</option> キーワードで始まる。</para>
+
+    <refsect2>
+      <title>セクション</title>
+
+      <variablelist>
+        <varlistentry>
+          <term><option>common</option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>common</secondary>
+              </indexterm>このセクションには、<option>disk</option>, <option>handlers</option>, <option>net</option>, <option>options</option>, <option>startup</option> セクションが含まれる。すべてのリソースは、これらのセクションのパラメータをデフォルト値として継承する。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>connection <replaceable><optional>name</optional></replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>connection</secondary>
+              </indexterm>2 つのホスト間の接続を定義する。このセクションには、2 つの <option>host</option> パラメータまたは複数の<option>path sections</option> を含む必要がある。オプション <replaceable>name</replaceable> は、システムログやその他のメッセージの接続を参照するために使用する。name を指定しない場合、代わりに対向ノードのホスト名が使用される。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>path</option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>path</secondary>
+              </indexterm>2 つのホスト間のパスを定義する。このセクションには、2 つの <option>host</option> パラメータを含む必要がある。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>connection-mesh</option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>connection-mesh</secondary>
+              </indexterm>複数のホスト間に接続網を定義する。このセクションは、 ホスト名を引数とする <option>hosts</option> パラメータを含む必要がある。このセクションは、同じネットワークオプションを共有する多くの接続を定義するためのショートカットである。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>disk</option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>disk</secondary>
+              </indexterm>ボリュームのパラメータを定義する。このセクションのすべてのパラメータはオプションである。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>floating <replaceable><optional>address-family</optional></replaceable> <replaceable>addr</replaceable>:<replaceable>port</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>floating</secondary>
+              </indexterm><option>on</option> と同様であるが、ホスト名の代わりにネットワークアドレスが <option>floating</option> セクションとマッチするかに使用される。</para>
+
+	    <para>このセクションの <option>node-id</option> パラメータは必須である。<option>address</option> パラメータが指定されていない場合、デフォルトで対向ノードへの接続は作成されない。<option>device</option>, <option>disk</option>, <option>meta-disk</option> パラメータは定義もしくは継承されている必要がある。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>global</option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>global</secondary>
+              </indexterm>いくつかのグローバルパラメータを定義する。このセクションのすべてのパラメータはオプションである。<option>global</option> セクションは一回だけ記述できる。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>handlers</option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>handlers</secondary>
+              </indexterm>特定のイベントが発生したときに呼び出されるハンドラを定義する。カーネルは、コマンドラインの最初の引数にリソース名を渡し、イベントのコンテキストに応じて次の環境変数を設定する。<itemizedlist>
+                <listitem>
+                        <para>特定のデバイスに関連するイベントの場合、デバイスのマイナー番号は <option>DRBD_MINOR</option>、デバイスのボリューム番号は <option>DRBD_VOLUME</option> に設定される。</para>
+                </listitem>
+                <listitem>
+                  <para>特定の対向ノード上の特定のデバイスに関連するイベントの場合、 <option>DRBD_MY_ADDRESS</option>,  <option>DRBD_MY_AF</option>, <option>DRBD_PEER_ADDRESS</option>, <option>DRBD_PEER_AF</option>; デバイスのローカルマイナー番号は <option>DRBD_MINOR</option>, デバイスのボリューム番号は <option>DRBD_VOLUME</option> に設定される。</para>
+                </listitem>
+                <listitem>
+                  <para>特定の接続に関連するイベントの場合、接続エンドポイントは <option>DRBD_MY_ADDRESS</option>, <option>DRBD_MY_AF</option>,  <option>DRBD_PEER_ADDRESS</option>, <option>DRBD_PEER_AF</option>; その接続用に定義された各デバイスについて、デバイスのマイナー番号は <option>DRBD_MINOR_<replaceable>volume-number</replaceable></option> に設定される。</para>
+                </listitem>
+                <listitem>
+                  <para>デバイスを識別するイベントの場合、下位デバイスが接続されている場合は、下位デバイスのデバイス名が渡される <option>DRBD_BACKING_DEV</option> （または<option>DRBD_BACKING_DEV_<replaceable>volume-number</replaceable></option>）。</para>
+              </listitem>
+              </itemizedlist>
+            </para>
+            <para>このセクションのすべてのパラメータはオプションである。イベントごとに 1 つのハンドラしか定義できない。ハンドラが定義されていなければ何も起こらない。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><anchor xml:id="net"/><option>net</option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>net</secondary>
+              </indexterm>接続のパラメータを定義する。このセクションのすべてのパラメータはオプションである。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>on</option> <option><replaceable>host-name</replaceable></option> <replaceable><optional>...</optional></replaceable></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>on</secondary>
+              </indexterm>特定のホストまたはホストのセット上のリソースのプロパティを定義する。複数のホスト名を指定することは、たとえば IP アドレスのフェイルオーバーを使用する設定で意味がある。<replaceable>host-name</replaceable> 引数は Linux のホスト名と一致する必要がある （<option>uname -n</option>）。</para>
+
+            <para>通常、少なくとも 1 つの <option>volume</option> セクションを含むか継承する。<option>node-id</option> と <option>address</option> パラメータはこのセクションで定義する必要がある。<option>device</option>, <option>disk</option>, <option>meta-disk</option> パラメータは定義もしくは継承されている必要がある。</para>
+
+            <para>通常の構成ファイルには、各リソースで 2 つ以上の <option>on</option> セクションが含まれる。<option>floating</option> セクションも参照。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>options</option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>options</secondary>
+              </indexterm>リソースのパラメータを定義する。このセクションのすべてのパラメータはオプションである。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>resource</option> <option><replaceable>name</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>resource</secondary>
+              </indexterm>リソースを定義する。通常、少なくとも 2 つの <option>on</option> セクションと少なくとも 1 つの <option>connection</option> セクションを含む。<!-- FIXME? auto-mesh? --></para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>stacked-on-top-of <replaceable>resource</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>stacked-on-top-of</secondary>
+            </indexterm>3〜4 つのノードを持つスタック型リソースを構成するため <option>on</option> セクションに代わり使われる。</para>
+	  <para>DRBD 9 以降、スタッキングは推奨しない。代わりに 2 つ以上のノード間で複製されるリソースを使用することを推奨する。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>startup</option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>startup</secondary>
+              </indexterm>このセクションのパラメータは、起動時のリソースの動作を決定する。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>volume</option> <option><replaceable>volume-number</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>volume</secondary>
+              </indexterm>リソース内のボリュームを定義する。リソースの <option>volume</option> セクションのボリューム番号は、どのホスト上のどのデバイスが複製されたデバイスを形成するかを定義する。</para>
+          </listitem>
+        </varlistentry>
+      </variablelist>
+    </refsect2>
+
+    <refsect2>
+      <title><option>connection</option> セクションのパラメータ</title>
+
+      <variablelist>
+        <varlistentry>
+          <term><option>host <replaceable>name</replaceable></option>
+            <optional><option>address
+                <optional>address-family</optional>
+                <replaceable>address</replaceable></option></optional>
+            <optional><option>port
+                <replaceable>port-number</replaceable></option></optional></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>host</secondary>
+              </indexterm>接続のエンドポイントを定義する。各 <option>host</option> ステートメントは、リソースの <option>on</option>  セクションを参照する。ポート番号が定義されている場合、このエンドポイントは、<option>on</option> セクションで定義されたポートの代わりに指定されたポートを使用する。各 <option>connection</option> セクションには 2 つ <option>host</option> パラメータが必要である。2 つ <option>host</option> パラメータに代わって、複数の <option>path</option> セクションを含むかもしれない。</para>
+          </listitem>
+        </varlistentry>
+      </variablelist>
+    </refsect2>
+
+    <refsect2>
+      <title><option>path</option> セクションのパラメータ</title>
+
+      <variablelist>
+        <varlistentry>
+          <term><option>host <replaceable>name</replaceable></option>
+            <optional><option>address
+                <optional>address-family</optional>
+                <replaceable>address</replaceable></option></optional>
+            <optional><option>port
+                <replaceable>port-number</replaceable></option></optional></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>host</secondary>
+              </indexterm>接続のエンドポイントを定義する。各 <option>host</option> ステートメントは、リソースの <option>on</option>  セクションを参照する。ポート番号が定義されている場合、このエンドポイントは、<option>on</option> セクションで定義されたポートの代わりに指定されたポートを使用する。各 <option>path</option> セクションには 2 つ <option>host</option> パラメータが必要である。</para>
+          </listitem>
+        </varlistentry>
+      </variablelist>
+    </refsect2>
+
+    <refsect2>
+      <title><option>connection-mesh</option> セクションのパラメータ</title>
+
+      <variablelist>
+        <varlistentry>
+          <term><option>hosts <arg choice="plain" rep="repeat"><replaceable>name</replaceable></arg></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>host</secondary>
+              </indexterm>すべてのノード網を定義する。各 <option><replaceable>name</replaceable></option> は、リソースの <option>on</option> セクションを参照する。<option>on</option> セクションで定義されているポートが使用される。</para>
+          </listitem>
+        </varlistentry>
+      </variablelist>
+    </refsect2>
+
+    <refsect2>
+      <title><option>disk</option> セクションのパラメータ</title>
+
+      <variablelist>
+	<pick_drbdsetup_option name="al-extents"/>
+	<pick_drbdsetup_option name="al-updates"/>
+	<pick_drbdsetup_option name="disk-barrier"/>
+	<pick_drbdsetup_option name="disk-timeout"/>
+	<pick_drbdsetup_option name="md-flushes"/>
+	<pick_drbdsetup_option name="on-io-error"/>
+	<pick_drbdsetup_option name="read-balancing"/>
+	<pick_drbdsetup_option name="resync-after"/>
+	<pick_drbdsetup_option name="rs-discard-granularity"/>
+	<pick_drbdsetup_option name="discard-zeroes-if-aligned"/>
+	<!-- <pick_drbdsetup_option name="size"/> -->
+      </variablelist>
+    </refsect2>
+
+    <refsect2>
+      <title><option>peer-device-options</option> セクションのパラメータ</title>
+      <para><option>disk</option> キーワードでセクションを開くこともできる。</para>
+      <variablelist>
+	<pick_drbdsetup_option name="c-delay-target"/>
+	<pick_drbdsetup_option name="c-min-rate"/>
+	<pick_drbdsetup_option name="resync-rate"/>
+      </variablelist>
+    </refsect2>
+
+    <refsect2>
+      <title><option>global</option> セクションのパラメータ</title>
+
+      <variablelist>
+        <pick_drbdsetup_option name="dialog-refresh"/>
+        <pick_drbdsetup_option name="disable-ip-verification"/>
+        <pick_drbdsetup_option name="usage-count"/>
+        <pick_drbdsetup_option name="udev-always-use-vnr"/>
+      </variablelist>
+    </refsect2>
+
+    <refsect2>
+      <title><option>handlers</option> セクションのパラメータ</title>
+
+      <variablelist>
+        <varlistentry>
+          <term><option>after-resync-target <replaceable>cmd</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>after-resync-target</secondary>
+              </indexterm>再同期が完了したとき、ノードの状態が <option>Inconsistent</option> から <option>Consistent</option> に変化したときに再同期ターゲットで呼び出される。このハンドラは <option>before-resync-target</option> ハンドラで作成したスナップショットを削除するのに使用できる。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>before-resync-target <replaceable>cmd</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>before-resync-target</secondary>
+              </indexterm>再同期の開始前に再同期ターゲットで呼び出される。このハンドラは、再同期中に下位レベルのデバイスのスナップショットを作成するために使用できる。再同期中に再同期ソースが使用できなくなった場合、スナップショットに戻すことで consistent 状態が復元される。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>fence-peer <replaceable>cmd</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>fence-peer</secondary>
+              </indexterm>ノードが特定の対向ノード上のリソースをフェンシングする必要があるときに呼び出される。ハンドラは、DRBD が対向ノードとのコミュニケーションに使用するのと同じ通信パスを使用すべきでない。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>unfence-peer <replaceable>cmd</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>unfence-peer</secondary>
+              </indexterm>ノードが他のノードからのフェンシング制約を削除するときに呼び出される。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>initial-split-brain <replaceable>cmd</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>initial-split-brain</secondary>
+              </indexterm>DRBD が対向ノードに接続し、対向ノードがローカルノードとスプリットブレイン状態にあることを検出すると呼び出される。このハンドラは自動解決されるスプリットブレインシナリオでも呼び出される。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>local-io-error <replaceable>cmd</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>local-io-error</secondary>
+              </indexterm>下位レベルのデバイスで I/O エラーが発生したときに呼び出される。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>pri-lost <replaceable>cmd</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>pri-lost</secondary>
+              </indexterm>ノードが現在プライマリであるにもかかわらず、 DRBD が同期先だと判断した場合に呼び出される。ノードは、プライマリ役割を断念すべきである。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>pri-lost-after-sb <replaceable>cmd</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>pri-lost-after-sb</secondary>
+              </indexterm>ノードが現在プライマリで、スプリットブレイン後の自動回復プロセスが失敗したときに呼び出される。ノードのデータは放棄されるべきである。<!-- FIXME: What is "abandon a node" supposed to mean? --></para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>pri-on-incon-degr <replaceable>cmd</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>pri-on-incon-degr</secondary>
+	      </indexterm>ローカルノードはプライマリであり、ローカルの下位レベルのデバイスも対向ノードの下位レベルのデバイスも最新でないときに呼び出される。（プライマリには読み書きするデバイスがない）。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>split-brain <replaceable>cmd</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>split-brain</secondary>
+              </indexterm>DRBD が自動的に解決できないスプリットブレイン状況を検出した。修復のための手作業が必要なので、このハンドラは、管理者の注意を呼び出すために使用できる。</para>
+          </listitem>
+        </varlistentry>
+
+      </variablelist>
+    </refsect2>
+
+    <refsect2>
+      <title><option>net</option> セクションのパラメータ</title>
+
+      <variablelist>
+        <pick_drbdsetup_option name="after-sb-0pri"/>
+        <pick_drbdsetup_option name="after-sb-1pri"/>
+        <pick_drbdsetup_option name="after-sb-2pri"/>
+        <pick_drbdsetup_option name="allow-two-primaries"/>
+        <pick_drbdsetup_option name="always-asbp"/>
+        <pick_drbdsetup_option name="connect-int"/>
+        <pick_drbdsetup_option name="cram-hmac-alg"/>
+        <pick_drbdsetup_option name="csums-alg"/>
+        <pick_drbdsetup_option name="csums-after-crash-only"/>
+        <pick_drbdsetup_option name="data-integrity-alg"/>
+        <pick_drbdsetup_option name="fencing"/>
+        <pick_drbdsetup_option name="ko-count"/>
+        <pick_drbdsetup_option name="max-buffers"/>
+        <pick_drbdsetup_option name="max-epoch-size"/>
+        <pick_drbdsetup_option name="on-congestion"/>
+        <pick_drbdsetup_option name="ping-int"/>
+        <pick_drbdsetup_option name="ping-timeout"/>
+        <pick_drbdsetup_option name="socket-check-timeout"/>
+        <pick_drbdsetup_option name="protocol"/>
+        <pick_drbdsetup_option name="rcvbuf-size"/>
+        <pick_drbdsetup_option name="rr-conflict"/>
+        <pick_drbdsetup_option name="shared-secret"/>
+        <pick_drbdsetup_option name="sndbuf-size"/>
+        <pick_drbdsetup_option name="tcp-cork"/>
+        <pick_drbdsetup_option name="timeout"/>
+        <pick_drbdsetup_option name="use-rle"/>
+        <pick_drbdsetup_option name="verify-alg"/>
+      </variablelist>
+    </refsect2>
+
+    <refsect2>
+      <title><option>on</option> セクションのパラメータ</title>
+
+      <variablelist>
+        <varlistentry>
+          <term><option>address
+              <replaceable><optional>address-family</optional></replaceable>
+              <replaceable>address</replaceable>:<replaceable>port</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>address</secondary>
+              </indexterm>接続エンドポイントのアドレスファミリ、アドレス、およびポートを定義する。</para>
+
+	    <para>アドレスファミリは <option>ipv4</option>, <option>ipv6</option>, <option>ssocks</option> (Dolphin Interconnect Solutions の「スーパーソケット」), <option>sdp</option> (Infiniband Sockets Direct Protocol), <option>sci</option> がサポートされる (<option>sci</option> は  <option>ssocks</option> の別名である)。アドレスファミリが指定されていない場合、 <option>ipv4</option> が仮定される。<option>ipv6</option> アドレスファミリ以外は、 address に IPv4 アドレス表記を使用する（たとえば、1.2.3.4）。<option>ipv6</option> アドレスは角括弧で囲み、 IPv6 アドレス表記法を使用する（たとえば、 [fd01：2345：6789：abcd :: 1]）。ポートは常に 1〜65535 の 10 進数で指定される。</para>
+
+            <para>各ホストで、ポート番号は各アドレスごとに一意でなければならない。ポートは共有できない。</para>
+          <!-- FIXME: The port should be made optional to avoid duplicate
+                      information here and in the connection sections. -->
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>node-id <replaceable>value</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>node-id</secondary>
+              </indexterm>クラスタ内のノードの一意のノード識別子を定義する。ノード識別子は、ネットワークプロトコル内の個々のノードを識別し、ビットマップスロットをメタデータ内のノードに割り当てるために使用される。</para>
+
+            <para>ノード識別子は、クラスタがダウンしている場合にのみ、クラスタ内で再割り当てすることができる。構成内およびデバイスメタデータ内のノード識別子が、すべてのホスト上で一貫して変更されることが不可欠である。メタデータを変更するには、 <command>drbdmeta dump-md</command> でダンプし、ビットマップスロット割り当てを調整し、<command>drbdmeta restore-md</command> でメタデータを更新する。</para>
+
+            <para><option>node-id</option> パラメータは DRBD 9 以降存在する。その値の範囲は 0 から 16 である。デフォルトはない。</para>
+          </listitem>
+        </varlistentry>
+      </variablelist>
+    </refsect2>
+
+    <refsect2>
+      <title><option>options</option> セクションのパラメータ (リソース options)</title>
+
+      <variablelist>
+        <pick_drbdsetup_option name="auto-promote"/>
+        <pick_drbdsetup_option name="cpu-mask"/>
+        <pick_drbdsetup_option name="on-no-data-accessible"/>
+        <pick_drbdsetup_option name="peer-ack-window"/>
+        <pick_drbdsetup_option name="peer-ack-delay"/>
+        <pick_drbdsetup_option name="quorum"/>
+	<pick_drbdsetup_option name="quorum-minimum-redundancy"/>
+        <pick_drbdsetup_option name="on-no-quorum"/>
+      </variablelist>
+    </refsect2>
+
+    <refsect2>
+      <title><option>startup</option> セクションのパラメータ</title>
+
+      <para>このセクションのパラメータは、DRBD init スクリプトでシステム起動時の DRBD の動作を定義する。システムが起動し、実行後には効果がない。</para>
+
+      <variablelist>
+	<pick_drbdsetup_option name="degr-wfc-timeout"/>
+	<pick_drbdsetup_option name="outdated-wfc-timeout"/>
+
+        <varlistentry>
+          <term><option>stacked-timeouts</option></term>
+
+          <listitem>
+            <para>スタックデバイスでは、通常は <option>wfc-timeout</option> および <option>degr-wfc-timeout</option> は無視される。これらのタイムアウト値には、代わりに<option>connect-int</option> の 2 倍のタイムアウト値が使われる。<option>stacked-timeouts</option> パラメータを指定すると、DRBD はスタックデバイスに対しても <option>wfc-timeout</option> および <option>degr-wfc-timeout</option> にもとづいて動作するようになる。スタックデバイスの対向ノードが多くの場合に利用できないケースや対向ノードがプライマリにならない場合に限って、このオプションを指定すべきである。このパラメータを誤って使用すると、スプリットブレインにつながる可能性がある。</para>
+          </listitem>
+        </varlistentry>
+
+	<pick_drbdsetup_option name="wait-after-sb"/>
+	<pick_drbdsetup_option name="wfc-timeout"/>
+      </variablelist>
+    </refsect2>
+
+    <refsect2>
+      <title><option>volume</option> セクションのパラメータ</title>
+
+      <variablelist>
+        <varlistentry>
+          <term><option>device /dev/drbd<replaceable>minor-number</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>device</secondary>
+              </indexterm>複製されたブロックデバイスのデバイス名とマイナー番号を定義する。これは、アプリケーションがアクセスするデバイスである。ほとんどの場合、デバイスは直接使用されるのではなく、ファイルシステムとして使用される。このパラメータは必須で、標準のデバイス命名規則が適用される。</para>
+
+            <para>このデバイスに加えて、udev は、 <option>/dev/drbd/by-res/<replaceable>resource</replaceable>/<replaceable>volume</replaceable></option>, <option>/dev/drbd/by-disk/<replaceable>lower-level-device</replaceable></option> シンボリックリンクをデバイスに作成する。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+	  <term><option>disk</option>
+	      <group choice="req" rep="norepeat">
+		<arg rep="norepeat">disk</arg>
+		<arg choice="plain" rep="norepeat"><option>none</option></arg>
+	      </group>
+	    </term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>disk</secondary>
+              </indexterm>DRBD が実際のデータを格納するために使用する下位ブロックデバイスを定義する。複製された DRBD デバイスが設定されている間は、下位レベルのデバイスを直接使用してはならない。読み取りアクセス専用のツール <citerefentry>
+                <refentrytitle>dumpe2fs</refentrytitle>
+                 <manvolnum>8</manvolnum> </citerefentry> や同様のツールも許可されない。キーワード <option>none</option> は、下位ブロックデバイスが設定されていないことを指定する。下位レベルデバイスの継承もこれにより上書きされる。</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>meta-disk internal</option></term>
+
+          <term><option>meta-disk <replaceable>device</replaceable></option></term>
+
+          <term><option>meta-disk <replaceable>device</replaceable> [<replaceable>index</replaceable>]</option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>meta-disk</secondary>
+              </indexterm>複製されたブロックデバイスのメタデータが存在する場所を定義する。 <option>internal</option> は、下位レベルのデバイスにデータとメタデータの両方が含まれていることを意味する。別のデバイスに格納されている場合は、これを指定する。</para>
+
+            <para><replaceable>index</replaceable> を指定すると、複数のレプリケートされたデバイスが同じメタデータデバイスを共有でき、それぞれ別のインデックスを使用する。各インデックスは 128 MiB のデータを占有し、2 つのクラスタノードで最大 4 TiB の複製されたデバイスサイズに対応する。メタデータデバイスは共有しないで、必要に応じて lvm ボリュームマネージャを使用してメタデータデバイスを作成することを推奨する。</para>
+
+            <para><replaceable>index</replaceable> を指定しない場合、下位レベルのデバイスのサイズによってメタデータのサイズが決定される。必要なサイズは 36 KiB +（下位デバイスのサイズ） / 32K *（ノード数-1） である。もし<!-- FIXME: al-striping, al-extents 65536? -->メタデータデバイスがそれよりも大きい場合、余分なスペースは使用されない。</para>
+	    <para>このパラメータは、<option>disk</option> が <option>none</option> 以外に設定されている場合は必須で、<option>disk</option> が <option>none</option> に設定されている場合は無視される。<option>disk</option> パラメータなしの <option>meta-disk</option> パラメータは使用できない。</para>
+          </listitem>
+        </varlistentry>
+      </variablelist>
+    </refsect2>
+  </refsect1>
+
+  <refsect1 id="data-integrity">
+    <title>データ整合性に関する注意</title>
+
+    <para>DRBD は、データの整合性チェックのための 2 つの異なるメカニズムをサポートする。 <option>data-integrity-alg</option> ネットワークパラメータを使用すると、ネットワーク経由で送信されたデータにチェックサムを追加できる。もう １ つのオンライン照合メカニズム（<command moreinfo="none">drbdadm verify</command>, <option>verify-alg</option> パラメータ）を使用すると、ディスク上のデータの違いをチェックできる。</para>
+
+    <para>両方のメカニズムは、データが I/O 中に変更された場合（つまり、ネットワークを介して送信されている間、またはディスクに書き込まれている間）、誤検出を引き起こす可能性がある。これは常に問題を示すとは限らない。たとえば、一部のファイルシステムやアプリケーションでは、特定の操作のために I/O 下のデータを変更する。スワップ領域も I/O 中に変更される可能性がある。</para>
+
+    <para>ネットワークデータの整合性チェックは、データの送信後に送信側のチェックサムを検証することによって、 I/O 中のデータ変更を識別しようとする。不一致が検出された場合は、エラーを記録する。また、受信側も、不一致を検出するとエラーをログに記録する。したがって、受信側でのみ記録されるエラーはネットワーク上のエラーを示し、両側に記録されたエラーは I/O でのデータ変更を示す。</para>
+
+    <para>直近の例 (2007 年) では系統的なデータ損傷のケースがあり、特定の種類のギガビット NIC の TCP オフロードエンジンとドライバのバグが原因であった。データの破損が、コアメモリからカードへの DMA 転送で発生していた。TCP チェックサムはカード上で計算されたため、 TCP/IP プロトコルチェックサムではこの問題を検出できませんでした。</para>
+  </refsect1>
+
+  <refsect1>
+    <title>Version</title>
+
+    <simpara>このドキュメントは DRBD バージョン 9.0.0 向けに改訂されている。</simpara>
+  </refsect1>
+
+  <refsect1>
+    <title>Author</title>
+
+    <simpara>Written by Philipp Reisner <email>philipp.reisner@linbit.com</email> and Lars
+    Ellenberg <email>lars.ellenberg@linbit.com</email>.</simpara>
+  </refsect1>
+
+  <refsect1>
+    <title>Reporting Bugs</title>
+
+    <simpara>Report bugs to <email>drbd-user@lists.linbit.com</email>.</simpara>
+  </refsect1>
+
+  <refsect1>
+    <title>Copyright</title>
+
+    <simpara>Copyright 2001-2018 LINBIT Information Technologies, Philipp Reisner, Lars Ellenberg.
+    This is free software; see the source for copying conditions. There is NO warranty; not even
+    for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.</simpara>
+  </refsect1>
+
+  <refsect1>
+    <title>See Also</title>
+
+    <para><citerefentry>
+        <refentrytitle>drbd</refentrytitle>
+
+        <manvolnum>8</manvolnum>
+      </citerefentry>, <citerefentry>
+        <refentrytitle>drbdsetup</refentrytitle>
+
+        <manvolnum>8</manvolnum>
+      </citerefentry>, <citerefentry>
+        <refentrytitle>drbdadm</refentrytitle>
+
+        <manvolnum>8</manvolnum>
+      </citerefentry>,
+      <ulink url="http://www.drbd.org/users-guide/"><citetitle>DRBD User's Guide</citetitle></ulink>,
+       <ulink url="http://www.drbd.org/"><citetitle>DRBD Web Site</citetitle></ulink></para>
+
+  </refsect1>
+</refentry>

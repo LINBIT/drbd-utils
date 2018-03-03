@@ -393,7 +393,7 @@ fi
 
 dnl The configuration files we create (from their .in template)
 if test -z $SPECMODE; then
-   AC_CONFIG_FILES(Makefile user/shared/Makefile user/v9/Makefile user/v83/Makefile user/v84/Makefile scripts/Makefile documentation/v9/Makefile documentation/v83/Makefile documentation/v84/Makefile scripts/drbd.rules user/drbdmon/Makefile documentation/ja/v84/Makefile)
+   AC_CONFIG_FILES(Makefile user/shared/Makefile user/v9/Makefile user/v83/Makefile user/v84/Makefile scripts/Makefile documentation/v9/Makefile documentation/v83/Makefile documentation/v84/Makefile scripts/drbd.rules user/drbdmon/Makefile documentation/ja/v84/Makefile documentation/ja/v9/Makefile)
    AC_CONFIG_HEADERS(user/shared/config.h)
 else
    AC_CONFIG_FILES(drbd.spec)

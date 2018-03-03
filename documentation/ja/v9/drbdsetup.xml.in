@@ -1,0 +1,995 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd"
+[
+<!ENTITY drbdsetup_options SYSTEM "drbdsetup-options.xml">
+]>
+<refentry id="re-drbdsetup">
+  &drbdsetup_options;
+
+
+  <refentryinfo>
+    <date>17 January 2018</date>
+
+    <productname>DRBD</productname>
+
+    <productnumber>9.0.x</productnumber>
+  </refentryinfo>
+
+  <refmeta>
+    <refentrytitle>drbdsetup</refentrytitle>
+
+    <manvolnum>8</manvolnum> <refmiscinfo class="manual">System Administration</refmiscinfo> </refmeta> <refnamediv> <refname>drbdsetup</refname> <refpurpose>DRBD カーネルモジュールを構成する<indexterm significance="normal">
+        <primary>drbdsetup</primary>
+      </indexterm></refpurpose> </refnamediv> <refsynopsisdiv> <cmdsynopsis sepchar=" "> <command moreinfo="none">drbdsetup</command> <arg choice="plain" rep="norepeat">command</arg> <arg choice="req" rep="repeat">argument</arg> <arg choice="opt" rep="repeat">option</arg> </cmdsynopsis> </refsynopsisdiv>
+
+  <refsect1>
+    <title>Description</title>
+
+    <para><command moreinfo="none">drbdsetup</command> ユーティリティは、DRBD カーネルモジュールを構成し、また現在の構成を表示する。ユーザは通常、 <command moreinfo="none">drbdsetup</command> でなく、DRBD に対してより高度なインタフェースを提供する <command moreinfo="none">drbdadm</command>  ユーティリティを通して使用する。(<option>drbdadm</option> が <option>drbdsetup</option> をどのように使うかを表示するには <option>drbdadm</option> の <option>--dry-run</option> オプションを使用する。)</para>
+
+    <para>一部のオプション引数には、素の数値が指定されたときに適用されるデフォルトのスケールがある（たとえば、Kilo は数値の1024倍）。このようなデフォルトのスケールは、接尾辞を使用して上書きすることができる。（メガの場合は M）。共通の接尾語 K = 2^10 = 1024, M = 1024 K, G = 1024 M はサポートされている。</para>
+  </refsect1>
+
+  <refsect1>
+    <title>Commands</title>
+
+    <variablelist>
+      <varlistentry>
+	<xi:include href="drbdsetup_attach.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Attach a lower-level device to an existing replicated device. -->
+	<xi:include href="drbdsetup_disk-options.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Change the disk options of an attached lower-level device. -->
+
+        <listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>disk</secondary>
+	  </indexterm>
+
+	  <para><option>attach</option> コマンドは、下位デバイスを既存の複製デバイスに接続する。<option>disk-options</option> コマンドは、接続された下位デバイスのディスクオプションを変更する。複製されたデバイスは、 <command moreinfo="none">drbdsetup new-minor</command> で作られている必要がある。</para>
+
+	    <para>複製されたデバイスをその <replaceable>minor</replaceable> 番号で指定する。<replaceable>lower_dev</replaceable>は、下位レベルデバイスの名前である。<replaceable>meta_data_dev</replaceable> は、メタデータを含むデバイスの名前であり、 <replaceable>lower_dev</replaceable> と同じにできる。<replaceable>meta_data_index</replaceable> は、数値のメタデータインデックス、内部メタデータ用のキーワード <option>internal</option> 、または可変サイズの外部メタデータ用のキーワード <option>flexible</option>  のどれかである。利用可能なオプション: </para>
+
+
+	  <variablelist>
+	    <pick_drbdsetup_option name="al-extents"/>
+	    <pick_drbdsetup_option name="al-updates"/>
+	    <pick_drbdsetup_option name="disk-barrier"/>
+	    <pick_drbdsetup_option name="disk-timeout"/>
+	    <pick_drbdsetup_option name="md-flushes"/>
+	    <pick_drbdsetup_option name="on-io-error"/>
+	    <pick_drbdsetup_option name="read-balancing"/>
+	    <pick_drbdsetup_option name="resync-after"/>
+	    <pick_drbdsetup_option name="size"/> <!-- only for attach, not for disk-options? -->
+	    <pick_drbdsetup_option name="discard-zeroes-if-aligned"/>
+	    <pick_drbdsetup_option name="rs-discard-granularity"/>
+          </variablelist>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_peer-device-options.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Remember the current size of a lower-level device. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>peer-device-options</secondary>
+	  </indexterm>
+
+	  <para>これらは、 <replaceable>peer</replaceable> のデバイスに影響を与えるオプションである。</para>
+
+
+	  <variablelist>
+	    <pick_drbdsetup_option name="c-delay-target"/>
+	    <pick_drbdsetup_option name="c-fill-target"/>
+	    <pick_drbdsetup_option name="c-max-rate"/>
+	    <pick_drbdsetup_option name="c-min-rate"/>
+	    <pick_drbdsetup_option name="c-plan-ahead"/>
+	    <pick_drbdsetup_option name="resync-rate"/>
+	 </variablelist>
+
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_check-resize.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Remember the current size of a lower-level device. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>check-resize</secondary>
+	  </indexterm>
+
+	  <para>指定された複製デバイスの下位デバイスの現在のサイズを記録する。drbdadm によって使用される。サイズ情報は、/var/lib/drbd/drbd-minor-<replaceable>minor</replaceable>.lkbd という名前で記録される。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_new-peer.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Create a connection/peer within a resource. -->
+	<xi:include href="drbdsetup_net-options.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Change the network options of a connection. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>net</secondary>
+	  </indexterm>
+
+	  <para><option>new-peer</option> コマンドは、 <replaceable>resource</replaceable> に接続を作成する。リソースは <command moreinfo="none">drbdsetup new-resource</command> で作成されている必要がある。<option>net-options</option> オプションは、既存の接続のネットワークオプションを変更する。<option>connect</option> コマンドで接続をアクティブにする前に、少なくとも1つのパスを <option>new-path</option> コマンドで追加する必要がある。利用可能なオプション: </para>
+
+	  <variablelist>
+
+	    <pick_drbdsetup_option name="after-sb-0pri"/>
+	    <pick_drbdsetup_option name="after-sb-1pri"/>
+	    <pick_drbdsetup_option name="after-sb-2pri"/>
+	    <pick_drbdsetup_option name="allow-two-primaries"/>
+	    <pick_drbdsetup_option name="always-asbp"/>
+	    <pick_drbdsetup_option name="connect-int"/>
+	    <pick_drbdsetup_option name="cram-hmac-alg"/>
+	    <pick_drbdsetup_option name="csums-alg"/>
+	    <pick_drbdsetup_option name="csums-after-crash-only"/>
+	    <pick_drbdsetup_option name="data-integrity-alg"/>
+	    <pick_drbdsetup_option name="fencing"/>
+	    <pick_drbdsetup_option name="ko-count"/>
+	    <pick_drbdsetup_option name="max-buffers"/>
+	    <pick_drbdsetup_option name="max-epoch-size"/>
+	    <pick_drbdsetup_option name="on-congestion"/>
+	    <pick_drbdsetup_option name="ping-int"/>
+	    <pick_drbdsetup_option name="ping-timeout"/>
+	    <pick_drbdsetup_option name="socket-check-timeout"/>
+	    <pick_drbdsetup_option name="protocol"/>
+	    <pick_drbdsetup_option name="rcvbuf-size"/>
+	    <pick_drbdsetup_option name="rr-conflict"/>
+	    <pick_drbdsetup_option name="shared-secret"/>
+	    <pick_drbdsetup_option name="sndbuf-size"/>
+	    <pick_drbdsetup_option name="tcp-cork"/>
+	    <pick_drbdsetup_option name="timeout"/>
+	    <pick_drbdsetup_option name="use-rle"/>
+	    <pick_drbdsetup_option name="verify-alg"/>
+	  </variablelist>
+	</listitem>
+      </varlistentry>
+
+
+      <varlistentry>
+	<xi:include href="drbdsetup_new-path.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Create a path to a peer (within a connection). -->
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>net</secondary>
+	  </indexterm>
+
+	  <para><option>new-path</option> コマンドは、<replaceable>接続</replaceable>にパスを作成する。接続は <command moreinfo="none">drbdsetup new-peer</command> で作成されている必要がある。<replaceable>local_addr</replaceable>, <replaceable>remote_addr</replaceable> は、ローカルとリモートのプロトコル、ネットワークアドレス、ポートの形式を <optional><replaceable>address-family</replaceable>:</optional><replaceable>address</replaceable><optional>:<replaceable>port</replaceable></optional> で参照する。アドレスファミリは、 <option>ipv4</option>, <option>ipv6</option>, <option>ssocks</option> (Dolphin Interconnect Solutionsの「スーパーソケット」), <option>sdp</option> (Infiniband Sockets Direct Protocol), <option>sci</option>  がサポートされる(<option>sci</option> は、 <option>ssocks</option> の別名である)。アドレスファミリが指定されていない場合、 <option>ipv4</option> を仮定する。<option>ipv6</option> アドレスファミリ以外は、 <replaceable>address</replaceable> に IPv4 アドレス表記を使用する（たとえば、1.2.3.4）。<option>ipv6</option> アドレスは角括弧で囲み、 IPv6 アドレス表記法を使用する（たとえば、 [fd01：2345：6789：abcd :: 1]）。<replaceable>port</replaceable> のデフォルトは 7788 である。</para>
+
+	</listitem>
+      </varlistentry>
+
+
+      <varlistentry>
+	<xi:include href="drbdsetup_connect.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Activate a connection. -->
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>net</secondary>
+	  </indexterm>
+
+	  <para><option>connect</option> コマンドは接続をアクティブにする。つまり、DRBD ドライバは接続パスのすべてのローカルアドレスをバインドしてリッスンする。接続パスを 1 つ以上確立しようとする。利用可能なオプション: </para>
+
+	  <variablelist>
+	    <pick_drbdsetup_option name="tentative"/>
+	    <pick_drbdsetup_option name="discard-my-data"/>
+	  </variablelist>
+
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_del-peer.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Remove a connection/peer within a resource. -->
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>net</secondary>
+	  </indexterm>
+
+	  <para><option>del-peer</option> コマンドは、 <replaceable>resource</replaceable> から接続を削除する。</para>
+
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_del-path.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Remove a connection/peer within a resource. -->
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>net</secondary>
+	  </indexterm>
+
+	  <para><option>del-path</option> コマンドは、<replaceable>接続</replaceable>からパスを削除する。接続先の接続を維持するためにパスが必要な場合は失敗しないようにする。すべてのパスを削除するには、まず接続を切断する。</para>
+
+	</listitem>
+      </varlistentry>
+
+
+      <varlistentry>
+	<xi:include href="drbdsetup_cstate.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Show the current state of a connection. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>cstate</secondary>
+	  </indexterm>
+
+	  <para>接続の現在の状態を表示する。接続は、対向ノードの node-id によって識別される。<command moreinfo="none">drbdsetup connect</command> コマンを参照。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_del-minor.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Remove a replicated device. -->
+
+	<listitem>
+	  <para>複製されたデバイスを削除する。下位レベルのデバイスに接続できまない。<command moreinfo="none">drbdsetup detach</command> を参照。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_del-resource.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Remove a resource. -->
+
+	<listitem>
+	  <para>リソースを削除する。すべてのボリュームと接続を最初に削除する必要がある （<command moreinfo="none">drbdsetup del-minor</command>、 <command moreinfo="none">drbdsetup disconnect</command>）。あるいは、 <command moreinfo="none">drbdsetup down</command> すべてのボリュームと接続とともにリソースを削除するために使用できる。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_detach.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Detach the lower-level device of a replicated device. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>detach</secondary>
+	  </indexterm>
+	  <para>複製されたデバイスの下位デバイスを切り離す。利用可能なオプション: <variablelist>
+	    <varlistentry>
+	      <term><option>--force</option></term>
+	      <listitem>
+		<para>強制的に切り離し、すぐに戻る。これにより、保留中のすべての I/O が完了するまで下位レベルのデバイスが失敗した状態になり、デバイスが切り離される。下位レベルのデバイスにまだ送信されていない I/O （デバイスの I/O が中断されたなど） は失敗したものとみなされる。</para>
+	      </listitem>
+	    </varlistentry>
+	  </variablelist>
+	  </para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_disconnect.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Disconnect a resource from a peer host. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>disconnect</secondary>
+	  </indexterm>
+
+	  <para>対向ノードへの接続を削除する。接続は、対向ノードの node-id によって識別される。<command moreinfo="none">drbdsetup connect</command> コマンを参照。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_down.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Take a resource down. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>down</secondary>
+	  </indexterm>
+
+	  <para>すべてのボリューム、接続、およびリソース自体を削除して、リソースを落とす。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_dstate.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Show the current disk state of a lower-level device. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>dstate</secondary>
+	  </indexterm>
+
+	  <para>下位デバイスの現在のディスク状態を表示する。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_events2.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Show the current state and all state changes of all resources. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>events2</secondary>
+	  </indexterm>
+
+	  <para>設定されたすべての DRBD オブジェクトの現在の状態、状態へのすべての変更を表示する。</para>
+
+	  <para>出力形式は、機械だけでなく人も読める形式である。各行は、イベントの種類を示す単語で始まる: <option>exists</option> は既存オブジェクトの場合; <option>create</option>, <option>destroy</option>,  <option>change</option> はオブジェクトが作成、破棄、変更された場合; <option>call</option>, <option>response</option> はイベントハンドラが呼び出された、戻った場合。2 番目の単語は、イベントが適用されるオブジェクトを示す: <option>resource</option>, <option>device</option>, <option>connection</option>, <option>peer-device</option>, <option>helper</option>, 現在の状態が完全にダンプされたことを示すための dash (<option>-</option>) 。</para>
+
+	  <para>残りの単語はオブジェクトを識別し、オブジェクトが入っている状態を記述する。利用可能なオプション: <variablelist>
+	      <varlistentry>
+		<term><option>--now</option></term>
+
+		<listitem>
+		  <para>現在の状態を報告した後に終了する。デフォルトでは、継続的に監視し、状態の変化を報告する。</para>
+		</listitem>
+	      </varlistentry>
+
+	      <varlistentry>
+		<term><option>--statistics</option></term>
+
+		<listitem>
+		  <para>統計情報を出力に含める。</para>
+		</listitem>
+	      </varlistentry>
+	    </variablelist>
+	  </para>
+	</listitem>
+    </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_get-gi.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Show the data generation identifiers for a device on a particular connection. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>get-gi</secondary>
+	  </indexterm>
+
+	  <para>特定の接続上のデバイスのデータ世代識別子を表示する。デバイスは、そのボリューム番号によって識別される。接続はそのエンドポイントによって識別される。<command moreinfo="none">drbdsetup connect</command> コマンドを参照。</para>
+
+	  <para>出力は、現在の UUID、ビットマップ UUID、および最初の2つの履歴 UUID で構成され、一連のフラグが続く。現在の UUID と履歴 UUID はデバイス固有である。ビットマップ UUID およびフラグは、対向ノードのデバイス固有である。このコマンドは、最初の2つの履歴 UUID のみを表示する。内部的には、DRBD は各対向ノードのデバイスの履歴 UUID を1つ保持する。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_invalidate.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Replace the local data of a resource with that of a peer. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>invalidate</secondary>
+	  </indexterm>
+
+	  <para>デバイスのローカルデータを対向ノードのローカルデータで置き換える。すべてのローカルデータが非同期とマークされ、指定された対向ノードデバイスとの再同期が始まる。</para>
+	  <!-- "This command will fail if the device is not part of a connected device pair." -->
+	  <!-- FIXME: What if the peer is not connected? -->
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_invalidate-remote.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Replace a peer's data of a resource with the local data. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>invalidate-remote</secondary>
+	  </indexterm>
+
+	  <para>対向ノードのリソースデータをローカルデータで置き換える。対向ノードデバイスのデータは非同期にマークされ、ローカルノードから指定された対向ノードへの再同期が始まる。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_new-current-uuid.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Generate a new current UUID. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>new-current-uuid</secondary>
+	  </indexterm>
+
+	  <!-- FIXME: The description does not really explain what is going on
+	  and why; this needs to be completely analyzed and revised.  Also, we
+	  should have separate commands for creating a new current uuid and for
+	  clearing unused bitmap slots. -->
+
+	  <para>現在 UUID を生成して、他のすべての UUID をローテートする。このコマンドには 2 通りの利用シーンが考えられる。まず、初期同期を省略する際に利用する。また、 1 台で設定を行った後遠隔サイトに運搬することにより帯域幅を節約するためにも利用できる。</para>
+
+	  <para>利用可能なオプション: <variablelist>
+	      <varlistentry>
+		<term><option>--clear-bitmap</option></term>
+
+		<listitem>
+		  <para>現在 UUID を生成すると同時に同期ビットマップをクリアする。</para>
+		</listitem>
+	      </varlistentry>
+	    </variablelist></para>
+
+	  <para>このオプションは、ゼロから新規に構築する際に初期同期を省略するために使用する。この方法は、作ったばかりのメタデータに対して効果がある。必要なステップは以下のとおり:<orderedlist continuation="restarts" inheritnum="ignore" numeration="arabic">
+	      <listitem>
+		<simpara>両ノードでメタデータを初期化してデバイスを設定する。</simpara>
+
+		<simpara><command moreinfo="none">drbdadm create-md --force
+		<replaceable>res</replaceable></command></simpara>
+	      </listitem>
+
+	      <listitem>
+		<simpara>それぞれのサイズを知るために初期ハンドシェークが必要となる。</simpara>
+
+		<simpara><command moreinfo="none">drbdadm up
+		<replaceable>res</replaceable></command></simpara>
+	      </listitem>
+
+	      <listitem>
+		<simpara>Secondary/Secondary Inconsistent/Inconsistent の状態で接続される。新しい現在 UUID を作りダーティなビットマップをクリアする。</simpara>
+
+		<simpara><command moreinfo="none">drbdadm --clear-bitmap new-current-uuid
+		<replaceable>res</replaceable></command></simpara>
+	      </listitem>
+
+	      <listitem>
+		<simpara>Secondary/Secondary UpToDate/UpToDate の状態で接続される。片方をプライマリに切り替えてファイルシステムを作成する。</simpara>
+
+		<simpara><command moreinfo="none">drbdadm primary
+		<replaceable>res</replaceable></command></simpara>
+
+		<simpara><command moreinfo="none">mkfs -t <replaceable>fs-type</replaceable> $(drbdadm
+		sh-dev <replaceable>res</replaceable>)</command></simpara>
+		<!-- FIXME: sh-dev can probably return more than one device; we can no longer use it like this. -->
+	      </listitem>
+	    </orderedlist></para>
+
+	  <para>この方法の明らかな欠点は、別の方法でディスク内容を同一にしない限り、複製物全体に古いゴミのデータが残ることである。このため、オンライン照合は多数の非同期ブロックを見出してしまう。</para>
+
+	  <para><emphasis>この方法は、すでにデータのあるディスクに適用してはならない！</emphasis> 最初は動作しているように見えても、ノードの切り替えを行うとデータが壊れてしまい二度と使えなくなる。そのため、<emphasis>mkfs を省略してはならない</emphasis>　(またはそれに相当する操作)。</para>
+
+	  <para>このコマンドは、最初のノードを本稼働させた後でディスク自体を 2 番目のノードに移すという手法により、クラスタの初期化時間を短縮する目的にも適用できる。この方法は、切断されたデバイスに対してのみ有効である。デバイスのロールはプライマリでもセカンダリでもよい。</para>
+
+	  <para>必要なステップは以下のとおり:<orderedlist continuation="restarts" inheritnum="ignore" numeration="arabic">
+	      <listitem>
+		<simpara><command moreinfo="none">drbdsetup new-current-uuid --clear-bitmap <replaceable>minor</replaceable>
+		</command></simpara>
+	      </listitem>
+
+	      <listitem>
+		<simpara>現在のアクティブなサーバのディスクをコピーする。たとえば RAID1 コントローラ配下のディスクを 1 本抜く、 dd でコピーするなど。実際のデータ領域とメタデータの両方をコピーする必要がある。</simpara>
+	      </listitem>
+
+	      <listitem>
+		<simpara><command moreinfo="none">drbdsetup new-current-uuid <replaceable>minor</replaceable>
+		</command></simpara>
+	      </listitem>
+	    </orderedlist>このディスクをセカンダリのノードに挿入してクラスタに参加させる。ステップ 1 での <command moreinfo="none">drbdsetup</command> の実行以降に変更した箇所の再同期が行われる。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_new-minor.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Create a new replicated device within a resource. -->
+
+	<listitem>
+	  <para>リソース内に新しい複製されたデバイスを作成する。このコマンドは、複製されたデバイス用のブロックデバイスの inode を作成する（デフォルトでは、/dev/drbd<replaceable>minor</replaceable>）。<replaceable>volume</replaceable> 番号は <replaceable>resource</replaceable> 内のデバイスを認識する。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_new-resource.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Create a new resource. -->
+	<xi:include href="drbdsetup_resource-options.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Change the resource options of an existing resource. -->
+
+	<listitem>
+	  <para><option>new-resource</option> コマンドは、新しいリソースを作成する。<option>resource-options</option> コマンドは、既存のリソースのリソースオプションを変更する。利用可能なオプション: <variablelist>
+	    <pick_drbdsetup_option name="auto-promote"/>
+	    <pick_drbdsetup_option name="cpu-mask"/>
+	    <pick_drbdsetup_option name="on-no-data-accessible"/>
+	    <pick_drbdsetup_option name="peer-ack-window"/>
+	    <pick_drbdsetup_option name="peer-ack-delay"/>
+	    <pick_drbdsetup_option name="quorum"/>
+	    <pick_drbdsetup_option name="quorum-minimum-redundancy"/>
+	    <pick_drbdsetup_option name="on-no-quorum"/>
+	  </variablelist>
+	  </para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_outdate.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Mark the data on a lower-level device as outdated. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>outdate</secondary>
+	  </indexterm>
+
+	  <para>下位デバイスのデータ内容が「無効」であるとマークする。これはフェンシングに使用され、デバイスが含まれているリソースが将来プライマリになるのを防ぐ。<option>--fencing</option> ディスクオプションを参照。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_pause-sync.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Stop resynchronizing between a local and a peer device. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>pause-sync</secondary>
+	  </indexterm>
+
+	  <para>ローカルポーズフラグを設定して、ローカルデバイスと対向ノードとの再同期を停止する。再同期は、接続の両側の一時停止フラグがクリアされた場合にのみ再開することができる。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_primary.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Change the role of a node in a resource to primary. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>primary</secondary>
+	  </indexterm>
+
+	  <para>リソース内のノードの役割をプライマリに変更する。これにより、このリソース内の複製されたデバイスを書き込み用にマウントまたはオープンすることができる。利用可能なオプション: </para>
+
+	  <variablelist>
+	    <varlistentry>
+	      <term><option>--overwrite-data-of-peer</option></term>
+
+	      <listitem>
+		<para>このオプションは、 <option>--force</option> オプション の別名である。</para>
+	      </listitem>
+	    </varlistentry>
+	  </variablelist>
+
+	  <variablelist>
+	    <varlistentry>
+	      <term><option>--force</option></term>
+
+	      <listitem>
+		<para>一部のデバイスで最新のデータが保証されていない場合でも、リソースを強制的にプライマリにする。このオプションは、新しく作成されたクラスタ内のいずれかのノードをプライマリノードに切り替える場合や、障害から手動で回復する場合に使用する。</para>
+		<para>これは、スプリットブレインにつながる可能性があることに注意すること。また、不整合なデバイスを最新のデバイスに強制的に変更する場合は、使用可能な完全性チェック（ファイルシステムチェックなど）を使用して、システムをクラッシュさせずにデバイスを使用できることを確認すること。</para>
+	      </listitem>
+	    </varlistentry>
+	  </variablelist>
+
+	  <para>DRBD では、通常、クラスタ内の 1 つのノードだけがプライマリの役割を果たすことができる。 DRBD はノード間のリソース内のデバイスを調整できる。<option>--allow-two-primaries</option> ネットワークオプションは、これを変更する。その場合、DRBD 以外のメカニズムはデバイスアクセスを調整する必要がある。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_resize.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Reexamine the lower-level device sizes to resize a replicated device. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>resize</secondary>
+	  </indexterm>
+
+	  <para>すべてのノードで、複製されたデバイスの下位デバイスのサイズを再確認する。このコマンドは、複製されたデバイスのサイズを調整するために、すべてのノードの下位レベルのデバイスが拡張された後に呼び出されれる。利用可能なオプション: <variablelist>
+	      <varlistentry>
+		<term><option>--assume-peer-has-space</option></term>
+
+		<listitem>
+		  <para>現時点では、対向ノードのデバイスの一部が接続されていない場合でも、デバイスのサイズを変更する。DRBD は、次に接続するときに対向ノードのデバイスのサイズを変更しようとする。対向ノードの小さすぎるデバイスへの接続は拒否する。</para>
+		</listitem>
+	      </varlistentry>
+
+	      <varlistentry>
+		<term><option>--assume-clean</option></term>
+		<listitem>
+		  <para>追加されたディスクスペースを再同期しない。代わりに、すべてのノードで同一であると仮定する。このオプションは、ディスクスペースが初期化されておらず、相違していない場合や、すべてのノードで同一であることが分かっている場合に使用できる。<command moreinfo="none">drbdsetup verify</command> コマンドを参照。</para>
+		</listitem>
+	      </varlistentry>
+
+	      <varlistentry>
+		<term><option>--size <replaceable>val</replaceable></option></term>
+		<listitem>
+		  <para>このオプションは、DRBD デバイスの使用可能なサイズをオンラインで縮小するために使用できる。ファイルシステムがこの操作によって破損しないことはユーザ責任において確認する。</para>
+		</listitem>
+	      </varlistentry>
+
+	      <varlistentry>
+		<term><option>--al-stripes <replaceable>val</replaceable></option>
+		<option>--al-stripes <replaceable>val</replaceable></option></term>
+		<listitem>
+		  <para>これらのオプションを使用して、アクティビティログのレイアウトをオンラインで変更することができる。内部メタデータの場合には、同時に、下位デバイスのユーザーに見えるサイズ(<option>--size</option> を使用して)の縮小、または拡大が必要である。</para>
+		</listitem>
+	      </varlistentry>
+
+	    </variablelist>
+	  </para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_resume-io.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Resume I/O on a replicated device. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>resume-io</secondary>
+	  </indexterm>
+
+	  <para>複製されたデバイスの I/O を再開する。<option>--fencing</option> ネットオプションを参照。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_resume-sync.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Resume the resynchronization between a local and a peer device. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>resume-sync</secondary>
+	  </indexterm>
+
+	  <para>ローカル同期の一時停止フラグをクリアして、再同期を再開できるようにする。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_role.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Show the current role of a resource. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>role</secondary>
+	  </indexterm>
+
+	  <para>リソースの現在の役割を表示する。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_secondary.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Change the role of a node in a resource to secondary. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>secondary</secondary>
+	  </indexterm>
+
+	  <para>リソース内のノードの役割をセカンダリに変更する。複製されたデバイスが使用中の場合、このコマンドは失敗する。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_show.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Show the current configuration of a resource, or of all resources. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>show</secondary>
+	  </indexterm>
+
+	  <para>リソースまたはすべてのリソースの現在の構成を表示する。利用可能なオプション: <variablelist>
+	      <varlistentry>
+		<term><option>--show-defaults</option></term>
+
+		<listitem>
+		  <para>すべての設定パラメータを表示する。設定ファイルに未設定のパラメータも初期値の設定で表示する。このオプションをつけないと、初期値のパラメータは確認できない。</para>
+		</listitem>
+	      </varlistentry>
+	    </variablelist>
+	  </para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_show-gi.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Show data generation identifiers for a device and peer device, with explanations. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>show-gi</secondary>
+	  </indexterm>
+
+	  <para>特定の接続上のデバイスのデータ世代識別子を表示する。さらに、出力の説明を行う。他は <command moreinfo="none">drbdsetup get-gi</command> コマンドと同じである。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term><command moreinfo="none">drbdsetup</command><arg choice="plain" rep="norepeat">state</arg></term>
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>state</secondary>
+	  </indexterm>
+
+	  <para>これは <command moreinfo="none">drbdsetup role</command> の別名である。推奨しない。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_status.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Show the status of a resource, or of all resources. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>status</secondary>
+	  </indexterm>
+
+	  <para>リソースの全ての有効な設定情報を表示する。出力は、構成されたリソースごとに 1 つの段落で構成される。各段落は、リソースごとに 1 行、各デバイスに 1 行、接続ごとに 1 行が続く。デバイスと接続行はインテンドされる。各接続行は、対向ノードのデバイスごとに 1 行、これらは接続行に対してインテンドされる。</para>
+
+	  <para>長い行は端末の幅で折り返され、どの行に属しているかを示すためにインデントされる。利用可能なオプション: <variablelist>
+	      <varlistentry>
+		<term><option>--verbose</option></term>
+
+		<listitem>
+		  <para>冗長か無関係であっても、より多くの情報を出力に含める。</para>
+		</listitem>
+	      </varlistentry>
+
+	      <varlistentry>
+		<term><option>--statistics</option></term>
+
+		<listitem>
+		  <para>出力にデータ転送の統計情報を含める。</para>
+		</listitem>
+	      </varlistentry>
+
+	      <varlistentry>
+		<term>
+		  <option>--color=<group choice="req" rep="norepeat">
+		      <arg choice="plain" rep="norepeat">always</arg>
+		      <arg choice="plain" rep="norepeat">auto</arg>
+		      <arg choice="plain" rep="norepeat">never</arg>
+		    </group>
+		  </option>
+		</term>
+
+		<listitem>
+		  <para>出力をカラー化する。 <option>--color=auto</option>, <option>drbdsetup</option> は標準出力が端末に接続されている場合にのみカラーコードを出力する。</para>
+		</listitem>
+	      </varlistentry>
+	    </variablelist>
+	  </para>
+
+	  <para>たとえば、1 つの接続と1 つのボリュームのみを持つリソースの出力は、次のようになる。<programlisting format="linespecific">
+drbd0 role:Primary
+  disk:UpToDate
+  host2.example.com role:Secondary
+    disk:UpToDate
+	      </programlisting>
+	    </para>
+
+	    <para><option>--verbose</option> を使用すると, 同じリソースは次のように出力される:<programlisting format="linespecific">
+drbd0 node-id:1 role:Primary suspended:no
+  volume:0 minor:1 disk:UpToDate blocked:no
+  host2.example.com local:ipv4:192.168.123.4:7788
+      peer:ipv4:192.168.123.2:7788 node-id:0 connection:WFReportParams
+      role:Secondary congested:no
+    volume:0 replication:Connected disk:UpToDate resync-suspended:no
+	      </programlisting>
+	    </para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_suspend-io.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Suspend I/O on a replicated device. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>suspend-io</secondary>
+	  </indexterm>
+
+	  <para>複製されたデバイスの I/O を停止する。通常、このコマンドを使用する必要はない。</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_verify.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Verify the data on a lower-level device against a peer device. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>verify</secondary>
+	  </indexterm>
+
+	  <para>オンライン照合を開始するか、デバイスの検証部分を変更するか、オンライン照合を停止する。このコマンドでは、指定した対向ノードを接続する必要がある。</para>
+
+	  <para>オンライン照合では、ローカルと対向ノードの各ディスクブロックを比較する。ノード間で異なるブロックは非同期としてマークされるが、 自動的に同期化<emphasis>されない</emphasis>。それらを同期させるには、リソースを切断して再接続する必要がある。進行状況は、 <command moreinfo="none">drbdsetup status --statistics</command> の出力で監視できる。利用可能なオプション: </para>
+
+	  <variablelist>
+	    <varlistentry>
+	      <term><option>--start <replaceable>position</replaceable></option></term>
+
+	      <listitem>
+		<para>オンライン照合を開始する場所を定義する。オンライン照合がすでに進行中の場合、このパラメータは無視される。開始パラメータが指定されていない場合、オンライン照合は以前に中断された場所（対向ノードの接続が照合中に失われた場合）、前回の終了したセクタの後（以前にオンライン照合が完了した場合）、またはデバイスの最初（以前に終わりに達した場合、または以前にオンライン照合が実行されていない場合）から続けられる。</para>
+
+		<para>ディスク上の位置は、デフォルトでディスクセクタ（512バイト）で指定される。</para>
+	      </listitem>
+	    </varlistentry>
+	    <varlistentry>
+	      <term><option>--stop <replaceable>position</replaceable></option></term>
+	      <listitem>
+		<para>オンライン照合を停止する場所を定義する。オンライン照合が既に進行中の場合、進行中のオンライン照合プロセスの停止位置が変更される。これを使用してオンライン照合を停止する。</para>
+
+		<para>ディスク上の位置は、デフォルトでディスクセクタ（512バイト）で指定される。</para>
+	      </listitem>
+	    </varlistentry>
+	  </variablelist>
+
+	  <para>また、'notes' のデータの完全性に関する注意を参照。<citerefentry>
+	  <refentrytitle>drbd.conf</refentrytitle> <manvolnum>5</manvolnum>
+	  </citerefentry> manual page.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+
+	<xi:include href="drbdsetup_wait-connect-volume.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Wait until a device on a peer is visible. -->
+	<xi:include href="drbdsetup_wait-connect-connection.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Wait until all peer volumes of connection are visible. -->
+	<xi:include href="drbdsetup_wait-connect-resource.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Wait until all connections are establised. -->
+
+	<xi:include href="drbdsetup_wait-sync-volume.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Wait until a device on a peer is up to date. -->
+	<xi:include href="drbdsetup_wait-sync-connection.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Wait until resync finished on all volumes of a connection. -->
+	<xi:include href="drbdsetup_wait-sync-resource.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Wait until resync finished on all volumes. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>wait-connect-volume</secondary>
+	    <secondary>wait-connect-connection</secondary>
+	    <secondary>wait-connect-resource</secondary>
+	  </indexterm>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>wait-sync-volume</secondary>
+	    <secondary>wait-sync-connection</secondary>
+	    <secondary>wait-sync-resource</secondary>
+	  </indexterm>
+
+	  <para><option>wait-connect-*</option> コマンドは、対向ノード上のデバイスが表示されるまで待機する。<option>wait-sync-*</option> コマンドは、対向ノード上のデバイスが最新の状態になるまで待機する。両方のコマンドで利用可能なオプション：<variablelist>
+	      <pick_drbdsetup_option name="degr-wfc-timeout"/>
+	      <pick_drbdsetup_option name="outdated-wfc-timeout"/>
+	      <pick_drbdsetup_option name="wait-after-sb"/>
+	      <pick_drbdsetup_option name="wfc-timeout"/>
+	    </variablelist>
+	  </para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_forget-peer.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+	<!-- Completely remove any reference to a unconnected peer from meta-data. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>forget-peer</secondary>
+	  </indexterm>
+
+	  <para><option>forget-peer</option> コマンドは、対向ノードのすべての痕跡をメタデータから削除する。これは、メタデータ内のビットマップスロットを解放し、今まで接続したことのないノードが接続した場合、より多くのビットマップスロットを割り当てることを可能にする。</para>
+	  <para>このコマンドを使用するには、接続を解除する必要がある。対向ノードが後で再接続する場合、ビットマップベースの再同期は完全同期に変わる。</para>
+	</listitem>
+      </varlistentry>
+
+    </variablelist>
+  </refsect1>
+
+  <refsect1>
+    <title>Examples</title>
+
+    <para>詳しくは <ulink url="http://www.drbd.org/users-guide/"><citetitle>DRBD User's Guide</citetitle></ulink> を参照。</para>
+
+  </refsect1>
+
+  <refsect1>
+    <title>Version</title>
+
+    <simpara>このドキュメントは DRBD バージョン 9.0.0 向けに改訂されている。</simpara>
+  </refsect1>
+
+  <refsect1>
+    <title>Author</title>
+
+    <simpara>Written by Philipp Reisner <email>philipp.reisner@linbit.com</email> and Lars
+    Ellenberg <email>lars.ellenberg@linbit.com</email>.</simpara>
+  </refsect1>
+
+  <refsect1>
+    <title>Reporting Bugs</title>
+
+    <simpara>Report bugs to <email>drbd-user@lists.linbit.com</email>.</simpara>
+  </refsect1>
+
+  <refsect1>
+    <title>Copyright</title>
+
+    <simpara>Copyright 2001-2018 LINBIT Information Technologies, Philipp Reisner, Lars Ellenberg.
+    This is free software; see the source for copying conditions. There is NO warranty; not even
+    for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.</simpara>
+  </refsect1>
+
+  <refsect1>
+    <title>See Also</title>
+
+    <para><citerefentry>
+        <refentrytitle>drbd.conf</refentrytitle>
+
+        <manvolnum>5</manvolnum>
+      </citerefentry>, <citerefentry>
+        <refentrytitle>drbd</refentrytitle>
+
+        <manvolnum>8</manvolnum>
+      </citerefentry>, <citerefentry>
+        <refentrytitle>drbdadm</refentrytitle>
+
+        <manvolnum>8</manvolnum>
+      </citerefentry>,
+      <ulink url="http://www.drbd.org/users-guide/"><citetitle>DRBD User's Guide</citetitle></ulink>,
+       <ulink url="http://www.drbd.org/"><citetitle>DRBD Web Site</citetitle></ulink></para>
+
+  </refsect1>
+</refentry>
