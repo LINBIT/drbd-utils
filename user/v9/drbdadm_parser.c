@@ -1382,7 +1382,10 @@ int parse_proxy_options_section(struct d_proxy_info **pp)
 	int token;
 	struct d_proxy_info *proxy;
 
-	proxy = *pp ? *pp : calloc(1, sizeof(struct d_proxy_info));
+	if (!*pp)
+		*pp = calloc(1, sizeof(struct d_proxy_info));
+	proxy = *pp;
+
 	token = yylex();
 	if (token != TK_PROXY) {
 		yyrestart(yyin); /* flushes flex's buffers */

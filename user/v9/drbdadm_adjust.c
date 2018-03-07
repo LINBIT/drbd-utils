@@ -391,6 +391,9 @@ static int proxy_reconf(const struct cfg_ctx *ctx, struct connection *running_co
 	if (!running_path->my_proxy)
 		goto redo_whole_conn;
 
+	if (running_path->proxy_conn_is_down)
+		goto up_whole_conn;
+
 	res_o = find_opt(&path->my_proxy->options, "memlimit");
 	run_o = find_opt(&running_path->my_proxy->options, "memlimit");
 	v1 = res_o ? m_strtoll(res_o->value, 1) : 0;
@@ -401,11 +404,12 @@ static int proxy_reconf(const struct cfg_ctx *ctx, struct connection *running_co
 	if (res_o &&
 			(!run_o || abs(v1-v2)/(float)minimum > 0.02))
 	{
-redo_whole_conn:
+	redo_whole_conn:
 		/* As the memory is in use while the connection is allocated we have to
 		 * completely destroy and rebuild the connection. */
 
 		schedule_deferred_cmd(&proxy_conn_down_cmd, ctx, CFG_NET_PREP_DOWN);
+	up_whole_conn:
 		schedule_deferred_cmd(&proxy_conn_up_cmd, ctx, CFG_NET_PREP_UP);
 		schedule_deferred_cmd(&proxy_conn_plugins_cmd, ctx, CFG_NET_PREP_UP);
 
@@ -418,7 +422,7 @@ redo_whole_conn:
 	res_o = STAILQ_FIRST(&path->my_proxy->plugins);
 	run_o = STAILQ_FIRST(&running_path->my_proxy->plugins);
 	used = 0;
-	conn_name = proxy_connection_name(ctx->res, running_conn);
+	conn_name = proxy_connection_name(ctx->res, conn); /* this is not possible on running_conn */
 	for(i=0; i<MAX_PLUGINS; i++)
 	{
 		if (used >= sizeof(plugin_changes)-1) {
@@ -786,8 +790,7 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running)
 		}
 
 		path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
-		if (path->my_proxy && !path->can_not_do_proxy &&
-		    hostname_in_list(hostname, &path->my_proxy->on_hosts))
+		if (path->my_proxy && hostname_in_list(hostname, &path->my_proxy->on_hosts))
 			proxy_reconf(&tmp_ctx, running_conn);
 	}
 }
@@ -939,7 +942,7 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 			struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
 			struct cfg_ctx tmp_ctx = { .res = ctx->res };
 			char *show_conn;
-			int pid,argc;
+			int pid, argc, status, w;
 			char *argv[20];
 
 			if (!path)
@@ -966,10 +969,15 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 
 			/* actually parse "drbd-proxy-ctl show" output */
 			yyin = m_popen(&pid, argv);
-			configured_path->can_not_do_proxy = parse_proxy_options_section(&path->my_proxy);
+			path->proxy_conn_is_down = parse_proxy_options_section(&path->my_proxy);
 			fclose(yyin);
 
-			waitpid(pid,0,0);
+			w = waitpid(pid, &status, 0);
+			if (w == -1)
+				err("waitpid() errno = %d\n", errno);
+
+			if (WIFEXITED(status) && WEXITSTATUS(status))
+				path->proxy_conn_is_down = 1;
 		}
 	}
 
