@@ -153,43 +153,50 @@ static int opts_equal(struct context_def *ctx, struct d_option* conf, struct d_o
 	return 1;
 }
 
-static int addr_equal(struct d_resource* conf, struct d_resource* running)
+static bool addr_equal(struct d_resource *conf, struct d_resource *running)
 {
-	int equal;
-	char *peer_addr, *peer_af, *peer_port;
+	bool match = false;
+	if (running->peer != NULL) {
+		char *peer_addr = NULL;
+		char *peer_port = NULL;
+		char *peer_af = NULL;
+		if (conf->me->proxy != NULL) {
+			peer_addr = conf->me->proxy->inside_addr;
+			peer_port = conf->me->proxy->inside_port;
+			peer_af = conf->me->proxy->inside_af;
+		} else if (conf->peer != NULL) {
+			peer_addr = conf->peer->address;
+			peer_port = conf->peer->port;
+			peer_af = conf->peer->address_family;
+		}
 
-	if (conf->peer == NULL && running->peer == NULL) return 1;
-	if (running->peer == NULL) return 0;
+		// Addresses never match if conf->peer == NULL
+		if (conf->peer != NULL) {
+			match = addresses_match(conf->me->address_family, conf->me->address,
+			                        running->me->address_family, running->me->address) &&
+			        strcmp(conf->me->port, running->me->port) == 0 &&
+			        addresses_match(peer_af, peer_addr,
+			                        running->peer->address_family, running->peer->address) &&
+			        strcmp(peer_port, running->peer->port) == 0;
+		}
 
-	equal = !strcmp(conf->me->address,        running->me->address) &&
-		!strcmp(conf->me->port,           running->me->port) &&
-		!strcmp(conf->me->address_family, running->me->address_family);
-
-	if(conf->me->proxy) {
-		peer_addr = conf->me->proxy->inside_addr;
-		peer_port = conf->me->proxy->inside_port;
-		peer_af = conf->me->proxy->inside_af;
+		// Prints NULL values
+		// in case conf->peer == NULL && conf->me->proxy == NULL
+		if (!match && verbose > 2) {
+			err("Network addresses differ:\n"
+			    "\trunning: %s:%s:%s -- %s:%s:%s\n"
+			    "\t config: %s:%s:%s -- %s:%s:%s\n",
+			    running->me->address_family, running->me->address, running->me->port,
+			    running->peer->address_family, running->peer->address, running->peer->port,
+			    conf->me->address_family, conf->me->address, conf->me->port,
+			    peer_af, peer_addr, peer_port);
+		}
 	} else {
-		peer_addr = conf->peer->address;
-		peer_port = conf->peer->port;
-		peer_af = conf->peer->address_family;
+		// Two non-existent addresses are considered to be equal
+		match = conf->peer == NULL;
 	}
 
-	equal = equal && conf->peer &&
-		!strcmp(peer_addr, running->peer->address) &&
-		!strcmp(peer_port, running->peer->port) &&
-		!strcmp(peer_af, running->peer->address_family);
-
-	if (!equal && verbose > 2)
-		err("Network addresses differ:\n"
-			"\trunning: %s:%s:%s -- %s:%s:%s\n"
-			"\t config: %s:%s:%s -- %s:%s:%s\n",
-			running->me->address_family, running->me->address, running->me->port,
-			running->peer->address_family, running->peer->address, running->peer->port,
-			conf->me->address_family, conf->me->address, conf->me->port,
-			peer_af, peer_addr, peer_port);
-
-	return equal;
+	return match;
 }
 
 /* Are both internal, or are both not internal. */

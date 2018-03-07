@@ -33,6 +33,9 @@
 #include "drbdadm.h"
 #include "config_flags.h"
 #include <search.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 
 static void inherit_volumes(struct volumes *from, struct d_host_info *host);
 static void check_volume_sets_equal(struct d_resource *, struct d_host_info *, struct d_host_info *);
@@ -871,22 +874,40 @@ static void create_connections_from_mesh(struct d_resource *res, struct mesh *me
 	}
 }
 
+// Returns 0 if the addresses, ports, address families match.
+// Otherwise, returns the result of the comparison of those
+// strings that mismatch.
 int addresses_cmp(struct d_address *addr1, struct d_address *addr2)
 {
-	int ret;
+	bool ips_match = false;
+	if (strcasecmp(addr1->af, IPV4_STR) == 0 &&
+	    strcasecmp(addr2->af, IPV4_STR) == 0) {
+		ips_match = ipv4_addresses_match(addr1->addr, addr2->addr);
+	} else if (strcasecmp(addr1->af, IPV6_STR) == 0 &&
+	           strcasecmp(addr2->af, IPV6_STR) == 0) {
+		ips_match = ipv6_addresses_match(addr1->addr, addr2->addr);
+	}
 
-	if ((ret = strcmp(addr1->addr, addr2->addr)))
-		return ret;
+	int result = ips_match ? 0 : strcmp(addr1->addr, addr2->addr);
 
-	if ((ret = strcmp(addr1->port, addr2->port)))
-		return ret;
+	// If the addresses did not match, emulate the old behavior,
+	// because this function is used for sorting tree entries elsewhere
+	if (result == 0) {
+		// Peer addresses match, order lexically by port
+		result = strcmp(addr1->port, addr2->port);
+		if (result == 0) {
+			// Peer addresses and ports match,
+			// order lexically by address family
+			result = strcmp(addr1->af, addr2->af);
+		}
+	}
 
-	return strcmp(addr1->af, addr2->af);
+	return result;
 }
 
 bool addresses_equal(struct d_address *addr1, struct d_address *addr2)
 {
-	return !addresses_cmp(addr1, addr2);
+	return addresses_cmp(addr1, addr2) == 0;
 }
 
 struct addrtree_entry {

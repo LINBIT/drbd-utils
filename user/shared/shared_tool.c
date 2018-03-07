@@ -39,6 +39,9 @@
 #include <sys/random.h>
 #endif
 
+const char *IPV4_STR = "ipv4";
+const char *IPV6_STR = "ipv6";
+
 const char* shell_escape(const char* s)
 {
 	/* ugly static buffer. so what. */
@@ -487,6 +490,64 @@ bool addr_scope_local(const char *input)
 
 	return false;
 }
+
+bool addresses_match(const char *const af_1st, const char *const addr_1st,
+                     const char *const af_2nd, const char *const addr_2nd)
+{
+	bool match = false;
+
+	if (strcasecmp(af_1st, IPV4_STR) == 0 &&
+	    strcasecmp(af_2nd, IPV4_STR) == 0) {
+		// Both addresses are IPv4, match the translated IPv4 addresses
+		match = ipv4_addresses_match(addr_1st, addr_2nd);
+	} else if (strcasecmp(af_1st, IPV6_STR) == 0 &&
+	           strcasecmp(af_2nd, IPV6_STR) == 0) {
+		// Both addresses are IPv6, match the translated IPv6 addresses
+		match = ipv6_addresses_match(addr_1st, addr_2nd);
+	} else {
+		// Address families either mismatch or they are neither
+		// IPv4 nor IPv6 type addresses
+		// Fall back to string comparison to cover those cases
+		match = strcmp(af_1st, af_2nd) == 0 &&
+		        strcmp(addr_1st, addr_2nd) == 0;
+	}
+
+	return match;
+}
+
+bool ipv4_addresses_match(const char *const addr_1st,
+                          const char *const addr_2nd)
+{
+	bool match = false;
+
+	struct in_addr v4_addr_1st;
+	struct in_addr v4_addr_2nd;
+	if (inet_pton(AF_INET, addr_1st, &v4_addr_1st) == 1 &&
+	    inet_pton(AF_INET, addr_2nd, &v4_addr_2nd) == 1) {
+		match = v4_addr_1st.s_addr == v4_addr_2nd.s_addr;
+	}
+
+	return match;
+}
+
+bool ipv6_addresses_match(const char *const addr_1st,
+                          const char *const addr_2nd)
+{
+	bool match = false;
+
+	struct in6_addr v6_addr_1st;
+	struct in6_addr v6_addr_2nd;
+	if (inet_pton(AF_INET6, addr_1st, &v6_addr_1st) == 1 &&
+	    inet_pton(AF_INET6, addr_2nd, &v6_addr_2nd) == 1) {
+		size_t length = sizeof (v6_addr_1st.s6_addr);
+		match = memcmp(v6_addr_1st.s6_addr,
+		               v6_addr_2nd.s6_addr,
+		               length) == 0;
+	}
+
+	return match;
+}
+
 unsigned long long
 m_strtoll(const char *s, const char def_unit)
 {
