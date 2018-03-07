@@ -14,6 +14,9 @@
 
 #define COMM_TIMEOUT 120
 
+extern const char *IPV4_STR;
+extern const char *IPV6_STR;
+
 /* MetaDataIndex for v06 / v07 style meta data blocks */
 enum MetaDataIndex {
 	Flags,			/* Consistency flag,connected-ind,primary-ind */
@@ -114,6 +117,14 @@ extern void initialize_err(void);
 extern int err(const char *format, ...);
 extern const char *esc_xml(char *str);
 extern const char *esc(char *str);
+
+bool ipv4_addresses_match(const char *addr_1st, const char *addr_2nd);
+
+bool ipv6_addresses_match(const char *addr_1st, const char *addr_2nd);
+
+bool addresses_match(const char *af_1st, const char *addr_1st,
+                     const char *af_2nd, const char *addr_2nd);
+
 
 
 #endif
