@@ -310,6 +310,7 @@ in the Cluster distribution.
 %{_datadir}/cluster/drbd.metadata
 %endif # with rgmanager
 
+%if %{with 84support}%{with 83support}
 %if %{with heartbeat}
 %package heartbeat
 Summary: Heartbeat resource agent for DRBD
@@ -333,6 +334,7 @@ resource manager (in v1 compatibility mode).
 %{_mandir}/man8/drbddisk-*
 %endif
 %endif # with heartbeat
+%endif # 83 || 84 support
 
 %if %{with bashcompletion}
 %package bash-completion
