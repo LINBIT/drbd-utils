@@ -144,6 +144,7 @@ enum filesystem_ops {
 	HIDE_FILESYSTEM, SHOW_FILESYSTEM, FILESYSTEM_STATE
 };
 
+#if 0
 static int run_command(const char *command, char *args[])
 {
 	int ret;
@@ -160,10 +161,13 @@ static int run_command(const char *command, char *args[])
 		return ret;
 	}
 }
+#endif
 
+#if 0
 static int remount_volume(const char *drive)
 {
 	check_drive_letter(drive);
+
 
 	wchar_t mount_point[10];
 	wchar_t guid[80];
@@ -201,6 +205,7 @@ static int remount_volume(const char *drive)
 		return 1;
 	}
 	return 0;
+#endif
 
 #if 0
 	if (DeleteVolumeMountPoint(mount_point) == 0) {
@@ -222,9 +227,26 @@ fgets(x, sizeof(x)-1, stdin);
 printf("Mount point %s set.\n", drive);
 
 	return 0;
-#endif
 }
+#endif
+
+static int dismount_volume(HANDLE h)
+{
+	BOOL ret;
+	DWORD size;
+	int err;
+
+	ret = DeviceIoControl(h, FSCTL_DISMOUNT_VOLUME, NULL, 0, NULL, 0, &size, NULL);
+	if (!ret) {
+		err = GetLastError();
+		fprintf(stderr, "DeviceIoControl(.., FSCTL_DISMOUNT_VOLUME, ..) failed with error %d\n", err);
+		return -1;
+	}
+	return 0;
+}
+
 	
+
 static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 {
 	check_drive_letter(drive);
@@ -276,8 +298,8 @@ static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 			return 1;
 		}
 		if (patched && op == HIDE_FILESYSTEM) {
-			if (remount_volume(drive) != 0) {
-				fprintf(stderr, "Couldn't remount volume, please reboot before using this drive (%s)\n", drive);
+			if (dismount_volume(h) != 0) {
+				fprintf(stderr, "Couldn't dismount volume, please reboot before using this drive (%s)\n", drive);
 
 				CloseHandle(h);
 				return 1;
