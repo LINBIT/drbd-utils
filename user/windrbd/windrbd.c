@@ -23,6 +23,10 @@ void usage_and_exit(void)
 	fprintf(stderr, "		Assign drive letter to windrbd device for this user.\n");
 	fprintf(stderr, "	windrbd [opt] delete-drive-letter <minor> <drive-letter>\n");
 	fprintf(stderr, "		Delete drive letter to windrbd device for this user.\n");
+	fprintf(stderr, "	windrbd [opt] set-volume-mount-point <GUID> <drive-letter>\n");
+	fprintf(stderr, "		Assign mountpoint (drive letter) to volume GUID.\n");
+	fprintf(stderr, "	windrbd [opt] delete-volume-mount-point <drive-letter>\n");
+	fprintf(stderr, "		Delete mountpoint (drive letter).\n");
 	fprintf(stderr, "	windrbd [opt] hide-filesystem <drive-letter>\n");
 	fprintf(stderr, "		Prepare existing drive for use as windrbd backing device.\n");
 	fprintf(stderr, "	windrbd [opt] show-filesystem <drive-letter>\n");
@@ -358,6 +362,44 @@ int log_server_op(const char *log_file)
 	return 1;
 }
 
+int delete_mountpoint(const char *drive)
+{
+	wchar_t t_mountpoint[100];
+	int err;
+	BOOL ret;
+
+	check_drive_letter(drive);
+	swprintf(t_mountpoint, sizeof(t_mountpoint) / sizeof(*t_mountpoint) -1, L"%s\\", drive);
+
+	ret = DeleteVolumeMountPoint(t_mountpoint);
+	if (!ret) {
+		err = GetLastError();
+		fprintf(stderr, "DeleteVolumeMountPoint(%ls) failed with error %d\n", t_mountpoint, err);
+		return 1;
+	}
+	return 0;
+}
+
+int set_mountpoint(const char *drive, const char *guid)
+{
+	wchar_t t_mountpoint[100];
+	wchar_t t_guid[100];
+	int err;
+	BOOL ret;
+
+	check_drive_letter(drive);
+	swprintf(t_mountpoint, sizeof(t_mountpoint) / sizeof(*t_mountpoint) -1, L"%s\\", drive);
+	swprintf(t_guid, sizeof(t_guid) / sizeof(*t_guid) -1, L"\\\\?\\Volume{%s}\\", guid);
+
+	ret = SetVolumeMountPoint(t_mountpoint, t_guid);
+	if (!ret) {
+		err = GetLastError();
+		fprintf(stderr, "SetVolumeMountPoint(%ls, %ls) failed with error %d\n", t_mountpoint, t_guid, err);
+		return 1;
+	}
+	return 0;
+}
+
 int main(int argc, char ** argv)
 {
 	const char *op;
@@ -391,6 +433,23 @@ int main(int argc, char ** argv)
 		const char *drive = argv[optind+2];
 
 		return drive_letter_op(minor, drive, DELETE_DRIVE_LETTER);
+	}
+	if (strcmp(op, "delete-volume-mount-point") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		const char *mount_point = argv[optind+1];
+
+		return delete_mountpoint(mount_point);
+	}
+	if (strcmp(op, "set-volume-mount-point") == 0) {
+		if (argc != optind+3) {
+			usage_and_exit();
+		}
+		const char *mount_point = argv[optind+1];
+		const char *guid = argv[optind+2];
+
+		return set_mountpoint(mount_point, guid);
 	}
 	if (strcmp(op, "hide-filesystem") == 0) {
 		if (argc != optind+2) {
