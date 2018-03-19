@@ -44,9 +44,15 @@ WITH_XEN = @WITH_XEN@
 WITH_PACEMAKER = @WITH_PACEMAKER@
 WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
+WITH_WINDRBD = @WITH_WINDRBD@
 
 # variables meant to be overridden from the make command line
+ifeq ($(WITH_WINDRBD),yes)
+DESTDIR ?=
+else
 DESTDIR ?= /
+endif
+
 
 CFLAGS += -Wall -I. -I../shared
 

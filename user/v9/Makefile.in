@@ -51,13 +51,18 @@ WITH_XEN = @WITH_XEN@
 WITH_PACEMAKER = @WITH_PACEMAKER@
 WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
+WITH_WINDRBD = @WITH_WINDRBD@
 
 # for some reason some of the commands below only work correctly in bash,
 # and not in e.g. dash. I'm too lazy to fix it to be compatible.
 SHELL=/bin/bash
 
 # variables meant to be overridden from the make command line
+ifeq ($(WITH_WINDRBD),yes)
+DESTDIR ?=
+else
 DESTDIR ?= /
+endif
 
 CFLAGS += -Wall -I../../drbd-headers -I.. -I. -I../shared
 CFLAGS += $(EXTRA_CFLAGS)
