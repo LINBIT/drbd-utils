@@ -33,6 +33,7 @@ user/v83/.*.d
 user/v83/Makefile
 user/v84/.*.d
 user/v84/Makefile
+user/windrbd/Makefile
 
 documentation/v9/Makefile
 documentation/v9/drbd.8

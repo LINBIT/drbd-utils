@@ -1,0 +1,23 @@
+# This is a very simple makefile
+
+sbindir = @sbindir@
+WITH_WINDRBD = @WITH_WINDRBD@
+
+# variables meant to be overridden from the make command line
+ifeq ($(WITH_WINDRBD),yes)
+DESTDIR ?=
+else
+# This does not make sense ...
+DESTDIR ?= /
+endif
+
+all: windrbd
+
+windrbd: windrbd.c
+	gcc -g -Wall -o windrbd.exe windrbd.c
+
+install: windrbd
+	install windrbd.exe $(DESTDIR)$(sbindir)
+
+clean:
+	rm windrbd.exe
