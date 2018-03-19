@@ -1,6 +1,18 @@
 #include <stdarg.h>
 #include <stdio.h>
+#include <ctype.h>
 #include "shared_main.h"
+
+int is_driveletter(const char *drive)
+{
+        if (!isalpha(drive[0])) return 0;
+        if (drive[1] != '\0') {
+                if (drive[1] != ':' || drive[2] != '\0') {
+			return 0;
+                }
+        }
+	return 1;
+}
 
 int call_windrbd(char *res_name, char *path, ...)
 {
