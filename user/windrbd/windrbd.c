@@ -14,23 +14,27 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
+static int quiet = 0;
+
 void usage_and_exit(void)
 {
 	fprintf(stderr, "Usage:\n");
-	fprintf(stderr, "	windrbd assign-drive-letter <minor> <drive-letter>\n");
+	fprintf(stderr, "	windrbd [opt] assign-drive-letter <minor> <drive-letter>\n");
 	fprintf(stderr, "		Assign drive letter to windrbd device for this user.\n");
-	fprintf(stderr, "	windrbd delete-drive-letter <minor> <drive-letter>\n");
+	fprintf(stderr, "	windrbd [opt] delete-drive-letter <minor> <drive-letter>\n");
 	fprintf(stderr, "		Delete drive letter to windrbd device for this user.\n");
-	fprintf(stderr, "	windrbd hide-filesystem <drive-letter>\n");
+	fprintf(stderr, "	windrbd [opt] hide-filesystem <drive-letter>\n");
 	fprintf(stderr, "		Prepare existing drive for use as windrbd backing device.\n");
-	fprintf(stderr, "	windrbd show-filesystem <drive-letter>\n");
+	fprintf(stderr, "	windrbd [opt] show-filesystem <drive-letter>\n");
 	fprintf(stderr, "		Make backing device visible to Windows again.\n");
 	fprintf(stderr, "		(You cannot use it as backing device after doing that)\n");
-	fprintf(stderr, "	windrbd filesystem-state <drive-letter>\n");
+	fprintf(stderr, "	windrbd [opt] filesystem-state <drive-letter>\n");
 	fprintf(stderr, "		Shows the current filesystem state (windows, windrbd, other)\n");
-	fprintf(stderr, "	windrbd log-server [<log-file>]\n");
+	fprintf(stderr, "	windrbd [opt] log-server [<log-file>]\n");
 	fprintf(stderr, "		Logs windrbd kernel messages to stdout (and optionally to\n");
 	fprintf(stderr, "		log-file)\n");
+	fprintf(stderr, "Options are\n");
+	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
 
 	exit(1);
 }
@@ -127,12 +131,13 @@ static int patch_boot_sector(char *buffer, int to_fs, int test_mode)
                 }
                 if (fs_signatures[fs][to_fs][i] == '\0') {
                         if (!test_mode) {
-                                printf("Patching boot sector from %s to %s\n", fs_signatures[fs][to_fs], fs_signatures[fs][!to_fs]);
+				if (!quiet)
+					printf("Patching boot sector from %s to %s\n", fs_signatures[fs][to_fs], fs_signatures[fs][!to_fs]);
                                 for (i=0;fs_signatures[fs][to_fs][i] != '\0';i++) {
                                         buffer[3+i] = fs_signatures[fs][!to_fs][i];
                                 }
                         } else {
-                                printf("File system signature %s found in boot sector\n", fs_signatures[fs][to_fs]);
+				printf("File system signature %s found in boot sector\n", fs_signatures[fs][to_fs]);
                         }
                         return 1;
                 }
@@ -279,10 +284,12 @@ static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 		else
 			printf("Nothing I recognize on drive %s\n", drive);
 	} else {
-		if ((patched = patch_boot_sector(buf, op == SHOW_FILESYSTEM, 0)))
-			printf("Filesystem on drive %s %s\n", drive, op == HIDE_FILESYSTEM ? "prepared for use with windrbd (for now you should reboot, windrbd might blue screen when using the disk without a reboot)." : "reverted to be used directly (you might have to reboot before you can use it).");
-		else
-			fprintf(stderr, "No %s found on %s\n", op == HIDE_FILESYSTEM ? "Windows filesystem" : "windrbd backing device", drive);
+		if ((patched = patch_boot_sector(buf, op == SHOW_FILESYSTEM, 0))) {
+			if (!quiet)
+				printf("Filesystem on drive %s %s\n", drive, op == HIDE_FILESYSTEM ? "prepared for use with windrbd." : "reverted to be used directly.");
+		} else
+			if (!quiet)
+				fprintf(stderr, "No %s found on %s\n", op == HIDE_FILESYSTEM ? "Windows filesystem" : "windrbd backing device", drive);
 
 	        px = SetFilePointer(h, 0, NULL, FILE_BEGIN);
 		if (px != 0) {
@@ -354,59 +361,66 @@ int log_server_op(const char *log_file)
 int main(int argc, char ** argv)
 {
 	const char *op;
+	char c;
 
-	if (argc < 2) {
+	while ((c = getopt(argc, argv, "q")) != -1) {
+		switch (c) {
+			case 'q': quiet = 1; break;
+			default: usage_and_exit();
+		}
+	}
+	if (argc < optind+1) {
 		usage_and_exit();
 	}
-	op = argv[1];
+	op = argv[optind];
 
 	if (strcmp(op, "assign-drive-letter") == 0) {
-		if (argc != 4) {
+		if (argc != optind+3) {
 			usage_and_exit();
 		}
-		int minor = atoi(argv[2]);
-		const char *drive = argv[3];
+		int minor = atoi(argv[optind+1]);
+		const char *drive = argv[optind+2];
 
 		return drive_letter_op(minor, drive, ASSIGN_DRIVE_LETTER);
 	}
 	if (strcmp(op, "delete-drive-letter") == 0) {
-		if (argc != 4) {
+		if (argc != optind+3) {
 			usage_and_exit();
 		}
-		int minor = atoi(argv[2]);
-		const char *drive = argv[3];
+		int minor = atoi(argv[optind+1]);
+		const char *drive = argv[optind+2];
 
 		return drive_letter_op(minor, drive, DELETE_DRIVE_LETTER);
 	}
 	if (strcmp(op, "hide-filesystem") == 0) {
-		if (argc != 3) {
+		if (argc != optind+2) {
 			usage_and_exit();
 		}
-		const char *drive = argv[2];
+		const char *drive = argv[optind+1];
 
 		return patch_bootsector_op(drive, HIDE_FILESYSTEM);
 	}
 	if (strcmp(op, "show-filesystem") == 0) {
-		if (argc != 3) {
+		if (argc != optind+2) {
 			usage_and_exit();
 		}
-		const char *drive = argv[2];
+		const char *drive = argv[optind+1];
 
 		return patch_bootsector_op(drive, SHOW_FILESYSTEM);
 	}
 	if (strcmp(op, "filesystem-state") == 0) {
-		if (argc != 3) {
+		if (argc != optind+2) {
 			usage_and_exit();
 		}
-		const char *drive = argv[2];
+		const char *drive = argv[optind+1];
 
 		return patch_bootsector_op(drive, FILESYSTEM_STATE);
 	}
 	if (strcmp(op, "log-server") == 0) {
-		if (argc < 2 || argc > 3) {
+		if (argc < optind+1 || argc > optind+2) {
 			usage_and_exit();
 		}
-		const char *log_file = argv[2];
+		const char *log_file = argv[optind+1];
 
 		return log_server_op(log_file);
 	}
