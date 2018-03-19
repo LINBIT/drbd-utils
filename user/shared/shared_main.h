@@ -24,6 +24,8 @@
 #ifndef __SHARED_MAIN_H__
 #define __SHARED_MAIN_H__
 
+#include <netinet/in.h>
+
 #define CMD_TIMEOUT_SHORT_DEF 5
 #define CMD_TIMEOUT_MEDIUM_DEF 121
 #define CMD_TIMEOUT_LONG_DEF 600
