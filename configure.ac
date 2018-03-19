@@ -57,6 +57,7 @@ WITH_BASHCOMPLETION=yes
 WITH_NOARCH_SUBPACKAGES=no
 WITH_MANUAL=yes
 WITH_DRBDMON=yes
+WITH_WINDRBD=no
 AC_ARG_WITH([83support],
 	[AS_HELP_STRING([--without-83support],
 			[Do not include support for drbd driver/module <= 8.3])],
@@ -192,6 +193,12 @@ AC_ARG_WITH([drbdmon],
 			[Do not include the DRBD resource reporting utility])],
 	[WITH_DRBDMON=$withval])
 AC_SUBST(WITH_DRBDMON)
+
+AC_ARG_WITH([windrbd],
+	[AS_HELP_STRING([--with-windrbd],
+			[Include windrbd support (do not use this under Linux)])],
+	[WITH_WINDRBD=$withval])
+AC_SUBST(WITH_WINDRBD)
 
 dnl Checks for programs
 AC_PROG_CC
@@ -374,6 +381,7 @@ AH_TEMPLATE(DRBD_BIN_DIR, [Installation directory. Commonly
 			   /cygdrive/c/Program Files/drbd])
 AH_TEMPLATE(DRBD_LEGACY_83, [Include support for drbd-8.3 kernel code])
 AH_TEMPLATE(DRBD_LEGACY_84, [Include support for drbd-8.4 kernel code])
+AH_TEMPLATE(WINDRBD, [Include support for windrbd (do not use this under Linux)])
 
 AC_SUBST(DRBD_LIB_DIR, [$localstatedir/lib/$PACKAGE_TARNAME])
 AC_SUBST(DRBD_RUN_DIR, [$localstatedir/run/$PACKAGE_TARNAME])
@@ -393,6 +401,10 @@ fi
 
 if test "$WITH_84_SUPPORT" = "yes"; then
    AC_DEFINE(DRBD_LEGACY_84, [1])
+fi
+
+if test "$WITH_WINDRBD" = "yes"; then
+   AC_DEFINE(WINDRBD, [1])
 fi
 
 dnl The configuration files we create (from their .in template)
