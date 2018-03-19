@@ -1414,6 +1414,11 @@ static void __adm_drbdsetup(const struct cfg_ctx *ctx, int flags, pid_t *pid, in
 		setenv("DRBD_RESOURCE", ctx->res->name, 1);
 
 	m__system(argv, flags, ctx->res ? ctx->res->name : NULL, pid, fd, ex);
+
+#ifdef WINDRBD
+	if (*ex == 0 && ctx->cmd == &detach_cmd)
+		*ex = call_windrbd(ctx->res->name, windrbd, "-q", "show-filesystem", ctx->vol->disk, NULL);
+#endif
 }
 
 static int _adm_drbdsetup(const struct cfg_ctx *ctx, int flags)

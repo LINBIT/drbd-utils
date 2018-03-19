@@ -33,7 +33,7 @@ void usage_and_exit(void)
 	fprintf(stderr, "	windrbd [opt] log-server [<log-file>]\n");
 	fprintf(stderr, "		Logs windrbd kernel messages to stdout (and optionally to\n");
 	fprintf(stderr, "		log-file)\n");
-	fprintf(stderr, "Options are\n");
+	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
 
 	exit(1);
