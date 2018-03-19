@@ -1124,7 +1124,7 @@ static int adm_attach(const struct cfg_ctx *ctx)
 			return rv;
 
 #ifdef WINDRBD
-		rv = call_windrbd(ctx->res->name, windrbd, "hide-filesystem", vol->disk, NULL);
+		rv = call_windrbd(ctx->res->name, windrbd, "-q", "hide-filesystem", vol->disk, NULL);
 		if (rv)
 			return rv;
 #endif
