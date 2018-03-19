@@ -587,7 +587,7 @@ struct d_volume *new_to_be_deleted_minor_from_template(struct d_volume *kern)
 	conf->vnr = kern->vnr;
 	/* conf->device: no need */
 	conf->device_minor = kern->device_minor;
-	if (kern->disk) {
+	if (kern->disk && strcmp(kern->disk, "none")) {
 		conf->disk = strdup(kern->disk);
 		conf->meta_disk = strdup(kern->meta_disk);
 		conf->meta_index = strdup(kern->meta_index);
