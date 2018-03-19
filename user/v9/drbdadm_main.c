@@ -58,6 +58,10 @@
 #include "shared_main.h"
 #include "drbdadm_parser.h"
 
+#ifdef WINDRBD
+#include "drbdadm_windrbd.h"
+#endif
+
 #define MAX_ARGS 40
 
 char *progname;
@@ -162,6 +166,9 @@ char *drbdsetup = NULL;
 char *drbdmeta = NULL;
 char *drbdadm_83 = NULL;
 char *drbdadm_84 = NULL;
+#ifdef WINDRBD
+char *windrbd = NULL;
+#endif
 char *drbd_proxy_ctl;
 char *sh_varname = NULL;
 struct names backend_options = STAILQ_HEAD_INITIALIZER(backend_options);
@@ -1115,6 +1122,12 @@ static int adm_attach(const struct cfg_ctx *ctx)
 		int rv = call_cmd_fn(&apply_al_cmd, ctx, KEEP_RUNNING);
 		if (rv)
 			return rv;
+
+#ifdef WINDRBD
+		rv = call_windrbd(ctx->res->name, windrbd, "hide-filesystem", vol->disk, NULL);
+		if (rv)
+			return rv;
+#endif
 	}
 
 	argv[NA(argc)] = drbdsetup;
@@ -2791,6 +2804,9 @@ void assign_command_names_from_argv0(char **argv)
 		{"drbd-proxy-ctl", &drbd_proxy_ctl},
 		{"drbdadm-83", &drbdadm_83},
 		{"drbdadm-84", &drbdadm_84},
+#ifdef WINDRBD
+		{"windrbd", &windrbd},
+#endif
 		{NULL, NULL}
 	};
 	struct cmd_helper *c;

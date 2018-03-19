@@ -83,6 +83,10 @@ drbdsetup-obj = libgenl.o registry.o drbdsetup.o drbdtool_common.o \
 drbdmeta-obj = drbdmeta.o drbdmeta_scanner.o drbdtool_common.o drbd_buildtag.o \
 	       drbd_strings.o shared_tool.o
 
+ifeq ($(WITH_WINDRBD),yes)
+drbdadm-obj += drbdadm_windrbd.o
+endif
+
 all-obj := $(drbdadm-obj) $(drbdsetup-obj) $(drbdmeta-obj)
 
 all: tools
