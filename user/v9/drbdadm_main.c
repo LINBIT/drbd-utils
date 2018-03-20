@@ -1428,6 +1428,19 @@ static void __adm_drbdsetup(const struct cfg_ctx *ctx, int flags, pid_t *pid, in
 		setenv("DRBD_RESOURCE", ctx->res->name, 1);
 
 	m__system(argv, flags, ctx->res ? ctx->res->name : NULL, pid, fd, ex);
+#ifdef WINDRBD
+	if (*ex == 0 && ctx->cmd == &del_minor_cmd) {
+		if (is_driveletter(ctx->vol->device)) {
+			char minor_str[10];
+
+			snprintf(minor_str, 9, "%d", ctx->vol->device_minor);
+
+			ex = call_windrbd(ctx->res->name, windrbd, "-q", "delete-drive-letter", minor_str, ctx->vol->device, NULL);
+		} else {
+			printf("Warning: %s is not a valid Windows drive letter. You will have to delete\nit later manually. To do so, use\n\twindrbd delete-drive-letter %d <drive-letter>\n", ctx->vol->device, ctx->vol->device_minor);
+		}
+	}
+#endif
 }
 
 static int _adm_drbdsetup(const struct cfg_ctx *ctx, int flags)
