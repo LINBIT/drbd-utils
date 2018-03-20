@@ -45,6 +45,10 @@
 #include "shared_parser.h"
 #include <config_flags.h>
 
+#ifdef WINDRBD
+#include "drbdadm_windrbd.h"
+#endif
+
 YYSTYPE yylval;
 
 /////////////////////
@@ -835,6 +839,11 @@ static void check_minor_nonsense(const char *devname, const int explicit_minor)
 	if (!devname)
 		return;
 
+#ifdef WINDRBD
+	if (is_driveletter(devname))
+		return;
+#endif
+
 	/* if devname is set, it starts with /dev/drbd */
 	if (only_digits(devname + 9)) {
 		int m = strtol(devname + 9, NULL, 10);
@@ -871,8 +880,11 @@ static void parse_device(struct names* on_hosts, struct d_volume *vol)
 			free(yylval.txt);
 		} else
 			vol->device = yylval.txt;
-
-		if (strncmp("/dev/drbd", vol->device, 9)) {
+		if (strncmp("/dev/drbd", vol->device, 9)
+#ifdef WINDRBD
+			&& !is_driveletter(vol->device)
+#endif
+		) {
 			err("%s:%d: device name must start with /dev/drbd\n"
 			    "\t(/dev/ is optional, but drbd is required)\n",
 			    config_file, fline);
