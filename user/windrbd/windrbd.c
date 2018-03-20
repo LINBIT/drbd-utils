@@ -132,9 +132,10 @@ static int drive_letter_op(int minor, const char *drive, enum drive_letter_ops o
 	swprintf(t_device, sizeof(t_device) / sizeof(*t_device) -1, L"\\Device\\Drbd%d", minor);
 	swprintf(t_drive, sizeof(t_drive) / sizeof(*t_drive) -1, L"%s", drive);
 
-	wprintf(L"%s drive letter %ls to minor %d (device %ls)\n",
-		op == ASSIGN_DRIVE_LETTER ? "Assigning" : "Deleting",
-		t_drive, minor, t_device);
+	if (!quiet)
+		wprintf(L"%s drive letter %ls to minor %d (device %ls)\n",
+			op == ASSIGN_DRIVE_LETTER ? "Assigning" : "Deleting",
+			t_drive, minor, t_device);
 
 	ret = DefineDosDevice(flag, t_drive, t_device);
 	if (!ret) {

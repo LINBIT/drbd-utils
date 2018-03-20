@@ -1204,7 +1204,19 @@ int adm_new_minor(const struct cfg_ctx *ctx)
 	if (!ex && do_register)
 		register_minor(ctx->vol->device_minor, config_save);
 
-printf("adm_new_minor: device: %s minor: %d\n", ctx->vol->device, ctx->vol->device_minor);
+#ifdef WINDRBD
+	if (ex == 0) {
+		if (is_driveletter(ctx->vol->device)) {
+			char minor_str[10];
+
+			snprintf(minor_str, 9, "%d", ctx->vol->device_minor);
+
+			ex = call_windrbd(ctx->res->name, windrbd, "-q", "assign-drive-letter", minor_str, ctx->vol->device, NULL);
+		} else {
+			printf("Warning: %s is not a valid Windows drive letter. You will have to assign\none later manually. To do so, use\n\twindrbd assign-drive-letter %d <drive-letter>\n", ctx->vol->device, ctx->vol->device_minor);
+		}
+	}
+#endif
 
 	return ex;
 }
