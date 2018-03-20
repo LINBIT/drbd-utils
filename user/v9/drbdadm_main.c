@@ -1220,6 +1220,8 @@ int adm_new_minor(const struct cfg_ctx *ctx)
 	if (!ex && do_register)
 		register_minor(ctx->vol->device_minor, config_save);
 
+printf("adm_new_minor: device: %s minor: %d\n", ctx->vol->device, ctx->vol->device_minor);
+
 	return ex;
 }
 
