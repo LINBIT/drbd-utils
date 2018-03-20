@@ -55,7 +55,9 @@ static int is_drive_letter(const char *drive)
 	if (drive[1] != '\0') {
 		if (drive[1] != ':' || drive[2] != '\0')
 			return 0;
-	}
+	} else
+		return 0;
+
 	return 1;
 }
 
@@ -70,7 +72,7 @@ static int is_guid(const char *arg)
                 if (GUID_MASK[i] == '-' && arg[i] != '-')
                         return 0;
         }
-        return arg[i] == '\0';
+        return i == strlen(GUID_MASK) && arg[i] == '\0';
 #undef GUID_MASK
 }
 
@@ -147,11 +149,15 @@ static int drive_letter_op(int minor, const char *drive, enum drive_letter_ops o
 
 static HANDLE do_open_device(const char *drive)
 {
+	enum volume_spec vs = check_drive_letter_or_guid(drive);
         HANDLE h;
         DWORD err;
 
         wchar_t fname[100];
-        swprintf(fname, sizeof(fname) / sizeof(fname[0]), L"\\\\.\\%s", drive);
+	if (vs == VS_GUID)
+	        swprintf(fname, sizeof(fname) / sizeof(fname[0]), L"\\\\?\\Volume{%s}", drive);
+	else
+	        swprintf(fname, sizeof(fname) / sizeof(fname[0]), L"\\\\.\\%s", drive);
 
         h = CreateFile(fname, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
         err = GetLastError();
@@ -301,12 +307,8 @@ static int dismount_volume(HANDLE h)
 	return 0;
 }
 
-	
-
 static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 {
-	check_drive_letter(drive);
-
 	HANDLE h = do_open_device(drive);
 	if (h == INVALID_HANDLE_VALUE)
 		return 1;

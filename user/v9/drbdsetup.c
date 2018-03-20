@@ -711,6 +711,7 @@ static bool endpoints_equal(struct drbd_cfg_context *a, struct drbd_cfg_context 
 
 #ifdef __CYGWIN__
 
+/* TODO: put this into a shared file. */
 static int is_guid(const char *arg)
 {
 	int i;
@@ -722,7 +723,7 @@ static int is_guid(const char *arg)
 		if (GUID_MASK[i] == '-' && arg[i] != '-')
 			return 0;
 	}
-	return arg[i] == '\0';
+	return i == strlen(GUID_MASK) && arg[i] == '\0';
 #undef GUID_MASK
 }
 
