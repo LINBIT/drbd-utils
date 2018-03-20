@@ -43,23 +43,70 @@ void usage_and_exit(void)
 	exit(1);
 }
 
-enum drive_letter_ops {
-	ASSIGN_DRIVE_LETTER, DELETE_DRIVE_LETTER
-};
+	/* TODO: move those to user/shared/windrbd_helper.c */
+
+enum volume_spec { VS_UNKNOWN, VS_DRIVE_LETTER, VS_GUID };
+
+static int is_drive_letter(const char *drive)
+{
+	if (!isalpha(drive[0]))
+		return 0;
+
+	if (drive[1] != '\0') {
+		if (drive[1] != ':' || drive[2] != '\0')
+			return 0;
+	}
+	return 1;
+}
+
+static int is_guid(const char *arg)
+{
+        int i;
+#define GUID_MASK "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+        for (i=0;arg[i] != '\0';i++) {
+                if (GUID_MASK[i] == 'x' && !isxdigit(arg[i]))
+                        return 0;
+                if (GUID_MASK[i] == '-' && arg[i] != '-')
+                        return 0;
+        }
+        return arg[i] == '\0';
+#undef GUID_MASK
+}
+
+static enum volume_spec volume_spec(const char *arg)
+{
+	if (arg == NULL)
+		return VS_UNKNOWN;
+	if (is_drive_letter(arg))
+		return VS_DRIVE_LETTER;
+	if (is_guid(arg))
+		return VS_GUID;
+	return VS_UNKNOWN;
+}
 
 static void check_drive_letter(const char *drive)
 {
-	if (!isalpha(drive[0])) {
-		fprintf(stderr, "Drive letter (%s) must start with a letter.\n", drive);
+	if (!is_drive_letter(drive)) {
+		fprintf(stderr, "Drive letter (%s) must start with a letter and have a colon.\n", drive);
 		usage_and_exit();
 	}
-	if (drive[1] != '\0') {
-		if (drive[1] != ':' || drive[2] != '\0') {
-			fprintf(stderr, "Drive letter (%s) must end with a colon\n", drive);
-			usage_and_exit();
-		}
-	}
 }
+
+static enum volume_spec check_drive_letter_or_guid(const char *arg)
+{
+	enum volume_spec vs = volume_spec(arg);
+
+	if (vs == VS_UNKNOWN) {
+		fprintf(stderr, "Argument (%s) must be a drive letter or a GUID.\n", arg);
+		usage_and_exit();
+	}
+	return vs;
+}
+
+enum drive_letter_ops {
+	ASSIGN_DRIVE_LETTER, DELETE_DRIVE_LETTER
+};
 
 static int drive_letter_op(int minor, const char *drive, enum drive_letter_ops op)
 {
