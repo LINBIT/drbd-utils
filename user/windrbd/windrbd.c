@@ -338,8 +338,14 @@ static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 			printf("Nothing I recognize on drive %s\n", drive);
 	} else {
 		if ((patched = patch_boot_sector(buf, op == SHOW_FILESYSTEM, 0))) {
-			if (!quiet)
-				printf("Filesystem on drive %s %s\n", drive, op == HIDE_FILESYSTEM ? "prepared for use with windrbd." : "reverted to be used directly.");
+			printf("Filesystem on drive %s %s\n", drive, op == HIDE_FILESYSTEM ? "prepared for use with windrbd." : "reverted to be used directly.");
+			if (op == HIDE_FILESYSTEM) {
+				printf("You can access your data via the DRBD device (specified in the device parameter\n");
+				printf("of your drbd.conf file). Do not access the backing device directly, always use\n");
+				printf("the DRBD device to access the data. To make it visible again (only if you\n");
+				printf("don't want to use DRBD on that device ever again), do a\n");
+				printf("	windrbd show-filesystem %s\n", drive);
+			}
 		} else
 			if (!quiet)
 				fprintf(stderr, "No %s found on %s\n", op == HIDE_FILESYSTEM ? "Windows filesystem" : "windrbd backing device", drive);
