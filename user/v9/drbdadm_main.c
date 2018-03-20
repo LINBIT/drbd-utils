@@ -1140,11 +1140,9 @@ static int adm_attach(const struct cfg_ctx *ctx)
 			return rv;
 
 #ifdef WINDRBD
-		if (is_driveletter(vol->disk)) {
-			rv = call_windrbd(ctx->res->name, windrbd, "-q", "hide-filesystem", vol->disk, NULL);
-			if (rv)
-				return rv;
-		}
+		rv = call_windrbd(ctx->res->name, windrbd, "-q", "hide-filesystem", vol->disk, NULL);
+		if (rv)
+			return rv;
 #endif
 	}
 
@@ -1438,9 +1436,7 @@ static void __adm_drbdsetup(const struct cfg_ctx *ctx, int flags, pid_t *pid, in
 
 #ifdef WINDRBD
 	if (*ex == 0 && ctx->cmd == &detach_cmd) {
-		if (is_driveletter(ctx->vol->disk)) {
-			*ex = call_windrbd(ctx->res->name, windrbd, "-q", "show-filesystem", ctx->vol->disk, NULL);
-		}
+		*ex = call_windrbd(ctx->res->name, windrbd, "-q", "show-filesystem", ctx->vol->disk, NULL);
 	}
 #endif
 }
