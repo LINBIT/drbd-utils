@@ -120,6 +120,7 @@ distclean: clean
 install:
 	install -d $(DESTDIR)$(sbindir)
 	install -d $(DESTDIR)$(localstatedir)/lib/drbd
+	install -d $(DESTDIR)$(localstatedir)/run/drbd
 	install -d $(DESTDIR)$(localstatedir)/lock
 	if getent group haclient > /dev/null 2> /dev/null ; then	\
 		install -g haclient -m 4750 drbdsetup $(DESTDIR)$(sbindir) ;	\
