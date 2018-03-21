@@ -54,9 +54,12 @@ DrbdConnection* DrbdResource::get_connection(const std::string& connection_name)
 void DrbdResource::remove_connection(const std::string& connection_name)
 {
     ConnectionsMap::Node* node = conn_list->get_node(&connection_name);
-    delete node->get_key();
-    delete node->get_value();
-    conn_list->remove_node(node);
+    if (node != nullptr)
+    {
+        delete node->get_key();
+        delete node->get_value();
+        conn_list->remove_node(node);
+    }
 }
 
 DrbdResource::ConnectionsIterator DrbdResource::connections_iterator()
