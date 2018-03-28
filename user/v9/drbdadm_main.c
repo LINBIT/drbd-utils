@@ -1198,25 +1198,20 @@ int adm_new_minor(const struct cfg_ctx *ctx)
 	argv[NA(argc)] = ssprintf("%u", ctx->vol->vnr);
 	if (!ctx->vol->disk)
 		argv[NA(argc)] = ssprintf("--diskless");
+
+#ifdef WINDRBD
+	if (is_driveletter(ctx->vol->device)) {
+		argv[NA(argc)] = ssprintf("--mount-point");
+		argv[NA(argc)] = ssprintf("%s", ctx->vol->device);
+	} else
+		printf("Warning: %s is not a valid Windows drive letter. The windrbd device\nwill not be mounted.\nTo mount it for the current session, use\n\twindrbd assign-drive-letter %d <drive-letter>\n", ctx->vol->device, ctx->vol->device_minor);
+#endif
+
 	argv[NA(argc)] = NULL;
 
 	ex = m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
 	if (!ex && do_register)
 		register_minor(ctx->vol->device_minor, config_save);
-
-#ifdef WINDRBD
-	if (ex == 0) {
-		if (is_driveletter(ctx->vol->device)) {
-			char minor_str[10];
-
-			snprintf(minor_str, 9, "%d", ctx->vol->device_minor);
-
-			ex = call_windrbd(ctx->res->name, windrbd, "-q", "assign-drive-letter", minor_str, ctx->vol->device, NULL);
-		} else {
-			printf("Warning: %s is not a valid Windows drive letter. You will have to assign\none later manually. To do so, use\n\twindrbd assign-drive-letter %d <drive-letter>\n", ctx->vol->device, ctx->vol->device_minor);
-		}
-	}
-#endif
 
 	return ex;
 }
@@ -1435,7 +1430,7 @@ static void __adm_drbdsetup(const struct cfg_ctx *ctx, int flags, pid_t *pid, in
 
 			snprintf(minor_str, 9, "%d", ctx->vol->device_minor);
 
-			ex = call_windrbd(ctx->res->name, windrbd, "-q", "delete-drive-letter", minor_str, ctx->vol->device, NULL);
+			*ex = call_windrbd(ctx->res->name, windrbd, "-q", "delete-drive-letter", minor_str, ctx->vol->device, NULL);
 		} else {
 			printf("Warning: %s is not a valid Windows drive letter. You will have to delete\nit later manually. To do so, use\n\twindrbd delete-drive-letter %d <drive-letter>\n", ctx->vol->device, ctx->vol->device_minor);
 		}
