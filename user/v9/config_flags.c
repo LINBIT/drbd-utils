@@ -1041,6 +1041,7 @@ struct context_def device_options_ctx = {
 	.fields = {
 		{ "max-bio-size", NUMERIC(max_bio_size, MAX_BIO_SIZE) },
 		{ "diskless", FLAG(intentional_diskless) },
+		{ "mount-point", STRING(mount_point) },
 		{ } },
 };
 
