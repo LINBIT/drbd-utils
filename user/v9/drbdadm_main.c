@@ -1119,15 +1119,16 @@ static int adm_attach(const struct cfg_ctx *ctx)
 	bool reset = (ctx->cmd == &disk_options_defaults_cmd);
 
 	if (do_attach) {
-		int rv = call_cmd_fn(&apply_al_cmd, ctx, KEEP_RUNNING);
-		if (rv)
-			return rv;
-
+		int rv;
 #ifdef WINDRBD
 		rv = call_windrbd(ctx->res->name, windrbd, "-q", "hide-filesystem", vol->disk, NULL);
 		if (rv)
 			return rv;
 #endif
+
+		rv = call_cmd_fn(&apply_al_cmd, ctx, KEEP_RUNNING);
+		if (rv)
+			return rv;
 	}
 
 	argv[NA(argc)] = drbdsetup;
