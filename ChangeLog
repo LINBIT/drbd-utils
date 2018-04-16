@@ -12,14 +12,6 @@ Latest:
  * VCS: typos and fixes for stacked resources
  * fixes from 9.2.1 and 9.2.2
 
-in progress
---------
- * update to Japanese man pages
- * fixes for stacking in drbd-9.0
- * fixes for proxy support in drbd-9.0
- * fix adjusting --bitmap=no peer to diskfull
- * VCS: typos and fixes for stacked resources
-
 9.2.0
 --------
  * Japanese man pages
