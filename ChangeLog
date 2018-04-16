@@ -10,7 +10,19 @@ Latest:
  * fixes for proxy support in drbd-9.0
  * fix adjusting --bitmap=no peer to diskfull
  * VCS: typos and fixes for stacked resources
- * fixes from 9.2.1 and 9.2.2
+
+9.2.2
+--------
+ * support to pass force option to dump md
+ * fix setting peers/disks in v9 stacked setups
+ * fix rpm build bug when built without 8.4 support
+ * retrofit rpm release date
+ * fix v9 adjust that converts permanent diskless to diskfull
+ * allow stacked setups in VCS clusters
+
+9.2.1
+--------
+ * fix drbdadm adjust when proxy is not local
 
 9.2.0
 --------
