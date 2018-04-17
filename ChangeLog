@@ -3,6 +3,11 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.3.1
+--------
+ * drbdadm v84: fixup for disable-write-same
+ * Fix IPv4 & IPv6 address comparisons for 'drbdadm adjust'
+
 9.3.0
 --------
  * update to Japanese man pages
