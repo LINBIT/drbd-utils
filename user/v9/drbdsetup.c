@@ -2530,10 +2530,7 @@ void resource_status(struct resources_list *resource)
 		if (nla)
 			wrap_printf(4, " node-id:%d", *(uint32_t *)nla_data(nla));
 	}
-	wrap_printf(4, " role:%s%s%s",
-		    role_color_start(role, true),
-		    drbd_role_str(role),
-		    role_color_stop(role, true));
+	wrap_printf(4, " role:%s%s%s", ROLE_COLOR_STRING(role, true));
 	if (opt_verbose ||
 	    resource->info.res_susp ||
 	    resource->info.res_susp_nod ||
@@ -2559,11 +2556,9 @@ static void device_status(struct devices_list *device, bool single_device)
 		if (opt_verbose)
 			wrap_printf(indent, " minor:%u", device->minor);
 	}
-	wrap_printf(indent, " disk:%s%s%s",
-		    disk_state_color_start(disk_state, intentional_diskless, true),
-		    drbd_disk_str(disk_state),
-		    disk_state_color_stop(disk_state, true));
-	if (disk_state == D_DISKLESS && opt_verbose)
+	wrap_printf(indent, " disk:%s%s%s", DISK_COLOR_STRING(disk_state, intentional_diskless, true));
+	if (disk_state == D_DISKLESS &&
+			(opt_verbose || !isatty(fileno(stdout))))
 		wrap_printf(indent, " client:%s", intentional_diskless_str(&device->info));
 	if (opt_verbose || !device->info.dev_has_quorum)
 		wrap_printf(indent, " quorum:%s%s%s",
@@ -2639,11 +2634,9 @@ static void peer_device_status(struct peer_devices_list *peer_device, bool singl
 	    peer_device->info.peer_disk_state != D_UNKNOWN) {
 		enum drbd_disk_state disk_state = peer_device->info.peer_disk_state;
 
-		wrap_printf(indent, " peer-disk:%s%s%s",
-			    disk_state_color_start(disk_state, intentional_diskless, false),
-			    drbd_disk_str(disk_state),
-			    disk_state_color_stop(disk_state, false));
-		if (disk_state == D_DISKLESS && opt_verbose)
+		wrap_printf(indent, " peer-disk:%s%s%s", DISK_COLOR_STRING(disk_state, intentional_diskless, false));
+		if (disk_state == D_DISKLESS &&
+				(opt_verbose || !isatty(fileno(stdout))))
 			wrap_printf(indent, " peer-client:%s", peer_intentional_diskless_str(&peer_device->info));
 		indent = 8;
 		if (peer_device->info.peer_repl_state >= L_SYNC_SOURCE &&
