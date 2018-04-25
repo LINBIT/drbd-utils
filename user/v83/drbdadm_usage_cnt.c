@@ -576,22 +576,21 @@ void uc_node(enum usage_count_type type)
 	if (no_tty) return;
 
 	vcs_get_current();
+	/* Avoid flapping between drbd-utils git-hash and
+	 * kernel module git-hash. */
+	if (current_vcs_is_from_proc_drbd == 0)
+		return;
+
+	memset(&ni, 0, sizeof(ni));
 
 	if( ! read_node_id(&ni) ) {
 		get_random_bytes(&ni.node_uuid,sizeof(ni.node_uuid));
 		ni.rev = current_vcs_rel;
 		send = 1;
-	} else if (current_vcs_is_from_proc_drbd == 0) {
-		/* Avoid flapping between drbd-utils git-hash and
-		 * kernel module git-hash. */
-		send = 0;
-	} else {
-		// read_node_id() was successful
-		if (!vcs_eq(&ni.rev,&current_vcs_rel)) {
-			ni.rev = current_vcs_rel;
-			update = 1;
-			send = 1;
-		}
+	} else if (!vcs_eq(&ni.rev,&current_vcs_rel)) {
+		ni.rev = current_vcs_rel;
+		update = 1;
+		send = 1;
 	}
 
 	if(!send) return;
