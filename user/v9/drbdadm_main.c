@@ -1425,7 +1425,7 @@ static void __adm_drbdsetup(const struct cfg_ctx *ctx, int flags, pid_t *pid, in
 
 	m__system(argv, flags, ctx->res ? ctx->res->name : NULL, pid, fd, ex);
 #ifdef WINDRBD
-	if (*ex == 0 && ctx->cmd == &del_minor_cmd) {
+	if (ex != NULL && *ex == 0 && ctx->cmd == &del_minor_cmd) {
 		if (is_driveletter(ctx->vol->device)) {
 			char minor_str[10];
 
