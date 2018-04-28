@@ -4,6 +4,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 
+__attribute__((format(printf, 2, 3)))
 int wrap_printf(int indent, const char *format, ...)
 {
 	static int columns, col;

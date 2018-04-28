@@ -1579,7 +1579,7 @@ static bool parse_color_argument(void)
 
 static bool opt_now;
 static bool opt_poll;
-static bool opt_verbose;
+static int opt_verbose;
 static bool opt_statistics;
 static bool opt_timestamps;
 
@@ -1934,7 +1934,7 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 			break;
 
 		case 's':
-			opt_verbose = true;
+			++opt_verbose;
 			opt_statistics = true;
 			break;
 
@@ -2260,6 +2260,7 @@ static const char *susp_str(struct resource_info *info)
 	return buffer;
 }
 
+__attribute__((format(printf, 2, 3)))
 int nowrap_printf(int indent, const char *format, ...)
 {
 	va_list ap;
@@ -2272,10 +2273,14 @@ int nowrap_printf(int indent, const char *format, ...)
 	return ret;
 }
 
+typedef
+__attribute__((format(printf, 2, 3)))
+int (*wrap_printf_fn_t)(int indent, const char *format, ...);
+
 void print_resource_statistics(int indent,
 			       struct resource_statistics *old,
 			       struct resource_statistics *new,
-			       int (*wrap_printf)(int, const char *, ...))
+			       wrap_printf_fn_t wrap_printf)
 {
 	static const char *write_ordering_str[] = {
 		[WO_NONE] = "none",
@@ -2296,7 +2301,7 @@ void print_resource_statistics(int indent,
 void print_device_statistics(int indent,
 			     struct device_statistics *old,
 			     struct device_statistics *new,
-			     int (*wrap_printf)(int, const char *, ...))
+			     wrap_printf_fn_t wrap_printf)
 {
 	if (opt_statistics) {
 		if (opt_verbose)
@@ -2349,18 +2354,29 @@ void print_device_statistics(int indent,
 void print_connection_statistics(int indent,
 				 struct connection_statistics *old,
 				 struct connection_statistics *new,
-				 int (*wrap_printf)(int, const char *, ...))
+				 wrap_printf_fn_t wrap_printf)
 {
 	if (!old ||
 	    old->conn_congested != new->conn_congested)
 		wrap_printf(indent, " congested:%s", new->conn_congested ? "yes" : "no");
+	if (new->ap_in_flight != -1ULL) {
+		wrap_printf(indent, " ap-in-flight:"U64, (uint64_t)new->ap_in_flight);
+		wrap_printf(indent, " rs-in-flight:"U64, (uint64_t)new->rs_in_flight);
+	}
 }
 
 static void peer_device_status_json(struct peer_devices_list *peer_device)
 {
 	struct peer_device_statistics *s = &peer_device->statistics;
-	bool in_rsync = (peer_device->info.peer_repl_state >= L_SYNC_SOURCE &&
-			peer_device->info.peer_repl_state <= L_PAUSED_SYNC_T);
+	bool sync_details =
+		(s->peer_dev_rs_total != 0) &&
+		(s->peer_dev_rs_total != -1ULL);
+	bool in_resync_without_details =
+		(s->peer_dev_rs_total == -1ULL) &&
+		(peer_device->info.peer_repl_state >= L_SYNC_SOURCE &&
+		 peer_device->info.peer_repl_state <= L_PAUSED_SYNC_T &&
+		 peer_device->info.peer_repl_state != L_VERIFY_S &&
+		 peer_device->info.peer_repl_state != L_VERIFY_T);
 
 	printf("        {\n"
 	       "          \"volume\": %d,\n"
@@ -2372,7 +2388,8 @@ static void peer_device_status_json(struct peer_devices_list *peer_device)
 	       "          \"sent\": " U64 ",\n"
 	       "          \"out-of-sync\": " U64 ",\n"
 	       "          \"pending\": " U32 ",\n"
-	       "          \"unacked\": " U32 "%s\n",
+	       "          \"unacked\": " U32",\n"
+	       "          \"percent-in-sync\": %.2f%s\n",
 	       peer_device->ctx.ctx_volume,
 	       drbd_repl_str(peer_device->info.peer_repl_state),
 	       drbd_disk_str(peer_device->info.peer_disk_state),
@@ -2383,13 +2400,80 @@ static void peer_device_status_json(struct peer_devices_list *peer_device)
 	       (uint64_t)s->peer_dev_out_of_sync / 2,
 	       s->peer_dev_pending,
 	       s->peer_dev_unacked,
-	       in_rsync ? "," : "");
+	       100 * (1 - (double)peer_device->statistics.peer_dev_out_of_sync /
+		      (double)peer_device->device->statistics.dev_size),
+	       (sync_details || in_resync_without_details) ? "," : "");
 
-	if (in_rsync)
+	if (sync_details) {
+		double db, dt;
+		uint64_t sectors_to_go;
+
+		printf("          \"rs-total\": "U64",\n"
+		       "          \"rs-dt-start-ms\": "D64",\n"
+		       "          \"rs-paused-ms\": "D64",\n"
+		       "          \"rs-dt0-ms\": "D64",\n"
+		       "          \"rs-db0-sectors\": "D64",\n"
+		       "          \"rs-dt1-ms\": "D64",\n"
+		       "          \"rs-db1-sectors\": "D64",\n",
+		       (uint64_t)s->peer_dev_rs_total,
+		       (uint64_t)s->peer_dev_rs_dt_start_ms,
+		       (uint64_t)s->peer_dev_rs_paused_ms,
+		       (uint64_t)s->peer_dev_rs_dt0_ms,
+		       (uint64_t)s->peer_dev_rs_db0_sectors,
+		       (uint64_t)s->peer_dev_rs_dt1_ms,
+		       (uint64_t)s->peer_dev_rs_db1_sectors);
+		if (s->peer_dev_ov_left) {
+			printf(
+		       "          \"ov-start-sector\": "U64",\n"
+		       "          \"ov-stop-sector\": "D64",\n"
+		       "          \"ov-position\": "D64",\n"
+		       "          \"ov-left\": "U64",\n"
+		       "          \"ov-skipped\": "U64",\n",
+		       (uint64_t)s->peer_dev_ov_start_sector,
+		       (uint64_t)s->peer_dev_ov_stop_sector,
+		       (uint64_t)s->peer_dev_ov_position,
+		       (uint64_t)s->peer_dev_ov_left,
+		       (uint64_t)s->peer_dev_ov_skipped);
+		} else {
+			printf(
+		       "          \"rs-failed\": "U64",\n"
+		       "          \"rs-same-csum\": "U64",\n",
+		       (uint64_t)s->peer_dev_resync_failed,
+		       (uint64_t)s->peer_dev_rs_same_csum);
+		}
+
+		if (s->peer_dev_rs_c_sync_rate)
+			printf("          \"want\": %.2f,\n",
+				s->peer_dev_rs_c_sync_rate / 1024.0);
+
+		db = s->peer_dev_rs_db0_sectors;
+		dt = s->peer_dev_rs_dt0_ms ?: 1;
+		printf("          \"db0/dt0 [MiB/s]\": %.2f,\n",
+			db/dt /* sectors/ms */
+			*1000.0/2048.0 /* MiB/s */);
+		db = s->peer_dev_rs_db1_sectors;
+		dt = s->peer_dev_rs_dt1_ms ?: 1;
+		printf("          \"db1/dt1 [MiB/s]\": %.2f,\n", db/dt *1000.0/2048.0);
+
+
+		sectors_to_go = s->peer_dev_ov_left ?:
+			s->peer_dev_out_of_sync - s->peer_dev_resync_failed;
+
+		/* estimate time-to-run, based on "db1/dt1" */
+		printf("          \"estimated-seconds-to-finish\": %.0f,\n",
+			dt * 1e-3 * sectors_to_go / (db?:1));
+
+		db = s->peer_dev_rs_total - sectors_to_go;
+		dt = s->peer_dev_rs_dt_start_ms - s->peer_dev_rs_paused_ms;
+		printf("          \"db/dt [MiB/s]\": %.2f,\n", db/(dt?:1) *1000.0/2048.0);
+
 		printf("          \"resync-done\": %.2f\n",
-		       100 * (1 - (double)peer_device->statistics.peer_dev_out_of_sync /
-			      (double)peer_device->device->statistics.dev_size));
-
+			100.0 * db/(double)s->peer_dev_rs_total);
+	} else if (in_resync_without_details) {
+		printf("          \"resync-done\": %.2f\n",
+			100 * (1 - (double)peer_device->statistics.peer_dev_out_of_sync /
+			(double)peer_device->device->statistics.dev_size));
+	}
 	printf("        }");
 }
 
@@ -2404,14 +2488,21 @@ static void connection_status_json(struct connections_list *connection,
 	       "      \"name\": \"%s\",\n"
 	       "      \"connection-state\": \"%s\", \n"
 	       "      \"congested\": %s,\n"
-	       "      \"peer-role\": \"%s\",\n"
-	       "      \"peer_devices\": [\n",
+	       "      \"peer-role\": \"%s\",\n",
 	       connection->ctx.ctx_peer_node_id,
 	       connection->ctx.ctx_conn_name,
 	       drbd_conn_str(connection->info.conn_connection_state),
 	       connection->statistics.conn_congested ? "true" : "false",
 	       drbd_role_str(connection->info.conn_role));
 
+	if (connection->statistics.ap_in_flight != -1ULL) {
+		printf("      \"ap-in-flight\": "U64",\n"
+		       "      \"rs-in-flight\": "U64",\n",
+			(uint64_t)connection->statistics.ap_in_flight,
+			(uint64_t)connection->statistics.rs_in_flight);
+	}
+
+	printf("      \"peer_devices\": [\n");
 	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next) {
 		if (connection->ctx.ctx_peer_node_id != peer_device->ctx.ctx_peer_node_id)
 			continue;
@@ -2500,22 +2591,75 @@ static void resource_status_json(struct resources_list *resource)
 
 void print_peer_device_statistics(int indent,
 				  struct peer_device_statistics *old,
-				  struct peer_device_statistics *new,
-				  int (*wrap_printf)(int, const char *, ...))
+				  struct peer_device_statistics *s,
+				  wrap_printf_fn_t wrap_printf)
 {
+	double db, dt;
+	uint64_t sectors_to_go = 0;
+	bool sync_details =
+		(s->peer_dev_rs_total != 0) &&
+		(s->peer_dev_rs_total != -1ULL);
+
 	wrap_printf(indent, " received:" U64,
-		    (uint64_t)new->peer_dev_received / 2);
+		    (uint64_t)s->peer_dev_received / 2);
 	wrap_printf(indent, " sent:" U64,
-		    (uint64_t)new->peer_dev_sent / 2);
-	if (opt_verbose || new->peer_dev_out_of_sync)
+		    (uint64_t)s->peer_dev_sent / 2);
+	if (opt_verbose || s->peer_dev_out_of_sync)
 		wrap_printf(indent, " out-of-sync:" U64,
-			    (uint64_t)new->peer_dev_out_of_sync / 2);
-	if (opt_verbose) {
-		wrap_printf(indent, " pending:" U32,
-			    new->peer_dev_pending);
-		wrap_printf(indent, " unacked:" U32,
-			    new->peer_dev_unacked);
+			    (uint64_t)s->peer_dev_out_of_sync / 2);
+	if (!opt_verbose)
+		return;
+
+	wrap_printf(indent, " pending:" U32,
+		    s->peer_dev_pending);
+	wrap_printf(indent, " unacked:" U32,
+		    s->peer_dev_unacked);
+
+	if (!sync_details)
+		return;
+
+	sectors_to_go = s->peer_dev_ov_left ?:
+		s->peer_dev_out_of_sync - s->peer_dev_resync_failed;
+
+	if (opt_verbose > 1) {
+		wrap_printf(indent, " rs-total:" U64, (uint64_t) s->peer_dev_rs_total);
+		wrap_printf(indent, " rs-dt-start-ms:" D64, (uint64_t) s->peer_dev_rs_dt_start_ms);
+		wrap_printf(indent, " rs-paused-ms:" D64, (uint64_t) s->peer_dev_rs_paused_ms);
+		wrap_printf(indent, " rs-dt0-ms:" D64, (uint64_t) s->peer_dev_rs_dt0_ms);
+		wrap_printf(indent, " rs-db0-sectors:" D64, (uint64_t) s->peer_dev_rs_db0_sectors);
+		wrap_printf(indent, " rs-dt1-ms:" D64, (uint64_t) s->peer_dev_rs_dt1_ms);
+		wrap_printf(indent, " rs-db1-sectors:" D64, (uint64_t) s->peer_dev_rs_db1_sectors);
+		if (s->peer_dev_ov_left) {
+			wrap_printf(indent, " ov-start-sector:"U64, (uint64_t)s->peer_dev_ov_start_sector);
+			wrap_printf(indent, " ov-stop-sector:"U64, (uint64_t)s->peer_dev_ov_stop_sector);
+			wrap_printf(indent, " ov-position:"D64, (uint64_t)s->peer_dev_ov_position);
+			wrap_printf(indent, " ov-left:"U64, (uint64_t)s->peer_dev_ov_left);
+			wrap_printf(indent, " ov-skipped:"U64, (uint64_t)s->peer_dev_ov_skipped);
+		} else {
+			wrap_printf(indent, " rs-failed:"U64, (uint64_t)s->peer_dev_resync_failed);
+			wrap_printf(indent, " rs-same-csum:"U64, (uint64_t)s->peer_dev_rs_same_csum);
+		}
+
+		if (s->peer_dev_rs_c_sync_rate)
+			wrap_printf(indent, " want:%.2f", s->peer_dev_rs_c_sync_rate / 1024.0);
+
+		db = s->peer_dev_rs_total - sectors_to_go;
+		dt = s->peer_dev_rs_dt_start_ms - s->peer_dev_rs_paused_ms;
+		wrap_printf(indent, " dbdt:%.2f", db/(dt?:1) *1000.0/2048.0);
+
+		db = s->peer_dev_rs_db0_sectors;
+		dt = s->peer_dev_rs_dt0_ms ?: 1;
+		wrap_printf(indent, " dbdt0:%.2f",
+				db/dt /* sectors/ms */
+				*1000.0/2048.0 /* MiB/s */);
 	}
+
+	db = s->peer_dev_rs_db1_sectors;
+	dt = s->peer_dev_rs_dt1_ms ?: 1;
+	wrap_printf(indent, " dbdt1:%.2f", db/dt *1000.0/2048.0);
+
+	/* estimate time-to-run, based on "db1/dt1" */
+	wrap_printf(indent, " eta:%.0f", dt * 1e-3 * sectors_to_go / (db?:1));
 }
 
 void resource_status(struct resources_list *resource)
@@ -2633,18 +2777,36 @@ static void peer_device_status(struct peer_devices_list *peer_device, bool singl
 	    peer_device->info.peer_repl_state != L_OFF ||
 	    peer_device->info.peer_disk_state != D_UNKNOWN) {
 		enum drbd_disk_state disk_state = peer_device->info.peer_disk_state;
+		struct peer_device_statistics *s = &peer_device->statistics;
+		bool sync_details =
+			(s->peer_dev_rs_total != 0) &&
+			(s->peer_dev_rs_total != -1ULL);
+		bool in_resync_without_details =
+			(s->peer_dev_rs_total == -1ULL) &&
+			(peer_device->info.peer_repl_state >= L_SYNC_SOURCE &&
+			 peer_device->info.peer_repl_state <= L_PAUSED_SYNC_T &&
+			 peer_device->info.peer_repl_state != L_VERIFY_S &&
+			 peer_device->info.peer_repl_state != L_VERIFY_T);
 
 		wrap_printf(indent, " peer-disk:%s%s%s", DISK_COLOR_STRING(disk_state, intentional_diskless, false));
 		if (disk_state == D_DISKLESS &&
 				(opt_verbose || !isatty(fileno(stdout))))
 			wrap_printf(indent, " peer-client:%s", peer_intentional_diskless_str(&peer_device->info));
 		indent = 8;
-		if (peer_device->info.peer_repl_state >= L_SYNC_SOURCE &&
-		    peer_device->info.peer_repl_state <= L_PAUSED_SYNC_T) {
+
+		if (in_resync_without_details) {
 			wrap_printf(indent, " done:%.2f", 100 * (1 -
 				(double)peer_device->statistics.peer_dev_out_of_sync /
 				(double)peer_device->device->statistics.dev_size));
+		} else if (sync_details) {
+			uint64_t sectors_to_go =
+				s->peer_dev_ov_left ?:
+				s->peer_dev_out_of_sync - s->peer_dev_resync_failed;
+			wrap_printf(indent, " done:%.2f", 100.0 *
+					(double)(s->peer_dev_rs_total - sectors_to_go) /
+				        (double)s->peer_dev_rs_total);
 		}
+
 		if (opt_verbose ||
 		    peer_device->info.peer_resync_susp_user ||
 		    peer_device->info.peer_resync_susp_peer ||
@@ -2746,7 +2908,7 @@ static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		case '?':
 			return 20;
 		case 'v':
-			opt_verbose = true;
+			++opt_verbose;
 			break;
 		case 's':
 			opt_statistics = true;
@@ -3178,6 +3340,7 @@ static int remember_connection(struct drbd_cmd *cmd, struct genl_info *info, voi
 		}
 		connection_info_from_attrs(&c->info, info);
 		memset(&c->statistics, -1, sizeof(c->statistics));
+		c->statistics.ap_in_flight = -1ULL;
 		connection_statistics_from_attrs(&c->statistics, info);
 		**tail = c;
 		*tail = &c->next;
@@ -3283,6 +3446,7 @@ static int remember_peer_device(struct drbd_cmd *cmd, struct genl_info *info, vo
 		p->info.peer_is_intentional_diskless = IS_INTENTIONAL_DEF;
 		peer_device_info_from_attrs(&p->info, info);
 		memset(&p->statistics, -1, sizeof(p->statistics));
+		p->statistics.peer_dev_rs_total = -1ULL;
 		peer_device_statistics_from_attrs(&p->statistics, info);
 		**tail = p;
 		*tail = &p->next;
@@ -3787,6 +3951,7 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 				printf(" role:%s%s%s",
 						ROLE_COLOR_STRING(new.i.conn_role, 0));
 			if (opt_statistics) {
+				new.s.ap_in_flight = -1ULL;
 				if (connection_statistics_from_attrs(&new.s, info)) {
 					dbg(1, "connection statistics missing\n");
 					if (old)
@@ -3828,6 +3993,8 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 				printf(" resync-suspended:%s",
 				       resync_susp_str(&new.i));
 			if (opt_statistics) {
+				memset(&new.s, -1, sizeof(new.s));
+				new.s.peer_dev_rs_total = -1ULL;
 				if (peer_device_statistics_from_attrs(&new.s, info)) {
 					dbg(1, "peer device statistics missing\n");
 					if (old)
