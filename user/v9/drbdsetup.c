@@ -2696,7 +2696,7 @@ void resource_status(struct resources_list *resource)
 	wrap_printf(0, "\n");
 }
 
-static void device_status(struct devices_list *device, bool single_device)
+static void device_status(struct devices_list *device, bool single_device, bool is_a_tty)
 {
 	enum drbd_disk_state disk_state = device->info.dev_disk_state;
 	bool intentional_diskless = device->info.is_intentional_diskless == 1;
@@ -2709,8 +2709,7 @@ static void device_status(struct devices_list *device, bool single_device)
 			wrap_printf(indent, " minor:%u", device->minor);
 	}
 	wrap_printf(indent, " disk:%s%s%s", DISK_COLOR_STRING(disk_state, intentional_diskless, true));
-	if (disk_state == D_DISKLESS &&
-			(opt_verbose || !isatty(fileno(stdout))))
+	if (disk_state == D_DISKLESS && (opt_verbose || !is_a_tty))
 		wrap_printf(indent, " client:%s", intentional_diskless_str(&device->info));
 	if (opt_verbose || !device->info.dev_has_quorum)
 		wrap_printf(indent, " quorum:%s%s%s",
@@ -2763,7 +2762,7 @@ static const char *resync_susp_str(struct peer_device_info *info)
 	return buffer;
 }
 
-static void peer_device_status(struct peer_devices_list *peer_device, bool single_device)
+static void peer_device_status(struct peer_devices_list *peer_device, bool single_device, bool is_a_tty)
 {
 	int indent = 4;
 	bool intentional_diskless = peer_device->info.peer_is_intentional_diskless == 1;
@@ -2797,8 +2796,7 @@ static void peer_device_status(struct peer_devices_list *peer_device, bool singl
 			 peer_device->info.peer_repl_state != L_VERIFY_T);
 
 		wrap_printf(indent, " peer-disk:%s%s%s", DISK_COLOR_STRING(disk_state, intentional_diskless, false));
-		if (disk_state == D_DISKLESS &&
-				(opt_verbose || !isatty(fileno(stdout))))
+		if (disk_state == D_DISKLESS && (opt_verbose || !is_a_tty))
 			wrap_printf(indent, " peer-client:%s", peer_intentional_diskless_str(&peer_device->info));
 		indent = 8;
 
@@ -2830,20 +2828,22 @@ static void peer_device_status(struct peer_devices_list *peer_device, bool singl
 	wrap_printf(0, "\n");
 }
 
-static void peer_devices_status(struct drbd_cfg_context *ctx, struct peer_devices_list *peer_devices, bool single_device)
+static void peer_devices_status(struct drbd_cfg_context *ctx,
+		struct peer_devices_list *peer_devices,
+		bool single_device, bool is_a_tty)
 {
 	struct peer_devices_list *peer_device;
 
 	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next) {
 		if (ctx->ctx_peer_node_id != peer_device->ctx.ctx_peer_node_id)
 			continue;
-		peer_device_status(peer_device, single_device);
+		peer_device_status(peer_device, single_device, is_a_tty);
 	}
 }
 
 static void connection_status(struct connections_list *connection,
 			      struct peer_devices_list *peer_devices,
-			      bool single_device)
+			      bool single_device, bool is_a_tty)
 {
 	if (connection->ctx.ctx_conn_name_len)
 		wrap_printf(2, "%s", connection->ctx.ctx_conn_name);
@@ -2870,7 +2870,7 @@ static void connection_status(struct connections_list *connection,
 		print_connection_statistics(6, NULL, &connection->statistics, wrap_printf);
 	wrap_printf(0, "\n");
 	if (opt_verbose || opt_statistics || connection->info.conn_connection_state == C_CONNECTED)
-		peer_devices_status(&connection->ctx, peer_devices, single_device);
+		peer_devices_status(&connection->ctx, peer_devices, single_device, is_a_tty);
 }
 
 static void stop_colors(int sig)
@@ -2978,12 +2978,13 @@ static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
 			}
 			puts(" ]\n}");
 		} else {
+			bool is_a_tty = isatty(fileno(stdout));
 			resource_status(resource);
 			single_device = devices && !devices->next;
 			for (device = devices; device; device = device->next)
-				device_status(device, single_device);
+				device_status(device, single_device, is_a_tty);
 			for (connection = connections; connection; connection = connection->next)
-				connection_status(connection, peer_devices, single_device);
+				connection_status(connection, peer_devices, single_device, is_a_tty);
 			wrap_printf(0, "\n");
 		}
 
