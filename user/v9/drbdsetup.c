@@ -2365,6 +2365,11 @@ void print_connection_statistics(int indent,
 	}
 }
 
+static char *bool2json(bool b)
+{
+	return b ? "true" : "false";
+}
+
 static void peer_device_status_json(struct peer_devices_list *peer_device)
 {
 	struct peer_device_statistics *s = &peer_device->statistics;
@@ -2389,6 +2394,8 @@ static void peer_device_status_json(struct peer_devices_list *peer_device)
 	       "          \"out-of-sync\": " U64 ",\n"
 	       "          \"pending\": " U32 ",\n"
 	       "          \"unacked\": " U32",\n"
+	       "          \"has-sync-details\": %s,\n"
+	       "          \"has-online-verify-details\": %s,\n"
 	       "          \"percent-in-sync\": %.2f%s\n",
 	       peer_device->ctx.ctx_volume,
 	       drbd_repl_str(peer_device->info.peer_repl_state),
@@ -2400,6 +2407,8 @@ static void peer_device_status_json(struct peer_devices_list *peer_device)
 	       (uint64_t)s->peer_dev_out_of_sync / 2,
 	       s->peer_dev_pending,
 	       s->peer_dev_unacked,
+	       bool2json(sync_details),
+	       bool2json(sync_details && s->peer_dev_ov_left),
 	       100 * (1 - (double)peer_device->statistics.peer_dev_out_of_sync /
 		      (double)peer_device->device->statistics.dev_size),
 	       (sync_details || in_resync_without_details) ? "," : "");
@@ -2442,9 +2451,8 @@ static void peer_device_status_json(struct peer_devices_list *peer_device)
 		       (uint64_t)s->peer_dev_rs_same_csum);
 		}
 
-		if (s->peer_dev_rs_c_sync_rate)
-			printf("          \"want\": %.2f,\n",
-				s->peer_dev_rs_c_sync_rate / 1024.0);
+		printf("          \"want\": %.2f,\n",
+				s->peer_dev_rs_c_sync_rate ? s->peer_dev_rs_c_sync_rate / 1024.0 : 0.0);
 
 		db = s->peer_dev_rs_db0_sectors;
 		dt = s->peer_dev_rs_dt0_ms ?: 1;
@@ -2492,7 +2500,7 @@ static void connection_status_json(struct connections_list *connection,
 	       connection->ctx.ctx_peer_node_id,
 	       connection->ctx.ctx_conn_name,
 	       drbd_conn_str(connection->info.conn_connection_state),
-	       connection->statistics.conn_congested ? "true" : "false",
+	       bool2json(connection->statistics.conn_congested),
 	       drbd_role_str(connection->info.conn_role));
 
 	if (connection->statistics.ap_in_flight != -1ULL) {
@@ -2524,12 +2532,12 @@ static void device_status_json(struct devices_list *device)
 	       "      \"minor\": %d,\n"
 	       "      \"disk-state\": \"%s\",\n"
 	       "      \"client\": \"%s\",\n"
-	       "      \"quorum\": \"%s\"%s\n",
+	       "      \"quorum\": %s%s\n",
 	       device->ctx.ctx_volume,
 	       device->minor,
 	       drbd_disk_str(disk_state),
 	       intentional_diskless_str(&device->info),
-	       device->info.dev_has_quorum ? "true" : "false",
+	       bool2json(device->info.dev_has_quorum),
 	       d_statistics ? "," : "");
 
 	if (d_statistics) {
@@ -2584,7 +2592,7 @@ static void resource_status_json(struct resources_list *resource)
 	       resource->name,
 	       node_id,
 	       drbd_role_str(resource->info.res_role),
-	       suspended ? "true" : "false",
+	       bool2json(suspended),
 	       write_ordering_str[resource->statistics.res_stat_write_ordering]);
 }
 
