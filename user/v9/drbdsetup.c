@@ -2387,7 +2387,7 @@ static void peer_device_status_json(struct peer_devices_list *peer_device)
 	       "          \"volume\": %d,\n"
 	       "          \"replication-state\": \"%s\",\n"
 	       "          \"peer-disk-state\": \"%s\",\n"
-	       "          \"peer-client\": \"%s\",\n"
+	       "          \"peer-client\": %s,\n"
 	       "          \"resync-suspended\": \"%s\",\n"
 	       "          \"received\": " U64 ",\n"
 	       "          \"sent\": " U64 ",\n"
@@ -2400,7 +2400,7 @@ static void peer_device_status_json(struct peer_devices_list *peer_device)
 	       peer_device->ctx.ctx_volume,
 	       drbd_repl_str(peer_device->info.peer_repl_state),
 	       drbd_disk_str(peer_device->info.peer_disk_state),
-	       peer_intentional_diskless_str(&peer_device->info),
+	       bool2json(peer_device->info.peer_is_intentional_diskless == 1),
 	       resync_susp_str(&peer_device->info),
 	       (uint64_t)s->peer_dev_received / 2,
 	       (uint64_t)s->peer_dev_sent / 2,
@@ -2475,10 +2475,10 @@ static void peer_device_status_json(struct peer_devices_list *peer_device)
 		dt = s->peer_dev_rs_dt_start_ms - s->peer_dev_rs_paused_ms;
 		printf("          \"db/dt [MiB/s]\": %.2f,\n", db/(dt?:1) *1000.0/2048.0);
 
-		printf("          \"resync-done\": %.2f\n",
+		printf("          \"percent-resync-done\": %.2f\n",
 			100.0 * db/(double)s->peer_dev_rs_total);
 	} else if (in_resync_without_details) {
-		printf("          \"resync-done\": %.2f\n",
+		printf("          \"percent-resync-done\": %.2f\n",
 			100 * (1 - (double)peer_device->statistics.peer_dev_out_of_sync /
 			(double)peer_device->device->statistics.dev_size));
 	}
@@ -2531,12 +2531,12 @@ static void device_status_json(struct devices_list *device)
 	       "      \"volume\": %d,\n"
 	       "      \"minor\": %d,\n"
 	       "      \"disk-state\": \"%s\",\n"
-	       "      \"client\": \"%s\",\n"
+	       "      \"client\": %s,\n"
 	       "      \"quorum\": %s%s\n",
 	       device->ctx.ctx_volume,
 	       device->minor,
 	       drbd_disk_str(disk_state),
-	       intentional_diskless_str(&device->info),
+	       bool2json(device->info.is_intentional_diskless == 1),
 	       bool2json(device->info.dev_has_quorum),
 	       d_statistics ? "," : "");
 
