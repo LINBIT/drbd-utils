@@ -50,6 +50,7 @@
 #include <time.h>
 #include <search.h>
 #include <syslog.h>
+#include <math.h> /* for NAN */
 
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
@@ -2469,7 +2470,7 @@ static void peer_device_status_json(struct peer_devices_list *peer_device)
 
 		/* estimate time-to-run, based on "db1/dt1" */
 		printf("          \"estimated-seconds-to-finish\": %.0f,\n",
-			dt * 1e-3 * sectors_to_go / (db?:1));
+			db ? dt * 1e-3 * sectors_to_go / db : NAN);
 
 		db = s->peer_dev_rs_total - sectors_to_go;
 		dt = s->peer_dev_rs_dt_start_ms - s->peer_dev_rs_paused_ms;
@@ -2667,7 +2668,7 @@ void print_peer_device_statistics(int indent,
 	wrap_printf(indent, " dbdt1:%.2f", db/dt *1000.0/2048.0);
 
 	/* estimate time-to-run, based on "db1/dt1" */
-	wrap_printf(indent, " eta:%.0f", dt * 1e-3 * sectors_to_go / (db?:1));
+	wrap_printf(indent, " eta:%.0f", db ? dt * 1e-3 * sectors_to_go / db : NAN);
 }
 
 void resource_status(struct resources_list *resource)
