@@ -2609,6 +2609,21 @@ void print_peer_device_statistics(int indent,
 		(s->peer_dev_rs_total != 0) &&
 		(s->peer_dev_rs_total != -1ULL);
 
+	if (sync_details)
+		sectors_to_go = s->peer_dev_ov_left ?:
+			s->peer_dev_out_of_sync - s->peer_dev_resync_failed;
+
+	if (indent == 0) { /* called from print_notifications() */
+		if (sync_details)
+			wrap_printf(indent, " done:%.2f", 100.0 *
+					(double)(s->peer_dev_rs_total - sectors_to_go) /
+					(double)s->peer_dev_rs_total);
+		if (!opt_statistics)
+			return;
+	}
+	/* else (indent != 0), called from peer_device_status(),
+	 * we printed the "done" percentage already */
+
 	wrap_printf(indent, " received:" U64,
 		    (uint64_t)s->peer_dev_received / 2);
 	wrap_printf(indent, " sent:" U64,
@@ -2626,9 +2641,6 @@ void print_peer_device_statistics(int indent,
 
 	if (!sync_details)
 		return;
-
-	sectors_to_go = s->peer_dev_ov_left ?:
-		s->peer_dev_out_of_sync - s->peer_dev_resync_failed;
 
 	if (opt_verbose > 1) {
 		wrap_printf(indent, " rs-total:" U64, (uint64_t) s->peer_dev_rs_total);
@@ -3976,6 +3988,7 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 		break;
 	case DRBD_PEER_DEVICE_STATE:
 		if (action != NOTIFY_DESTROY) {
+			bool have_new_stats = true;
 			struct {
 				struct peer_device_info i;
 				struct peer_device_statistics s;
@@ -3986,7 +3999,18 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 				dbg(1, "peer device info missing\n");
 				goto nl_out;
 			}
+
+			memset(&new.s, -1, sizeof(new.s));
+			new.s.peer_dev_rs_total = -1ULL;
+			if (peer_device_statistics_from_attrs(&new.s, info)) {
+				dbg(1, "peer device statistics missing\n");
+				have_new_stats = false;
+			}
+
 			old = update_info(&key, &new, sizeof(new));
+			if (old && !have_new_stats)
+				new.s = old->s;
+
 			if (!old || new.i.peer_repl_state != old->i.peer_repl_state)
 				printf(" replication:%s%s%s",
 						REPL_COLOR_STRING(new.i.peer_repl_state));
@@ -4002,17 +4026,11 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 			    new.i.peer_resync_susp_dependency != old->i.peer_resync_susp_dependency)
 				printf(" resync-suspended:%s",
 				       resync_susp_str(&new.i));
-			if (opt_statistics) {
-				memset(&new.s, -1, sizeof(new.s));
-				new.s.peer_dev_rs_total = -1ULL;
-				if (peer_device_statistics_from_attrs(&new.s, info)) {
-					dbg(1, "peer device statistics missing\n");
-					if (old)
-						new.s = old->s;
-				} else
-					print_peer_device_statistics(0, old ? &old->s : NULL,
-								     &new.s, nowrap_printf);
-			}
+
+			if (have_new_stats)
+				print_peer_device_statistics(0, old ? &old->s : NULL,
+							     &new.s, nowrap_printf);
+
 			free(old);
 		} else
 			update_info(&key, NULL, 0);
