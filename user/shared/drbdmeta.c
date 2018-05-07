@@ -5278,7 +5278,8 @@ int main(int argc, char **argv)
 	if (minor_attached)
 		fprintf(stderr, "# Output might be stale, since minor %d is attached\n", cfg->minor);
 
-	return rv;
+	// dummy bool normalization to not return negative values, the usual "FIXME sane exit codes" still applies */
+	return !!rv;
 	/* and if we want an explicit free,
 	 * this would be the place for it.
 	 * free(cfg->md_device_name), free(cfg) ...
