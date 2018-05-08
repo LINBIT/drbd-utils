@@ -484,6 +484,9 @@ fi
 
 
 %changelog
+* Tue May 08 2018 Roland Kammerer <roland.kammerer@linbit.com> - 9.4.0-1
+- New upstream release.
+
 * Tue Apr 17 2018 Roland Kammerer <roland.kammerer@linbit.com> - 9.3.1-1
 - New upstream release.
 

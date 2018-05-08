@@ -3,6 +3,14 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.4.0
+--------
+ * drbdmeta: don't exit with negative return codes
+ * usage counts: only register if we know driver version
+ * drbdsetup,v9: expose detailed verify/resync statistics
+ * drbdsetup,v9,json: saner types for client/peer-client/quorum on --json
+ * drbdsetup,v9: expose client/peer-client in status if !isatty()
+
 9.3.1
 --------
  * drbdadm v84: fixup for disable-write-same
