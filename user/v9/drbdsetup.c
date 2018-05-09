@@ -3362,7 +3362,6 @@ static int remember_connection(struct drbd_cmd *cmd, struct genl_info *info, voi
 		}
 		connection_info_from_attrs(&c->info, info);
 		memset(&c->statistics, -1, sizeof(c->statistics));
-		c->statistics.ap_in_flight = -1ULL;
 		connection_statistics_from_attrs(&c->statistics, info);
 		**tail = c;
 		*tail = &c->next;
@@ -3468,7 +3467,6 @@ static int remember_peer_device(struct drbd_cmd *cmd, struct genl_info *info, vo
 		p->info.peer_is_intentional_diskless = IS_INTENTIONAL_DEF;
 		peer_device_info_from_attrs(&p->info, info);
 		memset(&p->statistics, -1, sizeof(p->statistics));
-		p->statistics.peer_dev_rs_total = -1ULL;
 		peer_device_statistics_from_attrs(&p->statistics, info);
 		**tail = p;
 		*tail = &p->next;
@@ -3885,6 +3883,7 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 	switch(info->genlhdr->cmd) {
 	case DRBD_RESOURCE_STATE:
 		if (action != NOTIFY_DESTROY) {
+			bool have_new_stats = true;
 			struct {
 				struct resource_info i;
 				struct resource_statistics s;
@@ -3894,7 +3893,15 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 				dbg(1, "resource info missing\n");
 				goto nl_out;
 			}
+			memset(&new.s, -1, sizeof(new.s));
+			if (resource_statistics_from_attrs(&new.s, info)) {
+				dbg(1, "resource statistics missing\n");
+				have_new_stats = false;
+			}
 			old = update_info(&key, &new, sizeof(new));
+			if (old && !have_new_stats)
+				new.s = old->s;
+
 			if (!old || new.i.res_role != old->i.res_role)
 				printf(" role:%s%s%s",
 						ROLE_COLOR_STRING(new.i.res_role, 1));
@@ -3905,21 +3912,16 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 			    new.i.res_susp_quorum != old->i.res_susp_quorum)
 				printf(" suspended:%s",
 				       susp_str(&new.i));
-			if (opt_statistics) {
-				if (resource_statistics_from_attrs(&new.s, info)) {
-					dbg(1, "resource statistics missing\n");
-					if (old)
-						new.s = old->s;
-				} else
-					print_resource_statistics(0, old ? &old->s : NULL,
-								  &new.s, nowrap_printf);
-			}
+			if (opt_statistics && have_new_stats)
+				print_resource_statistics(0, old ? &old->s : NULL,
+							  &new.s, nowrap_printf);
 			free(old);
 		} else
 			update_info(&key, NULL, 0);
 		break;
 	case DRBD_DEVICE_STATE:
 		if (action != NOTIFY_DESTROY) {
+			bool have_new_stats = true;
 			struct {
 				struct device_info i;
 				struct device_statistics s;
@@ -3930,7 +3932,14 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 				dbg(1, "device info missing\n");
 				goto nl_out;
 			}
+			memset(&new.s, -1, sizeof(new.s));
+			if (device_statistics_from_attrs(&new.s, info)) {
+				dbg(1, "device statistics missing\n");
+				have_new_stats = false;
+			}
 			old = update_info(&key, &new, sizeof(new));
+			if (old && !have_new_stats)
+				new.s = old->s;
 			if (!old || new.i.dev_disk_state != old->i.dev_disk_state ||
 			    new.i.dev_has_quorum != old->i.dev_has_quorum) {
 				bool intentional = new.i.is_intentional_diskless == 1;
@@ -3939,21 +3948,16 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 				printf(" client:%s", intentional_diskless_str(&new.i));
 				printf(" quorum:%s", new.i.dev_has_quorum ? "yes" : "no");
 			}
-			if (opt_statistics) {
-				if (device_statistics_from_attrs(&new.s, info)) {
-					dbg(1, "device statistics missing\n");
-					if (old)
-						new.s = old->s;
-				} else
-					print_device_statistics(0, old ? &old->s : NULL,
-								&new.s, nowrap_printf);
-			}
+			if (opt_statistics && have_new_stats)
+				print_device_statistics(0, old ? &old->s : NULL,
+							&new.s, nowrap_printf);
 			free(old);
 		} else
 			update_info(&key, NULL, 0);
 		break;
 	case DRBD_CONNECTION_STATE:
 		if (action != NOTIFY_DESTROY) {
+			bool have_new_stats = true;
 			struct {
 				struct connection_info i;
 				struct connection_statistics s;
@@ -3963,7 +3967,14 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 				dbg(1, "connection info missing\n");
 				goto nl_out;
 			}
+			memset(&new.s, -1, sizeof(new.s));
+			if (connection_statistics_from_attrs(&new.s, info)) {
+				dbg(1, "connection statistics missing\n");
+				have_new_stats = false;
+			}
 			old = update_info(&key, &new, sizeof(new));
+			if (old && !have_new_stats)
+				new.s = old->s;
 			if (!old ||
 			    new.i.conn_connection_state != old->i.conn_connection_state)
 				printf(" connection:%s%s%s",
@@ -3972,16 +3983,9 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 			    new.i.conn_role != old->i.conn_role)
 				printf(" role:%s%s%s",
 						ROLE_COLOR_STRING(new.i.conn_role, 0));
-			if (opt_statistics) {
-				new.s.ap_in_flight = -1ULL;
-				if (connection_statistics_from_attrs(&new.s, info)) {
-					dbg(1, "connection statistics missing\n");
-					if (old)
-						new.s = old->s;
-				} else
-					print_connection_statistics(0, old ? &old->s : NULL,
-								    &new.s, nowrap_printf);
-			}
+			if (opt_statistics && have_new_stats)
+				print_connection_statistics(0, old ? &old->s : NULL,
+							    &new.s, nowrap_printf);
 			free(old);
 		} else
 			update_info(&key, NULL, 0);
@@ -4001,7 +4005,6 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 			}
 
 			memset(&new.s, -1, sizeof(new.s));
-			new.s.peer_dev_rs_total = -1ULL;
 			if (peer_device_statistics_from_attrs(&new.s, info)) {
 				dbg(1, "peer device statistics missing\n");
 				have_new_stats = false;

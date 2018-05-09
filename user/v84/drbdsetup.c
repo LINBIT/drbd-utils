@@ -2966,6 +2966,7 @@ static int print_notifications(const struct drbd_cmd *cm, struct genl_info *info
 	switch(info->genlhdr->cmd) {
 	case DRBD_RESOURCE_STATE:
 		if (action != NOTIFY_DESTROY) {
+			bool have_new_stats = true;
 			struct {
 				struct resource_info i;
 				struct resource_statistics s;
@@ -2975,7 +2976,15 @@ static int print_notifications(const struct drbd_cmd *cm, struct genl_info *info
 				dbg(1, "resource info missing\n");
 				goto nl_out;
 			}
+			memset(&new.s, -1, sizeof(new.s));
+			if (resource_statistics_from_attrs(&new.s, info)) {
+				dbg(1, "resource statistics missing\n");
+				have_new_stats = false;
+			}
 			old = update_info(&key, &new, sizeof(new));
+			if (old && !have_new_stats)
+				new.s = old->s;
+
 			if (!old || new.i.res_role != old->i.res_role)
 				printf(" role:%s",
 				       drbd_role_str(new.i.res_role));
@@ -2985,21 +2994,16 @@ static int print_notifications(const struct drbd_cmd *cm, struct genl_info *info
 			    new.i.res_susp_fen != old->i.res_susp_fen)
 				printf(" suspended:%s",
 				       susp_str(&new.i));
-			if (opt_statistics) {
-				if (resource_statistics_from_attrs(&new.s, info)) {
-					dbg(1, "resource statistics missing\n");
-					if (old)
-						new.s = old->s;
-				} else
-					print_resource_statistics(0, old ? &old->s : NULL,
-								  &new.s, nowrap_printf);
-			}
+			if (opt_statistics && have_new_stats)
+				print_resource_statistics(0, old ? &old->s : NULL,
+							  &new.s, nowrap_printf);
 			free(old);
 		} else
 			update_info(&key, NULL, 0);
 		break;
 	case DRBD_DEVICE_STATE:
 		if (action != NOTIFY_DESTROY) {
+			bool have_new_stats = true;
 			struct {
 				struct device_info i;
 				struct device_statistics s;
@@ -3009,25 +3013,27 @@ static int print_notifications(const struct drbd_cmd *cm, struct genl_info *info
 				dbg(1, "device info missing\n");
 				goto nl_out;
 			}
+			memset(&new.s, -1, sizeof(new.s));
+			if (device_statistics_from_attrs(&new.s, info)) {
+				dbg(1, "device statistics missing\n");
+				have_new_stats = false;
+			}
 			old = update_info(&key, &new, sizeof(new));
+			if (old && !have_new_stats)
+				new.s = old->s;
 			if (!old || new.i.dev_disk_state != old->i.dev_disk_state)
 				printf(" disk:%s",
 				       drbd_disk_str(new.i.dev_disk_state));
-			if (opt_statistics) {
-				if (device_statistics_from_attrs(&new.s, info)) {
-					dbg(1, "device statistics missing\n");
-					if (old)
-						new.s = old->s;
-				} else
-					print_device_statistics(0, old ? &old->s : NULL,
-								&new.s, nowrap_printf);
-			}
+			if (opt_statistics && have_new_stats)
+				print_device_statistics(0, old ? &old->s : NULL,
+							&new.s, nowrap_printf);
 			free(old);
 		} else
 			update_info(&key, NULL, 0);
 		break;
 	case DRBD_CONNECTION_STATE:
 		if (action != NOTIFY_DESTROY) {
+			bool have_new_stats = true;
 			struct {
 				struct connection_info i;
 				struct connection_statistics s;
@@ -3037,7 +3043,14 @@ static int print_notifications(const struct drbd_cmd *cm, struct genl_info *info
 				dbg(1, "connection info missing\n");
 				goto nl_out;
 			}
+			memset(&new.s, -1, sizeof(new.s));
+			if (connection_statistics_from_attrs(&new.s, info)) {
+				dbg(1, "connection statistics missing\n");
+				have_new_stats = false;
+			}
 			old = update_info(&key, &new, sizeof(new));
+			if (old && !have_new_stats)
+				new.s = old->s;
 			if (!old ||
 			    new.i.conn_connection_state != old->i.conn_connection_state)
 				printf(" connection:%s",
@@ -3046,21 +3059,16 @@ static int print_notifications(const struct drbd_cmd *cm, struct genl_info *info
 			    new.i.conn_role != old->i.conn_role)
 				printf(" role:%s",
 				       drbd_role_str(new.i.conn_role));
-			if (opt_statistics) {
-				if (connection_statistics_from_attrs(&new.s, info)) {
-					dbg(1, "connection statistics missing\n");
-					if (old)
-						new.s = old->s;
-				} else
-					print_connection_statistics(0, old ? &old->s : NULL,
-								    &new.s, nowrap_printf);
-			}
+			if (opt_statistics && have_new_stats)
+				print_connection_statistics(0, old ? &old->s : NULL,
+							    &new.s, nowrap_printf);
 			free(old);
 		} else
 			update_info(&key, NULL, 0);
 		break;
 	case DRBD_PEER_DEVICE_STATE:
 		if (action != NOTIFY_DESTROY) {
+			bool have_new_stats = true;
 			struct {
 				struct peer_device_info i;
 				struct peer_device_statistics s;
@@ -3070,7 +3078,15 @@ static int print_notifications(const struct drbd_cmd *cm, struct genl_info *info
 				dbg(1, "peer device info missing\n");
 				goto nl_out;
 			}
+			memset(&new.s, -1, sizeof(new.s));
+			if (peer_device_statistics_from_attrs(&new.s, info)) {
+				dbg(1, "peer device statistics missing\n");
+				have_new_stats = false;
+			}
 			old = update_info(&key, &new, sizeof(new));
+			if (old && !have_new_stats)
+				new.s = old->s;
+
 			if (!old || new.i.peer_repl_state != old->i.peer_repl_state)
 				printf(" replication:%s",
 				       drbd_repl_str9(new.i.peer_repl_state));
@@ -3083,15 +3099,9 @@ static int print_notifications(const struct drbd_cmd *cm, struct genl_info *info
 			    new.i.peer_resync_susp_dependency != old->i.peer_resync_susp_dependency)
 				printf(" resync-suspended:%s",
 				       resync_susp_str(&new.i));
-			if (opt_statistics) {
-				if (peer_device_statistics_from_attrs(&new.s, info)) {
-					dbg(1, "peer device statistics missing\n");
-					if (old)
-						new.s = old->s;
-				} else
-					print_peer_device_statistics(0, old ? &old->s : NULL,
-								     &new.s, nowrap_printf);
-			}
+			if (opt_statistics && have_new_stats)
+				print_peer_device_statistics(0, old ? &old->s : NULL,
+							     &new.s, nowrap_printf);
 			free(old);
 		} else
 			update_info(&key, NULL, 0);
