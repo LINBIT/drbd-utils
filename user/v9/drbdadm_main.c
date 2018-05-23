@@ -1392,6 +1392,9 @@ static void __adm_drbdsetup(const struct cfg_ctx *ctx, int flags, pid_t *pid, in
 		argv[NA(argc)] = ssprintf("%s", ctx->conn->peer->node_id);
 
 	if (ctx->vol) {
+		if (ctx->cmd == &detach_cmd && !ctx->vol->device)
+			argv[NA(argc)] = ssprintf("--diskless");
+
 		if (ctx->cmd->need_peer && ctx->cmd->iterate_volumes)
 			argv[NA(argc)] = ssprintf("%d", ctx->vol->vnr);
 		else

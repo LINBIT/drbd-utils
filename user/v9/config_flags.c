@@ -940,6 +940,7 @@ struct context_def detach_cmd_ctx = {
 	.nla_type = DRBD_NLA_DETACH_PARMS,
 	.fields = {
 		{ "force", FLAG(force_detach) },
+		{ "diskless", FLAG(intentional_diskless_detach) },
 		{ }
 	},
 };
