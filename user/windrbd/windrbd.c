@@ -13,6 +13,14 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <ctype.h>
+
+#include <winioctl.h>
+#include <shellapi.h>
+#include <shlobj.h>
+#include <dbt.h>
+
+
 
 static int quiet = 0;
 
@@ -37,6 +45,8 @@ void usage_and_exit(void)
 	fprintf(stderr, "	windrbd [opt] log-server [<log-file>]\n");
 	fprintf(stderr, "		Logs windrbd kernel messages to stdout (and optionally to\n");
 	fprintf(stderr, "		log-file)\n");
+	fprintf(stderr, "	windrbd [opt] add-drive-in-explorer <drive-letter>\n");
+	fprintf(stderr, "		Tells Windows Explorer that drive has been created.\n");
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
 
@@ -456,6 +466,68 @@ int set_mountpoint(const char *drive, const char *guid)
 	return 0;
 }
 
+enum explorer_ops {
+	ADD_DRIVE, DELETE_DRIVE
+};
+
+int notify_explorer(const char *drive, enum explorer_ops op)
+{
+	wchar_t t_drive[100];
+	DEV_BROADCAST_VOLUME dev_broadcast_volume = {
+		sizeof(DEV_BROADCAST_VOLUME),
+		DBT_DEVTYP_VOLUME
+	};
+	DWORD_PTR dwp;
+
+	check_drive_letter(drive);
+	if (islower(drive[0]))
+		dev_broadcast_volume.dbcv_unitmask = 1 << (drive[0] - 'a');
+	else
+		dev_broadcast_volume.dbcv_unitmask = 1 << (drive[0] - 'A');
+
+	swprintf(t_drive, sizeof(t_drive) / sizeof(*t_drive) -1, L"%s", drive);
+
+	switch (op) {
+	case ADD_DRIVE:
+
+			/* Taken from imdisk source: cpl/drvio.c:1576 */
+	
+		SHChangeNotify(SHCNE_DRIVEADD, SHCNF_PATH, t_drive, NULL);
+
+		SendMessageTimeout(HWND_BROADCAST,
+			WM_DEVICECHANGE,
+			DBT_DEVICEARRIVAL,
+			(LPARAM)&dev_broadcast_volume,
+			SMTO_BLOCK | SMTO_ABORTIFHUNG,
+			4000,
+			&dwp);
+
+		dev_broadcast_volume.dbcv_flags = DBTF_MEDIA;
+
+		SendMessageTimeout(HWND_BROADCAST,
+			WM_DEVICECHANGE,
+			DBT_DEVICEARRIVAL,
+			(LPARAM)&dev_broadcast_volume,
+			SMTO_BLOCK | SMTO_ABORTIFHUNG,
+			4000,
+			&dwp);
+
+		SendMessageTimeout(HWND_BROADCAST,
+			WM_DEVICECHANGE,
+			DBT_DEVNODES_CHANGED,
+			(LPARAM)0,
+			SMTO_BLOCK | SMTO_ABORTIFHUNG,
+			4000,
+			&dwp);
+
+		break;
+
+	default:
+		fprintf(stderr, "not implemented\n");
+	}
+	return 0;
+}
+
 int main(int argc, char ** argv)
 {
 	const char *op;
@@ -538,6 +610,14 @@ int main(int argc, char ** argv)
 		const char *log_file = argv[optind+1];
 
 		return log_server_op(log_file);
+	}
+	if (strcmp(op, "add-drive-in-explorer") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		const char *drive = argv[optind+1];
+
+		return notify_explorer(drive, ADD_DRIVE);
 	}
 
 	usage_and_exit();
