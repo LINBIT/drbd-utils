@@ -47,6 +47,8 @@ void usage_and_exit(void)
 	fprintf(stderr, "		log-file)\n");
 	fprintf(stderr, "	windrbd [opt] add-drive-in-explorer <drive-letter>\n");
 	fprintf(stderr, "		Tells Windows Explorer that drive has been created.\n");
+	fprintf(stderr, "	windrbd [opt] remove-drive-in-explorer <drive-letter>\n");
+	fprintf(stderr, "		Tells Windows Explorer that drive has been removed.\n");
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
 
@@ -467,7 +469,7 @@ int set_mountpoint(const char *drive, const char *guid)
 }
 
 enum explorer_ops {
-	ADD_DRIVE, DELETE_DRIVE
+	ADD_DRIVE, REMOVE_DRIVE
 };
 
 int notify_explorer(const char *drive, enum explorer_ops op)
@@ -516,6 +518,30 @@ int notify_explorer(const char *drive, enum explorer_ops op)
 			WM_DEVICECHANGE,
 			DBT_DEVNODES_CHANGED,
 			(LPARAM)0,
+			SMTO_BLOCK | SMTO_ABORTIFHUNG,
+			4000,
+			&dwp);
+
+		break;
+
+	case REMOVE_DRIVE:
+
+			/* Taken from imdisk source: cpl/drvio.c:735 */
+
+		SHChangeNotify(SHCNE_DRIVEREMOVED, SHCNF_PATH, t_drive, NULL);
+
+		SendMessageTimeout(HWND_BROADCAST,
+			WM_DEVICECHANGE,
+			DBT_DEVICEREMOVECOMPLETE,
+			(LPARAM)&dev_broadcast_volume,
+			SMTO_BLOCK | SMTO_ABORTIFHUNG,
+			4000,
+			&dwp);
+
+		SendMessageTimeout(HWND_BROADCAST,
+			WM_DEVICECHANGE,
+			DBT_DEVNODES_CHANGED,
+			0,
 			SMTO_BLOCK | SMTO_ABORTIFHUNG,
 			4000,
 			&dwp);
@@ -618,6 +644,14 @@ int main(int argc, char ** argv)
 		const char *drive = argv[optind+1];
 
 		return notify_explorer(drive, ADD_DRIVE);
+	}
+	if (strcmp(op, "remove-drive-in-explorer") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		const char *drive = argv[optind+1];
+
+		return notify_explorer(drive, REMOVE_DRIVE);
 	}
 
 	usage_and_exit();
