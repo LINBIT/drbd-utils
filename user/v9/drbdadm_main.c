@@ -1424,6 +1424,16 @@ static void __adm_drbdsetup(const struct cfg_ctx *ctx, int flags, pid_t *pid, in
 		setenv("DRBD_RESOURCE", ctx->res->name, 1);
 
 	m__system(argv, flags, ctx->res ? ctx->res->name : NULL, pid, fd, ex);
+
+#ifdef WINDRBD
+	if (ctx->cmd == &primary_cmd) {
+		struct d_volume *vol;
+
+		for_each_volume(vol, &ctx->res->me->volumes)
+			if (is_driveletter(vol->device))
+				call_windrbd(ctx->res->name, windrbd, "-q", "add-drive-in-explorer", vol->device, NULL);
+	}
+#endif
 }
 
 static int _adm_drbdsetup(const struct cfg_ctx *ctx, int flags)
