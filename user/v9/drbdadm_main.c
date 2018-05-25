@@ -1445,12 +1445,20 @@ static void __adm_drbdsetup(const struct cfg_ctx *ctx, int flags, pid_t *pid, in
 	m__system(argv, flags, ctx->res ? ctx->res->name : NULL, pid, fd, ex);
 
 #ifdef WINDRBD
-	if (ctx->cmd == &primary_cmd) {
+	const char *windrbd_cmd = NULL;
+
+	if (ctx->cmd == &primary_cmd)
+		windrbd_cmd = "add-drive-in-explorer";
+
+	if (ctx->cmd == &secondary_cmd || ctx->cmd == &down_cmd)
+		windrbd_cmd = "remove-drive-in-explorer";
+
+	if (windrbd_cmd != NULL) {
 		struct d_volume *vol;
 
 		for_each_volume(vol, &ctx->res->me->volumes)
 			if (is_driveletter(vol->device))
-				call_windrbd(ctx->res->name, windrbd, "-q", "add-drive-in-explorer", vol->device, NULL);
+				call_windrbd(ctx->res->name, windrbd, "-q", windrbd_cmd, vol->device, NULL);
 	}
 #endif
 }
