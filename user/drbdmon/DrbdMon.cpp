@@ -1144,7 +1144,7 @@ void DrbdMon::add_config_option(Configurable& owner, const ConfigOption& conf_op
     {
         try
         {
-            std::unique_ptr<DrbdMon::option_entry> entry = std::unique_ptr<DrbdMon::option_entry>(
+            std::unique_ptr<DrbdMon::option_entry> entry(
                 new DrbdMon::option_entry { owner, conf_option }
             );
             options->insert(&conf_option.key, entry.get());

@@ -295,8 +295,7 @@ static bool adjust_ids(MessageLog* log, bool& ids_safe)
 // @throws std::bad_alloc
 static void query_node_name(std::unique_ptr<std::string>& node_name)
 {
-    std::unique_ptr<struct utsname> uname_buffer;
-    uname_buffer = std::unique_ptr<struct utsname>(new struct utsname);
+    std::unique_ptr<struct utsname> uname_buffer(new struct utsname);
     if (uname(uname_buffer.get()) == 0)
     {
         node_name = std::unique_ptr<std::string>(new std::string(uname_buffer->nodename));
