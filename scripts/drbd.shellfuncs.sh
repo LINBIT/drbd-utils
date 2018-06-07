@@ -298,6 +298,7 @@ drbd_set_status_variables()
 	status_disk_all_up_to_date=false
 	status_disk_all_consistent=false
 	status_disk_transitional_state=false
+	status_diskless_client=false
 
 	# maybe we can use it to "unfence"
 	# a "stale" fencing constraint.
@@ -317,6 +318,7 @@ drbd_set_status_variables()
 	: == DEBUG == status_disk_all_up_to_date          == $status_disk_all_up_to_date ==
 	: == DEBUG == status_disk_all_consistent          == $status_disk_all_consistent ==
 	: == DEBUG == status_disk_transitional_state      == $status_disk_transitional_state ==
+	: == DEBUG == status_diskless_client              == $status_diskless_client ==
 	: == DEBUG == status_pdsk_all_up_to_date          == $status_pdsk_all_up_to_date ==
 	: == DEBUG == status_pdsk_any_unknown             == $status_pdsk_any_unknown ==
 	: == DEBUG == status_some_peer_any_unknown        == $status_some_peer_any_unknown ==
