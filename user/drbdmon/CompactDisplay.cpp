@@ -19,6 +19,7 @@ extern "C"
 const std::string CompactDisplay::OPT_NO_HEADER_KEY("no-header");
 const std::string CompactDisplay::OPT_NO_HOTKEYS_KEY("no-hotkeys");
 const std::string CompactDisplay::OPT_ASCII_KEY("ascii");
+const std::string CompactDisplay::OPT_PROBLEMS_KEY("problems");
 
 const std::string CompactDisplay::HDR_SPACER(" | ");
 const std::string CompactDisplay::NODE_DSP_PREFIX("Node ");
@@ -27,6 +28,7 @@ const std::string CompactDisplay::TRUNC_MARKER("...");
 const ConfigOption CompactDisplay::OPT_NO_HEADER(true, OPT_NO_HEADER_KEY);
 const ConfigOption CompactDisplay::OPT_NO_HOTKEYS(true, OPT_NO_HOTKEYS_KEY);
 const ConfigOption CompactDisplay::OPT_ASCII(true, OPT_ASCII_KEY);
+const ConfigOption CompactDisplay::OPT_PROBLEMS(true, OPT_PROBLEMS_KEY);
 
 // Generic formats
 const char* CompactDisplay::F_NORM  = "\x1b[0;32m";
@@ -960,6 +962,7 @@ void CompactDisplay::announce_options(Configurator& collector)
     collector.add_config_option(owner, OPT_NO_HEADER);
     collector.add_config_option(owner, OPT_NO_HOTKEYS);
     collector.add_config_option(owner, OPT_ASCII);
+    collector.add_config_option(owner, OPT_PROBLEMS);
 }
 
 void CompactDisplay::options_help() noexcept
@@ -968,6 +971,7 @@ void CompactDisplay::options_help() noexcept
     std::fputs("  --ascii          Use only ASCII characters (no Unicode)\n", stderr);
     std::fputs("  --no-header      Do not display the DrbdMon header line\n", stderr);
     std::fputs("  --no-hotkeys     Do not display the hotkeys line\n", stderr);
+    std::fputs("  --problems       Start with the problems view\n", stderr);
     std::fputc('\n', stderr);
     std::fflush(stderr);
 }
@@ -988,6 +992,11 @@ void CompactDisplay::set_flag(std::string& key)
     if (key == OPT_ASCII.key)
     {
         set_utf8(false);
+    }
+    else
+    if (key == OPT_PROBLEMS.key)
+    {
+        dsp_problems_active = true;
     }
 }
 

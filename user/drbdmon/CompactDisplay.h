@@ -32,6 +32,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
     static const std::string OPT_NO_HEADER_KEY;
     static const std::string OPT_NO_HOTKEYS_KEY;
     static const std::string OPT_ASCII_KEY;
+    static const std::string OPT_PROBLEMS_KEY;
 
     static const std::string HDR_SPACER;
     static const std::string NODE_DSP_PREFIX;
@@ -40,6 +41,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
     static const ConfigOption OPT_NO_HEADER;
     static const ConfigOption OPT_NO_HOTKEYS;
     static const ConfigOption OPT_ASCII;
+    static const ConfigOption OPT_PROBLEMS;
 
     static const char* F_NORM;
     static const char* F_WARN;
