@@ -44,7 +44,6 @@ const std::string DrbdMon::TYPE_SEPARATOR   = "-";
 
 const char DrbdMon::HOTKEY_QUIT       = 'q';
 const char DrbdMon::HOTKEY_REPAINT    = 'r';
-const char DrbdMon::HOTKEY_CLEAR_MSG  = 'c';
 const char DrbdMon::HOTKEY_REINIT     = 'R';
 const char DrbdMon::HOTKEY_VERSION    = 'V';
 
@@ -248,12 +247,6 @@ void DrbdMon::run()
                                 {
                                     fin_action = DrbdMon::finish_action::RESTART_IMMED;
                                     shutdown = true;
-                                }
-                                else
-                                if (c == HOTKEY_CLEAR_MSG)
-                                {
-                                    log.clear();
-                                    display->status_display();
                                 }
                                 else
                                 if (c == HOTKEY_QUIT)
@@ -1023,7 +1016,6 @@ void DrbdMon::setup_hotkeys_info()
 {
     hotkeys_info->append(&HOTKEY_QUIT, &DESC_QUIT);
     hotkeys_info->append(&HOTKEY_REPAINT, &DESC_REPAINT);
-    hotkeys_info->append(&HOTKEY_CLEAR_MSG, &DESC_CLEAR_MSG);
 }
 
 // Frees resources

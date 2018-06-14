@@ -47,7 +47,6 @@ class DrbdMon : public Configurable, public Configurator
 
     static const char HOTKEY_QUIT;
     static const char HOTKEY_REPAINT;
-    static const char HOTKEY_CLEAR_MSG;
     static const char HOTKEY_REINIT;
     static const char HOTKEY_VERSION;
 

@@ -93,9 +93,11 @@ const char* CompactDisplay::ANSI_CLEAR_LINE = "\x1b[K";
 const char* CompactDisplay::ANSI_CURSOR_OFF = "\x1b[?25l";
 const char* CompactDisplay::ANSI_CURSOR_ON  = "\x1b[?25h";
 
-const char CompactDisplay::HOTKEY_PGUP = '<';
-const char CompactDisplay::HOTKEY_PGDN = '>';
-const char CompactDisplay::HOTKEY_PGONE = '!';
+const char CompactDisplay::HOTKEY_MESSAGES  = 'm';
+const char CompactDisplay::HOTKEY_CLEAR_MSG = 'c';
+const char CompactDisplay::HOTKEY_PGUP      = '<';
+const char CompactDisplay::HOTKEY_PGDN      = '>';
+const char CompactDisplay::HOTKEY_PGONE     = '!';
 
 const char CompactDisplay::KEY_BACKSPACE = 127;
 const char CompactDisplay::KEY_CTRL_H    = 8;
@@ -104,6 +106,7 @@ const char CompactDisplay::KEY_ENTER     = '\r';
 const char CompactDisplay::KEY_ESC       = 0x1B;
 
 const std::string CompactDisplay::LABEL_MESSAGES    = "Messages";
+const std::string CompactDisplay::LABEL_CLEAR_MSG   = "Clear messages";
 const std::string CompactDisplay::LABEL_MONITOR     = "Monitor";
 const std::string CompactDisplay::LABEL_PROBLEMS    = "Problems";
 const std::string CompactDisplay::LABEL_STATUS      = "Status";
@@ -393,6 +396,8 @@ void CompactDisplay::display_hotkeys_info() const
         {
             write_char(' ');
             write_fmt(F_HOTKEY, 'm', LABEL_MONITOR.c_str());
+            write_char(' ');
+            write_fmt(F_HOTKEY, 'c', LABEL_CLEAR_MSG.c_str());
         }
         else
         if (log.has_entries())
@@ -1035,6 +1040,14 @@ void CompactDisplay::key_pressed(const char key)
                 dsp_msg_active = true;
             }
             status_display();
+            break;
+        case HOTKEY_CLEAR_MSG:
+            if (dsp_msg_active)
+            {
+                log.clear();
+                dsp_msg_active = false;
+                status_display();
+            }
             break;
         case 'p':
             if (dsp_problems_active)

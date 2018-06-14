@@ -104,6 +104,8 @@ class CompactDisplay : public GenericDisplay, public Configurable
     static const char* ANSI_CURSOR_OFF;
     static const char* ANSI_CURSOR_ON;
 
+    static const char HOTKEY_MESSAGES;
+    static const char HOTKEY_CLEAR_MSG;
     static const char HOTKEY_PGUP;
     static const char HOTKEY_PGDN;
     static const char HOTKEY_PGONE;
@@ -115,6 +117,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
     static const char KEY_ESC;
 
     static const std::string LABEL_MESSAGES;
+    static const std::string LABEL_CLEAR_MSG;
     static const std::string LABEL_MONITOR;
     static const std::string LABEL_PROBLEMS;
     static const std::string LABEL_STATUS;
