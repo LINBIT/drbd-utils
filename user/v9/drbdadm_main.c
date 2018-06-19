@@ -2060,7 +2060,6 @@ int ctx_by_minor(struct cfg_ctx *ctx, const char *id)
 			continue;
 		for_each_volume(vol, &res->me->volumes) {
 			if (mm == vol->device_minor) {
-				is_drbd_top = res->stacked;
 				ctx->res = res;
 				ctx->vol = vol;
 				return 0;
@@ -3446,15 +3445,9 @@ int main(int argc, char **argv)
 					       rv = E_USAGE;
 					continue;
 				}
-				if (is_drbd_top != ctx.res->stacked && !is_dump) {
-					err("'%s' is a %s resource, and not available in %s mode.\n",
-					    ctx.res->name,
-					    ctx.res->stacked ? "stacked" : "normal",
-					    is_drbd_top ? "stacked" : "normal");
-					if (rv < E_USAGE)
-					       rv = E_USAGE;
-					continue;
-				}
+				/* Someone named it explicitly. Don't be annoying.
+				 * Also, don't break handlers called from kernel. */
+				is_drbd_top = ctx.res->stacked;
 				verify_ips(ctx.res);
 				if (!is_dump && !config_valid)
 					exit(E_CONFIG_INVALID);
