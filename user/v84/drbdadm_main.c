@@ -722,7 +722,8 @@ static void dump_volume(int has_lower, struct d_volume *vol)
 	}
 
 	/* Handle volume of '_remote_host' */
-	if (!vol->device && !vol->disk && !vol->meta_disk && !vol->meta_index)
+	if (vol->device_minor == -1 && !vol->device
+	&& !vol->disk && !vol->meta_disk && !vol->meta_index)
 		goto out;
 
 	dump_options("disk", vol->disk_options);
