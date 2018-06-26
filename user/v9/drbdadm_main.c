@@ -210,6 +210,13 @@ int adm_adjust_wp(const struct cfg_ctx *ctx)
 	.backend_res_name = 1,		\
 	.uc_dialog = 1,			\
 
+#define ACF1_RESNAME_VERIFY_IPS		\
+	.show_in_usage = 1,		\
+	.res_name_required = 1,		\
+	.backend_res_name = 1,		\
+	.verify_ips = 1,		\
+	.uc_dialog = 1,			\
+
 #define ACF1_CONNECT			\
 	.show_in_usage = 1,		\
 	.res_name_required = 1,		\
@@ -329,7 +336,7 @@ int adm_adjust_wp(const struct cfg_ctx *ctx)
 /*  */ struct adm_cmd connect_cmd = {"connect", adm_connect, &connect_cmd_ctx, ACF1_CONNECT};
 /*  */ struct adm_cmd net_options_cmd = {"net-options", adm_new_peer, &net_options_ctx, ACF1_CONNECT};
 /*  */ struct adm_cmd disconnect_cmd = {"disconnect", adm_drbdsetup, &disconnect_cmd_ctx, ACF1_DISCONNECT};
-static struct adm_cmd up_cmd = {"up", adm_up, ACF1_RESNAME };
+static struct adm_cmd up_cmd = {"up", adm_up, ACF1_RESNAME_VERIFY_IPS };
 /*  */ struct adm_cmd res_options_cmd = {"resource-options", adm_resource, &resource_options_ctx, ACF1_RESNAME};
 static struct adm_cmd down_cmd = {"down", adm_drbdsetup, ACF1_RESNAME .takes_long = 1};
 static struct adm_cmd primary_cmd = {"primary", adm_drbdsetup, &primary_cmd_ctx, ACF1_RESNAME .takes_long = 1};
@@ -341,8 +348,8 @@ static struct adm_cmd outdate_cmd = {"outdate", adm_outdate, ACF1_DEFAULT};
 static struct adm_cmd verify_cmd = {"verify", adm_drbdsetup, &verify_cmd_ctx, ACF1_PEER_DEVICE};
 static struct adm_cmd pause_sync_cmd = {"pause-sync", adm_drbdsetup, ACF1_PEER_DEVICE};
 static struct adm_cmd resume_sync_cmd = {"resume-sync", adm_drbdsetup, ACF1_PEER_DEVICE};
-static struct adm_cmd adjust_cmd = {"adjust", adm_adjust, &adjust_ctx, ACF1_RESNAME .vol_id_optional = 1};
-static struct adm_cmd adjust_wp_cmd = {"adjust-with-progress", adm_adjust_wp, ACF1_RESNAME};
+static struct adm_cmd adjust_cmd = {"adjust", adm_adjust, &adjust_ctx, ACF1_RESNAME_VERIFY_IPS .vol_id_optional = 1};
+static struct adm_cmd adjust_wp_cmd = {"adjust-with-progress", adm_adjust_wp, ACF1_RESNAME_VERIFY_IPS};
 static struct adm_cmd wait_c_cmd = {"wait-connect", adm_wait_c, ACF1_WAIT};
 static struct adm_cmd wait_sync_cmd = {"wait-sync", adm_wait_c, ACF1_WAIT};
 static struct adm_cmd wait_ci_cmd = {"wait-con-int", adm_wait_ci, .show_in_usage = 1,.verify_ips = 1,};
@@ -2673,7 +2680,7 @@ void verify_ips(struct d_resource *res)
 {
 	if (global_options.disable_ip_verification)
 		return;
-	if (dry_run == 1 || do_verify_ips == 0)
+	if ((dry_run == 1 && no_tty) || do_verify_ips == 0)
 		return;
 	if (res->ignore)
 		return;
