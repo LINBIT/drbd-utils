@@ -3,6 +3,14 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.5.0
+--------
+ * drbdmon: allow to start in problems view (--problems)
+ * drbdadm,v9: fix always failing stacked handlers from kernel
+ * drbdadm,v9: adjust now hands over the information that a diskfull->diskless
+   change was intentional. Now shown as "green diskless"
+ * drbdadm,v9: adjust verifies now IPs
+
 9.4.0
 --------
  * drbdmeta: don't exit with negative return codes
