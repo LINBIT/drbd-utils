@@ -1,6 +1,8 @@
 #ifndef GENERICDISPLAY_H
 #define	GENERICDISPLAY_H
 
+#include <cstdint>
+
 class GenericDisplay
 {
   public:
