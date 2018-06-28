@@ -1,0 +1,3 @@
+option('with-83-support', type: 'boolean', value: true)
+option('with-84-support', type: 'boolean', value: true)
+option('with-drbdmon', type: 'boolean', value: true)
