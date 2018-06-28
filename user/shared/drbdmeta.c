@@ -682,70 +682,8 @@ void md_cpu_to_disk_08(struct md_on_disk_08 *disk, const struct md_cpu *cpu)
  * -- DRBD 8.4 --------------------------------------
  */
 
-/* new in 8.4: 4k al transaction blocks */
-#define AL_UPDATES_PER_TRANSACTION 64
-#define AL_CONTEXT_PER_TRANSACTION 919
 /* from DRBD 8.4 linux/drbd/drbd_limits.h, DRBD_AL_EXTENTS_MAX */
 #define AL_EXTENTS_MAX  65534
-enum al_transaction_types {
-	AL_TR_UPDATE = 0,
-	AL_TR_INITIALIZED = 0xffff
-};
-struct __packed al_4k_transaction_on_disk {
-	/* don't we all like magic */
-	be_u32	magic;
-
-	/* to identify the most recent transaction block
-	 * in the on disk ring buffer */
-	be_u32	tr_number;
-
-	/* checksum on the full 4k block, with this field set to 0. */
-	be_u32	crc32c;
-
-	/* type of transaction, special transaction types like:
-	 * purge-all, set-all-idle, set-all-active, ... to-be-defined
-	 * see also enum al_transaction_types */
-	be_u16	transaction_type;
-
-	/* we currently allow only a few thousand extents,
-	 * so 16bit will be enough for the slot number. */
-
-	/* how many updates in this transaction */
-	be_u16	n_updates;
-
-	/* maximum slot number, "al-extents" in drbd.conf speak.
-	 * Having this in each transaction should make reconfiguration
-	 * of that parameter easier. */
-	be_u16	context_size;
-
-	/* slot number the context starts with */
-	be_u16	context_start_slot_nr;
-
-	/* Some reserved bytes.  Expected usage is a 64bit counter of
-	 * sectors-written since device creation, and other data generation tag
-	 * supporting usage */
-	be_u32	__reserved[4];
-
-	/* --- 36 byte used --- */
-
-	/* Reserve space for up to AL_UPDATES_PER_TRANSACTION changes
-	 * in one transaction, then use the remaining byte in the 4k block for
-	 * context information.  "Flexible" number of updates per transaction
-	 * does not help, as we have to account for the case when all update
-	 * slots are used anyways, so it would only complicate code without
-	 * additional benefit.
-	 */
-	be_u16	update_slot_nr[AL_UPDATES_PER_TRANSACTION];
-
-	/* but the extent number is 32bit, which at an extent size of 4 MiB
-	 * allows to cover device sizes of up to 2**54 Byte (16 PiB) */
-	be_u32	update_extent_nr[AL_UPDATES_PER_TRANSACTION];
-
-	/* --- 420 bytes used (36 + 64*6) --- */
-
-	/* 4096 - 420 = 3676 = 919 * 4 */
-	be_u32	context[AL_CONTEXT_PER_TRANSACTION];
-};
 
 struct al_4k_cpu {
 	uint32_t	magic;
@@ -765,7 +703,7 @@ struct al_4k_cpu {
 
 /* --- */
 
-int v84_al_disk_to_cpu(struct al_4k_cpu *al_cpu, struct al_4k_transaction_on_disk *al_disk)
+int v84_al_disk_to_cpu(struct al_4k_cpu *al_cpu, struct al_transaction_on_disk *al_disk)
 {
 	unsigned crc = 0;
 	unsigned i;
@@ -1687,7 +1625,7 @@ void initialize_al(struct format *cfg)
 		 * For 8.4 and 9.0, we initialize to something that is
 		 * valid magic, valid crc, and transaction_type = 0xffff.
 		 */
-		struct al_4k_transaction_on_disk *al = on_disk_buffer;
+		struct al_transaction_on_disk *al = on_disk_buffer;
 		unsigned crc_be = 0;
 		int i;
 		for (i = 0; i < mx; i++, al++) {
@@ -1847,7 +1785,7 @@ void printf_al_07(struct format *cfg, struct al_sector_on_disk *al_disk)
 		max_slot_nr, cfg->md.al_nr_extents);
 }
 
-void printf_al_84(struct format *cfg, struct al_4k_transaction_on_disk *al_disk,
+void printf_al_84(struct format *cfg, struct al_transaction_on_disk *al_disk,
 	unsigned block_nr_offset, unsigned N)
 {
 	struct al_4k_cpu al_cpu;
@@ -1904,7 +1842,7 @@ void printf_al(struct format *cfg)
 	off_t al_on_disk_off = cfg->al_offset;
 	off_t al_size = cfg->md.al_stripes * cfg->md.al_stripe_size_4k * 4096;
 	struct al_sector_on_disk *al_512_disk = on_disk_buffer;
-	struct al_4k_transaction_on_disk *al_4k_disk = on_disk_buffer;
+	struct al_transaction_on_disk *al_4k_disk = on_disk_buffer;
 	unsigned block_nr_offset = 0;
 	unsigned N;
 
@@ -2078,7 +2016,7 @@ static unsigned int al_tr_number_to_on_disk_slot(struct format *cfg, unsigned in
 int replay_al_84(struct format *cfg, uint32_t *hot_extent)
 {
 	const unsigned int mx = cfg->md.al_stripes * cfg->md.al_stripe_size_4k;
-	struct al_4k_transaction_on_disk *al_disk = on_disk_buffer;
+	struct al_transaction_on_disk *al_disk = on_disk_buffer;
 	struct al_4k_cpu *al_cpu = NULL;
 	unsigned b, o, i;
 
@@ -2318,7 +2256,7 @@ int v08_move_internal_md_after_resize(struct format *cfg);
 int meta_apply_al(struct format *cfg, char **argv __attribute((unused)), int argc)
 {
 	off_t al_size;
-	struct al_4k_transaction_on_disk *al_4k_disk = on_disk_buffer;
+	struct al_transaction_on_disk *al_4k_disk = on_disk_buffer;
 	uint32_t hot_extent[AL_EXTENTS_MAX];
 	int need_to_update_md_flags = 0;
 	int re_initialize_anyways = 0;
