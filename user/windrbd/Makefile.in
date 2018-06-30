@@ -1,6 +1,7 @@
 # This is a very simple makefile
 
 sbindir = @sbindir@
+sysconfdir = @sysconfdir@
 WITH_WINDRBD = @WITH_WINDRBD@
 
 # variables meant to be overridden from the make command line
@@ -17,7 +18,8 @@ windrbd: windrbd.c
 	gcc -g -Wall -o windrbd.exe windrbd.c
 
 install: windrbd
-	install windrbd.exe $(DESTDIR)$(sbindir)
+	install -m 755 windrbd.exe $(DESTDIR)$(sbindir)
+	install -m 644 windrbd-sample.res $(DESTDIR)$(sysconfdir)/drbd.d
 
 clean:
 	rm windrbd.exe
