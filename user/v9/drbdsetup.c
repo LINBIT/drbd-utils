@@ -1117,8 +1117,23 @@ static int check_error(int err_no, char *desc)
 {
 	int rv = 0;
 
-	if (err_no == NO_ERROR || err_no == SS_SUCCESS)
+	if (err_no == NO_ERROR || err_no == SS_SUCCESS) {
+#ifdef WINDRBD
+			/* drbdsetup primary may produce warnings,
+			 * which are no errors. */
+		if (global_attrs[DRBD_NLA_CFG_REPLY] &&
+	            global_attrs[DRBD_NLA_CFG_REPLY]->nla_len) {
+			struct nlattr *nla;
+			int rem;
+			fprintf(stderr, "warnings from kernel:\n");
+			nla_for_each_nested(nla, global_attrs[DRBD_NLA_CFG_REPLY], rem) {
+				if (nla_type(nla) == __nla_type(T_info_text))
+					fprintf(stderr, "%s\n", (char*)nla_data(nla));
+			}
+		}
+#endif
 		return 0;
+	}
 
 	if (err_no == OTHER_ERROR) {
 		if (desc)
