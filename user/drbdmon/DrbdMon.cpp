@@ -8,8 +8,8 @@
 extern "C"
 {
     #include <errno.h>
-    #include <config.h>
-    #include <drbd_buildtag.h>
+    #include "config.h"
+    #include "drbd_buildtag.h"
 }
 
 #include <map_types.h>

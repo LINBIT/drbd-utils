@@ -1,7 +1,7 @@
 #ifndef DRBDADM_H
 #define DRBDADM_H
 
-#include <linux/drbd_config.h>
+#include "linux/drbd_config.h"
 #include <sys/utsname.h>
 #include <sys/types.h>
 #include <net/if.h>

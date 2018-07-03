@@ -35,7 +35,10 @@ all-obj := $(sort $(ls-obj) $(lst-obj))
 local-obj := $(filter-out $(dsaext-obj),$(all-obj))
 local-dep := $(patsubst %.o,.%.d,$(local-obj))
 ifeq ($(WITH_DRBDMON),yes)
+# avoid breaking clean target. somebody else has to create that file
+ifneq (,$(wildcard ../shared/drbd_buildtag.h))
 -include $(local-dep)
+endif
 endif
 
 $(dsaext-obj): $(basename $(dsaext-obj)).cpp $(basename $(dsaext-obj)).h

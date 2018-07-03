@@ -69,10 +69,10 @@
 
 #include "libgenl.h"
 #include "drbd_nla.h"
-#include <linux/drbd_config.h>
-#include <linux/drbd_genl_api.h>
-#include <linux/drbd_limits.h>
-#include <linux/genl_magic_func.h>
+#include "linux/drbd_config.h"
+#include "linux/drbd_genl_api.h"
+#include "linux/drbd_limits.h"
+#include "linux/genl_magic_func.h"
 #include "drbdtool_common.h"
 #include "registry.h"
 #include "config.h"

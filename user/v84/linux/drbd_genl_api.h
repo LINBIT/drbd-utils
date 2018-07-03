@@ -45,11 +45,11 @@ enum drbd_state_info_bcast_reason {
  * we cannot possibly include <1/drbd_genl.h> */
 #undef linux
 
-#include <linux/drbd.h>
+#include "linux/drbd.h"
 #define GENL_MAGIC_VERSION	API_VERSION
 #define GENL_MAGIC_FAMILY	drbd
 #define GENL_MAGIC_FAMILY_HDRSZ	sizeof(struct drbd_genlmsghdr)
-#define GENL_MAGIC_INCLUDE_FILE <linux/drbd_genl.h>
-#include <linux/genl_magic_struct.h>
+#define GENL_MAGIC_INCLUDE_FILE "linux/drbd_genl.h"
+#include "linux/genl_magic_struct.h"
 
 #endif
