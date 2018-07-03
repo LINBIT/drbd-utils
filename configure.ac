@@ -256,10 +256,26 @@ fi
 dnl special header checks
 
 AC_LANG(C)
-AC_COMPILE_IFELSE([AC_LANG_SOURCE[
-#include <linux/genetlink.h>
-static unsigned int dummy = CTRL_CMD_DELMCAST_GRP;
-]], [AC_DEFINE([HAVE_CTRL_CMD_DELMCAST_GRP],1,[Does genetlink provide CTRL_CMD_DELMCAST_GRP already])])
+AC_CHECK_HEADERS([linux/genetlink.h],
+   [
+      AC_COMPILE_IFELSE([AC_LANG_SOURCE[
+         #include <linux/genetlink.h>
+         static unsigned int i = CTRL_ATTR_VERSION;
+         ]], [AC_DEFINE([HAVE_CTRL_ATTR_VERSION],[],[CTRL_ATTR_VERSION defined in linux/genetlink.h])]),
+      AC_COMPILE_IFELSE([AC_LANG_SOURCE[
+         #include <linux/genetlink.h>
+         static unsigned int i = CTRL_ATTR_HDRSIZE;
+         ]], [AC_DEFINE([HAVE_CTRL_ATTR_HDRSIZE],[],[CTRL_ATTR_HDRSIZE defined in linux/genetlink.h])]),
+      AC_COMPILE_IFELSE([AC_LANG_SOURCE[
+         #include <linux/genetlink.h>
+         static unsigned int i = CTRL_ATTR_MCAST_GROUPS;
+         ]], [AC_DEFINE([HAVE_CTRL_ATTR_MCAST_GROUPS],[],[CTRL_ATTR_MCAST_GROUPS defined in linux/genetlink.h])]),
+      AC_COMPILE_IFELSE([AC_LANG_SOURCE[
+         #include <linux/genetlink.h>
+         static unsigned int i = CTRL_CMD_DELMCAST_GRP;
+         ]], [AC_DEFINE([HAVE_CTRL_CMD_DELMCAST_GRP],[1],[Does genetlink provide CTRL_CMD_DELMCAST_GRP already])]),
+   ],
+   [AC_MSG_ERROR([Could not find linux/genetlink.h])])
 
 dnl Checks for system services
 
