@@ -6,6 +6,8 @@
 #include <time.h>
 #include <poll.h>
 
+#include "config.h"
+
 int genl_join_mc_group(struct genl_sock *s, const char *name) {
 	int g_id;
 	int i;
