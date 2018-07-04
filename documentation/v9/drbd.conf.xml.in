@@ -643,6 +643,47 @@ resource
         </varlistentry>
 
         <varlistentry>
+          <term><option>before-resync-source <replaceable>cmd</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>before-resync-source</secondary>
+              </indexterm> Called on a resync source before a resync begins.
+              </para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>out-of-sync <replaceable>cmd</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>out-of-sync</secondary>
+              </indexterm> Called on all nodes after a <option>verify</option> finishes and out-of-sync blocks
+              were found. This handler is mainly used for monitoring purposes.
+              An example would be to call a script that sends an alert SMS.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>quorum-lost <replaceable>cmd</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>quorum-lost</secondary>
+              </indexterm> Called on a Primary that lost quorum.
+              This handler is usually used to reboot the node if it is not possible
+              to restart the application that uses the storage on top of DRBD.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
           <term><option>fence-peer <replaceable>cmd</replaceable></option></term>
 
           <listitem>
