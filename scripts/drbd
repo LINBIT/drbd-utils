@@ -230,6 +230,7 @@ case "$1" in
 	[[ $? = 127 ]] && exit 5 # LSB for "not installed"
 	log_daemon_msg "Stopping all DRBD resources"
 	for try in 1 2; do
+	    stop_failed=0
 	    if [ -e $PROC_DRBD ] ; then
 		[[ $try = 2 ]] && echo "Retrying once..."
 		# bypass drbdadm and drbd config file and everything,
@@ -240,19 +241,23 @@ case "$1" in
 			[ -L "$d" ] && continue
 			[ -b "$d" ] || continue
 			M=$(umount "$d" 2>&1)
+			[ $? != 0 ] && stop_failed=1
 			case $M in
 			*" not mounted") :;;
 			*) echo "$M" >&2 ;;
 			esac
 		done
 		for res in $($DRBDADM --stacked sh-resources) $($DRBDADM sh-resources); do
-			$DRBDSETUP down "$res"
+			$DRBDSETUP down "$res" || stop_failed=1
 		done
 		_udev_settle &> /dev/null
 		if [ -d /sys/module/drbd/holders ]; then
 			(cd /sys/module/drbd/holders; for tr in *; do [ -d ${tr} ] && ${RMMOD} ${tr}; done)
 		fi
-		$RMMOD drbd && break
+		if grep -qw drbd /proc/modules; then
+			$RMMOD drbd || stop_failed=1
+		fi
+		[ $stop_failed = 0 ] && break
 	    fi
 	done
 	run_hook stop
