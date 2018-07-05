@@ -16,6 +16,7 @@ flex = find_program('flex')
 grep = find_program('grep')
 drbd_buildtag = find_program('user/shared/drbd_buildtag.sh')
 git = find_program('git', required: false)
+xsltproc = find_program('xsltproc')
 
 # generator function for flex files
 lgen = generator(flex,
@@ -80,3 +81,4 @@ if compile_drbdmon
   subdir('user/drbdmon')
 endif
 subdir('user/v9')
+subdir('documentation/v84')

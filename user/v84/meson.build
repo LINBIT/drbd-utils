@@ -32,5 +32,5 @@ drbdadm_84_sources += [lfiles_adm_84]
 drbdadm_84_sources += [drbd_buildtag_h, drbd_buildtag_c]
 
 incdir = include_directories('linux', '../shared', '../..')
-executable('drbdsetup-84', drbdsetup_84_sources, include_directories: incdir)
+drbdsetup_84 = executable('drbdsetup-84', drbdsetup_84_sources, include_directories: incdir)
 executable('drbdadm-84', drbdadm_84_sources, include_directories: incdir)
