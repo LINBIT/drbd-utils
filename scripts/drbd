@@ -252,7 +252,9 @@ case "$1" in
 		if [ -d /sys/module/drbd/holders ]; then
 			(cd /sys/module/drbd/holders; for tr in *; do [ -d ${tr} ] && ${RMMOD} ${tr}; done)
 		fi
-		$RMMOD drbd && break
+		if [ ! -z "$(cat /proc/modules | grep -w drbd)" ]; then
+			$RMMOD drbd && break
+		fi
 	    fi
 	done
 	run_hook stop
