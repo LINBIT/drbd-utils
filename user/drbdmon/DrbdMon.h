@@ -19,7 +19,6 @@
 #include <MessageLog.h>
 #include <Configurable.h>
 #include <Configurator.h>
-#include <comparators.h>
 
 class DrbdMon : public Configurable, public Configurator
 {

@@ -20,6 +20,7 @@ extern "C"
 #include <CompactDisplay.h>
 #include <ConfigOption.h>
 #include <Args.h>
+#include <comparators.h>
 
 const std::string DrbdMon::PROGRAM_NAME = "DRBD DrbdMon";
 const std::string DrbdMon::VERSION = PACKAGE_VERSION;
@@ -64,7 +65,7 @@ DrbdMon::DrbdMon(
     arg_count(argc),
     arg_values(argv),
     resources_map(new ResourcesMap(&comparators::compare_string)),
-    hotkeys_info(new HotkeysMap(&comparators::compare_char)),
+    hotkeys_info(new HotkeysMap(&dsaext::generic_compare<char>)),
     fail_data(fail_data_ref),
     log(log_ref),
     node_name(node_name_ref)

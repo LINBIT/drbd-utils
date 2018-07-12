@@ -1,9 +1,8 @@
 #include <VolumesContainer.h>
-#include <comparators.h>
 
 // @throws std::bad_alloc
 VolumesContainer::VolumesContainer():
-    volume_list(new VolumesMap(&comparators::compare_uint16))
+    volume_list(new VolumesMap(&dsaext::generic_compare<uint16_t>))
 {
 }
 
