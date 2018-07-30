@@ -28,6 +28,8 @@ class DrbdMon : public Configurable, public Configurator
 
     static const std::string TOKEN_DELIMITER;
 
+    static const char DEBUG_SEQ_PFX;
+
     static const std::string OPT_HELP_KEY;
     static const std::string OPT_VERSION_KEY;
     static const ConfigOption OPT_HELP;
@@ -78,7 +80,8 @@ class DrbdMon : public Configurable, public Configurator
         RESTART_IMMED,
         RESTART_DELAYED,
         TERMINATE,
-        TERMINATE_NO_CLEAR
+        TERMINATE_NO_CLEAR,
+        DEBUG_MODE
     };
 
     // @throws std::bad_alloc
@@ -86,6 +89,7 @@ class DrbdMon : public Configurable, public Configurator
         int argc,
         char* argv[],
         MessageLog& log_ref,
+        MessageLog& debug_log_ref,
         fail_info& fail_data_ref,
         const std::string* const node_name_ref
     );
@@ -105,7 +109,8 @@ class DrbdMon : public Configurable, public Configurator
     virtual void process_event_message(
         std::string& mode,
         std::string& type,
-        PropsMap& event_props
+        PropsMap& event_props,
+        std::string& event_line
     );
     // Returns the action requested to be taken upon return from this class' run() method.
     // This method should be called only after run() has returned.
@@ -148,6 +153,7 @@ class DrbdMon : public Configurable, public Configurator
     fail_info&    fail_data;
     finish_action fin_action {DrbdMon::finish_action::RESTART_IMMED};
     MessageLog&   log;
+    MessageLog&   debug_log;
     const std::string* const node_name;
 
     bool          shutdown      {false};
@@ -159,45 +165,45 @@ class DrbdMon : public Configurable, public Configurator
     std::unique_ptr<Configurable*[]> configurables {nullptr};
 
     // @throws std::bad_alloc, EventMessageException
-    void create_connection(PropsMap& event_props);
+    void create_connection(PropsMap& event_props, std::string& event_line);
     // @throws std::bad_alloc, EventMessageException
-    void create_device(PropsMap& event_props);
+    void create_device(PropsMap& event_props, std::string& event_line);
     // @throws std::bad_alloc, EventMessageException
-    void create_peer_device(PropsMap& event_props);
+    void create_peer_device(PropsMap& event_props, std::string& event_line);
     // @throws std::bad_alloc, EventMessageException
-    void create_resource(PropsMap& event_props);
+    void create_resource(PropsMap& event_props, std::string& event_line);
 
     // @throws EventMessageException, EventObjectException
-    void update_connection(PropsMap& event_props);
+    void update_connection(PropsMap& event_props, std::string& event_line);
     // @throws EventMessageException, EventObjectException
-    void update_device(PropsMap& event_props);
+    void update_device(PropsMap& event_props, std::string& event_line);
     // @throws EventMessageException, EventObjectException
-    void update_peer_device(PropsMap& event_props);
+    void update_peer_device(PropsMap& event_props, std::string& event_line);
     // @throws EventMessageException, EventObjectException
-    void update_resource(PropsMap& event_props);
+    void update_resource(PropsMap& event_props, std::string& event_line);
 
     // @throws EventMessageException
-    void destroy_connection(PropsMap& event_props);
+    void destroy_connection(PropsMap& event_props, std::string& event_line);
     // @throws EventMessageException
-    void destroy_device(PropsMap& event_props);
+    void destroy_device(PropsMap& event_props, std::string& event_line);
     // @throws EventMessageException
-    void destroy_peer_device(PropsMap& event_props);
+    void destroy_peer_device(PropsMap& event_props, std::string& event_line);
     // @throws EventMessageException
-    void destroy_resource(PropsMap& event_props);
+    void destroy_resource(PropsMap& event_props, std::string& event_line);
 
     // @throws EventMessageException, EventObjectException
-    DrbdConnection& get_connection(DrbdResource& res, PropsMap& event_props);
+    DrbdConnection& get_connection(DrbdResource& res, PropsMap& event_props, std::string& event_line);
     // @throws EventMessageException, EventObjectException
-    DrbdVolume& get_device(VolumesContainer& vol_con, PropsMap& event_props);
+    DrbdVolume& get_device(VolumesContainer& vol_con, PropsMap& event_props, std::string& event_line);
     // @throws EventMessageException, EventObjectException
-    DrbdResource& get_resource(PropsMap& event_props);
+    DrbdResource& get_resource(PropsMap& event_props, std::string& event_line);
 
     // Loads the event_props map with the properties contained in tokens
     //
     // @param: tokens StringTokenizer that returns the 'key:value' tokens from a 'drbdsetup event2' line
     // @param: event_props Property map to load the key == value mappings into
     // @throws std::bad_alloc
-    void parse_event_props(StringTokenizer& tokens, PropsMap& event_props);
+    void parse_event_props(StringTokenizer& tokens, PropsMap& event_props, std::string& event_line);
     // Clears the event_props map and frees all its entries
     void clear_event_props(PropsMap& event_props);
 

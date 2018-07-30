@@ -12,6 +12,8 @@ extern "C"
     #include <sys/wait.h>
     #include <signal.h>
     #include <sys/utsname.h>
+    #include <fcntl.h>
+    #include <drbd_buildtag.h>
 }
 
 #include <DrbdMon.h>
@@ -19,6 +21,7 @@ extern "C"
 
 // LOG_CAPACITY must be >= 1
 const size_t LOG_CAPACITY {10};
+const size_t DEBUG_LOG_CAPACITY {100};
 
 // Clear screen escape sequence
 const char* ANSI_CLEAR = "\x1b[H\x1b[2J";
@@ -50,6 +53,7 @@ int main(int argc, char* argv[])
     DrbdMon::finish_action fin_action {DrbdMon::finish_action::RESTART_DELAYED};
 
     std::unique_ptr<MessageLog> log;
+    std::unique_ptr<MessageLog> debug_log;
     std::unique_ptr<std::string> node_name;
 
     bool ids_safe {false};
@@ -65,6 +69,12 @@ int main(int argc, char* argv[])
                 // only thrown if LOG_CAPACITY < 1
                 log = std::unique_ptr<MessageLog>(new MessageLog(LOG_CAPACITY));
             }
+            if (debug_log == nullptr)
+            {
+                // std::out_of_range exception not handled, as it is
+                // only thrown if LOG_CAPACITY < 1
+                debug_log = std::unique_ptr<MessageLog>(new MessageLog(DEBUG_LOG_CAPACITY));
+            }
 
             if (node_name == nullptr)
             {
@@ -75,7 +85,7 @@ int main(int argc, char* argv[])
             if (ids_safe || adjust_ids(log.get(), ids_safe))
             {
                 const std::unique_ptr<DrbdMon> dm_instance(
-                    new DrbdMon(argc, argv, *log, fail_data, node_name.get())
+                    new DrbdMon(argc, argv, *log, *debug_log, fail_data, node_name.get())
                 );
                 dm_instance->run();
                 fin_action = dm_instance->get_fin_action();
@@ -121,6 +131,65 @@ int main(int argc, char* argv[])
             child_pid = waitpid(-1, nullptr, WNOHANG);
         }
         while (child_pid > 0);
+
+        if (fin_action == DrbdMon::finish_action::DEBUG_MODE)
+        {
+            std::fprintf(stdout, "** %s v%s (%s)\n", DrbdMon::PROGRAM_NAME.c_str(), DrbdMon::VERSION.c_str(), GITHASH);
+            std::fputs("** Debug messages log\n", stdout);
+            if (debug_log->has_entries())
+            {
+                debug_log->display_messages(stdout);
+            }
+            else
+            {
+                std::fputs("The log contains no debug messages\n", stdout);
+            }
+
+            // Attempt to set blocking mode on stdin
+            int io_flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+            if (io_flags != -1)
+            {
+                fcntl(STDIN_FILENO, F_SETFL, io_flags & ~O_NONBLOCK);
+            }
+
+            bool skip_prompt = false;
+            while (fin_action == DrbdMon::finish_action::DEBUG_MODE)
+            {
+                if (skip_prompt)
+                {
+                    skip_prompt = false;
+                }
+                else
+                {
+                    std::fputs("\n[C] Clear debug messages, [Q] Quit, [R] Restart\n", stdout);
+                }
+
+                int key = std::fgetc(stdin);
+                if (key == 'c' || key == 'C')
+                {
+                    debug_log->clear();
+                    std::fputs("Debug messages log cleared\n", stdout);
+                }
+                else
+                if (key == 'q' || key == 'Q')
+                {
+                    fin_action = DrbdMon::finish_action::TERMINATE;
+                }
+                else
+                if (key == 'r' || key == 'R')
+                {
+                    fin_action = DrbdMon::finish_action::RESTART_IMMED;
+                }
+                else
+                if (key == '\n')
+                {
+                    // Entering characters in canonical mode requires pressing enter,
+                    // thereby causing the next read from stdin to read a newline
+                    // Avoid printing the prompt twice in this case
+                    skip_prompt = true;
+                }
+            }
+        }
 
         if (fin_action == DrbdMon::finish_action::RESTART_DELAYED)
         {

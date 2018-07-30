@@ -42,6 +42,9 @@ EventsSourceSpawner::~EventsSourceSpawner()
     }
 
     terminate_child_process();
+
+    int io_flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, io_flags & ~O_NONBLOCK);
 }
 
 pid_t EventsSourceSpawner::get_process_id()
@@ -75,10 +78,18 @@ int EventsSourceSpawner::spawn_source()
     {
         // Initialize the pipe
         checked_int_rc(pipe2(pipe_fd, 0));
+
         // Make the pipe's read end nonblocking
-        fcntl(pipe_fd[PIPE_READ_SIDE], F_SETFL, O_NONBLOCK);
+        {
+            int io_flags = fcntl(pipe_fd[PIPE_READ_SIDE], F_GETFL, 0);
+            fcntl(pipe_fd[PIPE_READ_SIDE], F_SETFL, io_flags | O_NONBLOCK);
+        }
+
         // Make stdin nonblocking
-        fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
+        {
+            int io_flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+            fcntl(STDIN_FILENO, F_SETFL, io_flags | O_NONBLOCK);
+        }
 
         // Initialize the datastructures for posix_spawn())
         {
