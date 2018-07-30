@@ -1,10 +1,10 @@
 /**
  * Data structures and algorithms extensions
  *
- * @version 2016-03-21_001
+ * @version 2018-05-16_001
  * @author  Robert Altnoeder (r.altnoeder@gmx.net)
  *
- * Copyright (C) 2012 - 2016 Robert ALTNOEDER
+ * Copyright (C) 2012 - 2018 Robert ALTNOEDER
  *
  * Redistribution and use in source and binary forms,
  * with or without modification, are permitted provided that
@@ -43,8 +43,8 @@ namespace dsaext
       public:
         typedef struct entry_s
         {
-            K* key;
-            V* value;
+            const K* key;
+            const V* value;
         }
         entry;
 
@@ -64,7 +64,7 @@ namespace dsaext
         }
 
         virtual V* get(const K* key) const = 0;
-        virtual void insert(K* key, V* value) = 0;
+        virtual void insert(const K* key, const V* value) = 0;
         virtual void remove(const K* key) = 0;
         virtual void clear() = 0;
         virtual size_t get_size() const = 0;
@@ -85,13 +85,40 @@ namespace dsaext
     class DuplicateInsertException : public std::exception
     {
       public:
-        DuplicateInsertException();
+        DuplicateInsertException() = default;
         DuplicateInsertException(const DuplicateInsertException& orig) = default;
         DuplicateInsertException& operator=(const DuplicateInsertException& orig) = default;
         DuplicateInsertException(DuplicateInsertException&& orig) = default;
         DuplicateInsertException& operator=(DuplicateInsertException&& orig) = default;
         virtual ~DuplicateInsertException() noexcept;
     };
+
+    class NumberFormatException : public std::exception
+    {
+      public:
+        NumberFormatException() = default;
+        NumberFormatException(const NumberFormatException& orig) = default;
+        NumberFormatException& operator=(const NumberFormatException& orig) = default;
+        NumberFormatException(NumberFormatException&& orig) = default;
+        NumberFormatException& operator=(NumberFormatException&& orig) = default;
+        virtual ~NumberFormatException() noexcept;
+    };
+
+    template<typename T>
+    int generic_compare(const T* const key_ptr, const T* const other_ptr)
+    {
+        int result = 0;
+        if (*key_ptr < *other_ptr)
+        {
+            result = -1;
+        }
+        else
+        if (*key_ptr > *other_ptr)
+        {
+            result = 1;
+        }
+        return result;
+    }
 }
 
 #endif	/* DSAEXT_H */

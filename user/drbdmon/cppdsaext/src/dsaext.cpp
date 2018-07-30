@@ -1,10 +1,10 @@
 /**
  * Data structures and algorithms extensions
  *
- * @version 2016-03-21_001
+ * @version 2018-05-16_001
  * @author  Robert Altnoeder (r.altnoeder@gmx.net)
  *
- * Copyright (C) 2012 - 2016 Robert ALTNOEDER
+ * Copyright (C) 2012 - 2018 Robert ALTNOEDER
  *
  * Redistribution and use in source and binary forms,
  * with or without modification, are permitted provided that
@@ -31,10 +31,10 @@
  */
 #include <dsaext.h>
 
-dsaext::DuplicateInsertException::DuplicateInsertException()
+dsaext::DuplicateInsertException::~DuplicateInsertException() noexcept
 {
 }
 
-dsaext::DuplicateInsertException::~DuplicateInsertException() noexcept
+dsaext::NumberFormatException::~NumberFormatException() noexcept
 {
 }

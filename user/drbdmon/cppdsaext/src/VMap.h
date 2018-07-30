@@ -1,10 +1,10 @@
 /**
- * Vector/Map
+ * Vector/Map, implemented as a double ended queue (deque)
  *
- * @version 2016-03-21_001
+ * @version 2018-05-16_001
  * @author  Robert Altnoeder (r.altnoeder@gmx.net)
  *
- * Copyright (C) 2012 - 2016 Robert ALTNOEDER
+ * Copyright (C) 2012 - 2018 Robert ALTNOEDER
  *
  * Redistribution and use in source and binary forms,
  * with or without modification, are permitted provided that
@@ -48,7 +48,7 @@ class VMap
         friend class VMap;
 
       public:
-        Node(K* key_ptr, V* value_ptr):
+        Node(const K* key_ptr, const V* value_ptr):
             key(key_ptr),
             value(value_ptr)
         {
@@ -77,12 +77,12 @@ class VMap
 
         virtual K* get_key() const
         {
-            return key;
+            return const_cast<K*> (key);
         }
 
         virtual V* get_value() const
         {
-            return value;
+            return const_cast<V*> (value);
         }
 
         virtual void reuse()
@@ -94,10 +94,10 @@ class VMap
         }
 
       private:
-        Node*   next  {nullptr};
-        Node*   prev  {nullptr};
-        K*      key   {nullptr};
-        V*      value {nullptr};
+        Node*       next    {nullptr};
+        Node*       prev    {nullptr};
+        const K*    key     {nullptr};
+        const V*    value   {nullptr};
     };
 
     template<typename T>
@@ -105,9 +105,9 @@ class VMap
     {
       public:
         BaseIterator(const VMap<K, V>& vmap_ref):
-            vmap_obj(vmap_ref)
+            vmap_obj(&vmap_ref)
         {
-            iter_node = vmap_obj.head;
+            iter_node = vmap_obj->head;
         }
 
         virtual ~BaseIterator() = default;
@@ -120,7 +120,7 @@ class VMap
 
         virtual size_t get_size() const
         {
-            return vmap_obj.size;
+            return vmap_obj->size;
         }
 
         virtual bool has_next() const
@@ -139,7 +139,7 @@ class VMap
             return ret_node;
         }
       private:
-        const VMap<K, V>& vmap_obj;
+        const VMap<K, V>* vmap_obj;
         Node* iter_node {nullptr};
     };
 
@@ -162,13 +162,13 @@ class VMap
 
         virtual K* next()
         {
-            K* iter_key {nullptr};
+            const K* iter_key {nullptr};
             Node* node = BaseIterator<K>::next_node();
             if (node != nullptr)
             {
                 iter_key = node->key;
             }
-            return iter_key;
+            return const_cast<K*> (iter_key);
         }
     };
 
@@ -191,13 +191,13 @@ class VMap
 
         virtual V* next()
         {
-            V* iter_value {nullptr};
+            const V* iter_value {nullptr};
             Node* node = BaseIterator<V>::next_node();
             if (node != nullptr)
             {
                 iter_value = node->value;
             }
-            return iter_value;
+            return const_cast<V*> (iter_value);
         }
     };
 
@@ -224,7 +224,7 @@ class VMap
         }
     };
 
-    VMap(compare_func compare_fn):
+    VMap(const compare_func compare_fn):
         compare(compare_fn)
     {
     }
@@ -247,15 +247,20 @@ class VMap
         size = 0;
     }
 
-    virtual V* get(K* key_ptr)
+    virtual size_t get_size() const
     {
-        V* value = nullptr;
+        return size;
+    }
+
+    virtual V* get(const K* key_ptr)
+    {
+        const V* value = nullptr;
         Node* node = find_node(key_ptr);
         if (node != nullptr)
         {
             value = node->value;
         }
-        return value;
+        return const_cast<V*> (value);
     }
 
     virtual Node* get_node(K* key_ptr)
@@ -264,14 +269,14 @@ class VMap
     }
 
     // @throw std::bad_alloc
-    virtual void prepend(K* key_ptr, V* value_ptr)
+    virtual void prepend(const K* key_ptr, const V* value_ptr)
     {
         Node* ins_node = new Node(key_ptr, value_ptr);
         prepend_node_impl(ins_node);
     }
 
     // @throw std::bad_alloc
-    virtual void append(K* key_ptr, V* value_ptr)
+    virtual void append(const K* key_ptr, const V* value_ptr)
     {
         Node* ins_node = new Node(key_ptr, value_ptr);
         append_node_impl(ins_node);
@@ -288,7 +293,7 @@ class VMap
     }
 
     // @throw std::bad_alloc
-    virtual void insert_before(Node* node, K* key_ptr, V* value_ptr)
+    virtual void insert_before(Node* node, const K* key_ptr, const V* value_ptr)
     {
         Node* ins_node = new Node(key_ptr, value_ptr);
         insert_node_before_impl(node, ins_node);
@@ -299,7 +304,7 @@ class VMap
         insert_node_before_impl(node, ins_node);
     }
 
-    virtual void remove(K* key_ptr)
+    virtual void remove(const K* key_ptr)
     {
         Node* rm_node = find_node(key_ptr);
         if (rm_node != nullptr)
@@ -319,7 +324,7 @@ class VMap
     }
 
   private:
-    Node* find_node(K* key_ptr)
+    Node* find_node(const K* key_ptr)
     {
         Node* result_node = head;
         while (result_node != nullptr)
