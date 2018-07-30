@@ -16,6 +16,8 @@ extern "C"
 #include <map_types.h>
 // https://github.com/raltnoeder/cppdsaext
 #include <dsaext.h>
+#include <integerparse.h>
+
 #include <DrbdMon.h>
 #include <utils.h>
 #include <CompactDisplay.h>
@@ -28,8 +30,14 @@ const std::string DrbdMon::VERSION = PACKAGE_VERSION;
 
 const std::string DrbdMon::OPT_HELP_KEY = "help";
 const std::string DrbdMon::OPT_VERSION_KEY = "version";
+const std::string DrbdMon::OPT_FREQ_LMT_KEY = "freqlmt";
 const ConfigOption DrbdMon::OPT_HELP(true, OPT_HELP_KEY);
 const ConfigOption DrbdMon::OPT_VERSION(true, OPT_VERSION_KEY);
+const ConfigOption DrbdMon::OPT_FREQ_LMT(false, OPT_FREQ_LMT_KEY);
+
+const std::string DrbdMon::UNIT_SFX_SECONDS = "s";
+const std::string DrbdMon::UNIT_SFX_MILLISECONDS = "ms";
+const uint16_t DrbdMon::MAX_INTERVAL = 10000;
 
 const std::string DrbdMon::TOKEN_DELIMITER = " ";
 
@@ -56,6 +64,7 @@ const std::string DrbdMon::DESC_REPAINT   = "Repaint";
 const std::string DrbdMon::DESC_CLEAR_MSG = "Clear messages";
 const std::string DrbdMon::DESC_REINIT    = "Reinitialize";
 
+static bool string_ends_with(const std::string& text, const std::string& suffix);
 
 // @throws std::bad_alloc
 DrbdMon::DrbdMon(
@@ -157,6 +166,8 @@ void DrbdMon::run()
 
 
             bool debug_key {false};
+            bool timer_available = (interval_timer_mgr.get() != nullptr);
+            bool timer_armed {false};
             while (!shutdown)
             {
                 EventsIo::event event_id = events_io->wait_event();
@@ -178,7 +189,14 @@ void DrbdMon::run()
                                     {
                                         if (update_counter >= MAX_EVENT_BUNDLE)
                                         {
-                                            display->status_display();
+                                            if (timer_available)
+                                            {
+                                                cond_display_update(timer_available, timer_armed);
+                                            }
+                                            else
+                                            {
+                                                display->status_display();
+                                            }
                                             update_counter = 0;
                                         }
                                         else
@@ -194,7 +212,14 @@ void DrbdMon::run()
                             }
                             if (have_initial_state)
                             {
-                                display->status_display();
+                                if (timer_available)
+                                {
+                                    cond_display_update(timer_available, timer_armed);
+                                }
+                                else
+                                {
+                                    display->status_display();
+                                }
                             }
                         }
                         break;
@@ -232,6 +257,12 @@ void DrbdMon::run()
                                         shutdown = true;
                                     }
                                     break;
+                                case SIGALRM:
+                                    {
+                                        display->status_display();
+                                        update_timestamp(timer_available, timer_armed);
+                                        timer_armed = false;
+                                    }
                                 default:
                                     // Unexpected signals ignored
                                     break;
@@ -1288,6 +1319,7 @@ void DrbdMon::announce_options(Configurator& collector)
     Configurable& owner = dynamic_cast<Configurable&> (*this);
     collector.add_config_option(owner, OPT_HELP);
     collector.add_config_option(owner, OPT_VERSION);
+    collector.add_config_option(owner, OPT_FREQ_LMT);
 }
 
 void DrbdMon::options_help() noexcept
@@ -1295,11 +1327,15 @@ void DrbdMon::options_help() noexcept
     std::fprintf(stderr, "%s configuration options:\n", DrbdMon::PROGRAM_NAME.c_str());
     std::fputs("  --version        Display version information\n", stderr);
     std::fputs("  --help           Display help\n", stderr);
+    std::fputs("  --freqlmt <interval>     Set a frequency limit for display updates\n", stderr);
+    std::fputs("    <interval>             Minimum delay between display updates [integer]\n", stderr);
+    std::fputs("    Supported unit suffixes: s (seconds), ms (milliseconds)\n", stderr);
+    std::fputs("    Default unit: s (seconds)\n", stderr);
     std::fputc('\n', stderr);
     std::fflush(stderr);
 }
 
-// @throws std::bad_alloc
+// @throws std::bad_alloc, ConfigurationException
 void DrbdMon::set_flag(std::string& key)
 {
     if (key == OPT_HELP.key)
@@ -1320,12 +1356,60 @@ void DrbdMon::set_flag(std::string& key)
     }
 }
 
-// @throws std::bad_alloc
+// @throws std::bad_alloc, ConfigurationException
 void DrbdMon::set_option(std::string& key, std::string& value)
 {
-    // no-op; the DrbdMon instance does not have any configurable options at this time
-}
+    if (key == OPT_FREQ_LMT.key)
+    {
+        uint16_t factor = 1000;
+        std::string number;
+        if (string_ends_with(value, UNIT_SFX_MILLISECONDS))
+        {
+            factor = 1;
+            number = value.substr(0, value.length() - UNIT_SFX_MILLISECONDS.length());
+        }
+        else
+        if (string_ends_with(value, UNIT_SFX_SECONDS))
+        {
+            number = value.substr(0, value.length() - UNIT_SFX_SECONDS.length());
+        }
+        else
+        {
+            number = value;
+        }
 
+        try
+        {
+            uint16_t interval = dsaext::parse_unsigned_int16(number);
+            if ((factor > 1 && MAX_INTERVAL / factor < interval) || interval > MAX_INTERVAL)
+            {
+                std::string error_message("Interval ");
+                error_message += value;
+                error_message += " for configuration option ";
+                error_message += OPT_FREQ_LMT.key;
+                error_message += " is out of range";
+                log.add_entry(MessageLog::log_level::ALERT, error_message);
+                throw ConfigurationException();
+            }
+            interval *= factor;
+            if (interval > 0 && interval_timer_mgr == nullptr)
+            {
+                interval_timer_mgr = std::unique_ptr<IntervalTimer>(
+                    new IntervalTimer(log, interval)
+                );
+            }
+        }
+        catch (dsaext::NumberFormatException&)
+        {
+            std::string error_message("Invalid interval ");
+            error_message += value;
+            error_message += " for configuration option ";
+            error_message += OPT_FREQ_LMT.key;
+            log.add_entry(MessageLog::log_level::ALERT, error_message);
+            throw ConfigurationException();
+        }
+    }
+}
 
 uint64_t DrbdMon::get_problem_count() const noexcept
 {
@@ -1345,4 +1429,74 @@ void DrbdMon::problem_counter_update(StateFlags::state res_last_state, StateFlag
     {
         --problem_count;
     }
+}
+
+void DrbdMon::disable_interval_timer(bool& timer_available, bool& timer_armed) noexcept
+{
+    // If the timer failed, disable limited frequency display updates
+    // and update the display immediately
+    timer_available = false;
+    timer_armed = false;
+    interval_timer_mgr = nullptr;
+    log.add_entry(
+        MessageLog::log_level::ALERT,
+        "System timer failed, display update frequency limiting has been disabled"
+    );
+}
+
+// @throws TimerException
+inline bool DrbdMon::is_interval_exceeded()
+{
+    if (clock_gettime(CLOCK_MONOTONIC, &cur_timestamp) != 0)
+    {
+        throw TimerException();
+    }
+    time_t secs_diff = (cur_timestamp.tv_sec - prev_timestamp.tv_sec);
+    long nanosecs_diff = (cur_timestamp.tv_nsec - prev_timestamp.tv_nsec);
+
+    struct timespec interval = interval_timer_mgr->get_interval();
+    bool exceeded = (
+        secs_diff > interval.tv_sec ||
+        (secs_diff == interval.tv_sec && nanosecs_diff >= interval.tv_nsec)
+    );
+    return exceeded;
+}
+
+inline void DrbdMon::cond_display_update(bool& timer_available, bool& timer_armed) noexcept
+{
+    try
+    {
+        if (!timer_armed)
+        {
+            if (is_interval_exceeded())
+            {
+                display->status_display();
+                prev_timestamp = cur_timestamp;
+            }
+            else
+            {
+                interval_timer_mgr->arm_timer();
+                timer_armed = true;
+            }
+        }
+    }
+    catch (TimerException&)
+    {
+        disable_interval_timer(timer_available, timer_armed);
+        display->status_display();
+    }
+}
+
+inline void DrbdMon::update_timestamp(bool& timer_available, bool& timer_armed) noexcept
+{
+    if (clock_gettime(CLOCK_MONOTONIC, &prev_timestamp) != 0)
+    {
+        disable_interval_timer(timer_available, timer_armed);
+    }
+}
+
+static bool string_ends_with(const std::string& text, const std::string& suffix)
+{
+    const size_t pos = text.rfind(suffix);
+    return (pos != std::string::npos && (pos == text.length() - suffix.length()));
 }

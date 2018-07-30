@@ -44,6 +44,7 @@ EventsIo::EventsIo(int events_input_fd):
         checked_int_rc(sigaddset(&mask, SIGHUP));
         checked_int_rc(sigaddset(&mask, SIGINT));
         checked_int_rc(sigaddset(&mask, SIGUSR1));
+        checked_int_rc(sigaddset(&mask, SIGALRM));
         checked_int_rc(sigaddset(&mask, SIGWINCH));
         checked_int_rc(sigaddset(&mask, SIGCHLD));
         checked_int_rc(sigprocmask(SIG_BLOCK, &mask, nullptr));

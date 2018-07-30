@@ -73,6 +73,20 @@ class ConfigurationException : public std::exception
     }
 };
 
+// Thrown to indicate a problem with the operating system's timer functions
+class TimerException : public std::exception
+{
+  public:
+    TimerException() = default;
+    TimerException(const TimerException& orig) = default;
+    TimerException& operator=(const TimerException& orig) = default;
+    TimerException(TimerException&& orig) = default;
+    TimerException& operator=(TimerException&& orig) = default;
+    virtual ~TimerException() noexcept
+    {
+    }
+};
+
 // Thrown to indicate a problem with the system configuration
 // (e.g., an illegal state of the operating system / runtime environment)
 class SysException : public std::exception

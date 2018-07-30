@@ -23,7 +23,7 @@ PHONY := all
 dsaext-obj := cppdsaext/src/dsaext.o
 integerparse-obj := cppdsaext/src/integerparse.o
 
-l-obj := DrbdMon.o MessageLog.o CompactDisplay.o
+l-obj := DrbdMon.o MessageLog.o CompactDisplay.o IntervalTimer.o
 l-obj += DrbdResource.o DrbdRole.o DrbdVolume.o DrbdConnection.o
 l-obj += VolumesContainer.o StateFlags.o EventsIo.o EventsSourceSpawner.o
 l-obj += Args.o ConfigOption.o
@@ -45,7 +45,7 @@ $(dsaext-obj): $(basename $(dsaext-obj)).cpp $(basename $(dsaext-obj)).h
 $(integerparse-obj): $(basename $(integerparse-obj)).cpp $(basename $(integerparse-obj)).h
 
 drbdmon: $(ls-obj)
-	$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) $^
+	$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) $^ -lrt
 
 # do not try to rebuild Makefile itself
 Makefile: ;

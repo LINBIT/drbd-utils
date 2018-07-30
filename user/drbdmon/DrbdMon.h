@@ -19,6 +19,13 @@
 #include <MessageLog.h>
 #include <Configurable.h>
 #include <Configurator.h>
+#include <comparators.h>
+#include <IntervalTimer.h>
+
+extern "C"
+{
+    #include <time.h>
+}
 
 class DrbdMon : public Configurable, public Configurator
 {
@@ -32,8 +39,14 @@ class DrbdMon : public Configurable, public Configurator
 
     static const std::string OPT_HELP_KEY;
     static const std::string OPT_VERSION_KEY;
+    static const std::string OPT_FREQ_LMT_KEY;
     static const ConfigOption OPT_HELP;
     static const ConfigOption OPT_VERSION;
+    static const ConfigOption OPT_FREQ_LMT;
+
+    static const std::string UNIT_SFX_SECONDS;
+    static const std::string UNIT_SFX_MILLISECONDS;
+    static const uint16_t MAX_INTERVAL;
 
     static const std::string TYPE_RESOURCE;
     static const std::string TYPE_CONNECTION;
@@ -164,6 +177,10 @@ class DrbdMon : public Configurable, public Configurator
     std::unique_ptr<GenericDisplay>  display {nullptr};
     std::unique_ptr<Configurable*[]> configurables {nullptr};
 
+    std::unique_ptr<IntervalTimer> interval_timer_mgr {nullptr};
+    struct timespec prev_timestamp {0, 0};
+    struct timespec cur_timestamp {0, 0};
+
     // @throws std::bad_alloc, EventMessageException
     void create_connection(PropsMap& event_props, std::string& event_line);
     // @throws std::bad_alloc, EventMessageException
@@ -220,6 +237,14 @@ class DrbdMon : public Configurable, public Configurator
     void options_cleanup() noexcept;
 
     void problem_counter_update(StateFlags::state res_last_state, StateFlags::state res_new_state) noexcept;
+
+    void disable_interval_timer(bool& timer_available, bool& timer_armed) noexcept;
+
+    // @throws TimerException
+    inline bool is_interval_exceeded();
+
+    inline void cond_display_update(bool& timer_available, bool& timer_armed) noexcept;
+    inline void update_timestamp(bool& timer_available, bool& timer_armed) noexcept;
 
     // Frees resources
     // @throws std::bad_alloc
