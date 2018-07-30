@@ -93,6 +93,9 @@ const char* CompactDisplay::ANSI_CLEAR_LINE = "\x1b[K";
 const char* CompactDisplay::ANSI_CURSOR_OFF = "\x1b[?25l";
 const char* CompactDisplay::ANSI_CURSOR_ON  = "\x1b[?25h";
 
+const char* CompactDisplay::ANSI_ALTBFR_ON  = "\x1b[?1049h";
+const char* CompactDisplay::ANSI_ALTBFR_OFF = "\x1b[?1049l";
+
 const char CompactDisplay::HOTKEY_MESSAGES  = 'm';
 const char CompactDisplay::HOTKEY_CLEAR_MSG = 'c';
 const char CompactDisplay::HOTKEY_PGUP      = '<';
@@ -175,6 +178,12 @@ CompactDisplay::~CompactDisplay() noexcept
 {
     // Show the cursor
     write_text(ANSI_CURSOR_ON);
+
+    if (alt_bfr_active)
+    {
+        // Switch back to the normal screen buffer
+        write_fmt(ANSI_ALTBFR_OFF);
+    }
 }
 
 void CompactDisplay::clear()
@@ -192,6 +201,10 @@ void CompactDisplay::clear()
 
 void CompactDisplay::initial_display()
 {
+    // Switch to the alternate screen buffer
+    write_fmt(ANSI_ALTBFR_ON);
+    alt_bfr_active = true;
+
     clear();
     display_header();
 

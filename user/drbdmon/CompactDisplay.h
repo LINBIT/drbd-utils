@@ -103,6 +103,8 @@ class CompactDisplay : public GenericDisplay, public Configurable
     static const char* ANSI_CLEAR_LINE;
     static const char* ANSI_CURSOR_OFF;
     static const char* ANSI_CURSOR_ON;
+    static const char* ANSI_ALTBFR_ON;
+    static const char* ANSI_ALTBFR_OFF;
 
     static const char HOTKEY_MESSAGES;
     static const char HOTKEY_CLEAR_MSG;
@@ -196,6 +198,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
 
     int output_fd {STDOUT_FILENO};
 
+    bool alt_bfr_active {false};
     bool dsp_msg_active {false};
     bool dsp_problems_active {false};
     bool problem_alert {false};

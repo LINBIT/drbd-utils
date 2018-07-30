@@ -23,6 +23,8 @@ const size_t LOG_CAPACITY {10};
 // Clear screen escape sequence
 const char* ANSI_CLEAR = "\x1b[H\x1b[2J";
 
+const char* WINDOW_TITLE_APP = "LINBIT\xC2\xAE DrbdMon";
+
 // Delay of 3 seconds for delayed restarts
 static const time_t DELAY_SECS = 3;
 static const long DELAY_NANOSECS = 0;
@@ -32,6 +34,8 @@ static void clear_screen() noexcept;
 static void cond_print_error_header(bool& error_header_printed, const std::string* const node_name) noexcept;
 static bool adjust_ids(MessageLog* log, bool& ids_safe);
 static void query_node_name(std::unique_ptr<std::string>& node_name);
+static void set_window_title(std::unique_ptr<std::string>& node_name);
+static void clear_window_title();
 
 int main(int argc, char* argv[])
 {
@@ -66,6 +70,7 @@ int main(int argc, char* argv[])
             {
                 query_node_name(node_name);
             }
+            set_window_title(node_name);
 
             if (ids_safe || adjust_ids(log.get(), ids_safe))
             {
@@ -152,6 +157,10 @@ int main(int argc, char* argv[])
             std::fprintf(stdout, "** %s: Reinitializing immediately\n", DrbdMon::PROGRAM_NAME.c_str());
         }
     }
+    clear_window_title();
+
+    std::fflush(stdout);
+    std::fflush(stderr);
 
     return exit_code;
 }
@@ -301,4 +310,25 @@ static void query_node_name(std::unique_ptr<std::string>& node_name)
     {
         node_name = std::unique_ptr<std::string>(new std::string(uname_buffer->nodename));
     }
+}
+
+static void set_window_title(std::unique_ptr<std::string>& node_name)
+{
+    std::string* node_name_text = node_name.get();
+    if (node_name_text != nullptr)
+    {
+        std::fprintf(stdout, "\x1b]2;%s (Node %s)\x07", WINDOW_TITLE_APP, node_name_text->c_str());
+        std::fflush(stdout);
+    }
+    else
+    {
+        std::fprintf(stdout, "\x1b]2;%s\x07", WINDOW_TITLE_APP);
+        std::fflush(stdout);
+    }
+}
+
+static void clear_window_title()
+{
+    std::fputs("\x1b]2; \x07", stdout);
+    std::fflush(stdout);
 }
