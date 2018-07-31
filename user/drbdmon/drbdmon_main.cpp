@@ -97,8 +97,8 @@ int main(int argc, char* argv[])
             if (log->has_entries())
             {
                 cond_print_error_header(error_header_printed, node_name.get());
-                std::fputs("** DrbdMon messages log\n\n", stdout);
-                log->display_messages(stderr);
+                std::fprintf(stdout, "** %s messages log\n\n", DrbdMon::PROGRAM_NAME.c_str());
+                log->display_messages(stdout);
                 fputc('\n', stdout);
             }
         }
@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
         if (fail_data == DrbdMon::fail_info::OUT_OF_MEMORY)
         {
             cond_print_error_header(error_header_printed, node_name.get());
-            std::fputs("** DrbdMon: Out of memory, trying to restart\n", stdout);
+            std::fprintf(stdout, "** %s: Out of memory, trying to restart\n", DrbdMon::PROGRAM_NAME.c_str());
         }
 
         // Cleanup any zombie child processes
@@ -120,7 +120,8 @@ int main(int argc, char* argv[])
         if (fin_action == DrbdMon::finish_action::RESTART_DELAYED)
         {
             cond_print_error_header(error_header_printed, node_name.get());
-            std::fprintf(stdout, "** DrbdMon: Reinitializing in %u seconds\n",
+            std::fprintf(stdout, "** %s: Reinitializing in %u seconds\n",
+                         DrbdMon::PROGRAM_NAME.c_str(),
                          static_cast<unsigned int> (delay.tv_sec));
 
             // Attempt to unblock signals before waiting, so one can
@@ -148,7 +149,7 @@ int main(int argc, char* argv[])
         if (fin_action == DrbdMon::finish_action::RESTART_IMMED)
         {
             cond_print_error_header(error_header_printed, node_name.get());
-            std::fputs("** DrbdMon: Reinitializing immediately\n", stdout);
+            std::fprintf(stdout, "** %s: Reinitializing immediately\n", DrbdMon::PROGRAM_NAME.c_str());
         }
     }
 
@@ -171,7 +172,7 @@ static void cond_print_error_header(bool& error_header_printed, const std::strin
 {
     if (!error_header_printed)
     {
-        std::fprintf(stdout, "** DrbdMon v%s\n", DrbdMon::VERSION.c_str());
+        std::fprintf(stdout, "** %s v%s\n", DrbdMon::PROGRAM_NAME.c_str(), DrbdMon::VERSION.c_str());
         if (node_name != nullptr)
         {
             std::fprintf(stdout, "   Node %s\n", node_name->c_str());

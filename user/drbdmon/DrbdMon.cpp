@@ -275,7 +275,7 @@ void DrbdMon::run()
                     default:
                         log.add_entry(
                             MessageLog::log_level::ALERT,
-                            "DrbdMon: Internal error: Unexpected event type returned by EventsIo"
+                            "Internal error: Unexpected event type returned by EventsIo"
                         );
                         break;
                 }
@@ -1170,7 +1170,7 @@ void DrbdMon::announce_options(Configurator& collector)
 
 void DrbdMon::options_help() noexcept
 {
-    std::fputs("DrbdMon configuration options:\n", stderr);
+    std::fprintf(stderr, "%s configuration options:\n", DrbdMon::PROGRAM_NAME.c_str());
     std::fputs("  --version        Display version information\n", stderr);
     std::fputs("  --help           Display help\n", stderr);
     std::fputc('\n', stderr);

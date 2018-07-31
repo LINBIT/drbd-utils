@@ -972,9 +972,9 @@ void CompactDisplay::announce_options(Configurator& collector)
 
 void CompactDisplay::options_help() noexcept
 {
-    std::fputs("DrbdMon display configuration options:\n", stderr);
+    std::fprintf(stderr, "%s display configuration options:\n", DrbdMon::PROGRAM_NAME.c_str());
     std::fputs("  --ascii          Use only ASCII characters (no Unicode)\n", stderr);
-    std::fputs("  --no-header      Do not display the DrbdMon header line\n", stderr);
+    std::fputs("  --no-header      Do not display the header line\n", stderr);
     std::fputs("  --no-hotkeys     Do not display the hotkeys line\n", stderr);
     std::fputs("  --problems       Start with the problems view\n", stderr);
     std::fputc('\n', stderr);
