@@ -10,7 +10,7 @@ WITH_DRBDMON=@WITH_DRBDMON@
 # variables meant to be overridden from the make command line
 DESTDIR ?= /
 
-binaries := drbdmon drbdmon_test
+binaries := drbdmon
 
 ifeq ($(WITH_DRBDMON),yes)
 all: $(binaries)
@@ -29,9 +29,8 @@ l-obj += Args.o ConfigOption.o
 l-obj += StringTokenizer.o comparators.o utils.o
 
 ls-obj := drbdmon_main.o $(l-obj) $(dsaext-obj)
-lst-obj := drbdmon_main.o $(l-obj) $(dsaext-obj) DebugDisplay.o
 
-all-obj := $(sort $(ls-obj) $(lst-obj))
+all-obj := $(sort $(ls-obj))
 local-obj := $(filter-out $(dsaext-obj),$(all-obj))
 local-dep := $(patsubst %.o,.%.d,$(local-obj))
 ifeq ($(WITH_DRBDMON),yes)
@@ -44,8 +43,6 @@ endif
 $(dsaext-obj): $(basename $(dsaext-obj)).cpp $(basename $(dsaext-obj)).h
 
 drbdmon: $(ls-obj)
-	$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) $^
-drbdmon_test: $(lst-obj)
 	$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) $^
 
 # do not try to rebuild Makefile itself
