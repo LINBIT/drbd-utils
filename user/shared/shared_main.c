@@ -25,6 +25,7 @@
 #define _XOPEN_SOURCE 600
 #define _FILE_OFFSET_BITS 64
 
+#include "config.h"
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -40,7 +41,7 @@
 #include <poll.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
-#ifndef __CYGWIN__
+#ifndef WINDRBD
 #include <sys/prctl.h>
 #endif
 #include <netinet/in.h>
@@ -307,7 +308,7 @@ void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd
 		exit(E_EXEC_ERROR);
 	}
 	if (pid == 0) {
-#ifndef __CYGWIN__
+#ifndef WINDRBD
 		prctl(PR_SET_PDEATHSIG, SIGKILL);
 #endif
 		/* Child: close reading end. */

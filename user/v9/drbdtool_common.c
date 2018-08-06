@@ -277,7 +277,7 @@ const struct version *drbd_driver_version(enum driver_version_policy fallback)
 		free(version_txt);
 		return &__drbd_driver_version;
 	} else {
-#if 0
+#ifndef WINDRBD
 		FILE *in = popen("modinfo -F version drbd", "r");
 		if (in) {
 			char buf[32];
@@ -360,7 +360,11 @@ void add_lib_drbd_to_path(void)
 {
 	char *new_path = NULL;
 	char *old_path = getenv("PATH");
+#ifndef WINDRBD
+	static const char lib_drbd[]="/lib/drbd";
+#else
 	static const char lib_drbd[]= DRBD_BIN_DIR;
+#endif
 
 	if (!old_path)
 		setenv("PATH", lib_drbd, 1);

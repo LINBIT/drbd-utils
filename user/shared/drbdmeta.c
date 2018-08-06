@@ -60,7 +60,7 @@
 
 #include "config.h"
 
-#ifdef __CYGWIN__
+#ifdef WINDRBD
 #include <windows.h>
 #include <winternl.h>
 #include <wchar.h>
@@ -73,7 +73,7 @@
  * kernels, but not yet in the headers used to build userland stuff like this.
  */
 
-#ifndef __CYGWIN__
+#ifndef WINDRBD
 #ifndef BLKZEROOUT
 # define BLKZEROOUT	_IO(0x12,127)
 #endif
@@ -323,7 +323,7 @@ struct format {
 	int lock_fd;
 	int drbd_fd;		/* no longer used!   */
 	int ll_fd;		/* not yet used here */
-#ifdef __CYGWIN__
+#ifdef WINDRBD
 	HANDLE disk_handle;
 #else
 	int md_fd;
@@ -1028,7 +1028,7 @@ struct meta_cmd cmds[] = {
  * or do we want to duplicate the error handling everywhere? */
 void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, const char* tag)
 {
-#ifdef __CYGWIN__
+#ifdef WINDRBD
 	DWORD bytes_read;
 	LARGE_INTEGER win_offset;
 
@@ -1039,8 +1039,7 @@ void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, con
 		fprintf(stderr, " %-26s: ReadFile(%p, ...,%6lu,%12llu)\n", tag,
 			cfg->disk_handle, (unsigned long)count, (unsigned long long)offset);
 	}
-	if (SetFilePointerEx(cfg->disk_handle, win_offset, NULL, FILE_BEGIN) == 
-0) {
+	if (SetFilePointerEx(cfg->disk_handle, win_offset, NULL, FILE_BEGIN) == 0) {
 		fprintf(stderr, "Could not set file pointer to position %zd using SetFilePointerEx, error is %d\n", offset, GetLastError());
 		exit(10);
 	}
@@ -1054,14 +1053,8 @@ void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, con
 		exit(10);
 	}
 #else
-	ssize_t c;
 	int fd = cfg->md_fd;
-
-	c = lseek(fd, offset, SEEK_SET);
-	if (c == offset)
-		c = read(fd, buf, count);
-	else
-		c = -1;
+	ssize_t c = pread(fd, buf, count, offset);
 
 	if (verbose >= 2) {
 		fflush(stdout);
@@ -1088,8 +1081,11 @@ void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, con
 		fprintf_hex(stderr, offset, buf, count);
 }
 
+#ifdef WINDRBD
+	/* Defined somewhere in Windows headers. */
 #ifdef min
 #undef min
+#endif
 #endif
 
 #define min(x,y) ((x) < (y) ? (x) : (y))
@@ -1137,11 +1133,11 @@ void validate_offsets_or_die(struct format *cfg, size_t count, off_t offset, con
 static unsigned n_writes = 0;
 void pwrite_or_die(struct format *cfg, const void *buf, size_t count, off_t offset, const char* tag)
 {
-	validate_offsets_or_die(cfg, count, offset, tag);
-
-#ifdef __CYGWIN__
+#ifdef WINDRBD
 	DWORD bytes_written;
 	LARGE_INTEGER win_offset;
+
+	validate_offsets_or_die(cfg, count, offset, tag);
 
 	++n_writes;
 	if (dry_run) {
@@ -1158,8 +1154,7 @@ void pwrite_or_die(struct format *cfg, const void *buf, size_t count, off_t offs
 	}
 
 	win_offset.QuadPart = offset;
-	if (SetFilePointerEx(cfg->disk_handle, win_offset, NULL, FILE_BEGIN) == 
-0) {
+	if (SetFilePointerEx(cfg->disk_handle, win_offset, NULL, FILE_BEGIN) == 0) {
 		fprintf(stderr, "Could not set file pointer to position %zd using SetFilePointerEx, error is %d\n", offset, GetLastError());
 		exit(10);
 	}
@@ -1173,8 +1168,10 @@ void pwrite_or_die(struct format *cfg, const void *buf, size_t count, off_t offs
 		exit(10);
 	}
 #else
-	ssize_t c;
 	int fd = cfg->md_fd;
+	ssize_t c;
+
+	validate_offsets_or_die(cfg, count, offset, tag);
 
 	++n_writes;
 	if (dry_run) {
@@ -1184,15 +1181,7 @@ void pwrite_or_die(struct format *cfg, const void *buf, size_t count, off_t offs
 			fprintf_hex(stderr, offset, buf, count);
 		return;
 	}
-	c = lseek(fd, offset, SEEK_SET);
-	if (c == offset)
-		c = write(fd, buf, count);
-	else {
-		if (c < 0)
-			perror("lseek");
-
-		c = -1;
-	}
+	c = pwrite(fd, buf, count, offset);
 	if (verbose >= 2) {
 		fflush(stdout);
 		fprintf(stderr, " %-26s: pwrite(%u, ...,%6lu,%12llu)\n", tag,
@@ -1208,9 +1197,6 @@ void pwrite_or_die(struct format *cfg, const void *buf, size_t count, off_t offs
 			tag, strerror(errno));
 		exit(10);
 	} else if ((size_t)c != count) {
-		if (c < 0)
-			perror("write");
-
 		/* FIXME we might just now have corrupted the on-disk data */
 		fprintf(stderr,"confused in %s: expected to write %d bytes,"
 			" actually wrote %d\n", tag, (int)count, (int)c);
@@ -1540,8 +1526,8 @@ int v06_parse(struct format *cfg, char **argv, int argc, int *ai)
 
 int v06_md_open(struct format *cfg)
 {
-#ifdef __CYGWIN__
-	fprintf(stderr, "v06_md_open: Not supported with Cygwin.\n");
+#ifdef WINDRBD
+	fprintf(stderr, "v06_md_open: Not supported with WinDRBD.\n");
 	return -1;
 #else
 
@@ -1575,7 +1561,7 @@ int v06_md_open(struct format *cfg)
 
 int generic_md_close(struct format *cfg)
 {
-#ifdef __CYGWIN__
+#ifdef WINDRBD
 	if (CloseHandle(cfg->disk_handle) == 0) {
 		fprintf(stderr, "CloseHandle() failed, error is %d\n", GetLastError());
 		return -1;
@@ -1760,7 +1746,9 @@ static void zeroout_bitmap(struct format *cfg)
 	const size_t bitmap_bytes =
 		ALIGN(bm_bytes(&cfg->md, cfg->bd_size >> 9), cfg->md_hard_sect_size);
 	uint64_t range[2];
-	int err = 0;
+#ifndef WINDRBD
+	int err;
+#endif
 
 	range[0] = cfg->bm_offset; /* start offset */
 	range[1] = bitmap_bytes; /* len */
@@ -1768,9 +1756,7 @@ static void zeroout_bitmap(struct format *cfg)
 	fprintf(stderr,"initializing bitmap (%u KB) to all zero\n",
 		(unsigned int)(bitmap_bytes>>10));
 
-#ifdef __CYGWIN__
-	errno = ENOTTY;
-#else
+#ifndef WINDRBD
 	err = ioctl(cfg->md_fd, BLKZEROOUT, &range);
 	if (!err)
 		return;
@@ -1780,7 +1766,11 @@ static void zeroout_bitmap(struct format *cfg)
 	fprintf(stderr, "Using slow(er) fallback.\n");
 #endif
 
-	if (errno == ENOTTY) {
+		/* if WINDRBD: Well .. there is such a thing under MS Windows,
+		 * maybe one day we'll implement it.
+		 */
+
+	{
 		/* need to sector-align this for O_DIRECT.
 		 * "sector" here means hard-sect size, which may be != 512.
 		 * Note that even though ALIGN does round up, for sector sizes
@@ -2684,7 +2674,9 @@ static void clip_effective_size_and_bm_bytes(struct format *cfg)
 
 
 
-#ifdef __CYGWIN__
+#ifdef WINDRBD
+
+	/* TODO: this function exists 3 times. */
 
 static int is_guid(const char *arg)
 {
@@ -2720,7 +2712,7 @@ HANDLE open_windows_device(const char *arg)
 	HANDLE hdisk = NULL;
 
         /* We want to do simple conversions
-                as C: -> \\\\.\\C: and GUIDs to 
+                as C: -> \\\\.\\C: and GUIDs to
                 \\\\.\\Volume{<GUID>} for convenience.
         */
 
@@ -2743,12 +2735,12 @@ HANDLE open_windows_device(const char *arg)
 		fprintf(stderr, "Converted %s to %s\n", arg, device);
 	}
 	hdisk = CreateFile(
-		device, 
-		GENERIC_READ | GENERIC_WRITE, 
-		FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, 
-		NULL, 
-		OPEN_EXISTING, 
-		FILE_SYNCHRONOUS_IO_NONALERT, 
+		device,
+		GENERIC_READ | GENERIC_WRITE,
+		FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+		NULL,
+		OPEN_EXISTING,
+		FILE_SYNCHRONOUS_IO_NONALERT,
 		NULL
 	);
 	if (hdisk == INVALID_HANDLE_VALUE) {
@@ -2791,7 +2783,7 @@ static int get_windows_device_geometry(HANDLE hdisk, int *md_hard_sect_size, uin
 
 int v07_style_md_open(struct format *cfg)
 {
-#ifdef __CYGWIN__
+#ifdef WINDRBD
 	cfg->disk_handle = open_windows_device(cfg->md_device_name);
 	if (cfg->disk_handle == INVALID_HANDLE_VALUE) {
 		fprintf(stderr, "Could not open Windows device %s\n", cfg->md_device_name);
@@ -2899,7 +2891,7 @@ int v07_style_md_open(struct format *cfg)
 		exit(10);
 	}
 
-#ifndef __CYGWIN__
+#ifndef WINDRBD
 	/* Windows doesn't have these ramdisks.
 	 * Or at least no major/minor numbers. */
 	if (!opened_odirect &&
