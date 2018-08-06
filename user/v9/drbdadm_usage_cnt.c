@@ -39,6 +39,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
+#include "config.h"
 #include "drbdadm.h"
 #include "drbdtool_common.h"
 #include "drbd_endian.h"
@@ -237,7 +238,7 @@ struct hostent *my_gethostbyname(const char *name)
 		 * gethostbyname_r() apparently does not use any internal locks.
 		 * Even if unnecessary in our case, it feels less dirty.
 		 */
-#ifdef __CYGWIN__
+#ifdef WINDRBD
 		h = gethostbyname(name);
 #else
 		gethostbyname_r(name, &ret, buf, sizeof(buf), &h, &my_h_errno);
