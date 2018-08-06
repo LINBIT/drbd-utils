@@ -265,6 +265,7 @@ fi
 
 dnl special header checks
 
+if test "$WITH_WINDRBD" = "no"; then
 AC_LANG(C)
 AC_CHECK_HEADERS([linux/genetlink.h],
    [
@@ -286,6 +287,7 @@ AC_CHECK_HEADERS([linux/genetlink.h],
          ]], [AC_DEFINE([HAVE_CTRL_CMD_DELMCAST_GRP],[1],[Does genetlink provide CTRL_CMD_DELMCAST_GRP already])]),
    ],
    [AC_MSG_ERROR([Could not find linux/genetlink.h])])
+fi
 
 dnl Checks for system services
 
