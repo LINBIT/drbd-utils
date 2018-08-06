@@ -1,6 +1,8 @@
 #ifndef LIBGENL_H
 #define LIBGENL_H
 
+#include "config.h"
+
 /*
  * stripped down copy of
  * linux-2.6.32/include/net/netlink.h and
@@ -14,7 +16,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#ifdef WINDRBD
 #include <windows.h>
+#endif
 #include <linux/socket.h>
 #include <linux/types.h>
 #include <linux/netlink.h>
@@ -1043,6 +1047,10 @@ static inline int genlmsg_total_size(int payload)
  * Some helpers to simplify communicating with a particular family
  */
 struct genl_sock {
+#ifndef WINDRBD
+	struct sockaddr_nl	s_local;
+	struct sockaddr_nl	s_peer;
+#endif
 	int			s_fd;
 	unsigned int		s_seq_next;
 	unsigned int		s_seq_expect;

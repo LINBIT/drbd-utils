@@ -1,6 +1,8 @@
 #ifndef DRBDTOOL_COMMON_H
 #define DRBDTOOL_COMMON_H
 
+#include "config.h"
+
 #include "drbd_endian.h"
 #include <stdio.h>
 #include <unistd.h>
@@ -84,8 +86,13 @@ struct version {
 	unsigned version_code;
 };
 
-// Windows km/miniport.h has a #define STRICT
+#ifdef WINDRBD
+/* Windows km/miniport.h has a #define STRICT */
+#ifdef STRICT
 #undef STRICT
+#endif
+#endif
+
 enum driver_version_policy {
 	STRICT,
 	FALLBACK_TO_UTILS

@@ -129,7 +129,7 @@ static int drive_letter_op(int minor, const char *drive, enum drive_letter_ops o
 	int flag;
 
 	switch (op) {
-	case ASSIGN_DRIVE_LETTER: 
+	case ASSIGN_DRIVE_LETTER:
 		flag = DDD_RAW_TARGET_PATH;
 		break;
 	case DELETE_DRIVE_LETTER:
@@ -225,7 +225,7 @@ static int run_command(const char *command, char *args[])
 	int ret;
 
 	switch (fork()) {
-	case 0:	
+	case 0:
 		execvp(command, args);
 		exit(1);
 	case -1:
@@ -250,7 +250,7 @@ static int remount_volume(const char *drive)
 	int err;
 	char *args[4];
 	int i;
-	
+
 	swprintf(mount_point, sizeof(mount_point) / sizeof(*mount_point) -1, L"%s\\", drive);
 	if (GetVolumeNameForVolumeMountPoint(mount_point, guid, sizeof(guid) / sizeof(*guid) - 1) == 0) {
 		err = GetLastError();
@@ -493,7 +493,7 @@ int notify_explorer(const char *drive, enum explorer_ops op)
 	case ADD_DRIVE:
 
 			/* Taken from imdisk source: cpl/drvio.c:1576 */
-	
+
 		SHChangeNotify(SHCNE_DRIVEADD, SHCNF_PATH, t_drive, NULL);
 
 		SendMessageTimeout(HWND_BROADCAST,

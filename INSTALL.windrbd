@@ -1,9 +1,0 @@
-To compile this under Cygwin (tested with Windows 7), do
-
-./autogen.sh
-./configure --prefix=/cygdrive/c/windrbd/usr --localstatedir=/cygdrive/c/windrbd/var --sysconfdir=/cygdrive/c/windrbd/etc --without-83support --without-84support --without-drbdmon --with-windrbd
-make
-make install
-
-If you are not already running bash as Administrator user, run the last
-command (make install) as Administrator, else make install will fail.
