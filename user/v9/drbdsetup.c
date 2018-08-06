@@ -88,7 +88,9 @@
 #include "config_flags.h"
 #include "wrap_printf.h"
 #include "drbdsetup_colors.h"
+#ifdef WINDRBD
 #include "shared_tool.h"
+#endif
 
 char *progname;
 
@@ -711,7 +713,7 @@ static bool endpoints_equal(struct drbd_cfg_context *a, struct drbd_cfg_context 
 }
 #endif
 
-#ifdef __CYGWIN__
+#ifdef WINDRBD
 
 /* TODO: put this into a shared file. */
 static int is_guid(const char *arg)
@@ -734,7 +736,7 @@ static int is_guid(const char *arg)
 static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 			  struct drbd_genlmsghdr *dhdr, char* arg)
 {
-#ifndef __CYGWIN__
+#ifndef WINDRBD
 		/* Under Microsoft Windows, we use a different disk name
 		 * layout. The kernel itself checks wheter it is
 		 * a block device or not.
@@ -763,9 +765,9 @@ static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 	close(device_fd);
 #endif
 
-#ifdef __CYGWIN__
+#ifdef WINDRBD
 
-	/* #ifdef __CYGWIN__ we want to do simple conversions
+	/* #ifdef WINDRBD we want to do simple conversions
 		as C: -> \\DosDevices\\C: and GUIDs to 
 		\\DosDevices\\Volume{<GUID>} for convenience.
 	*/
@@ -1676,7 +1678,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 		/* also always (try to) listen to nlctrl notify,
 		 * so we have a chance to notice rmmod.  */
 		int id = GENL_ID_CTRL;
-#ifdef __CYGWIN__
+#ifdef WINDRBD
 		if (genl_join_mc_group(drbd_sock, "events")) {
 			desc = "unable to join drbd events multicast group";
 			rv = OTHER_ERROR;
@@ -1831,7 +1833,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 			};
 
 			dbg(3, "received type:%x\n", nlh->nlmsg_type);
-#if 0
+#ifndef WINDRBD
 			if (nlh->nlmsg_type < NLMSG_MIN_TYPE) {
 				/* Ignore netlink control messages. */
 				continue;
@@ -1853,7 +1855,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				/* Ignore other generic netlink control messages. */
 				continue;
 			}
-#if 0
+#ifndef WINDRBD
 			if (nlh->nlmsg_type != drbd_genl_family.id) {
 				/* Ignore messages for all other netlink families. */
 				continue;
@@ -4437,7 +4439,41 @@ static void print_usage_and_exit(const char *addinfo)
 
 static int modprobe_drbd(void)
 {
+#ifndef WINDRBD
+	struct stat sb;
+	int ret, retries = 10;
+
+	ret = stat("/proc/drbd", &sb);
+	if (ret && errno == ENOENT) {
+		ret = system("/sbin/modprobe drbd");
+		if (ret != 0) {
+			fprintf(stderr, "Failed to modprobe drbd (%m)\n");
+			return 0;
+		}
+		for(;;) {
+			struct timespec ts = {
+				.tv_nsec = 1000000,
+			};
+
+			ret = stat("/proc/drbd", &sb);
+			if (!ret || retries-- == 0)
+				break;
+			nanosleep(&ts, NULL);
+		}
+	}
+	if (ret) {
+		fprintf(stderr, "Could not stat /proc/drbd: %m\n");
+		fprintf(stderr, "Make sure that the DRBD kernel module is installed "
+				"and can be loaded!\n");
+	}
+	return ret == 0;
+#else
+	/* TODO: later do a sc start drbd in order to start the
+	 * Windows kernel driver here (once we make it not starting
+	 * at boot time).
+	 */
 	return 1;
+#endif
 }
 
 static void maybe_exec_legacy_drbdsetup(char **argv)

@@ -1,7 +1,13 @@
 #ifndef TOOL_SHARED_H
 #define TOOL_SHARED_H
 
+#include "config.h"
+
+#ifdef WINDRBD
 #include <cygwin/fs.h>
+#else
+#include <linux/fs.h>		/* for BLKGETSIZE64 */
+#endif
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -125,9 +131,6 @@ bool ipv6_addresses_match(const char *addr_1st, const char *addr_2nd);
 bool addresses_match(const char *af_1st, const char *addr_1st,
                      const char *af_2nd, const char *addr_2nd);
 
-
-
-extern char * WindowsLowLevelDeviceName(char *input);
 
 
 #endif

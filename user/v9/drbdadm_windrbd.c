@@ -1,3 +1,9 @@
+#include "config.h"
+
+#ifndef WINDRBD
+#error This file makes only sense with WinDRBD, please configure with --with-windrbd
+#endif
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -23,7 +29,7 @@ int call_windrbd(char *res_name, char *path, ...)
 
 	argv[argc++] = path;
 	va_start(ap, path);
-	while (argc < sizeof(argv)/sizeof(*argv)-1 && 
+	while (argc < sizeof(argv)/sizeof(*argv)-1 &&
 	       (arg = va_arg(ap, char*)) != NULL)
 		argv[argc++] = arg;
 

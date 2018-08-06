@@ -22,4 +22,6 @@ install: windrbd
 	install -m 644 windrbd-sample.res $(DESTDIR)$(sysconfdir)/drbd.d
 
 clean:
-	rm windrbd.exe
+	rm -f windrbd.exe
+
+distclean:
