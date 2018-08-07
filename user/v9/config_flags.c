@@ -1,12 +1,15 @@
+#include "config.h"
+
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>
 
 #include <sys/socket.h>
 #include <linux/netlink.h>
+#ifndef WINDRBD
 #include <linux/genetlink.h>
+#endif
 
-#include "config.h"
 #include "libgenl.h"
 #include "linux/drbd.h"
 #include "linux/drbd_config.h"

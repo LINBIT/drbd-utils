@@ -7,7 +7,9 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdarg.h>
+#ifndef WINDRBD
 #include <linux/major.h>
+#endif
 
 #include "shared_tool.h"
 

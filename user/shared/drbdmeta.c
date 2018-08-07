@@ -30,6 +30,8 @@
 #define _XOPEN_SOURCE 600
 #define _FILE_OFFSET_BITS 64
 
+#include "config.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
@@ -46,10 +48,14 @@
 #include <fcntl.h>
 #include <time.h>
 
+#ifndef WINDRBD
 #include <linux/major.h>
 #include <linux/kdev_t.h>
+#endif
 #include <linux/drbd.h>		/* only use DRBD_MAGIC from here! */
+#ifndef WINDRBD
 #include <linux/fs.h>           /* for BLKFLSBUF */
+#endif
 
 #include "drbd_endian.h"
 #include "drbdtool_common.h"
