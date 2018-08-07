@@ -26,6 +26,8 @@
 #define _XOPEN_SOURCE 600
 #define _FILE_OFFSET_BITS 64
 
+#include "config.h"
+
 #include <stdbool.h>
 #include <errno.h>
 #include <unistd.h>
@@ -50,7 +52,9 @@
 #include <search.h>
 
 #include <linux/netlink.h>
+#ifndef WINDRBD
 #include <linux/genetlink.h>
+#endif
 
 #define EXIT_NOMEM 20
 #define EXIT_NO_FAMILY 20

@@ -2,6 +2,8 @@
 #define _XOPEN_SOURCE 600
 #define _FILE_OFFSET_BITS 64
 
+#include "config.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
@@ -15,7 +17,9 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <linux/drbd.h>
+#ifndef WINDRBD
 #include <linux/fs.h>           /* for BLKGETSIZE64 */
+#endif
 #include <string.h>
 
 #include "drbdtool_common.h"

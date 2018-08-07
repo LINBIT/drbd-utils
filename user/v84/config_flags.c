@@ -1,4 +1,7 @@
 #define _GNU_SOURCE
+
+#include "config.h"
+
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>
@@ -8,7 +11,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <linux/netlink.h>
+#ifndef WINDRBD
 #include <linux/genetlink.h>
+#endif
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
