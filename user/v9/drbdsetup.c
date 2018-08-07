@@ -103,6 +103,7 @@
 #include "drbdsetup_colors.h"
 #ifdef WINDRBD
 #include "shared_tool.h"
+#include "shared_windrbd.h"
 #endif
 
 char *progname;
@@ -724,26 +725,6 @@ static bool endpoints_equal(struct drbd_cfg_context *a, struct drbd_cfg_context 
 	       !memcmp(a->ctx_my_addr, b->ctx_my_addr, a->ctx_my_addr_len) &&
 	       !memcmp(a->ctx_peer_addr, b->ctx_peer_addr, a->ctx_peer_addr_len);
 }
-#endif
-
-#ifdef WINDRBD
-
-/* TODO: put this into a shared file. */
-static int is_guid(const char *arg)
-{
-	int i;
-#define GUID_MASK "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-
-	for (i=0;arg[i] != '\0';i++) {
-		if (GUID_MASK[i] == 'x' && !isxdigit(arg[i]))
-			return 0;
-		if (GUID_MASK[i] == '-' && arg[i] != '-')
-			return 0;
-	}
-	return i == strlen(GUID_MASK) && arg[i] == '\0';
-#undef GUID_MASK
-}
-
 #endif
 
 static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
