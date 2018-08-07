@@ -12,10 +12,16 @@ else
 DESTDIR ?= /
 endif
 
+CFLAGS=-g -Wall -I../shared
+OBJS=windrbd.o shared_windrbd.o
+
 all: windrbd
 
-windrbd: windrbd.c
-	gcc -g -Wall -o windrbd.exe windrbd.c
+shared_windrbd.o: ../shared/shared_windrbd.c
+	gcc -c $(CFLAGS) -o $@ $^
+
+windrbd: $(OBJS)
+	gcc $(CFLAGS) -o windrbd.exe $(OBJS)
 
 install: windrbd
 	install -m 755 windrbd.exe $(DESTDIR)$(sbindir)

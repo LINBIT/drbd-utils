@@ -70,6 +70,7 @@
 #include <windows.h>
 #include <winternl.h>
 #include <wchar.h>
+#include "shared_windrbd.h"
 #endif
 
 /* BLKZEROOUT, available on linux-3.6 and later,
@@ -2678,26 +2679,7 @@ static void clip_effective_size_and_bm_bytes(struct format *cfg)
 	cfg->bm_bytes = bm_bytes(&cfg->md, cfg->md.effective_size);
 }
 
-
-
 #ifdef WINDRBD
-
-	/* TODO: this function exists 3 times. */
-
-static int is_guid(const char *arg)
-{
-        int i;
-#define GUID_MASK "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-
-        for (i=0;arg[i] != '\0';i++) {
-                if (GUID_MASK[i] == 'x' && !isxdigit(arg[i]))
-                        return 0;
-                if (GUID_MASK[i] == '-' && arg[i] != '-')
-                        return 0;
-        }
-        return arg[i] == '\0';
-#undef GUID_MASK
-}
 
 /* Uses Win32 API (CreateFile) to open the disk. We do not
  * use CygWin (UNIX type: /dev/sdXN) API, since that follows the
