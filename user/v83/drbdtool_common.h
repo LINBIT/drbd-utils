@@ -1,11 +1,15 @@
 #ifndef DRBDTOOL_COMMON_H
 #define DRBDTOOL_COMMON_H
 
+#include "config.h"
+
 #include "drbd_endian.h"
 #include <stdio.h>
 #include <unistd.h>
 #include <stdarg.h>
+#ifndef WINDRBD
 #include <linux/major.h>
+#endif
 
 #include "shared_tool.h"
 

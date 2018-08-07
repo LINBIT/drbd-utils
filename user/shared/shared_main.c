@@ -46,8 +46,10 @@
 #endif
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#ifndef WINDRBD
 #include <linux/sockios.h>
 #include <linux/netdevice.h>
+#endif
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>

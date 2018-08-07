@@ -19,10 +19,14 @@
 #ifdef WINDRBD
 #include <windows.h>
 #endif
+#ifndef WINDRBD
 #include <linux/socket.h>
+#endif
 #include <linux/types.h>
 #include <linux/netlink.h>
+#ifndef WINDRBD
 #include <linux/genetlink.h>
+#endif
 
 #ifndef SOL_NETLINK
 #define SOL_NETLINK 270
