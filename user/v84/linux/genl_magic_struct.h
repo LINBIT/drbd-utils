@@ -15,9 +15,11 @@
 # error "you need to define GENL_MAGIC_INCLUDE_FILE before inclusion"
 #endif
 
-#include <linux/netlink.h>
 #ifndef WINDRBD
+#include <linux/netlink.h>
 #include <linux/genetlink.h>
+#else
+#include <windrbd/netlink.h>
 #endif
 #include <linux/types.h>
 

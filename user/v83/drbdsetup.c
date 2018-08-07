@@ -47,7 +47,12 @@
 
 #define __bitwise /* Build-workaround for broken RHEL4 kernels (2.6.9_78.0.1) */
 #include <linux/types.h>
+#ifndef WINDRBD
 #include <linux/netlink.h>
+#else
+#include <windrbd/netlink.h>
+#endif
+
 #include <linux/connector.h>
 
 #include <linux/drbd.h>
