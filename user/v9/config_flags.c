@@ -5,14 +5,22 @@
 #include <assert.h>
 
 #include <sys/socket.h>
-#include <linux/netlink.h>
 #ifndef WINDRBD
+#include <linux/netlink.h>
 #include <linux/genetlink.h>
+#else
+#include <windrbd/netlink.h>
 #endif
 
 #include "libgenl.h"
 #include "linux/drbd.h"
+
+#ifndef WINDRBD
 #include "linux/drbd_config.h"
+#else
+#include "windrbd/drbd_config.h"
+#endif
+
 #include "linux/drbd_genl_api.h"
 #include "linux/drbd_limits.h"
 #include "drbd_nla.h"

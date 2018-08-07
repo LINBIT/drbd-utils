@@ -23,9 +23,13 @@
 #include <string.h>
 #include <netdb.h>
 
+#ifndef WINDRBD
 #include "linux/drbd_config.h"
+#else
+#include "windrbd/drbd_config.h"
+#endif
+
 #include "drbdtool_common.h"
-#include "config.h"
 
 static struct version __drbd_driver_version = {};
 static struct version __drbd_utils_version = {};
