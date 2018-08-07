@@ -16,18 +16,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/socket.h>
-#ifdef WINDRBD
-#include <windows.h>
-#endif
+
 #ifndef WINDRBD
 #include <linux/socket.h>
-#endif
 #include <linux/types.h>
-#ifndef WINDRBD
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
 #else
+#include <windrbd/types.h>
 #include <windrbd/netlink.h>
+#include <windows.h>
 #endif
 
 #ifndef SOL_NETLINK

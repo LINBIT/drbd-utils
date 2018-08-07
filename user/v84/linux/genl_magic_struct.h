@@ -18,10 +18,11 @@
 #ifndef WINDRBD
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
+#include <linux/types.h>
 #else
 #include <windrbd/netlink.h>
+#include <windrbd/types.h>
 #endif
-#include <linux/types.h>
 
 #define CONCAT__(a,b)	a ## b
 #define CONCAT_(a,b)	CONCAT__(a,b)

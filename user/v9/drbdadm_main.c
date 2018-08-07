@@ -27,6 +27,8 @@
 #define _XOPEN_SOURCE 600
 #define _FILE_OFFSET_BITS 64
 
+#include "config.h"
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -37,6 +39,9 @@
 #include <assert.h>
 
 #include <sys/types.h>
+#ifdef WINDRBD
+#include <windrbd/types.h>
+#endif
 #include <sys/wait.h>
 #include <poll.h>
 #include <sys/socket.h>
