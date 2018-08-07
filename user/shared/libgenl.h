@@ -23,9 +23,11 @@
 #include <linux/socket.h>
 #endif
 #include <linux/types.h>
-#include <linux/netlink.h>
 #ifndef WINDRBD
+#include <linux/netlink.h>
 #include <linux/genetlink.h>
+#else
+#include <windrbd/netlink.h>
 #endif
 
 #ifndef SOL_NETLINK
