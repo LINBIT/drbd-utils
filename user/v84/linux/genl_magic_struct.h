@@ -1,6 +1,8 @@
 #ifndef GENL_MAGIC_STRUCT_H
 #define GENL_MAGIC_STRUCT_H
 
+#include "config.h"
+
 #ifndef GENL_MAGIC_FAMILY
 # error "you need to define GENL_MAGIC_FAMILY before inclusion"
 #endif
@@ -14,7 +16,9 @@
 #endif
 
 #include <linux/netlink.h>
+#ifndef WINDRBD
 #include <linux/genetlink.h>
+#endif
 #include <linux/types.h>
 
 #define CONCAT__(a,b)	a ## b
