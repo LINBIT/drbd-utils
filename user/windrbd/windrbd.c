@@ -53,6 +53,12 @@ void usage_and_exit(void)
 	fprintf(stderr, "		Tells Windows Explorer that drive has been created.\n");
 	fprintf(stderr, "	windrbd [opt] remove-drive-in-explorer <drive-letter>\n");
 	fprintf(stderr, "		Tells Windows Explorer that drive has been removed.\n");
+	fprintf(stderr, "	windrbd [opt] inject-faults-on-completion <drive-letter> <n>\n");
+	fprintf(stderr, "		Inject faults on completion after n requests. Turn off\n");
+	fprintf(stderr, "		fault injection if n is negative.\n");
+	fprintf(stderr, "	windrbd [opt] inject-faults-on-request <drive-letter> <n>\n");
+	fprintf(stderr, "		Inject faults on request after n requests. Turn off\n");
+	fprintf(stderr, "		fault injection if n is negative.\n");
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
 	fprintf(stderr, "	-f (force): do it even if it is dangerous.\n");
@@ -573,6 +579,43 @@ int notify_explorer(const char *drive, enum explorer_ops op)
 	return 0;
 }
 
+enum inject_fault_ops {
+	ON_REQUEST, ON_COMPLETION
+};
+
+static int inject_faults(const char *drive, enum inject_fault_ops op, int after)
+{
+        DWORD size;
+        BOOL ret;
+        int err;
+	int req = op == ON_REQUEST ?
+		IOCTL_WINDRBD_INJECT_FAULTS_ON_REQUEST :
+		IOCTL_WINDRBD_INJECT_FAULTS_ON_COMPLETION;
+	struct windrbd_ioctl_fault_injection after_struct;
+	HANDLE h = do_open_device(drive);
+
+	if (h == INVALID_HANDLE_VALUE)
+		return 1;
+
+	after_struct.after = after;
+        ret = DeviceIoControl(h, req, &after_struct, sizeof(after_struct), NULL, 0, &size, NULL);
+
+	if (!quiet) {
+		if (ret) {
+			if (after < 0)
+				printf("Turned off faults injection on %s.\n", op == ON_REQUEST ? "request" : "completion");
+			else
+				printf("Injected faults on %s after %d requests.\n", op == ON_REQUEST ? "request" : "completion", after);
+		} else {
+			err = GetLastError();
+			printf("Could not set fault injection (error code %d), is this a WinDRBD device?\n", err);
+		}
+	}
+	CloseHandle(h);
+
+	return !ret;
+}
+
 int main(int argc, char ** argv)
 {
 	const char *op;
@@ -672,6 +715,24 @@ int main(int argc, char ** argv)
 		const char *drive = argv[optind+1];
 
 		return notify_explorer(drive, REMOVE_DRIVE);
+	}
+	if (strcmp(op, "inject-faults-on-completion") == 0) {
+		if (argc != optind+3) {
+			usage_and_exit();
+		}
+		const char *drive = argv[optind+1];
+		int after = atoi(argv[optind+2]);
+
+		return inject_faults(drive, ON_COMPLETION, after);
+	}
+	if (strcmp(op, "inject-faults-on-request") == 0) {
+		if (argc != optind+3) {
+			usage_and_exit();
+		}
+		const char *drive = argv[optind+1];
+		int after = atoi(argv[optind+2]);
+
+		return inject_faults(drive, ON_REQUEST, after);
 	}
 
 	usage_and_exit();
