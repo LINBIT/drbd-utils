@@ -21,10 +21,12 @@
 #include <dbt.h>
 
 #include "shared_windrbd.h"
+#include "windrbd_ioctl.h"
 
 
 
 static int quiet = 0;
+static int force = 0;
 
 void usage_and_exit(void)
 {
@@ -53,6 +55,7 @@ void usage_and_exit(void)
 	fprintf(stderr, "		Tells Windows Explorer that drive has been removed.\n");
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
+	fprintf(stderr, "	-f (force): do it even if it is dangerous.\n");
 
 	exit(1);
 }
@@ -103,6 +106,23 @@ static enum volume_spec check_drive_letter_or_guid(const char *arg)
 		usage_and_exit();
 	}
 	return vs;
+}
+
+static int is_windrbd_device(HANDLE h)
+{
+        DWORD size;
+        BOOL ret;
+        int err;
+
+        ret = DeviceIoControl(h, IOCTL_WINDRBD_IS_WINDRBD_DEVICE, NULL, 0, NULL, 0, &size, NULL);
+	if (ret)
+		return 1;
+
+        err = GetLastError();
+	if (err != ERROR_INVALID_FUNCTION)
+		printf("Warning: device returned strange error code %d\n", err);
+
+	return 0;
 }
 
 enum drive_letter_ops {
@@ -312,6 +332,18 @@ static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 	HANDLE h = do_open_device(drive);
 	if (h == INVALID_HANDLE_VALUE)
 		return 1;
+
+	if (op != FILESYSTEM_STATE && !force && is_windrbd_device(h)) {
+		printf("This is a windrbd device. Patching the bootsector on\n");
+		printf("windrbd devices is neither sane nor does it work nor\n");
+		printf("does it make any sense to do so. You will not be able to\n");
+		printf("mount this filesystem on peers if you do this. Furthermore,\n");
+		printf("a hide-filesytem cannot be undone (except by formatting the\n");
+		printf("device).\n\n");
+		printf("If you really want to do this, use -f\n");
+
+		return 1;
+	}
 
 	char buf[512];
 	BOOL ret;
@@ -546,9 +578,10 @@ int main(int argc, char ** argv)
 	const char *op;
 	char c;
 
-	while ((c = getopt(argc, argv, "q")) != -1) {
+	while ((c = getopt(argc, argv, "qf")) != -1) {
 		switch (c) {
 			case 'q': quiet = 1; break;
+			case 'f': force = 1; break;
 			default: usage_and_exit();
 		}
 	}
