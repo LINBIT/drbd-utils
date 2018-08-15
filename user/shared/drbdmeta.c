@@ -687,10 +687,6 @@ void md_cpu_to_disk_08(struct md_on_disk_08 *disk, const struct md_cpu *cpu)
 #define AL_CONTEXT_PER_TRANSACTION 919
 /* from DRBD 8.4 linux/drbd/drbd_limits.h, DRBD_AL_EXTENTS_MAX */
 #define AL_EXTENTS_MAX  65534
-enum al_transaction_types {
-	AL_TR_UPDATE = 0,
-	AL_TR_INITIALIZED = 0xffff
-};
 struct __packed al_4k_transaction_on_disk {
 	/* don't we all like magic */
 	be_u32	magic;
