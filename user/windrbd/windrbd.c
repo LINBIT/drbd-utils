@@ -53,12 +53,11 @@ void usage_and_exit(void)
 	fprintf(stderr, "		Tells Windows Explorer that drive has been created.\n");
 	fprintf(stderr, "	windrbd [opt] remove-drive-in-explorer <drive-letter>\n");
 	fprintf(stderr, "		Tells Windows Explorer that drive has been removed.\n");
-	fprintf(stderr, "	windrbd [opt] inject-faults-on-completion <drive-letter> <n>\n");
+	fprintf(stderr, "	windrbd [opt] inject-faults <n> <where> [<drive-letter>]\n");
 	fprintf(stderr, "		Inject faults on completion after n requests. Turn off\n");
-	fprintf(stderr, "		fault injection if n is negative.\n");
-	fprintf(stderr, "	windrbd [opt] inject-faults-on-request <drive-letter> <n>\n");
-	fprintf(stderr, "		Inject faults on request after n requests. Turn off\n");
-	fprintf(stderr, "		fault injection if n is negative.\n");
+	fprintf(stderr, "		fault injection if n is negative. Where is anything out of\n");
+	fprintf(stderr, "		[all|backing|meta]-[request|completion]. Drive must be\n");
+	fprintf(stderr, "		specified unless all is given.\n");
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
 	fprintf(stderr, "	-f (force): do it even if it is dangerous.\n");
@@ -72,6 +71,9 @@ enum volume_spec { VS_UNKNOWN, VS_DRIVE_LETTER, VS_GUID };
 
 static int is_drive_letter(const char *drive)
 {
+	if (drive == NULL)
+		return 0;
+
 	if (!isalpha(drive[0]))
 		return 0;
 
@@ -112,6 +114,25 @@ static enum volume_spec check_drive_letter_or_guid(const char *arg)
 		usage_and_exit();
 	}
 	return vs;
+}
+
+static enum fault_injection_location str_to_fault_location(const char *s)
+{
+	static char *str[] = {
+		[ON_ALL_REQUESTS_ON_REQUEST] = "all-request",
+		[ON_ALL_REQUESTS_ON_COMPLETION] = "all-completion",
+		[ON_META_DEVICE_ON_REQUEST] = "meta-request",
+		[ON_META_DEVICE_ON_COMPLETION] = "meta-completion",
+		[ON_BACKING_DEVICE_ON_REQUEST] = "backing-request",
+		[ON_BACKING_DEVICE_ON_COMPLETION] = "backing-completion"
+	};
+	enum fault_injection_location i;
+
+	for (i=0; i<AFTER_LAST_FAULT_LOCATION; i++)
+		if (strcmp(str[i], s) == 0)
+			return i;
+
+	return INVALID_FAULT_LOCATION;
 }
 
 static int is_windrbd_device(HANDLE h)
@@ -190,6 +211,24 @@ static HANDLE do_open_device(const char *drive)
 
 	if (err != ERROR_SUCCESS) {
 		fprintf(stderr, "Couldn't open drive %s, error is %d\n", drive, err);
+		return INVALID_HANDLE_VALUE;
+	}
+        return h;
+}
+
+static HANDLE do_open_root_device(void)
+{
+        HANDLE h;
+        DWORD err;
+
+        wchar_t fname[100];
+        swprintf(fname, sizeof(fname) / sizeof(fname[0]), L"\\\\.\\" WINDRBD_ROOT_DEVICE_NAME);
+
+        h = CreateFile(fname, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        err = GetLastError();
+
+	if (err != ERROR_SUCCESS) {
+		fprintf(stderr, "Couldn't root device, error is %d\n", err);
 		return INVALID_HANDLE_VALUE;
 	}
         return h;
@@ -579,36 +618,40 @@ int notify_explorer(const char *drive, enum explorer_ops op)
 	return 0;
 }
 
-enum inject_fault_ops {
-	ON_REQUEST, ON_COMPLETION
-};
-
-static int inject_faults(const char *drive, enum inject_fault_ops op, int after)
+static int inject_faults(const char *drive, enum fault_injection_location where, int after, const char *s)
 {
         DWORD size;
         BOOL ret;
         int err;
-	int req = op == ON_REQUEST ?
-		IOCTL_WINDRBD_INJECT_FAULTS_ON_REQUEST :
-		IOCTL_WINDRBD_INJECT_FAULTS_ON_COMPLETION;
+	int root = where <= ON_ALL_REQUESTS_ON_COMPLETION;
+	int req;
 	struct windrbd_ioctl_fault_injection after_struct;
-	HANDLE h = do_open_device(drive);
+	HANDLE h;
+
+	if (root) {
+		h = do_open_root_device();
+		req = IOCTL_WINDRBD_ROOT_INJECT_FAULTS;
+	} else {
+		h = do_open_device(drive);
+		req = IOCTL_WINDRBD_INJECT_FAULTS;
+	}
 
 	if (h == INVALID_HANDLE_VALUE)
 		return 1;
 
 	after_struct.after = after;
+	after_struct.where = where;
         ret = DeviceIoControl(h, req, &after_struct, sizeof(after_struct), NULL, 0, &size, NULL);
 
 	if (!quiet) {
 		if (ret) {
 			if (after < 0)
-				printf("Turned off faults injection on %s.\n", op == ON_REQUEST ? "request" : "completion");
+				printf("Turned off faults injection on %s.\n", s);
 			else
-				printf("Injected faults on %s after %d requests.\n", op == ON_REQUEST ? "request" : "completion", after);
+				printf("Injected faults on %s after %d requests.\n", s, after);
 		} else {
 			err = GetLastError();
-			printf("Could not set fault injection (error code %d), is this a WinDRBD device?\n", err);
+			printf("Could not set fault injection (error code %d), is this a WinDRBD device? Does the backing device exist (not Diskless)?\n", err);
 		}
 	}
 	CloseHandle(h);
@@ -716,23 +759,19 @@ int main(int argc, char ** argv)
 
 		return notify_explorer(drive, REMOVE_DRIVE);
 	}
-	if (strcmp(op, "inject-faults-on-completion") == 0) {
-		if (argc != optind+3) {
+	if (strcmp(op, "inject-faults") == 0) {
+		if (argc != optind+3 && argc != optind+4) {
 			usage_and_exit();
 		}
-		const char *drive = argv[optind+1];
-		int after = atoi(argv[optind+2]);
+		int after = atoi(argv[optind+1]);
+		const char *where_str = argv[optind+2];
+		enum fault_injection_location where = str_to_fault_location(where_str);
+		const char *drive = argv[optind+3];
 
-		return inject_faults(drive, ON_COMPLETION, after);
-	}
-	if (strcmp(op, "inject-faults-on-request") == 0) {
-		if (argc != optind+3) {
+		if (where == INVALID_FAULT_LOCATION) {
 			usage_and_exit();
 		}
-		const char *drive = argv[optind+1];
-		int after = atoi(argv[optind+2]);
-
-		return inject_faults(drive, ON_REQUEST, after);
+		return inject_faults(drive, where, after, where_str);
 	}
 
 	usage_and_exit();
