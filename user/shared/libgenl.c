@@ -31,6 +31,70 @@
 #include <windows.h>
 #include "../windrbd/windrbd_ioctl.h"
 
+static void fill_in_header(struct genl_sock *s, struct msg_buff *msg)
+{
+	struct nlmsghdr *n = (struct nlmsghdr *)msg->data;
+
+	n->nlmsg_len = msg->tail - msg->data;
+	n->nlmsg_flags |= NLM_F_REQUEST;
+	n->nlmsg_seq = s->s_seq_expect = s->s_seq_next++;
+#ifndef WINDRBD
+	n->nlmsg_pid = s->s_local.nl_pid;
+#else
+	n->nlmsg_pid = getpid();
+#endif
+}
+
+static int verify_header(struct genl_sock *s, struct iovec *iov, size_t c, char ** err_desc)
+{
+	struct nlmsghdr *nlh;
+
+	nlh = (struct nlmsghdr*)iov->iov_base;
+	if (!nlmsg_ok(nlh, c)) {
+		if (err_desc)
+			*err_desc = "truncated message in netlink reply";
+		return -E_RCV_MSG_TRUNC;
+	}
+	if (s->s_seq_expect && nlh->nlmsg_seq != s->s_seq_expect) {
+#ifndef WINDRBD
+		dbg(2, "sequence mismatch: 0x%x != 0x%x, type:%x flags:%x sportid:%x\n",
+			nlh->nlmsg_seq, s->s_seq_expect, nlh->nlmsg_type, nlh->nlmsg_flags, nlh->nlmsg_pid);
+#endif
+
+		if (err_desc)
+			*err_desc = "sequence mismatch in netlink reply";
+		return -E_RCV_SEQ_MISMATCH;
+	}
+
+	if (nlh->nlmsg_type == NLMSG_NOOP ||
+	    nlh->nlmsg_type == NLMSG_OVERRUN) {
+		if (err_desc)
+			*err_desc = "unexpected message type in reply";
+		return -E_RCV_UNEXPECTED_TYPE;
+	}
+	if (nlh->nlmsg_type == NLMSG_DONE)
+		return -E_RCV_NLMSG_DONE;
+
+	if (nlh->nlmsg_type == NLMSG_ERROR) {
+printf("error\n");
+		struct nlmsgerr *e = nlmsg_data(nlh);
+		errno = -e->error;
+printf("errno = %d\n", errno);
+		if (!errno)
+			/* happens if you request NLM_F_ACK */
+			dbg(3, "got a positive ACK message for seq:%u",
+					s->s_seq_expect);
+		else {
+			dbg(3, "got a NACK message for seq:%u, error:%d",
+					s->s_seq_expect, e->error);
+			if (err_desc)
+				*err_desc = strerror(errno);
+		}
+		return -E_RCV_ERROR_REPLY;
+	}
+	return c;
+}
+
 	/* TODO: to shared file (also in windrbd.c) */
 
 static HANDLE do_open_root_device(void)
@@ -54,6 +118,8 @@ int windrbd_send_receive(struct genl_sock *s, struct msg_buff *send_msg, struct 
 	DWORD size;
 	size_t send_buf_size;
 
+	fill_in_header(s, send_msg);
+
 	send_buf_size = send_msg->tail - send_msg->data;
 
 printf("into DeviceIoControl\n");
@@ -64,10 +130,9 @@ printf("into DeviceIoControl\n");
 			*errmsg = "ioctl error";
 		return -1;
 	}
-		/* TODO: perform sanity checks on return packet, see genl_recv_msgs() */
 printf("out of DeviceIoControl, status is success\n");
 
-	return 0;
+	return verify_header(s, recv_iov, size, errmsg);
 }
 
 #endif
@@ -225,18 +290,12 @@ static int do_send(int fd, const void *buf, int len)
 	return 0;
 }
 
+
 int genl_send(struct genl_sock *s, struct msg_buff *msg)
 {
 	struct nlmsghdr *n = (struct nlmsghdr *)msg->data;
 
-	n->nlmsg_len = msg->tail - msg->data;
-	n->nlmsg_flags |= NLM_F_REQUEST;
-	n->nlmsg_seq = s->s_seq_expect = s->s_seq_next++;
-#ifndef WINDRBD
-	n->nlmsg_pid = s->s_local.nl_pid;
-#else
-	n->nlmsg_pid = getpid();
-#endif
+	fill_in_header(s, msg);
 
 #define LOCAL_DEBUG_LEVEL 3
 #if LOCAL_DEBUG_LEVEL <= DEBUG_LEVEL
@@ -368,58 +427,7 @@ int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int 
 		return c;
 	}
 
-	nlh = (struct nlmsghdr*)iov->iov_base;
-	if (!nlmsg_ok(nlh, c)) {
-		if (err_desc)
-			*err_desc = "truncated message in netlink reply";
-		return -E_RCV_MSG_TRUNC;
-	}
-#ifdef WINDRBD
-#ifdef NL_PACKET_MSG
-	struct genlmsghdr * hdr = nlmsg_data(nlh);
-	UTRACE("len(%d), type(0x%x), flags(0x%x), seq(%d), pid(%d), cmd(%d), version(%d)\n",
-	nlh->nlmsg_len, nlh->nlmsg_type, nlh->nlmsg_flags, nlh->nlmsg_seq, nlh->nlmsg_pid, hdr->cmd, hdr->version);
-#endif
-#endif
-	if (s->s_seq_expect && nlh->nlmsg_seq != s->s_seq_expect) {
-#ifndef WINDRBD
-		dbg(2, "sequence mismatch: 0x%x != 0x%x, type:%x flags:%x sportid:%x\n",
-			nlh->nlmsg_seq, s->s_seq_expect, nlh->nlmsg_type, nlh->nlmsg_flags, nlh->nlmsg_pid);
-#endif
-
-		if (err_desc)
-			*err_desc = "sequence mismatch in netlink reply";
-		return -E_RCV_SEQ_MISMATCH;
-	}
-
-	if (nlh->nlmsg_type == NLMSG_NOOP ||
-	    nlh->nlmsg_type == NLMSG_OVERRUN) {
-		if (err_desc)
-			*err_desc = "unexpected message type in reply";
-		return -E_RCV_UNEXPECTED_TYPE;
-	}
-	if (nlh->nlmsg_type == NLMSG_DONE)
-		return -E_RCV_NLMSG_DONE;
-
-	if (nlh->nlmsg_type == NLMSG_ERROR) {
-		struct nlmsgerr *e = nlmsg_data(nlh);
-		errno = -e->error;
-		if (!errno)
-			/* happens if you request NLM_F_ACK */
-			dbg(3, "got a positive ACK message for seq:%u",
-					s->s_seq_expect);
-		else {
-			dbg(3, "got a NACK message for seq:%u, error:%d",
-					s->s_seq_expect, e->error);
-			if (err_desc)
-				*err_desc = strerror(errno);
-		}
-		return -E_RCV_ERROR_REPLY;
-	}
-
-	/* good reply message(s) */
-	dbg(3, "received a good message for seq:%u", s->s_seq_expect);
-	return c;
+	return verify_header(s, iov, c, err_desc);
 }
 
 static struct genl_family genl_ctrl = {
