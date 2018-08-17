@@ -1375,7 +1375,9 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		}
 #endif
 		ASSERT(dh->minor == minor);
+printf("minor is %d\n", dh->minor);
 		rv = dh->ret_code;
+printf("rv is %d\n", rv);
 		if (rv != SS_IN_TRANSIENT_STATE)
 			break;
 		nanosleep(&retry_timeout, NULL);
