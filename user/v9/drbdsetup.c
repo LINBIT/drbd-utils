@@ -1341,6 +1341,7 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	}
 
 	for(;;) {
+#ifndef WINDRBD
 		if (genl_send(drbd_sock, smsg)) {
 			desc = "error sending config command";
 			rv = OTHER_ERROR;
@@ -1360,6 +1361,14 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 				goto error;
 			}
 		} while (false);
+#else
+		if (windrbd_send_receive(drbd_sock, smsg, &iov, &desc) < 0) {
+			if (!desc)
+				desc = "error sending/receiving via ioctl";
+			rv = OTHER_ERROR;
+			goto error;
+		}
+#endif
 		ASSERT(dh->minor == minor);
 		rv = dh->ret_code;
 		if (rv != SS_IN_TRANSIENT_STATE)
@@ -1522,12 +1531,21 @@ int choose_timeout(struct choose_timeout_ctx *ctx)
 	nla_put_u32(ctx->smsg, T_ctx_volume, ctx->ctx.ctx_volume);
 	nla_nest_end(ctx->smsg, nla);
 
+#ifndef WINDRBD
 	if (genl_send(drbd_sock, ctx->smsg)) {
 		desc = "error sending config command";
 		goto error;
 	}
 
 	rr = genl_recv_msgs(drbd_sock, ctx->iov, &desc, 120000);
+#else
+	if (windrbd_send_receive(drbd_sock, ctx->smsg, ctx->iov, &desc) < 0) {
+		if (!desc)
+			desc = "error sending/receiving via ioctl";
+		goto error;
+	}
+	rr = 1;
+#endif
 	if (rr > 0) {
 		struct nlmsghdr *nlh = (struct nlmsghdr*)ctx->iov->iov_base;
 		struct genl_info info = {
@@ -1705,11 +1723,13 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 		nla_nest_end(smsg, nla);
 	}
 
+printf("into genl_send()\n");
 	if (genl_send(drbd_sock, smsg)) {
 		desc = "error sending config command";
 		rv = OTHER_ERROR;
 		goto out2;
 	}
+printf("out of genl_send()\n");
 
 	/* disable sequence number check in genl_recv_msgs */
 	drbd_sock->s_seq_expect = 0;
@@ -1734,7 +1754,9 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 		timeout_ms =
 			timeout_arg == MULTIPLE_TIMEOUTS ? shortest_timeout(u_ptr) : timeout_arg;
 
+printf("into poll()\n");
 		ret = poll(pollfds, 2, timeout_ms);
+printf("out of poll()\n");
 		if (ret == 0) {
 			err = 5;
 			goto out2;
@@ -1742,7 +1764,9 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 		if (pollfds[0].revents == POLLERR || pollfds[0].revents == POLLHUP)
 			goto out2;
 
+printf("into genl_recv_msgs()\n");
 		received = genl_recv_msgs(drbd_sock, &iov, &desc, -1);
+printf("out of genl_recv_msgs()\n");
 		if (received < 0) {
 			switch(received) {
 			case E_RCV_TIMEDOUT:

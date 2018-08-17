@@ -26,6 +26,52 @@
  * plain TCP/IP socket.
  */
 
+#ifdef WINDRBD
+
+#include <windows.h>
+#include "../windrbd/windrbd_ioctl.h"
+
+	/* TODO: to shared file (also in windrbd.c) */
+
+static HANDLE do_open_root_device(void)
+{
+        HANDLE h;
+        DWORD err;
+
+        h = CreateFile("\\\\.\\" WINDRBD_ROOT_DEVICE_NAME, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        err = GetLastError();
+
+        if (err != ERROR_SUCCESS) {
+                fprintf(stderr, "Couldn't root device, error is %d\n", err);
+                return INVALID_HANDLE_VALUE;
+        }
+        return h;
+}
+
+int windrbd_send_receive(struct genl_sock *s, struct msg_buff *send_msg, struct iovec *recv_iov, char ** errmsg)
+{
+	int err;
+	DWORD size;
+	size_t send_buf_size;
+
+	send_buf_size = send_msg->tail - send_msg->data;
+
+printf("into DeviceIoControl\n");
+        if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_DRBD_CMD, send_msg->data, send_buf_size, recv_iov->iov_base, recv_iov->iov_len, &size, NULL) == 0) {
+	        err = GetLastError();
+		printf("DeviceIoControl() failed, error is %d\n", err);
+		if (errmsg)
+			*errmsg = "ioctl error";
+		return -1;
+	}
+		/* TODO: perform sanity checks on return packet, see genl_recv_msgs() */
+printf("out of DeviceIoControl, status is success\n");
+
+	return 0;
+}
+
+#endif
+
 int genl_join_mc_group(struct genl_sock *s, const char *name) {
 #ifndef WINDRBD
 	int g_id;
@@ -44,7 +90,7 @@ int genl_join_mc_group(struct genl_sock *s, const char *name) {
 	}
 	return -2;
 #else
-
+	
 	// not support
 	int len = send(s->s_fd, DRBD_EVENT_SOCKET_STRING, strlen(DRBD_EVENT_SOCKET_STRING), 0);
 
@@ -122,10 +168,14 @@ static struct genl_sock *genl_connect(__u32 nl_groups)
 		goto fail;
 #else
 	/* Create the windows TCP socket */
+	/* TODO: goes away */
 	if ((s->s_fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
 		perror("socket");
 		goto fail;
 	}
+	s->s_handle = do_open_root_device();
+	if (s->s_handle == INVALID_HANDLE_VALUE)
+		goto fail;
 #endif
 
 #ifndef WINDRBD
@@ -1118,3 +1168,4 @@ int nla_append(struct msg_buff *msg, int attrlen, const void *data)
 	memcpy(msg_put(msg, attrlen), data, attrlen);
 	return 0;
 }
+

@@ -55,4 +55,24 @@ struct windrbd_ioctl_fault_injection {
 
 #define IOCTL_WINDRBD_INJECT_FAULTS CTL_CODE(WINDRBD_DEVICE_TYPE, 2, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
+/* Input buffer: the netlink packet. Output buffer: the netlink reply packet.
+ * Call multiple times if there are more than one netlink request/reply
+ * sequences. Output buffer should hold at least NLMSG_GOODSIZE bytes,
+ * the actual size is returned by changing the output size parameter.
+ */
+#define IOCTL_WINDRBD_ROOT_DRBD_CMD CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 3, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+/* Poll for DRBD event. There may be 0-n processes waiting for an event,
+ * in which case all processes get the event delivered. On input, name
+ * of the netlink multicast group is expected (only 'events' is currently
+ * used, see ./drbd-headers/linux/drbd_genl.h:352 GENL_mc_group(events)).
+ */
+#define IOCTL_WINDRBD_ROOT_DRBD_EVENT CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 4, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+/* This is for calling usermode helpers. Interface has yet to be defined.
+ * (Linux has a built-in call_usermode_helper() function which we need
+ * to emulate).
+ */
+#define IOCTL_WINDRBD_ROOT_DRBD_USERMODE_HELPER CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 5, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
 #endif

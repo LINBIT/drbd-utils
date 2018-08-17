@@ -1054,6 +1054,8 @@ struct genl_sock {
 #ifndef WINDRBD
 	struct sockaddr_nl	s_local;
 	struct sockaddr_nl	s_peer;
+#else
+	HANDLE			s_handle;
 #endif
 	int			s_fd;
 	unsigned int		s_seq_next;
@@ -1079,5 +1081,8 @@ enum {
 /* returns negative E_RCV_*, or length of message */
 extern int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int timeout_ms);
 
+#ifdef WINDRBD
+int windrbd_send_receive(struct genl_sock *s, struct msg_buff *send_msg, struct iovec *recv_iov, char ** errmsg);
+#endif
 
 #endif	/* LIBGENL_H */
