@@ -76,10 +76,8 @@ static int verify_header(struct genl_sock *s, struct iovec *iov, size_t c, char 
 		return -E_RCV_NLMSG_DONE;
 
 	if (nlh->nlmsg_type == NLMSG_ERROR) {
-printf("error\n");
 		struct nlmsgerr *e = nlmsg_data(nlh);
 		errno = -e->error;
-printf("errno = %d\n", errno);
 		if (!errno)
 			/* happens if you request NLM_F_ACK */
 			dbg(3, "got a positive ACK message for seq:%u",
@@ -122,7 +120,6 @@ int windrbd_send_receive(struct genl_sock *s, struct msg_buff *send_msg, struct 
 
 	send_buf_size = send_msg->tail - send_msg->data;
 
-printf("into DeviceIoControl\n");
         if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_DRBD_CMD, send_msg->data, send_buf_size, recv_iov->iov_base, recv_iov->iov_len, &size, NULL) == 0) {
 	        err = GetLastError();
 		printf("DeviceIoControl() failed, error is %d\n", err);
@@ -130,7 +127,6 @@ printf("into DeviceIoControl\n");
 			*errmsg = "ioctl error";
 		return -1;
 	}
-printf("out of DeviceIoControl, status is success\n");
 
 	return verify_header(s, recv_iov, size, errmsg);
 }

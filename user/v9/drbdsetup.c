@@ -1375,9 +1375,7 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		}
 #endif
 		ASSERT(dh->minor == minor);
-printf("minor is %d\n", dh->minor);
 		rv = dh->ret_code;
-printf("rv is %d\n", rv);
 		if (rv != SS_IN_TRANSIENT_STATE)
 			break;
 		nanosleep(&retry_timeout, NULL);
@@ -1768,6 +1766,8 @@ static int opt_verbose;
 static bool opt_statistics;
 static bool opt_timestamps;
 
+	/* TODO: convert to ioctl interface */
+
 static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 {
 	char *desc = NULL;
@@ -1825,13 +1825,11 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 		nla_nest_end(smsg, nla);
 	}
 
-printf("into genl_send()\n");
 	if (genl_send(drbd_sock, smsg)) {
 		desc = "error sending config command";
 		rv = OTHER_ERROR;
 		goto out2;
 	}
-printf("out of genl_send()\n");
 
 	/* disable sequence number check in genl_recv_msgs */
 	drbd_sock->s_seq_expect = 0;
@@ -1856,9 +1854,7 @@ printf("out of genl_send()\n");
 		timeout_ms =
 			timeout_arg == MULTIPLE_TIMEOUTS ? shortest_timeout(u_ptr) : timeout_arg;
 
-printf("into poll()\n");
 		ret = poll(pollfds, 2, timeout_ms);
-printf("out of poll()\n");
 		if (ret == 0) {
 			err = 5;
 			goto out2;
@@ -1866,9 +1862,7 @@ printf("out of poll()\n");
 		if (pollfds[0].revents == POLLERR || pollfds[0].revents == POLLHUP)
 			goto out2;
 
-printf("into genl_recv_msgs()\n");
 		received = genl_recv_msgs(drbd_sock, &iov, &desc, -1);
-printf("out of genl_recv_msgs()\n");
 		if (received < 0) {
 			switch(received) {
 			case E_RCV_TIMEDOUT:
