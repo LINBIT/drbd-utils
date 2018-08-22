@@ -31,6 +31,8 @@
 #include <windows.h>
 #include "../windrbd/windrbd_ioctl.h"
 
+#endif
+
 static void fill_in_header(struct genl_sock *s, struct msg_buff *msg)
 {
 	struct nlmsghdr *n = (struct nlmsghdr *)msg->data;
@@ -93,6 +95,8 @@ static int verify_header(struct genl_sock *s, struct iovec *iov, size_t c, char 
 	return c;
 }
 
+#ifdef WINDRBD
+
 	/* TODO: to shared file (also in windrbd.c) */
 
 static HANDLE do_open_root_device(void)
@@ -108,27 +112,6 @@ static HANDLE do_open_root_device(void)
                 return INVALID_HANDLE_VALUE;
         }
         return h;
-}
-
-int windrbd_send_receive(struct genl_sock *s, struct msg_buff *send_msg, struct iovec *recv_iov, char ** errmsg)
-{
-	int err;
-	DWORD size;
-	size_t send_buf_size;
-
-	fill_in_header(s, send_msg);
-
-	send_buf_size = send_msg->tail - send_msg->data;
-
-        if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_DRBD_CMD, send_msg->data, send_buf_size, recv_iov->iov_base, recv_iov->iov_len, &size, NULL) == 0) {
-	        err = GetLastError();
-		printf("DeviceIoControl() failed, error is %d\n", err);
-		if (errmsg)
-			*errmsg = "ioctl error";
-		return -1;
-	}
-
-	return verify_header(s, recv_iov, size, errmsg);
 }
 
 #endif
@@ -271,10 +254,12 @@ fail:
 }
 #undef DO_OR_LOG_AND_FAIL
 
-static int do_send(int fd, const void *buf, int len)
+#ifndef WINDRBD
+
+static int do_send(struct genl_sock *s, const void *buf, int len)
 {
 	int c;
-	while ((c = write(fd, buf, len)) < len) {
+	while ((c = write(s->s_fd, buf, len)) < len) {
 		if (c == -1) {
 			if (errno == EINTR)
 				continue;
@@ -286,11 +271,28 @@ static int do_send(int fd, const void *buf, int len)
 	return 0;
 }
 
+#else
+
+static int do_send(struct genl_sock *s, const void *buf, int len)
+{
+	int err;
+	unsigned int unused;
+
+        if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_SEND_NL_PACKET, (void*) buf, len, NULL, 0, &unused, NULL) == 0) {
+	        err = GetLastError();
+		printf("DeviceIoControl() failed, error is %d\n", err);
+		return -1;
+	}
+	return 0;
+}
+
+#endif
 
 int genl_send(struct genl_sock *s, struct msg_buff *msg)
 {
 	struct nlmsghdr *n = (struct nlmsghdr *)msg->data;
 
+		/* TODO: revert fill_in_header patch */
 	fill_in_header(s, msg);
 
 #define LOCAL_DEBUG_LEVEL 3
@@ -300,16 +302,12 @@ int genl_send(struct genl_sock *s, struct msg_buff *msg)
 	dbg(LOCAL_DEBUG_LEVEL, "sending %smessage, pid:%u seq:%u, g.cmd/version:%u/%u",
 			n->nlmsg_type == GENL_ID_CTRL ? "ctrl " : "",
 			n->nlmsg_pid, n->nlmsg_seq, g->cmd, g->version);
-#ifdef WINDRBD
-#ifdef NL_PACKET_MSG
-	UTRACE("len(%d), type(0x%x), pid(%d), seq(%d), flags(0x%x), cmd(%d), version(%d)\n",
-	n->nlmsg_len, n->nlmsg_type, n->nlmsg_pid, n->nlmsg_seq, n->nlmsg_flags, g->cmd, g->version);
-#endif
-#endif
 #endif
 
-	return do_send(s->s_fd, msg->data, n->nlmsg_len);
+	return do_send(s, msg->data, n->nlmsg_len);
 }
+
+#ifndef WINDRBD
 
 /* "inspired" by libnl nl_recv()
  * You pass in one iovec, which may contain pre-allocated buffer space,
@@ -425,6 +423,30 @@ int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int 
 
 	return verify_header(s, iov, c, err_desc);
 }
+
+#else
+
+	/* TODO: timeout not implemeted. Only returns what is already there */
+
+int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int timeout_ms)
+{
+	struct windrbd_ioctl_genl_portid p;
+	unsigned int size;
+	int err;
+
+	p.portid = getpid();
+        if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_RECEIVE_NL_PACKET, &p, sizeof(p), iov->iov_base, iov->iov_len, &size, NULL) == 0) {
+	        err = GetLastError();
+		printf("DeviceIoControl() failed, error is %d\n", err);
+		if (err_desc)
+			*err_desc = "ioctl error";
+		return -1;
+	}
+
+	return verify_header(s, iov, size, err_desc);
+}
+
+#endif
 
 static struct genl_family genl_ctrl = {
         .id = GENL_ID_CTRL,
