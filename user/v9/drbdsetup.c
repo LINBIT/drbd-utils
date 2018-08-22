@@ -1793,6 +1793,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 #endif
 	}
 
+fprintf(stderr, "drbd_genl_family->id is %d\n", drbd_genl_family.id);
 	flags = 0;
 	if (minor == -1U)
 		flags |= NLM_F_DUMP;
@@ -1820,6 +1821,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 		int received, rem, ret;
 		struct nlmsghdr *nlh = (struct nlmsghdr *)iov.iov_base;
 		struct timeval before;
+#ifndef WINDRBD
 		struct pollfd pollfds[2] = {
 			[0] = {
 				.fd = 1,
@@ -1830,12 +1832,14 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				.events = POLLIN,
 			},
 		};
+#endif
 
 		gettimeofday(&before, NULL);
 
 		timeout_ms =
 			timeout_arg == MULTIPLE_TIMEOUTS ? shortest_timeout(u_ptr) : timeout_arg;
 
+#ifndef WINDRBD
 		ret = poll(pollfds, 2, timeout_ms);
 		if (ret == 0) {
 			err = 5;
@@ -1843,8 +1847,13 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 		}
 		if (pollfds[0].revents == POLLERR || pollfds[0].revents == POLLHUP)
 			goto out2;
+#else
+		/* TODO: #else poll via ioctl */
+		sleep(1);
+#endif
 
 		received = genl_recv_msgs(drbd_sock, &iov, &desc, -1);
+fprintf(stderr, "received: %d\n", received);
 		if (received < 0) {
 			switch(received) {
 			case E_RCV_TIMEDOUT:
@@ -1864,6 +1873,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 			case -E_RCV_UNEXPECTED_TYPE:
 				continue;
 			case -E_RCV_NLMSG_DONE:
+got_done:
 				if (cm->continuous_poll)
 					continue;
 				err = cm->show_function(cm, NULL, u_ptr);
@@ -1917,6 +1927,8 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 			}
 		}
 
+fprintf(stderr, "1\n");
+
 		/* There may be multiple messages in one datagram (for dump replies). */
 		nlmsg_for_each_msg(nlh, nlh, received, rem) {
 			struct drbd_genlmsghdr *dh = genlmsg_data(nlmsg_data(nlh));
@@ -1928,13 +1940,18 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				.attrs = global_attrs,
 			};
 
-			dbg(3, "received type:%x\n", nlh->nlmsg_type);
-#ifndef WINDRBD
-			if (nlh->nlmsg_type < NLMSG_MIN_TYPE) {
+fprintf(stderr, "2\n");
+fprintf(stderr, "received type:%x\n", nlh->nlmsg_type);
+			if (nlh->nlmsg_type == NLMSG_DONE) {
+fprintf(stderr, "got done\n");
+				goto got_done;
+			}
+/* TODO: Windrbd: here DRBD family ID is 0, probably not what we want */
+			if (nlh->nlmsg_type < NLMSG_MIN_TYPE && nlh->nlmsg_type != drbd_genl_family.id) {
+fprintf(stderr, "nlh->nlmsg_type is control message\n");
 				/* Ignore netlink control messages. */
 				continue;
 			}
-#endif
 			if (nlh->nlmsg_type == GENL_ID_CTRL) {
 #ifdef HAVE_CTRL_CMD_DELMCAST_GRP
 				dbg(3, "received cmd:%x\n", info.genlhdr->cmd);
@@ -1951,12 +1968,11 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				/* Ignore other generic netlink control messages. */
 				continue;
 			}
-#ifndef WINDRBD
+fprintf(stderr, "3\n");
 			if (nlh->nlmsg_type != drbd_genl_family.id) {
 				/* Ignore messages for all other netlink families. */
 				continue;
 			}
-#endif
 
 			/* parse early, otherwise drbd_cfg_context_from_attrs
 			 * can not work */
@@ -1969,8 +1985,10 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				rv = OTHER_ERROR;
 				goto out2;
 			}
+fprintf(stderr, "4\n");
 			if (cm->continuous_poll) {
 				struct drbd_cfg_context ctx;
+fprintf(stderr, "4a\n");
 				/*
 				 * We will receive all events and have to
 				 * filter for what we want ourself.
@@ -2017,18 +2035,24 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				}
 			}
 			rv = dh->ret_code;
+fprintf(stderr, "rv is %d\n", rv);
 			if (rv == ERR_MINOR_INVALID && cm->missing_ok)
 				rv = NO_ERROR;
+fprintf(stderr, "5a\n");
 			if (rv != NO_ERROR)
 				goto out2;
+fprintf(stderr, "5b\n");
 			err = cm->show_function(cm, &info, u_ptr);
 			if (err) {
 				if (err < 0)
 					err = 0;
 				goto out2;
 			}
+fprintf(stderr, "6\n");
 		}
+fprintf(stderr, "7\n");
 		if (!cm->continuous_poll && !(flags & NLM_F_DUMP)) {
+fprintf(stderr, "8\n");
 			/* There will be no more reply packets.  */
 			err = cm->show_function(cm, NULL, u_ptr);
 			goto out2;
@@ -2036,6 +2060,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 	}
 
 out2:
+fprintf(stderr, "9\n");
 	msg_free(smsg);
 
 out:
