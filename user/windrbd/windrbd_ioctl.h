@@ -55,24 +55,81 @@ struct windrbd_ioctl_fault_injection {
 
 #define IOCTL_WINDRBD_INJECT_FAULTS CTL_CODE(WINDRBD_DEVICE_TYPE, 2, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
-/* Input buffer: the netlink packet. Output buffer: the netlink reply packet.
- * Call multiple times if there are more than one netlink request/reply
- * sequences. Output buffer should hold at least NLMSG_GOODSIZE bytes,
- * the actual size is returned by changing the output size parameter.
- */
-#define IOCTL_WINDRBD_ROOT_DRBD_CMD CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 3, METHOD_BUFFERED, FILE_ANY_ACCESS)
+struct windrbd_ioctl_genl_portid {
+	u32 portid;
+};
 
-/* Poll for DRBD event. There may be 0-n processes waiting for an event,
- * in which case all processes get the event delivered. On input, name
- * of the netlink multicast group is expected (only 'events' is currently
- * used, see ./drbd-headers/linux/drbd_genl.h:352 GENL_mc_group(events)).
+struct windrbd_ioctl_genl_portid_and_timeout {
+	u32 portid;
+	s32 timeout;
+};
+
+struct windrbd_ioctl_genl_portid_and_multicast_group {
+	u32 portid;
+        char name[GENL_NAMSIZ];
+};
+
+/* Send netlink packet(s) to kernel.
+ *
+ * Input buffer: the netlink packet.
+ * Output buffer: none.
+ *
+ * Call multiple times if there are more than one netlink request.
+ * Return packet(s) to be fetched by receive nl packet ioctl().
  */
-#define IOCTL_WINDRBD_ROOT_DRBD_EVENT CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 4, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+#define IOCTL_WINDRBD_ROOT_SEND_NL_PACKET CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 3, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+/* Receive netlink packet(s) from kernel.
+ *
+ * Input buffer: the port id (getpid()) in a struct windrbd_ioctl_genl_portid
+ * Output buffer: the netlink reply packet(s).
+ *
+ * Call multiple times if there are more reply packets than the output buffer
+ * can hold. Output buffer should hold at least NLMSG_GOODSIZE bytes,
+ * the actual size is returned by the lpBytesReturned parameter to
+ * DeviceIoControl().
+ *
+ * Does not wait for packets to arrive, use POLL ioctl for waiting for
+ * packets.
+ */
+
+#define IOCTL_WINDRBD_ROOT_RECEIVE_NL_PACKET CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 4, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+/* Poll for netlink packets.
+ *
+ * Input buffer: the port id (getpid()) and timeout (in milliseconds) in a
+ * 		 struct windrbd_ioctl_genl_portid_and_timeout
+ * Output buffer: none.
+ *
+ * Use this as a replacement to poll(2) for polling for new netlink packets
+ * to arrive from DRBD kernel. TODO: somehow check for signals (POLLHUP).
+ */
+
+#define IOCTL_WINDRBD_ROOT_POLL_NL_PACKET CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 5, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+/* Add port ID to multicast group.
+ *
+ * Input buffer: the port id (getpid()) and name of the multicast group
+ * 		 in a struct windrbd_ioctl_genl_portid_and_multicast_group
+ * Output buffer: none.
+ *
+ * Adds the portid to multicast group specified in input buffer. As a
+ * consequence, everything DRBD sends to that multicast group can be
+ * received by the RECEIVE_NL_PACKET ioctl and be polled for with
+ * the POLL_NL_PACKET ioctl.
+ *
+ * Currently DRBD only uses the 'events' multicast group, however this
+ * may change in the future. Note that WinDRBD has no notion of netlink
+ * families since there is only DRBD to support.
+ */
+
+#define IOCTL_WINDRBD_ROOT_JOIN_MC_GROUP CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 6, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
 /* This is for calling usermode helpers. Interface has yet to be defined.
  * (Linux has a built-in call_usermode_helper() function which we need
  * to emulate).
  */
-#define IOCTL_WINDRBD_ROOT_DRBD_USERMODE_HELPER CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 5, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define IOCTL_WINDRBD_ROOT_DRBD_USERMODE_HELPER CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 7, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
 #endif
