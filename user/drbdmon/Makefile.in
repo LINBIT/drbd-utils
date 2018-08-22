@@ -21,6 +21,7 @@ endif
 PHONY := all
 
 dsaext-obj := cppdsaext/src/dsaext.o
+integerparse-obj := cppdsaext/src/integerparse.o
 
 l-obj := DrbdMon.o MessageLog.o CompactDisplay.o
 l-obj += DrbdResource.o DrbdRole.o DrbdVolume.o DrbdConnection.o
@@ -28,10 +29,10 @@ l-obj += VolumesContainer.o StateFlags.o EventsIo.o EventsSourceSpawner.o
 l-obj += Args.o ConfigOption.o
 l-obj += StringTokenizer.o comparators.o utils.o
 
-ls-obj := drbdmon_main.o $(l-obj) $(dsaext-obj)
+ls-obj := drbdmon_main.o $(l-obj) $(dsaext-obj) $(integerparse-obj)
 
 all-obj := $(sort $(ls-obj))
-local-obj := $(filter-out $(dsaext-obj),$(all-obj))
+local-obj := $(filter-out $(dsaext-obj) $(integerparse-obj),$(all-obj))
 local-dep := $(patsubst %.o,.%.d,$(local-obj))
 ifeq ($(WITH_DRBDMON),yes)
 # avoid breaking clean target. somebody else has to create that file
@@ -41,6 +42,7 @@ endif
 endif
 
 $(dsaext-obj): $(basename $(dsaext-obj)).cpp $(basename $(dsaext-obj)).h
+$(integerparse-obj): $(basename $(integerparse-obj)).cpp $(basename $(integerparse-obj)).h
 
 drbdmon: $(ls-obj)
 	$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) $^
@@ -66,7 +68,7 @@ endif
 
 PHONY += clean distclean
 clean:
-	rm -f $(local-obj) $(dsaext-obj) $(binaries)
+	rm -f $(local-obj) $(dsaext-obj) $(integerparse-obj) $(binaries)
 distclean: clean
 	rm -f $(local-dep)
 
