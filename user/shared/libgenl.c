@@ -134,19 +134,8 @@ int genl_join_mc_group(struct genl_sock *s, const char *name) {
 	}
 	return -2;
 #else
-	
-	// not support
-	int len = send(s->s_fd, DRBD_EVENT_SOCKET_STRING, strlen(DRBD_EVENT_SOCKET_STRING), 0);
-
-#ifdef NL_PACKET_MSG
-	UTRACE("sending DRBD_EVENT_SOCKET_STRING. len(%d)\n", len);
-#endif
-
-	if (len != strlen(DRBD_EVENT_SOCKET_STRING)) {
-		perror("send genl_join_mc_group error");
-		return -1;
-	}
-	return len;
+	printf("genl_join_mc_group: not implemented yet.\n");
+	return -EOPNOTSUPP;
 #endif
 }
 
@@ -211,12 +200,6 @@ static struct genl_sock *genl_connect(__u32 nl_groups)
 	if (s->s_fd == -1)
 		goto fail;
 #else
-	/* Create the windows TCP socket */
-	/* TODO: goes away */
-	if ((s->s_fd = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
-		perror("socket");
-		goto fail;
-	}
 	s->s_handle = do_open_root_device();
 	if (s->s_handle == INVALID_HANDLE_VALUE)
 		goto fail;
@@ -233,17 +216,6 @@ static struct genl_sock *genl_connect(__u32 nl_groups)
 		s->s_local.nl_pid, getpid(),
 		(unsigned)sock_len, (unsigned)sizeof(s->s_local));
 
-#else
-	struct sockaddr_in sendsocket;
-	memset(&sendsocket, 0, sizeof(sendsocket));
-	sendsocket.sin_family = AF_INET;
-	sendsocket.sin_addr.s_addr = inet_addr("127.0.0.1");
-	sendsocket.sin_port = get_netlink_port();
-
-	if (connect(s->s_fd, (struct sockaddr *) &sendsocket, sizeof(sendsocket)) < 0) {
-		perror("connect");
-		return NULL;
-	}
 #endif
 
 	return s;

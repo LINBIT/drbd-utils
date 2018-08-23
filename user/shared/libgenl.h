@@ -1054,10 +1054,10 @@ struct genl_sock {
 #ifndef WINDRBD
 	struct sockaddr_nl	s_local;
 	struct sockaddr_nl	s_peer;
+	int			s_fd;
 #else
 	HANDLE			s_handle;
 #endif
-	int			s_fd;
 	unsigned int		s_seq_next;
 	unsigned int		s_seq_expect;
 	unsigned int		s_flags;
