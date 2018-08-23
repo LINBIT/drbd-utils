@@ -1793,7 +1793,6 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 #endif
 	}
 
-fprintf(stderr, "drbd_genl_family->id is %d\n", drbd_genl_family.id);
 	flags = 0;
 	if (minor == -1U)
 		flags |= NLM_F_DUMP;
@@ -1849,11 +1848,9 @@ fprintf(stderr, "drbd_genl_family->id is %d\n", drbd_genl_family.id);
 			goto out2;
 #else
 		/* TODO: #else poll via ioctl */
-		sleep(1);
 #endif
 
 		received = genl_recv_msgs(drbd_sock, &iov, &desc, -1);
-fprintf(stderr, "received: %d\n", received);
 		if (received < 0) {
 			switch(received) {
 			case E_RCV_TIMEDOUT:
@@ -1927,8 +1924,6 @@ got_done:
 			}
 		}
 
-fprintf(stderr, "1\n");
-
 		/* There may be multiple messages in one datagram (for dump replies). */
 		nlmsg_for_each_msg(nlh, nlh, received, rem) {
 			struct drbd_genlmsghdr *dh = genlmsg_data(nlmsg_data(nlh));
@@ -1940,15 +1935,17 @@ fprintf(stderr, "1\n");
 				.attrs = global_attrs,
 			};
 
-fprintf(stderr, "2\n");
-fprintf(stderr, "received type:%x\n", nlh->nlmsg_type);
+/* TODO: here we need to check for NLMSG_DONE */
+#if 0
 			if (nlh->nlmsg_type == NLMSG_DONE) {
-fprintf(stderr, "got done\n");
+	/* not like this (there might be packets after the DONE packet)
+	 * but similar.
+	 */
 				goto got_done;
 			}
+#endif
 /* TODO: Windrbd: here DRBD family ID is 0, probably not what we want */
 			if (nlh->nlmsg_type < NLMSG_MIN_TYPE && nlh->nlmsg_type != drbd_genl_family.id) {
-fprintf(stderr, "nlh->nlmsg_type is control message\n");
 				/* Ignore netlink control messages. */
 				continue;
 			}
@@ -1968,7 +1965,6 @@ fprintf(stderr, "nlh->nlmsg_type is control message\n");
 				/* Ignore other generic netlink control messages. */
 				continue;
 			}
-fprintf(stderr, "3\n");
 			if (nlh->nlmsg_type != drbd_genl_family.id) {
 				/* Ignore messages for all other netlink families. */
 				continue;
@@ -1985,10 +1981,8 @@ fprintf(stderr, "3\n");
 				rv = OTHER_ERROR;
 				goto out2;
 			}
-fprintf(stderr, "4\n");
 			if (cm->continuous_poll) {
 				struct drbd_cfg_context ctx;
-fprintf(stderr, "4a\n");
 				/*
 				 * We will receive all events and have to
 				 * filter for what we want ourself.
@@ -2035,24 +2029,18 @@ fprintf(stderr, "4a\n");
 				}
 			}
 			rv = dh->ret_code;
-fprintf(stderr, "rv is %d\n", rv);
 			if (rv == ERR_MINOR_INVALID && cm->missing_ok)
 				rv = NO_ERROR;
-fprintf(stderr, "5a\n");
 			if (rv != NO_ERROR)
 				goto out2;
-fprintf(stderr, "5b\n");
 			err = cm->show_function(cm, &info, u_ptr);
 			if (err) {
 				if (err < 0)
 					err = 0;
 				goto out2;
 			}
-fprintf(stderr, "6\n");
 		}
-fprintf(stderr, "7\n");
 		if (!cm->continuous_poll && !(flags & NLM_F_DUMP)) {
-fprintf(stderr, "8\n");
 			/* There will be no more reply packets.  */
 			err = cm->show_function(cm, NULL, u_ptr);
 			goto out2;
@@ -2060,7 +2048,6 @@ fprintf(stderr, "8\n");
 	}
 
 out2:
-fprintf(stderr, "9\n");
 	msg_free(smsg);
 
 out:
