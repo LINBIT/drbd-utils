@@ -1870,7 +1870,6 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 			case -E_RCV_UNEXPECTED_TYPE:
 				continue;
 			case -E_RCV_NLMSG_DONE:
-got_done:
 				if (cm->continuous_poll)
 					continue;
 				err = cm->show_function(cm, NULL, u_ptr);
