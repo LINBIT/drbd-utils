@@ -394,59 +394,44 @@ int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int 
 
 #else
 
-int windrbd_genl_poll_timeout(struct genl_sock *s, int timeout_ms)
-{
-	struct windrbd_ioctl_genl_portid_and_timeout pt;
-	unsigned int size;
-	struct windrbd_ioctl_ret_code rc;
-	int err;
+/* Unfortunately, implementing a POLL semantics that honors CygWin signals
+ * (like SIGINT when user presses Ctrl-C) isn't that easy to do in kernel,
+ * since CygWin implements signals in user space.
+ *
+ * We therefore poll from user space here. It costs a little CPU, but
+ * we can interrupt the process any time we like.
+ */
 
-	pt.portid = getpid();
-	pt.timeout = timeout_ms;
-
-        if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_POLL_NL_PACKET, &pt, sizeof(pt), &rc, sizeof(rc), &size, NULL) == 0) {
-	        err = GetLastError();
-		printf("DeviceIoControl() failed, error is %d\n", err);
-		return -1;
-	}
-	return rc.ret;
-}
-
-	/* TODO: timeout not implemeted. Only returns what is already there */
+#define BUSY_POLLING_INTERVAL_MS 100
 
 int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int timeout_ms)
 {
 	struct windrbd_ioctl_genl_portid p;
 	unsigned int size;
 	int err;
-	int ret;
-
-	ret = windrbd_genl_poll_timeout(s, timeout_ms);
-	switch (ret) {
-	case 1: break;
-	case -ETIMEDOUT:
-		if (*err_desc)
-			*err_desc = "timed out waiting for reply";
-		return -E_RCV_TIMEDOUT;
-	case -EINTR:
-		fprintf(stderr, "windrbd_genl_poll_timeout interrupted\n");
-		if (*err_desc)
-			*err_desc = "interrupted";
-		return -E_RCV_FAILED;
-	default:
-		fprintf(stderr, "windrbd_genl_poll_timeout returned %d\n", ret);
-		if (*err_desc)
-			*err_desc = "error in polling";
-		return -E_RCV_FAILED;
-	}
+	int forever;
 
 	p.portid = getpid();
-        if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_RECEIVE_NL_PACKET, &p, sizeof(p), iov->iov_base, iov->iov_len, &size, NULL) == 0) {
-	        err = GetLastError();
-		printf("DeviceIoControl() failed, error is %d\n", err);
+	forever = timeout_ms < 0;
+	while (forever || timeout_ms > 0) {
+	        if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_RECEIVE_NL_PACKET, &p, sizeof(p), iov->iov_base, iov->iov_len, &size, NULL) == 0) {
+		        err = GetLastError();
+			printf("DeviceIoControl() failed, error is %d\n", err);
+			if (err_desc)
+				*err_desc = "ioctl error";
+			return -1;
+		}
+		if (size > 0)
+			break;
+
+		usleep(BUSY_POLLING_INTERVAL_MS * 1000);
+		if (!forever)
+			timeout_ms -= BUSY_POLLING_INTERVAL_MS;
+	}
+	if (size == 0) {
 		if (err_desc)
-			*err_desc = "ioctl error";
-		return -1;
+			*err_desc = "timed out waiting for reply";
+		return -E_RCV_TIMEDOUT;
 	}
 
 	return verify_header(s, iov, size, err_desc);
