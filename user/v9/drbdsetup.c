@@ -1843,8 +1843,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				goto got_done;
 			}
 #endif
-/* TODO: Windrbd: here DRBD family ID is 0, probably not what we want */
-			if (nlh->nlmsg_type < NLMSG_MIN_TYPE && nlh->nlmsg_type != drbd_genl_family.id) {
+			if (nlh->nlmsg_type < NLMSG_MIN_TYPE) {
 				/* Ignore netlink control messages. */
 				continue;
 			}

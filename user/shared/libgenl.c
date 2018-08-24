@@ -445,6 +445,8 @@ struct genl_sock *genl_connect_to_family(struct genl_family *family)
 		dbg(1, "could not allocate genl message");
 		goto out;
 	}
+#else
+	family->id = WINDRBD_NETLINK_FAMILY_ID;
 #endif
 
 	s = genl_connect(family->nl_groups);
