@@ -104,7 +104,7 @@ static HANDLE do_open_root_device(void)
         HANDLE h;
         DWORD err;
 
-        h = CreateFile("\\\\.\\" WINDRBD_ROOT_DEVICE_NAME, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        h = CreateFile("\\\\.\\" WINDRBD_ROOT_DEVICE_NAME, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, NULL);
         err = GetLastError();
 
         if (err != ERROR_SUCCESS) {
@@ -400,15 +400,47 @@ int windrbd_genl_poll_timeout(struct genl_sock *s, int timeout_ms)
 	unsigned int size;
 	struct windrbd_ioctl_ret_code rc;
 	int err;
+	struct _OVERLAPPED overlapped = {0};
 
 	pt.portid = getpid();
 	pt.timeout = timeout_ms;
 
-        if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_POLL_NL_PACKET, &pt, sizeof(pt), &rc, sizeof(rc), &size, NULL) == 0) {
+	overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+	if (overlapped.hEvent == NULL) {
 	        err = GetLastError();
+		printf("CreateEvent() failed, error is %d\n", err);
+		return -1;
+	}
+fprintf(stderr, "1\n");
+        if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_POLL_NL_PACKET, &pt, sizeof(pt), &rc, sizeof(rc), &size, &overlapped) == 0) {
+fprintf(stderr, "2\n");
+	        err = GetLastError();
+fprintf(stderr, "3\n");
+		if (err == ERROR_IO_PENDING) {
+fprintf(stderr, "4\n");
+			while (1) {
+fprintf(stderr, "5\n");
+				if (GetOverlappedResult(s->s_handle, &overlapped, &size, FALSE) == 0) {
+fprintf(stderr, "6\n");
+				        err = GetLastError();
+					if (err == ERROR_IO_INCOMPLETE) {
+fprintf(stderr, "7\n");
+						sleep(1);
+						continue;
+					}
+					printf("GetOverlappedResult() failed, error is %d\n", err);
+					return -1;
+				}
+fprintf(stderr, "8\n");
+				break;
+			}
+fprintf(stderr, "9\n");
+		}
+fprintf(stderr, "a\n");
 		printf("DeviceIoControl() failed, error is %d\n", err);
 		return -1;
 	}
+fprintf(stderr, "b\n");
 	return rc.ret;
 }
 
