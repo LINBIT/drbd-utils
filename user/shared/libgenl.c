@@ -325,11 +325,7 @@ retry:
 	else if (n < 0) {
 		if (errno == EINTR) {
 			dbg(3, "recvmsg() returned EINTR, retrying\n");
-#ifndef WINDRBD
 			goto retry;
-#else
-			return -EINTR;
-#endif
 		} else if (errno == EAGAIN) {
 			dbg(3, "recvmsg() returned EAGAIN, aborting\n");
 			return 0;
@@ -398,6 +394,24 @@ int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int 
 
 #else
 
+int windrbd_genl_poll_timeout(struct genl_sock *s, int timeout_ms)
+{
+	struct windrbd_ioctl_genl_portid_and_timeout pt;
+	unsigned int size;
+	struct windrbd_ioctl_ret_code rc;
+	int err;
+
+	pt.portid = getpid();
+	pt.timeout = timeout_ms;
+
+        if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_POLL_NL_PACKET, &pt, sizeof(pt), &rc, sizeof(rc), &size, NULL) == 0) {
+	        err = GetLastError();
+		printf("DeviceIoControl() failed, error is %d\n", err);
+		return -1;
+	}
+	return rc.ret;
+}
+
 	/* TODO: timeout not implemeted. Only returns what is already there */
 
 int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int timeout_ms)
@@ -405,6 +419,26 @@ int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int 
 	struct windrbd_ioctl_genl_portid p;
 	unsigned int size;
 	int err;
+	int ret;
+
+	ret = windrbd_genl_poll_timeout(s, timeout_ms);
+	switch (ret) {
+	case 1: break;
+	case -ETIMEDOUT:
+		if (*err_desc)
+			*err_desc = "timed out waiting for reply";
+		return -E_RCV_TIMEDOUT;
+	case -EINTR:
+		fprintf(stderr, "windrbd_genl_poll_timeout interrupted\n");
+		if (*err_desc)
+			*err_desc = "interrupted";
+		return -E_RCV_FAILED;
+	default:
+		fprintf(stderr, "windrbd_genl_poll_timeout returned %d\n", ret);
+		if (*err_desc)
+			*err_desc = "error in polling";
+		return -E_RCV_FAILED;
+	}
 
 	p.portid = getpid();
         if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_RECEIVE_NL_PACKET, &p, sizeof(p), iov->iov_base, iov->iov_len, &size, NULL) == 0) {
