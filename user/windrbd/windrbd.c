@@ -20,6 +20,12 @@
 #include <shlobj.h>
 #include <dbt.h>
 
+	/* TODO: those two should be included inside windrbd_ioctl.h . Do
+	 * that once this header is moved to drbd-headers repo.
+	 */
+#include <windrbd/types.h>
+#include <windrbd/netlink.h>
+
 #include "shared_windrbd.h"
 #include "windrbd_ioctl.h"
 
