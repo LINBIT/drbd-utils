@@ -336,10 +336,15 @@
           storage devices (on both nodes, of course), then DRBD will adopt the new size after you
           called this command on one of your nodes. Since new storage space must be synchronised
           this command only works if there is at least one primary node present.</para>
+          <para>Note that all of the following options are <option>backend-options</option> (i.e., separated via "--").</para>
 
 	  <para>The <option>--size</option> option can be used to online shrink the usable
 	  size of a drbd device. It's the users responsibility to make sure that a file system
-	  on the device is not truncated by that operation.</para>
+	  on the device is not truncated by that operation.
+	  Example:
+          <programlisting format="linespecific">
+# drbdadm -- --size=10G resize r0</programlisting></para>
+
 
           <para>The <option>--assume-peer-has-space</option> allows you to resize a device which
           is currently not connected to the peer. Use with care, since if you do not resize the
