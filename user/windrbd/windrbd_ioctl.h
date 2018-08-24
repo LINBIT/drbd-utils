@@ -132,4 +132,9 @@ struct windrbd_ioctl_genl_portid_and_multicast_group {
  */
 #define IOCTL_WINDRBD_ROOT_DRBD_USERMODE_HELPER CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 7, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
+	/* Something > 0x10, this is the value current kernels (4.1x) use.
+	 * Do not change.
+	 */
+#define WINDRBD_NETLINK_FAMILY_ID	28
+
 #endif
