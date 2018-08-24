@@ -1746,11 +1746,20 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 		}
 		if (pollfds[0].revents == POLLERR || pollfds[0].revents == POLLHUP)
 			goto out2;
-#else
-		/* TODO: #else poll via ioctl */
-#endif
 
 		received = genl_recv_msgs(drbd_sock, &iov, &desc, -1);
+#else
+			/* WinDRBD driver has no (interruptible) poll, this
+			 * function does a busy poll from user space; see
+			 * comment there.
+			 */
+		received = genl_recv_msgs(drbd_sock, &iov, &desc, timeout_ms);
+		if (received == -E_RCV_TIMEDOUT) {
+			err = 5;
+			goto out2;
+		}
+#endif
+
 		if (received < 0) {
 			switch(received) {
 			case E_RCV_TIMEDOUT:
