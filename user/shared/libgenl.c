@@ -20,12 +20,6 @@
 #include <w32api/wsipv6ok.h>
 #endif
 
-/* TODO: most WinDRBD specific "netlink" code in here will go away and
- * be replaced by a ioctl() call. Reason is that we want to verify
- * permissions of the one who runs us, which we can't if it is a
- * plain TCP/IP socket.
- */
-
 #ifdef WINDRBD
 
 #include <windows.h>
@@ -134,8 +128,19 @@ int genl_join_mc_group(struct genl_sock *s, const char *name) {
 	}
 	return -2;
 #else
-	printf("genl_join_mc_group: not implemented yet.\n");
-	return -EOPNOTSUPP;
+	int err;
+	unsigned int unused;
+	struct windrbd_ioctl_genl_portid_and_multicast_group m;
+
+	strncpy(m.name, name, sizeof(m.name));
+	m.portid = getpid();
+
+        if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_JOIN_MC_GROUP, (void*) &m, sizeof(m), NULL, 0, &unused, NULL) == 0) {
+	        err = GetLastError();
+		printf("DeviceIoControl() failed, error is %d\n", err);
+		return -1;
+	}
+	return 0;
 #endif
 }
 
@@ -148,28 +153,6 @@ int genl_join_mc_group(struct genl_sock *s, const char *name) {
 			goto fail;				\
 		}						\
 	} while(0)
-
-#ifdef WINDRBD
-int get_netlink_port()
-{
-	DWORD value, port = NETLINK_PORT;
-	HKEY hKey;
-	DWORD status;
-	DWORD type = REG_DWORD;
-	DWORD size = sizeof(DWORD);
-	const CHAR * registryPath = "SYSTEM\\CurrentControlSet\\Services\\drbd";
-	status = RegOpenKeyEx(HKEY_LOCAL_MACHINE, registryPath, 0, KEY_ALL_ACCESS, &hKey);
-	if (status == ERROR_SUCCESS)
-	{
-		status = RegQueryValueEx(hKey, TEXT("netlink_tcp_port"), NULL, &type, (LPBYTE)&value, &size);
-		if (status == ERROR_SUCCESS)
-			port = value;
-	}
-
-	RegCloseKey(hKey);
-	return htons(port);
-}
-#endif
 
 static struct genl_sock *genl_connect(__u32 nl_groups)
 {
