@@ -59,18 +59,9 @@ struct windrbd_ioctl_genl_portid {
 	u32 portid;
 };
 
-struct windrbd_ioctl_genl_portid_and_timeout {
-	u32 portid;
-	s32 timeout;
-};
-
 struct windrbd_ioctl_genl_portid_and_multicast_group {
 	u32 portid;
         char name[GENL_NAMSIZ];
-};
-
-struct windrbd_ioctl_ret_code {
-	int ret;
 };
 
 /* Send netlink packet(s) to kernel.
@@ -100,19 +91,6 @@ struct windrbd_ioctl_ret_code {
 
 #define IOCTL_WINDRBD_ROOT_RECEIVE_NL_PACKET CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 4, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
-/* Poll for netlink packets.
- *
- * Input buffer: the port id (getpid()) and timeout (in milliseconds) in a
- * 		 struct windrbd_ioctl_genl_portid_and_timeout
- * Output buffer: an int containing a Linux-kernel-style return value
- *		 (negative errno) in a struct windrbd_ioctl_ret_code.
- *
- * Use this as a replacement to poll(2) for polling for new netlink packets
- * to arrive from DRBD kernel. TODO: somehow check for signals (POLLHUP).
- */
-
-#define IOCTL_WINDRBD_ROOT_POLL_NL_PACKET CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 5, METHOD_BUFFERED, FILE_ANY_ACCESS)
-
 /* Add port ID to multicast group.
  *
  * Input buffer: the port id (getpid()) and name of the multicast group
@@ -121,25 +99,24 @@ struct windrbd_ioctl_ret_code {
  *
  * Adds the portid to multicast group specified in input buffer. As a
  * consequence, everything DRBD sends to that multicast group can be
- * received by the RECEIVE_NL_PACKET ioctl and be polled for with
- * the POLL_NL_PACKET ioctl.
+ * received by the RECEIVE_NL_PACKET ioctl.
  *
  * Currently DRBD only uses the 'events' multicast group, however this
  * may change in the future. Note that WinDRBD has no notion of netlink
  * families since there is only DRBD to support.
  */
 
-#define IOCTL_WINDRBD_ROOT_JOIN_MC_GROUP CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 6, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define IOCTL_WINDRBD_ROOT_JOIN_MC_GROUP CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 5, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
 /* This is for calling usermode helpers. Interface has yet to be defined.
  * (Linux has a built-in call_usermode_helper() function which we need
  * to emulate).
  */
-#define IOCTL_WINDRBD_ROOT_DRBD_USERMODE_HELPER CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 7, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#define IOCTL_WINDRBD_ROOT_DRBD_USERMODE_HELPER CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 6, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
-	/* Something > 0x10, this is the value current kernels (4.1x) use.
-	 * Do not change.
-	 */
+/* Something > 0x10, this is the value current kernels (4.1x) use.
+ * Do not change.
+ */
 #define WINDRBD_NETLINK_FAMILY_ID	28
 
 #endif
