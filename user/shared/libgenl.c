@@ -102,7 +102,15 @@ static HANDLE do_open_root_device(void)
         err = GetLastError();
 
         if (err != ERROR_SUCCESS) {
-                fprintf(stderr, "Couldn't root device, error is %d\n", err);
+                fprintf(stderr, "Couldn't open root device, error is %d\n", err);
+		switch (err) {
+		case ERROR_FILE_NOT_FOUND:
+			fprintf(stderr, "(this is most likely because the WinDRBD driver is not loaded).\n");
+			break;
+		case ERROR_ACCESS_DENIED:
+			fprintf(stderr, "(this is most likely because you are not running as Administrator).\n");
+			break;
+		}
                 return INVALID_HANDLE_VALUE;
         }
         return h;
