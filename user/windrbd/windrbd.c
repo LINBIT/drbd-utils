@@ -1,4 +1,6 @@
 #define UNICODE 1
+#define _GNU_SOURCE 1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,6 +16,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <ctype.h>
+#include <sys/queue.h>
 
 #include <winioctl.h>
 #include <shellapi.h>
@@ -64,6 +67,10 @@ void usage_and_exit(void)
 	fprintf(stderr, "		fault injection if n is negative. Where is anything out of\n");
 	fprintf(stderr, "		[all|backing|meta]-[request|completion]. Drive must be\n");
 	fprintf(stderr, "		specified unless all is given.\n");
+	fprintf(stderr, "	windrbd [opt] user-mode-helper-daemon\n");
+	fprintf(stderr, "		Run user mode helper daemon. Receives commands from\n");
+	fprintf(stderr, "		kernel driver if something interresting happens, runs\n");
+	fprintf(stderr, "		them and returns result to kernel.\n");
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
 	fprintf(stderr, "	-f (force): do it even if it is dangerous.\n");
@@ -217,6 +224,9 @@ static HANDLE do_open_device(const char *drive)
 
 	if (err != ERROR_SUCCESS) {
 		fprintf(stderr, "Couldn't open drive %s, error is %d\n", drive, err);
+		if (err == ERROR_ACCESS_DENIED)
+			fprintf(stderr, "You have to be administrator to do that\n");
+
 		return INVALID_HANDLE_VALUE;
 	}
         return h;
@@ -235,6 +245,9 @@ static HANDLE do_open_root_device(void)
 
 	if (err != ERROR_SUCCESS) {
 		fprintf(stderr, "Couldn't root device, error is %d\n", err);
+		if (err == ERROR_ACCESS_DENIED)
+			fprintf(stderr, "You have to be administrator to do that\n");
+
 		return INVALID_HANDLE_VALUE;
 	}
         return h;
@@ -665,6 +678,190 @@ static int inject_faults(const char *drive, enum fault_injection_location where,
 	return !ret;
 }
 
+#define USER_MODE_HELPER_POLLING_INTERVAL_MS 100
+
+static HANDLE um_root_dev_handle;
+
+struct process {
+	pid_t pid;
+	struct windrbd_usermode_helper *cmd;
+	LIST_ENTRY(process) list_entry;
+};
+
+static LIST_HEAD(process_head, process) process_head =
+	LIST_HEAD_INITIALIZER(process_head);
+
+static void sigchild(int sig)
+{
+	int retval;
+	pid_t child_pid;
+	struct process *p;
+	struct windrbd_usermode_helper_return_value rv;
+	DWORD unused;
+	BOOL ret;
+	int err;
+
+	child_pid = wait(&retval);
+	if (child_pid < 0) {
+		perror("wait");
+		printf("Error waiting for child process in signal handler.\n");
+		return;
+	}
+	LIST_FOREACH(p, &process_head, list_entry) {
+		if (p->pid == child_pid) {
+			rv.id = p->cmd->id;
+			rv.retval = retval;
+			free(p->cmd);
+			LIST_REMOVE(p, list_entry);
+			free(p);
+
+			ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_SEND_USERMODE_HELPER_RETURN_VALUE, &rv, sizeof(rv), NULL, 0, &unused, NULL);
+			if (!ret) {
+				err = GetLastError();
+				printf("Error in sending ioctl to kernel, err is %d\n", err);
+			}
+			return;
+		}
+	}
+	printf("Warning: Process %d not found on process list\n", child_pid);
+}
+
+static int exec_command(struct windrbd_usermode_helper *next_cmd)
+{
+	char **argv;
+	char **envp;
+	char *cmd;
+	int i;
+
+	char *s;
+
+	argv = malloc((next_cmd->argc+1)*sizeof(argv[0]));
+	if (argv == NULL)
+		return -ENOMEM;
+	envp = malloc((next_cmd->envc+1)*sizeof(envp[0]));
+	if (envp == NULL) {
+		free(argv);
+		return -ENOMEM;
+	}
+
+	cmd = &next_cmd->data[0];
+	s = cmd;
+
+	for (i=0;i<next_cmd->argc;i++) {
+		while (*s) s++;
+		s++;
+		argv[i] = s;
+	}
+	for (i=0;i<next_cmd->envc;i++) {
+		while (*s) s++;
+		s++;
+		envp[i] = s;
+	}
+
+	execvpe(cmd, argv, envp);
+	perror("execvpe");
+	printf("Could not exec %s\n", cmd);
+	exit(1);
+}
+
+static struct process *add_command_to_process_list(struct windrbd_usermode_helper *next_cmd)
+{
+	struct process *p;
+
+	p = malloc(sizeof(*p));
+	if (p == NULL) {
+		printf("Could not allocate memory for process struct\n");
+		return NULL;
+	}
+/*	p->pid = getpid(); TODO */
+	p->cmd = next_cmd;
+	LIST_INSERT_HEAD(&process_head, p, list_entry);
+
+	return p;
+}
+
+static int fork_and_exec_command(struct windrbd_usermode_helper *next_cmd)
+{
+	pid_t pid;
+	struct process *p = add_command_to_process_list(next_cmd);
+
+	switch (pid = fork()) {
+	case 0:
+		exec_command(next_cmd);
+		exit(1);
+
+	case -1:
+		perror("fork");
+		printf("Cannot fork process\n");
+		return -1;
+
+		/* TODO: Yes there is a race. All that can happen is
+		 * that we leak the struct process and a return value
+		 * does not get delivered if the exec'ed process is really
+		 * fast. Use sem_open(3) to solve that problem.
+		 */
+
+	default:
+		p->pid = pid;
+	}
+	return 0;
+}
+
+
+static int user_mode_helper_daemon(void)
+{
+	struct windrbd_usermode_helper get_size;
+	struct windrbd_usermode_helper *next_cmd;
+	DWORD size, size2;
+	int err;
+	BOOL ret;
+
+	um_root_dev_handle = do_open_root_device();
+	if (um_root_dev_handle == INVALID_HANDLE_VALUE)
+		return 1;
+
+	if (signal(SIGCHLD, sigchild) == SIG_ERR) {
+		perror("signal");
+		fprintf(stderr, "Could not set signal handler\n");
+
+		CloseHandle(um_root_dev_handle);
+		return 1;
+	}
+
+	while (1) {
+		ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_RECEIVE_USERMODE_HELPER, &get_size, sizeof(get_size), NULL, 0, &size, NULL);
+		if (!ret) {
+			err = GetLastError();
+			printf("Error in sending ioctl to kernel, err is %d\n", err);
+			break;
+		}
+		if (size > 0) {
+			size_t req_size = get_size.total_size;
+
+			next_cmd = malloc(req_size);
+			if (next_cmd == NULL) {
+				printf("Could not alloc %zd bytes for command, aborting\n", req_size);
+				break;
+			}
+			ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_RECEIVE_USERMODE_HELPER, next_cmd, req_size, NULL, 0, &size2, NULL);
+			if (!ret) {
+				err = GetLastError();
+				printf("Error in sending ioctl to kernel, err is %d\n", err);
+				break;
+			}
+			if (size2 != req_size) {
+				printf("Size mismatch from ioctl: expected %zd actual %d\n", req_size, size2);
+				break;
+			}
+			fork_and_exec_command(next_cmd);
+		} /* else nothing to do, wait a little and poll again */
+		usleep(USER_MODE_HELPER_POLLING_INTERVAL_MS*1000);
+	}
+		/* TODO: cleanup processes */
+
+	return -1;
+}
+
 int main(int argc, char ** argv)
 {
 	const char *op;
@@ -779,6 +976,8 @@ int main(int argc, char ** argv)
 		}
 		return inject_faults(drive, where, after, where_str);
 	}
+	if (strcmp(op, "user-mode-helper-daemon") == 0)
+		return user_mode_helper_daemon();
 
 	usage_and_exit();
 	return 0;
