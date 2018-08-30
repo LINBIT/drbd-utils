@@ -709,11 +709,15 @@ static void sigchild(int sig)
 	}
 	LIST_FOREACH(p, &process_head, list_entry) {
 		if (p->pid == child_pid) {
+				/* TODO: if WIFSIGNALED(retval) */
 			rv.id = p->cmd->id;
 			rv.retval = retval;
 			free(p->cmd);
 			LIST_REMOVE(p, list_entry);
 			free(p);
+
+			if (!quiet)
+				printf("handler terminated and returned exit status %d\n", WEXITSTATUS(rv.retval));
 
 			ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_SEND_USERMODE_HELPER_RETURN_VALUE, &rv, sizeof(rv), NULL, 0, &unused, NULL);
 			if (!ret) {
@@ -752,12 +756,23 @@ static int exec_command(struct windrbd_usermode_helper *next_cmd)
 		s++;
 		argv[i] = s;
 	}
+	argv[i] = NULL;
 	for (i=0;i<next_cmd->envc;i++) {
 		while (*s) s++;
 		s++;
 		envp[i] = s;
 	}
+	envp[i] = NULL;
 
+	if (!quiet) {
+		printf("about to exec %s ...\n", cmd);
+		for (i=0;argv[i]!=NULL;i++)
+			printf("%s ", argv[i]);
+		printf("\nEnvironment: \n");
+		for (i=0;envp[i]!=NULL;i++)
+			printf("%s\n", envp[i]);
+		printf("\n(pid is %d)\n", getpid());
+	}
 	execvpe(cmd, argv, envp);
 	perror("execvpe");
 	printf("Could not exec %s\n", cmd);
@@ -829,7 +844,7 @@ static int user_mode_helper_daemon(void)
 	}
 
 	while (1) {
-		ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_RECEIVE_USERMODE_HELPER, &get_size, sizeof(get_size), NULL, 0, &size, NULL);
+		ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_RECEIVE_USERMODE_HELPER, NULL, 0, &get_size, sizeof(get_size), &size, NULL);
 		if (!ret) {
 			err = GetLastError();
 			printf("Error in sending ioctl to kernel, err is %d\n", err);
@@ -843,7 +858,7 @@ static int user_mode_helper_daemon(void)
 				printf("Could not alloc %zd bytes for command, aborting\n", req_size);
 				break;
 			}
-			ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_RECEIVE_USERMODE_HELPER, next_cmd, req_size, NULL, 0, &size2, NULL);
+			ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_RECEIVE_USERMODE_HELPER, NULL, 0, next_cmd, req_size, &size2, NULL);
 			if (!ret) {
 				err = GetLastError();
 				printf("Error in sending ioctl to kernel, err is %d\n", err);
