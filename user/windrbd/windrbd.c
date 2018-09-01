@@ -691,7 +691,7 @@ struct process {
 static LIST_HEAD(process_head, process) process_head =
 	LIST_HEAD_INITIALIZER(process_head);
 
-static void sigchild(int sig)
+static int check_for_retvals(void)
 {
 	int retval;
 	pid_t child_pid;
@@ -701,33 +701,50 @@ static void sigchild(int sig)
 	BOOL ret;
 	int err;
 
-	child_pid = wait(&retval);
-	if (child_pid < 0) {
-		perror("wait");
-		printf("Error waiting for child process in signal handler.\n");
-		return;
-	}
-	LIST_FOREACH(p, &process_head, list_entry) {
-		if (p->pid == child_pid) {
-				/* TODO: if WIFSIGNALED(retval) */
-			rv.id = p->cmd->id;
-			rv.retval = retval;
-			free(p->cmd);
-			LIST_REMOVE(p, list_entry);
-			free(p);
-
-			if (!quiet)
-				printf("handler terminated and returned exit status %d\n", WEXITSTATUS(rv.retval));
-
-			ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_SEND_USERMODE_HELPER_RETURN_VALUE, &rv, sizeof(rv), NULL, 0, &unused, NULL);
-			if (!ret) {
-				err = GetLastError();
-				printf("Error in sending ioctl to kernel, err is %d\n", err);
+	while (1) {
+		child_pid = waitpid(-1, &retval, WNOHANG);
+		if (child_pid < 0) {
+			if (errno != ECHILD) {
+				perror("wait");
+				printf("Error waiting for child process in signal handler.\n");
+				return -1;
 			}
-			return;
+			return 0;
 		}
+		if (child_pid == 0)
+			return 0;
+
+		LIST_FOREACH(p, &process_head, list_entry) {
+			if (p->pid == child_pid) {
+				rv.id = p->cmd->id;
+				if (WIFSIGNALED(retval))
+						/* Linux does it that way */
+					rv.retval = WTERMSIG(retval)+128;
+				else
+					rv.retval = retval;
+
+				free(p->cmd);
+				LIST_REMOVE(p, list_entry);
+				free(p);
+
+				if (!quiet) {
+					if (WIFSIGNALED(retval))
+						printf("handler was terminated by signal %d\n", WTERMSIG(retval));
+					else
+						printf("handler terminated and returned exit status %d\n", retval);
+				}
+				ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_SEND_USERMODE_HELPER_RETURN_VALUE, &rv, sizeof(rv), NULL, 0, &unused, NULL);
+				if (!ret) {
+					err = GetLastError();
+					printf("Error in sending ioctl to kernel, err is %d\n", err);
+				}
+				break;
+			}
+		}
+		if (p == NULL)
+			printf("Warning: Process %d not found on process list\n", child_pid);
 	}
-	printf("Warning: Process %d not found on process list\n", child_pid);
+	return 0;
 }
 
 static int exec_command(struct windrbd_usermode_helper *next_cmd)
@@ -788,7 +805,6 @@ static struct process *add_command_to_process_list(struct windrbd_usermode_helpe
 		printf("Could not allocate memory for process struct\n");
 		return NULL;
 	}
-/*	p->pid = getpid(); TODO */
 	p->cmd = next_cmd;
 	LIST_INSERT_HEAD(&process_head, p, list_entry);
 
@@ -810,12 +826,6 @@ static int fork_and_exec_command(struct windrbd_usermode_helper *next_cmd)
 		printf("Cannot fork process\n");
 		return -1;
 
-		/* TODO: Yes there is a race. All that can happen is
-		 * that we leak the struct process and a return value
-		 * does not get delivered if the exec'ed process is really
-		 * fast. Use sem_open(3) to solve that problem.
-		 */
-
 	default:
 		p->pid = pid;
 	}
@@ -834,14 +844,6 @@ static int user_mode_helper_daemon(void)
 	um_root_dev_handle = do_open_root_device();
 	if (um_root_dev_handle == INVALID_HANDLE_VALUE)
 		return 1;
-
-	if (signal(SIGCHLD, sigchild) == SIG_ERR) {
-		perror("signal");
-		fprintf(stderr, "Could not set signal handler\n");
-
-		CloseHandle(um_root_dev_handle);
-		return 1;
-	}
 
 	while (1) {
 		ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_RECEIVE_USERMODE_HELPER, NULL, 0, &get_size, sizeof(get_size), &size, NULL);
@@ -870,9 +872,20 @@ static int user_mode_helper_daemon(void)
 			}
 			fork_and_exec_command(next_cmd);
 		} /* else nothing to do, wait a little and poll again */
+
+			/* This checks for terminated child processes and
+			 * sends their return values to the windrbd driver.
+			 */
+		check_for_retvals();
+
 		usleep(USER_MODE_HELPER_POLLING_INTERVAL_MS*1000);
 	}
-		/* TODO: cleanup processes */
+
+		/* We are not cleaning up here, since the handlers might
+		 * do something useful. If user pressed Ctrl-C, however
+		 * handlers will get killed (by SIGINT), since they are
+		 * also attached to the terminal.
+		 */
 
 	return -1;
 }
