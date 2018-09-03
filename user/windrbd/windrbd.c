@@ -232,27 +232,6 @@ static HANDLE do_open_device(const char *drive)
         return h;
 }
 
-static HANDLE do_open_root_device(void)
-{
-        HANDLE h;
-        DWORD err;
-
-        wchar_t fname[100];
-        swprintf(fname, sizeof(fname) / sizeof(fname[0]), L"\\\\.\\" WINDRBD_ROOT_DEVICE_NAME);
-
-        h = CreateFile(fname, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-        err = GetLastError();
-
-	if (err != ERROR_SUCCESS) {
-		fprintf(stderr, "Couldn't root device, error is %d\n", err);
-		if (err == ERROR_ACCESS_DENIED)
-			fprintf(stderr, "You have to be administrator to do that\n");
-
-		return INVALID_HANDLE_VALUE;
-	}
-        return h;
-}
-
 	/* Taken from windrbd drbd_windows.c. See comments there. */
 
 static int patch_boot_sector(char *buffer, int to_fs, int test_mode)
@@ -648,7 +627,7 @@ static int inject_faults(const char *drive, enum fault_injection_location where,
 	HANDLE h;
 
 	if (root) {
-		h = do_open_root_device();
+		h = do_open_root_device(quiet);
 		req = IOCTL_WINDRBD_ROOT_INJECT_FAULTS;
 	} else {
 		h = do_open_device(drive);
@@ -841,7 +820,7 @@ static int user_mode_helper_daemon(void)
 	int err;
 	BOOL ret;
 
-	um_root_dev_handle = do_open_root_device();
+	um_root_dev_handle = do_open_root_device(quiet);
 	if (um_root_dev_handle == INVALID_HANDLE_VALUE)
 		return 1;
 
