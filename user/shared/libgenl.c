@@ -24,6 +24,7 @@
 
 #include <windows.h>
 #include "../windrbd/windrbd_ioctl.h"
+#include "shared_windrbd.h"
 
 #endif
 
@@ -89,34 +90,6 @@ static int verify_header(struct genl_sock *s, struct iovec *iov, size_t c, char 
 	return c;
 }
 
-#ifdef WINDRBD
-
-	/* TODO: to shared file (also in windrbd.c) */
-
-static HANDLE do_open_root_device(void)
-{
-        HANDLE h;
-        DWORD err;
-
-        h = CreateFile("\\\\.\\" WINDRBD_ROOT_DEVICE_NAME, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-        err = GetLastError();
-
-        if (err != ERROR_SUCCESS) {
-                fprintf(stderr, "Couldn't open root device, error is %d\n", err);
-		switch (err) {
-		case ERROR_FILE_NOT_FOUND:
-			fprintf(stderr, "(this is most likely because the WinDRBD driver is not loaded).\n");
-			break;
-		case ERROR_ACCESS_DENIED:
-			fprintf(stderr, "(this is most likely because you are not running as Administrator).\n");
-			break;
-		}
-                return INVALID_HANDLE_VALUE;
-        }
-        return h;
-}
-
-#endif
 
 int genl_join_mc_group(struct genl_sock *s, const char *name) {
 #ifndef WINDRBD
@@ -191,7 +164,7 @@ static struct genl_sock *genl_connect(__u32 nl_groups)
 	if (s->s_fd == -1)
 		goto fail;
 #else
-	s->s_handle = do_open_root_device();
+	s->s_handle = do_open_root_device(0);
 	if (s->s_handle == INVALID_HANDLE_VALUE)
 		goto fail;
 #endif
