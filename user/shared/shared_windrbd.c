@@ -1,5 +1,17 @@
 #include <string.h>
 #include <ctype.h>
+#include <windows.h>
+
+        /* TODO: those two should be included inside windrbd_ioctl.h . Do
+         * that once this header is moved to drbd-headers repo.
+         */
+#include <sys/types.h>
+#include <windrbd/types.h>
+#include <windrbd/netlink.h>
+
+#include "shared_windrbd.h"
+#include "../windrbd/windrbd_ioctl.h"
+#include <stdio.h>
 
 int is_guid(const char *arg)
 {
@@ -17,3 +29,36 @@ int is_guid(const char *arg)
 }
 
 
+HANDLE do_open_root_device(int quiet)
+{
+        HANDLE h;
+        DWORD err;
+
+        h = CreateFile("\\\\.\\" WINDRBD_ROOT_DEVICE_NAME, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (h == INVALID_HANDLE_VALUE && !quiet) {
+	        err = GetLastError();
+
+	        if (err != ERROR_SUCCESS) {
+			fprintf(stderr, "Couldn't open root device, error is %d\n", err);
+			switch (err) {
+			case ERROR_FILE_NOT_FOUND:
+				fprintf(stderr, "(this is most likely because the WinDRBD driver is not loaded).\n");
+				break;
+			case ERROR_ACCESS_DENIED:
+				fprintf(stderr, "(this is most likely because you are not running as Administrator).\n");
+				break;
+			}
+		}
+        }
+        return h;
+}
+
+int windrbd_driver_loaded(void)
+{
+	HANDLE h = do_open_root_device(0);
+	if (h == INVALID_HANDLE_VALUE)
+		return 0;
+
+	CloseHandle(h);
+	return 1;
+}

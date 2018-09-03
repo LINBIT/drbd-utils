@@ -59,6 +59,7 @@
 #include <linux/genetlink.h>
 #else
 #include <windrbd/netlink.h>
+#include "shared_windrbd.h"
 #endif
 
 #define EXIT_NOMEM 20
@@ -4483,10 +4484,22 @@ static int modprobe_drbd(void)
 	}
 	return ret == 0;
 #else
-	/* TODO: later do a sc start drbd in order to start the
-	 * Windows kernel driver here (once we make it not starting
-	 * at boot time).
-	 */
+	int ret;
+
+	if (!windrbd_driver_loaded()) {
+		fprintf(stderr, "WinDRBD driver not found, trying to start it.\n");
+		ret = system("sc start windrbd");
+		if (ret != 0) {
+			fprintf(stderr, "Couldn't start windrbd driver.\n");
+			return 0;
+		}
+		if (!windrbd_driver_loaded()) {
+			fprintf(stderr, "Start windrbd driver failed, maybe you need to update userland and/or kernel?\n");
+			return 0;
+		} else {
+			fprintf(stderr, "WinDRBD driver started.\n");
+		}
+	}
 	return 1;
 #endif
 }
