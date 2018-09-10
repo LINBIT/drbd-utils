@@ -124,8 +124,8 @@ const uint16_t CompactDisplay::MAX_SIZE_Y = 1024;
 
 const int CompactDisplay::RES_NAME_WIDTH   = 32;
 const int CompactDisplay::ROLE_WIDTH       = 10;
-const int CompactDisplay::VOL_NR_WIDTH     = 2;
-const int CompactDisplay::MINOR_NR_WIDTH   = 4;
+const int CompactDisplay::VOL_NR_WIDTH     = 5;
+const int CompactDisplay::MINOR_NR_WIDTH   = 7;
 const int CompactDisplay::CONN_NAME_WIDTH  = 20;
 const int CompactDisplay::CONN_STATE_WIDTH = 20;
 const int CompactDisplay::DISK_STATE_WIDTH = 20;
