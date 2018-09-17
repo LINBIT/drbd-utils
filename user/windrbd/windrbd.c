@@ -45,9 +45,9 @@ void usage_and_exit(void)
 	fprintf(stderr, "	windrbd [opt] delete-drive-letter <minor> <drive-letter>\n");
 	fprintf(stderr, "		Delete drive letter to windrbd device for this user.\n");
 	fprintf(stderr, "	windrbd [opt] set-volume-mount-point <GUID> <drive-letter>\n");
-	fprintf(stderr, "		Assign mountpoint (drive letter) to volume GUID.\n");
+	fprintf(stderr, "		Assign mountpoint (drive letter) to volume GUID. (deprecated)\n");
 	fprintf(stderr, "	windrbd [opt] delete-volume-mount-point <drive-letter>\n");
-	fprintf(stderr, "		Delete mountpoint (drive letter).\n");
+	fprintf(stderr, "		Delete mountpoint (drive letter). (deprecated)\n");
 	fprintf(stderr, "	windrbd [opt] hide-filesystem <drive-letter>\n");
 	fprintf(stderr, "		Prepare existing drive for use as windrbd backing device.\n");
 	fprintf(stderr, "	windrbd [opt] show-filesystem <drive-letter>\n");
@@ -71,6 +71,8 @@ void usage_and_exit(void)
 	fprintf(stderr, "		Run user mode helper daemon. Receives commands from\n");
 	fprintf(stderr, "		kernel driver if something interresting happens, runs\n");
 	fprintf(stderr, "		them and returns result to kernel.\n");
+	fprintf(stderr, "	windrbd [opt] set-mount-point-for-minor <minor> <mount-point>\n");
+	fprintf(stderr, "		Assign mountpoint (drive letter) to DRBD minor.\n");
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
 	fprintf(stderr, "	-f (force): do it even if it is dangerous.\n");
@@ -869,6 +871,53 @@ static int user_mode_helper_daemon(void)
 	return -1;
 }
 
+/* mount_point is in UTF-8 encoding */
+int set_mount_point_for_minor(int minor, const char *mount_point)
+{
+	int mblen = strlen(mount_point);
+	int wcchars = MultiByteToWideChar(CP_UTF8, 0, mount_point, mblen, NULL, 0);
+	int wcchars2;
+	int mmp_len;
+	DWORD unused;
+
+	struct windrbd_minor_mount_point *mmp;
+	HANDLE root_dev;
+	BOOL ret;
+	int err;
+
+	root_dev = do_open_root_device(quiet);
+	if (root_dev == INVALID_HANDLE_VALUE)
+		return 1;
+
+	mmp_len = wcchars*sizeof(wchar_t) + sizeof(*mmp);
+	mmp = malloc(mmp_len);
+	if (mmp == NULL) {
+		fprintf(stderr, "Could not allocate buffer for ioctl\n");
+		return -1;
+	}
+	wcchars2 = MultiByteToWideChar(CP_UTF8, 0, mount_point, mblen, &mmp->mount_point[0], wcchars);
+
+	if (wcchars2 != wcchars) {
+		fprintf(stderr, "Conversion error\n");
+		free(mmp);
+		return -1;
+	}
+	mmp->minor = minor;
+
+	ret = DeviceIoControl(root_dev, IOCTL_WINDRBD_ROOT_SET_MOUNT_POINT_FOR_MINOR, mmp, mmp_len, NULL, 0, &unused, NULL);
+	if (!ret) {
+		err = GetLastError();
+		printf("Error in sending ioctl to kernel, err is %d\n", err);
+		free(mmp);
+		return -1;
+	}
+	if (!quiet)
+		printf("Mount point for minor %d set to %ls\n", minor, mmp->mount_point);
+
+	free(mmp);
+	return 0;
+}
+
 int main(int argc, char ** argv)
 {
 	const char *op;
@@ -985,6 +1034,16 @@ int main(int argc, char ** argv)
 	}
 	if (strcmp(op, "user-mode-helper-daemon") == 0)
 		return user_mode_helper_daemon();
+
+	if (strcmp(op, "set-mount-point-for-minor") == 0) {
+		if (argc != optind+3) {
+			usage_and_exit();
+		}
+		int minor = atoi(argv[optind+1]);
+		const char *mount_point = argv[optind+2];
+
+		return set_mount_point_for_minor(minor, mount_point);
+	}
 
 	usage_and_exit();
 	return 0;
