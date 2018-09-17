@@ -178,4 +178,32 @@ struct windrbd_usermode_helper_return_value {
 
 #define IOCTL_WINDRBD_ROOT_SEND_USERMODE_HELPER_RETURN_VALUE CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 7, METHOD_BUFFERED, FILE_ANY_ACCESS)
 
+struct windrbd_minor_mount_point {
+	int minor;
+	wchar_t mount_point[1];
+};
+
+/* Set a mount point for a DRBD minor.
+ * Input: a struct windrbd_minor_mount_point
+ * Output: none
+ *
+ * Sets a Windows NT mount point for DRBD minor. This is usually done right
+ * after creating the minor, but it can be changed later. The mount point
+ * can be a drive letter (in the form X:) or an empty NTFS directory
+ * (right now, only drive letter is implemented). The mount point is
+ * specified in 16-bit Unicode (UTF-16) in order to allow for directory
+ * paths containing non-latin characters later (however drbd.conf does
+ * not support this and probably never will, so one has to do that manually).
+ *
+ * Please make sure that mount_point field is zero-terminated (using
+ * a 16-bit 0 value).
+ *
+ * The mount/umount process itself happens internally on becoming primary/
+ * secondary later, so this has to be done before becoming primary. If
+ * the mount point is changed at any point in time, we requre a drbdadm
+ * secondary / drbdadm primary to take changes effect.
+ */
+
+#define IOCTL_WINDRBD_ROOT_SET_MOUNT_POINT_FOR_MINOR CTL_CODE(WINDRBD_ROOT_DEVICE_TYPE, 8, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
 #endif
