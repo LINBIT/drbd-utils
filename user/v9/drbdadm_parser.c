@@ -845,7 +845,7 @@ static void check_minor_nonsense(const char *devname, const int explicit_minor)
 		return;
 
 #ifdef WINDRBD
-	if (is_driveletter(devname))
+	if (is_driveletter(devname) || devname[0] == '\0')
 		return;
 #endif
 
@@ -888,6 +888,7 @@ static void parse_device(struct names* on_hosts, struct d_volume *vol)
 		if (strncmp("/dev/drbd", vol->device, 9)
 #ifdef WINDRBD
 			&& !is_driveletter(vol->device)
+			&& vol->device[0] != '\0'
 #endif
 		) {
 			err("%s:%d: device name must start with /dev/drbd\n"
@@ -929,7 +930,11 @@ out:
 	STAILQ_FOREACH(h, on_hosts, link) {
 		check_uniq_file_line(vol->v_config_file, vol->v_device_line,
 			"device-minor", "device-minor:%s:%u", h->name, vol->device_minor);
+#ifndef WINDRBD
 		if (vol->device)
+#else
+		if (vol->device && vol->device[0] != '\0')
+#endif
 			check_uniq_file_line(vol->v_config_file, vol->v_device_line,
 				"device", "device:%s:%s", h->name, vol->device);
 	}
