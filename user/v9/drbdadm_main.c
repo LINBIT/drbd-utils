@@ -1219,20 +1219,20 @@ int adm_new_minor(const struct cfg_ctx *ctx)
 	argv[NA(argc)] = ssprintf("%u", ctx->vol->vnr);
 	if (!ctx->vol->disk)
 		argv[NA(argc)] = ssprintf("--diskless");
-
-#ifdef WINDRBD
-	if (is_driveletter(ctx->vol->device)) {
-		argv[NA(argc)] = ssprintf("--mount-point");
-		argv[NA(argc)] = ssprintf("%s", ctx->vol->device);
-	} else
-		printf("Warning: %s is not a valid Windows drive letter. The windrbd device\nwill not be mounted.\nTo mount it for the current session, use\n\twindrbd assign-drive-letter %d <drive-letter>\n", ctx->vol->device, ctx->vol->device_minor);
-#endif
-
 	argv[NA(argc)] = NULL;
 
 	ex = m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
 	if (!ex && do_register)
 		register_minor(ctx->vol->device_minor, config_save);
+
+#ifdef WINDRBD
+	if (is_driveletter(ctx->vol->device) || ctx->vol->device[0] == '\0') {
+		char minor_str[10];
+		snprintf(minor_str, sizeof(minor_str)-1, "%d", ctx->vol->device_minor);
+		call_windrbd(ctx->res->name, windrbd, "-q", "set-mount-point-for-minor", minor_str, ctx->vol->device, NULL);
+	} else
+		printf("Warning: %s is not a valid Windows drive letter or empty. The windrbd device\nwill not be mounted.\nTo mount it, do a\n\twindrbd set-mount-point-for-minor %d <drive-letter>:\n", ctx->vol->device, ctx->vol->device_minor);
+#endif
 
 	return ex;
 }
