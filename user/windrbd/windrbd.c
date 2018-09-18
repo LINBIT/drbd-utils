@@ -914,7 +914,11 @@ int set_mount_point_for_minor(int minor, const char *mount_point)
 	ret = DeviceIoControl(root_dev, IOCTL_WINDRBD_ROOT_SET_MOUNT_POINT_FOR_MINOR, mmp, mmp_len, NULL, 0, &unused, NULL);
 	if (!ret) {
 		err = GetLastError();
-		printf("Error in sending ioctl to kernel, err is %d\n", err);
+		if (err == ERROR_BUSY)
+			fprintf(stderr, "Device is mounted, please do a drbdadm secondary to change the mount point.\n");
+		else
+			fprintf(stderr, "Error in sending ioctl to kernel, err is %d\n", err);
+
 		free(mmp);
 		return -1;
 	}
