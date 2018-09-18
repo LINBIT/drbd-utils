@@ -874,8 +874,10 @@ static int user_mode_helper_daemon(void)
 /* mount_point is in UTF-8 encoding */
 int set_mount_point_for_minor(int minor, const char *mount_point)
 {
-	int mblen = strlen(mount_point);
-	int wcchars = MultiByteToWideChar(CP_UTF8, 0, mount_point, mblen, NULL, 0);
+		/* do not pass strlen(mount_point) as length, if you do,
+		 * the resulting string will not be zero-terminated.
+		 */
+	int wcchars = MultiByteToWideChar(CP_UTF8, 0, mount_point, -1, NULL, 0);
 	int wcchars2;
 	int mmp_len;
 	DWORD unused;
@@ -895,7 +897,7 @@ int set_mount_point_for_minor(int minor, const char *mount_point)
 		fprintf(stderr, "Could not allocate buffer for ioctl\n");
 		return -1;
 	}
-	wcchars2 = MultiByteToWideChar(CP_UTF8, 0, mount_point, mblen, &mmp->mount_point[0], wcchars);
+	wcchars2 = MultiByteToWideChar(CP_UTF8, 0, mount_point, -1, &mmp->mount_point[0], wcchars);
 
 	if (wcchars2 != wcchars) {
 		fprintf(stderr, "Conversion error\n");
