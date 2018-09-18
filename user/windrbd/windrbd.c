@@ -874,10 +874,7 @@ static int user_mode_helper_daemon(void)
 /* mount_point is in UTF-8 encoding */
 int set_mount_point_for_minor(int minor, const char *mount_point)
 {
-		/* do not pass strlen(mount_point) as length, if you do,
-		 * the resulting string will not be zero-terminated.
-		 */
-	int wcchars = MultiByteToWideChar(CP_UTF8, 0, mount_point, -1, NULL, 0);
+	int wcchars;
 	int wcchars2;
 	int mmp_len;
 	DWORD unused;
@@ -890,6 +887,14 @@ int set_mount_point_for_minor(int minor, const char *mount_point)
 	root_dev = do_open_root_device(quiet);
 	if (root_dev == INVALID_HANDLE_VALUE)
 		return 1;
+
+	if (mount_point == NULL)
+		mount_point = "";
+
+		/* do not pass strlen(mount_point) as length, if you do,
+		 * the resulting string will not be zero-terminated.
+		 */
+	wcchars = MultiByteToWideChar(CP_UTF8, 0, mount_point, -1, NULL, 0);
 
 	mmp_len = wcchars*sizeof(wchar_t) + sizeof(*mmp);
 	mmp = malloc(mmp_len);
@@ -913,8 +918,12 @@ int set_mount_point_for_minor(int minor, const char *mount_point)
 		free(mmp);
 		return -1;
 	}
-	if (!quiet)
-		printf("Mount point for minor %d set to %ls\n", minor, mmp->mount_point);
+	if (!quiet) {
+		if (mount_point[0] != '\0')
+			printf("Mount point for minor %d set to %ls\n", minor, mmp->mount_point);
+		else
+			printf("Not mounting minor %d\n", minor);
+	}
 
 	free(mmp);
 	return 0;
@@ -1038,7 +1047,7 @@ int main(int argc, char ** argv)
 		return user_mode_helper_daemon();
 
 	if (strcmp(op, "set-mount-point-for-minor") == 0) {
-		if (argc != optind+3) {
+		if (argc != optind+2 && argc != optind+3) {
 			usage_and_exit();
 		}
 		int minor = atoi(argv[optind+1]);
