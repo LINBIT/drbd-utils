@@ -880,10 +880,12 @@ static void parse_device(struct names* on_hosts, struct d_volume *vol)
 
 	switch (yylex()) {
 	case TK_STRING:
+#ifndef WINDRBD
 		if (!strncmp("drbd", yylval.txt, 4)) {
 			m_asprintf(&vol->device, "/dev/%s", yylval.txt);
 			free(yylval.txt);
 		} else
+#endif
 			vol->device = yylval.txt;
 		if ((on_hosts == NULL || hostname_in_list(hostname, on_hosts))
 			&& strncmp("/dev/drbd", vol->device, 9)
