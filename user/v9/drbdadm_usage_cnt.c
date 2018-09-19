@@ -223,9 +223,11 @@ struct hostent *my_gethostbyname(const char *name)
 	sigaction(SIGALRM, &sa, &so);
 
 	if (!sigsetjmp(timed_out, 1)) {
+#ifndef WINDRBD
 		struct hostent ret;
 		char buf[2048];
 		int my_h_errno;
+#endif
 
 		alarm(DNS_TIMEOUT);
 		/* h = gethostbyname(name);
