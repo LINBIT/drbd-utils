@@ -339,7 +339,6 @@ retry:
  * when necessary. */
 int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int timeout_ms)
 {
-	struct nlmsghdr *nlh;
 	int c = genl_recv_timeout(s, iov, timeout_ms);
 	if (c <= 0) {
 		if (err_desc)
