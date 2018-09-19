@@ -1672,9 +1672,6 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 	}
 
 	if (cm->continuous_poll) {
-		/* also always (try to) listen to nlctrl notify,
-		 * so we have a chance to notice rmmod.  */
-		int id = GENL_ID_CTRL;
 #ifdef WINDRBD
 		if (genl_join_mc_group(drbd_sock, "events")) {
 			desc = "unable to join drbd events multicast group";
@@ -1682,6 +1679,10 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 			goto out2;
 		}
 #else
+		/* also always (try to) listen to nlctrl notify,
+		 * so we have a chance to notice rmmod.  */
+		int id = GENL_ID_CTRL;
+
 		setsockopt(drbd_sock->s_fd, SOL_NETLINK, NETLINK_ADD_MEMBERSHIP,
 					&id, sizeof(id));
 
@@ -1718,10 +1719,11 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 	drbd_sock->s_seq_expect = 0;
 
 	for (;;) {
-		int received, rem, ret;
+		int received, rem;
 		struct nlmsghdr *nlh = (struct nlmsghdr *)iov.iov_base;
 		struct timeval before;
 #ifndef WINDRBD
+		int ret;
 		struct pollfd pollfds[2] = {
 			[0] = {
 				.fd = 1,
