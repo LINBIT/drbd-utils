@@ -46,17 +46,14 @@ WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 WITH_WINDRBD = @WITH_WINDRBD@
 
-# variables meant to be overridden from the make command line
 ifeq ($(WITH_WINDRBD),yes)
-DESTDIR ?=
-else
-DESTDIR ?= /
+$(error Only DRBD 9 supported with WinDRBD, please use --without-84support with configure)
 endif
 
+# variables meant to be overridden from the make command line
+DESTDIR ?= /
+
 CFLAGS += -Wall -I. -I../shared
-ifeq ($(WITH_WINDRBD),yes)
-CFLAGS += -I../windrbd-fake-headers
-endif
 CFLAGS += $(EXTRA_CFLAGS)
 
 drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_main.o \
