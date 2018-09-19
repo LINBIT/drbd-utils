@@ -22,8 +22,8 @@
 
 #ifdef WINDRBD
 
+#include <windrbd/windrbd_ioctl.h>
 #include <windows.h>
-#include "../windrbd/windrbd_ioctl.h"
 #include "shared_windrbd.h"
 
 #endif
