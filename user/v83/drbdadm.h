@@ -3,11 +3,7 @@
 
 #include "config.h"
 
-#ifndef WINDRBD
 #include "linux/drbd_config.h"
-#else
-#include "windrbd/drbd_config.h"
-#endif
 
 #include <sys/utsname.h>
 #include <sys/types.h>
