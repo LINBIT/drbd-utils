@@ -62,6 +62,9 @@ DESTDIR ?= /
 endif
 
 CFLAGS += -Wall -I../../drbd-headers -I.. -I.
+ifeq ($(WITH_WINDRBD),yes)
+CFLAGS += -I../windrbd-fake-headers
+endif
 CFLAGS += $(EXTRA_CFLAGS)
 
 .PHONY: drbd_buildtag.h drbd_buildtag.c

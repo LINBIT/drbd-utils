@@ -1,4 +1,6 @@
 # This is a very simple makefile
+# TODO: raise error if WITH_WINDRBD is not set
+# TODO: set CC to gcc or do not use build in .c.o rule
 
 sbindir = @sbindir@
 sysconfdir = @sysconfdir@
@@ -12,7 +14,11 @@ else
 DESTDIR ?= /
 endif
 
-CFLAGS=-g -Wall -I../shared
+CFLAGS=-g -Wall -I../shared -I../../drbd-headers
+# TODO: is this also here needed?
+ifeq ($(WITH_WINDRBD),yes)
+CFLAGS += -I../windrbd-fake-headers
+endif
 OBJS=windrbd.o shared_windrbd.o
 
 all: windrbd

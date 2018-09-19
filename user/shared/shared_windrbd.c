@@ -2,15 +2,8 @@
 #include <ctype.h>
 #include <windows.h>
 
-        /* TODO: those two should be included inside windrbd_ioctl.h . Do
-         * that once this header is moved to drbd-headers repo.
-         */
-#include <sys/types.h>
-#include <windrbd/types.h>
-#include <windrbd/netlink.h>
-
 #include "shared_windrbd.h"
-#include "../windrbd/windrbd_ioctl.h"
+#include <windrbd/windrbd_ioctl.h>
 #include <stdio.h>
 
 int is_guid(const char *arg)
