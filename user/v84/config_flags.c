@@ -10,23 +10,15 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#ifndef WINDRBD
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
-#else
-#include <windrbd/netlink.h>
-#endif
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
 
 #include "libgenl.h"
 #include <linux/drbd.h>
-#ifndef WINDRBD
 #include <linux/drbd_config.h>
-#else
-#include <windrbd/drbd_config.h>
-#endif
 #include <linux/drbd_genl_api.h>
 #include <linux/drbd_limits.h>
 #include "drbd_nla.h"
