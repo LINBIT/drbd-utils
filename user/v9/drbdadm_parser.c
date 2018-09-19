@@ -885,7 +885,8 @@ static void parse_device(struct names* on_hosts, struct d_volume *vol)
 			free(yylval.txt);
 		} else
 			vol->device = yylval.txt;
-		if (strncmp("/dev/drbd", vol->device, 9)
+		if ((on_hosts == NULL || hostname_in_list(hostname, on_hosts))
+			&& strncmp("/dev/drbd", vol->device, 9)
 #ifdef WINDRBD
 			&& !is_driveletter(vol->device)
 			&& vol->device[0] != '\0'
@@ -921,7 +922,8 @@ static void parse_device(struct names* on_hosts, struct d_volume *vol)
 
 		/* if both device name and minor number are explicitly given,
 		 * force /dev/drbd<minor-number> or /dev/drbd_<arbitrary> */
-		check_minor_nonsense(vol->device, vol->device_minor);
+		if (on_hosts == NULL || hostname_in_list(hostname, on_hosts))
+			check_minor_nonsense(vol->device, vol->device_minor);
 	}
 out:
 	if (!on_hosts)
