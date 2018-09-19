@@ -1,0 +1,1 @@
+#define prctl(a,b)

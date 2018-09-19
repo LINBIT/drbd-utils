@@ -41,15 +41,11 @@
 #include <poll.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
-#ifndef WINDRBD
 #include <sys/prctl.h>
-#endif
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#ifndef WINDRBD
 #include <linux/sockios.h>
 #include <linux/netdevice.h>
-#endif
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
@@ -310,9 +306,7 @@ void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd
 		exit(E_EXEC_ERROR);
 	}
 	if (pid == 0) {
-#ifndef WINDRBD
 		prctl(PR_SET_PDEATHSIG, SIGKILL);
-#endif
 		/* Child: close reading end. */
 		close(pipe_fds[0]);
 		if (flags & RETURN_STDOUT_FD) {
