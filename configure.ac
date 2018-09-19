@@ -111,6 +111,24 @@ AC_ARG_WITH([manual],
 	[AS_HELP_STRING([--without-manual],
 			[Do not include manual pages])],
 	[WITH_MANUAL=$withval])
+
+AC_ARG_WITH([windrbd],
+	[AS_HELP_STRING([--with-windrbd],
+			[Include windrbd support (do not use this under Linux)])],
+	[WITH_WINDRBD=$withval])
+AC_SUBST(WITH_WINDRBD)
+
+if [[ $WITH_WINDRBD == "yes" ]] ; then
+   if [[ $WITH_83_SUPPORT == "yes" ]] ; then
+      AC_MSG_WARN([DRBD 8.3 (and earlier) not supported with WinDRBD, disabling drbd 8.3 userland tools build.])
+      WITH_83_SUPPORT=no
+   fi
+   if [[ $WITH_84_SUPPORT == "yes" ]] ; then
+      AC_MSG_WARN([DRBD 8.4 (and earlier) not supported with WinDRBD, disabling drbd 8.4 userland tools build.])
+      WITH_84_SUPPORT=no
+   fi
+fi
+
 AC_SUBST(WITH_83_SUPPORT)
 AC_SUBST(WITH_84_SUPPORT)
 AC_SUBST(WITH_UDEV)
@@ -193,12 +211,6 @@ AC_ARG_WITH([drbdmon],
 			[Do not include the DRBD resource reporting utility])],
 	[WITH_DRBDMON=$withval])
 AC_SUBST(WITH_DRBDMON)
-
-AC_ARG_WITH([windrbd],
-	[AS_HELP_STRING([--with-windrbd],
-			[Include windrbd support (do not use this under Linux)])],
-	[WITH_WINDRBD=$withval])
-AC_SUBST(WITH_WINDRBD)
 
 dnl Checks for programs
 AC_PROG_CC
