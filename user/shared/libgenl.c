@@ -138,8 +138,10 @@ int genl_join_mc_group(struct genl_sock *s, const char *name) {
 static struct genl_sock *genl_connect(__u32 nl_groups)
 {
 	struct genl_sock *s = calloc(1, sizeof(*s));
+#ifndef WINDRBD
 	socklen_t sock_len;
 	int bsz = 1 << 20;
+#endif
 
 	if (!s)
 		return NULL;
@@ -402,12 +404,16 @@ int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int 
 
 #endif
 
+#ifndef WINDRBD
+
 static struct genl_family genl_ctrl = {
         .id = GENL_ID_CTRL,
         .name = "nlctrl",
         .version = 0x2,
         .maxattr = CTRL_ATTR_MAX,
 };
+
+#endif
 
 struct genl_sock *genl_connect_to_family(struct genl_family *family)
 {

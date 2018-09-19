@@ -1752,13 +1752,13 @@ static void zeroout_bitmap(struct format *cfg)
 {
 	const size_t bitmap_bytes =
 		ALIGN(bm_bytes(&cfg->md, cfg->bd_size >> 9), cfg->md_hard_sect_size);
-	uint64_t range[2];
 #ifndef WINDRBD
+	uint64_t range[2];
 	int err;
-#endif
 
 	range[0] = cfg->bm_offset; /* start offset */
 	range[1] = bitmap_bytes; /* len */
+#endif
 
 	fprintf(stderr,"initializing bitmap (%u KB) to all zero\n",
 		(unsigned int)(bitmap_bytes>>10));
