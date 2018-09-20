@@ -26,6 +26,10 @@
 /* have the <sys/....h> first, otherwise you get e.g. "redefined" types from
  * sys/types.h and other weird stuff */
 
+/* Note: With WinDRBD integration, some of the low level I/O functions
+ * have moved to drbdmeta_{linux,windrbd}.c
+ */
+
 #define _GNU_SOURCE
 #define _XOPEN_SOURCE 600
 #define _FILE_OFFSET_BITS 64
@@ -62,13 +66,6 @@
 
 #include "config.h"
 
-#ifdef WINDRBD
-#include <windows.h>
-#include <winternl.h>
-#include <wchar.h>
-#include "shared_windrbd.h"
-#endif
-
 /* BLKZEROOUT, available on linux-3.6 and later,
  * and maybe backported to distribution kernels,
  * even if they pretend to be older.
@@ -76,10 +73,8 @@
  * kernels, but not yet in the headers used to build userland stuff like this.
  */
 
-#ifndef WINDRBD
 #ifndef BLKZEROOUT
 # define BLKZEROOUT	_IO(0x12,127)
-#endif
 #endif
 
 extern FILE* yyin;
@@ -119,24 +114,7 @@ struct option metaopt[] = {
  * AND, the exit codes should follow some defined scheme.
  */
 
-#if 0
-#define ASSERT(x) ((void)(0))
-#define d_expect(x) (x)
-#else
-#define ASSERT(x) do { if (!(x)) {				\
-	fprintf(stderr, "%s:%u:%s: ASSERT(%s) failed.\n",	\
-		__FILE__ , __LINE__ , __func__ , #x );		\
-	abort(); }						\
-	} while (0)
-#define d_expect(x) ({						\
-	int _x = (x);						\
-	if (!_x)						\
-		fprintf(stderr, "%s:%u:%s: ASSERT(%s) failed.\n",\
-			__FILE__ , __LINE__ , __func__ , #x );	\
-	_x; })
-#endif
-
-static int confirmed(const char *text)
+int confirmed(const char *text)
 {
 	const char yes[] = "yes";
 	const ssize_t N = sizeof(yes);
@@ -202,16 +180,6 @@ static int confirmed(const char *text)
  * otherwise direct io will fail with EINVAL */
 #define SO_MUCH (68*1024)
 
-/*
- * I think this block of declarations and definitions should be
- * in some common.h, too.
- * {
- */
-
-#ifndef ALIGN
-# define ALIGN(x,a) ( ((x) + (a)-1) &~ ((a)-1) )
-#endif
-
 #define MD_AL_OFFSET_07        8
 #define MD_AL_MAX_SECT_07     64
 #define MD_BM_OFFSET_07        (MD_AL_OFFSET_07 + MD_AL_MAX_SECT_07)
@@ -256,139 +224,7 @@ int global_argc;
 char **global_argv;
 char *progname = NULL;
 
-enum md_format {
-	DRBD_V06,
-	DRBD_V07,
-	DRBD_V08,
-	DRBD_V09,
-	DRBD_UNKNOWN,
-};
-
-/* let gcc help us get it right.
- * some explicit endian types */
-typedef struct { uint64_t le; } le_u64;
-typedef struct { uint64_t be; } be_u64;
-typedef struct { uint32_t le; } le_u32;
-typedef struct { uint32_t be; } be_u32;
-typedef struct { int32_t be; } be_s32;
-typedef struct { uint16_t be; } be_u16;
-typedef struct { unsigned long le; } le_ulong;
-typedef struct { unsigned long be; } be_ulong;
-
-/* NOTE that this structure does not need to be packed,
- * aligned, nor does it need to be in the same order as the on_disk variants.
- */
-struct peer_md_cpu {
-	uint64_t bitmap_uuid;
-	uint64_t bitmap_dagtag;
-	uint32_t flags;
-	int32_t bitmap_index;
-};
-
-struct md_cpu {
-	uint64_t current_uuid;
-	uint64_t history_uuids[HISTORY_UUIDS];
-	/* present since drbd 0.6 */
-	uint32_t gc[GEN_CNT_SIZE];	/* generation counter */
-	uint32_t magic;
-	/* added in drbd 0.7;
-	 * 0.7 stores effevtive_size on disk as kb, 0.8 in units of sectors.
-	 * we use sectors in our general working structure here */
-	uint64_t effective_size;	/* last agreed size */
-	uint32_t md_size_sect;
-	int32_t al_offset;		/* signed sector offset to this block */
-	uint32_t al_nr_extents;	/* important for restoring the AL */
-	int32_t bm_offset;		/* signed sector offset to the bitmap, from here */
-	/* Since DRBD 0.8 we have uuid instead of gc */
-	uint32_t flags;
-	uint64_t device_uuid;
-	uint32_t bm_bytes_per_bit;
-	uint32_t la_peer_max_bio_size;
-	/* Since DRBD 9.0 the following new stuff: */
-	uint32_t max_peers;
-	int32_t node_id;
-	struct peer_md_cpu peers[DRBD_PEERS_MAX];
-	uint32_t al_stripes;
-	uint32_t al_stripe_size_4k;
-};
-
-/*
- * drbdmeta specific types
- */
-
-struct format_ops;
-
-struct format {
-	const struct format_ops *ops;
-	char *md_device_name;	/* well, in 06 it is file name */
-	char *drbd_dev_name;
-	unsigned minor;		/* cache, determined from drbd_dev_name */
-	int lock_fd;
-	int drbd_fd;		/* no longer used!   */
-	int ll_fd;		/* not yet used here */
-#ifdef WINDRBD
-	HANDLE disk_handle;
-#else
-	int md_fd;
-#endif
-
-	int md_hard_sect_size;
-
-
-	/* unused in 06 */
-	int md_index;
-	unsigned int bm_bytes;
-	unsigned int bits_set;	/* 32 bit should be enough. @4k ==> 16TB */
-	int bits_counted:1;
-	int update_lk_bdev:1;	/* need to update the last known bdev info? */
-
-	struct md_cpu md;
-
-	/* _byte_ offsets of our "super block" and other data, within fd */
-	uint64_t md_offset;
-	uint64_t al_offset;
-	uint64_t bm_offset;
-
-	/* if create_md actually does convert,
-	 * we want to wipe the old meta data block _after_ convertion. */
-	uint64_t wipe_fixed;
-	uint64_t wipe_flex;
-	uint64_t wipe_resize;
-
-	/* convenience */
-	uint64_t bd_size; /* size of block device for internal meta data */
-
-	/* size limit due to available on-disk bitmap */
-	uint64_t max_usable_sect;
-
-	/* last-known bdev info,
-	 * to increase the chance of finding internal meta data in case the
-	 * lower level device has been resized without telling DRBD.
-	 * Loaded from file for internal metadata */
-	struct bdev_info lk_bd;
-};
-
-/* - parse is expected to exit() if it does not work out.
- * - open is expected to read the respective on_disk members,
- *   and copy the "superblock" meta data into the struct mem_cpu
- * FIXME describe rest of them, and when they should exit,
- * return error or success.
- */
-struct format_ops {
-	const char *name;
-	char **args;
-	int (*parse) (struct format *, char **, int, int *);
-	int (*open) (struct format *);
-	int (*close) (struct format *);
-	int (*md_initialize) (struct format *, int do_disk_writes, int max_peers);
-	int (*md_disk_to_cpu) (struct format *);
-	int (*md_cpu_to_disk) (struct format *);
-	void (*get_gi) (struct md_cpu *md, int node_id);
-	void (*show_gi) (struct md_cpu *md, int node_id);
-	void (*set_gi) (struct md_cpu *md, int node_id, char **argv, int argc);
-	int (*outdate_gi) (struct md_cpu *md);
-	int (*invalidate_gi) (struct md_cpu *md);
-};
+#include "drbdmeta.h"
 
 struct format_ops f_ops[];
 /*
@@ -871,13 +707,6 @@ int v09_md_disk_to_cpu(struct format *cfg);
 int v09_md_cpu_to_disk(struct format *cfg);
 int v09_md_initialize(struct format *cfg, int do_disk_writes, int max_peers);
 
-/* return codes for md_open */
-enum {
-	VALID_MD_FOUND = 0,
-	NO_VALID_MD_FOUND = -1,
-	VALID_MD_FOUND_AT_LAST_KNOWN_LOCATION = -2,
-};
-
 struct format_ops f_ops[] = {
 	[DRBD_V06] = {
 		     .name = "v06",
@@ -941,7 +770,7 @@ struct format_ops f_ops[] = {
 		     },
 };
 
-static inline enum md_format format_version(struct format *cfg)
+enum md_format format_version(struct format *cfg)
 {
 	return (cfg->ops - f_ops);
 }
@@ -1027,68 +856,10 @@ struct meta_cmd cmds[] = {
 
 #define PREAD(cfg,b,c,d) pread_or_die((cfg),(b),(c),(d), __func__ )
 #define PWRITE(cfg,b,c,d) pwrite_or_die((cfg),(b),(c),(d), __func__ )
-/* Do we want to exit() right here,
- * or do we want to duplicate the error handling everywhere? */
-void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, const char* tag)
-{
-#ifdef WINDRBD
-	DWORD bytes_read;
-	LARGE_INTEGER win_offset;
 
-	win_offset.QuadPart = offset;
-
-	if (verbose >= 2) {
-		fflush(stdout);
-		fprintf(stderr, " %-26s: ReadFile(%p, ...,%6lu,%12llu)\n", tag,
-			cfg->disk_handle, (unsigned long)count, (unsigned long long)offset);
-	}
-	if (SetFilePointerEx(cfg->disk_handle, win_offset, NULL, FILE_BEGIN) == 0) {
-		fprintf(stderr, "Could not set file pointer to position %zd using SetFilePointerEx, error is %d\n", offset, GetLastError());
-		exit(10);
-	}
-	if (ReadFile(cfg->disk_handle, buf, count, &bytes_read, NULL) == 0) {
-		fprintf(stderr, "Could not read %zd bytes from position %zd using ReadFile, error is %d\n", count, offset, GetLastError());
-		exit(10);
-	}
-	if (bytes_read != count) {
-		fprintf(stderr, "Read %d bytes from position %zd using ReadFile, expected %zd bytes error is %d\n", bytes_read, offset, count, GetLastError());
-		fprintf(stderr, "Is this a NTFS partition?\n");
-		exit(10);
-	}
-#else
-	int fd = cfg->md_fd;
-	ssize_t c = pread(fd, buf, count, offset);
-
-	if (verbose >= 2) {
-		fflush(stdout);
-		fprintf(stderr, " %-26s: pread(%u, ...,%6lu,%12llu)\n", tag,
-			fd, (unsigned long)count, (unsigned long long)offset);
-		if (count & ((1<<12)-1))
-			fprintf(stderr, "\tcount will cause EINVAL on hard sect size != 512\n");
-		if (offset & ((1<<12)-1))
-			fprintf(stderr, "\toffset will cause EINVAL on hard sect size != 512\n");
-	}
-	if (c < 0) {
-		fprintf(stderr,"pread(%u,...,%lu,%llu) in %s failed: %s\n",
-			fd, (unsigned long)count, (unsigned long long)offset,
-			tag, strerror(errno));
-		exit(10);
-	} else if ((size_t)c != count) {
-		fprintf(stderr,"confused in %s: expected to read %d bytes,"
-			" actually read %d\n",
-			tag, (int)count, (int)c);
-		exit(10);
-	}
-#endif
-	if (verbose > 10)
-		fprintf_hex(stderr, offset, buf, count);
-}
-
-#ifdef WINDRBD
 	/* Defined somewhere in Windows headers. */
 #ifdef min
 #undef min
-#endif
 #endif
 
 #define min(x,y) ((x) < (y) ? (x) : (y))
@@ -1131,81 +902,6 @@ void validate_offsets_or_die(struct format *cfg, size_t count, off_t offset, con
 			exit(10);
 		}
 	}
-}
-
-static unsigned n_writes = 0;
-void pwrite_or_die(struct format *cfg, const void *buf, size_t count, off_t offset, const char* tag)
-{
-#ifdef WINDRBD
-	DWORD bytes_written;
-	LARGE_INTEGER win_offset;
-
-	validate_offsets_or_die(cfg, count, offset, tag);
-
-	++n_writes;
-	if (dry_run) {
-		fprintf(stderr, " %-26s: WriteFile(%p, ...,%6lu,%12llu) SKIPPED DUE TO DRY-RUN\n",
-			tag, cfg->disk_handle, (unsigned long)count, (unsigned long long)offset);
-		if (verbose > 10)
-			fprintf_hex(stderr, offset, buf, count);
-		return;
-	}
-	if (verbose >= 2) {
-		fflush(stdout);
-		fprintf(stderr, " %-26s: WriteFile(%p, ...,%6lu,%12llu)\n", tag,
-			cfg->disk_handle, (unsigned long)count, (unsigned long long)offset);
-	}
-
-	win_offset.QuadPart = offset;
-	if (SetFilePointerEx(cfg->disk_handle, win_offset, NULL, FILE_BEGIN) == 0) {
-		fprintf(stderr, "Could not set file pointer to position %zd using SetFilePointerEx, error is %d\n", offset, GetLastError());
-		exit(10);
-	}
-	if (WriteFile(cfg->disk_handle, buf, count, &bytes_written, NULL) == 0) {
-		fprintf(stderr, "Could not write %zd bytes from position %zd using ReadFile, error is %d\n", count, offset, GetLastError());
-		exit(10);
-	}
-	if (bytes_written != count) {
-		fprintf(stderr, "Wrote %d bytes from position %zd using WriteFile, expected %zd bytes error is %d\n", bytes_written, offset, count, GetLastError());
-		fprintf(stderr, "Is this a NTFS partition?\n");
-		exit(10);
-	}
-#else
-	int fd = cfg->md_fd;
-	ssize_t c;
-
-	validate_offsets_or_die(cfg, count, offset, tag);
-
-	++n_writes;
-	if (dry_run) {
-		fprintf(stderr, " %-26s: pwrite(%u, ...,%6lu,%12llu) SKIPPED DUE TO DRY-RUN\n",
-			tag, fd, (unsigned long)count, (unsigned long long)offset);
-		if (verbose > 10)
-			fprintf_hex(stderr, offset, buf, count);
-		return;
-	}
-	c = pwrite(fd, buf, count, offset);
-	if (verbose >= 2) {
-		fflush(stdout);
-		fprintf(stderr, " %-26s: pwrite(%u, ...,%6lu,%12llu)\n", tag,
-			fd, (unsigned long)count, (unsigned long long)offset);
-		if (count & ((1<<12)-1))
-			fprintf(stderr, "\tcount will cause EINVAL on hard sect size != 512\n");
-		if (offset & ((1<<12)-1))
-			fprintf(stderr, "\toffset will cause EINVAL on hard sect size != 512\n");
-	}
-	if (c < 0) {
-		fprintf(stderr,"pwrite(%u,...,%lu,%llu) in %s failed: %s\n",
-			fd, (unsigned long)count, (unsigned long long)offset,
-			tag, strerror(errno));
-		exit(10);
-	} else if ((size_t)c != count) {
-		/* FIXME we might just now have corrupted the on-disk data */
-		fprintf(stderr,"confused in %s: expected to write %d bytes,"
-			" actually wrote %d\n", tag, (int)count, (int)c);
-		exit(10);
-	}
-#endif
 }
 
 size_t pwrite_with_limit_or_die(struct format *cfg, const void *buf, size_t count, off_t offset, off_t limit, const char* tag)
@@ -1527,61 +1223,6 @@ int v06_parse(struct format *cfg, char **argv, int argc, int *ai)
 	return 0;
 }
 
-int v06_md_open(struct format *cfg)
-{
-#ifdef WINDRBD
-	fprintf(stderr, "v06_md_open: Not supported with WinDRBD.\n");
-	return -1;
-#else
-
-	struct stat sb;
-
-	cfg->md_fd = open(cfg->md_device_name, O_RDWR);
-
-	if (cfg->md_fd == -1) {
-		PERROR("open(%s) failed", cfg->md_device_name);
-		return NO_VALID_MD_FOUND;
-	}
-
-	if (fstat(cfg->md_fd, &sb)) {
-		PERROR("fstat() failed");
-		return NO_VALID_MD_FOUND;
-	}
-
-	if (!S_ISREG(sb.st_mode)) {
-		fprintf(stderr, "'%s' is not a plain file!\n",
-			cfg->md_device_name);
-		return NO_VALID_MD_FOUND;
-	}
-
-	if (cfg->ops->md_disk_to_cpu(cfg)) {
-		return NO_VALID_MD_FOUND;
-	}
-
-	return VALID_MD_FOUND;
-#endif
-}
-
-int generic_md_close(struct format *cfg)
-{
-#ifdef WINDRBD
-	if (CloseHandle(cfg->disk_handle) == 0) {
-		fprintf(stderr, "CloseHandle() failed, error is %d\n", GetLastError());
-		return -1;
-	}
-	return 0;
-#else
-	/* On /dev/ram0 we may not use O_SYNC for some kernels (eg. RHEL6 2.6.32),
-	 * and fsync() returns EIO, too. So we don't do error checking here. */
-	fsync(cfg->md_fd);
-	if (close(cfg->md_fd)) {
-		PERROR("close() failed");
-		return -1;
-	}
-	return 0;
-#endif
-}
-
 int v06_md_initialize(struct format *cfg,
 		      int do_disk_writes __attribute((unused)),
 		      int max_peers __attribute((unused)))
@@ -1748,30 +1389,11 @@ static void zeroout_bitmap(struct format *cfg)
 {
 	const size_t bitmap_bytes =
 		ALIGN(bm_bytes(&cfg->md, cfg->bd_size >> 9), cfg->md_hard_sect_size);
-#ifndef WINDRBD
-	uint64_t range[2];
-	int err;
-
-	range[0] = cfg->bm_offset; /* start offset */
-	range[1] = bitmap_bytes; /* len */
-#endif
-
 	fprintf(stderr,"initializing bitmap (%u KB) to all zero\n",
 		(unsigned int)(bitmap_bytes>>10));
 
-#ifndef WINDRBD
-	err = ioctl(cfg->md_fd, BLKZEROOUT, &range);
-	if (!err)
+	if (zeroout_bitmap_fast(cfg) == 0)
 		return;
-
-	PERROR("ioctl(%s, BLKZEROOUT, [%llu, %llu]) failed", cfg->md_device_name,
-			(unsigned long long)range[0], (unsigned long long)range[1]);
-	fprintf(stderr, "Using slow(er) fallback.\n");
-#endif
-
-		/* if WINDRBD: Well .. there is such a thing under MS Windows,
-		 * maybe one day we'll implement it.
-		 */
 
 	{
 		/* need to sector-align this for O_DIRECT.
@@ -2675,185 +2297,15 @@ static void clip_effective_size_and_bm_bytes(struct format *cfg)
 	cfg->bm_bytes = bm_bytes(&cfg->md, cfg->md.effective_size);
 }
 
-#ifdef WINDRBD
-
-/* Uses Win32 API (CreateFile) to open the disk. We do not
- * use CygWin (UNIX type: /dev/sdXN) API, since that follows the
- * symbolic links in \\Device\\Harddisk<n>\\Partition<n> which
- * changes between reboots (\\Device\\Harddisk0 becomes
- * \\Device\\Harddisk1 and vice versa). That way, we allow the
- * user to use GUIDs (\\\\.\\Volumes{<GID>}) or drive letters
- * (\\\\.\\x:). Specifying \\Device\\HarddiskVolume<n> directly
- * does not work, but it is not needed. Most recommended way
- * is to use the GUIDs.
- *
- * This function writes results directly into the cfg passed as
- * a parameter.
- */
-
-HANDLE open_windows_device(const char *arg)
+int is_apply_al_cmd(void)
 {
-	HANDLE hdisk = NULL;
-
-        /* We want to do simple conversions
-                as C: -> \\\\.\\C: and GUIDs to
-                \\\\.\\Volume{<GUID>} for convenience.
-        */
-
-        char device[1024];
-        size_t n;
-
-        if (isalpha(arg[0]) && arg[1] == ':' && arg[2] == '\0') {
-                n = snprintf(device, sizeof(device), "\\\\.\\%s", arg);
-        } else if (is_guid(arg)) {
-                n = snprintf(device, sizeof(device), "\\\\.\\Volume{%s}", arg);
-        } else {
-                n = snprintf(device, sizeof(device), "%s", arg);
-        }
-        if (n >= sizeof(device)) {
-                fprintf(stderr, "Device name too long: %s (%zd), please report this.\n", arg, n);
-                return INVALID_HANDLE_VALUE;
-        }
-
-	if (verbose > 2) {
-		fprintf(stderr, "Converted %s to %s\n", arg, device);
-	}
-	hdisk = CreateFile(
-		device,
-		GENERIC_READ | GENERIC_WRITE,
-		FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-		NULL,
-		OPEN_EXISTING,
-		FILE_SYNCHRONOUS_IO_NONALERT,
-		NULL
-	);
-	if (hdisk == INVALID_HANDLE_VALUE) {
-		fprintf(stderr, "Couldn't open disk %s with CreateFile: Error is %d\n", device, GetLastError());
-	}
-	return hdisk;
+	return command->function == &meta_apply_al;
 }
-
-	/* Now, get the disk parameters (sector size and total size) */
-
-static int get_windows_device_geometry(HANDLE hdisk, int *md_hard_sect_size, uint64_t *bd_size)
-{
-	DISK_GEOMETRY_EX geometry;
-	DWORD ret_bytes;
-	PARTITION_INFORMATION_EX partition_info;
-
-	if (DeviceIoControl(hdisk, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, 0, &geometry, sizeof(geometry), &ret_bytes, NULL) == 0) {
-		fprintf(stderr, "Failed to get disk geometry: error is %d\n", GetLastError());
-		return -1;
-	}
-	if (verbose >= 1) {
-		printf("%d bytes per sector, total disk size %lld\n", geometry.Geometry.BytesPerSector, geometry.DiskSize.QuadPart);
-	}
-
-	if (DeviceIoControl(hdisk, IOCTL_DISK_GET_PARTITION_INFO_EX, NULL, 0, &partition_info, sizeof(partition_info), &ret_bytes, NULL) == 0) {
-		fprintf(stderr, "Failed to get partition info: error is %d\n", GetLastError());
-		return -1;
-	}
-	if (verbose >= 1) {
-		printf("partition size %lld\n", partition_info.PartitionLength.QuadPart);
-	}
-
-	*md_hard_sect_size = geometry.Geometry.BytesPerSector;
-	*bd_size = partition_info.PartitionLength.QuadPart;
-
-	return 0;
-}
-
-#endif
 
 int v07_style_md_open(struct format *cfg)
 {
-#ifdef WINDRBD
-	cfg->disk_handle = open_windows_device(cfg->md_device_name);
-	if (cfg->disk_handle == INVALID_HANDLE_VALUE) {
-		fprintf(stderr, "Could not open Windows device %s\n", cfg->md_device_name);
+	if (v07_style_md_open_device(cfg) < 0)
 		exit(20);
-	}
-	if (get_windows_device_geometry(cfg->disk_handle, &cfg->md_hard_sect_size, &cfg->bd_size) < 0) {
-		CloseHandle(cfg->disk_handle);
-		fprintf(stderr, "Could not open Windows device %s\n", cfg->md_device_name);
-		exit(20);
-	}
-#else
-	struct stat sb;
-	unsigned int hard_sect_size = 0;
-	int ioctl_err;
-	int open_flags = O_RDWR | O_DIRECT;
-
-	/* For old-style fixed size indexed external meta data,
-	 * we cannot really use O_EXCL, we have to trust the given minor.
-	 *
-	 * For internal, or "flexible" external meta data, we open O_EXCL to
-	 * avoid accidentally damaging otherwise in-use data, just because
-	 * someone had a typo in the command line.
-	 */
-	if (cfg->md_index < 0)
-		open_flags |= O_EXCL;
-
- retry:
-	cfg->md_fd = open(cfg->md_device_name, open_flags );
-
-	if (cfg->md_fd == -1) {
-		int save_errno = errno;
-		PERROR("open(%s) failed", cfg->md_device_name);
-		if (save_errno == EBUSY && (open_flags & O_EXCL)) {
-			if ((!force && command->function == &meta_apply_al) ||
-			    !confirmed("Exclusive open failed. Do it anyways?"))
-			{
-				printf("Operation canceled.\n");
-				exit(20);
-			}
-			open_flags &= ~O_EXCL;
-			goto retry;
-		}
-		if (save_errno == EINVAL && (open_flags & O_DIRECT)) {
-			/* shoo. O_DIRECT is not supported?
-			 * retry, but remember this, so we can
-			 * BLKFLSBUF appropriately */
-			fprintf(stderr, "could not open with O_DIRECT, retrying without\n");
-			open_flags &= ~O_DIRECT;
-			opened_odirect = 0;
-			goto retry;
-		}
-		exit(20);
-	}
-
-	if (fstat(cfg->md_fd, &sb)) {
-		PERROR("fstat(%s) failed", cfg->md_device_name);
-		exit(20);
-	}
-
-	if (!S_ISBLK(sb.st_mode)) {
-		if (!force) {
-			fprintf(stderr, "'%s' is not a block device!\n",
-				cfg->md_device_name);
-			exit(20);
-		}
-		cfg->bd_size = sb.st_size;
-	}
-
-	if (format_version(cfg) >= DRBD_V08) {
-		ASSERT(cfg->md_index != DRBD_MD_INDEX_INTERNAL);
-	}
-	ioctl_err = ioctl(cfg->md_fd, BLKSSZGET, &hard_sect_size);
-	if (ioctl_err) {
-		fprintf(stderr, "ioctl(md_fd, BLKSSZGET) returned %d, "
-			"assuming hard_sect_size is 512 Byte\n", ioctl_err);
-		cfg->md_hard_sect_size = 512;
-	} else {
-		cfg->md_hard_sect_size = hard_sect_size;
-		if (verbose >= 2)
-			fprintf(stderr, "hard_sect_size is %d Byte\n",
-				cfg->md_hard_sect_size);
-	}
-
-	if (!cfg->bd_size)
-		cfg->bd_size = bdev_size(cfg->md_fd);
-#endif
 
 	/* check_for_existing_data() wants to read that much,
 	 * so having less than that doesn't make sense.
@@ -2874,20 +2326,6 @@ int v07_style_md_open(struct format *cfg)
 			(long long unsigned)cfg->bd_size);
 		exit(10);
 	}
-
-#ifndef WINDRBD
-	/* Windows doesn't have these ramdisks.
-	 * Or at least no major/minor numbers. */
-	if (!opened_odirect &&
-	    (MAJOR(sb.st_rdev) != RAMDISK_MAJOR)) {
-		ioctl_err = ioctl(cfg->md_fd, BLKFLSBUF);
-		/* report error, but otherwise ignore.  we could not open
-		 * O_DIRECT, it is a "strange" device anyways. */
-		if (ioctl_err)
-			fprintf(stderr, "ioctl(md_fd, BLKFLSBUF) returned %d, "
-					"we may read stale data\n", ioctl_err);
-	}
-#endif
 
 	if (cfg->ops->md_disk_to_cpu(cfg)) {
 		/* no valid meta data found.  but we want to initialize
