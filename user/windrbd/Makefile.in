@@ -17,7 +17,7 @@ endif
 CFLAGS=-g -Wall -I../shared -I../../drbd-headers
 # TODO: is this also here needed?
 ifeq ($(WITH_WINDRBD),yes)
-CFLAGS += -I../windrbd-fake-headers
+CFLAGS += -I../windrbd-compat-headers
 endif
 OBJS=windrbd.o shared_windrbd.o
 
