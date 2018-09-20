@@ -21,11 +21,7 @@
 #include <string.h>
 #include <netdb.h>
 
-#ifndef WINDRBD
 #include "linux/drbd_config.h"
-#else
-#include "windrbd/drbd_config.h"
-#endif
 
 #include "drbdtool_common.h"
 
