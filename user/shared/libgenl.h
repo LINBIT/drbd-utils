@@ -1079,9 +1079,4 @@ enum {
 /* returns negative E_RCV_*, or length of message */
 extern int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int timeout_ms);
 
-#ifdef WINDRBD
-	/* TODO: deprecated, still used? */
-int windrbd_send_receive(struct genl_sock *s, struct msg_buff *send_msg, struct iovec *recv_iov, char ** errmsg);
-#endif
-
 #endif	/* LIBGENL_H */

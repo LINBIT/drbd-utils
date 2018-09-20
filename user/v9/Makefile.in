@@ -85,7 +85,9 @@ drbdmeta-obj = drbdmeta.o drbdmeta_scanner.o drbdtool_common.o drbd_buildtag.o \
 ifeq ($(WITH_WINDRBD),yes)
 drbdadm-obj += drbdadm_windrbd.o shared_windrbd.o
 drbdsetup-obj += shared_windrbd.o
-drbdmeta-obj += shared_windrbd.o
+drbdmeta-obj += shared_windrbd.o drbdmeta_windrbd.o
+else
+drbdmeta-obj += drbdmeta_linux.o
 endif
 
 all-obj := $(drbdadm-obj) $(drbdsetup-obj) $(drbdmeta-obj)
