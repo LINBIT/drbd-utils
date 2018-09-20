@@ -54,13 +54,8 @@
 #include <syslog.h>
 #include <math.h> /* for NAN */
 
-#ifndef WINDRBD
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
-#else
-#include <windrbd/netlink.h>
-#include "shared_windrbd.h"
-#endif
 
 #define EXIT_NOMEM 20
 #define EXIT_NO_FAMILY 20
@@ -86,11 +81,7 @@
 #include "libgenl.h"
 #include "drbd_nla.h"
 
-#ifndef WINDRBD
 #include <linux/drbd_config.h>
-#else
-#include <windrbd/drbd_config.h>
-#endif
 
 #include <linux/drbd_genl_api.h>
 #include <linux/drbd_limits.h>

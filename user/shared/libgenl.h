@@ -17,14 +17,12 @@
 #include <stdio.h>
 #include <sys/socket.h>
 
-#ifndef WINDRBD
 #include <linux/socket.h>
 #include <linux/types.h>
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
-#else
-#include <windrbd/types.h>
-#include <windrbd/netlink.h>
+
+#ifdef WINDRBD
 #include <windows.h>
 #endif
 
@@ -1082,6 +1080,7 @@ enum {
 extern int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int timeout_ms);
 
 #ifdef WINDRBD
+	/* TODO: deprecated, still used? */
 int windrbd_send_receive(struct genl_sock *s, struct msg_buff *send_msg, struct iovec *recv_iov, char ** errmsg);
 #endif
 
