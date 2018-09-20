@@ -39,9 +39,7 @@
 #include <assert.h>
 
 #include <sys/types.h>
-#ifdef WINDRBD
-#include <windrbd/types.h>
-#endif
+#include <linux/types.h>
 #include <sys/wait.h>
 #include <poll.h>
 #include <sys/socket.h>

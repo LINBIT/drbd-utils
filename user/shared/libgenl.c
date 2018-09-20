@@ -549,12 +549,7 @@ out:
  */
 
 #include <string.h>
-
-#ifndef WINDRBD
 #include <linux/types.h>
-#else
-#include <windrbd/types.h>
-#endif
 
 static __u16 nla_attr_minlen[NLA_TYPE_MAX+1] __read_mostly = {
 	[NLA_U8]	= sizeof(__u8),

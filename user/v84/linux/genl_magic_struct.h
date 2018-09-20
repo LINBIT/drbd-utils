@@ -15,14 +15,9 @@
 # error "you need to define GENL_MAGIC_INCLUDE_FILE before inclusion"
 #endif
 
-#ifndef WINDRBD
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
 #include <linux/types.h>
-#else
-#include <windrbd/netlink.h>
-#include <windrbd/types.h>
-#endif
 
 #define CONCAT__(a,b)	a ## b
 #define CONCAT_(a,b)	CONCAT__(a,b)
