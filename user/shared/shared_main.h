@@ -24,11 +24,7 @@
 #ifndef __SHARED_MAIN_H__
 #define __SHARED_MAIN_H__
 
-#include "config.h"
-
-#ifdef WINDRBD
-#include <netinet/in.h>
-#endif
+#include <netinet/in.h>		/* for IFNAMSIZ */
 
 #define CMD_TIMEOUT_SHORT_DEF 5
 #define CMD_TIMEOUT_MEDIUM_DEF 121
