@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include "shared_main.h"
+#include "drbdtool_common.h"
 
 int is_driveletter(const char *drive)
 {
@@ -44,3 +45,9 @@ int call_windrbd(char *res_name, char *path, ...)
 
         return m_system_ex(argv, SLEEPS_SHORT, res_name);
 }
+
+void maybe_add_bin_dir_to_path(void)
+{
+        add_component_to_path(DRBD_BIN_DIR);
+}
+

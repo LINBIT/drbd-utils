@@ -25,6 +25,7 @@
 #define __SHARED_MAIN_H__
 
 #include <netinet/in.h>		/* for IFNAMSIZ */
+#include <stdio.h>		/* for NULL */
 
 #define CMD_TIMEOUT_SHORT_DEF 5
 #define CMD_TIMEOUT_MEDIUM_DEF 121

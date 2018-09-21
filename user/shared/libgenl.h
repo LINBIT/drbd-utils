@@ -23,7 +23,7 @@
 #include <linux/genetlink.h>
 
 #ifdef WINDRBD
-#include <windows.h>
+#include <windows.h>		/* for HANDLE */
 #endif
 
 #ifndef SOL_NETLINK
