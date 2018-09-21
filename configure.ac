@@ -141,6 +141,7 @@ AC_SUBST(WITH_MANUAL)
 
 dnl Check for functions
 AC_CHECK_FUNCS([getentropy])
+AC_CHECK_FUNCS([gethostbyname_r])
 
 dnl Do we know where systemd unit files go?
 PKG_PROG_PKG_CONFIG
