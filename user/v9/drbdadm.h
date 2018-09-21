@@ -556,3 +556,9 @@ extern struct names backend_options;
 
 #endif
 
+/* Hooks that do something when compiled --with-windrbd, noops for
+ * the Linux version.
+ */
+
+void maybe_add_bin_dir_to_path(void);
+
