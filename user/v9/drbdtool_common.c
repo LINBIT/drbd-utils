@@ -358,27 +358,28 @@ void config_help_legacy(const char * const tool,
 			driver_version->version.major, driver_version->version.minor);
 }
 
-void add_lib_drbd_to_path(void)
+void add_component_to_path(const char *path)
 {
 	char *new_path = NULL;
 	char *old_path = getenv("PATH");
-#ifndef WINDRBD
-	static const char lib_drbd[]="/lib/drbd";
-#else
-	static const char lib_drbd[]= DRBD_BIN_DIR;
-#endif
 
 	if (!old_path)
-		setenv("PATH", lib_drbd, 1);
+		setenv("PATH", path, 1);
 	else {
 		m_asprintf(&new_path, "%s%s%s",
 				old_path,
 				(*old_path &&
 				 old_path[strlen(old_path) -1] != ':')
 				? ":" : "",
-				lib_drbd);
+				path);
 		setenv("PATH", new_path, 1);
 	}
+}
+
+void add_lib_drbd_to_path(void)
+{
+		/* TODO: if exec-prefix != "/" ? */
+	add_component_to_path("/lib/drbd");
 }
 
 /* from linux/crypto/crc32.c */

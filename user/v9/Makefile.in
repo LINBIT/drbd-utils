@@ -87,7 +87,7 @@ drbdadm-obj += drbdadm_windrbd.o shared_windrbd.o libgenl_windrbd.o
 drbdsetup-obj += shared_windrbd.o libgenl_windrbd.o
 drbdmeta-obj += shared_windrbd.o drbdmeta_windrbd.o
 else
-drbdadm-obj += libgenl.o
+drbdadm-obj += libgenl.o drbdadm_linux.o
 drbdsetup-obj += libgenl.o
 drbdmeta-obj += drbdmeta_linux.o
 endif
