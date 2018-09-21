@@ -1,13 +1,7 @@
 #ifndef TOOL_SHARED_H
 #define TOOL_SHARED_H
 
-#include "config.h"
-
-#ifdef WINDRBD
-#include <cygwin/fs.h>
-#else
-#include <linux/fs.h>		/* for BLKGETSIZE64 */
-#endif
+#include <linux/fs.h>           /* for BLKGETSIZE64 */
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdbool.h>
