@@ -6,9 +6,8 @@
 #include "shared_tool.h"
 #include <linux/drbd.h>
 
-/* TODO: this is included just for HANDLE */
 #ifdef WINDRBD
-#include <windows.h>
+#include <windows.h>		/* for HANDLE */
 #endif
 
 enum md_format {

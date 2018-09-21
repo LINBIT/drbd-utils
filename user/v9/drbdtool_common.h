@@ -1,8 +1,6 @@
 #ifndef DRBDTOOL_COMMON_H
 #define DRBDTOOL_COMMON_H
 
-#include "config.h"
-
 #include "drbd_endian.h"
 #include <stdio.h>
 #include <unistd.h>
@@ -86,11 +84,9 @@ struct version {
 	unsigned version_code;
 };
 
-#ifdef WINDRBD
 /* Windows km/miniport.h has a #define STRICT */
 #ifdef STRICT
 #undef STRICT
-#endif
 #endif
 
 enum driver_version_policy {
@@ -104,6 +100,7 @@ extern int version_code_kernel(void);
 extern int version_code_userland(void);
 extern int version_equal(const struct version *rev1, const struct version *rev2);
 extern void config_help_legacy(const char * const tool, const struct version * const driver_version);
+extern void add_component_to_path(const char *path);
 extern void add_lib_drbd_to_path(void);
 extern uint32_t crc32c(uint32_t crc, const uint8_t *data, unsigned int length);
 
