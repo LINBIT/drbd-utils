@@ -9,6 +9,22 @@
 #include "drbdadm.h"
 #include "drbdadm_parser.h"
 
+/* Name of the windrbd command, including path of drbdadm binary */
+
+static char *windrbd = NULL;
+
+/* List of commands executed by drbdadm */
+
+struct cmd_helper helpers[] = {
+	{"drbdsetup", &drbdsetup},
+	{"drbdmeta", &drbdmeta},
+	{"drbd-proxy-ctl", &drbd_proxy_ctl},
+	{"drbdadm-83", &drbdadm_83},
+	{"drbdadm-84", &drbdadm_84},
+	{"windrbd", &windrbd},
+	{NULL, NULL}
+};
+
 static int is_driveletter(const char *drive)
 {
         if (!isalpha(drive[0])) return 0;
@@ -44,10 +60,6 @@ static int call_windrbd(char *res_name, char *path, ...)
 
         return m_system_ex(argv, SLEEPS_SHORT, res_name);
 }
-
-/* Name of the windrbd command, including path of drbdadm binary */
-
-extern char *windrbd;
 
 int before_attach(const struct cfg_ctx *ctx)
 {

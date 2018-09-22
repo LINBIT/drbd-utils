@@ -171,9 +171,6 @@ char *drbdsetup = NULL;
 char *drbdmeta = NULL;
 char *drbdadm_83 = NULL;
 char *drbdadm_84 = NULL;
-#ifdef WINDRBD
-char *windrbd = NULL;
-#endif
 char *drbd_proxy_ctl;
 char *sh_varname = NULL;
 struct names backend_options = STAILQ_HEAD_INITIALIZER(backend_options);
@@ -2820,21 +2817,10 @@ char *canonify_path(char *path)
 
 void assign_command_names_from_argv0(char **argv)
 {
-	struct cmd_helper {
-		char *name;
-		char **var;
-	};
-	static struct cmd_helper helpers[] = {
-		{"drbdsetup", &drbdsetup},
-		{"drbdmeta", &drbdmeta},
-		{"drbd-proxy-ctl", &drbd_proxy_ctl},
-		{"drbdadm-83", &drbdadm_83},
-		{"drbdadm-84", &drbdadm_84},
-#ifdef WINDRBD
-		{"windrbd", &windrbd},
-#endif
-		{NULL, NULL}
-	};
+	/* The predefined list of command helpers has been moved to
+	 * platform-dependent code.
+	 */
+
 	struct cmd_helper *c;
 
 	/* in case drbdadm is called with an absolute or relative pathname
