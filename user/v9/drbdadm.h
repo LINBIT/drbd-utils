@@ -561,4 +561,9 @@ extern struct names backend_options;
  */
 
 void maybe_add_bin_dir_to_path(void);
+int before_attach(const struct cfg_ctx *ctx);
+int after_new_minor(const struct cfg_ctx *ctx);
+int after_primary(const struct cfg_ctx *ctx);
+int after_secondary(const struct cfg_ctx *ctx);
 
+void parse_device(struct names* on_hosts, struct d_volume *vol);
