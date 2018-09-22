@@ -62,10 +62,6 @@
 #include "shared_main.h"
 #include "drbdadm_parser.h"
 
-#ifdef WINDRBD
-#include "drbdadm_windrbd.h"
-#endif
-
 #define MAX_ARGS 40
 
 char *progname;
@@ -1139,11 +1135,9 @@ static int adm_attach(const struct cfg_ctx *ctx)
 
 	if (do_attach) {
 		int rv;
-#ifdef WINDRBD
-		rv = call_windrbd(ctx->res->name, windrbd, "-q", "hide-filesystem", vol->disk, NULL);
+		rv = before_attach(ctx);
 		if (rv)
 			return rv;
-#endif
 
 		rv = call_cmd_fn(&apply_al_cmd, ctx, KEEP_RUNNING);
 		if (rv)
@@ -1224,14 +1218,8 @@ int adm_new_minor(const struct cfg_ctx *ctx)
 	if (!ex && do_register)
 		register_minor(ctx->vol->device_minor, config_save);
 
-#ifdef WINDRBD
-	if (is_driveletter(ctx->vol->device) || ctx->vol->device[0] == '\0') {
-		char minor_str[10];
-		snprintf(minor_str, sizeof(minor_str)-1, "%d", ctx->vol->device_minor);
-		call_windrbd(ctx->res->name, windrbd, "-q", "set-mount-point-for-minor", minor_str, ctx->vol->device, NULL);
-	} else
-		printf("Warning: %s is not a valid Windows drive letter or empty. The windrbd device\nwill not be mounted.\nTo mount it, do a\n\twindrbd set-mount-point-for-minor %d <drive-letter>:\n", ctx->vol->device, ctx->vol->device_minor);
-#endif
+	if (!ex)
+		ex = after_new_minor(ctx);
 
 	return ex;
 }
@@ -1447,23 +1435,11 @@ static void __adm_drbdsetup(const struct cfg_ctx *ctx, int flags, pid_t *pid, in
 
 	m__system(argv, flags, ctx->res ? ctx->res->name : NULL, pid, fd, ex);
 
-#ifdef WINDRBD
-	const char *windrbd_cmd = NULL;
-
 	if (ctx->cmd == &primary_cmd)
-		windrbd_cmd = "add-drive-in-explorer";
+		after_primary(ctx);
 
 	if (ctx->cmd == &secondary_cmd || ctx->cmd == &down_cmd)
-		windrbd_cmd = "remove-drive-in-explorer";
-
-	if (windrbd_cmd != NULL) {
-		struct d_volume *vol;
-
-		for_each_volume(vol, &ctx->res->me->volumes)
-			if (is_driveletter(vol->device))
-				call_windrbd(ctx->res->name, windrbd, "-q", windrbd_cmd, vol->device, NULL);
-	}
-#endif
+		after_secondary(ctx);
 }
 
 static int _adm_drbdsetup(const struct cfg_ctx *ctx, int flags)
