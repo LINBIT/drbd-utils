@@ -25,7 +25,7 @@
 
 #include "drbdtool_common.h"
 
-static struct version __drbd_driver_version = {};
+struct version __drbd_driver_version = {};
 static struct version __drbd_utils_version = {};
 
 
@@ -132,36 +132,6 @@ const char *get_hostname(void)
 }
 
 
-/* For our purpose (finding the revision) SLURP_SIZE is always enough.
- */
-static char *slurp_proc_drbd()
-{
-	const int SLURP_SIZE = 4096;
-	char *buffer;
-	int rr, fd;
-
-	fd = open("/proc/drbd",O_RDONLY);
-	if (fd == -1)
-		return NULL;
-
-	buffer = malloc(SLURP_SIZE);
-	if(!buffer)
-		goto fail;
-
-	rr = read(fd, buffer, SLURP_SIZE-1);
-	if (rr == -1) {
-		free(buffer);
-		buffer = NULL;
-		goto fail;
-	}
-
-	buffer[rr]=0;
-fail:
-	close(fd);
-
-	return buffer;
-}
-
 static void read_hex(char *dst, char *src, int dst_size, int src_size)
 {
 	int dst_i, u, src_i=0;
@@ -184,7 +154,7 @@ static void read_hex(char *dst, char *src, int dst_size, int src_size)
 	}
 }
 
-static void version_from_str(struct version *rel, const char *token)
+void version_from_str(struct version *rel, const char *token)
 {
 	char *dot;
 	long maj, min, sub;
@@ -208,7 +178,7 @@ static void version_from_str(struct version *rel, const char *token)
 	rel->version_code = (maj << 16) + (min << 8) + sub;
 }
 
-static void parse_version(struct version *rel, const char *text)
+void parse_version(struct version *rel, const char *text)
 {
 	char token[80];
 	int plus=0;
@@ -260,8 +230,8 @@ static void parse_version(struct version *rel, const char *text)
 
 const struct version *drbd_driver_version(enum driver_version_policy fallback)
 {
-	char *version_txt;
 	char *drbd_driver_version_override;
+	const struct version *version;
 
 	if (__drbd_driver_version.version_code)
 		return &__drbd_driver_version;
@@ -273,25 +243,9 @@ const struct version *drbd_driver_version(enum driver_version_policy fallback)
 			return &__drbd_driver_version;
 	}
 
-	version_txt = slurp_proc_drbd();
-	if (version_txt) {
-		parse_version(&__drbd_driver_version, version_txt);
-		free(version_txt);
-		return &__drbd_driver_version;
-	} else {
-#ifndef WINDRBD
-		FILE *in = popen("modinfo -F version drbd", "r");
-		if (in) {
-			char buf[32];
-			int c = fscanf(in, "%30s", buf);
-			pclose(in);
-			if (c == 1) {
-				version_from_str(&__drbd_driver_version, buf);
-				return &__drbd_driver_version;
-			}
-		}
-#endif
-	}
+	version = get_drbd_driver_version();
+	if (version != NULL)
+		return version;
 
 	if (fallback == FALLBACK_TO_UTILS)
 		return drbd_utils_version();
