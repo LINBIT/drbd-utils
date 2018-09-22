@@ -104,7 +104,10 @@ extern void add_component_to_path(const char *path);
 extern void add_lib_drbd_to_path(void);
 extern uint32_t crc32c(uint32_t crc, const uint8_t *data, unsigned int length);
 
+extern void parse_version(struct version *rel, const char *text);
+extern void version_from_str(struct version *rel, const char *token);
 
-
+/* This is platform-specific */
+extern const struct version *get_drbd_driver_version(void);
 
 #endif
