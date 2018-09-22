@@ -10,6 +10,17 @@
  * WinDRBD. Most of them are empty for Linux.
  */
 
+/* List of commands executed by drbdadm */
+
+struct cmd_helper helpers[] = {
+	{"drbdsetup", &drbdsetup},
+	{"drbdmeta", &drbdmeta},
+	{"drbd-proxy-ctl", &drbd_proxy_ctl},
+	{"drbdadm-83", &drbdadm_83},
+	{"drbdadm-84", &drbdadm_84},
+	{NULL, NULL}
+};
+
 void maybe_add_bin_dir_to_path(void)
 {
 }
