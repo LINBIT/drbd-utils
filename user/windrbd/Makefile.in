@@ -1,33 +1,35 @@
 # This is a very simple makefile
-# TODO: raise error if WITH_WINDRBD is not set
-# TODO: set CC to gcc or do not use build in .c.o rule
+#
+# It is used to compile the windrbd utility, which implements Windows-specific
+# things for the WinDRBD driver. See help of windrbd for more details.
+
+VPATH = ../shared
 
 sbindir = @sbindir@
 sysconfdir = @sysconfdir@
 WITH_WINDRBD = @WITH_WINDRBD@
+CC = @CC@
+CFLAGS = @CFLAGS@
+LDFLAGS = @LDFLAGS@
 
 # variables meant to be overridden from the make command line
 ifeq ($(WITH_WINDRBD),yes)
 DESTDIR ?=
 else
-# This does not make sense ...
-DESTDIR ?= /
+$(error windrbd utility can only be made on Windows, please configure --with-windrbd)
 endif
 
-CFLAGS=-g -Wall -I../shared -I../../drbd-headers
-# TODO: is this also here needed?
-ifeq ($(WITH_WINDRBD),yes)
-CFLAGS += -I../windrbd-compat-headers
-endif
-OBJS=windrbd.o shared_windrbd.o
+CFLAGS += -Wall -I../shared -I../../drbd-headers -I../windrbd-compat-headers
+windrbd-obj = windrbd.o shared_windrbd.o
+all-obj = $(windrbd-obj)
 
 all: windrbd
 
-shared_windrbd.o: ../shared/shared_windrbd.c
-	gcc -c $(CFLAGS) -o $@ $^
+../shared_prereqs.mk: ;
+include ../shared_prereqs.mk
 
-windrbd: $(OBJS)
-	gcc $(CFLAGS) -o windrbd.exe $(OBJS)
+windrbd: $(windrbd-obj)
+	$(LINK.c) $(LDFLAGS) -o windrbd.exe $(windrbd-obj)
 
 install: windrbd
 	install -m 755 windrbd.exe $(DESTDIR)$(sbindir)
@@ -35,5 +37,7 @@ install: windrbd
 
 clean:
 	rm -f windrbd.exe
+	rm -f $(all-obj)
 
-distclean:
+distclean: clean
+	rm -f $(all-dep)
