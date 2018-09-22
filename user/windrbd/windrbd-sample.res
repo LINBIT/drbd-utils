@@ -43,6 +43,11 @@ resource "windrbd-sample" {
 # The data is accessible under this drive letter (F: in that case) once
 # the windrbd resource is primary (do drbdadm up <res> / drbdadm primary <res>)
 #
+# Note that only newer Linux drbd-utils (newer than 9.5.0) understand the
+# WinDRBD device name syntax (they will ignore device names that are not
+# on the local host), so either upgrade your drbd-utils or patch the
+# file on your Linux hosts to use /dev/drbdN syntax.
+#
 			device		"F:" minor 1;
 			meta-disk	internal;
 #
@@ -50,13 +55,6 @@ resource "windrbd-sample" {
 #			meta-disk	"G:";
 # Again, we recommend not to use a drive letter:
 #			meta-disk       "3e56b893-10bf-11e8-aedd-080027421234";
-#
-# Please note that as of 06/2018 Linux drbd-utils do not understand
-# WinDRBD syntax of block devices (yet), so you need to replace the
-# disk, device and meta-disk windows block devices with dummy values
-# (/dev/drbdX, /dev/sdxx) if you want to use the same file on Linux.
-# This will change in upcoming Linux drbd-utils versions.
-#
 		}
 	}
 }
