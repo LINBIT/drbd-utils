@@ -1,4 +1,4 @@
-﻿/*
+/*
 	Copyright(C) 2007-2016, ManTechnology Co., LTD.
 	Copyright(C) 2007-2016, wdrbd@mantech.co.kr
 

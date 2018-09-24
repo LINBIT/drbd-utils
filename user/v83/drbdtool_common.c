@@ -2,8 +2,6 @@
 #define _XOPEN_SOURCE 600
 #define _FILE_OFFSET_BITS 64
 
-#include "config.h"
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/sysmacros.h>

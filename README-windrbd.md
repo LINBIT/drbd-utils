@@ -1,16 +1,13 @@
-Drbd-utils for windrbd
+Drbd-utils for WinDRBD
 ======================
 
-This is the WinDRBD branch of drbd-utils. If you want to build
-for Linux, please do a
-
-	git checkout master
-
-now.
+These drbd-utils can be also built for DRBD for Windows (WinDRBD),
+except for drbdmon (coming soon) and the drbd-83 and drbd-84 utilities
+(which don't and never exist for Windows, driver is based on DRBD 9)
 
 To clone this, do a
 
-	git clone --branch windrbd --recursive https://github.com/LINBIT/drbd-utils.git
+	git clone --recursive https://github.com/LINBIT/drbd-utils.git
 
 Build instructions
 ==================
@@ -40,4 +37,4 @@ Support
 If you need help with drbd and windrbd please contact Linbit at
 sales@linbit.com
 
-The windrbd branch is currently maintained by Johannes Thoma.
+The windrbd patches are maintained by Johannes Thoma <johannes@johannesthoma.com>.

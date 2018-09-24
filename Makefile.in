@@ -53,7 +53,7 @@ TOOLS_DIRS  := user/shared user/v9 scripts user/drbdmon
 DOC_DIRS    := documentation/v9
 ifeq ($(WITH_83_SUPPORT),yes)
 TOOLS_DIRS  += user/v83 scripts
-DOC_DIRS    = documentation/v83 
+DOC_DIRS    = documentation/v83
 endif
 ifeq ($(WITH_84_SUPPORT),yes)
 TOOLS_DIRS  = user/v84

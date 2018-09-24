@@ -26,8 +26,6 @@
 #define _XOPEN_SOURCE 600
 #define _FILE_OFFSET_BITS 64
 
-#include "config.h"
-
 #include <stdbool.h>
 #include <errno.h>
 #include <unistd.h>
@@ -71,9 +69,7 @@
 
 #include "libgenl.h"
 #include "drbd_nla.h"
-
 #include "linux/drbd_config.h"
-
 #include "linux/drbd_genl_api.h"
 #include "linux/drbd_limits.h"
 #include "linux/genl_magic_func.h"

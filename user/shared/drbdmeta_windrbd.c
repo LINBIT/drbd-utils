@@ -29,7 +29,7 @@
  * Linux or other UNICES), since the mapping between device files
  * (/dev/sda1 and the like) changes between system reboots (/dev/sda1
  * becoming /dev/sdb1 and vice versa), because they follow the
- * NT internal device scheme (\Devices\Harddisk0\Partition0), which 
+ * NT internal device scheme (\Devices\Harddisk0\Partition0), which
  * changes between reboots.
  * That's why we implemented accessing block devices using the WIN32
  * native API.
