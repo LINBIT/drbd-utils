@@ -57,6 +57,8 @@
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
 
+#include "drbdsetup.h"
+
 #define EXIT_NOMEM 20
 #define EXIT_NO_FAMILY 20
 #define EXIT_SEND_ERR 20
@@ -93,10 +95,7 @@
 #include "config_flags.h"
 #include "wrap_printf.h"
 #include "drbdsetup_colors.h"
-#ifdef WINDRBD
 #include "shared_tool.h"
-#include "shared_windrbd.h"
-#endif
 
 char *progname;
 
@@ -168,15 +167,6 @@ enum usage_type {
 	BRIEF,
 	FULL,
 	XML,
-};
-
-struct drbd_argument {
-	const char* name;
-	__u16 nla_type;
-	int (*convert_function)(struct drbd_argument *,
-				struct msg_buff *,
-				struct drbd_genlmsghdr *dhdr,
-				char *);
 };
 
 /* Configuration requests typically need a context to operate on.
@@ -293,7 +283,6 @@ static int remember_peer_device(struct drbd_cmd *, struct genl_info *, void *);
 static char *address_str(char *buffer, void* address, int addr_len);
 
 // convert functions for arguments
-static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 static int conv_md_idx(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 static int conv_u32(struct drbd_argument *, struct msg_buff *, struct drbd_genlmsghdr *, char *);
 static int conv_addr(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
@@ -593,8 +582,6 @@ struct drbd_cmd commands[] = {
 bool show_defaults;
 bool wait_after_split_brain;
 
-#define OTHER_ERROR 900
-
 #define EM(C) [ C - ERR_CODE_BASE ]
 
 /* The EM(123) are used for old error messages. */
@@ -723,66 +710,6 @@ static bool endpoints_equal(struct drbd_cfg_context *a, struct drbd_cfg_context 
 	       !memcmp(a->ctx_peer_addr, b->ctx_peer_addr, a->ctx_peer_addr_len);
 }
 #endif
-
-static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
-			  struct drbd_genlmsghdr *dhdr, char* arg)
-{
-#ifndef WINDRBD
-		/* Under Microsoft Windows, we use a different disk name
-		 * layout. The kernel itself checks wheter it is
-		 * a block device or not.
-		 */
-
-	struct stat sb;
-	int device_fd;
-
-	if ((device_fd = open(arg,O_RDWR))==-1) {
-		PERROR("Can not open device '%s'", arg);
-		return OTHER_ERROR;
-	}
-
-	if (fstat(device_fd, &sb)) {
-		PERROR("fstat(%s) failed", arg);
-		close(device_fd);
-		return OTHER_ERROR;
-	}
-
-	if(!S_ISBLK(sb.st_mode)) {
-		fprintf(stderr, "%s is not a block device!\n", arg);
-		close(device_fd);
-		return OTHER_ERROR;
-	}
-
-	close(device_fd);
-#endif
-
-#ifdef WINDRBD
-
-	/* #ifdef WINDRBD we want to do simple conversions
-		as C: -> \\DosDevices\\C: and GUIDs to 
-		\\DosDevices\\Volume{<GUID>} for convenience.
-	*/
-
-	char device[1024];
-	size_t n;
-
-	if (isalpha(arg[0]) && arg[1] == ':' && arg[2] == '\0') {
-		n = snprintf(device, sizeof(device), "\\DosDevices\\%s", arg);
-	} else if (is_guid(arg)) {
-		n = snprintf(device, sizeof(device), "\\DosDevices\\Volume{%s}", arg);
-	} else {
-		n = snprintf(device, sizeof(device), "%s", arg);
-	}
-	if (n >= sizeof(device)) {
-		fprintf(stderr, "Device name too long: %s (%zd), please report this.\n", arg, n);
-		return OTHER_ERROR;
-	}
-	nla_put_string(msg, ad->nla_type, device);
-#else
-	nla_put_string(msg, ad->nla_type, arg);
-#endif
-	return NO_ERROR;
-}
 
 static int conv_md_idx(struct drbd_argument *ad, struct msg_buff *msg,
 		       struct drbd_genlmsghdr *dhdr, char* arg)
@@ -1106,9 +1033,8 @@ static int check_error(int err_no, char *desc)
 	int rv = 0;
 
 	if (err_no == NO_ERROR || err_no == SS_SUCCESS) {
-#ifdef WINDRBD
 			/* drbdsetup primary may produce warnings,
-			 * which are no errors. */
+			 * which are no errors (on WinDRBD). */
 		if (global_attrs[DRBD_NLA_CFG_REPLY] &&
 	            global_attrs[DRBD_NLA_CFG_REPLY]->nla_len) {
 			struct nlattr *nla;
@@ -1119,7 +1045,6 @@ static int check_error(int err_no, char *desc)
 					fprintf(stderr, "%s\n", (char*)nla_data(nla));
 			}
 		}
-#endif
 		return 0;
 	}
 
@@ -1659,32 +1584,6 @@ error:
 	return 20;
 }
 
-#include <sys/utsname.h>
-static bool kernel_older_than(int version, int patchlevel, int sublevel)
-{
-	struct utsname utsname;
-	char *rel;
-	int l;
-
-	if (uname(&utsname) != 0)
-		return false;
-	rel = utsname.release;
-	l = strtol(rel, &rel, 10);
-	if (l > version)
-		return false;
-	else if (l < version || *rel == 0)
-		return true;
-	l = strtol(rel + 1, &rel, 10);
-	if (l > patchlevel)
-		return false;
-	else if (l < patchlevel || *rel == 0)
-		return true;
-	l = strtol(rel + 1, &rel, 10);
-	if (l >= sublevel)
-		return false;
-	return true;
-}
-
 static int shortest_timeout(struct peer_devices_list *peer_devices)
 {
 	struct peer_devices_list *peer_device;
@@ -1740,8 +1639,6 @@ static int opt_verbose;
 static bool opt_statistics;
 static bool opt_timestamps;
 
-	/* TODO: convert to ioctl interface */
-
 static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 {
 	char *desc = NULL;
@@ -1763,27 +1660,11 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 	}
 
 	if (cm->continuous_poll) {
-#ifdef WINDRBD
-		if (genl_join_mc_group(drbd_sock, "events")) {
+		if (genl_join_mc_group_and_ctrl(drbd_sock, "events")) {
 			desc = "unable to join drbd events multicast group";
 			rv = OTHER_ERROR;
 			goto out2;
 		}
-#else
-		/* also always (try to) listen to nlctrl notify,
-		 * so we have a chance to notice rmmod.  */
-		int id = GENL_ID_CTRL;
-
-		setsockopt(drbd_sock->s_fd, SOL_NETLINK, NETLINK_ADD_MEMBERSHIP,
-					&id, sizeof(id));
-
-		if (genl_join_mc_group(drbd_sock, "events") &&
-		    !kernel_older_than(2, 6, 23)) {
-			desc = "unable to join drbd events multicast group";
-			rv = OTHER_ERROR;
-			goto out2;
-		}
-#endif
 	}
 
 	flags = 0;
@@ -1813,46 +1694,19 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 		int received, rem;
 		struct nlmsghdr *nlh = (struct nlmsghdr *)iov.iov_base;
 		struct timeval before;
-#ifndef WINDRBD
-		int ret;
-		struct pollfd pollfds[2] = {
-			[0] = {
-				.fd = 1,
-				.events = POLLHUP,
-			},
-			[1] = {
-				.fd = drbd_sock->s_fd,
-				.events = POLLIN,
-			},
-		};
-#endif
 
 		gettimeofday(&before, NULL);
 
 		timeout_ms =
 			timeout_arg == MULTIPLE_TIMEOUTS ? shortest_timeout(u_ptr) : timeout_arg;
 
-#ifndef WINDRBD
-		ret = poll(pollfds, 2, timeout_ms);
-		if (ret == 0) {
-			err = 5;
-			goto out2;
-		}
-		if (pollfds[0].revents == POLLERR || pollfds[0].revents == POLLHUP)
-			goto out2;
-
-		received = genl_recv_msgs(drbd_sock, &iov, &desc, -1);
-#else
-			/* WinDRBD driver has no (interruptible) poll, this
-			 * function does a busy poll from user space; see
-			 * comment there.
-			 */
-		received = genl_recv_msgs(drbd_sock, &iov, &desc, timeout_ms);
+		received = genl_recv_msgs_poll_hup(drbd_sock, &iov, &desc, -1);
 		if (received == -E_RCV_TIMEDOUT) {
 			err = 5;
 			goto out2;
 		}
-#endif
+		if (received == 0)
+			goto out2;
 
 		if (received < 0) {
 			switch(received) {
@@ -4758,57 +4612,6 @@ static void print_usage_and_exit(const char *addinfo)
 		printf("\n%s\n", addinfo);
 
 	exit(20);
-}
-
-static int modprobe_drbd(void)
-{
-#ifndef WINDRBD
-	struct stat sb;
-	int ret, retries = 10;
-
-	ret = stat("/proc/drbd", &sb);
-	if (ret && errno == ENOENT) {
-		ret = system("/sbin/modprobe drbd");
-		if (ret != 0) {
-			fprintf(stderr, "Failed to modprobe drbd (%m)\n");
-			return 0;
-		}
-		for(;;) {
-			struct timespec ts = {
-				.tv_nsec = 1000000,
-			};
-
-			ret = stat("/proc/drbd", &sb);
-			if (!ret || retries-- == 0)
-				break;
-			nanosleep(&ts, NULL);
-		}
-	}
-	if (ret) {
-		fprintf(stderr, "Could not stat /proc/drbd: %m\n");
-		fprintf(stderr, "Make sure that the DRBD kernel module is installed "
-				"and can be loaded!\n");
-	}
-	return ret == 0;
-#else
-	int ret;
-
-	if (!windrbd_driver_loaded()) {
-		fprintf(stderr, "WinDRBD driver not found, trying to start it.\n");
-		ret = system("sc start windrbd");
-		if (ret != 0) {
-			fprintf(stderr, "Couldn't start windrbd driver.\n");
-			return 0;
-		}
-		if (!windrbd_driver_loaded()) {
-			fprintf(stderr, "Start windrbd driver failed, maybe you need to update userland and/or kernel?\n");
-			return 0;
-		} else {
-			fprintf(stderr, "WinDRBD driver started.\n");
-		}
-	}
-	return 1;
-#endif
 }
 
 static void maybe_exec_legacy_drbdsetup(char **argv)

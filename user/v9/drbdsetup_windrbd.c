@@ -1,0 +1,71 @@
+#include "drbdsetup.h"
+#include <linux/drbd.h>
+#include <stdio.h>
+#include "shared_tool.h"
+#include "libgenl.h"
+#include "shared_windrbd.h"
+
+bool kernel_older_than(int version, int patchlevel, int sublevel)
+{
+	return true;
+}
+
+int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
+		   struct drbd_genlmsghdr *dhdr, char* arg)
+{
+	/* we want to do simple conversions
+		as C: -> \\DosDevices\\C: and GUIDs to 
+		\\DosDevices\\Volume{<GUID>} for convenience.
+	*/
+
+		/* TODO: PATH_MAX */
+	char device[1024];
+	size_t n;
+
+	if (isalpha(arg[0]) && arg[1] == ':' && arg[2] == '\0') {
+		n = snprintf(device, sizeof(device), "\\DosDevices\\%s", arg);
+	} else if (is_guid(arg)) {
+		n = snprintf(device, sizeof(device), "\\DosDevices\\Volume{%s}", arg);
+	} else {
+		n = snprintf(device, sizeof(device), "%s", arg);
+	}
+	if (n >= sizeof(device)) {
+		fprintf(stderr, "Device name too long: %s (%zd), please report this.\n", arg, n);
+		return OTHER_ERROR;
+	}
+	nla_put_string(msg, ad->nla_type, device);
+
+	return NO_ERROR;
+}
+
+int genl_join_mc_group_and_ctrl(struct genl_sock *s, const char *name)
+{
+	return genl_join_mc_group(s, name);
+}
+
+int genl_recv_msgs_poll_hup(struct genl_sock *s, struct iovec *iov, char **err_desc, int timeout_ms)
+{
+	return genl_recv_msgs(s, iov, err_desc, timeout_ms);
+}
+
+int modprobe_drbd(void)
+{
+	int ret;
+
+	if (!windrbd_driver_loaded()) {
+		fprintf(stderr, "WinDRBD driver not found, trying to start it.\n");
+		ret = system("sc start windrbd");
+		if (ret != 0) {
+			fprintf(stderr, "Couldn't start windrbd driver.\n");
+			return 0;
+		}
+		if (!windrbd_driver_loaded()) {
+			fprintf(stderr, "Start windrbd driver failed, maybe you need to update userland and/or kernel?\n");
+			return 0;
+		} else {
+			fprintf(stderr, "WinDRBD driver started.\n");
+		}
+	}
+	return 1;
+}
+
