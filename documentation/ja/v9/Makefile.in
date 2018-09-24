@@ -30,9 +30,15 @@ WITH_PACEMAKER = @WITH_PACEMAKER@
 WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 WITH_DRBDMON=@WITH_DRBDMON@
+WITH_WINDRBD = @WITH_WINDRBD@
 
 # variables meant to be overridden from the make command line
+ifeq ($(WITH_WINDRBD),yes)
+DESTDIR ?=
+else
 DESTDIR ?= /
+endif
+
 CREATE_MAN_LINK ?= yes
 
 MANPAGES       := drbdsetup.8 drbd.conf.5 drbd.8 drbdadm.8 drbdmeta.8
