@@ -409,7 +409,7 @@ AH_TEMPLATE(DRBD_CONFIG_DIR, [Local configuration directory. Commonly
 			   /etc or
 			   /usr/local/etc])
 AH_TEMPLATE(DRBD_BIN_DIR, [Installation directory. Commonly
-			   /cygdrive/c/Program Files/drbd])
+			   /usr/bin])
 AH_TEMPLATE(DRBD_LEGACY_83, [Include support for drbd-8.3 kernel code])
 AH_TEMPLATE(DRBD_LEGACY_84, [Include support for drbd-8.4 kernel code])
 AH_TEMPLATE(WINDRBD, [Include support for windrbd (do not use this under Linux)])

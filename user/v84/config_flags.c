@@ -1,7 +1,4 @@
 #define _GNU_SOURCE
-
-#include "config.h"
-
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>

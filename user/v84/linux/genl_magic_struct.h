@@ -1,8 +1,6 @@
 #ifndef GENL_MAGIC_STRUCT_H
 #define GENL_MAGIC_STRUCT_H
 
-#include "config.h"
-
 #ifndef GENL_MAGIC_FAMILY
 # error "you need to define GENL_MAGIC_FAMILY before inclusion"
 #endif
