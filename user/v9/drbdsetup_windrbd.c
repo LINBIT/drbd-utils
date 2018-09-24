@@ -14,7 +14,7 @@ int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 		   struct drbd_genlmsghdr *dhdr, char* arg)
 {
 	/* we want to do simple conversions
-		as C: -> \\DosDevices\\C: and GUIDs to 
+		as C: -> \\DosDevices\\C: and GUIDs to
 		\\DosDevices\\Volume{<GUID>} for convenience.
 	*/
 

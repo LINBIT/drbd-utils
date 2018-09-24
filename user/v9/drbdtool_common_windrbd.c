@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "drbdtool_common.h"
 
-extern struct version __drbd_driver_version; 
+extern struct version __drbd_driver_version;
 
 const struct version *get_drbd_driver_version(void)
 {
