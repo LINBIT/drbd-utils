@@ -1,5 +1,3 @@
-#include "config.h"
-
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>
@@ -10,9 +8,7 @@
 
 #include "libgenl.h"
 #include "linux/drbd.h"
-
 #include "linux/drbd_config.h"
-
 #include "linux/drbd_genl_api.h"
 #include "linux/drbd_limits.h"
 #include "drbd_nla.h"

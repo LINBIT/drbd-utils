@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include "drbdtool_common.h"
 
-extern struct version __drbd_driver_version; 
+extern struct version __drbd_driver_version;
 
 /* For our purpose (finding the revision) SLURP_SIZE is always enough.
  */

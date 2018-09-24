@@ -26,8 +26,6 @@
 #define _XOPEN_SOURCE 600
 #define _FILE_OFFSET_BITS 64
 
-#include "config.h"
-
 #include <stdbool.h>
 #include <errno.h>
 #include <unistd.h>
@@ -79,12 +77,9 @@
  * coding the necessary bits right here.
  */
 
-#include "config.h"
 #include "libgenl.h"
 #include "drbd_nla.h"
-
 #include <linux/drbd_config.h>
-
 #include <linux/drbd_genl_api.h>
 #include <linux/drbd_limits.h>
 #include "drbdtool_common.h"
@@ -95,7 +90,6 @@
 #include "config_flags.h"
 #include "wrap_printf.h"
 #include "drbdsetup_colors.h"
-#include "shared_tool.h"
 
 char *progname;
 
@@ -1791,15 +1785,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				.attrs = global_attrs,
 			};
 
-/* TODO: here we need to check for NLMSG_DONE */
-#if 0
-			if (nlh->nlmsg_type == NLMSG_DONE) {
-	/* not like this (there might be packets after the DONE packet)
-	 * but similar.
-	 */
-				goto got_done;
-			}
-#endif
+			dbg(3, "received type:%x\n", nlh->nlmsg_type);
 			if (nlh->nlmsg_type < NLMSG_MIN_TYPE) {
 				/* Ignore netlink control messages. */
 				continue;

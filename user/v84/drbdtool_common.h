@@ -1,8 +1,6 @@
 #ifndef DRBDTOOL_COMMON_H
 #define DRBDTOOL_COMMON_H
 
-#include "config.h"
-
 #include "drbd_endian.h"
 #include <stdio.h>
 #include <unistd.h>
