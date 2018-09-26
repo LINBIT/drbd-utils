@@ -2410,6 +2410,8 @@ static void peer_device_status_json(struct peer_devices_list *peer_device)
 	       s->peer_dev_unacked,
 	       bool2json(sync_details),
 	       bool2json(sync_details && s->peer_dev_ov_left),
+	       /* a volume of size 0 is what? 100% in sync? 0% in sync? */
+	       peer_device->device->statistics.dev_size == 0 ? 0 :
 	       100 * (1 - (double)peer_device->statistics.peer_dev_out_of_sync /
 		      (double)peer_device->device->statistics.dev_size),
 	       (sync_details || in_resync_without_details) ? "," : "");
@@ -2470,13 +2472,14 @@ static void peer_device_status_json(struct peer_devices_list *peer_device)
 
 		/* estimate time-to-run, based on "db1/dt1" */
 		printf("          \"estimated-seconds-to-finish\": %.0f,\n",
-			db ? dt * 1e-3 * sectors_to_go / db : NAN);
+			db == 0 ? 987654321 : dt * 1e-3 * sectors_to_go / db);
 
 		db = s->peer_dev_rs_total - sectors_to_go;
 		dt = s->peer_dev_rs_dt_start_ms - s->peer_dev_rs_paused_ms;
 		printf("          \"db/dt [MiB/s]\": %.2f,\n", db/(dt?:1) *1000.0/2048.0);
 
 		printf("          \"percent-resync-done\": %.2f\n",
+			s->peer_dev_rs_total == 0 ? 0 :
 			100.0 * db/(double)s->peer_dev_rs_total);
 	} else if (in_resync_without_details) {
 		printf("          \"percent-resync-done\": %.2f\n",
