@@ -2949,7 +2949,7 @@ static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
 
 	resources = sort_resources(list_resources());
 
-	if (resources == NULL)
+	if (resources == NULL && !json)
 		printf("# No currently configured DRBD found.\n");
 
 	sigaction(SIGHUP, &sa, NULL);
