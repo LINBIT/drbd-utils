@@ -150,6 +150,7 @@ int main(void)
 static int indent = 0;
 #define INDENT_WIDTH	4
 #define printI(fmt, args... ) printf("%*s" fmt,INDENT_WIDTH * indent,"" , ## args )
+#define QUOTED(str) "\"" str "\""
 
 enum usage_type {
 	BRIEF,
@@ -351,6 +352,7 @@ struct option events_cmd_options[] = {
 
 struct option show_cmd_options[] = {
 	{ "show-defaults", no_argument, 0, 'D' },
+	{ "json", no_argument, 0, 'j' },
 	{ }
 };
 
@@ -1416,6 +1418,71 @@ static void print_options(struct nlattr *attr, struct context_def *ctx, const ch
 	}
 }
 
+static bool print_options_json(
+	struct nlattr *attr,
+	struct context_def *ctx,
+	const char *sect_name,
+	bool comma_before,
+	bool comma_after
+)
+{
+	struct field_def *field;
+	int opened = 0;
+
+	if (!attr)
+		return false;
+
+	if (drbd_nla_parse_nested(nested_attr_tb, ctx->nla_policy_size - 1,
+				  attr, ctx->nla_policy)) {
+		fprintf(stderr, "nla_policy violation for %s payload!\n", sect_name);
+		/* still, print those that validated ok */
+	}
+
+	for (field = ctx->fields; field->name; field++) {
+		struct nlattr *nlattr;
+		const char *str;
+		bool is_default;
+
+		nlattr = ntb(field->nla_type);
+		if (!nlattr)
+			continue;
+		str = field->ops->get(ctx, field, nlattr);
+		is_default = field->ops->is_default(field, str);
+		if (is_default && !show_defaults)
+			continue;
+		if (!opened) {
+			opened=1;
+			if (comma_before)
+				printf(",\n");
+			printI(QUOTED("%s") ": {\n", sect_name);
+			++indent;
+		}
+
+		printI(QUOTED("%s") ": ", field->name);
+		if (field->ops == &fc_boolean)
+		{
+			if (strcmp("yes", str) == 0)
+				printf("true");
+			else
+				printf("false");
+		}
+		else
+			printf(QUOTED("%s"), str);
+		if ((field+1)->name)
+			printf(",");
+		printf("\n");
+	}
+	if(opened) {
+		--indent;
+		if (comma_after)
+			printI("},\n");
+		else
+			printI("}\n");
+	}
+
+	return opened > 0;
+}
+
 struct choose_timeout_ctx {
 	struct drbd_cfg_context ctx;
 	struct msg_buff *smsg;
@@ -2111,6 +2178,37 @@ static void print_paths(struct connections_list *connection)
 	}
 }
 
+static void print_paths_json(struct connections_list *connection)
+{
+	char address[ADDRESS_STR_MAX];
+	char *colon;
+	struct nlattr *nla;
+	int tmp;
+
+	if (!connection->path_list)
+		return;
+
+	nla_for_each_nested(nla, connection->path_list, tmp) {
+		int l = nla_len(nla);
+
+		if (!address_str(address, nla_data(nla), l))
+			continue;
+		colon = strchr(address, ':');
+		if (colon)
+			*colon = ' ';
+		if (nla->nla_type == T_my_addr) {
+			printI(QUOTED("path") ": {\n");
+			++indent;
+			printI(QUOTED("_this_host") ": \"%s\",\n", address);
+		}
+		if (nla->nla_type == T_peer_addr) {
+			printI(QUOTED("_remote_host") ": \"%s\"\n", address);
+			--indent;
+			printI("},\n");
+		}
+	}
+}
+
 static void show_connection(struct connections_list *connection, struct peer_devices_list *peer_devices)
 {
 	struct peer_devices_list *peer_device;
@@ -2131,6 +2229,87 @@ static void show_connection(struct connections_list *connection, struct peer_dev
 
 	--indent;
 	printI("}\n");
+}
+
+static bool connection_has_disk_options(__u32 conn_ctx_peer_node_id, struct peer_devices_list *peer_devices)
+{
+	struct peer_devices_list *peer_device;
+	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next) {
+		if (conn_ctx_peer_node_id == peer_device->ctx.ctx_peer_node_id &&
+			!options_empty(peer_device->peer_device_conf, &peer_device_options_ctx)
+		)
+			return true;
+	}
+
+	return false;
+}
+
+static void show_connection_json(struct connections_list *connection, struct peer_devices_list *peer_devices)
+{
+	struct peer_devices_list *peer_device;
+
+	printI(QUOTED("_peer_node_id") ": %d,\n", connection->ctx.ctx_peer_node_id);
+
+	bool has_disk_options = connection_has_disk_options(connection->ctx.ctx_peer_node_id, peer_devices);
+
+	print_paths_json(connection);
+	if (connection->info.conn_connection_state == C_STANDALONE)
+		printI(QUOTED("_is_standalone") ": true,\n");
+	print_options_json(connection->net_conf, &show_net_options_ctx, "net", false, has_disk_options);
+
+	if (has_disk_options)
+	{
+		printI(QUOTED("volumes") ": [\n");
+		for (peer_device = peer_devices; peer_device; peer_device = peer_device->next) {
+			if (connection->ctx.ctx_peer_node_id == peer_device->ctx.ctx_peer_node_id &&
+				!options_empty(peer_device->peer_device_conf, &peer_device_options_ctx)
+			)
+			{
+				++indent;
+				printI("{\n");
+				++indent;
+				printI(QUOTED("volume_nr") ": %d,\n", peer_device->ctx.ctx_volume);
+				print_options_json(peer_device->peer_device_conf, &peer_device_options_ctx, "disk", false, false);
+				--indent;
+				printI("}\n");
+				--indent;
+			}
+		}
+		printI("]\n");
+	}
+}
+
+static void show_volume_json(struct devices_list *device)
+{
+	printI("{\n");
+	++indent;
+	printI(QUOTED("volume_nr") ": %d,\n", device->ctx.ctx_volume);
+	printI(QUOTED("device_minor") ": %d", device->minor);
+	if (device->disk_conf.backing_dev[0]) {
+		printf(",\n");
+		printI(QUOTED("disk") ": " QUOTED("%s") ",\n", device->disk_conf.backing_dev);
+		switch(device->disk_conf.meta_dev_idx) {
+		case DRBD_MD_INDEX_INTERNAL:
+		case DRBD_MD_INDEX_FLEX_INT:
+			printI(QUOTED("meta-disk") ": " QUOTED("internal"));
+			break;
+		case DRBD_MD_INDEX_FLEX_EXT:
+			printI(QUOTED("meta-disk") ": %s",
+			       double_quote_string(device->disk_conf.meta_dev));
+			break;
+		default:
+			printI("%s : %d",
+			       double_quote_string(device->disk_conf.meta_dev),
+			       device->disk_conf.meta_dev_idx);
+		}
+	} else if (device->info.is_intentional_diskless == 1) {
+		printI(QUOTED("disk") ": " QUOTED("none"));
+	}
+
+	if (!print_options_json(device->disk_conf_nl, &attach_cmd_ctx, "disk", true, false))
+		printf("\n");
+	--indent;
+	printI("}\n"); /* close volume */
 }
 
 static void show_volume(struct devices_list *device)
@@ -2164,28 +2343,9 @@ static void show_volume(struct devices_list *device)
 	printI("}\n"); /* close volume */
 }
 
-static int show_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static void show_resource_list(struct resources_list *resources_list, char* old_objname)
 {
-	struct resources_list *resources_list, *resource;
-	char *old_objname = objname;
-	int c;
-
-	optind = 0;  /* reset getopt_long() */
-	for (;;) {
-		c = getopt_long(argc, argv, "D", show_cmd_options, 0);
-		if (c == -1)
-			break;
-		switch(c) {
-		default:
-		case '?':
-			return 20;
-		case 'D':
-			show_defaults = true;
-			break;
-		}
-	}
-
-	resources_list = sort_resources(list_resources());
+	struct resources_list *resource;
 
 	if (resources_list == NULL)
 		printf("# No currently configured DRBD found.\n");
@@ -2235,6 +2395,132 @@ static int show_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		free_devices(devices);
 		free_peer_devices(peer_devices);
 	}
+}
+
+static void show_resource_list_json(struct resources_list *resources_list, char* old_objname)
+{
+	struct resources_list *resource;
+
+	printI("[\n");
+	++indent;
+
+	for (resource = resources_list; resource; resource = resource->next) {
+		struct devices_list *devices, *device;
+		struct connections_list *connections, *connection;
+		struct peer_devices_list *peer_devices = NULL;
+
+		struct nlattr *nla;
+
+		if (strcmp(old_objname, "all") && strcmp(old_objname, resource->name))
+			continue;
+
+		devices = list_devices(resource->name);
+		connections = sort_connections(list_connections(resource->name));
+		if (devices && connections)
+			peer_devices = list_peer_devices(resource->name);
+
+		objname = resource->name;
+
+		printI("{\n");
+		++indent;
+		printI(QUOTED("rsc_name") ": " QUOTED("%s") ",\n", resource->name);
+
+		print_options_json(resource->res_opts, &resource_options_ctx, "options", false, true);
+
+		printI("\"_this_host\": {\n");
+		++indent;
+
+		nla = nla_find_nested(resource->res_opts, __nla_type(T_node_id));
+		if (nla)
+		{
+			printI("\"node-id\": %d", *(uint32_t *)nla_data(nla));
+			if (devices)
+				printf(",");
+			printf("\n");
+		}
+
+		printI(QUOTED("volumes") ": [\n");
+		indent++;
+		for (device = devices; device; device = device->next)
+			show_volume_json(device);
+
+		--indent;
+		printI("]\n");
+
+		--indent;
+		printI("}");
+		if (connections)
+			printf(",");
+		printf("\n");
+
+		if (connections)
+		{
+			printI(QUOTED("connections") ": [\n");
+			indent++;
+			for (connection = connections; connection; connection = connection->next)
+			{
+				printI("{\n");
+				indent++;
+				show_connection_json(connection, peer_devices);
+				indent--;
+				printI("}");
+				if (connection->next)
+					printf(",");
+				printf("\n");
+			}
+
+			indent--;
+			printI("]\n");
+		}
+
+		--indent;
+		printI("}");
+
+		if (resource->next)
+			printf(",");
+
+		printf("\n");
+
+		free_connections(connections);
+		free_devices(devices);
+		free_peer_devices(peer_devices);
+	}
+
+	indent--;
+	printI("]\n");
+}
+
+static int show_cmd(struct drbd_cmd *cm, int argc, char **argv)
+{
+	struct resources_list *resources_list;
+	char *old_objname = objname;
+	int c;
+	bool json_output = false;
+
+	optind = 0;  /* reset getopt_long() */
+	for (;;) {
+		c = getopt_long(argc, argv, "D", show_cmd_options, 0);
+		if (c == -1)
+			break;
+		switch(c) {
+		default:
+		case '?':
+			return 20;
+		case 'D':
+			show_defaults = true;
+			break;
+		case 'j':
+			json_output = true;
+			break;
+		}
+	}
+
+	resources_list = sort_resources(list_resources());
+
+	if (json_output)
+		show_resource_list_json(resources_list, old_objname);
+	else
+		show_resource_list(resources_list, old_objname);
 
 	free(resources_list);
 	objname = old_objname;
