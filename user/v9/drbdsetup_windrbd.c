@@ -48,19 +48,38 @@ int genl_recv_msgs_poll_hup(struct genl_sock *s, struct iovec *iov, char **err_d
 	return genl_recv_msgs(s, iov, err_desc, timeout_ms);
 }
 
+static int run_command(const char *command, char *args[])
+{
+        int ret;
+
+        switch (fork()) {
+        case 0:
+                execvp(command, args);
+		perror("execvp");
+                exit(1);
+        case -1:
+                perror("fork");
+                return 1;
+        default:
+                wait(&ret);
+                return ret;
+        }
+}
+
 int modprobe_drbd(void)
 {
 	int ret;
 
 	if (!windrbd_driver_loaded()) {
+		char *args[] = { "sc", "start", "windrbd", NULL };
 		fprintf(stderr, "WinDRBD driver not found, trying to start it.\n");
-		ret = system("sc start windrbd");
+		ret = run_command("sc", args);
 		if (ret != 0) {
 			fprintf(stderr, "Couldn't start windrbd driver.\n");
 			return 0;
 		}
 		if (!windrbd_driver_loaded()) {
-			fprintf(stderr, "Start windrbd driver failed, maybe you need to update userland and/or kernel?\n");
+			fprintf(stderr, "Start windrbd driver failed, maybe you need to update userland and/or kernel?\nDo you have permissions to start a driver (Administrator?)\nIf you don't have an officially signed driver, try executing bcdedit /set TESTSIGNING ON, reboot and try again.\n");
 			return 0;
 		} else {
 			fprintf(stderr, "WinDRBD driver started.\n");
