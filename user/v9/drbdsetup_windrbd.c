@@ -4,6 +4,7 @@
 #include "shared_tool.h"
 #include "libgenl.h"
 #include "shared_windrbd.h"
+#include <unistd.h>
 
 bool kernel_older_than(int version, int patchlevel, int sublevel)
 {
