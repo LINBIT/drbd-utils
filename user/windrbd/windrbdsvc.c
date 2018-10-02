@@ -1,9 +1,68 @@
-/* Compile this with mingw. It won't compile with normal gcc */
+/*
+
+The handling of the Windows Services API was taken from
+ImDisk (http://www.ltr-data.se/opencode.html). Since I
+consider this 'substanstial portion of the software' I
+include following license statement:
+
+Copyright (C) 2005-2015 Olof Lagerkvist.
+
+Permission is hereby granted, free of charge, to any person
+obtaining a copy of this software and associated documentation
+files (the "Software"), to deal in the Software without
+restriction, including without limitation the rights to use,
+copy, modify, merge, publish, distribute, sublicense, and/or
+sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+*/
 
 #include <windows.h>
-// #include <winioctl.h>
-// #include <ntsecapi.h>
 #include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#define MAX_ARGS 4
+#define NUM_WINDRBD_PROCESSES 2
+
+struct windrbd_process {
+	pid_t pid;
+	const char *cmdline[MAX_ARGS];
+};
+
+struct windrbd_process windrbd_processes[NUM_WINDRBD_PROCESSES] =
+	{ { -1, {"windrbd", "user-mode-helper-daemon", NULL, } },
+	  { -1, {"windrbd", "log-server", NULL /* fname */ , NULL } }
+	};
+
+void start_processes_if_not_running(void)
+{
+	/* while waitpid(..., NOHANG) != 0 */
+	/* find pid in table and set pid = -1 */
+
+	/* foreach p in table */
+	/* if pid == -1 fork() { exec() / pid = retval of fork } */
+
+	/* sleep(1) */
+}
+
+void terminate_processes(void)
+{
+	/* for each p in table */
+	/* if pid != -1 kill(, SIGKILL) and waitpid(pid, HANG) */
+}
 
 #define WINDRBDUM_SVC "WinDRBDUM"
 
@@ -65,8 +124,11 @@ WinDRBDSvcStart(DWORD a, LPSTR *b)
             WinDRBDSvcStatus.dwWin32ExitCode = NO_ERROR;
             break;
         }
-		/* do something */
+	start_processes_if_not_running();
+
+	sleep(1);
     }
+    terminate_processes();
 
     WinDRBDSvcStatus.dwCurrentState = SERVICE_STOPPED;
     WinDRBDSvcStatus.dwControlsAccepted = 0;
