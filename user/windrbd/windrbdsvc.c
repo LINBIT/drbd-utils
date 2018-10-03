@@ -32,36 +32,81 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include <windows.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
+#include <sys/wait.h>
+#include <signal.h>
 
 #define MAX_ARGS 4
 #define NUM_WINDRBD_PROCESSES 2
 
 struct windrbd_process {
 	pid_t pid;
-	const char *cmdline[MAX_ARGS];
+	char *cmdline[MAX_ARGS];
+	char *logfile;
 };
 
 struct windrbd_process windrbd_processes[NUM_WINDRBD_PROCESSES] =
-	{ { -1, {"windrbd", "user-mode-helper-daemon", NULL, } },
-	  { -1, {"windrbd", "log-server", NULL /* fname */ , NULL } }
+	{ { -1, {"windrbd", "user-mode-helper-daemon", NULL, }, "/cygdrive/c/windrbd/user-mode-helper-daemon.log" },
+//	{ { -1, {"windrbd", "user-mode-helper-daemon", NULL, }, "/dev/null" }
+	  { -1, {"windrbd", "log-server", NULL /* fname */ , NULL }, "windrbd.log" }
 	};
 
 void start_processes_if_not_running(void)
 {
-	/* while waitpid(..., NOHANG) != 0 */
-	/* find pid in table and set pid = -1 */
+	pid_t pid;
+	int retval;
+	int i;
+	int fd;
 
-	/* foreach p in table */
-	/* if pid == -1 fork() { exec() / pid = retval of fork } */
+	while ((pid = waitpid(-1, &retval, WNOHANG)) > 0) {
+		for (i=0;i<NUM_WINDRBD_PROCESSES;i++) {
+			if (pid == windrbd_processes[i].pid)
+				windrbd_processes[i].pid = -1;
+		}
+	}
 
-	/* sleep(1) */
+	for (i=0;i<NUM_WINDRBD_PROCESSES;i++) {
+		if (windrbd_processes[i].pid == -1) {
+			switch (pid = fork()) {
+			case -1: perror("fork"); break;
+			case 0:
+#if 0
+				fd = open(windrbd_processes[i].logfile, O_CREAT | O_APPEND | O_SYNC | O_DSYNC, 0600);
+				if (fd < 0)
+					perror("open");
+				else {
+					if (dup2(fd, 1) < 0)
+						perror("dup2");
+					if (dup2(fd, 2) < 0)
+						perror("dup2");
+				}
+#endif
+
+				execvp(windrbd_processes[i].cmdline[0], windrbd_processes[i].cmdline);
+				perror("exec");
+				fprintf(stderr, "Could not run %s\n", windrbd_processes[i].cmdline[0]);
+				exit(1);
+			default: windrbd_processes[i].pid = pid;
+			}
+		}
+	}
 }
 
 void terminate_processes(void)
 {
-	/* for each p in table */
-	/* if pid != -1 kill(, SIGKILL) and waitpid(pid, HANG) */
+	int i;
+
+	for (i=0;i<NUM_WINDRBD_PROCESSES;i++) {
+		if (windrbd_processes[i].pid != -1)
+			kill(windrbd_processes[i].pid, SIGTERM);
+	}
+	sleep(1);
+	for (i=0;i<NUM_WINDRBD_PROCESSES;i++) {
+		if (windrbd_processes[i].pid != -1)
+			kill(windrbd_processes[i].pid, SIGKILL);
+	}
 }
 
 #define WINDRBDUM_SVC "WinDRBDUM"
@@ -169,3 +214,27 @@ WinMain(HINSTANCE a,
     return 1;
 }
 
+#ifdef CYGWIN_CMDLINE_TEST
+
+static int run = 1;
+
+void sigint(int sig)
+{
+	run = 0;
+	signal(SIGINT, SIG_DFL);
+}
+
+int main(int argc, char ** argv)
+{
+	signal(SIGINT, sigint);
+
+	while (run) {
+		start_processes_if_not_running();
+		sleep(1);
+	}
+	terminate_processes();
+
+	return 0;
+}
+
+#endif
