@@ -38,6 +38,8 @@ windrbdsvc: $(windrbdsvc-obj)
 install: windrbd windrbdsvc
 	install -m 755 windrbd.exe $(DESTDIR)$(sbindir)
 	install -m 755 windrbdsvc.exe $(DESTDIR)$(sbindir)
+# TODO: remove later
+	install -m 755 windrbdsvc.exe "/cygdrive/c/Program Files/WinDRBD"
 	install -m 644 windrbd-sample.res $(DESTDIR)$(sysconfdir)/drbd.d
 
 clean:
