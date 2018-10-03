@@ -768,7 +768,7 @@ static int exec_command(struct windrbd_usermode_helper *next_cmd)
 	execvpe(cmd, argv, envp);
 	perror("execvpe");
 	printf("Could not exec %s\n", cmd);
-	exit(1);
+	exit(102);
 }
 
 static struct process *add_command_to_process_list(struct windrbd_usermode_helper *next_cmd)
@@ -794,7 +794,7 @@ static int fork_and_exec_command(struct windrbd_usermode_helper *next_cmd)
 	switch (pid = fork()) {
 	case 0:
 		exec_command(next_cmd);
-		exit(1);
+		exit(101);
 
 	case -1:
 		perror("fork");
@@ -815,6 +815,9 @@ static int user_mode_helper_daemon(void)
 	DWORD size, size2;
 	int err;
 	BOOL ret;
+
+	if (!quiet)
+		printf("Starting WinDRBD user mode helper daemon\n");
 
 	um_root_dev_handle = do_open_root_device(quiet);
 	if (um_root_dev_handle == INVALID_HANDLE_VALUE)
