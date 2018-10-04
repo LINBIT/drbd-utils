@@ -1,3 +1,5 @@
+#define CYGWIN_CMDLINE_TEST 1
+
 /*
 
 The handling of the Windows Services API was taken from
@@ -58,7 +60,6 @@ void start_processes_if_not_running(void)
 	pid_t pid;
 	int retval;
 	int i;
-	int fd;
 
 	while ((pid = waitpid(-1, &retval, WNOHANG)) > 0) {
 		for (i=0;i<NUM_WINDRBD_PROCESSES;i++) {
@@ -72,18 +73,6 @@ void start_processes_if_not_running(void)
 			switch (pid = fork()) {
 			case -1: perror("fork"); break;
 			case 0:
-#if 0
-				fd = open(windrbd_processes[i].logfile, O_CREAT | O_APPEND | O_SYNC | O_DSYNC, 0600);
-				if (fd < 0)
-					perror("open");
-				else {
-					if (dup2(fd, 1) < 0)
-						perror("dup2");
-					if (dup2(fd, 2) < 0)
-						perror("dup2");
-				}
-#endif
-
 				execvp(windrbd_processes[i].cmdline[0], windrbd_processes[i].cmdline);
 				perror("exec");
 				fprintf(stderr, "Could not run %s\n", windrbd_processes[i].cmdline[0]);
@@ -106,6 +95,21 @@ void terminate_processes(void)
 	for (i=0;i<NUM_WINDRBD_PROCESSES;i++) {
 		if (windrbd_processes[i].pid != -1)
 			kill(windrbd_processes[i].pid, SIGKILL);
+	}
+}
+
+void dup_output_to_logfile(const char *logfile)
+{
+	int fd;
+
+	fd = open(logfile, O_CREAT | O_APPEND | O_SYNC | O_DSYNC, 0600);
+	if (fd < 0)
+		perror("open");
+	else {
+		if (dup2(fd, 1) < 0)
+			perror("dup2");
+		if (dup2(fd, 2) < 0)
+			perror("dup2");
 	}
 }
 
@@ -226,6 +230,8 @@ void sigint(int sig)
 
 int main(int argc, char ** argv)
 {
+	dup_output_to_logfile("/cygdrive/c/windrbd/var/log/windrbd.log");
+
 	signal(SIGINT, sigint);
 
 	while (run) {
