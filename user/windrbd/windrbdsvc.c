@@ -102,7 +102,7 @@ void dup_output_to_logfile(const char *logfile)
 {
 	int fd;
 
-	fd = open(logfile, O_CREAT | O_APPEND | O_SYNC | O_DSYNC, 0600);
+	fd = open(logfile, O_CREAT | O_APPEND | O_SYNC | O_DSYNC | O_RDWR, 0600);
 	if (fd < 0)
 		perror("open");
 	else {
