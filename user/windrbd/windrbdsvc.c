@@ -1,4 +1,5 @@
-#define CYGWIN_CMDLINE_TEST 1
+/* Define this to build a binary to be run on a console */
+/* #define CYGWIN_CMDLINE_TEST 1 */
 
 /*
 
@@ -46,13 +47,11 @@ OTHER DEALINGS IN THE SOFTWARE.
 struct windrbd_process {
 	pid_t pid;
 	char *cmdline[MAX_ARGS];
-	char *logfile;
 };
 
 struct windrbd_process windrbd_processes[NUM_WINDRBD_PROCESSES] =
-	{ { -1, {"windrbd", "user-mode-helper-daemon", NULL, }, "/cygdrive/c/windrbd/user-mode-helper-daemon.log" },
-//	{ { -1, {"windrbd", "user-mode-helper-daemon", NULL, }, "/dev/null" }
-	  { -1, {"windrbd", "log-server", NULL /* fname */ , NULL }, "windrbd.log" }
+	{ { -1, {"windrbd", "user-mode-helper-daemon", NULL, } },
+	  { -1, {"windrbd", "log-server", NULL /* fname */ , NULL } }
 	};
 
 void start_processes_if_not_running(void)
@@ -165,6 +164,10 @@ WinDRBDSvcStart(DWORD a, LPSTR *b)
 
     WinDRBDSvcStatus.dwCurrentState = SERVICE_RUNNING;
     SetServiceStatus(WinDRBDSvcStatusHandle, &WinDRBDSvcStatus);
+
+	/* Note: Not to /var/log, Windows admins don't look there. */
+
+    dup_output_to_logfile("/cygdrive/c/windrbd/windrbd.log");
 
     for (;;)
     {
