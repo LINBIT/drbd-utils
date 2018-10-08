@@ -2395,7 +2395,7 @@ static void show_resource_list_json(struct resources_list *resources_list, char*
 
 		printI("{\n");
 		++indent;
-		printI(QUOTED("rsc_name") ": " QUOTED("%s") ",\n", resource->name);
+		printI(QUOTED("resource") ": " QUOTED("%s") ",\n", resource->name);
 
 		print_options_json(resource->res_opts, &resource_options_ctx, "options", false, true);
 
