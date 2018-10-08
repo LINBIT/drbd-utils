@@ -2275,6 +2275,7 @@ static void show_volume_json(struct devices_list *device)
 			       device->disk_conf.meta_dev_idx);
 		}
 	} else if (device->info.is_intentional_diskless == 1) {
+		printf(",\n");
 		printI(QUOTED("disk") ": " QUOTED("none"));
 	}
 
