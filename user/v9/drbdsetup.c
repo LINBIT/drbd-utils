@@ -151,6 +151,9 @@ static int indent = 0;
 #define INDENT_WIDTH	4
 #define printI(fmt, args... ) printf("%*s" fmt,INDENT_WIDTH * indent,"" , ## args )
 #define QUOTED(str) "\"" str "\""
+static bool json_output = false;
+#define pJ(fmt, args...) do { if (json_output) printI(fmt, ##args); } while(0)
+#define pD(fmt, args...) do { if (!json_output) printI(fmt, ##args); } while(0)
 
 enum usage_type {
 	BRIEF,
@@ -2166,45 +2169,14 @@ static void print_paths(struct connections_list *connection)
 		if (colon)
 			*colon = ' ';
 		if (nla->nla_type == T_my_addr) {
-			printI("path {\n");
+			pD("path {\n"); pJ(QUOTED("path") ": {\n");
 			++indent;
-			printI("_this_host %s;\n", address);
+			pD("_this_host %s;\n", address); pJ(QUOTED("_this_host") ": \"%s\",\n", address);
 		}
 		if (nla->nla_type == T_peer_addr) {
-			printI("_remote_host %s;\n", address);
+			pD("_remote_host %s;\n", address); pJ(QUOTED("_remote_host") ": \"%s\"\n", address);
 			--indent;
-			printI("}\n");
-		}
-	}
-}
-
-static void print_paths_json(struct connections_list *connection)
-{
-	char address[ADDRESS_STR_MAX];
-	char *colon;
-	struct nlattr *nla;
-	int tmp;
-
-	if (!connection->path_list)
-		return;
-
-	nla_for_each_nested(nla, connection->path_list, tmp) {
-		int l = nla_len(nla);
-
-		if (!address_str(address, nla_data(nla), l))
-			continue;
-		colon = strchr(address, ':');
-		if (colon)
-			*colon = ' ';
-		if (nla->nla_type == T_my_addr) {
-			printI(QUOTED("path") ": {\n");
-			++indent;
-			printI(QUOTED("_this_host") ": \"%s\",\n", address);
-		}
-		if (nla->nla_type == T_peer_addr) {
-			printI(QUOTED("_remote_host") ": \"%s\"\n", address);
-			--indent;
-			printI("},\n");
+			pD("}\n"); pJ("},\n");
 		}
 	}
 }
@@ -2252,7 +2224,7 @@ static void show_connection_json(struct connections_list *connection, struct pee
 
 	bool has_disk_options = connection_has_disk_options(connection->ctx.ctx_peer_node_id, peer_devices);
 
-	print_paths_json(connection);
+	print_paths(connection);
 	if (connection->info.conn_connection_state == C_STANDALONE)
 		printI(QUOTED("_is_standalone") ": true,\n");
 	print_options_json(connection->net_conf, &show_net_options_ctx, "net", false, has_disk_options);
@@ -2495,7 +2467,6 @@ static int show_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	struct resources_list *resources_list;
 	char *old_objname = objname;
 	int c;
-	bool json_output = false;
 
 	optind = 0;  /* reset getopt_long() */
 	for (;;) {
