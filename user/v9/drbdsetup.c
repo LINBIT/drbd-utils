@@ -2499,7 +2499,7 @@ static int show_cmd(struct drbd_cmd *cm, int argc, char **argv)
 
 	optind = 0;  /* reset getopt_long() */
 	for (;;) {
-		c = getopt_long(argc, argv, "D", show_cmd_options, 0);
+		c = getopt_long(argc, argv, "Dj", show_cmd_options, 0);
 		if (c == -1)
 			break;
 		switch(c) {
