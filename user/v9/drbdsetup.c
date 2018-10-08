@@ -1421,6 +1421,30 @@ static void print_options(struct nlattr *attr, struct context_def *ctx, const ch
 	}
 }
 
+static bool prints_more_opts(struct context_def *ctx, struct field_def *start)
+{
+	struct field_def *field;
+	const char *str;
+	bool is_default;
+
+	if (start == NULL)
+		return false;
+
+	for (field = start; field->name; field++) {
+		struct nlattr *nlattr = ntb(field->nla_type);
+		if (!nlattr)
+			continue;
+		str = field->ops->get(ctx, field, nlattr);
+		is_default = field->ops->is_default(field, str);
+		if (is_default && !show_defaults)
+			continue;
+
+		return true;
+	}
+
+	return false;
+}
+
 static bool print_options_json(
 	struct nlattr *attr,
 	struct context_def *ctx,
@@ -1471,7 +1495,7 @@ static bool print_options_json(
 		}
 		else
 			printf(QUOTED("%s"), str);
-		if ((field+1)->name)
+		if (prints_more_opts(ctx, field+1))
 			printf(",");
 		printf("\n");
 	}
