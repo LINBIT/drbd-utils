@@ -935,6 +935,11 @@ int main(int argc, char ** argv)
 	const char *op;
 	char c;
 
+		/* When running as service, we are redirected to
+		 * files, always flush printf's.
+		 */
+
+	setbuf(stdout, NULL);
 	while ((c = getopt(argc, argv, "qf")) != -1) {
 		switch (c) {
 			case 'q': quiet = 1; break;
