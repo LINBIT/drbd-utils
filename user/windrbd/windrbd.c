@@ -816,12 +816,21 @@ static int user_mode_helper_daemon(void)
 	int err;
 	BOOL ret;
 
-	if (!quiet)
+	if (!quiet) {
 		printf("Starting WinDRBD user mode helper daemon\n");
+		printf("Press Ctrl-C to stop.\n");
+	}
 
-	um_root_dev_handle = do_open_root_device(quiet);
-	if (um_root_dev_handle == INVALID_HANDLE_VALUE)
-		return 1;
+		/* We might be started when the driver isn't started
+		 * yet. Keep on trying until we succeed or get killed.
+		 */
+
+	while (1) {
+		um_root_dev_handle = do_open_root_device(quiet);
+		if (um_root_dev_handle != INVALID_HANDLE_VALUE)
+			break;
+		sleep(1);
+	}
 
 	while (1) {
 		ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_RECEIVE_USERMODE_HELPER, NULL, 0, &get_size, sizeof(get_size), &size, NULL);
