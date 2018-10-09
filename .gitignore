@@ -30,7 +30,6 @@ user/v9/drbdmeta_scanner.c
 user/v9/drbdsetup
 user/v9/drbdsetup.exe
 user/windrbd/windrbd.exe
-user/windrbd/windrbdsvc.exe
 
 user/v9/.*.d
 user/v9/Makefile

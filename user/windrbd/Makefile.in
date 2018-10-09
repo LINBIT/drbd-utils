@@ -21,10 +21,9 @@ endif
 
 CFLAGS += -Wall -I../shared -I../../drbd-headers -I../windrbd-compat-headers
 windrbd-obj = windrbd.o shared_windrbd.o
-windrbdsvc-obj = windrbdsvc.o
-all-obj = $(windrbd-obj) $(windrbdsvc-obj)
+all-obj = $(windrbd-obj)
 
-all: windrbd windrbdsvc
+all: windrbd
 
 ../shared_prereqs.mk: ;
 include ../shared_prereqs.mk
@@ -32,16 +31,12 @@ include ../shared_prereqs.mk
 windrbd: $(windrbd-obj)
 	$(LINK.c) $(LDFLAGS) -o windrbd.exe $(windrbd-obj)
 
-windrbdsvc: $(windrbdsvc-obj)
-	$(LINK.c) $(LDFLAGS) -o windrbdsvc.exe $(windrbdsvc-obj)
-
-install: windrbd windrbdsvc
+install: windrbd
 	install -m 755 windrbd.exe $(DESTDIR)$(sbindir)
-	install -m 755 windrbdsvc.exe $(DESTDIR)$(sbindir)
 	install -m 644 windrbd-sample.res $(DESTDIR)$(sysconfdir)/drbd.d
 
 clean:
-	rm -f windrbd.exe windrbdsvc.exe
+	rm -f windrbd.exe
 	rm -f $(all-obj)
 
 distclean: clean
