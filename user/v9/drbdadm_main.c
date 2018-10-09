@@ -1625,7 +1625,8 @@ static int adm_khelper(const struct cfg_ctx *ctx)
 	char *sh_cmd;
 	char minor_string[8];
 	char volume_string[8];
-	char *argv[] = { "/bin/sh", "-c", NULL, NULL };
+	char *argv[] = { "/cygdrive/c/windows/system32/WindowsPowerShell/v1.0/powershell", "-command", NULL, NULL };
+/*	char *argv[] = { "/bin/sh", "-c", NULL, NULL }; */
 
 	setenv("DRBD_CONF", config_save, 1);
 	setenv("DRBD_RESOURCE", res->name, 1);
