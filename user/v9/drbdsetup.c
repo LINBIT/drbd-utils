@@ -1421,14 +1421,15 @@ static void print_options(struct nlattr *attr, struct context_def *ctx, const ch
 	}
 }
 
-static bool prints_more_opts(struct context_def *ctx, struct field_def *start)
+static int nr_printed_opts(struct context_def *ctx, struct field_def *start)
 {
 	struct field_def *field;
 	const char *str;
 	bool is_default;
 
+	int nr = -1;
 	if (start == NULL)
-		return false;
+		return nr;
 
 	for (field = start; field->name; field++) {
 		struct nlattr *nlattr = ntb(field->nla_type);
@@ -1439,10 +1440,10 @@ static bool prints_more_opts(struct context_def *ctx, struct field_def *start)
 		if (is_default && !show_defaults)
 			continue;
 
-		return true;
+		nr++;
 	}
 
-	return false;
+	return nr;
 }
 
 static bool print_options_json(
@@ -1455,6 +1456,7 @@ static bool print_options_json(
 {
 	struct field_def *field;
 	int opened = 0;
+	int will_print, printed;
 
 	if (!attr)
 		return false;
@@ -1465,6 +1467,8 @@ static bool print_options_json(
 		/* still, print those that validated ok */
 	}
 
+	will_print = nr_printed_opts(ctx, ctx->fields);
+	printed = 0;
 	for (field = ctx->fields; field->name; field++) {
 		struct nlattr *nlattr;
 		const char *str;
@@ -1495,9 +1499,11 @@ static bool print_options_json(
 		}
 		else
 			printf(QUOTED("%s"), str);
-		if (prints_more_opts(ctx, field+1))
+		if (printed < will_print)
 			printf(",");
 		printf("\n");
+
+		printed++;
 	}
 	if(opened) {
 		--indent;
