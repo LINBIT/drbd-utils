@@ -16,8 +16,7 @@ resource "windrbd-sample" {
 #		c-fill-target 1048000;
 #	}
 
-# You can use handlers with /bin/sh scripts, however you will need
-# a full CygWin installation then.
+# You can use handlers with PowerShell scripts
 #       handlers {
 #		before-resync-target "echo return error ; exit 55";
 #		after-resync-target "echo return ok ; exit 0";
