@@ -831,6 +831,8 @@ static int user_mode_helper_daemon(void)
 			break;
 		sleep(1);
 	}
+	if (!quiet)
+		printf("Connected to WinDRBD kernel driver\n");
 
 	while (1) {
 		ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_RECEIVE_USERMODE_HELPER, NULL, 0, &get_size, sizeof(get_size), &size, NULL);
