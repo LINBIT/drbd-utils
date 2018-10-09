@@ -582,6 +582,7 @@ struct cmd_helper {
 };
 
 extern struct cmd_helper helpers[];
+extern char *khelper_argv[];
 
 #endif
 
