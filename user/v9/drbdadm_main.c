@@ -1626,8 +1626,7 @@ static int adm_khelper(const struct cfg_ctx *ctx)
 	char *sh_cmd;
 	char minor_string[8];
 	char volume_string[8];
-	char *argv[] = { "/cygdrive/c/windows/system32/WindowsPowerShell/v1.0/powershell", "-command", NULL, NULL };
-/*	char *argv[] = { "/bin/sh", "-c", NULL, NULL }; */
+	char *argv[4] = { NULL, };
 
 	setenv("DRBD_CONF", config_save, 1);
 	setenv("DRBD_RESOURCE", res->name, 1);
@@ -1695,7 +1694,11 @@ static int adm_khelper(const struct cfg_ctx *ctx)
 	}
 
 	if ((sh_cmd = get_opt_val(&res->handlers, ctx->cmd->name, NULL))) {
+		argv[0] = khelper_argv[0];
+		argv[1] = khelper_argv[1];
 		argv[2] = sh_cmd;
+		argv[3] = NULL;
+
 		rv = m_system_ex(argv, SLEEPS_VERY_LONG, res->name);
 	}
 	return rv;

@@ -21,6 +21,10 @@ struct cmd_helper helpers[] = {
 	{NULL, NULL}
 };
 
+/* Which shell we are using for khelpers. */
+
+char *khelper_argv[] = { "/bin/sh", "-c", NULL, NULL };
+
 void maybe_add_bin_dir_to_path(void)
 {
 }

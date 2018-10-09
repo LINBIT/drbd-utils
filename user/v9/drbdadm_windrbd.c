@@ -25,6 +25,13 @@ struct cmd_helper helpers[] = {
 	{NULL, NULL}
 };
 
+/* Which shell we are using for khelpers.
+ * On Windows this path is sort of "defined" to point to the
+ * PowerShell binary.
+ */
+
+char *khelper_argv[] = { "/cygdrive/c/windows/system32/WindowsPowerShell/v1.0/powershell", "-command", NULL, NULL };
+
 static int is_driveletter(const char *drive)
 {
         if (!isalpha(drive[0])) return 0;
