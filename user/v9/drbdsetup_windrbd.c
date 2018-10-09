@@ -72,18 +72,28 @@ int modprobe_drbd(void)
 	int ret;
 
 	if (!windrbd_driver_loaded()) {
-		char *args[] = { "sc", "start", "windrbd", NULL };
+		char *args[] = { "sc", "start", NULL, NULL };
 		fprintf(stderr, "WinDRBD driver not found, trying to start it.\n");
+		args[2] = "windrbdlog";
 		ret = run_command("sc", args);
-		if (ret != 0) {
+		if (ret != 0)
+			fprintf(stderr, "Couldn't start windrbd logging service.\n");
+
+		args[2] = "windrbdumhelper";
+		ret = run_command("sc", args);
+		if (ret != 0)
+			fprintf(stderr, "Couldn't start windrbd user mode helper service.\n");
+
+		args[2] = "windrbd";
+		ret = run_command("sc", args);
+		if (ret != 0)
 			fprintf(stderr, "Couldn't start windrbd driver.\n");
-			return 0;
-		}
+
 		if (!windrbd_driver_loaded()) {
 			fprintf(stderr, "Start windrbd driver failed, maybe you need to update userland and/or kernel?\nDo you have permissions to start a driver (Administrator?)\nIf you don't have an officially signed driver, try executing bcdedit /set TESTSIGNING ON, reboot and try again.\n");
 			return 0;
 		} else {
-			fprintf(stderr, "WinDRBD driver started.\n");
+			fprintf(stderr, "WinDRBD driver and services started.\n");
 		}
 	}
 	return 1;
