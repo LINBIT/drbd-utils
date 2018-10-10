@@ -2246,6 +2246,15 @@ static bool connection_has_disk_options(__u32 conn_ctx_peer_node_id, struct peer
 	return false;
 }
 
+static bool will_show_connection_json(struct connections_list *connection, struct peer_devices_list *peer_device)
+{
+	if (connection == NULL || peer_device == NULL)
+		return false;
+
+	return (connection->ctx.ctx_peer_node_id == peer_device->ctx.ctx_peer_node_id &&
+				!options_empty(peer_device->peer_device_conf, &peer_device_options_ctx));
+
+}
 static void show_connection_json(struct connections_list *connection, struct peer_devices_list *peer_devices)
 {
 	struct peer_devices_list *peer_device;
@@ -2261,11 +2270,18 @@ static void show_connection_json(struct connections_list *connection, struct pee
 
 	if (has_disk_options)
 	{
+		int will_print, printed;
+
+		will_print = 0;
+		for (peer_device = peer_devices; peer_device; peer_device = peer_device->next) {
+			if (will_show_connection_json(connection, peer_device))
+				will_print++;
+		}
+
+		printed = 0;
 		printI(QUOTED("volumes") ": [\n");
 		for (peer_device = peer_devices; peer_device; peer_device = peer_device->next) {
-			if (connection->ctx.ctx_peer_node_id == peer_device->ctx.ctx_peer_node_id &&
-				!options_empty(peer_device->peer_device_conf, &peer_device_options_ctx)
-			)
+			if (will_show_connection_json(connection, peer_device))
 			{
 				++indent;
 				printI("{\n");
@@ -2273,8 +2289,9 @@ static void show_connection_json(struct connections_list *connection, struct pee
 				printI(QUOTED("volume_nr") ": %d,\n", peer_device->ctx.ctx_volume);
 				print_options_json(peer_device->peer_device_conf, &peer_device_options_ctx, "disk", false, false);
 				--indent;
-				printI("}\n");
+				printI("}%s\n", printed < will_print - 1 ? "," : "");
 				--indent;
+				printed++;
 			}
 		}
 		printI("]\n");
@@ -2312,7 +2329,7 @@ static void show_volume_json(struct devices_list *device)
 	if (!print_options_json(device->disk_conf_nl, &attach_cmd_ctx, "disk", true, false))
 		printf("\n");
 	--indent;
-	printI("}\n"); /* close volume */
+	printI("}%s\n", device->next ? "," : ""); /* close volume */
 }
 
 static void show_volume(struct devices_list *device)
