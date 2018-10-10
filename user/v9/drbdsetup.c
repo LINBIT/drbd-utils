@@ -2417,6 +2417,17 @@ static void show_resource_list(struct resources_list *resources_list, char* old_
 	}
 }
 
+static bool will_resource_list_json(struct resources_list *resource, char* old_objname)
+{
+	if (resource == NULL)
+		return false;
+
+	if (strcmp(old_objname, "all") && strcmp(old_objname, resource->name))
+		return false;
+
+	return true;
+}
+
 static void show_resource_list_json(struct resources_list *resources_list, char* old_objname)
 {
 	struct resources_list *resource;
@@ -2431,7 +2442,7 @@ static void show_resource_list_json(struct resources_list *resources_list, char*
 
 		struct nlattr *nla;
 
-		if (strcmp(old_objname, "all") && strcmp(old_objname, resource->name))
+		if (!will_resource_list_json(resource, old_objname))
 			continue;
 
 		devices = list_devices(resource->name);
@@ -2494,12 +2505,7 @@ static void show_resource_list_json(struct resources_list *resources_list, char*
 		}
 
 		--indent;
-		printI("}");
-
-		if (resource->next)
-			printf(",");
-
-		printf("\n");
+		printI("}%s\n", will_resource_list_json(resource->next, old_objname) ? "," :"");
 
 		free_connections(connections);
 		free_devices(devices);
