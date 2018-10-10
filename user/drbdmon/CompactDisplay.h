@@ -73,6 +73,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
 
     static const char* F_CURSOR_POS;
     static const char* F_HOTKEY;
+    static const char* F_PRB_HOTKEY;
     static const char* F_ALERT_HOTKEY;
 
     static const char* F_PAGE;

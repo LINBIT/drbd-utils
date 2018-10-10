@@ -60,8 +60,9 @@ const char* CompactDisplay::F_RES_COUNT  = "\x1b[0;32mResources: %6llu\x1b[0m";
 const char* CompactDisplay::F_PRB_COUNT  = "\x1b[0;1;31m (%llu degraded)\x1b[0m";
 
 const char* CompactDisplay::F_CURSOR_POS = "\x1b[%u;%uH";
-const char* CompactDisplay::F_HOTKEY     = "\x1b[0;30;47m%c\x1b[0;37;44m %s \033[0m";
-const char* CompactDisplay::F_ALERT_HOTKEY = "\x1b[0;30;47m%c\x1b[1;33;41m %s \033[0m";
+const char* CompactDisplay::F_HOTKEY     = "\x1b[0;30;47m%c\x1b[0;37;44m %s \x1b[0m";
+const char* CompactDisplay::F_PRB_HOTKEY = "\x1b[0;30;47m%c\x1b[0;30;42m %s \x1b[0m";
+const char* CompactDisplay::F_ALERT_HOTKEY = "\x1b[0;30;47m%c\x1b[1;33;41m %s \x1b[0m";
 
 const char* CompactDisplay::F_PAGE       = "Page: %5llu\n";
 const int   CompactDisplay::PAGE_POS_R   = 15;
@@ -401,7 +402,7 @@ void CompactDisplay::display_hotkeys_info() const
         }
         else
         {
-            const char* format = problem_alert ? F_ALERT_HOTKEY : F_HOTKEY;
+            const char* format = problem_alert ? F_ALERT_HOTKEY : F_PRB_HOTKEY;
             write_fmt(format, 'p', LABEL_PROBLEMS.c_str());
         }
 
