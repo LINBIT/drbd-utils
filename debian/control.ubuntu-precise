@@ -16,7 +16,7 @@ Vcs-Git: https://github.com/LINBIT/drbd-utils.git
 
 Package: drbd-utils
 Architecture: linux-any
-Depends: debconf (>= 0.5), ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}
+Depends: debconf (>= 0.5), ${shlibs:Depends}, ${misc:Depends}
 Breaks: drbd8-utils (<< 2:8.9.0)
 Replaces: drbd8-utils (<< 2:8.9.0)
 Suggests: heartbeat

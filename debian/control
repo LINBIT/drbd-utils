@@ -21,7 +21,6 @@ Architecture: linux-any
 Depends: debconf (>= 0.5),
          mount,
          ${misc:Depends},
-         ${perl:Depends},
          ${shlibs:Depends}
 Breaks: drbd8-utils (<< 2:8.9.0)
 Replaces: drbd8-utils (<< 2:8.9.0)

@@ -36,7 +36,6 @@ DESTDIR ?= /
 CREATE_MAN_LINK ?= yes
 
 MANPAGES       := drbdsetup.8 drbd.conf.5 drbd.8 drbdadm.8 drbdmeta.8
-MANPAGES       += drbd-overview.8
 ifeq ($(WITH_DRBDMON), yes)
 MANPAGES       += drbdmon.8
 endif
@@ -119,7 +118,7 @@ FORCE:
 
 # Don't try to re-make files tracked in git
 FILES_IN_GIT := # $(shell git ls-files)
-FILES_IN_GIT += Makefile.in drbd-overview.xml drbd.conf.xml.in drbd.conf.xsl
+FILES_IN_GIT += Makefile.in drbd.conf.xml.in drbd.conf.xsl
 FILES_IN_GIT += drbd.xml drbdadm.xml drbdmeta.xml drbdsetup-options.xml
 FILES_IN_GIT += drbdsetup.xml.in drbdsetup.xsl xml-usage-to-docbook.xsl
 $(FILES_IN_GIT): ;

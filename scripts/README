@@ -14,7 +14,5 @@ outdate-peer.sh
 	example implementation of the fence-peer mechanism using ssh
 drbd.conf
 	commented example configuration
-drbd-overview.pl
-	consolidates /proc/drbd, /etc/drbd.conf, xm list, lvs, df
 VCS/*
 	Veritas Cluster Server integration scripts

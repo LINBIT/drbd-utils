@@ -95,8 +95,6 @@ endif
 	  $(LN_S) -f notify.sh notify-emergency-reboot.sh ;\
 	  $(LN_S) -f notify.sh notify-emergency-shutdown.sh ;\
 	  $(LN_S) -f notify.sh notify-out-of-sync.sh; )
-	install -d $(DESTDIR)$(sbindir)
-	install -m 755 drbd-overview.pl $(DESTDIR)$(sbindir)/drbd-overview
 ifeq ($(DISTRO),debian)
 	@ echo "Don't forget to run update-rc.d"
 else
@@ -174,7 +172,6 @@ endif
 	rm -f $(DESTDIR)$(sysconfdir)/ha.d/resource.d/drbdupper
 	rm -f $(DESTDIR)$(sysconfdir)/xen/scripts/block-drbd
 	rm -f $(DESTDIR)$(sysconfdir)/bash_completion.d/drbdadm$(BASH_COMPLETION_SUFFIX)
-	rm -f $(DESTDIR)$(sbindir)/drbd-overview
 	! test -L $(DESTDIR)/sbin/rcdrbd || rm $(DESTDIR)/sbin/rcdrbd
 
 .PHONY: install uninstall clean distclean

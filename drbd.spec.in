@@ -166,7 +166,6 @@ This packages includes the DRBD administration tools.
 %if %{initscripttype} == "sysv"
 %{_initddir}/drbd
 %endif
-%{_sbindir}/drbd-overview
 %dir %{_prefix}/lib/drbd
 %{_prefix}/lib/drbd/outdate-peer.sh
 %{_prefix}/lib/drbd/snapshot-resync-target-lvm.sh
