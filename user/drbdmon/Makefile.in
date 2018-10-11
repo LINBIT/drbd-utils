@@ -2,6 +2,7 @@ CXXFLAGS=-std=c++11 -I. -I../shared -Icppdsaext/src -Wall -Werror --pedantic-err
 -Wsign-compare -Wpointer-arith -Wswitch-default -Wswitch-enum -Wtype-limits \
 -Wmissing-declarations -Wshadow
 CXX = @CXX@
+LIBS = @LIBS@
 
 # variables set by configure
 sbindir = @sbindir@
@@ -45,7 +46,7 @@ $(dsaext-obj): $(basename $(dsaext-obj)).cpp $(basename $(dsaext-obj)).h
 $(integerparse-obj): $(basename $(integerparse-obj)).cpp $(basename $(integerparse-obj)).h
 
 drbdmon: $(ls-obj)
-	$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) $^ -lrt
+	$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) $^ $(LIBS)
 
 # do not try to rebuild Makefile itself
 Makefile: ;

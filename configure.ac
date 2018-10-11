@@ -225,6 +225,9 @@ if [[ $WITH_DRBDMON == "yes" ]] ; then
       AC_MSG_WARN([No C++11 compiler found, disabling drbdmon build.])
       WITH_DRBDMON=no
    fi
+   AC_CHECK_LIB([rt], [clock_gettime, timer_create, timer_settime, timer_delete], [],
+                [AC_MSG_WARN([Could not find required librt functions, disabling drbdmon build.])
+                 WITH_DRBDMON=no])
 fi
 
 if test -z $RPMBUILD; then
