@@ -113,3 +113,6 @@ out:
 	}
 }
 
+void print_platform_specific_versions(void)
+{
+}

@@ -3020,6 +3020,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 			printf("DRBD_KERNEL_VERSION=%s\n", escaped_version_code_kernel());
 			printf("DRBDADM_VERSION_CODE=0x%06x\n", version_code_userland());
 			printf("DRBDADM_VERSION=%s\n", shell_escape(PACKAGE_VERSION));
+			print_platform_specific_versions();
 			exit(0);
 			break;
 		case 'P':
