@@ -8,6 +8,7 @@
 #include "drbdtool_common.h"
 #include "drbdadm.h"
 #include "drbdadm_parser.h"
+#include "shared_windrbd.h"
 
 /* Name of the windrbd command, including path of drbdadm binary */
 
@@ -164,4 +165,8 @@ void maybe_add_bin_dir_to_path(void)
         add_component_to_path(DRBD_BIN_DIR);
 }
 
-
+void print_platform_specific_versions(void)
+{
+	char *windrbd_version = windrbd_get_windrbd_version();
+	printf("WINDRBD_VERSION=%s\n", shell_escape(windrbd_version));
+}

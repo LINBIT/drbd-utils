@@ -55,3 +55,48 @@ int windrbd_driver_loaded(void)
 	CloseHandle(h);
 	return 1;
 }
+
+static char drbd_version[256] = "Unknown DRBD version (driver not loaded?)";
+static char windrbd_version[256] = "Unknown WinDRBD version (driver not loaded?)";
+static int got_version;
+
+static int get_driver_versions(void)
+{
+	DWORD ret_bytes;
+
+	if (got_version)
+		return 0;
+
+        HANDLE h = do_open_root_device(1);
+        if (h == INVALID_HANDLE_VALUE)
+                return -1;
+
+	if (DeviceIoControl(h, IOCTL_WINDRBD_ROOT_GET_DRBD_VERSION, NULL, 0, drbd_version, sizeof(drbd_version), &ret_bytes, NULL) == 0) {
+		fprintf(stderr, "Could not get DRBD version from driver, error is %d\n",  GetLastError());
+		CloseHandle(h);
+                return -1;
+	}
+
+	if (DeviceIoControl(h, IOCTL_WINDRBD_ROOT_GET_WINDRBD_VERSION, NULL, 0, windrbd_version, sizeof(windrbd_version), &ret_bytes, NULL) == 0) {
+		fprintf(stderr, "Could not get WinDRBD version from driver, error is %d\n",  GetLastError());
+		CloseHandle(h);
+                return -1;
+	}
+
+	got_version = 1;
+        CloseHandle(h);
+
+	return 0;
+}
+
+char *windrbd_get_drbd_version(void)
+{
+	get_driver_versions();
+	return drbd_version;
+}
+
+char *windrbd_get_windrbd_version(void)
+{
+	get_driver_versions();
+	return windrbd_version;
+}
