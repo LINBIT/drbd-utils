@@ -7,6 +7,10 @@ After=network-online.target sshd.service
 Type=oneshot
 RemainAfterExit=yes
 
+# Do not trigger asking for participation in the users count.
+# A check for INIT_VERSION already exists, just set it to something.
+Environment=INIT_VERSION=systemd
+
 ExecStart=/lib/drbd/drbd start
 ExecStop=/lib/drbd/drbd stop
 

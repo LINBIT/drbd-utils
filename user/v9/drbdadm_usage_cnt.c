@@ -389,7 +389,6 @@ void uc_node(enum usage_count_type type)
 {
 	struct node_info ni;
 	char *uri;
-	int send = 0;
 	int update = 0;
 	char answer[ANSWER_SIZE];
 	char n_comment[ANSWER_SIZE*3];
@@ -400,12 +399,12 @@ void uc_node(enum usage_count_type type)
 	if( getuid() != 0 ) return;
 
 	/* not when running directly from init,
-	 * or if stdout is no tty.
+	 * or if stdout is no tty and type is ask.
 	 * you do not want to have the "user information message"
 	 * as output from `drbdadm sh-resources all`
 	 */
 	if (getenv("INIT_VERSION")) return;
-	if (no_tty) return;
+	if (no_tty && type == UC_ASK) return;
 
 	/* If we don't know the current version control system hash,
 	 * we found the version via "modprobe -F version drbd",
@@ -421,14 +420,10 @@ void uc_node(enum usage_count_type type)
 	if( ! read_node_id(&ni) ) {
 		get_random_bytes(&ni.node_uuid,sizeof(ni.node_uuid));
 		ni.rev = *driver_version;
-		send = 1;
 	} else if (driver_version && !version_equal(&ni.rev, driver_version)) {
 		ni.rev = *driver_version;
 		update = 1;
-		send = 1;
-	}
-
-	if(!send) return;
+	} else return;
 
 	n_comment[0]=0;
 	if (type == UC_ASK ) {
@@ -446,7 +441,7 @@ void uc_node(enum usage_count_type type)
 		    "http://"HTTP_HOST"/cgi-bin/insert_usage.pl?nu="U64"&%s\n\n"
 		    "In case you want to participate but know that this machine is firewalled,\n"
 		    "simply issue the query string with your favorite web browser or wget.\n"
-		    "You can control all of this by setting 'usage-count' in your drbd.conf.\n\n"
+		    "You can control all of this by setting 'usage-count' in your global_common.conf.\n\n"
 		    "* You may enter a free form comment about your machine, that gets\n"
 		    "  used on "HTTP_HOST" instead of the big random number.\n"
 		    "* If you wish to opt out entirely, simply enter 'no'.\n"
@@ -454,7 +449,7 @@ void uc_node(enum usage_count_type type)
 		    update ? "an update" : "a new installation",
 		    PACKAGE_VERSION, ni.node_uuid, vcs_to_str(&ni.rev));
 		r = fgets(answer, ANSWER_SIZE, stdin);
-		if(r && !strcmp(answer,"no\n")) send = 0;
+		if(r && !strcmp(answer,"no\n")) return;
 		url_encode(answer,n_comment);
 	}
 
@@ -462,23 +457,20 @@ void uc_node(enum usage_count_type type)
 		       ni.node_uuid, vcs_to_str(&ni.rev),
 		       n_comment[0] ? "&nc=" : "", n_comment);
 
-	if (send) {
-		write_node_id(&ni);
+	write_node_id(&ni);
 
-		err("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
-		    "  --==  Thank you for participating in the global usage survey  ==--\n"
-		    "The server's response is:\n\n");
-		make_get_request(uri);
-		if (type == UC_ASK) {
-			err("\n"
-			    "From now on, drbdadm will contact "HTTP_HOST" only when you update\n"
-			    "DRBD or when you use 'drbdadm create-md'. Of course it will continue\n"
-			    "to ask you for confirmation as long as 'usage-count' is at its default\n"
-			    "value of 'ask'.\n\n"
-			    "Just press [RETURN] to continue: ");
-			if (fgets(answer, 9, stdin) == NULL)
-				err("Could not read answer\n");
-		}
+	err("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+			"  --==  Thank you for participating in the global usage survey  ==--\n"
+			"The server's response is:\n\n");
+	make_get_request(uri);
+	if (type == UC_ASK) {
+		err("\n"
+				"From now on, drbdadm will contact "HTTP_HOST" only when you update\n"
+				"DRBD or when you use 'drbdadm create-md'. Of course it will continue\n"
+				"to ask you for confirmation as long as 'usage-count' is set to 'ask'\n\n"
+				"Just press [RETURN] to continue: ");
+		if (fgets(answer, 9, stdin) == NULL)
+			err("Could not read answer\n");
 	}
 }
 
