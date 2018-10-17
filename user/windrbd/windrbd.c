@@ -67,6 +67,8 @@ void usage_and_exit(void)
 	fprintf(stderr, "		them and returns result to kernel.\n");
 	fprintf(stderr, "	windrbd [opt] set-mount-point-for-minor <minor> <mount-point>\n");
 	fprintf(stderr, "		Assign mountpoint (drive letter) to DRBD minor.\n");
+	fprintf(stderr, "	windrbd [opt] print-exe-path\n");
+	fprintf(stderr, "		Print (UNIX) path to this program\n");
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
 	fprintf(stderr, "	-f (force): do it even if it is dangerous.\n");
@@ -722,6 +724,19 @@ static int check_for_retvals(void)
 	return 0;
 }
 
+/* This is currently defined to be the drbdadm in the same directory
+ * as this windrbd utility is running. The value that comes out of
+ * the kernel is currently ignored. This is good enough (c) for
+ * now, later, we may implement an ioctl for the kernel module
+ * to set the path (linux does this by module parameters) and
+ * use that value again.
+ *
+ * Update: currently not used, installation problems. Binary path
+ * hardcoded to /cygdrive/c/windrbd/usr/sbin
+ */
+
+static char drbdadm_path[4096];
+
 static int exec_command(struct windrbd_usermode_helper *next_cmd)
 {
 	char **argv;
@@ -740,6 +755,10 @@ static int exec_command(struct windrbd_usermode_helper *next_cmd)
 		return -ENOMEM;
 	}
 
+/* later: due to installation problems we cannot do that now:
+	cmd = drbdadm_path;
+	s = &next_cmd->data[0];
+*/
 	cmd = &next_cmd->data[0];
 	s = cmd;
 
@@ -807,6 +826,67 @@ static int fork_and_exec_command(struct windrbd_usermode_helper *next_cmd)
 	return 0;
 }
 
+static int get_exe_path(char *buf, size_t bufsize)
+{
+	int fd = open("/proc/self/exename", O_RDONLY);
+	size_t len;
+
+	if (fd < 0) {
+		perror("open /proc/self/exename");
+		fprintf(stderr, "Could not open /proc/self/exename, does /proc exist?\n");
+
+		return -1;
+	}
+	len = read(fd, buf, bufsize-1);
+	if (len < 0) {
+		perror("read /proc/self/exename");
+		fprintf(stderr, "Could not read /proc/self/exename\n");
+		close(fd);
+
+		return -1;
+	} else {
+		buf[len] = 0;
+	}
+	close(fd);
+
+	return 0;
+}
+
+static int print_exe_path(void)
+{
+	char buf[4096];
+	int ret;
+
+	ret = get_exe_path(buf, sizeof(buf));
+	if (ret == 0)
+		printf("%s\n", buf);
+
+	return ret;
+}
+
+static int set_um_helper(void)
+{
+	int ret;
+	char *p;
+
+	ret = get_exe_path(drbdadm_path, sizeof(drbdadm_path));
+	if (ret == 0) {
+		p = strrchr(drbdadm_path, '/');
+		if (p == NULL)
+			p = drbdadm_path;
+		else
+			p++;
+		strcpy(p, "drbdadm");
+	} else {
+		fprintf(stderr, "Couldn't get path to drbdadm, trying default\n");
+		strcpy(drbdadm_path, "/cygdrive/c/windrbd/usr/sbin/drbdadm");
+	}
+
+	if (!quiet)
+		printf("We will use %s for user mode helper (drbdadm)\n", drbdadm_path);
+
+	return ret;
+}
 
 static int user_mode_helper_daemon(void)
 {
@@ -833,6 +913,9 @@ static int user_mode_helper_daemon(void)
 	}
 	if (!quiet)
 		printf("Connected to WinDRBD kernel driver\n");
+
+/* Later: */
+/*	set_um_helper(); */
 
 	while (1) {
 		ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_RECEIVE_USERMODE_HELPER, NULL, 0, &get_size, sizeof(get_size), &size, NULL);
@@ -1072,6 +1155,8 @@ int main(int argc, char ** argv)
 
 		return set_mount_point_for_minor(minor, mount_point);
 	}
+	if (strcmp(op, "print-exe-path") == 0)
+		return print_exe_path();
 
 	usage_and_exit();
 	return 0;
