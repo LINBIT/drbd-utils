@@ -3,6 +3,21 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.6.0
+--------
+ * usage-count: also count notty users if possible.
+ * drbd-overview: remove it, we have drbdtop/drbdmon. saves all the Perl deps.
+ * drbdmon: update frequency limiting, debug log for drbdevents, use
+   altbuffer,...
+ * drbdsetup show: on 9 allow json output.
+   mainly used in our CI, don't expect a stable field names yet.
+ * drbdsetup satus: on 9 fix json output to not include NaN/Infinity
+ * allow higher resync rates: first customers hit a limit. this requires an
+   updated kernel module as well (e.g., 9.0.16)
+ * init: fix some 8-only leftovers (sh-b-pri), sanitize the retry logic
+ * doc: document various 9 features that got forgotten (e.g., quorum-lost)
+ * build: various small fixes that popped up while playing with meson
+
 9.5.0
 --------
  * drbdmon: allow to start in problems view (--problems)
