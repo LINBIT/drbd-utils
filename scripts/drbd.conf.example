@@ -229,9 +229,9 @@ resource drbd_9_two_connection {
 			inside 127.0.0.2:7800;
 			outside 192.168.31.2:7801;
 		}
-		host charlie address 127.0.0.1:7800 via proxy on charlie {
-			inside 127.0.0.2:7800;
-			outside 192.168.31.3:7800;
+		host charlie address 127.0.0.1:7801 via proxy on charlie {
+			inside 127.0.0.2:7801;
+			outside 192.168.31.3:7801;
 		}
 		net { protocol A; }
 	}
