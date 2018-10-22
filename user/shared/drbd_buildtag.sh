@@ -7,7 +7,7 @@ drbd_buildtag_h() {
 	if test -e ../../.git && GITHEAD=$(git rev-parse HEAD); then
 		GITDIFF=$(cd .. && git diff --name-only HEAD |
 			tr -s '\t\n' '  ' |
-			sed -e 's/ *$$//')
+			sed -e 's/ *$//')
 		echo -e "#define GITHASH \"${GITHEAD}\""
 		echo -e "#define GITDIFF \"${GITDIFF}\""
 	elif ! test -e ${out} ; then
