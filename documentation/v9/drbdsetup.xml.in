@@ -573,7 +573,7 @@
 		device.</simpara>
 
 		<simpara><command moreinfo="none">drbdadm create-md --force
-		<replaceable>res</replaceable></command></simpara>
+		<replaceable>res/volume-number</replaceable></command></simpara>
 	      </listitem>
 
 	      <listitem>
