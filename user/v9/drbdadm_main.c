@@ -702,6 +702,7 @@ static char *drbd_cfg_stage_string[] = {
 	[CFG_NET_DISCONNECT] = "prepare net",
 	[CFG_NET_PREP_DOWN] = "prepare net",
 	[CFG_NET_PREP_UP] = "prepare net",
+	[CFG_NET_PATH] = "prepare net",
 	[CFG_NET] = "adjust net",
 	[CFG_PEER_DEVICE] = "adjust peer_devices",
 	[CFG_NET_CONNECT] = "attempt to connect",
