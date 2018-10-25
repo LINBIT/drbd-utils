@@ -499,11 +499,11 @@ bool CompactDisplay::list_resources()
             }
 
             next_line();
-            // Marker (1) + "RES:" (4) + RES_NAME_WIDTH + " " (1) + role icon (1) + ROLE_WIDTH
-            if (next_column(6 + RES_NAME_WIDTH + ROLE_WIDTH))
+            // Marker (1) + "RES:" (4) + " " (1) + RES_NAME_WIDTH + " " (1) + role icon (1) + ROLE_WIDTH
+            if (next_column(7 + RES_NAME_WIDTH + ROLE_WIDTH))
             {
                 write_fmt(
-                    "%s%s%sRES:%s%-*s%s %s%s%-*s%s",
+                    "%s%s%sRES:%s %-*s%s %s%s%-*s%s",
                     f_mark, mark_icon, f_res, F_RES_NAME, RES_NAME_WIDTH, res.get_name().c_str(), F_RESET,
                     f_role, role_icon, ROLE_WIDTH, res.get_role_label(), F_RESET
                 );
