@@ -1130,11 +1130,15 @@ _drbd_validate_all () {
 	# DRBD_DEVICES will be a shell array!
 	# FIXME we should double check that we explicitly restrict the set of
 	# valid characters in device names...
-	if DRBD_DEVICES=($($DRBDADM --stacked sh-dev $DRBD_RESOURCE 2>/dev/null)); then
+	if DRBD_DEVICES=($($DRBDADM sh-dev $DRBD_RESOURCE 2>/dev/null)); then
+		# Note: If dealing with drbd module version 9 and starting with
+		# drbd-utils version 9.5.0, for explicitly listed resources
+		# (as is the case here), we don't need to add "--stacked"
+		# anymore, even if they are stacked.
+		: # nothing to do.
+	elif DRBD_DEVICES=($($DRBDADM --stacked sh-dev $DRBD_RESOURCE 2>/dev/null)); then
 		# apparently a "stacked" resource. Remember for future DRBDADM calls.
 		DRBDADM="$DRBDADM -S"
-	elif DRBD_DEVICES=($($DRBDADM sh-dev $DRBD_RESOURCE 2>/dev/null)); then
-		: # nothing to do.
 	else
 		if [[ $__OCF_ACTION = "monitor" && $OCF_RESKEY_CRM_meta_interval = 0 ]]; then
 			# ok, this was a probe. That may happen on any node,
