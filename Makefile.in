@@ -166,7 +166,7 @@ check_changelogs_up2date:
 	then \
 	   echo -e "\n\tconfigure.ac needs update"; \
 	   up2date=false; fi ; \
-	if ! grep "^drbd-utils ($$dver_re+linbit" >/dev/null 2>&1 debian/changelog; \
+	if ! grep "^drbd-utils ($$dver_re" >/dev/null 2>&1 debian/changelog; \
 	then \
 	   echo -e "\n\tdebian/changelog needs update [ignored]\n"; \
 	   : do not fail the build because of outdated debian/changelog ; fi ; \
