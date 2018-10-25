@@ -3268,11 +3268,14 @@ int main(int argc, char **argv)
 		exit(E_USAGE);
 	}
 
-	do_verify_ips = cmd->verify_ips;
-
 	is_dump_xml = (cmd == &dump_xml_cmd);
 	is_dump = (is_dump_xml || cmd == &dump_cmd);
 	is_adjust = (cmd == &adjust_cmd || cmd == &adjust_wp_cmd);
+
+	if (is_adjust && find_backend_option("--skip-net"))
+		do_verify_ips = 0;
+	else
+		do_verify_ips = cmd->verify_ips;
 
 	if (!resource_names[0]) {
 		if (!is_dump && cmd->res_name_required)
