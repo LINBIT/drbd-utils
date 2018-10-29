@@ -241,10 +241,9 @@ case "$1" in
 			[ -L "$d" ] && continue
 			[ -b "$d" ] || continue
 			M=$(umount "$d" 2>&1)
-			[ $? != 0 ] && stop_failed=1
 			case $M in
 			*" not mounted") :;;
-			*) echo "$M" >&2 ;;
+			*) stop_failed=1; echo "$M" >&2 ;;
 			esac
 		done
 		for res in $($DRBDADM --stacked sh-resources) $($DRBDADM sh-resources); do
