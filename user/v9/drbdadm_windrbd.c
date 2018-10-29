@@ -71,7 +71,9 @@ static int call_windrbd(char *res_name, char *path, ...)
 
 int before_attach(const struct cfg_ctx *ctx)
 {
-	return call_windrbd(ctx->res->name, windrbd, "-q", "hide-filesystem", ctx->vol->disk, NULL);
+printf("Not hiding filesystem.\n");
+	return 0;
+//	return call_windrbd(ctx->res->name, windrbd, "-q", "hide-filesystem", ctx->vol->disk, NULL);
 }
 
 int after_new_minor(const struct cfg_ctx *ctx)
