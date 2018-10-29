@@ -38,6 +38,7 @@ const ConfigOption DrbdMon::OPT_FREQ_LMT(false, OPT_FREQ_LMT_KEY);
 const std::string DrbdMon::UNIT_SFX_SECONDS = "s";
 const std::string DrbdMon::UNIT_SFX_MILLISECONDS = "ms";
 const uint16_t DrbdMon::MAX_INTERVAL = 10000;
+const uint16_t DrbdMon::DFLT_INTERVAL = 40;
 
 const std::string DrbdMon::TOKEN_DELIMITER = " ";
 
@@ -164,6 +165,10 @@ void DrbdMon::run()
             // Show an initial display while reading the initial DRBD status
             display->initial_display();
 
+            if (use_dflt_freq_lmt && interval_timer_mgr.get() == nullptr)
+            {
+                interval_timer_mgr = std::unique_ptr<IntervalTimer>(new IntervalTimer(log, DFLT_INTERVAL));
+            }
 
             bool debug_key {false};
             bool timer_available = (interval_timer_mgr.get() != nullptr);
@@ -1391,6 +1396,11 @@ void DrbdMon::set_option(std::string& key, std::string& value)
                 log.add_entry(MessageLog::log_level::ALERT, error_message);
                 throw ConfigurationException();
             }
+
+            // Valid user configured interval, or frequency limiting disabled by the user,
+            // do not configure the default interval
+            use_dflt_freq_lmt = false;
+
             interval *= factor;
             if (interval > 0 && interval_timer_mgr == nullptr)
             {

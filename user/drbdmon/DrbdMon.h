@@ -47,6 +47,7 @@ class DrbdMon : public Configurable, public Configurator
     static const std::string UNIT_SFX_SECONDS;
     static const std::string UNIT_SFX_MILLISECONDS;
     static const uint16_t MAX_INTERVAL;
+    static const uint16_t DFLT_INTERVAL;
 
     static const std::string TYPE_RESOURCE;
     static const std::string TYPE_CONNECTION;
@@ -180,6 +181,7 @@ class DrbdMon : public Configurable, public Configurator
     std::unique_ptr<IntervalTimer> interval_timer_mgr {nullptr};
     struct timespec prev_timestamp {0, 0};
     struct timespec cur_timestamp {0, 0};
+    bool use_dflt_freq_lmt {true};
 
     // @throws std::bad_alloc, EventMessageException
     void create_connection(PropsMap& event_props, std::string& event_line);
