@@ -119,6 +119,22 @@ namespace dsaext
         }
         return result;
     }
+
+    template<typename T>
+    const T& generic_bounds(const T& min_value, const T& value, const T& max_value)
+    {
+        const T* result = &value;
+        if (*result < min_value)
+        {
+            result = &min_value;
+        }
+        else
+        if (*result > max_value)
+        {
+            result = &max_value;
+        }
+        return *result;
+    }
 }
 
 #endif	/* DSAEXT_H */
