@@ -746,7 +746,6 @@ static int exec_command(struct windrbd_usermode_helper *next_cmd)
 
 	char *s;
 
-printf("PATH is %s\n", getenv("PATH"));
 	argv = malloc((next_cmd->argc+1)*sizeof(argv[0]));
 	if (argv == NULL)
 		return -ENOMEM;
@@ -772,6 +771,11 @@ printf("PATH is %s\n", getenv("PATH"));
 	for (i=0;i<next_cmd->envc;i++) {
 		while (*s) s++;
 		s++;
+
+			/* TODO: later we want a cygrunsrv fixed that can
+			 * handle pathes with whitespace. For now we can
+			 * live with that hardcoded path.
+			 */
 
 		if (strncmp(s, "PATH=", 5) == 0)
 			envp[i]="PATH=/cygdrive/c/Program Files/WinDRBD:/cygdrive/c/windrbd/usr/sbin:/cygdrive/c/Windows/system32:/cygdrive/c/Windows:/cygdrive/c/Windows/System32/Wbem:/cygdrive/c/Windows/System32/WindowsPowerShell/v1.0";
