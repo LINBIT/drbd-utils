@@ -47,6 +47,7 @@ const char* CompactDisplay::F_VOL_MINOR  = "\x1b[0;4;36m";
 const char* CompactDisplay::F_CONN_NORM  = "\x1b[0;37;44m";
 const char* CompactDisplay::F_PRIMARY    = "\x1b[1;36m";
 const char* CompactDisplay::F_SECONDARY  = "\x1b[0;36m";
+const char* CompactDisplay::F_SYNC_PERC  = "\x1b[1;31m";
 const char* CompactDisplay::QUORUM_ALERT = "\x1b[1;33;41mQUORUM LOST\x1b[0m";
 
 const int CompactDisplay::QUORUM_ALERT_WIDTH = 11;
@@ -70,23 +71,23 @@ const char* CompactDisplay::F_GOTO_PAGE  = "\x1b[1;37m[Go to page: %5llu]\x1b[0m
 const int   CompactDisplay::GOTO_PAGE_POS_R = 37;
 const int   CompactDisplay::GOTO_PAGE_CURSOR_POS = 17;
 
-const char* CompactDisplay::UTF8_PRIMARY   = "\xE2\x9A\xAB";
-const char* CompactDisplay::UTF8_SECONDARY = " "; // otherwise UTF-8 E2 9A AA
-const char* CompactDisplay::UTF8_CONN_GOOD = "\xE2\x87\x84";
-const char* CompactDisplay::UTF8_CONN_BAD  = "\xE2\x86\xAF";
-const char* CompactDisplay::UTF8_DISK_GOOD = "\xE2\x97\x8E";
-const char* CompactDisplay::UTF8_DISK_BAD  = "\xE2\x9C\x97";
-const char* CompactDisplay::UTF8_MARK_OFF  = "\xE2\x9A\xAC";
-const char* CompactDisplay::UTF8_MARK_ON   = "\xE2\xA4\xB7";
+const char* CompactDisplay::UTF8_PRIMARY        = "\xE2\x9A\xAB";
+const char* CompactDisplay::UTF8_SECONDARY      = " "; // otherwise UTF-8 E2 9A AA
+const char* CompactDisplay::UTF8_CONN_GOOD      = "\xE2\x87\x84";
+const char* CompactDisplay::UTF8_CONN_BAD       = "\xE2\x86\xAF";
+const char* CompactDisplay::UTF8_DISK_GOOD      = "\xE2\x97\x8E";
+const char* CompactDisplay::UTF8_DISK_BAD       = "\xE2\x9C\x97";
+const char* CompactDisplay::UTF8_MARK_OFF       = "\xE2\x9A\xAC";
+const char* CompactDisplay::UTF8_MARK_ON        = "\xE2\xA4\xB7";
 
-const char* CompactDisplay::ASCII_PRIMARY   = "*";
-const char* CompactDisplay::ASCII_SECONDARY = " ";
-const char* CompactDisplay::ASCII_CONN_GOOD = "+";
-const char* CompactDisplay::ASCII_CONN_BAD  = "/";
-const char* CompactDisplay::ASCII_DISK_GOOD = "+";
-const char* CompactDisplay::ASCII_DISK_BAD  = "/";
-const char* CompactDisplay::ASCII_MARK_OFF  = " ";
-const char* CompactDisplay::ASCII_MARK_ON   = "+";
+const char* CompactDisplay::ASCII_PRIMARY       = "*";
+const char* CompactDisplay::ASCII_SECONDARY     = " ";
+const char* CompactDisplay::ASCII_CONN_GOOD     = "+";
+const char* CompactDisplay::ASCII_CONN_BAD      = "/";
+const char* CompactDisplay::ASCII_DISK_GOOD     = "+";
+const char* CompactDisplay::ASCII_DISK_BAD      = "/";
+const char* CompactDisplay::ASCII_MARK_OFF      = " ";
+const char* CompactDisplay::ASCII_MARK_ON       = "+";
 
 const char* CompactDisplay::ANSI_CLEAR      = "\x1b[H\x1b[2J";
 const char* CompactDisplay::ANSI_CLEAR_LINE = "\x1b[K";
@@ -137,6 +138,21 @@ const uint16_t CompactDisplay::OUTPUT_BUFFER_SIZE   = 1024;
 
 const uint16_t CompactDisplay::MIN_NODENAME_DSP_LENGTH = 4;
 const uint32_t CompactDisplay::MAX_YIELD_LOOP = 10;
+
+const uint16_t CompactDisplay::ProgressBar::MIN_SYNC_BAR_SIZE   = 20;
+const uint16_t CompactDisplay::ProgressBar::MAX_SYNC_BAR_SIZE   = 1000;
+
+const uint16_t CompactDisplay::ProgressBar::MAX_PERC            = 100;
+const uint16_t CompactDisplay::ProgressBar::MAX_SYNC_PERC       = 10000;
+
+const char* CompactDisplay::ProgressBar::ASCII_SYNC_BLK     = "X";
+const char* CompactDisplay::ProgressBar::ASCII_UNSYNC_BLK   = "-";
+
+const char* CompactDisplay::ProgressBar::UTF8_SYNC_BLK      = "\xE2\x96\x88";
+const char* CompactDisplay::ProgressBar::UTF8_UNSYNC_BLK    = "\xE2\x96\x92";
+
+const char* CompactDisplay::ProgressBar::F_SYNC_BLK         = "\x1b[0;32m";
+const char* CompactDisplay::ProgressBar::F_UNSYNC_BLK       = "\x1b[1;31m";
 
 // @throws std::bad_alloc
 CompactDisplay::CompactDisplay(
@@ -238,6 +254,14 @@ void CompactDisplay::status_display()
     uint32_t current_page = page;
     page_start = (term_y - 4) * current_page;
     page_end   = (term_y - 4) * (current_page + 1) - 1;
+
+    if (sync_progress == nullptr)
+    {
+        sync_progress_mgr = std::unique_ptr<CompactDisplay::ProgressBar>(
+            new CompactDisplay::ProgressBar(this, enable_utf8)
+        );
+        sync_progress = sync_progress_mgr.get();
+    }
 
     problem_check();
     clear();
@@ -783,6 +807,33 @@ void CompactDisplay::show_volume(DrbdVolume& vol, bool peer_volume, bool long_fo
                 write_fmt(" %s", QUORUM_ALERT);
             }
         }
+
+        uint16_t sync_perc = vol.get_sync_perc();
+        if (sync_perc != DrbdVolume::MAX_SYNC_PERC)
+        {
+            next_line();
+            increase_indent();
+            // "xxx.xx% " -> 8 bytes column length
+            if (next_column(8))
+            {
+                write_text(F_SYNC_PERC);
+                write_fmt(
+                    "%3u.%02u%% ",
+                    static_cast<unsigned int> (sync_perc / 100),
+                    static_cast<unsigned int> (sync_perc % 100)
+                );
+                write_text(F_RESET);
+
+                // Display a sync progress bar if there is enough space left
+                // (leave 4 characters space as margin to the right edge of the terminal)
+                uint16_t sync_bar_width = std::max(term_x - current_x, 2) - 4;
+                if (sync_bar_width >= CompactDisplay::ProgressBar::MIN_SYNC_BAR_SIZE)
+                {
+                    sync_progress->display_progress_bar(sync_bar_width, sync_perc);
+                }
+            }
+            decrease_indent();
+        }
     }
     else
     {
@@ -1212,5 +1263,121 @@ void CompactDisplay::write_buffer(const char* buffer, size_t length) const noexc
                 static_cast<void> (nanosleep(&write_retry_delay, nullptr));
             }
         }
+    }
+}
+
+CompactDisplay::ProgressBar::ProgressBar(CompactDisplay* const dsp_ref, const bool utf8_mode):
+    dsp(dsp_ref),
+    pb_utf8_mode(utf8_mode)
+{
+    // Create the progress bar rendering source buffers
+    if (pb_utf8_mode)
+    {
+        utf8_sync_blk_width = std::strlen(UTF8_SYNC_BLK);
+        utf8_unsync_blk_width = std::strlen(UTF8_UNSYNC_BLK);
+
+        sync_blk_buffer_mgr = std::unique_ptr<char[]>(new char[MAX_SYNC_BAR_SIZE * utf8_sync_blk_width]);
+        unsync_blk_buffer_mgr = std::unique_ptr<char[]>(new char[MAX_SYNC_BAR_SIZE * utf8_unsync_blk_width]);
+
+        char* const init_sync_blk_buffer = sync_blk_buffer_mgr.get();
+        char* const init_unsync_blk_buffer = unsync_blk_buffer_mgr.get();
+
+        for (size_t idx = 0; idx < MAX_SYNC_BAR_SIZE; ++idx)
+        {
+            size_t utf8_offset = idx * utf8_sync_blk_width;
+            for (size_t byte_offset = 0; byte_offset < utf8_sync_blk_width; ++byte_offset)
+            {
+                init_sync_blk_buffer[utf8_offset + byte_offset] = UTF8_SYNC_BLK[byte_offset];
+            }
+        }
+
+        for (size_t idx = 0; idx < MAX_SYNC_BAR_SIZE; ++idx)
+        {
+            size_t utf8_offset = idx * utf8_unsync_blk_width;
+            for (size_t byte_offset = 0; byte_offset < utf8_unsync_blk_width; ++byte_offset)
+            {
+                init_unsync_blk_buffer[utf8_offset + byte_offset] = UTF8_UNSYNC_BLK[byte_offset];
+            }
+        }
+    }
+    else
+    {
+        sync_blk_buffer_mgr = std::unique_ptr<char[]>(new char[MAX_SYNC_BAR_SIZE]);
+        unsync_blk_buffer_mgr = std::unique_ptr<char[]>(new char[MAX_SYNC_BAR_SIZE]);
+
+        char* const init_sync_blk_buffer = sync_blk_buffer_mgr.get();
+        char* const init_unsync_blk_buffer = unsync_blk_buffer_mgr.get();
+
+        for (size_t idx = 0; idx < MAX_SYNC_BAR_SIZE; ++idx)
+        {
+            init_sync_blk_buffer[idx] = ASCII_SYNC_BLK[0];
+            init_unsync_blk_buffer[idx] = ASCII_UNSYNC_BLK[0];
+        }
+    }
+
+    sync_blk_buffer = sync_blk_buffer_mgr.get();
+    unsync_blk_buffer = unsync_blk_buffer_mgr.get();
+}
+
+CompactDisplay::ProgressBar::~ProgressBar() noexcept
+{
+}
+
+CompactDisplay::ProgressBar::ProgressBar(ProgressBar&& orig):
+    dsp(orig.dsp),
+    pb_utf8_mode(orig.pb_utf8_mode),
+    sync_blk_buffer_mgr(std::move(orig.sync_blk_buffer_mgr)),
+    unsync_blk_buffer_mgr(std::move(orig.unsync_blk_buffer_mgr)),
+    sync_blk_buffer(orig.sync_blk_buffer),
+    unsync_blk_buffer(orig.unsync_blk_buffer)
+{
+    orig.dsp = nullptr;
+    orig.sync_blk_buffer = nullptr;
+    orig.unsync_blk_buffer = nullptr;
+}
+
+CompactDisplay::ProgressBar& CompactDisplay::ProgressBar::operator=(CompactDisplay::ProgressBar&& orig)
+{
+    if (this != &orig)
+    {
+        dsp = orig.dsp;
+
+        sync_blk_buffer_mgr = std::move(orig.sync_blk_buffer_mgr);
+        unsync_blk_buffer_mgr = std::move(orig.unsync_blk_buffer_mgr);
+
+        sync_blk_buffer = orig.sync_blk_buffer;
+        unsync_blk_buffer = orig.unsync_blk_buffer;
+
+        orig.dsp = nullptr;
+        orig.sync_blk_buffer = nullptr;
+        orig.unsync_blk_buffer = nullptr;
+    }
+    return *this;
+}
+
+void CompactDisplay::ProgressBar::display_progress_bar(const uint16_t width, const uint16_t sync_perc) const
+{
+    const uint16_t safe_width = dsaext::generic_bounds<const uint16_t>(MIN_SYNC_BAR_SIZE, width, MAX_SYNC_BAR_SIZE);
+    const uint16_t safe_sync_perc = std::min<const uint16_t>(MAX_SYNC_PERC, sync_perc);
+    const uint16_t sync_bar_length = static_cast<const uint16_t> (
+        static_cast<uint32_t> (safe_sync_perc) * safe_width / MAX_SYNC_PERC
+    );
+    const uint16_t unsync_bar_length = safe_width - sync_bar_length;
+
+    if (pb_utf8_mode)
+    {
+        dsp->write_text(F_SYNC_BLK);
+        dsp->write_buffer(sync_blk_buffer, sync_bar_length * utf8_sync_blk_width);
+        dsp->write_text(F_UNSYNC_BLK);
+        dsp->write_buffer(unsync_blk_buffer, unsync_bar_length * utf8_unsync_blk_width);
+        dsp->write_text(F_RESET);
+    }
+    else
+    {
+        dsp->write_text(F_SYNC_BLK);
+        dsp->write_buffer(sync_blk_buffer, sync_bar_length);
+        dsp->write_text(F_UNSYNC_BLK);
+        dsp->write_buffer(unsync_blk_buffer, unsync_bar_length);
+        dsp->write_text(F_RESET);
     }
 }

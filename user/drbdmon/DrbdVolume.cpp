@@ -3,6 +3,8 @@
 #include <utils.h>
 #include <integerparse.h>
 
+#include "integerparse.h"
+
 const std::string DrbdVolume::PROP_KEY_VOL_NR      = "volume";
 const std::string DrbdVolume::PROP_KEY_MINOR       = "minor";
 const std::string DrbdVolume::PROP_KEY_DISK        = "disk";
@@ -11,6 +13,7 @@ const std::string DrbdVolume::PROP_KEY_REPLICATION = "replication";
 const std::string DrbdVolume::PROP_KEY_CLIENT      = "client";
 const std::string DrbdVolume::PROP_KEY_PEER_CLIENT = "peer-client";
 const std::string DrbdVolume::PROP_KEY_QUORUM      = "quorum";
+const std::string DrbdVolume::PROP_KEY_SYNC_PERC   = "done";
 
 const char* DrbdVolume::DS_LABEL_DISKLESS     = "Diskless";
 const char* DrbdVolume::DS_LABEL_ATTACHING    = "Attaching";
@@ -47,6 +50,18 @@ const char* DrbdVolume::CS_LABEL_UNKNOWN              = "unknown";
 const char* DrbdVolume::QU_LABEL_PRESENT              = "yes";
 const char* DrbdVolume::QU_LABEL_LOST                 = "no";
 
+// Integer / Fraction separator
+const char* DrbdVolume::FRACT_SEPA = ".";
+
+// Maximum value of the sync_perc field - 100 * percent value -> 10,000
+const uint16_t DrbdVolume::MAX_SYNC_PERC = 10000;
+
+// Maximum percent value - 100
+const uint16_t DrbdVolume::MAX_PERC = 100;
+
+// Maximum fraction value - 2 digits precision, 99
+const uint16_t DrbdVolume::MAX_FRACT = 99;
+
 DrbdVolume::DrbdVolume(uint16_t volume_nr) :
     vol_nr(volume_nr)
 {
@@ -59,6 +74,11 @@ DrbdVolume::DrbdVolume(uint16_t volume_nr) :
 const uint16_t DrbdVolume::get_volume_nr() const
 {
     return vol_nr;
+}
+
+uint16_t DrbdVolume::get_sync_perc() const
+{
+    return sync_perc;
 }
 
 // @throws EventMessageException
@@ -109,6 +129,67 @@ void DrbdVolume::update(PropsMap& event_props)
     if (prop_quorum != nullptr)
     {
         quorum_alert = !parse_quorum_state(*prop_quorum);
+    }
+
+    {
+        bool is_resyncing {false};
+        switch (vol_repl_state)
+        {
+            case DrbdVolume::repl_state::OFF:
+                // fall-through
+            case DrbdVolume::repl_state::BEHIND:
+                // fall-through
+            case DrbdVolume::repl_state::STARTING_SYNC_TARGET:
+                // fall-through
+            case DrbdVolume::repl_state::SYNC_TARGET:
+                // fall-through
+            case DrbdVolume::repl_state::PAUSED_SYNC_TARGET:
+                // fall-through
+            case DrbdVolume::repl_state::VERIFY_TARGET:
+                is_resyncing = true;
+                break;
+            case DrbdVolume::repl_state::ESTABLISHED:
+                // Whenever the replication state returns to ESTABLISHED, reset
+                // the sync percentage, because the drbdsetup events commonly
+                // skips reporting 100 percent sync percentage
+                sync_perc = MAX_SYNC_PERC;
+                break;
+            case DrbdVolume::repl_state::AHEAD:
+                // fall-through
+            case DrbdVolume::repl_state::PAUSED_SYNC_SOURCE:
+                // fall-through
+            case DrbdVolume::repl_state::STARTING_SYNC_SOURCE:
+                // fall-through
+            case DrbdVolume::repl_state::SYNC_SOURCE:
+                // fall-through
+            case DrbdVolume::repl_state::VERIFY_SOURCE:
+                // fall-through
+            case DrbdVolume::repl_state::WF_BITMAP_SOURCE:
+                // fall-through
+            case DrbdVolume::repl_state::WF_BITMAP_TARGET:
+                // fall-through
+            case DrbdVolume::repl_state::WF_SYNC_UUID:
+                // fall-through
+            case DrbdVolume::repl_state::UNKNOWN:
+                // fall-through
+            default:
+                break;
+        }
+        if (is_resyncing)
+        {
+            std::string* prop_sync_perc = event_props.get(&PROP_KEY_SYNC_PERC);
+            if (prop_sync_perc != nullptr)
+            {
+                try
+                {
+                    sync_perc = parse_sync_perc(*prop_sync_perc);
+                }
+                catch (dsaext::NumberFormatException&)
+                {
+                    throw EventMessageException();
+                }
+            }
+        }
     }
 }
 
@@ -606,6 +687,35 @@ uint16_t DrbdVolume::parse_volume_nr(std::string& value_str)
 int32_t DrbdVolume::parse_minor_nr(std::string& value_str)
 {
     return dsaext::parse_signed_int32(value_str);
+}
+
+// @throws NumberFormatException
+uint16_t DrbdVolume::parse_sync_perc(std::string& value_str)
+{
+    uint16_t result {0};
+    size_t split_idx = value_str.find(FRACT_SEPA, 0);
+    if (split_idx != std::string::npos)
+    {
+        std::string perc_value_str = value_str.substr(0, split_idx);
+        std::string perc_fract_str = value_str.substr(split_idx + 1);
+
+        uint16_t value = dsaext::parse_unsigned_int16(perc_value_str);
+        if (value > MAX_PERC)
+        {
+            throw dsaext::NumberFormatException();
+        }
+        uint16_t fract = dsaext::parse_unsigned_int16(perc_fract_str);
+        if (fract > MAX_FRACT)
+        {
+            throw dsaext::NumberFormatException();
+        }
+        result = value * 100 + fract;
+        if (result > MAX_SYNC_PERC)
+        {
+            throw dsaext::NumberFormatException();
+        }
+    }
+    return result;
 }
 
 // Creates (allocates and initializes) a new DrbdVolume object from a map of properties

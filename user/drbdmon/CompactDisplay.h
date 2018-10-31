@@ -61,6 +61,7 @@ class CompactDisplay : public GenericDisplay, public Configurable
     static const char* F_CONN_NORM;
     static const char* F_PRIMARY;
     static const char* F_SECONDARY;
+    static const char* F_SYNC_PERC;
     static const char* QUORUM_ALERT;
 
     static const int QUORUM_ALERT_WIDTH;
@@ -192,6 +193,46 @@ class CompactDisplay : public GenericDisplay, public Configurable
         PAGE_NR
     };
 
+    class ProgressBar
+    {
+      public:
+        static const uint16_t MIN_SYNC_BAR_SIZE;
+        static const uint16_t MAX_SYNC_BAR_SIZE;
+
+        static const uint16_t MAX_PERC;
+        static const uint16_t MAX_SYNC_PERC;
+
+        static const char* UTF8_SYNC_BLK;
+        static const char* UTF8_UNSYNC_BLK;
+
+        static const char* ASCII_SYNC_BLK;
+        static const char* ASCII_UNSYNC_BLK;
+
+        static const char* F_SYNC_BLK;
+        static const char* F_UNSYNC_BLK;
+
+      private:
+        CompactDisplay* dsp;
+        const bool pb_utf8_mode;
+        size_t utf8_sync_blk_width {0};
+        size_t utf8_unsync_blk_width {0};
+        std::unique_ptr<char[]> sync_blk_buffer_mgr {nullptr};
+        std::unique_ptr<char[]> unsync_blk_buffer_mgr {nullptr};
+        const char* sync_blk_buffer {nullptr};
+        const char* unsync_blk_buffer {nullptr};
+
+      public:
+        ProgressBar(CompactDisplay* const dsp_ref, const bool utf8_mode);
+        virtual ~ProgressBar() noexcept;
+
+        ProgressBar(const ProgressBar& orig) = delete;
+        virtual ProgressBar& operator=(const ProgressBar& orig) = delete;
+        ProgressBar(ProgressBar&& orig);
+        virtual ProgressBar& operator=(ProgressBar&& orig);
+
+        virtual void display_progress_bar(const uint16_t width, const uint16_t sync_perc) const;
+    };
+
     DrbdMon& drbdmon;
     ResourcesMap& resources_map;
     MessageLog& log;
@@ -233,11 +274,14 @@ class CompactDisplay : public GenericDisplay, public Configurable
     uint16_t indent_level {0};
     char* indent_buffer {nullptr};
     std::unique_ptr<char[]> indent_buffer_mgr {nullptr};
-    char *output_buffer {nullptr};
+    char* output_buffer {nullptr};
     std::unique_ptr<char[]> output_buffer_mgr {nullptr};
 
     std::unique_ptr<std::string> node_label {nullptr};
     const std::string* const node_name;
+
+    std::unique_ptr<CompactDisplay::ProgressBar> sync_progress_mgr {nullptr};
+    const CompactDisplay::ProgressBar* sync_progress {nullptr};
 
     // 20 ms delay
     struct timespec write_retry_delay {0, 20000000};

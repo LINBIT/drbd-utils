@@ -67,6 +67,7 @@ class DrbdVolume : private StateFlags
     static const std::string PROP_KEY_CLIENT;
     static const std::string PROP_KEY_PEER_CLIENT;
     static const std::string PROP_KEY_QUORUM;
+    static const std::string PROP_KEY_SYNC_PERC;
 
     static const char* DS_LABEL_DISKLESS;
     static const char* DS_LABEL_ATTACHING;
@@ -103,6 +104,18 @@ class DrbdVolume : private StateFlags
     static const char* QU_LABEL_PRESENT;
     static const char* QU_LABEL_LOST;
 
+    // Integer / Fraction separator
+    static const char* FRACT_SEPA;
+
+    // Maximum value of the sync_perc field - 100 * percent value -> 10,000
+    static const uint16_t MAX_SYNC_PERC;
+
+    // Maximum percent value - 100
+    static const uint16_t MAX_PERC;
+
+    // Maximum fraction value - 2 digits precision, 99
+    static const uint16_t MAX_FRACT;
+
 
     explicit DrbdVolume(uint16_t volume_nr);
     DrbdVolume(const DrbdVolume& orig) = delete;
@@ -115,6 +128,7 @@ class DrbdVolume : private StateFlags
 
     virtual const uint16_t get_volume_nr() const;
     virtual int32_t get_minor_nr() const;
+    virtual uint16_t get_sync_perc() const;
 
     // @throws EventMessageException
     virtual void set_minor_nr(int32_t value);
@@ -168,9 +182,13 @@ class DrbdVolume : private StateFlags
     // @throws EventMessageException
     static bool parse_quorum_state(std::string& value_str);
 
+    // @throws NumberFormatException
+    static uint16_t parse_sync_perc(std::string& value_str);
+
   private:
     const uint16_t vol_nr;
     int32_t minor_nr {-1};
+    uint16_t sync_perc {MAX_SYNC_PERC};
     disk_state vol_disk_state;
     repl_state vol_repl_state;
     client_state vol_client_state;
