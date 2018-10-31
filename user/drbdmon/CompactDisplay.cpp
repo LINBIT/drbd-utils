@@ -808,37 +808,8 @@ void CompactDisplay::show_volume(DrbdVolume& vol, bool peer_volume, bool long_fo
 
 void CompactDisplay::set_terminal_size(uint16_t size_x, uint16_t size_y)
 {
-    if (size_x >= MIN_SIZE_X)
-    {
-        if (size_x <= MAX_SIZE_X)
-        {
-            term_x = size_x;
-        }
-        else
-        {
-            term_x = MAX_SIZE_X;
-        }
-    }
-    else
-    {
-        term_x = MIN_SIZE_X;
-    }
-
-    if (size_y >= MIN_SIZE_Y)
-    {
-        if (size_y <= MAX_SIZE_Y)
-        {
-            term_y = size_y;
-        }
-        else
-        {
-            term_y = MAX_SIZE_Y;
-        }
-    }
-    else
-    {
-        term_y = MIN_SIZE_Y;
-    }
+    term_x = dsaext::generic_bounds<uint16_t>(MIN_SIZE_X, size_x, MAX_SIZE_X);
+    term_y = dsaext::generic_bounds<uint16_t>(MIN_SIZE_Y, size_y, MAX_SIZE_Y);
 }
 
 void CompactDisplay::increase_indent()
