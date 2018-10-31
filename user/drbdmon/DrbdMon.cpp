@@ -1001,7 +1001,7 @@ void DrbdMon::destroy_peer_device(PropsMap& event_props, std::string& event_line
                     problem_counter_update(res_last_state, res_new_state);
                 }
             }
-            catch (NumberFormatException& nf_exc)
+            catch (dsaext::NumberFormatException&)
             {
                 std::string msg("Destroy peer device / Unparsable volume number: ");
                 msg += event_line;
@@ -1105,7 +1105,7 @@ DrbdVolume& DrbdMon::get_device(VolumesContainer& vol_con, PropsMap& event_props
             uint16_t vol_nr = DrbdVolume::parse_volume_nr(*vol_nr_str);
             vol = vol_con.get_volume(vol_nr);
         }
-        catch (NumberFormatException& nf_exc)
+        catch (dsaext::NumberFormatException&)
         {
             throw EventMessageException();
         }

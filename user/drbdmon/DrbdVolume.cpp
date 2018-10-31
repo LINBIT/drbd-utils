@@ -1,6 +1,7 @@
 #include <DrbdVolume.h>
 #include <DrbdConnection.h>
 #include <utils.h>
+#include <integerparse.h>
 
 const std::string DrbdVolume::PROP_KEY_VOL_NR      = "volume";
 const std::string DrbdVolume::PROP_KEY_MINOR       = "minor";
@@ -87,7 +88,7 @@ void DrbdVolume::update(PropsMap& event_props)
         {
             minor_nr = DrbdVolume::parse_minor_nr(*minor_nr_str);
         }
-        catch (NumberFormatException& nf_exc)
+        catch (dsaext::NumberFormatException&)
         {
             throw EventMessageException();
         }
@@ -598,17 +599,13 @@ bool DrbdVolume::parse_quorum_state(std::string& value_str)
 // @throws NumberFormatException
 uint16_t DrbdVolume::parse_volume_nr(std::string& value_str)
 {
-    uint16_t value {0};
-    value = NumberParser::parse_uint16(value_str);
-    return value;
+    return dsaext::parse_unsigned_int16(value_str);
 }
 
 // @throws NumberFormatException
 int32_t DrbdVolume::parse_minor_nr(std::string& value_str)
 {
-    int32_t value {-1};
-    value = NumberParser::parse_int32(value_str);
-    return value;
+    return dsaext::parse_signed_int32(value_str);
 }
 
 // Creates (allocates and initializes) a new DrbdVolume object from a map of properties
@@ -624,10 +621,10 @@ DrbdVolume* DrbdVolume::new_from_props(PropsMap& event_props)
     {
         try
         {
-            uint16_t vol_nr = NumberParser::parse_uint16(*number_str);
+            uint16_t vol_nr = dsaext::parse_unsigned_int16(*number_str);
             vol = new DrbdVolume(vol_nr);
         }
-        catch (NumberFormatException& nf_exc)
+        catch (dsaext::NumberFormatException&)
         {
             // no-op
         }

@@ -1,5 +1,7 @@
 #include <DrbdConnection.h>
 
+#include "integerparse.h"
+
 const std::string DrbdConnection::PROP_KEY_CONNECTION = "connection";
 const std::string DrbdConnection::PROP_KEY_CONN_NAME = "conn-name";
 const std::string DrbdConnection::PROP_KEY_PEER_NODE_ID = "peer-node-id";
@@ -287,10 +289,10 @@ DrbdConnection* DrbdConnection::new_from_props(PropsMap& event_props)
     {
         try
         {
-            uint8_t new_node_id = NumberParser::parse_uint8(*node_id_str);
+            uint8_t new_node_id = dsaext::parse_unsigned_int8(*node_id_str);
             new_conn = new DrbdConnection(*conn_name, new_node_id);
         }
-        catch (NumberFormatException& nf_exc)
+        catch (dsaext::NumberFormatException&)
         {
             // no-op
         }

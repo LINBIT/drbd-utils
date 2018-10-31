@@ -3,19 +3,6 @@
 
 #include <stdexcept>
 
-class NumberFormatException : public std::exception
-{
-  public:
-    NumberFormatException() = default;
-    NumberFormatException(const NumberFormatException& orig) = default;
-    NumberFormatException& operator=(const NumberFormatException& orig) = default;
-    NumberFormatException(NumberFormatException&& orig) = default;
-    NumberFormatException& operator=(NumberFormatException&& orig) = default;
-    virtual ~NumberFormatException() noexcept
-    {
-    }
-};
-
 class EventException : public std::exception
 {
   public:
