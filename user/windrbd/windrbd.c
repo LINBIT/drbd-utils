@@ -746,6 +746,7 @@ static int exec_command(struct windrbd_usermode_helper *next_cmd)
 
 	char *s;
 
+printf("PATH is %s\n", getenv("PATH"));
 	argv = malloc((next_cmd->argc+1)*sizeof(argv[0]));
 	if (argv == NULL)
 		return -ENOMEM;
@@ -771,7 +772,11 @@ static int exec_command(struct windrbd_usermode_helper *next_cmd)
 	for (i=0;i<next_cmd->envc;i++) {
 		while (*s) s++;
 		s++;
-		envp[i] = s;
+
+		if (strncmp(s, "PATH=", 5) == 0)
+			envp[i]="PATH=/cygdrive/c/Program Files/WinDRBD:/cygdrive/c/windrbd/usr/sbin:/cygdrive/c/Windows/system32:/cygdrive/c/Windows:/cygdrive/c/Windows/System32/Wbem:/cygdrive/c/Windows/System32/WindowsPowerShell/v1.0";
+		else
+			envp[i] = s;
 	}
 	envp[i] = NULL;
 

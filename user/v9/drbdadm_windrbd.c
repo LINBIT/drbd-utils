@@ -171,3 +171,20 @@ void print_platform_specific_versions(void)
 	char *windrbd_version = windrbd_get_windrbd_version();
 	printf("WINDRBD_VERSION=%s\n", shell_escape(windrbd_version));
 }
+
+/* Replace the PATH environment variable to default Windows
+ * pathes, since we are using cmd for shell now.
+ */
+
+#include <sys/cygwin.h>
+
+void set_platform_env_for_khelper(void)
+{
+//	setenv("PATH", "C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0", 1);
+//	setenv("PATH", "/cygdrive/c/Windows/system32;/cygdrive/c/Windows;/cygdrive/c/Windows/System32/Wbem;/cygdrive/c/Windows/System32/WindowsPowerShell/v1.0", 1);
+
+	cygwin_internal(CW_SYNC_WINENV);
+
+printf("PATH is now %s\n", getenv("PATH"));
+}
+

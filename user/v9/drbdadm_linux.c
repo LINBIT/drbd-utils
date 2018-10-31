@@ -116,3 +116,9 @@ out:
 void print_platform_specific_versions(void)
 {
 }
+
+void set_platform_env_for_khelper(void)
+{
+}
+
+
