@@ -1692,7 +1692,6 @@ static int adm_khelper(const struct cfg_ctx *ctx)
 		setenv("DRBD_VOLUME", volume_list, 1);
 		setenv("DRBD_LL_DISK", ll_list, 1);
 	}
-//	set_platform_env_for_khelper();
 
 	if ((sh_cmd = get_opt_val(&res->handlers, ctx->cmd->name, NULL))) {
 		argv[0] = khelper_argv[0];
@@ -3245,8 +3244,6 @@ int main(int argc, char **argv)
 	int is_dump;
 	int is_adjust;
 	struct cfg_ctx ctx = { };
-
-printf("in main()\n");
 
 	initialize_err();
 	initialize_deferred_cmds();
