@@ -724,19 +724,6 @@ static int check_for_retvals(void)
 	return 0;
 }
 
-/* This is currently defined to be the drbdadm in the same directory
- * as this windrbd utility is running. The value that comes out of
- * the kernel is currently ignored. This is good enough (c) for
- * now, later, we may implement an ioctl for the kernel module
- * to set the path (linux does this by module parameters) and
- * use that value again.
- *
- * Update: currently not used, installation problems. Binary path
- * hardcoded to /cygdrive/c/windrbd/usr/sbin
- */
-
-static char drbdadm_path[4096];
-
 static int exec_command(struct windrbd_usermode_helper *next_cmd)
 {
 	char **argv;
@@ -873,6 +860,27 @@ static int print_exe_path(void)
 	return ret;
 }
 
+#if 0
+
+/* This is currently defined to be the drbdadm in the same directory
+ * as this windrbd utility is running. The value that comes out of
+ * the kernel is currently ignored. This is good enough (c) for
+ * now, later, we may implement an ioctl for the kernel module
+ * to set the path (linux does this by module parameters) and
+ * use that value again.
+ *
+ * Update: currently not used, installation problems. Binary path
+ * hardcoded to /cygdrive/c/windrbd/usr/sbin
+ */
+
+static char drbdadm_path[4096];
+
+/* Set user mode helper to the same path this program is located.
+ * This is currently disabled, since we have C:\windrbd\usr\sbin
+ * hardcoded anyway (for a couple of other reasons). Uncomment
+ * this code if the feature is eventually needed.
+ */
+
 static int set_um_helper(void)
 {
 	int ret;
@@ -896,6 +904,8 @@ static int set_um_helper(void)
 
 	return ret;
 }
+
+#endif
 
 static int user_mode_helper_daemon(void)
 {
