@@ -69,6 +69,8 @@ void usage_and_exit(void)
 	fprintf(stderr, "		Assign mountpoint (drive letter) to DRBD minor.\n");
 	fprintf(stderr, "	windrbd [opt] print-exe-path\n");
 	fprintf(stderr, "		Print (UNIX) path to this program\n");
+	fprintf(stderr, "	windrbd [opt] dump-memory-allocations\n");
+	fprintf(stderr, "		Cause kernel to dump (via printk) currently allocated memory\n");
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
 	fprintf(stderr, "	-f (force): do it even if it is dangerous.\n");
@@ -1043,6 +1045,26 @@ int set_mount_point_for_minor(int minor, const char *mount_point)
 	return 0;
 }
 
+int dump_memory_allocations(void)
+{
+	HANDLE root_dev;
+	DWORD unused;
+	BOOL ret;
+	int err;
+
+	root_dev = do_open_root_device(quiet);
+	if (root_dev == INVALID_HANDLE_VALUE)
+		return 1;
+
+	ret = DeviceIoControl(root_dev, IOCTL_WINDRBD_ROOT_DUMP_ALLOCATED_MEMORY, NULL, 0, NULL, 0, &unused, NULL);
+	if (!ret) {
+		err = GetLastError();
+		fprintf(stderr, "Error in sending ioctl to kernel, err is %d\n", err);
+		return -1;
+	}
+	return 0;
+}
+
 int main(int argc, char ** argv)
 {
 	const char *op;
@@ -1176,6 +1198,9 @@ int main(int argc, char ** argv)
 	}
 	if (strcmp(op, "print-exe-path") == 0)
 		return print_exe_path();
+
+	if (strcmp(op, "dump-memory-allocations") == 0)
+		return dump_memory_allocations();
 
 	usage_and_exit();
 	return 0;
