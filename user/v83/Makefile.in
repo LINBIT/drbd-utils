@@ -44,11 +44,6 @@ WITH_XEN = @WITH_XEN@
 WITH_PACEMAKER = @WITH_PACEMAKER@
 WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
-WITH_WINDRBD = @WITH_WINDRBD@
-
-ifeq ($(WITH_WINDRBD),yes)
-$(error Only DRBD 9 supported with WinDRBD, please use --without-83support with configure)
-endif
 
 # variables meant to be overridden from the make command line
 DESTDIR ?= /
