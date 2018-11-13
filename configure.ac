@@ -114,7 +114,7 @@ AC_ARG_WITH([manual],
 
 AC_ARG_WITH([windrbd],
 	[AS_HELP_STRING([--with-windrbd],
-			[Include windrbd support (do not use this under Linux)])],
+			[Include windrbd support (requires Cygwin)])],
 	[WITH_WINDRBD=$withval])
 AC_SUBST(WITH_WINDRBD)
 
