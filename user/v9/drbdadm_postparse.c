@@ -1339,6 +1339,16 @@ struct d_resource *res_by_name(const char *name)
 	return NULL;
 }
 
+static struct d_resource *res_by_name_ign_vol(const char *name)
+{
+	char *name_dup = strdupa(name);
+	char *slash = strchr(name_dup, '/');
+
+	if (slash) *slash = '\0';
+
+	return res_by_name(name_dup);
+}
+
 static int sanity_check_abs_cmd(char *cmd_name)
 {
 	struct stat sb;
@@ -1508,7 +1518,7 @@ static void validate_resource(struct d_resource *res, enum pp_flags flags)
 	next:
 		if (strcmp(opt->name, "resync-after"))
 			continue;
-		rs_after_res = res_by_name(opt->value);
+		rs_after_res = res_by_name_ign_vol(opt->value);
 		if (rs_after_res == NULL ||
 		    (rs_after_res->ignore && !(flags & MATCH_ON_PROXY))) {
 			err("%s:%d: in resource %s:\n\tresource '%s' mentioned in "
@@ -1606,9 +1616,9 @@ static void _convert_after_option(struct d_resource *res, struct d_volume *vol)
 	next:
 		if (strcmp(opt->name, "resync-after"))
 			continue;
-		ctx_by_name(&depends_on_ctx, opt->value, CTX_FIRST);
+		ctx_by_name(&depends_on_ctx, opt->value, SETUP_MULTI);
 		volumes = ctx_set_implicit_volume(&depends_on_ctx);
-		if (volumes > 1) {
+		if (volumes > 1 && !strchr(res->name, '/')) {
 			err("%s:%d: in resource %s:\n\t"
 			    "resync-after contains '%s', which is ambiguous, since it contains %d volumes\n",
 			    res->config_file, res->start_line, res->name,
