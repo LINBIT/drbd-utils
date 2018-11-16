@@ -118,12 +118,12 @@ AC_ARG_WITH([windrbd],
 	[WITH_WINDRBD=$withval])
 AC_SUBST(WITH_WINDRBD)
 
-if [ "$WITH_WINDRBD" = "yes" ] ; then
-   if [ "$WITH_83_SUPPORT" = "yes" ] ; then
+if test x"$WITH_WINDRBD" = x"yes" ; then
+   if test x"$WITH_83_SUPPORT" = x"yes" ; then
       AC_MSG_WARN([DRBD 8.3 (and earlier) not supported with WinDRBD, disabling drbd 8.3 userland tools build.])
       WITH_83_SUPPORT=no
    fi
-   if [ "$WITH_84_SUPPORT" = "yes" ] ; then
+   if test x"$WITH_84_SUPPORT" = x"yes" ; then
       AC_MSG_WARN([DRBD 8.4 (and earlier) not supported with WinDRBD, disabling drbd 8.4 userland tools build.])
       WITH_84_SUPPORT=no
    fi
@@ -248,6 +248,14 @@ if [[ $WITH_DRBDMON == "yes" ]] ; then
    AC_CHECK_LIB([rt], [clock_gettime, timer_create, timer_settime, timer_delete], [],
                 [AC_MSG_WARN([Could not find required librt functions, disabling drbdmon build.])
                  WITH_DRBDMON=no])
+fi
+
+if test x"$WITH_WINDRBD" = x"yes" ; then
+   AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+#ifndef __CYGWIN__
+# error Not a cygwin compiler
+#endif
+]])], [AC_MSG_RESULT([This is a cygwin compiler, which is good])], [AC_MSG_ERROR([--with-windrbd requires a Cygwin gcc for being built])])
 fi
 
 if test -z $RPMBUILD; then
