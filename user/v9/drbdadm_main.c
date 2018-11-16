@@ -37,6 +37,7 @@
 #include <assert.h>
 
 #include <sys/types.h>
+#include <linux/types.h>
 #include <sys/wait.h>
 #include <poll.h>
 #include <sys/socket.h>
@@ -1128,7 +1129,12 @@ static int adm_attach(const struct cfg_ctx *ctx)
 	bool reset = (ctx->cmd == &disk_options_defaults_cmd);
 
 	if (do_attach) {
-		int rv = call_cmd_fn(&apply_al_cmd, ctx, KEEP_RUNNING);
+		int rv;
+		rv = before_attach(ctx);
+		if (rv)
+			return rv;
+
+		rv = call_cmd_fn(&apply_al_cmd, ctx, KEEP_RUNNING);
 		if (rv)
 			return rv;
 	}
@@ -1206,6 +1212,9 @@ int adm_new_minor(const struct cfg_ctx *ctx)
 	ex = m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
 	if (!ex && do_register)
 		register_minor(ctx->vol->device_minor, config_save);
+
+	if (!ex)
+		ex = after_new_minor(ctx);
 
 	return ex;
 }
@@ -1420,6 +1429,12 @@ static void __adm_drbdsetup(const struct cfg_ctx *ctx, int flags, pid_t *pid, in
 		setenv("DRBD_RESOURCE", ctx->res->name, 1);
 
 	m__system(argv, flags, ctx->res ? ctx->res->name : NULL, pid, fd, ex);
+
+	if (ctx->cmd == &primary_cmd)
+		after_primary(ctx);
+
+	if (ctx->cmd == &secondary_cmd || ctx->cmd == &down_cmd)
+		after_secondary(ctx);
 }
 
 static int _adm_drbdsetup(const struct cfg_ctx *ctx, int flags)
@@ -1611,7 +1626,7 @@ static int adm_khelper(const struct cfg_ctx *ctx)
 	char *sh_cmd;
 	char minor_string[8];
 	char volume_string[8];
-	char *argv[] = { "/bin/sh", "-c", NULL, NULL };
+	char *argv[4] = { NULL, };
 
 	setenv("DRBD_CONF", config_save, 1);
 	setenv("DRBD_RESOURCE", res->name, 1);
@@ -1679,7 +1694,11 @@ static int adm_khelper(const struct cfg_ctx *ctx)
 	}
 
 	if ((sh_cmd = get_opt_val(&res->handlers, ctx->cmd->name, NULL))) {
+		argv[0] = khelper_argv[0];
+		argv[1] = khelper_argv[1];
 		argv[2] = sh_cmd;
+		argv[3] = NULL;
+
 		rv = m_system_ex(argv, SLEEPS_VERY_LONG, res->name);
 	}
 	return rv;
@@ -2800,18 +2819,10 @@ char *canonify_path(char *path)
 
 void assign_command_names_from_argv0(char **argv)
 {
-	struct cmd_helper {
-		char *name;
-		char **var;
-	};
-	static struct cmd_helper helpers[] = {
-		{"drbdsetup", &drbdsetup},
-		{"drbdmeta", &drbdmeta},
-		{"drbd-proxy-ctl", &drbd_proxy_ctl},
-		{"drbdadm-83", &drbdadm_83},
-		{"drbdadm-84", &drbdadm_84},
-		{NULL, NULL}
-	};
+	/* The predefined list of command helpers has been moved to
+	 * platform-dependent code.
+	 */
+
 	struct cmd_helper *c;
 
 	/* in case drbdadm is called with an absolute or relative pathname
@@ -3010,6 +3021,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 			printf("DRBD_KERNEL_VERSION=%s\n", escaped_version_code_kernel());
 			printf("DRBDADM_VERSION_CODE=0x%06x\n", version_code_userland());
 			printf("DRBDADM_VERSION=%s\n", shell_escape(PACKAGE_VERSION));
+			print_platform_specific_versions();
 			exit(0);
 			break;
 		case 'P':
@@ -3249,6 +3261,7 @@ int main(int argc, char **argv)
 	}
 
 	assign_command_names_from_argv0(argv);
+	maybe_add_bin_dir_to_path();
 
 	if (drbdsetup == NULL || drbdmeta == NULL || drbd_proxy_ctl == NULL) {
 		err("could not strdup argv[0].\n");

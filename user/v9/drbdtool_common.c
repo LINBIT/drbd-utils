@@ -2,6 +2,8 @@
 #define _XOPEN_SOURCE 600
 #define _FILE_OFFSET_BITS 64
 
+#include "config.h"
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
@@ -20,10 +22,10 @@
 #include <netdb.h>
 
 #include "linux/drbd_config.h"
-#include "drbdtool_common.h"
-#include "config.h"
 
-static struct version __drbd_driver_version = {};
+#include "drbdtool_common.h"
+
+struct version __drbd_driver_version = {};
 static struct version __drbd_utils_version = {};
 
 
@@ -130,36 +132,6 @@ const char *get_hostname(void)
 }
 
 
-/* For our purpose (finding the revision) SLURP_SIZE is always enough.
- */
-static char *slurp_proc_drbd()
-{
-	const int SLURP_SIZE = 4096;
-	char *buffer;
-	int rr, fd;
-
-	fd = open("/proc/drbd",O_RDONLY);
-	if (fd == -1)
-		return NULL;
-
-	buffer = malloc(SLURP_SIZE);
-	if(!buffer)
-		goto fail;
-
-	rr = read(fd, buffer, SLURP_SIZE-1);
-	if (rr == -1) {
-		free(buffer);
-		buffer = NULL;
-		goto fail;
-	}
-
-	buffer[rr]=0;
-fail:
-	close(fd);
-
-	return buffer;
-}
-
 static void read_hex(char *dst, char *src, int dst_size, int src_size)
 {
 	int dst_i, u, src_i=0;
@@ -182,7 +154,7 @@ static void read_hex(char *dst, char *src, int dst_size, int src_size)
 	}
 }
 
-static void version_from_str(struct version *rel, const char *token)
+void version_from_str(struct version *rel, const char *token)
 {
 	char *dot;
 	long maj, min, sub;
@@ -206,7 +178,7 @@ static void version_from_str(struct version *rel, const char *token)
 	rel->version_code = (maj << 16) + (min << 8) + sub;
 }
 
-static void parse_version(struct version *rel, const char *text)
+void parse_version(struct version *rel, const char *text)
 {
 	char token[80];
 	int plus=0;
@@ -258,8 +230,8 @@ static void parse_version(struct version *rel, const char *text)
 
 const struct version *drbd_driver_version(enum driver_version_policy fallback)
 {
-	char *version_txt;
 	char *drbd_driver_version_override;
+	const struct version *version;
 
 	if (__drbd_driver_version.version_code)
 		return &__drbd_driver_version;
@@ -271,23 +243,9 @@ const struct version *drbd_driver_version(enum driver_version_policy fallback)
 			return &__drbd_driver_version;
 	}
 
-	version_txt = slurp_proc_drbd();
-	if (version_txt) {
-		parse_version(&__drbd_driver_version, version_txt);
-		free(version_txt);
-		return &__drbd_driver_version;
-	} else {
-		FILE *in = popen("modinfo -F version drbd", "r");
-		if (in) {
-			char buf[32];
-			int c = fscanf(in, "%30s", buf);
-			pclose(in);
-			if (c == 1) {
-				version_from_str(&__drbd_driver_version, buf);
-				return &__drbd_driver_version;
-			}
-		}
-	}
+	version = get_drbd_driver_version();
+	if (version != NULL)
+		return version;
 
 	if (fallback == FALLBACK_TO_UTILS)
 		return drbd_utils_version();
@@ -354,23 +312,28 @@ void config_help_legacy(const char * const tool,
 			driver_version->version.major, driver_version->version.minor);
 }
 
-void add_lib_drbd_to_path(void)
+void add_component_to_path(const char *path)
 {
 	char *new_path = NULL;
 	char *old_path = getenv("PATH");
-	static const char lib_drbd[]="/lib/drbd";
 
 	if (!old_path)
-		setenv("PATH", lib_drbd, 1);
+		setenv("PATH", path, 1);
 	else {
 		m_asprintf(&new_path, "%s%s%s",
 				old_path,
 				(*old_path &&
 				 old_path[strlen(old_path) -1] != ':')
 				? ":" : "",
-				lib_drbd);
+				path);
 		setenv("PATH", new_path, 1);
 	}
+}
+
+void add_lib_drbd_to_path(void)
+{
+		/* TODO: if exec-prefix != "/" ? */
+	add_component_to_path("/lib/drbd");
 }
 
 /* from linux/crypto/crc32.c */

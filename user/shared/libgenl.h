@@ -1,6 +1,8 @@
 #ifndef LIBGENL_H
 #define LIBGENL_H
 
+#include "config.h"
+
 /*
  * stripped down copy of
  * linux-2.6.32/include/net/netlink.h and
@@ -14,10 +16,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/socket.h>
+#include <sys/types.h>
+
 #include <linux/socket.h>
 #include <linux/types.h>
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
+
+#ifdef WINDRBD
+#include <windows.h>		/* for HANDLE */
+#endif
 
 #ifndef SOL_NETLINK
 #define SOL_NETLINK 270
@@ -1042,9 +1050,13 @@ static inline int genlmsg_total_size(int payload)
  * Some helpers to simplify communicating with a particular family
  */
 struct genl_sock {
+#ifndef WINDRBD
 	struct sockaddr_nl	s_local;
 	struct sockaddr_nl	s_peer;
 	int			s_fd;
+#else
+	HANDLE			s_handle;
+#endif
 	unsigned int		s_seq_next;
 	unsigned int		s_seq_expect;
 	unsigned int		s_flags;
@@ -1067,6 +1079,5 @@ enum {
 };
 /* returns negative E_RCV_*, or length of message */
 extern int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int timeout_ms);
-
 
 #endif	/* LIBGENL_H */

@@ -84,6 +84,11 @@ struct version {
 	unsigned version_code;
 };
 
+/* Windows km/miniport.h has a #define STRICT */
+#ifdef STRICT
+#undef STRICT
+#endif
+
 enum driver_version_policy {
 	STRICT,
 	FALLBACK_TO_UTILS
@@ -95,10 +100,14 @@ extern int version_code_kernel(void);
 extern int version_code_userland(void);
 extern int version_equal(const struct version *rev1, const struct version *rev2);
 extern void config_help_legacy(const char * const tool, const struct version * const driver_version);
+extern void add_component_to_path(const char *path);
 extern void add_lib_drbd_to_path(void);
 extern uint32_t crc32c(uint32_t crc, const uint8_t *data, unsigned int length);
 
+extern void parse_version(struct version *rel, const char *text);
+extern void version_from_str(struct version *rel, const char *token);
 
-
+/* This is platform-specific */
+extern const struct version *get_drbd_driver_version(void);
 
 #endif

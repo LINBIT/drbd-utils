@@ -336,7 +336,7 @@ int vcheck_uniq(void **bt, const char *what, const char *fmt, va_list ap)
 	return vcheck_uniq_file_line(config_file, fline, bt, what, fmt, ap);
 }
 
-static void pe_expected(const char *exp)
+void pe_expected(const char *exp)
 {
 	const char *s = yytext;
 	err("%s:%u: Parse error: '%s' expected,\n\tbut got '%.20s%s'\n",
@@ -344,7 +344,7 @@ static void pe_expected(const char *exp)
 	exit(E_CONFIG_INVALID);
 }
 
-static void check_string_error(int got)
+void check_string_error(int got)
 {
 	const char *msg;
 	switch(got) {
@@ -364,7 +364,7 @@ static void check_string_error(int got)
 	exit(E_CONFIG_INVALID);
 }
 
-static void pe_expected_got(const char *exp, int got)
+void pe_expected_got(const char *exp, int got)
 {
 	static char tmp[2] = "\0";
 	const char *s = yytext;
@@ -375,18 +375,6 @@ static void pe_expected_got(const char *exp, int got)
 	    config_file, line, tmp[0] ? tmp : exp, s, strlen(s) > 20 ? "..." : "", got);
 	exit(E_CONFIG_INVALID);
 }
-
-#define EXP(TOKEN1)						\
-({								\
-	int token;						\
-	token = yylex();					\
-	if (token != TOKEN1) {					\
-		if (TOKEN1 == TK_STRING)			\
-			check_string_error(token);		\
-		pe_expected_got( #TOKEN1, token);		\
-	}							\
-	token;							\
-})
 
 static void parse_global(void)
 {
@@ -835,7 +823,7 @@ void parse_meta_disk(struct d_volume *vol)
 	}
 }
 
-static void check_minor_nonsense(const char *devname, const int explicit_minor)
+void check_minor_nonsense(const char *devname, const int explicit_minor)
 {
 	if (!devname)
 		return;
@@ -864,64 +852,9 @@ static void check_minor_nonsense(const char *devname, const int explicit_minor)
 	return;
 }
 
-static void parse_device(struct names* on_hosts, struct d_volume *vol)
-{
-	struct d_name *h;
-	int m;
-
-	switch (yylex()) {
-	case TK_STRING:
-		if (!strncmp("drbd", yylval.txt, 4)) {
-			m_asprintf(&vol->device, "/dev/%s", yylval.txt);
-			free(yylval.txt);
-		} else
-			vol->device = yylval.txt;
-
-		if (strncmp("/dev/drbd", vol->device, 9)) {
-			err("%s:%d: device name must start with /dev/drbd\n"
-			    "\t(/dev/ is optional, but drbd is required)\n",
-			    config_file, fline);
-			config_valid = 0;
-			/* no goto out yet,
-			 * as that would additionally throw a parse error */
-		}
-		switch (yylex()) {
-		default:
-			pe_expected("minor | ;");
-			/* fall through */
-		case ';':
-			m = dt_minor_of_dev(vol->device);
-			if (m < 0) {
-				err("%s:%d: no minor given nor device name contains a minor number\n",
-				    config_file, fline);
-				config_valid = 0;
-			}
-			vol->device_minor = m;
-			goto out;
-		case TK_MINOR:
-			; /* double fall through */
-		}
-	case TK_MINOR:
-		EXP(TK_INTEGER);
-		vol->device_minor = atoi(yylval.txt);
-		EXP(';');
-
-		/* if both device name and minor number are explicitly given,
-		 * force /dev/drbd<minor-number> or /dev/drbd_<arbitrary> */
-		check_minor_nonsense(vol->device, vol->device_minor);
-	}
-out:
-	if (!on_hosts)
-		return;
-
-	STAILQ_FOREACH(h, on_hosts, link) {
-		check_uniq_file_line(vol->v_config_file, vol->v_device_line,
-			"device-minor", "device-minor:%s:%u", h->name, vol->device_minor);
-		if (vol->device)
-			check_uniq_file_line(vol->v_config_file, vol->v_device_line,
-				"device", "device:%s:%s", h->name, vol->device);
-	}
-}
+/* parse_device has been moved to platform dependent code since the
+ * syntax of the device name differs between Linux and Windows.
+ */
 
 struct d_volume *alloc_volume(void)
 {

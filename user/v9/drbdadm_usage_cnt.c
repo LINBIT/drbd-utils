@@ -39,6 +39,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
+#include "config.h"
 #include "drbdadm.h"
 #include "drbdtool_common.h"
 #include "drbd_endian.h"
@@ -222,9 +223,11 @@ struct hostent *my_gethostbyname(const char *name)
 	sigaction(SIGALRM, &sa, &so);
 
 	if (!sigsetjmp(timed_out, 1)) {
+#ifdef HAVE_GETHOSTBYNAME_R
 		struct hostent ret;
 		char buf[2048];
 		int my_h_errno;
+#endif
 
 		alarm(DNS_TIMEOUT);
 		/* h = gethostbyname(name);
@@ -237,7 +240,11 @@ struct hostent *my_gethostbyname(const char *name)
 		 * gethostbyname_r() apparently does not use any internal locks.
 		 * Even if unnecessary in our case, it feels less dirty.
 		 */
+#ifdef HAVE_GETHOSTBYNAME_R
 		gethostbyname_r(name, &ret, buf, sizeof(buf), &h, &my_h_errno);
+#else
+		h = gethostbyname(name);
+#endif
 	} else {
 		/* timed out, longjmp of SIGALRM jumped here */
 		h = NULL;

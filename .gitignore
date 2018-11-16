@@ -24,8 +24,12 @@ user/v9/config.h.in
 user/v9/drbd_strings.[ch]
 user/v9/drbdadm
 user/v9/drbdmeta
+user/v9/drbdadm.exe
+user/v9/drbdmeta.exe
 user/v9/drbdmeta_scanner.c
 user/v9/drbdsetup
+user/v9/drbdsetup.exe
+user/windrbd/windrbd.exe
 
 user/v9/.*.d
 user/v9/Makefile
@@ -33,6 +37,8 @@ user/v83/.*.d
 user/v83/Makefile
 user/v84/.*.d
 user/v84/Makefile
+user/windrbd/.*.d
+user/windrbd/Makefile
 
 documentation/v9/Makefile
 documentation/v9/drbd.8

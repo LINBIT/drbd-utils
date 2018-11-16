@@ -119,3 +119,20 @@ void my_yypush_buffer_state(FILE *f);
 void yypop_buffer_state (void );
 void yyrestart(FILE *input_file);
 void free_btrees(void);
+void check_minor_nonsense(const char *devname, const int explicit_minor);
+void pe_expected(const char *exp);
+void check_string_error(int got);
+void pe_expected_got(const char *exp, int got);
+
+#define EXP(TOKEN1)						\
+({								\
+	int token;						\
+	token = yylex();					\
+	if (token != TOKEN1) {					\
+		if (TOKEN1 == TK_STRING)			\
+			check_string_error(token);		\
+		pe_expected_got( #TOKEN1, token);		\
+	}							\
+	token;							\
+})
+
