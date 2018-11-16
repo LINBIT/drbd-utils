@@ -118,12 +118,12 @@ AC_ARG_WITH([windrbd],
 	[WITH_WINDRBD=$withval])
 AC_SUBST(WITH_WINDRBD)
 
-if [[ $WITH_WINDRBD == "yes" ]] ; then
-   if [[ $WITH_83_SUPPORT == "yes" ]] ; then
+if [ "$WITH_WINDRBD" = "yes" ] ; then
+   if [ "$WITH_83_SUPPORT" = "yes" ] ; then
       AC_MSG_WARN([DRBD 8.3 (and earlier) not supported with WinDRBD, disabling drbd 8.3 userland tools build.])
       WITH_83_SUPPORT=no
    fi
-   if [[ $WITH_84_SUPPORT == "yes" ]] ; then
+   if [ "$WITH_84_SUPPORT" = "yes" ] ; then
       AC_MSG_WARN([DRBD 8.4 (and earlier) not supported with WinDRBD, disabling drbd 8.4 userland tools build.])
       WITH_84_SUPPORT=no
    fi
