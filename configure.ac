@@ -127,12 +127,6 @@ if [ "$WITH_WINDRBD" = "yes" ] ; then
       AC_MSG_WARN([DRBD 8.4 (and earlier) not supported with WinDRBD, disabling drbd 8.4 userland tools build.])
       WITH_84_SUPPORT=no
    fi
-   AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
-#ifndef __CYGWIN__
-# error Not a cygwin compiler
-#endif
-]])], [AC_MSG_RESULT([This is a cygwin compiler, which is good])], [AC_MSG_ERROR([--with-windrbd requires a Cygwin gcc for being built])])
-
 fi
 
 AC_SUBST(WITH_83_SUPPORT)
