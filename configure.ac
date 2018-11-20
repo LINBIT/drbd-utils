@@ -57,6 +57,7 @@ WITH_BASHCOMPLETION=yes
 WITH_NOARCH_SUBPACKAGES=no
 WITH_MANUAL=yes
 WITH_DRBDMON=yes
+WITH_WINDRBD=no
 AC_ARG_WITH([83support],
 	[AS_HELP_STRING([--without-83support],
 			[Do not include support for drbd driver/module <= 8.3])],
@@ -110,6 +111,24 @@ AC_ARG_WITH([manual],
 	[AS_HELP_STRING([--without-manual],
 			[Do not include manual pages])],
 	[WITH_MANUAL=$withval])
+
+AC_ARG_WITH([windrbd],
+	[AS_HELP_STRING([--with-windrbd],
+			[Include windrbd support (requires Cygwin)])],
+	[WITH_WINDRBD=$withval])
+AC_SUBST(WITH_WINDRBD)
+
+if test x"$WITH_WINDRBD" = x"yes" ; then
+   if test x"$WITH_83_SUPPORT" = x"yes" ; then
+      AC_MSG_WARN([DRBD 8.3 (and earlier) not supported with WinDRBD, disabling drbd 8.3 userland tools build.])
+      WITH_83_SUPPORT=no
+   fi
+   if test x"$WITH_84_SUPPORT" = x"yes" ; then
+      AC_MSG_WARN([DRBD 8.4 (and earlier) not supported with WinDRBD, disabling drbd 8.4 userland tools build.])
+      WITH_84_SUPPORT=no
+   fi
+fi
+
 AC_SUBST(WITH_83_SUPPORT)
 AC_SUBST(WITH_84_SUPPORT)
 AC_SUBST(WITH_UDEV)
@@ -122,6 +141,7 @@ AC_SUBST(WITH_MANUAL)
 
 dnl Check for functions
 AC_CHECK_FUNCS([getentropy])
+AC_CHECK_FUNCS([gethostbyname_r])
 
 dnl Do we know where systemd unit files go?
 PKG_PROG_PKG_CONFIG
@@ -230,6 +250,14 @@ if [[ $WITH_DRBDMON == "yes" ]] ; then
                  WITH_DRBDMON=no])
 fi
 
+if test x"$WITH_WINDRBD" = x"yes" ; then
+   AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+#ifndef __CYGWIN__
+# error Not a cygwin compiler
+#endif
+]])], [AC_MSG_RESULT([This is a cygwin compiler, which is good])], [AC_MSG_ERROR([--with-windrbd requires a Cygwin gcc for being built])])
+fi
+
 if test -z $RPMBUILD; then
    AC_MSG_WARN([No rpmbuild found, building RPM packages is disabled.])
 fi
@@ -258,6 +286,7 @@ fi
 
 dnl special header checks
 
+if test "$WITH_WINDRBD" = "no"; then
 AC_LANG(C)
 AC_CHECK_HEADERS([linux/genetlink.h],
    [
@@ -279,6 +308,7 @@ AC_CHECK_HEADERS([linux/genetlink.h],
          ]], [AC_DEFINE([HAVE_CTRL_CMD_DELMCAST_GRP],[1],[Does genetlink provide CTRL_CMD_DELMCAST_GRP already])]),
    ],
    [AC_MSG_ERROR([Could not find linux/genetlink.h])])
+fi
 
 dnl Checks for system services
 
@@ -389,18 +419,23 @@ AH_TEMPLATE(DRBD_LOCK_DIR, [Local lock directory. Commonly
 AH_TEMPLATE(DRBD_CONFIG_DIR, [Local configuration directory. Commonly
 			   /etc or
 			   /usr/local/etc])
+AH_TEMPLATE(DRBD_BIN_DIR, [Installation directory. Commonly
+			   /usr/bin])
 AH_TEMPLATE(DRBD_LEGACY_83, [Include support for drbd-8.3 kernel code])
 AH_TEMPLATE(DRBD_LEGACY_84, [Include support for drbd-8.4 kernel code])
+AH_TEMPLATE(WINDRBD, [Include support for windrbd (do not use this under Linux)])
 
 AC_SUBST(DRBD_LIB_DIR, [$localstatedir/lib/$PACKAGE_TARNAME])
 AC_SUBST(DRBD_RUN_DIR, [$localstatedir/run/$PACKAGE_TARNAME])
 AC_SUBST(DRBD_LOCK_DIR, [$localstatedir/lock])
 AC_SUBST(DRBD_CONFIG_DIR, [$sysconfdir])
+AC_SUBST(DRBD_BIN_DIR, [$exec_prefix/bin])
 
 AC_DEFINE_UNQUOTED(DRBD_LIB_DIR, ["$DRBD_LIB_DIR"])
 AC_DEFINE_UNQUOTED(DRBD_RUN_DIR, ["$DRBD_RUN_DIR"])
 AC_DEFINE_UNQUOTED(DRBD_LOCK_DIR, ["$DRBD_LOCK_DIR"])
 AC_DEFINE_UNQUOTED(DRBD_CONFIG_DIR, ["$DRBD_CONFIG_DIR"])
+AC_DEFINE_UNQUOTED(DRBD_BIN_DIR, ["$DRBD_BIN_DIR"])
 
 if test "$WITH_83_SUPPORT" = "yes"; then
    AC_DEFINE(DRBD_LEGACY_83, [1])
@@ -410,9 +445,13 @@ if test "$WITH_84_SUPPORT" = "yes"; then
    AC_DEFINE(DRBD_LEGACY_84, [1])
 fi
 
+if test "$WITH_WINDRBD" = "yes"; then
+   AC_DEFINE(WINDRBD, [1])
+fi
+
 dnl The configuration files we create (from their .in template)
 if test -z $SPECMODE; then
-   AC_CONFIG_FILES(Makefile user/shared/Makefile user/v9/Makefile user/v83/Makefile user/v84/Makefile scripts/Makefile documentation/v9/Makefile documentation/v83/Makefile documentation/v84/Makefile scripts/drbd.rules user/drbdmon/Makefile documentation/ja/v84/Makefile documentation/ja/v9/Makefile)
+   AC_CONFIG_FILES(Makefile user/shared/Makefile user/v9/Makefile user/v83/Makefile user/v84/Makefile scripts/Makefile documentation/v9/Makefile documentation/v83/Makefile documentation/v84/Makefile scripts/drbd.rules user/drbdmon/Makefile user/windrbd/Makefile documentation/ja/v84/Makefile documentation/ja/v9/Makefile)
    AC_CONFIG_HEADERS(user/shared/config.h)
 else
    AC_CONFIG_FILES(drbd.spec)

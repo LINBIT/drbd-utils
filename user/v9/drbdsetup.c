@@ -55,6 +55,8 @@
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
 
+#include "drbdsetup.h"
+
 #define EXIT_NOMEM 20
 #define EXIT_NO_FAMILY 20
 #define EXIT_SEND_ERR 20
@@ -159,15 +161,6 @@ enum usage_type {
 	BRIEF,
 	FULL,
 	XML,
-};
-
-struct drbd_argument {
-	const char* name;
-	__u16 nla_type;
-	int (*convert_function)(struct drbd_argument *,
-				struct msg_buff *,
-				struct drbd_genlmsghdr *dhdr,
-				char *);
 };
 
 /* Configuration requests typically need a context to operate on.
@@ -284,7 +277,6 @@ static int remember_peer_device(struct drbd_cmd *, struct genl_info *, void *);
 static char *address_str(char *buffer, void* address, int addr_len);
 
 // convert functions for arguments
-static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 static int conv_md_idx(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 static int conv_u32(struct drbd_argument *, struct msg_buff *, struct drbd_genlmsghdr *, char *);
 static int conv_addr(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
@@ -584,8 +576,6 @@ struct drbd_cmd commands[] = {
 bool show_defaults;
 bool wait_after_split_brain;
 
-#define OTHER_ERROR 900
-
 #define EM(C) [ C - ERR_CODE_BASE ]
 
 /* The EM(123) are used for old error messages. */
@@ -714,34 +704,6 @@ static bool endpoints_equal(struct drbd_cfg_context *a, struct drbd_cfg_context 
 	       !memcmp(a->ctx_peer_addr, b->ctx_peer_addr, a->ctx_peer_addr_len);
 }
 #endif
-
-static int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
-			  struct drbd_genlmsghdr *dhdr, char* arg)
-{
-	struct stat sb;
-	int device_fd;
-
-	if ((device_fd = open(arg,O_RDWR))==-1) {
-		PERROR("Can not open device '%s'", arg);
-		return OTHER_ERROR;
-	}
-
-	if (fstat(device_fd, &sb)) {
-		PERROR("fstat(%s) failed", arg);
-		return OTHER_ERROR;
-	}
-
-	if(!S_ISBLK(sb.st_mode)) {
-		fprintf(stderr, "%s is not a block device!\n", arg);
-		return OTHER_ERROR;
-	}
-
-	close(device_fd);
-
-	nla_put_string(msg, ad->nla_type, arg);
-
-	return NO_ERROR;
-}
 
 static int conv_md_idx(struct drbd_argument *ad, struct msg_buff *msg,
 		       struct drbd_genlmsghdr *dhdr, char* arg)
@@ -1064,8 +1026,21 @@ static int check_error(int err_no, char *desc)
 {
 	int rv = 0;
 
-	if (err_no == NO_ERROR || err_no == SS_SUCCESS)
+	if (err_no == NO_ERROR || err_no == SS_SUCCESS) {
+			/* drbdsetup primary may produce warnings,
+			 * which are no errors (on WinDRBD). */
+		if (global_attrs[DRBD_NLA_CFG_REPLY] &&
+	            global_attrs[DRBD_NLA_CFG_REPLY]->nla_len) {
+			struct nlattr *nla;
+			int rem;
+			fprintf(stderr, "warnings from kernel:\n");
+			nla_for_each_nested(nla, global_attrs[DRBD_NLA_CFG_REPLY], rem) {
+				if (nla_type(nla) == __nla_type(T_info_text))
+					fprintf(stderr, "%s\n", (char*)nla_data(nla));
+			}
+		}
 		return 0;
+	}
 
 	if (err_no == OTHER_ERROR) {
 		if (desc)
@@ -1603,32 +1578,6 @@ error:
 	return 20;
 }
 
-#include <sys/utsname.h>
-static bool kernel_older_than(int version, int patchlevel, int sublevel)
-{
-	struct utsname utsname;
-	char *rel;
-	int l;
-
-	if (uname(&utsname) != 0)
-		return false;
-	rel = utsname.release;
-	l = strtol(rel, &rel, 10);
-	if (l > version)
-		return false;
-	else if (l < version || *rel == 0)
-		return true;
-	l = strtol(rel + 1, &rel, 10);
-	if (l > patchlevel)
-		return false;
-	else if (l < patchlevel || *rel == 0)
-		return true;
-	l = strtol(rel + 1, &rel, 10);
-	if (l >= sublevel)
-		return false;
-	return true;
-}
-
 static int shortest_timeout(struct peer_devices_list *peer_devices)
 {
 	struct peer_devices_list *peer_device;
@@ -1705,14 +1654,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 	}
 
 	if (cm->continuous_poll) {
-		/* also always (try to) listen to nlctrl notify,
-		 * so we have a chance to notice rmmod.  */
-		int id = GENL_ID_CTRL;
-		setsockopt(drbd_sock->s_fd, SOL_NETLINK, NETLINK_ADD_MEMBERSHIP,
-					&id, sizeof(id));
-
-		if (genl_join_mc_group(drbd_sock, "events") &&
-		    !kernel_older_than(2, 6, 23)) {
+		if (genl_join_mc_group_and_ctrl(drbd_sock, "events")) {
 			desc = "unable to join drbd events multicast group";
 			rv = OTHER_ERROR;
 			goto out2;
@@ -1743,34 +1685,23 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 	drbd_sock->s_seq_expect = 0;
 
 	for (;;) {
-		int received, rem, ret;
+		int received, rem;
 		struct nlmsghdr *nlh = (struct nlmsghdr *)iov.iov_base;
 		struct timeval before;
-		struct pollfd pollfds[2] = {
-			[0] = {
-				.fd = 1,
-				.events = POLLHUP,
-			},
-			[1] = {
-				.fd = drbd_sock->s_fd,
-				.events = POLLIN,
-			},
-		};
 
 		gettimeofday(&before, NULL);
 
 		timeout_ms =
 			timeout_arg == MULTIPLE_TIMEOUTS ? shortest_timeout(u_ptr) : timeout_arg;
 
-		ret = poll(pollfds, 2, timeout_ms);
-		if (ret == 0) {
+		received = genl_recv_msgs_poll_hup(drbd_sock, &iov, &desc, -1);
+		if (received == -E_RCV_TIMEDOUT) {
 			err = 5;
 			goto out2;
 		}
-		if (pollfds[0].revents == POLLERR || pollfds[0].revents == POLLHUP)
+		if (received == 0)
 			goto out2;
 
-		received = genl_recv_msgs(drbd_sock, &iov, &desc, -1);
 		if (received < 0) {
 			switch(received) {
 			case E_RCV_TIMEDOUT:
@@ -4667,37 +4598,6 @@ static void print_usage_and_exit(const char *addinfo)
 		printf("\n%s\n", addinfo);
 
 	exit(20);
-}
-
-static int modprobe_drbd(void)
-{
-	struct stat sb;
-	int ret, retries = 10;
-
-	ret = stat("/proc/drbd", &sb);
-	if (ret && errno == ENOENT) {
-		ret = system("/sbin/modprobe drbd");
-		if (ret != 0) {
-			fprintf(stderr, "Failed to modprobe drbd (%m)\n");
-			return 0;
-		}
-		for(;;) {
-			struct timespec ts = {
-				.tv_nsec = 1000000,
-			};
-
-			ret = stat("/proc/drbd", &sb);
-			if (!ret || retries-- == 0)
-				break;
-			nanosleep(&ts, NULL);
-		}
-	}
-	if (ret) {
-		fprintf(stderr, "Could not stat /proc/drbd: %m\n");
-		fprintf(stderr, "Make sure that the DRBD kernel module is installed "
-				"and can be loaded!\n");
-	}
-	return ret == 0;
 }
 
 static void maybe_exec_legacy_drbdsetup(char **argv)

@@ -42,14 +42,35 @@ WITH_83_SUPPORT = @WITH_83_SUPPORT@
 WITH_84_SUPPORT = @WITH_84_SUPPORT@
 WITH_MANUAL = @WITH_MANUAL@
 WITH_DRBDMON = @WITH_DRBDMON@
+WITH_WINDRBD = @WITH_WINDRBD@
 
 # for some reason some of the commands below only work correctly in bash,
 # and not in e.g. dash. I'm too lazy to fix it to be compatible.
 SHELL=/bin/bash
 
-TOOLS_DIRS  = user/shared user/v9 user/v84 user/v83 scripts user/drbdmon
-DOC_DIRS    = documentation/v83 documentation/v84 documentation/v9 documentation/ja/v84 documentation/ja/v9
+
+TOOLS_DIRS  := user/shared user/v9 scripts
+DOC_DIRS    := documentation/v9 documentation/ja/v9
+ifeq ($(WITH_83_SUPPORT),yes)
+TOOLS_DIRS  += user/v83
+DOC_DIRS    += documentation/v83
+endif
+ifeq ($(WITH_84_SUPPORT),yes)
+TOOLS_DIRS  += user/v84
+DOC_DIRS    += documentation/v84 documentation/ja/v84
+endif
+ifeq ($(WITH_DRBDMON),yes)
+TOOLS_DIRS  += user/drbdmon
+endif
+ifeq ($(WITH_WINDRBD),yes)
+TOOLS_DIRS  += user/windrbd
+endif
+
+ifeq ($(WITH_MANUAL),yes)
 SUBDIRS     = $(TOOLS_DIRS) $(DOC_DIRS)
+else
+SUBDIRS     = $(TOOLS_DIRS)
+endif
 
 REL_VERSION := $(shell $(SED) -ne '/^AC_INIT/{s/^[^,]*, *\([^,]*\) *,.*/\1/;p;q}' configure.ac)
 ifdef FORCE

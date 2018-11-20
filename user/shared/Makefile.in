@@ -43,6 +43,7 @@ DRBD_CONFIG_DIR = @DRBD_CONFIG_DIR@
 # features enabled or disabled by configure
 WITH_83_SUPPORT = @WITH_83_SUPPORT@
 WITH_84_SUPPORT = @WITH_84_SUPPORT@
+WITH_WINDRBD = @WITH_WINDRBD@
 WITH_UDEV = @WITH_UDEV@
 WITH_XEN = @WITH_XEN@
 WITH_PACEMAKER = @WITH_PACEMAKER@
@@ -54,9 +55,16 @@ WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 SHELL=/bin/bash
 
 # variables meant to be overridden from the make command line
+ifeq ($(WITH_WINDRBD),yes)
+DESTDIR ?=
+else
 DESTDIR ?= /
+endif
 
 CFLAGS += -Wall -I../../drbd-headers -I.. -I.
+ifeq ($(WITH_WINDRBD),yes)
+CFLAGS += -I../windrbd-compat-headers
+endif
 CFLAGS += $(EXTRA_CFLAGS)
 
 .PHONY: drbd_buildtag.h drbd_buildtag.c

@@ -1,0 +1,45 @@
+# This is a very simple makefile
+#
+# It is used to compile the windrbd utility, which implements Windows-specific
+# things for the WinDRBD driver. See help of windrbd for more details.
+
+VPATH = ../shared
+
+sbindir = @sbindir@
+sysconfdir = @sysconfdir@
+WITH_WINDRBD = @WITH_WINDRBD@
+CC = @CC@
+CFLAGS = @CFLAGS@
+LDFLAGS = @LDFLAGS@
+
+# variables meant to be overridden from the make command line
+ifeq ($(WITH_WINDRBD),yes)
+DESTDIR ?=
+else
+$(error windrbd utility can only be made on Windows, please configure --with-windrbd)
+endif
+
+CFLAGS += -Wall -I../shared -I../../drbd-headers -I../windrbd-compat-headers
+windrbd-obj = windrbd.o shared_windrbd.o
+all-obj = $(windrbd-obj)
+
+all: windrbd
+
+../shared_prereqs.mk: ;
+include ../shared_prereqs.mk
+
+windrbd: $(windrbd-obj)
+	$(LINK.c) $(LDFLAGS) -o windrbd.exe $(windrbd-obj)
+
+install: windrbd
+	install -m 755 windrbd.exe $(DESTDIR)$(sbindir)
+	cygrunsrv.exe -I windrbdlog -p /cygdrive/c/windrbd/usr/sbin/windrbd.exe -a log-server -1 /cygdrive/c/windrbd/windrbd-kernel.log -2 /cygdrive/c/windrbd/windrbd-kernel.log -t manual || exit 0
+	cygrunsrv.exe -I windrbdumhelper -p /cygdrive/c/windrbd/usr/sbin/windrbd.exe -auser-mode-helper-daemon -1 /cygdrive/c/windrbd/windrbd-umhelper.log -2 /cygdrive/c/windrbd/windrbd-umhelper.log -t manual || exit 0
+	install -m 644 windrbd-sample.res $(DESTDIR)$(sysconfdir)/drbd.d
+
+clean:
+	rm -f windrbd.exe
+	rm -f $(all-obj)
+
+distclean: clean
+	rm -f $(all-dep)

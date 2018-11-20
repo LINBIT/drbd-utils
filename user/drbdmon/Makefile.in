@@ -7,9 +7,14 @@ LIBS = @LIBS@
 # variables set by configure
 sbindir = @sbindir@
 WITH_DRBDMON=@WITH_DRBDMON@
+WITH_WINDRBD = @WITH_WINDRBD@
 
 # variables meant to be overridden from the make command line
+ifeq ($(WITH_WINDRBD),yes)
+DESTDIR ?=
+else
 DESTDIR ?= /
+endif
 
 binaries := drbdmon
 

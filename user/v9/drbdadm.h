@@ -554,5 +554,37 @@ extern struct names backend_options;
 } while (/*CONSTCOND*/0)
 #endif
 
+/* Hooks that do something when compiled --with-windrbd, noops for
+ * the Linux version.
+ */
+
+void maybe_add_bin_dir_to_path(void);
+int before_attach(const struct cfg_ctx *ctx);
+int after_new_minor(const struct cfg_ctx *ctx);
+int after_primary(const struct cfg_ctx *ctx);
+int after_secondary(const struct cfg_ctx *ctx);
+
+void parse_device(struct names* on_hosts, struct d_volume *vol);
+
+/* Command helpers common to all platforms. Platform specific code
+ * might add utilities to that list (like windrbd for Windows)
+ */
+
+extern char *drbdsetup;
+extern char *drbdmeta;
+extern char *drbdadm_83;
+extern char *drbdadm_84;
+extern char *drbd_proxy_ctl;
+
+struct cmd_helper {
+	char *name;
+	char **var;
+};
+
+extern struct cmd_helper helpers[];
+extern char *khelper_argv[];
+
+void print_platform_specific_versions(void);
+
 #endif
 

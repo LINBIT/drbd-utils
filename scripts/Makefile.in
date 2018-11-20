@@ -50,9 +50,14 @@ WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 WITH_83_SUPPORT = @WITH_83_SUPPORT@
 WITH_84_SUPPORT = @WITH_84_SUPPORT@
+WITH_WINDRBD = @WITH_WINDRBD@
 
 # variables meant to be overridden from the make command line
+ifeq ($(WITH_WINDRBD),yes)
+DESTDIR ?=
+else
 DESTDIR ?= /
+endif
 
 all:
 
