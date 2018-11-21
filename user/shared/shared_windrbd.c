@@ -32,7 +32,7 @@ HANDLE do_open_root_device(int quiet)
 	        err = GetLastError();
 
 	        if (err != ERROR_SUCCESS) {
-			fprintf(stderr, "Couldn't open root device, error is %d\n", err);
+			fprintf(stderr, "Couldn't open root device, error is %lu\n", err);
 			switch (err) {
 			case ERROR_FILE_NOT_FOUND:
 				fprintf(stderr, "(this is most likely because the WinDRBD driver is not loaded).\n");
@@ -72,13 +72,13 @@ static int get_driver_versions(void)
                 return -1;
 
 	if (DeviceIoControl(h, IOCTL_WINDRBD_ROOT_GET_DRBD_VERSION, NULL, 0, drbd_version, sizeof(drbd_version), &ret_bytes, NULL) == 0) {
-		fprintf(stderr, "Could not get DRBD version from driver, error is %d\n",  GetLastError());
+		fprintf(stderr, "Could not get DRBD version from driver, error is %lu\n", GetLastError());
 		CloseHandle(h);
                 return -1;
 	}
 
 	if (DeviceIoControl(h, IOCTL_WINDRBD_ROOT_GET_WINDRBD_VERSION, NULL, 0, windrbd_version, sizeof(windrbd_version), &ret_bytes, NULL) == 0) {
-		fprintf(stderr, "Could not get WinDRBD version from driver, error is %d\n",  GetLastError());
+		fprintf(stderr, "Could not get WinDRBD version from driver, error is %lu\n",  GetLastError());
 		CloseHandle(h);
                 return -1;
 	}

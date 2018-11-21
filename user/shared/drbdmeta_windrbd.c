@@ -77,15 +77,15 @@ void pread_or_die(struct format *cfg, void *buf, size_t count, off_t offset, con
 			cfg->disk_handle, (unsigned long)count, (unsigned long long)offset);
 	}
 	if (SetFilePointerEx(cfg->disk_handle, win_offset, NULL, FILE_BEGIN) == 0) {
-		fprintf(stderr, "Could not set file pointer to position %zd using SetFilePointerEx, error is %d\n", offset, GetLastError());
+		fprintf(stderr, "Could not set file pointer to position %zd using SetFilePointerEx, error is %lu\n", offset, GetLastError());
 		exit(10);
 	}
 	if (ReadFile(cfg->disk_handle, buf, count, &bytes_read, NULL) == 0) {
-		fprintf(stderr, "Could not read %zd bytes from position %zd using ReadFile, error is %d\n", count, offset, GetLastError());
+		fprintf(stderr, "Could not read %zu bytes from position %zd using ReadFile, error is %lu\n", count, offset, GetLastError());
 		exit(10);
 	}
 	if (bytes_read != count) {
-		fprintf(stderr, "Read %d bytes from position %zd using ReadFile, expected %zd bytes error is %d\n", bytes_read, offset, count, GetLastError());
+		fprintf(stderr, "Read %lu bytes from position %zd using ReadFile, expected %zu bytes, error is %lu\n", bytes_read, offset, count, GetLastError());
 		fprintf(stderr, "Is this a NTFS partition?\n");
 		exit(10);
 	}
@@ -118,15 +118,15 @@ void pwrite_or_die(struct format *cfg, const void *buf, size_t count, off_t offs
 
 	win_offset.QuadPart = offset;
 	if (SetFilePointerEx(cfg->disk_handle, win_offset, NULL, FILE_BEGIN) == 0) {
-		fprintf(stderr, "Could not set file pointer to position %zd using SetFilePointerEx, error is %d\n", offset, GetLastError());
+		fprintf(stderr, "Could not set file pointer to position %zd using SetFilePointerEx, error is %lu\n", offset, GetLastError());
 		exit(10);
 	}
 	if (WriteFile(cfg->disk_handle, buf, count, &bytes_written, NULL) == 0) {
-		fprintf(stderr, "Could not write %zd bytes from position %zd using ReadFile, error is %d\n", count, offset, GetLastError());
+		fprintf(stderr, "Could not write %zu bytes from position %zd using ReadFile, error is %lu\n", count, offset, GetLastError());
 		exit(10);
 	}
 	if (bytes_written != count) {
-		fprintf(stderr, "Wrote %d bytes from position %zd using WriteFile, expected %zd bytes error is %d\n", bytes_written, offset, count, GetLastError());
+		fprintf(stderr, "Wrote %lu bytes from position %zd using WriteFile, expected %zu bytes error is %lu\n", bytes_written, offset, count, GetLastError());
 		fprintf(stderr, "Is this a NTFS partition?\n");
 		exit(10);
 	}
@@ -141,7 +141,7 @@ int v06_md_open(struct format *cfg)
 int generic_md_close(struct format *cfg)
 {
 	if (CloseHandle(cfg->disk_handle) == 0) {
-		fprintf(stderr, "CloseHandle() failed, error is %d\n", GetLastError());
+		fprintf(stderr, "CloseHandle() failed, error is %lu\n", GetLastError());
 		return -1;
 	}
 	return 0;
@@ -190,7 +190,7 @@ HANDLE open_windows_device(const char *arg)
                 n = snprintf(device, sizeof(device), "%s", arg);
         }
         if (n >= sizeof(device)) {
-                fprintf(stderr, "Device name too long: %s (%zd), please report this.\n", arg, n);
+                fprintf(stderr, "Device name too long: %s (%zu), please report this.\n", arg, n);
                 return INVALID_HANDLE_VALUE;
         }
 
@@ -207,7 +207,7 @@ HANDLE open_windows_device(const char *arg)
 		NULL
 	);
 	if (hdisk == INVALID_HANDLE_VALUE) {
-		fprintf(stderr, "Couldn't open disk %s with CreateFile: Error is %d\n", device, GetLastError());
+		fprintf(stderr, "Couldn't open disk %s with CreateFile: Error is %lu\n", device, GetLastError());
 	}
 	return hdisk;
 }
@@ -221,7 +221,7 @@ static int get_windows_device_geometry(HANDLE hdisk, int *md_hard_sect_size, uin
 	PARTITION_INFORMATION_EX partition_info;
 
 	if (DeviceIoControl(hdisk, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, 0, &geometry, sizeof(geometry), &ret_bytes, NULL) == 0) {
-		fprintf(stderr, "Failed to get disk geometry: error is %d\n", GetLastError());
+		fprintf(stderr, "Failed to get disk geometry: error is %lu\n", GetLastError());
 		return -1;
 	}
 	if (verbose >= 1) {
@@ -229,7 +229,7 @@ static int get_windows_device_geometry(HANDLE hdisk, int *md_hard_sect_size, uin
 	}
 
 	if (DeviceIoControl(hdisk, IOCTL_DISK_GET_PARTITION_INFO_EX, NULL, 0, &partition_info, sizeof(partition_info), &ret_bytes, NULL) == 0) {
-		fprintf(stderr, "Failed to get partition info: error is %d\n", GetLastError());
+		fprintf(stderr, "Failed to get partition info: error is %lu\n", GetLastError());
 		return -1;
 	}
 	if (verbose >= 1) {

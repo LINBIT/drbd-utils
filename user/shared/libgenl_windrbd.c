@@ -78,7 +78,6 @@ static int verify_header(struct genl_sock *s, struct iovec *iov, size_t c, char 
 
 int genl_join_mc_group(struct genl_sock *s, const char *name)
 {
-	int err;
 	unsigned int unused;
 	struct windrbd_ioctl_genl_portid_and_multicast_group m;
 
@@ -86,8 +85,7 @@ int genl_join_mc_group(struct genl_sock *s, const char *name)
 	m.portid = getpid();
 
         if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_JOIN_MC_GROUP, (void*) &m, sizeof(m), NULL, 0, &unused, NULL) == 0) {
-	        err = GetLastError();
-		printf("DeviceIoControl() failed, error is %d\n", err);
+		printf("DeviceIoControl() failed, error is %lu\n", GetLastError());
 		return -1;
 	}
 	return 0;
@@ -116,12 +114,10 @@ fail:
 
 static int do_send(struct genl_sock *s, const void *buf, int len)
 {
-	int err;
 	unsigned int unused;
 
         if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_SEND_NL_PACKET, (void*) buf, len, NULL, 0, &unused, NULL) == 0) {
-	        err = GetLastError();
-		printf("DeviceIoControl() failed, error is %d\n", err);
+		printf("DeviceIoControl() failed, error is %lu\n", GetLastError());
 		return -1;
 	}
 	return 0;
@@ -159,15 +155,13 @@ int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int 
 {
 	struct windrbd_ioctl_genl_portid p;
 	unsigned int size;
-	int err;
 	int forever;
 
 	p.portid = getpid();
 	forever = timeout_ms < 0;
 	while (forever || timeout_ms > 0) {
 	        if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_RECEIVE_NL_PACKET, &p, sizeof(p), iov->iov_base, iov->iov_len, &size, NULL) == 0) {
-		        err = GetLastError();
-			printf("DeviceIoControl() failed, error is %d\n", err);
+			printf("DeviceIoControl() failed, error is %d\n", GetLastError());
 			if (err_desc)
 				*err_desc = "ioctl error";
 			return -1;

@@ -31,7 +31,7 @@ int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 		n = snprintf(device, sizeof(device), "%s", arg);
 	}
 	if (n >= sizeof(device)) {
-		fprintf(stderr, "Device name too long: %s (%zd), please report this.\n", arg, n);
+		fprintf(stderr, "Device name too long: %s (%zu), please report this.\n", arg, n);
 		return OTHER_ERROR;
 	}
 	nla_put_string(msg, ad->nla_type, device);
