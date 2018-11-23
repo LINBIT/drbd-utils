@@ -1960,6 +1960,45 @@ void include_stmt(char *str)
 	popd(cwd);
 }
 
+static void validate_kmod(int token)
+{
+	struct version expected;
+	const struct version *have;
+	bool kmod_valid;
+	const char *op = "";
+	char *buf;
+
+	have = drbd_driver_version(STRICT);
+	if (!have) {
+		fprintf(stderr, "Could not get drbd-module-version, Module not loaded?\n");
+		exit(E_CONFIG_INVALID);
+	}
+
+	m_asprintf(&buf, "version: %s", yylval.txt);
+	parse_version(&expected, buf);
+
+#define MOD_CMP(opr) do { \
+		op = #opr; \
+		kmod_valid = ((have->version_code - expected.version_code) opr 0); \
+} while(0)
+	if (token == TK_MODULE_EQ) MOD_CMP(==);
+	else if (token == TK_MODULE_NE) MOD_CMP(!=);
+	else if (token == TK_MODULE_GT) MOD_CMP(>);
+	else if (token == TK_MODULE_GE) MOD_CMP(>=);
+	else if (token == TK_MODULE_LT) MOD_CMP(<);
+	else if (token == TK_MODULE_LE) MOD_CMP(<=);
+	else { op = "???"; kmod_valid=false; }
+#undef MOD_CMP
+
+	if (!kmod_valid) {
+		err("%s:%u: Validation error: drbd-module-version %d.%d.%d %s %s not true\n",
+				config_file, line,
+				have->version.major, have->version.minor, have->version.sublvl,
+				op, yylval.txt);
+		exit(E_CONFIG_INVALID);
+	}
+}
+
 void my_parse(void)
 {
 	/* Remember that we're reading that file. */
@@ -1991,10 +2030,26 @@ void my_parse(void)
 			EXP(';');
 			include_stmt(yylval.txt);
 			break;
+		case TK_MODULE_EQ:
+			/* fall through */
+		case TK_MODULE_NE:
+			/* fall through */
+		case TK_MODULE_GT:
+			/* fall through */
+		case TK_MODULE_GE:
+			/* fall through */
+		case TK_MODULE_LT:
+			/* fall through */
+		case TK_MODULE_LE:
+			EXP(TK_KMODVERS);
+			EXP(';');
+			validate_kmod(token);
+			break;
 		case 0:
 			return;
 		default:
-			pe_expected("global | common | resource | skip | include");
+			pe_expected("global | common | resource | skip | include |\n"
+				"\trequire-drbd-module-version-{eq,ne,gt,ge,lt,le}");
 		}
 	}
 }

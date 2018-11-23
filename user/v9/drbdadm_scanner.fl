@@ -34,6 +34,7 @@ int include_stack_ptr = 0;
 
 NUM		[0-9]{1,8}[MKGs]?
 SNUMB		[0-9]{1,3}
+KMODVERS	[0-9]+"."[0-9]+"."[0-9]+
 IPV4ADDR	({SNUMB}"."){3}{SNUMB}
 HEX4            [0-9a-fA-F]{1,4}
 IPV6ADDR	((({HEX4}":"){0,5}{HEX4})?":"{HEX4}?":"({HEX4}(":"{HEX4}){0,5})?("%"{STRING})?)|("::"[fF]{4}":"{IPV4ADDR})
@@ -60,6 +61,13 @@ yes			{ DP; return TK_YES;			}
 ask			{ DP; return TK_ASK;			}
 via			{ DP; return TK_VIA;			}
 skip			{ DP; return TK_SKIP;			}
+require-drbd-module-version-eq		{ DP; return TK_MODULE_EQ;			}
+require-drbd-module-version-ne		{ DP; return TK_MODULE_NE;			}
+require-drbd-module-version-gt		{ DP; return TK_MODULE_GT;			}
+require-drbd-module-version-ge		{ DP; return TK_MODULE_GE;			}
+require-drbd-module-version-lt		{ DP; return TK_MODULE_LT;			}
+require-drbd-module-version-le		{ DP; return TK_MODULE_LE;			}
+{KMODVERS}		{ DP; CP; return TK_KMODVERS;		}
 disk			{ DP; return TK_DISK;			}
 host			{ DP; return TK_HOST;			}
 hosts			{ DP; return TK_HOSTS;			}
