@@ -1,0 +1,411 @@
+# SOME DESCRIPTIVE TITLE
+# Copyright (C) YEAR Free Software Foundation, Inc.
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: 2018-11-02 13:05+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. type: Content of: <refentry><refentryinfo>
+msgid ""
+"<date>15 Oct 2008</date> <productname>DRBD</productname> "
+"<productnumber>8.3.2</productnumber>"
+msgstr ""
+"<date>15 Oct 2008</date> <productname>DRBD</productname> "
+"<productnumber>8.3.2</productnumber>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><primary>
+msgid "drbdmeta"
+msgstr "drbdmeta"
+
+#. type: Content of: <refentry><refmeta><manvolnum>
+msgid "8"
+msgstr "8"
+
+#. type: Content of: <refentry><refmeta><refmiscinfo>
+msgid "System Administration"
+msgstr "System Administration"
+
+#. type: Content of: <refentry><refnamediv><refpurpose>
+msgid ""
+"DRBD's meta data management tool <placeholder type=\"indexterm\" id=\"0\"/>"
+msgstr "DRBD のメタデータ管理ツール<placeholder type=\"indexterm\" id=\"0\"/>"
+
+#. type: Content of: <refentry><refsynopsisdiv><cmdsynopsis>
+msgid ""
+"<command moreinfo=\"none\">drbdmeta</command> <arg choice=\"opt\" rep="
+"\"norepeat\">--force</arg> <arg choice=\"opt\" rep=\"norepeat\">--ignore-"
+"sanity-checks</arg> <arg choice=\"req\" rep=\"norepeat\"> "
+"<replaceable>device</replaceable> </arg> <group choice=\"req\" rep=\"norepeat"
+"\"> <arg choice=\"plain\" rep=\"norepeat\">v06 <replaceable>minor</"
+"replaceable></arg> <arg choice=\"plain\" rep=\"norepeat\">v07 "
+"<replaceable>meta_dev index</replaceable></arg> <arg choice=\"plain\" rep="
+"\"norepeat\">v08 <replaceable>meta_dev index</replaceable></arg> </group> "
+"<arg choice=\"req\" rep=\"norepeat\"> <replaceable>command</replaceable> </"
+"arg> <arg choice=\"opt\" rep=\"repeat\"> <replaceable>cmd args</replaceable> "
+"</arg>"
+msgstr ""
+"<command moreinfo=\"none\">drbdmeta</command> <arg choice=\"opt\" rep="
+"\"norepeat\">--force</arg> <arg choice=\"opt\" rep=\"norepeat\">--ignore-"
+"sanity-checks</arg> <arg choice=\"req\" rep=\"norepeat\"> "
+"<replaceable>device</replaceable> </arg> <group choice=\"req\" rep=\"norepeat"
+"\"> <arg choice=\"plain\" rep=\"norepeat\">v06 <replaceable>minor</"
+"replaceable></arg> <arg choice=\"plain\" rep=\"norepeat\">v07 "
+"<replaceable>meta_dev index</replaceable></arg> <arg choice=\"plain\" rep="
+"\"norepeat\">v08 <replaceable>meta_dev index</replaceable></arg> </group> "
+"<arg choice=\"req\" rep=\"norepeat\"> <replaceable>command</replaceable> </"
+"arg> <arg choice=\"opt\" rep=\"repeat\"> <replaceable>cmd args</replaceable> "
+"</arg>"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Description"
+msgstr "Description"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"Drbdmeta is used to create, display and modify the contents of DRBD's meta "
+"data storage. Usually you do not want to use this command directly, but "
+"start it via the frontend <citerefentry><refentrytitle>drbdadm</"
+"refentrytitle><manvolnum>8</manvolnum></citerefentry>."
+msgstr ""
+"drbdmeta は、DRBD メタデータを作成、内容表示、あるいは変更する。通常はフロン"
+"トエンドのコマンドを使うため、直接使用する必要はない、 "
+"<citerefentry><refentrytitle>drbdadm</refentrytitle><manvolnum>8</"
+"manvolnum></citerefentry> を参照。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"This command only works if the DRBD resource is currently down, or at least "
+"detached from its backing storage. The first parameter is the device node "
+"associated to the resource. With the second parameter you can select the "
+"version of the meta data. Currently all major DRBD releases (0.6, 0.7 and 8) "
+"are supported."
+msgstr ""
+"このコマンドは、DRBD リソースを無効にしてある場合、もしくは少なくとも下位レベ"
+"ルストレージから切り離してある場合のみ動作する。最初の引数は、リソースに結び"
+"付けたデバイス名である。第2引数はメタデータのバージョンで、現在の主要な全バー"
+"ジョン (0.6、0.7および 8) を指定できる。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Options"
+msgstr "Options"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "--force"
+msgstr "--force"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> All questions that get asked by "
+"drbdmeta are treated as if the user answered 'yes'."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>drbdmeta からのすべての質問に "
+"'yes' と回答するようにする。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "--ignore-sanity-checks"
+msgstr "--ignore-sanity-checks"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Some sanity checks cause drbdmeta "
+"to terminate. E.g. if a file system image would get destroyed by creating "
+"the meta data. By using that option you can force drbdmeta to ignore these "
+"checks."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>サニティチェックをすると drbdmeta "
+"が終了することがある。メタデータを作成することにより、ファイルシステムイメー"
+"ジが破壊された場合などである。このオプションを使うことにより、 drbdmeta がこ"
+"れらのチェックを無視するようになる。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Commands"
+msgstr "Commands"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"create-md <option>--peer-max-bio-size <replaceable>val</replaceable></"
+"option> <option>--al-stripes <replaceable>val</replaceable></option> "
+"<option>--al-stripe-size-kB <replaceable>val</replaceable></option>"
+msgstr ""
+"create-md <option>--peer-max-bio-size <replaceable>val</replaceable></"
+"option> <option>--al-stripes <replaceable>val</replaceable></option> "
+"<option>--al-stripe-size-kB <replaceable>val</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "create-md"
+msgstr "create-md"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Create-md initializes the meta "
+"data storage. This needs to be done before a DRBD resource can be taken "
+"online for the first time. In case there is already a meta data signature of "
+"an older format in place, drbdmeta will ask you if it should convert the "
+"older format to the selected format."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>create-md はメタデータ領域を新しく"
+"作成する。DRBD リソースを初めて利用する場合、オンラインにする前にこのコマンド"
+"を実行する必要がある。すでに古いバージョンのメタデータが存在する場合、"
+"drbdmeta は指定したバージョンの形式に変換するかどうかを尋ねる。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"If you will use the resource before it is connected to its peer for the "
+"first time DRBD may perform better if you use the <option>--peer-max-bio-"
+"size</option> option. For DRBD versions of the peer use up to these values: "
+"&lt;8.3.7 -&gt; 4k, 8.3.8 -&gt; 32k, 8.3.9 -&gt; 128k, 8.4.0 -&gt; 1M."
+msgstr ""
+"最初に対向ノードに接続する前にリソースを使用する場合、<option>--peer-max-bio-"
+"size</option> オプションを使用すると DRBD の性能が向上する。対向ノードの "
+"DRBD のバージョンによって、これらの値を使う。8.3.7 → 4k、8.3.8 → 32k、8.3.9 "
+"→ 128k、8.4.0 → 1M。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"If you want to use more than 6433 activity log extents, or live on top of a "
+"spriped RAID, you may specify the number of stripes (<option>--al-stripes</"
+"option>, default 1), and the stripe size (<option>--al-stripe-size-kB</"
+"option>, default 32).  To just use a larger linear on-disk ring-buffer, "
+"leave the number of stripes at 1, and increase the size only:"
+msgstr ""
+"6433 以上のアクティビティログのエクステントを使用したい場合、またはストライプ"
+"ド RAID 上で使用する場合には、ストライプ数 (<option>--al-stripes</option>、デ"
+"フォルトは 1) とストライプのサイズ(<option>--al-stripe-size-kB</option>、デ"
+"フォルトは32)を指定することが可能。単に大きなオンディスクのリングバッファを使"
+"用する場合には、ストライプ 数を1にし、サイズを次のように拡大する。 :"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<command>drbdmeta 0 v08 /dev/vg23/lv42 internal create-md --al-stripe-size "
+"1M</command>"
+msgstr ""
+"<command>drbdmeta 0 v08 /dev/vg23/lv42 internal create-md --al-stripe-size "
+"1M</command>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"To avoid a single \"spindle\" from becoming a bottleneck, increase the "
+"number of stripes, to achieve an interleaved layout of the on-disk activity-"
+"log transactions.  What you give as \"stripe-size\" should be what is a.k.a. "
+"\"chunk size\" or \"granularity\" or \"strip unit\": the minimum skip to the "
+"next \"spindle\"."
+msgstr ""
+"ボトルネックの単一の「スピンドル」になるのを避けるため、ストライプ数を増や"
+"し、オンディスクのアクティビティログ処理のインターリーブ対応の構成する。"
+"&quot;stripe-size&quot; で指定するものは、いわゆる「チャンクサイズ」または"
+"「粒度」あるいは「ストライプユニット」である。つまり、次の「スピンドル」への"
+"最短のステップとなる。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<command>drbdmeta 0 v08 /dev/vg23/lv42 internal create-md --al-stripes 7 --"
+"al-stripe-size 64k</command>"
+msgstr ""
+"<command>drbdmeta 0 v08 /dev/vg23/lv42 internal create-md --al-stripes 7 --"
+"al-stripe-size 64k</command>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "get-gi"
+msgstr "get-gi"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Get-gi shows a short textual "
+"representation of the data generation identifier. In version 0.6 and 0.7 "
+"these are generation counters, while in version 8 it is a set of UUIDs."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>データ世代識別子 (data generation "
+"identifiers) の情報を簡潔なテキスト情報として表示する。バージョン 0.6 および "
+"0.7 形式のメタデータには世代カウンタがあるが、バージョン 8 では UUID が表示さ"
+"れる。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "show-gi"
+msgstr "show-gi"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Show-gi prints a textual "
+"representation of the data generation identifiers including explanatory "
+"information."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>データ世代識別子 (data generation "
+"identifiers) の情報を、説明テキストとともにテキスト情報として表示する。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "dump-md"
+msgstr "dump-md"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Dumps the whole contents of the "
+"meta data storage including the stored bit-map and activity-log in a textual "
+"representation."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>メタデータの全内容をテキスト形式で"
+"ダンプする。ダンプにはビットマップとアクティビティログも含まれる。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "outdate"
+msgstr "outdate"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Sets the outdated flag in the "
+"meta data. This is used by the peer node when it wants to become primary, "
+"but cannot communicate with the DRBD stack on this host."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>メタデータに outdated フラグをたて"
+"る。他ノードが自ノードと通信できない状態でプライマリ状態になりたい場合、他"
+"ノードからのリモート実行でこのコマンドが実行される。ただし、スタックされた"
+"ノードにはできない。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "dstate"
+msgstr "dstate"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Prints the state of the data on "
+"the backing storage. The output is always followed by '/DUnknown' since "
+"drbdmeta only looks at the local meta data."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>下位レベルストレージの状態を表示す"
+"る。drbdmeta はローカルメタデータのみにアクセスするため、出力にははつねに '/"
+"DUnknown' が表示される。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "check-resize"
+msgstr "check-resize"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Examines the device size of a "
+"backing device, and it's last known device size, recorded in a file /var/lib/"
+"drbd/drbd-minor-??.lkbd. In case the size of the backing device changed, and "
+"the meta data can be found at the old position, it moves the meta data to "
+"the right position at the end of the block device."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>下位デバイスのデバイスサイズを調"
+"べ、最新のデバイスサイズを /var/lib/drbd/ 下のファイル drbd-minor-??.lkbd に"
+"記録する。下位デバイスのサイズが変更されていて、古い場所にメタデータを検出し"
+"た場合、メタデータを正しい場所であるブロックデバイスの最後に移動させる。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Expert's commands"
+msgstr "Expert's commands"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"Drbdmeta allows you to modify the meta data as well. This is intentionally "
+"omitted for the command's usage output, since you should only use it if you "
+"really know what you are doing.  By setting the generation identifiers to "
+"wrong values, you risk to overwrite your up-to-data data with an older "
+"version of your data."
+msgstr ""
+"drbdmeta を使うと、メタデータの内容を変更できる。以下のコマンドは、コマンド自"
+"身の使用法表示から意図的に削除してある。これは、何をしているのか明確に理解し"
+"た上で実行しないと危険なためである。データ世代識別子に間違った値をセットする"
+"と、古いデータで最新データを上書きしてしまうなどのリスクが生じる。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid "set-gi <replaceable>gi</replaceable>"
+msgstr "set-gi <replaceable>gi</replaceable>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "set-gi"
+msgstr "set-gi"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Set-gi allows you to set the "
+"generation identifier.  <replaceable>Gi</replaceable> needs to be a "
+"generation counter for the 0.6 and 0.7 format, and a UUID set for 8.x.  "
+"Specify it in the same way as get-gi shows it."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>データ世代識別子に値をセットする。"
+"<replaceable>Gi</replaceable> にはバージョン 0.6 および 0.7 では世代カウンタ"
+"を、バージョン 8.x では UUID を指定する。get-gi で表示された値と同じ値を指定"
+"すること。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid "restore-md <replaceable>dump_file</replaceable>"
+msgstr "restore-md <replaceable>dump_file</replaceable>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "restore-md"
+msgstr "restore-md"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Reads the <replaceable>dump_file</"
+"replaceable> and writes it to the meta data."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/><replaceable>dump_file</"
+"replaceable> を読み込んで、その内容をメタデータに書き込む。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Version"
+msgstr "Version"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid "This document was revised for version 8.3.2 of the DRBD distribution."
+msgstr "このドキュメントは DRBD バージョン 8.3.2 向けに改訂されている。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Author"
+msgstr "Author"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid ""
+"Written by Philipp Reisner <email>philipp.reisner@linbit.com</email> and "
+"Lars Ellenberg <email>lars.ellenberg@linbit.com</email>."
+msgstr ""
+"Written by Philipp Reisner <email>philipp.reisner@linbit.com</email> and "
+"Lars Ellenberg <email>lars.ellenberg@linbit.com</email>."
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Reporting Bugs"
+msgstr "Reporting Bugs"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid "Report bugs to <email>drbd-user@lists.linbit.com</email>."
+msgstr "Report bugs to <email>drbd-user@lists.linbit.com</email>."
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Copyright"
+msgstr "Copyright"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid ""
+"Copyright 2001-2008 LINBIT Information Technologies, Philipp Reisner, Lars "
+"Ellenberg. This is free software; see the source for copying conditions.  "
+"There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A "
+"PARTICULAR PURPOSE."
+msgstr ""
+"Copyright 2001-2008 LINBIT Information Technologies, Philipp Reisner, Lars "
+"Ellenberg. This is free software; see the source for copying conditions.  "
+"There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A "
+"PARTICULAR PURPOSE."
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "See Also"
+msgstr "See Also"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"<citerefentry> <refentrytitle>drbdadm</refentrytitle> <manvolnum>8</"
+"manvolnum> </citerefentry>"
+msgstr ""
+"<citerefentry> <refentrytitle>drbdadm</refentrytitle> <manvolnum>8</"
+"manvolnum> </citerefentry>"

@@ -1,0 +1,2838 @@
+# SOME DESCRIPTIVE TITLE
+# Copyright (C) YEAR Free Software Foundation, Inc.
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: 2018-11-02 13:05+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. type: Content of: <refentry><refentryinfo>
+msgid ""
+"<date>6 May 2011</date> <productname>DRBD</productname> "
+"<productnumber>8.4.0</productnumber>"
+msgstr ""
+"<date>6 May 2011</date> <productname>DRBD</productname> "
+"<productnumber>8.4.0</productnumber>"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><primary>
+msgid "drbdsetup"
+msgstr "drbdsetup"
+
+#. type: Content of: <refentry><refmeta><manvolnum>
+msgid "8"
+msgstr "8"
+
+#. type: Content of: <refentry><refmeta><refmiscinfo>
+msgid "System Administration"
+msgstr "System Administration"
+
+#. type: Content of: <refentry><refnamediv><refpurpose>
+msgid "Setup tool for DRBD <placeholder type=\"indexterm\" id=\"0\"/>"
+msgstr "DRBD を設定するツール<placeholder type=\"indexterm\" id=\"0\"/>"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Description"
+msgstr "Description"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"drbdsetup is used to associate DRBD devices with their backing block "
+"devices, to set up DRBD device pairs to mirror their backing block devices, "
+"and to inspect the configuration of running DRBD devices."
+msgstr ""
+"drbdsetup は、DRBD デバイスと下位レベルブロックデバイスを結びつける、DRBD デ"
+"バイス間で下位レベルデバイス同士ミラーリングを設定する、現在実行中の DRBD デ"
+"バイスの設定を検査する、などの目的で使用する。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Note"
+msgstr "Note"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"drbdsetup is a low level tool of the DRBD program suite. It is used by the "
+"data disk and drbd scripts to communicate with the device driver."
+msgstr ""
+"drbdsetup は DRBD プログラム群の中で低レベルのツールである。デバイスドライバ"
+"を操作するために、drbddisk や drbd ス クリプトなどの中で使用される。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Commands"
+msgstr "Commands"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"Each drbdsetup sub-command might require arguments and bring its own set of "
+"options. All values have default units which might be overruled by K, M or "
+"G. These units are defined in the usual way (e.g. K = 2^10 = 1024)."
+msgstr ""
+"サブコマンドの中には、独自の引数やオプションを持つものがある。すべての値はデ"
+"フォルトの単位があるが、K、 M、 G といった通常の方法でも定義でき "
+"(K=2^10=1024、 M=1024K、 G=1024M)。"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "Common options"
+msgstr "Common options"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><term>
+msgid "<option>--create-device</option>"
+msgstr "<option>--create-device</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"In case the specified DRBD device (minor number) does not exist yet, create "
+"it implicitly."
+msgstr ""
+"指定した DRBD デバイスに対応するデバイスファイルがない場合、自動的に作成する"
+"するよう指定する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"All drbdsetup sub-commands accept these two options <placeholder type="
+"\"variablelist\" id=\"0\"/>"
+msgstr ""
+"すべての drbdsetup サブコマンドに次のオプションを指定することができる。"
+"<placeholder type=\"variablelist\" id=\"0\"/>"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "new-resource"
+msgstr "new-resource"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Resources are the primary objects of any DRBD configuration. A resource must "
+"be created with the <option>new-resource</option> command before any volumes "
+"or minor devices can be created.  Connections are referenced by name."
+msgstr ""
+"リソースは DRBD 構成の最初の対象である。リソースはいかなるボリュームやマイ"
+"ナーデバイスが作成されるより前に <option>new-resource</option> コマンドで作成"
+"されなければならない。コネクションは名前で参照される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "new-minor"
+msgstr "new-minor"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"A <emphasis>minor</emphasis> is used as a synonym for replicated block "
+"device. It is represented in the /dev/ directory by a block device. It is "
+"the application's interface to the DRBD-replicated block devices. These "
+"block devices get addressed by their minor numbers on the drbdsetup "
+"commandline."
+msgstr ""
+"<emphasis>minor</emphasis> は複製されたブロックデバイスと同じ意味で使われ、ブ"
+"ロックデバイスとして /dev/ ディレクトリで表示されている。これは DRBD が複製す"
+"るブロックデバイスへのアプリケーションのインターフェースである。drbdsetup の"
+"コマンドラインで、これらのブロックデバイスはマイナー番号によってアドレス指定"
+"される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"A pair of replicated block devices may have different minor numbers on the "
+"two machines. They are associated by a common <emphasis>volume-number</"
+"emphasis>. Volume numbers are local to each connection. Minor numbers are "
+"global on one node."
+msgstr ""
+"複製されたブロックデバイスの組は 2 マシン間で異なったマイナー番号を持つ場合も"
+"あるが、共通の<emphasis>ボリューム番号</emphasis>で関連付けされている。ボ"
+"リューム番号は各々の接続におけるローカルなものである。マイナー番号は一つの"
+"ノードにおけるグローバルなものである。"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "del-resource"
+msgstr "del-resource"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Destroys a resource object. This is only possible if the resource has no "
+"volumes."
+msgstr "リソースのオブジェクトを破棄する。リソースに値がない場合のみ可能。"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "del-minor"
+msgstr "del-minor"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid "Minors can only be destroyed if its disk is detached."
+msgstr "マイナーはディスクが外されている場合のみ破棄できる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "attach, disk-options"
+msgstr "attach, disk-options"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "disk"
+msgstr "disk"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Attach associates <replaceable>device</replaceable> with "
+"<replaceable>lower_device</replaceable> to store its data blocks on. The "
+"<option>-d</option> (or <option>--disk-size</option>) should only be used if "
+"you wish not to use as much as possible from the backing block devices. If "
+"you do not use <option>-d</option>, the <replaceable>device</replaceable> is "
+"only ready for use as soon as it was connected to its peer once. (See the "
+"<option>net</option> command.)"
+msgstr ""
+"Attach は<replaceable>デバイス</replaceable>と<replaceable>下位ブロックデバイ"
+"ス</replaceable>を接続する。<option>-d</option> (または <option>--disk-size</"
+"option>) は下位ブロックデバイスをできるだけ使いたくない場合にのみ使用する。"
+"<option>-d</option> を使わない場合、<replaceable>デバイス</replaceable>は対向"
+"ノードに接続されるとすぐに使用できる状態になる。(<option>net</option> コマン"
+"ドを参照)"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"With the disk-options command it is possible to change the options of a "
+"minor while it is attached."
+msgstr ""
+"disk-options コマンドを使うと、接続されている間、そのマイナーのオプション変更"
+"ができる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--disk-size <replaceable>size</replaceable></option>"
+msgstr "<option>--disk-size <replaceable>size</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"You can override DRBD's size determination method with this option. If you "
+"need to use the device before it was ever connected to its peer, use this "
+"option to pass the <replaceable>size</replaceable> of the DRBD device to the "
+"driver. Default unit is sectors (1s = 512 bytes)."
+msgstr ""
+"DRBD は利用できるデータ領域を自動的に決定する機能を持つ。これまで対向ノードに"
+"接続したことのないデバイスを使用する場合に、DRBD デバイスの<replaceable>サイ"
+"ズ</replaceable>をドライバに渡すためにこのオプションを使用する。デフォルトの"
+"単位はセクタ (1s=512バイト) である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"If you use the <replaceable>size</replaceable> parameter in drbd.conf, we "
+"strongly recommend to add an explicit unit postfix. drbdadm and drbdsetup "
+"used to have mismatching default units."
+msgstr ""
+"<replaceable>size</replaceable> パラメータを drbd.conf で使用する場合には、明"
+"示的に単位を追加する事が推奨される。drbdadm と drbdsetup はデフォルトの単位"
+"で、しばしば食い違いになることがある。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--on-io-error <replaceable>err_handler</replaceable></option>"
+msgstr "<option>--on-io-error <replaceable>err_handler</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"If the driver of the <replaceable>lower_device</replaceable> reports an "
+"error to DRBD, DRBD will mark the disk as inconsistent, call a helper "
+"program, or detach the device from its backing storage and perform all "
+"further IO by requesting it from the peer. The valid "
+"<replaceable>err_handlers</replaceable> are: <option>pass_on</option>, "
+"<option>call-local-io-error</option> and <option>detach</option>."
+msgstr ""
+"<replaceable>下位デバイス</replaceable>のドライバがエラーを伝えた場合に DRBD "
+"はディスクを不整合とマークする。そしてヘルパープログラムを呼び出すか、デバイ"
+"スを下位ストレージから切り離して以後の I/O を対向ノードに委ねる。"
+"<replaceable>err_handlers</replaceable> に指定できる値は、 <option>pass_on</"
+"option>, <option>call-local-io-error</option>, <option>detach</option> であ"
+"る。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--fencing <replaceable>fencing_policy</replaceable></option>"
+msgstr "<option>--fencing <replaceable>fencing_policy</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Under <option>fencing</option> we understand preventive measures to avoid "
+"situations where both nodes are primary and disconnected (AKA split brain)."
+msgstr ""
+"<option>fencing</option> は、2つのノードがともにプライマリになること (スプ"
+"リットブレイン) を防止し、どちらかを切り離す防御手段のことである。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid "Valid fencing policies are:"
+msgstr "次のフェンシングポリシーを指定できる:"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><term>
+msgid "<option>dont-care</option>"
+msgstr "<option>dont-care</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid "This is the default policy. No fencing actions are done."
+msgstr ""
+"デフォルトの設定値で、フェンシングのためのアクションをなにも実行しない。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><term>
+msgid "<option>resource-only</option>"
+msgstr "<option>resource-only</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid ""
+"If a node becomes a disconnected primary, it tries to outdate the peer's "
+"disk. This is done by calling the fence-peer handler. The handler is "
+"supposed to reach the other node over alternative communication paths and "
+"call 'drbdadm outdate res' there."
+msgstr ""
+"ノードが切り離されたプライマリ状態になると、DRBD は他ノードを無効状態に変えよ"
+"うとして、fence-peer ハンドラを実行する。このハンドラには、レプリケーション用"
+"とは別のネットワーク経由で他ノードにアクセスし、 'drbdadm outdate res' を実行"
+"するという機能が期待される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><term>
+msgid "<option>resource-and-stonith</option>"
+msgstr "<option>resource-and-stonith</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid ""
+"If a node becomes a disconnected primary, it freezes all its IO operations "
+"and calls its fence-peer handler. The fence-peer handler is supposed to "
+"reach the peer over alternative communication paths and call 'drbdadm "
+"outdate res' there. In case it cannot reach the peer, it should stonith the "
+"peer. IO is resumed as soon as the situation is resolved. In case your "
+"handler fails, you can resume IO with the <option>resume-io</option> command."
+msgstr ""
+"ノードが切り離されたプライマリ状態になると、 DRBD はすべてのディスク I/O を停"
+"止して fence-peer ハンドラを呼び出す。このハンドラには、レプリケーション用と"
+"は別のネットワーク経由で他ノードにアクセスし、 'drbdadm outdate res' を実行す"
+"るという機能を想定している。ハンドラが他ノードに到達できない場合、 DRBD は "
+"STONITH 機能を使って他ノードを強制排除する。これらが完了したら、ディスク I/O "
+"を再開する。ハンドラが失敗した場合には、 <option>resume-io</option> コマンド"
+"でディスク I/O を再開できる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--disk-barrier</option>"
+msgstr "<option>--disk-barrier</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--disk-flushes</option>"
+msgstr "<option>--disk-flushes</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--disk-drain</option>"
+msgstr "<option>--disk-drain</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"DRBD has four implementations to express write-after-write dependencies to "
+"its backing storage device. DRBD will use the first method that is supported "
+"by the backing storage device and that is not disabled. By default the "
+"<emphasis>flush</emphasis> method is used."
+msgstr ""
+"DRBD は下位デバイスに対する複数のディスク書き込みの間の依存関係を指定するため"
+"の 4 種類のオプションを用意している。そのうち、下位デバイスがサポートしていて"
+"ユーザが無効に設定していない最初のオプションが使用される。デフォルトでは "
+"<emphasis>flush</emphasis> メソッドが使われる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Since drbd-8.4.2 <option>disk-barrier</option> is disabled by default "
+"because since linux-2.6.36 (or 2.6.32 RHEL6) there is no reliable way to "
+"determine if queuing of IO-barriers works. <emphasis>Dangerous</emphasis> "
+"only enable if you are told so by one that knows for sure."
+msgstr ""
+"drbd-8.4.2 から <option>disk-barrier</option> は、linux-2.6.36 (及び RHEL6 "
+"の 2.6.32) 以降での正常動作が確認できないためデフォルトで無効になった。注意: "
+"有識者による指示のもとでのみ使用すること。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"When selecting the method you should not only base your decision on the "
+"measurable performance. In case your backing storage device has a volatile "
+"write cache (plain disks, RAID of plain disks) you should use one of the "
+"first two. In case your backing storage device has battery-backed write "
+"cache you may go with option 3.  Option 4 (disable everything, use \"none\") "
+"<emphasis>is dangerous</emphasis> on most IO stacks, may result in write-"
+"reordering, and if so, can theoretically be the reason for data corruption, "
+"or disturb the DRBD protocol, causing spurious disconnect/reconnect cycles.  "
+"<emphasis>Do not use</emphasis> <option>no-disk-drain</option>."
+msgstr ""
+"手法を選択するにあたっては、測定可能なパフォーマンスデータのみに頼るべきでは"
+"ない。下位デバイスが揮発性の書き込みキャッシュしか持たない場合 (通常のハード"
+"ディスクや通常のハードディスクだけで構成される RAID など)、最初の 2 つのオプ"
+"ションのどちらかを使うべきである。下位デバイスにバッテリバックアップ機能付き"
+"の書き込みキャッシュがある場合には、3 番目のオプションが利用できる。4番目のオ"
+"プション (すべてを無効にする場合は &quot;none&quot;) は、ほとんどの I/O ス"
+"タックにおいて危険で、ディスクへの書き込み順序が入れ替わってしまう可能性があ"
+"る。<option>no-disk-drain</option> を使っては <emphasis>ならない </"
+"emphasis>。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid "Unfortunately device mapper (LVM) might not support barriers."
+msgstr "残念なことに、デバイスマッパ(LVM) はバリアをサポートしていない。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The letter after \"wo:\" in /proc/drbd indicates with method is currently in "
+"use for a device: b, f, d, n. The implementations:"
+msgstr ""
+"/proc/drbd の &quot;wo:&quot; の文字の後ろに、下位デバイスに対する現在の設定"
+"が b, f, d, n の文字で表示される。オプションは次のとおり:"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><term>
+msgid "barrier"
+msgstr "barrier"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid ""
+"The first requires that the driver of the backing storage device support "
+"barriers (called 'tagged command queuing' in SCSI and 'native command "
+"queuing' in SATA speak). The use of this method can be enabled by setting "
+"the <option>disk-barrier</option> options to <option>yes</option>."
+msgstr ""
+"下位デバイスがバリア (SCSI では &quot;tagged command queuing&quot;、SATA で"
+"は &quot;native com-mand queuing&quot; と呼ばれる) をサポートしている場合、こ"
+"のオプションを選択できる。このオプションを有効にするには <option>disk-"
+"barrier</option> オプションを <option>yes</option> にする。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><term>
+msgid "flush"
+msgstr "flush"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid ""
+"The second requires that the backing device support disk flushes (called "
+"'force unit access' in the drive vendors speak). The use of this method can "
+"be disabled setting <option>disk-flushes</option> to <option>no</option>."
+msgstr ""
+"下位デバイスがディスクフラッシュ (ベンダーは &quot;force unit access&quot; と"
+"呼んでいる) をサポートしている場合、このオプションを選択できる。このオプショ"
+"ンを無効にするには <option>disk-flushes</option> を <option>no</option> に設"
+"定する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><term>
+msgid "drain"
+msgstr "drain"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid ""
+"The third method is simply to let write requests drain before write requests "
+"of a new reordering domain are issued. That was the only implementation "
+"before 8.0.9."
+msgstr ""
+"３番目の方法は、単純に、最初の書き込みは次の書き込みリクエストを処理する前に"
+"吐き出す、方法である。8.0.9 まではこれが唯一のオプションであった。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><term>
+msgid "none"
+msgstr "none"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid ""
+"The fourth method is to not express write-after-write dependencies to the "
+"backing store at all, by also specifying <option>--no-disk-drain</option>.  "
+"This <emphasis>is dangerous</emphasis> on most IO stacks, may result in "
+"write-reordering, and if so, can theoretically be the reason for data "
+"corruption, or disturb the DRBD protocol, causing spurious disconnect/"
+"reconnect cycles.  <emphasis>Do not use</emphasis> <option>--no-disk-drain</"
+"option>."
+msgstr ""
+"<option>no-disk-drain</option> を指定すると、下位デバイスへの書き込みの依存関"
+"係を一切指示しなくなる。これはほとんどの I/O スタックにおいて <emphasis>危険"
+"</emphasis> であり、ディスクへの書き込み順序が入れ替わってしまう可能性があ"
+"る。そうなると、理論的にはデータ破損の原因、または DRBD プロトコルを乱し、再"
+"接続と切断を繰り返すような状態に陥る可能性がある。<option>no-disk-drain</"
+"option> を <emphasis>使ってはならない</emphasis>。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--md-flushes</option>"
+msgstr "<option>--md-flushes</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Disables the use of disk flushes and barrier BIOs when accessing the meta "
+"data device. See the notes on <option>--disk-flushes</option>."
+msgstr ""
+"メタデータデバイスへのアクセスにあたってバリアやフラッシュを使用しない。 See "
+"the notes on <option>--disk-flushes</option>."
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--max-bio-bvecs</option>"
+msgstr "<option>--max-bio-bvecs</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"In some special circumstances the device mapper stack manages to pass BIOs "
+"to DRBD that violate the constraints that are set forth by DRBD's "
+"merge_bvec() function and which have more than one bvec. A known example is: "
+"phys-disk -&gt; DRBD -&gt; LVM -&gt; Xen -&gt; misaligned partition (63) -"
+"&gt; DomU FS. Then you might see \"bio would need to, but cannot, be split:"
+"\" in the Dom0's kernel log."
+msgstr ""
+"ある特別な環境において、デバイスマッパースタックは、複数の bvec を持つ制約に"
+"違反する BIO を merge_bvec（） 関数の４番目の引数に設定し DRBD に渡す。 例え"
+"ば、物理ディスク → DRBD → LVM → Xen → 誤ったパーティション(63) → DomU FS の場"
+"合である。Dom0 のカーネルログには、 &quot;bio would need to, but cannot, be "
+"split:&quot; と記録される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The best workaround is to proper align the partition within the VM (E.g. "
+"start it at sector 1024). That costs 480 KiB of storage. Unfortunately the "
+"default of most Linux partitioning tools is to start the first partition at "
+"an odd number (63).  Therefore most distributions install helpers for "
+"virtual linux machines will end up with misaligned partitions. The second "
+"best workaround is to limit DRBD's max bvecs per BIO (i.e., the <option>max-"
+"bio-bvecs</option> option) to 1, but that might cost performance."
+msgstr ""
+"最も良い回避方法は、VM の内部にパーティションを適切に配置する (例えば、セク"
+"タ 1024 から開始する) ことである。これは、ストレージ領域を 480 KiB を消費す"
+"る。残念ながら、ほとんどの Linux パーティションツールは、奇数 (63) でパーティ"
+"ションを開始する。そのため、ほとんどのディストリビューションは、仮想 Linux マ"
+"シンにインストールを行うと、誤ったパーティションで終了してしまう。第 2 の回避"
+"方法は、 BIO あたりの最大 DRBD bvecs (= <option>max-bio-bvecs</option>) を 1 "
+"にすることである。しかし、パフォーマンスは低下する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The default value of <option>max-bio-bvecs</option> is 0, which means that "
+"there is no user imposed limitation."
+msgstr ""
+"<option>max-bio-bvecs</option> のデフォルト値は 0 で、これはユーザに制限が無"
+"いことを意味する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--resync-rate <replaceable>rate</replaceable></option>"
+msgstr "<option>--resync-rate <replaceable>rate</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"To ensure smooth operation of the application on top of DRBD, it is possible "
+"to limit the bandwidth that may be used by background synchronization. The "
+"default is 250 KiB/sec, the default unit is KiB/sec."
+msgstr ""
+"DRBD の上位で動作するアプリケーションの円滑な実行のために、バックグラウンドの"
+"同期作業が利用する帯域幅を制限できる。デフォルト値は 250KiB/秒、デフォルト単"
+"位は KiB/秒である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--resync-after <replaceable>minor</replaceable></option>"
+msgstr "<option>--resync-after <replaceable>minor</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Start resync on this device only if the device with <replaceable>minor</"
+"replaceable> is already in connected state. Otherwise this device waits in "
+"SyncPause state."
+msgstr ""
+"<replaceable>minor</replaceable> に指定したマイナー番号を持つデバイスが接続さ"
+"れると、このデバイスの再同期を開始する。接続されるまでの間は SyncPause 状態に"
+"なる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--al-extents <replaceable>extents</replaceable></option>"
+msgstr "<option>--al-extents <replaceable>extents</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"DRBD automatically performs hot area detection. With this parameter you "
+"control how big the hot area (=active set) can get. Each extent marks 4M of "
+"the backing storage. In case a primary node leaves the cluster unexpectedly, "
+"the areas covered by the active set must be resynced upon rejoining of the "
+"failed node. The data structure is stored in the meta-data area, therefore "
+"each change of the active set is a write operation to the meta-data device. "
+"A higher number of extents gives longer resync times but less updates to the "
+"meta-data. The default number of <replaceable>extents</replaceable> is 1237. "
+"(Minimum: 7, Maximum: 65534)"
+msgstr ""
+"DRBD はホットエリアを自動的に検出する。このパラメータを指定すると、ホットエリ"
+"アの大きさを制御できる。各エクステントは、下位デバイスの 4MB の領域になる。予"
+"定外の事情によってプライマリノードがクラスタから切り離されると、そのときの"
+"ホットエリアのデータは、次回接続したときの再同期の対象になる。このデータ構造"
+"は、メタデータ領域に書き込まれる。したがって、ホットエリアの状態更新は、メタ"
+"データデ バイスへの書き込みを引き起こす。エクステント値を大きくすると、再同期"
+"所要時間が長くなるが、メタデータの更新頻度を減らすことができる。 "
+"<replaceable>extents</replaceable> のデフォルト値は 1237 である。(最小値:7、"
+"最大値:65534)"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"See also <citerefentry><refentrytitle>drbd.conf</refentrytitle><manvolnum>5</"
+"manvolnum></citerefentry> and <citerefentry><refentrytitle>drbdmeta</"
+"refentrytitle><manvolnum>8</manvolnum></citerefentry> for additional "
+"limitations and necessary preparation."
+msgstr ""
+"追加の制限と必要な準備については、次のマニュアルを参照:"
+"<citerefentry><refentrytitle>drbd.conf</refentrytitle><manvolnum>5</"
+"manvolnum></citerefentry> , <citerefentry><refentrytitle>drbdmeta</"
+"refentrytitle><manvolnum>8</manvolnum></citerefentry>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>--al-updates <group choice=\"req\" rep=\"norepeat\"> <arg choice="
+"\"plain\" rep=\"norepeat\">yes</arg> <arg choice=\"plain\" rep=\"norepeat"
+"\">no</arg> </group></option>"
+msgstr ""
+"<option>--al-updates <group choice=\"req\" rep=\"norepeat\"> <arg choice="
+"\"plain\" rep=\"norepeat\">yes</arg> <arg choice=\"plain\" rep=\"norepeat"
+"\">no</arg> </group></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"DRBD's activity log transaction writing makes it possible, that after the "
+"crash of a primary node a partial (bit-map based) resync is sufficient to "
+"bring the node back to up-to-date.  Setting <option>al-updates</option> to "
+"<option>no</option> might increase normal operation performance but causes "
+"DRBD to do a full resync when a crashed primary gets reconnected. The "
+"default value is <option>yes</option>."
+msgstr ""
+"DRBD のアクティビティログ処理の書き込みによって、プライマリノードのクラッシュ"
+"後の部分的な (ビットマップに基づく) 再同期でノードを up-to-date に復帰させる"
+"事ができるようになる。<option>al-updates</option> を <option>no</option> に設"
+"定すると通常の運用パフォーマンスが向上するかもしれないが、クラッシュ時にプラ"
+"イマリが再接続した際にはフル同期となる。デフォルト値は <option>yes</option> "
+"である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--c-plan-ahead <replaceable>plan_time</replaceable></option>"
+msgstr "<option>--c-plan-ahead <replaceable>plan_time</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--c-fill-target <replaceable>fill_target</replaceable></option>"
+msgstr ""
+"<option>--c-fill-target <replaceable>fill_target</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>--c-delay-target <replaceable>delay_target</replaceable></option>"
+msgstr ""
+"<option>--c-delay-target <replaceable>delay_target</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--c-max-rate <replaceable>max_rate</replaceable></option>"
+msgstr "<option>--c-max-rate <replaceable>max_rate</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The dynamic resync speed controller gets enabled with setting "
+"<replaceable>plan_time</replaceable> to a positive value. It aims to fill "
+"the buffers along the data path with either a constant amount of data "
+"<replaceable>fill_target</replaceable>, or aims to have a constant delay "
+"time of <replaceable>delay_target</replaceable> along the path. The "
+"controller has an upper bound of <replaceable>max_rate</replaceable>."
+msgstr ""
+"<replaceable>plan_time</replaceable> に正の値を指定すると、再同期速度を動的に"
+"調整できるようになる。これは、 <replaceable>fill_target</replaceable> に指定"
+"した一定速度で、あるいは <replaceable>delay_target</replaceable> に指定した一"
+"定の遅延でデータを送信バッファに送り込むことによって実現される。調整における"
+"最大値は <replaceable>max_rate</replaceable> で指定する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"By <replaceable>plan_time</replaceable> the agility of the controller is "
+"configured. Higher values yield for slower/lower responses of the controller "
+"to deviation from the target value. It should be at least 5 times RTT. For "
+"regular data paths a <replaceable>fill_target</replaceable> in the area of "
+"4k to 100k is appropriate. For a setup that contains drbd-proxy it is "
+"advisable to use <replaceable>delay_target</replaceable> instead. Only when "
+"<replaceable>fill_target</replaceable> is set to 0 the controller will use "
+"<replaceable>delay_target</replaceable>. 5 times RTT is a reasonable "
+"starting value.  <replaceable>Max_rate</replaceable> should be set to the "
+"bandwidth available between the DRBD-hosts and the machines hosting DRBD-"
+"proxy, or to the available disk-bandwidth."
+msgstr ""
+"<replaceable>plan_time</replaceable> パラメータで調節機能の機敏さを設定する。"
+"大きな値を設定すると、調節機能のレスポンスが低下する。この値は最低でもネット"
+"ワークの RTT の 5 倍以上を指定する。通常のデータ経路では "
+"<replaceable>fill_target</replaceable> に 4k から 100k を指定するのが適切であ"
+"る。DRBD-Proxy を使用する場合には、代わりに <replaceable>delay_target</"
+"replaceable> を使用するのが望ましい。<replaceable>delay_target</replaceable> "
+"は <replaceable>fill_target</replaceable> が 0 の場合にのみ使用できる。初期値"
+"は RTT の 5 倍が適切である。<replaceable>Max_rate</replaceable> には DRBD 間"
+"または DRBD-Proxy 間の帯域幅あるいはディスク帯域幅を指定する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The default value of <replaceable>plan_time</replaceable> is 0, the default "
+"unit is 0.1 seconds. <replaceable>Fill_target</replaceable> has 0 and "
+"sectors as default unit. <replaceable>Delay_target</replaceable> has 1 "
+"(100ms) and 0.1 as default unit.  <replaceable>Max_rate</replaceable> has "
+"10240 (100MiB/s) and KiB/s as default unit."
+msgstr ""
+"<replaceable>plan_time</replaceable> のデフォルト値は 0 で、0.1 秒単位で指定"
+"する。<replaceable>Fill_target</replaceable> のデフォルト値は 0 でセクタ数を"
+"指定する。<replaceable>Delay_target</replaceable> のデフォルト値は 1 (100 ミ"
+"リ秒) で 0.1 秒単位で指定する。<replaceable>Max_rate</replaceable> のデフォル"
+"ト値は 10240 (100MiB/s) で、 KiB/s 単位で指定する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--c-min-rate <replaceable>min_rate</replaceable></option>"
+msgstr "<option>--c-min-rate <replaceable>min_rate</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"We track the disk IO rate caused by the resync, so we can detect non-resync "
+"IO on the lower level device. If the lower level device seems to be busy, "
+"and the current resync rate is above <replaceable>min_rate</replaceable>, we "
+"throttle the resync."
+msgstr ""
+"再同期の際、ディスク I/O 速度を監視すると、下位レベルデバイスが再同期していな"
+"いことがわかる。下位レベルデバイスがビジーで、再同期速度が "
+"<replaceable>min_rate</replaceable> を超えている場合、再同期の処理を調整す"
+"る。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The default value of <replaceable>min_rate</replaceable> is 4M, the default "
+"unit is k. If you want to not throttle at all, set it to zero, if you want "
+"to throttle always, set it to one."
+msgstr ""
+"<replaceable>min_rate</replaceable> のデフォルト値は 4M で、k 単位で指定す"
+"る。調整したくない場合は 0 を設定する。常に調整する場合は 1 を設定する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>-t</option>, <option>--disk-timeout <replaceable>disk_timeout</"
+"replaceable></option>"
+msgstr ""
+"<option>-t</option>, <option>--disk-timeout <replaceable>disk_timeout</"
+"replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"If the lower-level device on which a DRBD device stores its data does not "
+"finish an I/O request within the defined <option>disk-timeout</option>, DRBD "
+"treats this as a failure. The lower-level device is detached, and the "
+"device's disk state advances to Diskless.  If DRBD is connected to one or "
+"more peers, the failed request is passed on to one of them."
+msgstr ""
+"DRBD デバイスがデータを格納する下位レベルデバイスが、指定した <option>disk-"
+"timeout</option> 以内で I/O リクエストを完了しない場合、DRBD はこれを障害とみ"
+"なす。下位デバイスは切り離され、デバイスのディスク状態はディスクレス状態にな"
+"る。DRBD が 1 台以上の対向ノードに接続したとき、失敗したリクエストはそのうち "
+"1 台に伝えられる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"This option is <emphasis>dangerous and may lead to kernel panic!</emphasis>"
+msgstr ""
+"このオプションは <emphasis>カーネルパニックを引き起こす可能性があり、注意が必"
+"要である</emphasis>。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"\"Aborting\" requests, or force-detaching the disk, is intended for "
+"completely blocked/hung local backing devices which do no longer complete "
+"requests at all, not even do error completions.  In this situation, usually "
+"a hard-reset and failover is the only way out."
+msgstr ""
+"リクエストの「中断」あるいはディスクの強制切り離しは、完全に下位デバイスをブ"
+"ロックまたはハンギングして、リクエストをまったく処理せずエラーも処理しなくな"
+"る。この状況ではハードリセットとフェイルオーバ以外になす術がない。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"By \"aborting\", basically faking a local error-completion, we allow for a "
+"more graceful swichover by cleanly migrating services.  Still the affected "
+"node has to be rebooted \"soon\"."
+msgstr ""
+"「中断」すると、基本的にローカルエラーの完了を装い、すみやかにサービスの移行"
+"を行うことで安全な切り替えを行う。それでもなお、影響を受けるノードは &quot;す"
+"ぐ&quot; に再起動される必要はある。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"By completing these requests, we allow the upper layers to re-use the "
+"associated data pages."
+msgstr ""
+"リクエストを完了することで、上位レイヤーに関連するデータページを再利用させる"
+"ことができる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"If later the local backing device \"recovers\", and now DMAs some data from "
+"disk into the original request pages, in the best case it will just put "
+"random data into unused pages; but typically it will corrupt meanwhile "
+"completely unrelated data, causing all sorts of damage."
+msgstr ""
+"後にローカルの下位デバイスが「復帰」すると、ディスクから元のリクエストページ"
+"への DMA のデータは、うまくいくと未使用のページへランダムなデータを送るが、多"
+"くの場合その間に関係のないデータに変形してしまい、様々なダメージの原因にな"
+"る。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Which means delayed successful completion, especially for READ requests, is "
+"a reason to panic().  We assume that a delayed *error* completion is OK, "
+"though we still will complain noisily about it."
+msgstr ""
+"つまり遅延した正常な完了は、特に読み込みリクエストの場合 panic() の原因にな"
+"る。遅延した「エラー」完了は、その都度に通知は行うが、問題ないと考えてよい。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The default value of <option>disk-timeout</option> is 0, which stands for an "
+"infinite timeout.  Timeouts are specified in units of 0.1 seconds. This "
+"option is available since DRBD 8.3.12."
+msgstr ""
+"<option>disk-timeout</option> のデフォルト値は 0 であり、無限のタイムアウトを"
+"意味する。タイムアウトは 0.1 秒単位で指定する。このオプションは DRBD 8.3.12. "
+"から利用できる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>--discard-zeroes-if-aligned <group choice=\"req\" rep=\"norepeat\"> "
+"<arg choice=\"plain\" rep=\"norepeat\">yes</arg> <arg choice=\"plain\" rep="
+"\"norepeat\">no</arg> </group></option>"
+msgstr ""
+"<option>--discard-zeroes-if-aligned <group choice=\"req\" rep=\"norepeat\"> "
+"<arg choice=\"plain\" rep=\"norepeat\">yes</arg> <arg choice=\"plain\" rep="
+"\"norepeat\">no</arg> </group></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Setting <option>discard-zeroes-if-aligned</option> to <option>no</option> "
+"will cause DRBD to always fall-back to zero-out on the receiving side, and "
+"to not even announce discard capabilities on the Primary, if the respective "
+"backend announces discard_zeroes_data=false."
+msgstr ""
+"<option> discard-zeroes-if-aligned </option> を <option>no</option> に設定す"
+"ると、それぞれのバックエンドが discard_zeroes_data = false をアナウンスする場"
+"合、DRBD は常に受信側でゼロアウトにフォールバックし、プライマリ側では "
+"discard に関して通知しない。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Setting <option>discards-zeroes-if-aligned</option> to <option>yes</option> "
+"will allow DRBD to use discards, and to announce discard_zeroes=true, even "
+"on backends that announce discard_zeroes_data=false."
+msgstr ""
+"<option> discard-zeroes-if-aligned </option> を <option>yes</option> に設定す"
+"ると、 discard_zeroes_data = false を通知するバックエンドであっても DRBD は "
+"discard を使用し、 discard_zeroes_data = true を通知する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"We used to ignore the discard_zeroes_data setting completely.  To not break "
+"established and expected behaviour, the default value is <option>yes</"
+"option>."
+msgstr ""
+"私たちは、 discard_zeroes_data 設定を完全に無視していました。確立し、期待され"
+"た動作を壊さないためのデフォルト値は <option>yes</option> である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"This option is available since 8.4.7.  See also "
+"<citerefentry><refentrytitle>drbd.conf</refentrytitle><manvolnum>5</"
+"manvolnum></citerefentry>."
+msgstr ""
+"このオプションは 8.4.7 から有効である。追加の制限と必要な準備については、次の"
+"マニュアルを参照:<citerefentry><refentrytitle>drbd.conf</"
+"refentrytitle><manvolnum>5</manvolnum></citerefentry>."
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--read-balancing <replaceable>method</replaceable></option>"
+msgstr "<option>--read-balancing <replaceable>method</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The supported <replaceable>methods</replaceable> for load balancing of read "
+"requests are <option>prefer-local</option>, <option>prefer-remote</option>, "
+"<option>round-robin</option>, <option>least-pending</option> and "
+"<option>when-congested-remote</option>, <option>32K-striping</option>, "
+"<option>64K-striping</option>, <option>128K-striping</option>, <option>256K-"
+"striping</option>, <option>512K-striping</option> and <option>1M-striping</"
+"option>."
+msgstr ""
+"読み込みリクエストの負荷分散で使用できる <replaceable>methods</replaceable> "
+"は <option>prefer-local</option>, <option>prefer-remote</option>, "
+"<option>round-robin</option>, <option>least-pending</option>, <option>when-"
+"congested-remote</option>, <option>32K-striping</option>, <option>64K-"
+"striping</option>, <option>128K-striping</option>, <option>256K-striping</"
+"option>, <option>512K-striping</option>, <option>1M-striping</option> であ"
+"る。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The default value of is <option>prefer-local</option>.  This option is "
+"available since 8.4.1."
+msgstr ""
+"デフォルトは <option>prefer-local</option> である。このオプションは 8.4.1 か"
+"ら有効である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>--rs-discard-granularity <replaceable>bytes</replaceable></option>"
+msgstr ""
+"<option>--rs-discard-granularity <replaceable>bytes</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"When <option>rs-discard-granularity</option> is set to a non zero, positive "
+"value then DRBD tries to do a resync operation in requests of this size.  In "
+"case such a block contains only zero bytes on the sync source node, the sync "
+"target node will issue a discard/trim/unmap command for the area."
+msgstr ""
+"<option> rs-discard-granularity </option> がゼロ以外の正の値に設定されている"
+"場合、DRBD はこのサイズで再同期操作を要求する。そのようなブロックが同期ソース"
+"ノード上にゼロバイトしか含まない場合、同期ターゲットノードは、その領域に対し"
+"て discard/trim/unmap コマンドを発行する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The value is constrained by the discard granularity of the backing block "
+"device. In case <option>rs-discard-granularity</option> is not a multiplier "
+"of the discard granularity of the backing block device DRBD rounds it up. "
+"The feature only gets active if the backing block device reads back zeroes "
+"after a discard command."
+msgstr ""
+"この値は、下位ブロックデバイスの discard 粒度によって制約される。<option> rs-"
+"discard-granularity </option>が下位ブロックデバイスの discard 粒度の乗数でな"
+"い場合、DRBD はそれを切り上げる。この機能は、下位ブロックデバイスが discard "
+"コマンドの後に、ゼロを読み戻す場合にのみアクティブになる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid "The default value of is 0. This option is available since 8.4.7."
+msgstr "デフォルト値は 0 である。このオプションは 8.4.7 から有効である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "connect, net-options"
+msgstr "connect, net-options"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "net"
+msgstr "net"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Connect sets up the <replaceable>device</replaceable> to listen on "
+"<replaceable>af:local_addr:port</replaceable> for incoming connections and "
+"to try to connect to <replaceable>af:remote_addr:port</replaceable>. If "
+"<replaceable>port</replaceable> is omitted, 7788 is used as default. If "
+"<replaceable>af</replaceable> is omitted <option>ipv4</option> gets used. "
+"Other supported address families are <option>ipv6</option>, <option>ssocks</"
+"option> for Dolphin Interconnect Solutions' \"super sockets\" and "
+"<option>sdp</option> for Sockets Direct Protocol (Infiniband)."
+msgstr ""
+"Connect は <replaceable>device</replaceable> を <replaceable>af:local_addr:"
+"port</replaceable> の内向きのコネクションを Listen させ、また "
+"<replaceable>af:remote_addr:port</replaceable> へ接続させる。"
+"<replaceable>port</replaceable> が省略されると、デフォルトで 7788 が使用され"
+"る。<replaceable>af</replaceable> が省略されると <option>ipv4</option> が使用"
+"される。他の対応するアドレスファミリは <option>ipv6</option>, "
+"<option>ssocks</option>, <option>sdp</option> がある。 ssocks は Dolphin "
+"Interconnect Solutions の 「super sockets」、sdp は Sockets Direct "
+"Protocol(Infiniband) を指す。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"The net-options command allows you to change options while the connection is "
+"established."
+msgstr "net-options コマンドはコネクションの確立中にオプションの変更が行える。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--protocol <replaceable>protocol</replaceable></option>"
+msgstr "<option>--protocol <replaceable>protocol</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"On the TCP/IP link the specified <replaceable>protocol</replaceable> is "
+"used.  Valid protocol specifiers are A, B, and C."
+msgstr ""
+"DRBD の TCP/IP の通信の際に使われる <replaceable>プロトコル</replaceable> を"
+"指定する。指定できるプロトコルは A, B, C である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Protocol A: write IO is reported as completed, if it has reached local disk "
+"and local TCP send buffer."
+msgstr ""
+"プロトコル A: ローカルディスクとローカル TCP 送信バッファにデータを書き込んだ"
+"らディスクへの書き込みが完了したと判断する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Protocol B: write IO is reported as completed, if it has reached local disk "
+"and remote buffer cache."
+msgstr ""
+"プロトコル B: ローカルディスクとリモートバッファキャッシュにデータを書き込ん"
+"だらディスクへの書き込みが完了したと判断する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Protocol C: write IO is reported as completed, if it has reached both local "
+"and remote disk."
+msgstr ""
+"プロトコル C: ローカルディスクとリモートディスクの両方にデータを書き込んだら"
+"ディスクへの書き込みが完了したと判断する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--connect-int <replaceable>time</replaceable></option>"
+msgstr "<option>--connect-int <replaceable>time</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"In case it is not possible to connect to the remote DRBD device immediately, "
+"DRBD keeps on trying to connect. With this option you can set the time "
+"between two retries. The default value is 10. The unit is seconds."
+msgstr ""
+"対向ノードにただちに接続できない場合、DRBD は接続を繰り返し試行する。このパラ"
+"メータは試行間隔を指定する。デフォルト値は 10 である。単位は秒である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--ping-int <replaceable>time</replaceable></option>"
+msgstr "<option>--ping-int <replaceable>time</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"If the TCP/IP connection linking a DRBD device pair is idle for more than "
+"<replaceable>time</replaceable> seconds, DRBD will generate a keep-alive "
+"packet to check if its partner is still alive. The default value is 10. The "
+"unit is seconds."
+msgstr ""
+"DRBD デバイス間の TCP/IP 接続があり、対向ノードから <replaceable>time</"
+"replaceable> 秒の間に何も通信が行われなかった場合、 DRBD は死活確認のためキー"
+"プアライブパケットを生成する。デフォルト値は 10 である。単位は秒である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--timeout <replaceable>val</replaceable></option>"
+msgstr "<option>--timeout <replaceable>val</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"If the partner node fails to send an expected response packet within "
+"<replaceable>val</replaceable> tenths of a second, the partner node is "
+"considered dead and therefore the TCP/IP connection is abandoned. The "
+"default value is 60 (= 6 seconds)."
+msgstr ""
+"対向ノードからの応答パケットが 1/10 の <replaceable>val</replaceable> 倍の時"
+"間以内に返ってこない場合、対向ノードが死んだと判断して TCP/IP コネクションを"
+"切断する。デフォルト値は 60 で、これは 6 秒に相当する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--sndbuf-size <replaceable>size</replaceable></option>"
+msgstr "<option>--sndbuf-size <replaceable>size</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The socket send buffer is used to store packets sent to the secondary node, "
+"which are not yet acknowledged (from a network point of view) by the "
+"secondary node.  When using protocol A, it might be necessary to increase "
+"the size of this data structure in order to increase asynchronicity between "
+"primary and secondary nodes. But keep in mind that more asynchronicity is "
+"synonymous with more data loss in the case of a primary node failure. Since "
+"8.0.13 resp. 8.2.7 setting the <replaceable>size</replaceable> value to 0 "
+"means that the kernel should autotune this.  The default <replaceable>size</"
+"replaceable> is 0, i.e. autotune."
+msgstr ""
+"ソケット送信バッファは、セカンダリノードに送信するパケットを格納するために使"
+"われる。この中のパケットは、ネットワーク的にはセカンダリ側から受信確認を受け"
+"取っていない。プロトコル A を使う場合は、両ノード間の同期を高めるために、この"
+"バッファサイズを増やす必要が生じる可能性がある。しかし、プライマリノードが"
+"フェイルしたときに失うデータが増えることも考慮しておく必要がある。8.0.13 か"
+"ら 8.2.7 までは、手動で 0 を設定しないと自動調整にならない。デフォルト値は 0 "
+"で自動調整される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--rcvbuf-size <replaceable>size</replaceable></option>"
+msgstr "<option>--rcvbuf-size <replaceable>size</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Packets received from the network are stored in the socket receive buffer "
+"first.  From there they are consumed by DRBD. Before 8.3.2 the receive "
+"buffer's size was always set to the size of the socket send buffer. Since "
+"8.3.2 they can be tuned independently. A value of 0 means that the kernel "
+"should autotune this. The default <replaceable>size</replaceable> is 0, i.e. "
+"autotune."
+msgstr ""
+"ネットワークから受信したパケットは、最初にソケットの受信バッファに保存され"
+"る。そこから DRBD に使われる。8.3.1 以前は、ソケット受信バッファのサイズはソ"
+"ケット送信バッファと同じサイズに固定されていた。8.3.2 からこれらを別々に設定"
+"できるようになっている。0 を指定するとカーネルが自動的に設定する。デフォルト"
+"値は 0 で自動調整される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--ko-count <replaceable>count</replaceable></option>"
+msgstr "<option>--ko-count <replaceable>count</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"In case the secondary node fails to complete a single write request for "
+"<replaceable>count</replaceable> times the <replaceable>timeout</"
+"replaceable>, it is expelled from the cluster, i.e. the primary node goes "
+"into StandAlone mode.  To disable this feature, you should explicitly set it "
+"to 0; defaults may change between versions."
+msgstr ""
+"セカンダリノードが書き込みリクエストを <replaceable>timeout</replaceable> 内"
+"で <replaceable>count</replaceable> 回以上失敗した場合、そのセカンダリノード"
+"はクラスタから排除され、プライマリノードは StandAlone モードに遷移する。この"
+"機能を無効にするには、明示的に 0 に設定する必要がある。デフォルトはバージョン"
+"間で変更されている。8.4 は 7 がデフォルト値である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--max-epoch-size <replaceable>val</replaceable></option>"
+msgstr "<option>--max-epoch-size <replaceable>val</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"With this option the maximal number of write requests between two barriers "
+"is limited. Typically set to the same as <option>--max-buffers</option>, or "
+"the allowed maximum.  Values smaller than 10 can lead to degraded "
+"performance.  The default value is 2048."
+msgstr ""
+"このオプションを指定すると、バリアとバリアの間の書き込みリクエスト数の最大値"
+"を制限できる。|<option>--max-buffers</option> と同じ値か、取りうる最大値を指"
+"定するのが望ましい。10 より小さい値は、パフォーマンス低下をもたらす。デフォル"
+"ト値は 2048 である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--max-buffers <replaceable>val</replaceable></option>"
+msgstr "<option>--max-buffers <replaceable>val</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"With this option the maximal number of buffer pages allocated by DRBD's "
+"receiver thread is limited. Typically set to the same as <option>--max-epoch-"
+"size</option>.  Small values could lead to degraded performance. The default "
+"value is 2048, the minimum 32.  Increase this if you cannot saturate the IO "
+"backend of the receiving side during linear write or during resync while "
+"otherwise idle."
+msgstr ""
+"DRBD 受信スレッドに割り当てるバッファページの最大値を指定する。<option>--max-"
+"epoch-size</option> と同じ値を指定するのが望ましい。小さい値はパフォーマンス"
+"低下をもたらす。デフォルト値は 2048 で、最小は 32 である。リニア書き込みや一"
+"方がアイドル状態での再同期の際、受け取り側の I/O バックエンドに余裕がある場合"
+"にはこの値を増やすのがよい。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"See also <citerefentry><refentrytitle>drbd.conf</refentrytitle><manvolnum>5</"
+"manvolnum></citerefentry>"
+msgstr ""
+"追加の制限と必要な準備については、次のマニュアルを参照:"
+"<citerefentry><refentrytitle>drbd.conf</refentrytitle><manvolnum>5</"
+"manvolnum></citerefentry>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--unplug-watermark <replaceable>val</replaceable></option>"
+msgstr "<option>--unplug-watermark <replaceable>val</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"This setting has no effect with recent kernels that use explicit on-stack "
+"plugging (upstream Linux kernel 2.6.39, distributions may have backported)."
+msgstr ""
+"この設定は、最近の明示的にスタックプラギングを使用するカーネルには効果がない "
+"(Linux kernel 2.6.39 には移植されている)。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"When the number of pending write requests on the standby (secondary) node "
+"exceeds the unplug-watermark, we trigger the request processing of our "
+"backing storage device. Some storage controllers deliver better performance "
+"with small values, others deliver best performance when the value is set to "
+"the same value as max-buffers, yet others don't feel much effect at all.  "
+"Minimum 16, default 128, maximum 131072."
+msgstr ""
+"スタンバイ(セカンダリ) ノードで書き込まれていない書き込みリクエスト数が "
+"unplug-watermark を上回ると、下位デバイスに対して書き込みリクエストを送る。ス"
+"トレージによっては小さい値でも良好な結果が得られるが、多くのデバイスでは max-"
+"buffers と同じ値を指定するときに最良の結果が得られる。デフォルト値は 128 で、"
+"指定できる最小値は 16、最大値は 131072 である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--allow-two-primaries </option>"
+msgstr "<option>--allow-two-primaries </option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"With this option set you may assign primary role to both nodes. You only "
+"should use this option if you use a shared storage file system on top of "
+"DRBD. At the time of writing the only ones are: OCFS2 and GFS. If you use "
+"this option with any other file system, you are going to crash your nodes "
+"and to corrupt your data!"
+msgstr ""
+"このオプションを指定すると、両ノードにプライマリを割り当てられる。このオプ"
+"ションは分散共有ファイルシステムを使うときのみ指定する。現在 DRBD がサポート"
+"するファイルシステムは OCFS2 と GFS である。これら以外のファイルシステムを使"
+"うときにこのオプションを指定すると、データの破損とノードのダウンを引き起こ"
+"す。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--cram-hmac-alg <replaceable>alg</replaceable></option>"
+msgstr "<option>--cram-hmac-alg <replaceable>alg</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"You need to specify the HMAC algorithm to enable peer authentication at all. "
+"You are strongly encouraged to use peer authentication. The HMAC algorithm "
+"will be used for the challenge response authentication of the peer. You may "
+"specify any digest algorithm that is named in /proc/crypto."
+msgstr ""
+"対向ノードの認証を行いたい場合、 +HMAC アルゴリズムを指定する。対向ノードの認"
+"証は行うべきである。チャレンジ-レスポンス方式で対向ノードを認証するのに、 "
+"HMA CFC アルゴリズムが使われる。/proc/crypto に記録されている任意のダイジェス"
+"トアルゴリズムを指定できる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--shared-secret <replaceable>secret</replaceable></option>"
+msgstr "<option>--shared-secret <replaceable>secret</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The shared secret used in peer authentication. May be up to 64 characters."
+msgstr "対向ノードの認証には共有秘密鍵が使用され、64文字までで指定する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>--after-sb-0pri <replaceable>asb-0p-policy</replaceable></option>"
+msgstr ""
+"<option>--after-sb-0pri <replaceable>asb-0p-policy</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid "possible policies are:"
+msgstr "指定できるポリシーは以下の通り:"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><term>
+msgid "<option>disconnect</option>"
+msgstr "<option>disconnect</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid "No automatic resynchronization, simply disconnect."
+msgstr "自動再同期を行わず接続を切断する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><term>
+msgid "<option>discard-younger-primary</option>"
+msgstr "<option>discard-younger-primary</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid ""
+"Auto sync from the node that was primary before the split-brain situation "
+"occurred."
+msgstr ""
+"スプリットブレイン発生前にプライマリであったノードからの再同期を自動的に実行"
+"する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><term>
+msgid "<option>discard-older-primary</option>"
+msgstr "<option>discard-older-primary</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid ""
+"Auto sync from the node that became primary as second during the split-brain "
+"situation."
+msgstr ""
+"スプリットブレイン発生時にプライマリになったノードからの再同期を自動的に実行"
+"する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><term>
+msgid "<option>discard-zero-changes</option>"
+msgstr "<option>discard-zero-changes</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid ""
+"In case one node did not write anything since the split brain became "
+"evident, sync from the node that wrote something to the node that did not "
+"write anything. In case none wrote anything this policy uses a random "
+"decision to perform a \"resync\" of 0 blocks. In case both have written "
+"something this policy disconnects the nodes."
+msgstr ""
+"プリットブレイン発生後どちらか一方のノードに書き込みがまったく行われなかった"
+"ことが明白な場合、書き込みが行われたノードから行われなかったノードに対する再"
+"同期が実行される。どちらも書き込まれなかった場合は、 DRBD はランダムな判断に"
+"よって 0 ブロックの再同期を実行する。両ノードに書き込みが行われた場合、このポ"
+"リシーはノードの接続を切断する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><term>
+msgid "<option>discard-least-changes</option>"
+msgstr "<option>discard-least-changes</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid ""
+"Auto sync from the node that touched more blocks during the split brain "
+"situation."
+msgstr ""
+"スプリットブレイン発生後、より多くのブロックを書き込んだノードから他方に対す"
+"る再同期を実行する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><term>
+msgid "<option>discard-node-NODENAME</option>"
+msgstr "<option>discard-node-NODENAME</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid "Auto sync to the named node."
+msgstr "指定した名前のノードに対する再同期を実行する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>--after-sb-1pri <replaceable>asb-1p-policy</replaceable></option>"
+msgstr ""
+"<option>--after-sb-1pri <replaceable>asb-1p-policy</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><term>
+msgid "<option>consensus</option>"
+msgstr "<option>consensus</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid ""
+"Discard the version of the secondary if the outcome of the <option>after-"
+"sb-0pri</option> algorithm would also destroy the current secondary's data. "
+"Otherwise disconnect."
+msgstr ""
+"<option>after-sb-0pri</option> アルゴリズムの結果が現在のセカンダリノードの"
+"データを壊すことになる場合、セカンダリノードのデータを捨てる。そうではない場"
+"合は接続を切断する。そうではない場合は接続を切断する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><term>
+msgid "<option>discard-secondary</option>"
+msgstr "<option>discard-secondary</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid "Discard the secondary's version."
+msgstr "セカンダリ側のデータを捨てる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><term>
+msgid "<option>call-pri-lost-after-sb</option>"
+msgstr "<option>call-pri-lost-after-sb</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid ""
+"Always honor the outcome of the <option>after-sb-0pri </option> algorithm.  "
+"In case it decides the current secondary has the correct data, call the "
+"<option>pri-lost-after-sb</option> on the current primary."
+msgstr ""
+"<option>after-sb-0pri</option> アルゴリズムの判断を常に採用する。セカンダリ側"
+"のデータが正しいと判断された場合には、現在のプライマリ側で <option>pri-lost-"
+"after-sb</option> ハンドラが呼び出される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><term>
+msgid "<option>violently-as0p</option>"
+msgstr "<option>violently-as0p</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid ""
+"Always honor the outcome of the <option>after-sb-0pri </option> algorithm.  "
+"In case it decides the current secondary has the correct data, accept a "
+"possible instantaneous change of the primary's data."
+msgstr ""
+"<option>after-sb-0pri</option> アルゴリズムの判断を常に採用する。セカンダリ側"
+"のデータが正しいと判断された場合でも、プライマリ側のデータの変更箇所を受け入"
+"れる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>--after-sb-2pri <replaceable>asb-2p-policy</replaceable></option>"
+msgstr ""
+"<option>--after-sb-2pri <replaceable>asb-2p-policy</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid ""
+"Always honor the outcome of the <option>after-sb-0pri </option> algorithm.  "
+"In case it decides the current secondary has the right data, call the "
+"<option>pri-lost-after-sb</option> on the current primary."
+msgstr ""
+"<option>after-sb-0pri</option> アルゴリズムの判断を常に採用する。セカンダリ側"
+"のデータが正しいと判断された場合には、現在のプライマリ側で <option>pri-lost-"
+"after-sb</option> ハンドラが呼び出される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><variablelist><varlistentry><listitem><para>
+msgid ""
+"Always honor the outcome of the <option>after-sb-0pri </option> algorithm.  "
+"In case it decides the current secondary has the right data, accept a "
+"possible instantaneous change of the primary's data."
+msgstr ""
+"<option>after-sb-0pri</option> アルゴリズムの判断を常に採用する。セカンダリ側"
+"のデータが正しいと判断された場合でも、プライマリ側のデータの変更箇所を受け入"
+"れる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--always-asbp</option>"
+msgstr "<option>--always-asbp</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Normally the automatic after-split-brain policies are only used if current "
+"states of the UUIDs do not indicate the presence of a third node."
+msgstr ""
+"通常、3 番目のノードが存在しないことが現在の UUID 値から明らかな場合のみ、ス"
+"プリットブレイン発生後の修復ポリシーだけが適用される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"With this option you request that the automatic after-split-brain policies "
+"are used as long as the data sets of the nodes are somehow related. This "
+"might cause a full sync, if the UUIDs indicate the presence of a third node. "
+"(Or double faults have led to strange UUID sets.)"
+msgstr ""
+"このオプションを指定すると、両ノードのデータに関連性があるとして、スプリット"
+"ブレイン発生後のポリシーが適用される。UUID の分析により 3 番目のノードの存在"
+"が疑われる場合には、フル同期が行われることがある。(または、なんらかの別の原因"
+"によって間違った UUID セットで判断してしまった場合)"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>--rr-conflict <replaceable>role-resync-conflict-policy</"
+"replaceable></option>"
+msgstr ""
+"<option>--rr-conflict <replaceable>role-resync-conflict-policy</"
+"replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"This option sets DRBD's behavior when DRBD deduces from its meta data that a "
+"resynchronization is needed, and the SyncTarget node is already primary. The "
+"possible settings are: <option>disconnect</option>, <option>call-pri-lost</"
+"option> and <option>violently</option>. While <option>disconnect</option> "
+"speaks for itself, with the <option>call-pri-lost</option> setting the "
+"<option>pri-lost</option> handler is called which is expected to either "
+"change the role of the node to secondary, or remove the node from the "
+"cluster. The default is <option>disconnect</option>."
+msgstr ""
+"このオプションは、SyncTarget ノードがすでにプライマリであり、再同期が必要であ"
+"ることを DRBD がメタデータから推測するときの DRBD の動作を設定する。設定でき"
+"る値は: <option>disconnect</option>, <option>call-pri-lost</option>, "
+"<option>violently</option> である。<option>disconnect</option> は接続を切断す"
+"る。<option>call-pri-lost</option> は <option>pri-lost</option> ハンドラを呼"
+"び出す。このハンドラは、ノードの状態をセカンダリに切り替えるか、あるいはノー"
+"ドをクラスタから切り離すときに呼ばれる。デフォルトは <option>disconnect</"
+"option> である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"With the <option>violently</option> setting you allow DRBD to force a "
+"primary node into SyncTarget state. This means that the data exposed by DRBD "
+"changes to the SyncSource's version of the data instantaneously. USE THIS "
+"OPTION ONLY IF YOU KNOW WHAT YOU ARE DOING."
+msgstr ""
+"<option>violently</option> を指定すると、プリマリノードを強制的に同期先 "
+"(SyncTarget) にできる。このオプションを指定すると、即座に同期元 (SyncSource) "
+"のデータに書き換えられる。このオプションは、何をしているのかを理解した上で使"
+"用するように。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>--data-integrity-alg <replaceable>hash_alg</replaceable></option>"
+msgstr ""
+"<option>--data-integrity-alg <replaceable>hash_alg</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"DRBD can ensure the data integrity of the user's data on the network by "
+"comparing hash values. Normally this is ensured by the 16 bit checksums in "
+"the headers of TCP/IP packets. This option can be set to any of the kernel's "
+"data digest algorithms. In a typical kernel configuration you should have at "
+"least one of <option>md5</option>, <option>sha1</option>, and "
+"<option>crc32c</option> available. By default this is not enabled."
+msgstr ""
+"ネットワーク経由で受け渡されるデータの整合性を担保するために、DRBD はハッシュ"
+"値を比較する機能を備えている。通常は、TCP/IP パケット自体のヘッダに含まれる "
+"16 ビットチェックサムで保証される。このオプション値には、カーネルがサポートす"
+"る任意のダイジェストアルゴリズムを指定できる。一般的なカーネルの場合、少なく"
+"とも <option>md5</option>, <option>sha1</option>, <option>crc32c</option> の"
+"どれかが利用できる。デフォルトでは、この機能は無効である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid "See also the notes on data integrity on the drbd.conf manpage."
+msgstr "drbd.conf マニュアルページのデータ整合性に関する説明も参照のこと。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--no-tcp-cork</option>"
+msgstr "<option>--no-tcp-cork</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"DRBD usually uses the TCP socket option TCP_CORK to hint to the network "
+"stack when it can expect more data, and when it should flush out what it has "
+"in its send queue. There is at least one network stack that performs worse "
+"when one uses this hinting method. Therefore we introduced this option, "
+"which disable the setting and clearing of the TCP_CORK socket option by DRBD."
+msgstr ""
+"DRBD は、 TCP ソケットの TCP_CORK オプションを使って、いつ追加データを受け取"
+"るか、あるいは送信キューのデータをいつフラッシュするかのヒントを得ている。こ"
+"の方法が悪影響を及ぼすネットワークスタックが少なくとも存在する。このオプショ"
+"ンを指定すると、TCP_CORK ソケットオプションの設定が無効になる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--ping-timeout <replaceable>ping_timeout</replaceable></option>"
+msgstr ""
+"<option>--ping-timeout <replaceable>ping_timeout</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The time the peer has to answer to a keep-alive packet. In case the peer's "
+"reply is not received within this time period, it is considered dead. The "
+"default unit is tenths of a second, the default value is 5 (for half a "
+"second)."
+msgstr ""
+"このパラメータで指定した時間内にキープアライブパケットに応答しなければならな"
+"い。応答パケットが返ってこない場合、その対向ノードは死んだと判断される。デ"
+"フォルト値は 5(500ms) で、100ms 単位で指定する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--discard-my-data</option>"
+msgstr "<option>--discard-my-data</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Use this option to manually recover from a split-brain situation. In case "
+"you do not have any automatic after-split-brain policies selected, the nodes "
+"refuse to connect. By passing this option you make this node a sync target "
+"immediately after successful connect."
+msgstr ""
+"スプリットブレイン状態から復旧するときに、このオプションを手作業で指定する。"
+"自動的な復旧ポリシーを設定していない場合には、DRBD は接続を拒否する。このオプ"
+"ションを実行すると、そのノードは接続後ただちに同期先になる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--tentative</option>"
+msgstr "<option>--tentative</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Causes DRBD to abort the connection process after the resync handshake, i.e. "
+"no resync gets performed. You can find out which resync DRBD would perform "
+"by looking at the kernel's log file."
+msgstr ""
+"再同期を実行させない場合などにおいて、再同期ハンドシェーク後に DRBD 接続プロ"
+"セスを終了させる。DRBD がどの再同期を実行しているかについては、カーネルログで"
+"確認することができる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>--on-congestion <replaceable>congestion_policy</replaceable></option>"
+msgstr ""
+"<option>--on-congestion <replaceable>congestion_policy</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>--congestion-fill <replaceable>fill_threshold</replaceable></option>"
+msgstr ""
+"<option>--congestion-fill <replaceable>fill_threshold</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>--congestion-extents <replaceable>active_extents_threshold</"
+"replaceable></option>"
+msgstr ""
+"<option>--congestion-extents <replaceable>active_extents_threshold</"
+"replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"By default DRBD blocks when the available TCP send queue becomes full. That "
+"means it will slow down the application that generates the write requests "
+"that cause DRBD to send more data down that TCP connection."
+msgstr ""
+"デフォルトでは、 TCP 送信キューが一杯になると、 DRBD は書き込みをブロックす"
+"る。このことは DRBD が TCP で送信できるデータ量を越えてディスクに書きこもうと"
+"するアプリケーションの処理速度が低下することを意味する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"When DRBD is deployed with DRBD-proxy it might be more desirable that DRBD "
+"goes into AHEAD/BEHIND mode shortly before the send queue becomes full. In "
+"AHEAD/BEHIND mode DRBD does no longer replicate data, but still keeps the "
+"connection open."
+msgstr ""
+"DRBD-Proxy を使っている場合、送信キューが満杯になる直前に AHEAD/BEAIND モード"
+"に移行するのが望ましい。AHEAD/BEHIND モードでは、DRBD 間の通信は切断しない"
+"が、データレプリケーションは行われなくなる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The advantage of the AHEAD/BEHIND mode is that the application is not slowed "
+"down, even if DRBD-proxy's buffer is not sufficient to buffer all write "
+"requests. The downside is that the peer node falls behind, and that a resync "
+"will be necessary to bring it back into sync. During that resync the peer "
+"node will have an inconsistent disk."
+msgstr ""
+"AHEAD/BEHIND モードの利点は、たとえ DRBD-Proxy のバッファがすべての書き込み要"
+"求を受け入れるのに十分でなくても、アプリケーションが遅くならないことである。"
+"欠点は、対向ノードが後れをとっているため、同期状態に戻すために再同期が必要に"
+"なることである。再同期中対向ノードのデータは不整合状態のままとなる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Available <replaceable>congestion_policy</replaceable>s are <option>block</"
+"option> and <option>pull-ahead</option>. The default is <option>block</"
+"option>. <replaceable>Fill_threshold</replaceable> might be in the range of "
+"0 to 10GiBytes. The default is 0 which disables the check.  "
+"<replaceable>Active_extents_threshold</replaceable> has the same limits as "
+"<option>al-extents</option>."
+msgstr ""
+"<replaceable>congestion_policy</replaceable> では <option>block</option> と "
+"<option>pull-ahead</option> が使用できる。デフォルトは <option>block</"
+"option> である。<replaceable>Fill_threshold</replaceable> は 0 から 10GiB ま"
+"での値を指定できる。デフォルト値は 0 で、これはチェックが無効になることを意味"
+"する。<replaceable>Active_extents_threshold</replaceable> は、 <option>al-"
+"extents</option> と同じ制限がある。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid "The AHEAD/BEHIND mode and its settings are available since DRBD 8.3.10."
+msgstr "AHEAD/BEHIND は DRBD8.3.10 以降で利用できる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--verify-alg <replaceable>hash-alg</replaceable></option>"
+msgstr "<option>--verify-alg <replaceable>hash-alg</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"During online verification (as initiated by the <command moreinfo=\"none"
+"\">verify</command> sub-command), rather than doing a bit-wise comparison, "
+"DRBD applies a hash function to the contents of every block being verified, "
+"and compares that hash with the peer. This option defines the hash algorithm "
+"being used for that purpose. It can be set to any of the kernel's data "
+"digest algorithms. In a typical kernel configuration you should have at "
+"least one of <option>md5</option>, <option>sha1</option>, and "
+"<option>crc32c</option> available. By default this is not enabled; you must "
+"set this option explicitly in order to be able to use on-line device "
+"verification."
+msgstr ""
+"<command moreinfo=\"none\">verify</command> サブコマンドでディスク内容をオン"
+"ライン照合する際、 DRBD はビット単位の比較ではなく、ブロックごとのハッシュ値"
+"を計算し、対向ノードのハッシュ値と比較する。照合に利用するハッシュアルゴリズ"
+"ムは、このパラメータで指定する。オプション値には、カーネルがサポートする任意"
+"のダイジェストアルゴリズムを指定できる。一般的なカーネルの場合、少なくとも "
+"<option>md5</option>, <option>sha1</option>, <option>crc32c</option> のどれか"
+"が利用できる。デフォルトでは、この機能は無効である。オンライン照合を有効にす"
+"るには、このパラメータを明示的に設定する必要がある。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--csums-alg <replaceable>hash-alg</replaceable></option>"
+msgstr "<option>--csums-alg <replaceable>hash-alg</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"A resync process sends all marked data blocks from the source to the "
+"destination node, as long as no <option>csums-alg</option> is given. When "
+"one is specified the resync process exchanges hash values of all marked "
+"blocks first, and sends only those data blocks over, that have different "
+"hash values."
+msgstr ""
+"csums-alg が指定されていない場合、再同期プロセスはすべてのマークされたデータ"
+"ブロックをコピー元からコピー先に転送するこのオプションを指定すると、マークさ"
+"れたデータブロックのハッシュ値を最初に送り、ハッシュ値が一致しないブロックに"
+"ついてのみデータを転送する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"This setting is useful for DRBD setups with low bandwidth links. During the "
+"restart of a crashed primary node, all blocks covered by the activity log "
+"are marked for resync. But a large part of those will actually be still in "
+"sync, therefore using <option>csums-alg</option> will lower the required "
+"bandwidth in exchange for CPU cycles."
+msgstr ""
+"帯域幅が小さい回線を使うとき、このオプションは有用である。クラッシュしたプラ"
+"イマリノードが復帰したとき、アクティビティログに記録されたすべてのブロックが"
+"再同期の対象となる。しかし大部分のブロックは同期が取れている。このため、 "
+"<option>csums-alg</option> を指定することによって、 CPU の使用量と引き換えに"
+"必要な転送量を減らせる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--use-rle</option>"
+msgstr "<option>--use-rle</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"During resync-handshake, the dirty-bitmaps of the nodes are exchanged and "
+"merged (using bit-or), so the nodes will have the same understanding of "
+"which blocks are dirty. On large devices, the fine grained dirty-bitmap can "
+"become large as well, and the bitmap exchange can take quite some time on "
+"low-bandwidth links."
+msgstr ""
+"再同期開始時のハンドシェークの過程で各ノードのビットマップが交換され、ビット"
+"単位の OR 計算が行われる。これによって、どのブロックがダーティ (不一致) であ"
+"るかについて、それぞれのノードは共通の認識を持つ。大容量デバイスではビット"
+"マップも大きくなり、帯域幅が小さいネットワークではその交換に時間を要する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Because the bitmap typically contains compact areas where all bits are unset "
+"(clean) or set (dirty), a simple run-length encoding scheme can considerably "
+"reduce the network traffic necessary for the bitmap exchange."
+msgstr ""
+"典型的なビットマップは、すべてがセットされていない (クリーン) あるいはセット"
+"されている (ダーティ) いくつかのエリアに分かれている。このため、単純ではある"
+"がランレングス符号化を採用することにより、ビットマップ交換のためのネットワー"
+"クトラフィックを顕著に減らすことができる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"For backward compatibility reasons, and because on fast links this possibly "
+"does not improve transfer time but consumes cpu cycles, this defaults to off."
+msgstr ""
+"過去のバージョンとの互換性のため、また高速ネットワークでは転送時間改善効果が"
+"少なく CPU 使用量が増えるため、デフォルトではこの機能は無効である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid "Introduced in 8.3.2."
+msgstr "Introduced in 8.3.2."
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--socket-check-timeout</option>"
+msgstr "<option>--socket-check-timeout</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"In setups involving a DRBD-proxy and connections that experience a lot of "
+"buffer-bloat it might be necessary to set <option>ping-timeout</option> to "
+"an unusual high value. By default DRBD uses the same value to wait if a "
+"newly established TCP-connection is stable. Since the DRBD-proxy is usually "
+"located in the same data center such a long wait time may hinder DRBD's "
+"connect process."
+msgstr ""
+"DRBD-Proxy を使っていて大量のバッファを確保する必要がある環境では ping-"
+"timeout に非現実的な大きな値を指定しなければならないことがある。TCP コネク"
+"ションが開始したときの安定するのを待つ局面でも、 DRBD はデフォルトで ping-"
+"timeout を使ってしまう。DRBD-Proxy は通常、同じデータセンターに配置されている"
+"ため、長い待機時間は DRBD の接続プロセスを妨げる可能性がある。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"In such setups <option>socket-check-timeout</option> should be set to at "
+"least to the round trip time between DRBD and DRBD-proxy. I.e. in most cases "
+"to 1."
+msgstr ""
+"このような場合、<option>socket-check-timeout</option> に DRBD と DRBD-Proxy "
+"間の round trip time(RTT) を設定するとよい。たいていの場合 1 である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The default unit is tenths of a second, the default value is 0 (which causes "
+"DRBD to use the value of <option>ping-timeout</option> instead).  Introduced "
+"in 8.4.5."
+msgstr ""
+"デフォルトの単位は 10 分の 1 秒である。デフォルト値は 0 で socket-check-"
+"timeout 値の代わりに <option>ping-timeout</option> 値を使用する。8.4.5 から導"
+"入された。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "resource-options"
+msgstr "resource-options"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid "Changes the options of the resource at runtime."
+msgstr "Changes the options of the resource at runtime."
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--cpu-mask <replaceable>cpu-mask</replaceable></option>"
+msgstr "<option>--cpu-mask <replaceable>cpu-mask</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Sets the cpu-affinity-mask for DRBD's kernel threads of this device. The "
+"default value of <replaceable>cpu-mask</replaceable> is 0, which means that "
+"DRBD's kernel threads should be spread over all CPUs of the machine. This "
+"value must be given in hexadecimal notation. If it is too big it will be "
+"truncated."
+msgstr ""
+"DRBD のカーネルスレッドに CPU アフィニティマスクを設定する。<replaceable>cpu-"
+"mask</replaceable> のデフォルト値は 0 で、 DRBD のカーネルスレッドがマシン全"
+"体の CPU にまたがって動作することを意味している。この値は 16 進表現で指定する"
+"必要がある。値が大きすぎると切り捨てられる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>--on-no-data-accessible <replaceable>ond-policy</replaceable></"
+"option>"
+msgstr ""
+"<option>--on-no-data-accessible <replaceable>ond-policy</replaceable></"
+"option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"This setting controls what happens to IO requests on a degraded, disk less "
+"node (I.e. no data store is reachable). The available policies are "
+"<option>io-error</option> and <option>suspend-io</option>."
+msgstr ""
+"この設定は、ディスクレスモードが発生した際の操作を指定する。設定できるポリ"
+"シーは <option>io-error</option> と <option>suspend-io</option> である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"If <replaceable>ond-policy</replaceable> is set to <option>suspend-io</"
+"option> you can either resume IO by attaching/connecting the last lost data "
+"storage, or by the <command moreinfo=\"none\">drbdadm resume-io "
+"<replaceable>res</replaceable></command> command. The latter will result in "
+"IO errors of course."
+msgstr ""
+"<replaceable>ond-policy</replaceable> に <option>suspend-io</option> を設定す"
+"ると、最後に接続していたデータストレージから、もしくは、 <command moreinfo="
+"\"none\">drbdadm resume-io <replaceable>res</replaceable></command> コマンド"
+"により、 I/O を再開することができる。後者はもちろん I/O エラーを発生させる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The default is <option>io-error</option>. This setting is available since "
+"DRBD 8.3.9."
+msgstr ""
+"デフォルトは <option>io-error</option> である。この設定は、 DRBD 8.3.9 から有"
+"効である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "primary"
+msgstr "primary"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Sets the <replaceable>device</replaceable> into primary role. This means "
+"that applications (e.g. a file system) may open the <replaceable>device</"
+"replaceable> for read and write access. Data written to the "
+"<replaceable>device</replaceable> in primary role are mirrored to the device "
+"in secondary role."
+msgstr ""
+"<replaceable>デバイス</replaceable>をプライマリロールに切り替える。するとアプ"
+"リケーション (この場合はファイルシステムなど) は<replaceable>デバイス</"
+"replaceable>を読み書きモードでオープンできるようになる。プライマリロールの"
+"<replaceable>デバイス</replaceable>に書き込まれたデータはセカンダリロールのデ"
+"バイスにミラーされる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Normally it is not possible to set both devices of a connected DRBD device "
+"pair to primary role. By using the <option>--allow-two-primaries</option> "
+"option, you override this behavior and instruct DRBD to allow two primaries."
+msgstr ""
+"通常の実行状態では、 DRBD デバイスペアの両方を同時にプライマリに切り替えるこ"
+"とはできない。<option>--allow-two-primaries</option> オプションを使用すると、"
+"DRBD の既定の仕様を変更して両ノードをプライマリにできる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--overwrite-data-of-peer</option>"
+msgstr "<option>--overwrite-data-of-peer</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid "Alias for --force."
+msgstr "--force のエイリアス。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--force</option>"
+msgstr "<option>--force</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Becoming primary fails if the local replica is not up-to-date. I.e. when it "
+"is inconsistent, outdated of consistent. By using this option you can force "
+"it into primary role anyway. USE THIS OPTION ONLY IF YOU KNOW WHAT YOU ARE "
+"DOING."
+msgstr ""
+"ローカルディスクの複製物が最新 (UpToDate) でない場合は、プライマリになれな"
+"い。つまり、データが一致しなかったり、古かったりする場合である。このオプショ"
+"ンを指定すると、状況に関係なくプライマリに切り替えられる。このオプションは、"
+"何をしているのかを理解した上で使用するように。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "secondary"
+msgstr "secondary"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Brings the <replaceable>device</replaceable> into secondary role. This "
+"operation fails as long as at least one application (or file system) has "
+"opened the device."
+msgstr ""
+"<replaceable>デバイス</replaceable>をセカンダリロールに切り替える。何らかのア"
+"プリケーション (またはファイルシステム) が書き込みモードでデバイスをオープン"
+"している間は、この操作は失敗する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"It is possible that both devices of a connected DRBD device pair are "
+"secondary."
+msgstr ""
+"DRBD デバイスペアの両方がともにセカンダリ状態になることは問題なく可能である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "verify"
+msgstr "verify"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"This initiates on-line device verification. During on-line verification, the "
+"contents of every block on the local node are compared to those on the peer "
+"node. Device verification progress can be monitored via <filename moreinfo="
+"\"none\">/proc/drbd</filename>. Any blocks whose content differs from that "
+"of the corresponding block on the peer node will be marked out-of-sync in "
+"DRBD's on-disk bitmap; they are <emphasis>not</emphasis> brought back in "
+"sync automatically. To do that, simply disconnect and reconnect the resource."
+msgstr ""
+"オンライン状態でデバイスを照合する。オンライン照合は、ローカルノードの全ブ"
+"ロックを対向ノードの対応するブロックと比較することである。照合の進行状況は、 "
+"<filename moreinfo=\"none\">/proc/drbd</filename> を通じて確認できる。ローカ"
+"ルディスクと対向ホストで内容が異なるブロックは、 DRBD のディスク上ビットマッ"
+"プに不整合としてマークされる。これらは自動的な再同期が行われない。再同期を行"
+"うには、いったんリソースの接続を切って再接続すればよい。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"If on-line verification is already in progress (and this node is \"VerifyS"
+"\"), this command silently \"succeeds\". In this case, any start-sector (see "
+"below) will be ignored, and any stop-sector (see below) will be honored.  "
+"This can be used to stop a running verify, or to update/shorten/extend the "
+"coverage of the currently running verify."
+msgstr ""
+"すでにオンライン照合が進行中の場合、 (当該ノードが照合を行い) このコマンドは"
+"成功する。この場合、 start-sector (以下参照) は無視され、 stop-sector (以下参"
+"照) が採用される。これは照合を終了するため、あるいは現在進行中の照合の範囲を "
+"更新/ 短縮/ 拡張 するために使用される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"This command will fail if the <replaceable>device</replaceable> is not part "
+"of a connected device pair."
+msgstr ""
+"このコマンドは<replaceable>デバイス</replaceable>が接続されているデバイスペア"
+"のうちの一つでない場合は失敗する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--start <replaceable>start-sector</replaceable></option>"
+msgstr "<option>--start <replaceable>start-sector</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Since version 8.3.2, on-line verification should resume from the last "
+"position after connection loss. It may also be started from an arbitrary "
+"position by setting this option. If you had reached some stop-sector before, "
+"and you do not specify an explicit start-sector, verify should resume from "
+"the previous stop-sector."
+msgstr ""
+"バージョン 8.3.2 以降でこのオプションが利用できる。接続が切れて復旧したとき、"
+"オンライン照合は直前の最後の位置から再開する。このオプションを指定すると、任"
+"意の位置から照合を開始できる。以前に stop-sector に達した事があり、明示的に "
+"start-sector を指定しない場合には、照合は以前の停止セクタから再開される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Default unit is sectors. You may also specify a unit explicitly. The "
+"<option>start-sector</option> will be rounded down to a multiple of 8 "
+"sectors (4kB)."
+msgstr ""
+"デフォルトの単位はセクタである。単位を明示的に指定することもできる。<option>"
+"開始セクタ</option>は 8 セクタの倍数 (4kB) に切り捨てられる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>-S</option>, <option>--stop <replaceable>stop-sector</replaceable></"
+"option>"
+msgstr ""
+"<option>-S</option>, <option>--stop <replaceable>stop-sector</replaceable></"
+"option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Since version 8.3.14, on-line verification can be stopped before it reaches "
+"end-of-device."
+msgstr ""
+"バージョン 8.3.14 以降では、オンライン照合はデバイスの最後に達する前に終了す"
+"ることができる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Default unit is sectors. You may also specify a unit explicitly.  The "
+"<option>stop-sector</option> may be updated by issuing an additional "
+"drbdsetup verify command on the same node while the verify is running.  This "
+"can be used to stop a running verify, or to update/shorten/extend the "
+"coverage of the currently running verify."
+msgstr ""
+"デフォルトの単位はセクタである。単位を明示的に指定することもできる。照合が進"
+"行中に追加の drbdsetup verify コマンドを同じノードで実行することで、 "
+"<option>stop-sector</option> を更新する事ができる。これは照合を終了するため、"
+"あるいは現在進行中の照合の範囲を 更新/ 短縮/ 拡張 するために使用される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "invalidate"
+msgstr "invalidate"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"This forces the local device of a pair of connected DRBD devices into "
+"SyncTarget state, which means that all data blocks of the device are copied "
+"over from the peer."
+msgstr ""
+"接続された DRBD デバイスペアのローカル側を SyncTarget 状態に切り替える。これ"
+"により、対向ホスト側のすべてのデータブロックがローカルディスクにコピーされ"
+"る。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"This command will fail if the <replaceable>device</replaceable> is not "
+"either part of a connected device pair, or disconnected Secondary."
+msgstr ""
+"デバイスが対向ホスト側のデバイスと接続していなかったり、切断されたセカンダリ"
+"の場合、コマンドは失敗する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "invalidate-remote"
+msgstr "invalidate-remote"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"This forces the local device of a pair of connected DRBD devices into "
+"SyncSource state, which means that all data blocks of the device are copied "
+"to the peer."
+msgstr ""
+"接続された DRBD デバイスペアのローカルデバイス側を SyncSource 状態に切り替え"
+"る。これにより、ローカルディスクのすべてのデータブロックが対向ペアにコピーさ"
+"れる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"On a disconnected Primary device, this will set all bits in the out of sync "
+"bitmap.  As a side affect this suspends updates to the on disk activity log. "
+"Updates to the on disk activity log resume automatically when necessary."
+msgstr ""
+"切断されたプライマリデバイス側では、すべてのビットが非同期のビットマップに設"
+"定される。これによってオンディスクのアクティビティログの更新が一時停止する。"
+"アクティビティログの更新が再開すると、必要に応じて自動的再開される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "wait-connect"
+msgstr "wait-connect"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Returns as soon as the <replaceable>device</replaceable> can communicate "
+"with its partner device."
+msgstr ""
+"<replaceable>デバイス</replaceable>が対向デバイスと通信可能になるまで待機す"
+"る。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--wfc-timeout <replaceable>wfc_timeout</replaceable></option>"
+msgstr "<option>--wfc-timeout <replaceable>wfc_timeout</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>--degr-wfc-timeout <replaceable>degr_wfc_timeout</replaceable></"
+"option>"
+msgstr ""
+"<option>--degr-wfc-timeout <replaceable>degr_wfc_timeout</replaceable></"
+"option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>--outdated-wfc-timeout <replaceable>outdated_wfc_timeout</"
+"replaceable></option>"
+msgstr ""
+"<option>--outdated-wfc-timeout <replaceable>outdated_wfc_timeout</"
+"replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>--wait-after-sb</option>"
+msgstr "<option>--wait-after-sb</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"This command will fail if the <replaceable>device</replaceable> cannot "
+"communicate with its partner for <replaceable>timeout</replaceable> seconds. "
+"If the peer was working before this node was rebooted, the "
+"<replaceable>wfc_timeout</replaceable> is used. If the peer was already down "
+"before this node was rebooted, the <replaceable>degr_wfc_timeout</"
+"replaceable> is used. If the peer was successfully outdated before this node "
+"was rebooted the <replaceable>outdated_wfc_timeout</replaceable> is used. "
+"The default value for all those timeout values is 0 which means to wait "
+"forever. The unit is seconds. In case the connection status goes down to "
+"StandAlone because the peer appeared but the devices had a split brain "
+"situation, the default for the command is to terminate. You can change this "
+"behavior with the <option>--wait-after-sb</option> option."
+msgstr ""
+"<replaceable>デバイス</replaceable>が <replaceable>timeout</replaceable> 秒以"
+"内に対向ペアと通信できないと、このコマンドは失敗する。ノードが再起動する前に"
+"対向ノードが動作していた場合、 <replaceable>wfc_timeout</replaceable> パラ"
+"メータの値が使われる。ノードが再起動する前に対向ノードがダウンしていた場合に"
+"は、 <replaceable>degr_wfc_timeout</replaceable> パラメータの値が使われる。"
+"ノードが再起動する前に対向ノードが無効にされていた場合には "
+"<replaceable>outdated_wfc_timeout</replaceable> パラメータが使われる。これら"
+"すべてのタイムアウト値のデフォルトは 0 で、接続されるまで永久に待機することを"
+"表す。単位は秒である。スプリットブレイン状態が起きたためにデバイスが接続され"
+"た後 StandaAlone 状態になってしまった場合、このコマンドは失敗する。<option>--"
+"wait-after-sb</option> を指定すると、デフォルトの動作を変更できる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "wait-sync"
+msgstr "wait-sync"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Returns as soon as the <replaceable>device</replaceable> leaves any "
+"synchronization into connected state. The options are the same as with the "
+"<replaceable>wait-connect</replaceable> command."
+msgstr ""
+"<replaceable>デバイス</replaceable>の同期が終わるまで待機する。このオプション"
+"は <replaceable>wait-connect</replaceable> コマンドと同じである。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "disconnect"
+msgstr "disconnect"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Removes the information set by the <option>net</option> command from the "
+"<replaceable>device</replaceable>. This means that the <replaceable>device</"
+"replaceable> goes into unconnected state and will no longer listen for "
+"incoming connections."
+msgstr ""
+"<option>net</option> コマンドで設定した<replaceable>デバイス</replaceable>の"
+"情報を削除する。その結果、<replaceable>デバイス</replaceable>は切断状態にな"
+"り、その後はネットワーク経由の情報を受け取らない。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "detach"
+msgstr "detach"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><term>
+msgid "<option>-f</option>, <option>--force</option>"
+msgstr "<option>-f</option>, <option>--force</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"A regular detach returns after the disk state finally reached diskless. As a "
+"consequence detaching from a frozen backing block device never terminates."
+msgstr ""
+"通常、detach は、ディスク状態がディスクレスになってから戻ってくる。そのため、"
+"フリーズしている下位ブロックデバイスの切り離しは終了しない。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"On the other hand A forced detach returns immediately. It allows you to "
+"detach DRBD from a frozen backing block device. Please note that the disk "
+"will be marked as failed until all pending IO requests where finished by the "
+"backing block device."
+msgstr ""
+"一方で、強制切り離しは即座に返答がくる。これでフリーズした下位ブロックデバイ"
+"スを切り離すことができる。ディスクは全 I/O リクエストが下位ブロックデバイスで"
+"完了するまで failed としてマークされることに注意。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Removes the information set by the <option>disk</option> command from the "
+"<replaceable>device</replaceable>. This means that the <replaceable>device</"
+"replaceable> is detached from its backing storage device.  <placeholder type="
+"\"variablelist\" id=\"0\"/>"
+msgstr ""
+"<option>disk</option> コマンドで設定したデバイスの情報を消去する。その結果、"
+"<replaceable>デバイス</replaceable>は下位ストレージデバイスから切り離される。"
+"<placeholder type=\"variablelist\" id=\"0\"/>"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "down"
+msgstr "down"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Removes all configuration information from the <replaceable>device</"
+"replaceable> and forces it back to unconfigured state."
+msgstr ""
+"<replaceable>デバイス</replaceable>の全ての設定情報を消去する。また、未設定の"
+"状態に戻す。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "role"
+msgstr "role"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Shows the current roles of the <replaceable>device</replaceable> and its "
+"peer, as <replaceable>local</replaceable>/<replaceable>peer</replaceable>."
+msgstr ""
+"<replaceable>デバイス</replaceable>とその対向デバイスの現在のロール (役割) を"
+"表示する。表示形式は <replaceable>ローカ ル</replaceable>/<replaceable>他ノー"
+"ド</replaceable>である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "state"
+msgstr "state"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid "Deprecated alias for \"role\""
+msgstr "&quot;role&quot; の別名である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "cstate"
+msgstr "cstate"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Shows the current connection state of the <replaceable>device</replaceable>."
+msgstr "現在の<replaceable>デバイス</replaceable>の接続状態を表示する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "dstate"
+msgstr "dstate"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Shows the current states of the backing storage devices, as "
+"<replaceable>local</replaceable>/<replaceable>peer</replaceable>."
+msgstr ""
+"現在の下位デバイスの状態を表示する。表示形式は<replaceable>ローカル</"
+"replaceable>/<replaceable>他ノード</replaceable>である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "resize"
+msgstr "resize"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"This causes DRBD to reexamine the size of the <replaceable>device</"
+"replaceable>'s backing storage device. To actually do online growing you "
+"need to extend the backing storages on both devices and call the "
+"<option>resize</option> command on one of your nodes."
+msgstr ""
+"下位<replaceable>デバイス</replaceable>のサイズを再検査する。実際にオンライン"
+"拡張するには、両デバイスで下位デバイスを拡張してから、そのうちの1 台で "
+"<option>resize</option> コマンドを実行する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"The <option>--size</option> option can be used to online shrink the usable "
+"size of a drbd device. It's the users responsibility to make sure that a "
+"file system on the device is not truncated by that operation."
+msgstr ""
+"<option>--size</option> オプションは DRBD デバイスで使用できるサイズのオンラ"
+"イン縮小に使用される。ファイルシステムがこの操作によって破損しないことはユー"
+"ザ責任において確認する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"The <option>--assume-peer-has-space</option> allows you to resize a device "
+"which is currently not connected to the peer. Use with care, since if you do "
+"not resize the peer's disk as well, further connect attempts of the two will "
+"fail."
+msgstr ""
+"<option>--assume-peer-has-space</option> オプションは、現在対向ノードに接続さ"
+"れていないデバイスのサイズ変更ができる。対向ノードのディスクサイズを同様に変"
+"更しないと、以降接続が失敗するので注意すること。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"When the <option>--assume-clean</option> option is given DRBD will skip the "
+"resync of the new storage. Only do this if you know that the new storage was "
+"initialized to the same content by other means."
+msgstr ""
+"<option>--assume-clean</option> オプションを使用すると DRBD は新しいストレー"
+"ジの再同期をスキップする。新しいストレージが、別の方法で初期化されていること"
+"が確認できている場合のみ、これを設定する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"The options <option>--al-stripes</option> and <option>--al-stripe-size-kB</"
+"option> may be used to change the layout of the activity log online. In case "
+"of internal meta data this may invovle shrinking the user visible size at "
+"the same time (unsing the <option>--size</option>) or increasing the "
+"avalable space on the backing devices."
+msgstr ""
+"<option>--al-stripes</option> と <option>--al-stripe-size-kB</option> オプ"
+"ションはオンラインでアクティビティログのレイアウトを変更する。内部メタデータ"
+"の場合には、同時に、下位デバイスのユーザーに見えるサイズ(<option>--size</"
+"option> を使用して)の縮小、または拡大が必要である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "check-resize"
+msgstr "check-resize"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"To enable DRBD to detect offline resizing of backing devices this command "
+"may be used to record the current size of backing devices. The size is "
+"stored in files in /var/lib/drbd/ named drbd-minor-??.lkbd"
+msgstr ""
+"DRBD が下位デバイスのオフラインリサイズを検知できるようにするため、このコマン"
+"ドは下位デバイスの現在のサイズを記録するために使用される。サイズは、/var/lib/"
+"drbd/ 下に drbd-minor-??.lkbd という名前で記録される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"This command is called by <command moreinfo=\"none\">drbdadm resize "
+"<replaceable>res</replaceable></command> after <command moreinfo=\"none"
+"\">drbdsetup <replaceable>device</replaceable> resize</command> returned."
+msgstr ""
+"このコマンドは <command moreinfo=\"none\">drbdsetup <replaceable>device</"
+"replaceable> resize</command> が実行された後で <command moreinfo=\"none"
+"\">drbdadm resize <replaceable>res</replaceable></command> からコールされる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "pause-sync"
+msgstr "pause-sync"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Temporarily suspend an ongoing resynchronization by setting the local pause "
+"flag.  Resync only progresses if neither the local nor the remote pause flag "
+"is set. It might be desirable to postpone DRBD's resynchronization after "
+"eventual resynchronization of the backing storage's RAID setup."
+msgstr ""
+"ローカルメタデータの一時停止フラグをセットして、進行中の再同期を一時停止す"
+"る。再開させるには、ローカルと他ノードの両方の一時停止フラグをクリアする必要"
+"がある。下位レベルデバイスの RAID を再構成しているときなど、 DRBD の再同期を"
+"一時停止するのが望ましい場合がある。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "resume-sync"
+msgstr "resume-sync"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid "Unset the local sync pause flag."
+msgstr "自機の一時停止フラグをクリアする。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "outdate"
+msgstr "outdate"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Mark the data on the local backing storage as outdated. An outdated device "
+"refuses to become primary. This is used in conjunction with <option>fencing</"
+"option> and by the peer's <option>fence-peer</option> handler."
+msgstr ""
+"自ノードの下位レベルデバイスの内容が「無効」であるとマークする。無効ノードは"
+"プライマリになれない。このコマンドは通常 <option>fencing</option> や対向ノー"
+"ドの <option>fence-peer</option> ハンドラと組み合わせて使用される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "show-gi"
+msgstr "show-gi"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid "Displays the device's data generation identifiers verbosely."
+msgstr ""
+"デバイスのデータ世代識別子 (data generation identifiers) の内容を説明テキスト"
+"とともに表示する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "get-gi"
+msgstr "get-gi"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid "Displays the device's data generation identifiers."
+msgstr ""
+"デバイスのデータ世代識別子 (data generation identifiers) の内容を表示する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "show"
+msgstr "show"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><term>
+msgid "<option>--show-defaults</option>"
+msgstr "<option>--show-defaults</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"Show all configuration parameters, even the ones with default values.  "
+"Normally, parameters with default values are not shown."
+msgstr ""
+"すべての設定パラメータを表示する。設定ファイルに未設定のパラメータも初期値の"
+"設定で表示する。このオプションをつけないと、初期値のパラメータは確認できな"
+"い。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Shows all available configuration information of a resource, or of all "
+"resources. Available options: <placeholder type=\"variablelist\" id=\"0\"/>"
+msgstr ""
+"リソースの全ての有効な設定情報を表示する。利用可能なオプション: <placeholder "
+"type=\"variablelist\" id=\"0\"/>"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "suspend-io"
+msgstr "suspend-io"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"This command is of no apparent use and just provided for the sake of "
+"completeness."
+msgstr ""
+"このコマンドの明確な使用法はないが、コマンドセットの完全性のために用意されて"
+"いる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "resume-io"
+msgstr "resume-io"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"If the fence-peer handler fails to stonith the peer node, and your "
+"<option>fencing</option> policy is set to resource-and-stonith, you can "
+"unfreeze IO operations with this command."
+msgstr ""
+"<option>fencing</option> ポリシーが resource-and-stonith に設定されており、"
+"fence-peer ハンドラの実行に失敗した場合、このコマンドによってフリーズされた "
+"I/O 操作を再開できる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "status"
+msgstr "status"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Show the status of a resource, or of all resources.  The output consists of "
+"one paragraph for each configured resource.  Each paragraph contains one "
+"line for each resource, followed by one line for each device, and one line "
+"for each connection.  The device and connection lines are indented.  The "
+"connection lines are followed by one line for each peer device; these lines "
+"are indented against the connection line."
+msgstr ""
+"リソースの全ての有効な設定情報を表示する。出力は、構成されたリソースごとに 1 "
+"つの段落で構成される。各段落は、リソースごとに 1 行、各デバイスに 1 行、接続"
+"ごとに 1 行が続くデバイスと接続行はインテンドされる。各接続行は、対向ノードの"
+"デバイスごとに 1 行、これらは接続行に対してインテンドされる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><term>
+msgid "<option>--verbose</option>"
+msgstr "<option>--verbose</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"Include more information in the output even when it is likely redundant or "
+"irrelevant."
+msgstr "冗長か無関係であっても、より多くの情報を出力に含める。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><term>
+msgid "<option>--statistics</option>"
+msgstr "<option>--statistics</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><listitem><para>
+msgid "Include data transfer statistics in the output."
+msgstr "出力にデータ転送の統計情報を含める。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><term>
+msgid ""
+"<option>--color=<group choice=\"req\" rep=\"norepeat\"> <arg choice=\"plain"
+"\" rep=\"norepeat\">always</arg> <arg choice=\"plain\" rep=\"norepeat"
+"\">auto</arg> <arg choice=\"plain\" rep=\"norepeat\">never</arg> </group> </"
+"option>"
+msgstr ""
+"<option>--color=<group choice=\"req\" rep=\"norepeat\"> <arg choice=\"plain"
+"\" rep=\"norepeat\">always</arg> <arg choice=\"plain\" rep=\"norepeat"
+"\">auto</arg> <arg choice=\"plain\" rep=\"norepeat\">never</arg> </group> </"
+"option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"Colorize the output.  With <option>--color=auto</option>, <option>drbdsetup</"
+"option> emits color codes only when standard output is connected to a "
+"terminal."
+msgstr ""
+"出力をカラー化する。 <option>--color=auto</option>, <option>drbdsetup</"
+"option> は標準出力が端末に接続されている場合にのみカラーコードを出力する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Long lines are wrapped around at terminal width, and indented to indicate "
+"how the lines belongs together.  Available options: <placeholder type="
+"\"variablelist\" id=\"0\"/>"
+msgstr ""
+"長い行は端末の幅で折り返され、どの行に属しているかを示すためにインデントされ"
+"る。利用可能なオプション: <placeholder type=\"variablelist\" id=\"0\"/>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><programlisting>
+#, no-wrap
+msgid ""
+"fs-backoffice role:Primary\n"
+"  disk:UpToDate\n"
+"  peer role:Secondary\n"
+"    replication:Established peer-disk:UpToDate\n"
+"\t      "
+msgstr ""
+"fs-backoffice role:Primary\n"
+"  disk:UpToDate\n"
+"  peer role:Secondary\n"
+"    replication:Established peer-disk:UpToDate\n"
+"\t      "
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"For example, the non-verbose output for a resource with only one connection "
+"and only one volume could look like this: <placeholder type=\"programlisting"
+"\" id=\"0\"/>"
+msgstr ""
+"たとえば、1 つの接続と1 つのボリュームのみを持つリソースの出力は、次のように"
+"なる。<placeholder type=\"programlisting\" id=\"0\"/>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><programlisting>
+#, no-wrap
+msgid ""
+"fs-data role:Primary suspended:no\n"
+"    write-ordering:drain\n"
+"  volume:0 minor:1 disk:UpToDate\n"
+"      size:10616472 read:134465 written:144800 al-writes:18 bm-writes:0\n"
+"      upper-pending:0 lower-pending:0 al-suspended:no blocked:no\n"
+"  peer connection:Connected role:Secondary congested:no\n"
+"    volume:0 replication:Established peer-disk:UpToDate resync-suspended:no\n"
+"        received:122596 sent:22204 out-of-sync:0 pending:0 unacked:0\n"
+"\t      "
+msgstr ""
+"fs-data role:Primary suspended:no\n"
+"    write-ordering:drain\n"
+"  volume:0 minor:1 disk:UpToDate\n"
+"      size:10616472 read:134465 written:144800 al-writes:18 bm-writes:0\n"
+"      upper-pending:0 lower-pending:0 al-suspended:no blocked:no\n"
+"  peer connection:Connected role:Secondary congested:no\n"
+"    volume:0 replication:Established peer-disk:UpToDate resync-suspended:no\n"
+"        received:122596 sent:22204 out-of-sync:0 pending:0 unacked:0\n"
+"\t      "
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"With the <option>--verbose</option> <option>--statistics</option> options, "
+"the same resource could be reported as: <placeholder type=\"programlisting\" "
+"id=\"0\"/>"
+msgstr ""
+"<option>--verbose</option> と <option>--statistics</option> を使用すると, 同"
+"じリソースは次のように出力される:<placeholder type=\"programlisting\" id="
+"\"0\"/>"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "events2"
+msgstr "events2"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Show the current state of all configured DRBD objects, followed by all "
+"changes to the state."
+msgstr ""
+"設定されたすべての DRBD オブジェクトの現在の状態、状態へのすべての変更を表示"
+"する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"The output format is meant to be human as well as machine readable.  Each "
+"line starts with the event number, which is followed by an asterisk if the "
+"event continues in the next line.  The second word in each line indicates "
+"the kind of event: <option>exists</option> for an existing object; "
+"<option>create</option>, <option>destroy</option>, and <option>change</"
+"option> if an object is created, destroyed, or changed; or <option>call</"
+"option> or <option>response</option> if an event handler is called or it "
+"returns.  The third word indicates the object the event applies to: "
+"<option>resource</option>, <option>device</option>, <option>connection</"
+"option>, <option>peer-device</option>, <option>helper</option>, or a dash "
+"(<option>-</option>) to indicate that the current state has been dumped "
+"completely."
+msgstr ""
+"出力形式は、機械だけでなく人も読める形式である。各行はイベント番号で始まり、"
+"イベントが次の行に続く場合はアスタリスクが続く。各行の 2 番目の単語は、イベン"
+"トの種類を示す: 既存オブジェクトの <option>exists</option>; オブジェクトが作"
+"成、破棄、変更された場合 <option>create</option>, <option>destroy</option>, "
+"<option>change</option>; イベントハンドラが呼び出された、戻った場合 "
+"<option>call</option>, <option>response</option> である。第 3 の単語は、イベ"
+"ントが適用されるオブジェクトを示す: <option>resource</option>, "
+"<option>device</option>, <option>connection</option>, <option>peer-device</"
+"option>, <option>helper</option>, 現在の状態が完全にダンプされたことを示すた"
+"めの dash (<option>-</option>)"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><term>
+msgid "<option>--now</option>"
+msgstr "<option>--now</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"Terminate after reporting the current state.  The default is to continuously "
+"listen and report state changes."
+msgstr ""
+"現在の状態を報告した後に終了する。デフォルトでは、継続的に監視し、状態の変化"
+"を報告する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><listitem><para>
+msgid "Include statistics in the output."
+msgstr "統計情報を出力に含める。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"The remaining words identify the object and describe the state that he "
+"object is in.  Available options: <placeholder type=\"variablelist\" id="
+"\"0\"/>"
+msgstr ""
+"残りの単語はオブジェクトを識別し、オブジェクトが入っている状態を記述する。利"
+"用可能なオプション: <placeholder type=\"variablelist\" id=\"0\"/>"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "events"
+msgstr "events"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid "Deprecated. If possible, change to the events2 subcommand instead."
+msgstr "推奨しない。可能であれば、events2 サブコマンドに変更する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><term>
+msgid "<option>--all-devices</option>"
+msgstr "<option>--all-devices</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><listitem><para>
+msgid "Display the events of all DRBD minors."
+msgstr "すべての DRBD デバイスの状態を表示する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><term>
+msgid "<option>--unfiltered</option>"
+msgstr "<option>--unfiltered</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"This is a debugging aid that displays the content of all received netlink "
+"messages."
+msgstr ""
+"このオプションはデバッグ用である。すべてのネットリンクレイやの受信メッセージ"
+"の内容を表示する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Displays every state change of DRBD and all calls to helper programs. This "
+"might be used to get notified of DRBD's state changes by piping the output "
+"to another program.  <placeholder type=\"variablelist\" id=\"0\"/>"
+msgstr ""
+"DRBD のすべての状態変化とヘルパープログラムの呼び出し経緯を表示する。このコマ"
+"ンドは、DRBD の状態変化を他のプログラムにパイプで渡したいときに利用できる。"
+"<placeholder type=\"variablelist\" id=\"0\"/>"
+
+#. type: Content of: <refentry><refsect1><refsect2><indexterm><secondary>
+msgid "new-current-uuid"
+msgstr "new-current-uuid"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Generates a new current UUID and rotates all other UUID values. This has at "
+"least two use cases, namely to skip the initial sync, and to reduce network "
+"bandwidth when starting in a single node configuration and then later "
+"(re-)integrating a remote site."
+msgstr ""
+"現在 UUID を生成して、他のすべての UUID をローテートする。このコマンドには 2 "
+"通りの利用シーンが考えられる。まず、初期同期を省略する際に利用する。また、 1 "
+"台で設定を行った後遠隔サイトに運搬することにより帯域幅を節約するためにも利用"
+"できる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><term>
+msgid "<option>--clear-bitmap</option>"
+msgstr "<option>--clear-bitmap</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><variablelist><varlistentry><listitem><para>
+msgid "Clears the sync bitmap in addition to generating a new current UUID."
+msgstr "現在 UUID を生成すると同時に同期ビットマップをクリアする。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid "Available option: <placeholder type=\"variablelist\" id=\"0\"/>"
+msgstr "利用可能なオプション: <placeholder type=\"variablelist\" id=\"0\"/>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><orderedlist><listitem><simpara>
+msgid ""
+"On <emphasis>both</emphasis> nodes, initialize meta data and configure the "
+"device."
+msgstr "両ノードでメタデータを初期化してデバイスを設定する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><orderedlist><listitem><simpara>
+msgid ""
+"<command moreinfo=\"none\">drbdadm -- --force create-md <replaceable>res</"
+"replaceable></command>"
+msgstr ""
+"<command moreinfo=\"none\">drbdadm -- --force create-md <replaceable>res</"
+"replaceable></command>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><orderedlist><listitem><simpara>
+msgid "They need to do the initial handshake, so they know their sizes."
+msgstr "それぞれのサイズを知るために初期ハンドシェークが必要となる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><orderedlist><listitem><simpara>
+msgid ""
+"<command moreinfo=\"none\">drbdadm up <replaceable>res</replaceable></"
+"command>"
+msgstr ""
+"<command moreinfo=\"none\">drbdadm up <replaceable>res</replaceable></"
+"command>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><orderedlist><listitem><simpara>
+msgid ""
+"They are now Connected Secondary/Secondary Inconsistent/Inconsistent.  "
+"Generate a new current-uuid and clear the dirty bitmap."
+msgstr ""
+"Secondary/Secondary Inconsistent/Inconsistent の状態で接続される。新しい現在 "
+"UUID を作りダーティなビットマップをクリアする。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><orderedlist><listitem><simpara>
+msgid ""
+"<command moreinfo=\"none\">drbdadm new-current-uuid --clear-bitmap "
+"<replaceable>res</replaceable></command>"
+msgstr ""
+"<command moreinfo=\"none\">drbdadm new-current-uuid --clear-bitmap "
+"<replaceable>res</replaceable></command>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><orderedlist><listitem><simpara>
+msgid ""
+"They are now Connected Secondary/Secondary UpToDate/UpToDate. Make one side "
+"primary and create a file system."
+msgstr ""
+"Secondary/Secondary UpToDate/UpToDate の状態で接続される。片方をプライマリに"
+"切り替えてファイルシステムを作成する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><orderedlist><listitem><simpara>
+msgid ""
+"<command moreinfo=\"none\">drbdadm primary <replaceable>res</replaceable></"
+"command>"
+msgstr ""
+"<command moreinfo=\"none\">drbdadm primary <replaceable>res</replaceable></"
+"command>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><orderedlist><listitem><simpara>
+msgid ""
+"<command moreinfo=\"none\">mkfs -t <replaceable>fs-type</replaceable> "
+"$(drbdadm sh-dev <replaceable>res</replaceable>)</command>"
+msgstr ""
+"<command moreinfo=\"none\">mkfs -t <replaceable>fs-type</replaceable> "
+"$(drbdadm sh-dev <replaceable>res</replaceable>)</command>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"This can be used to skip the initial sync, if you want to start from "
+"scratch. This use-case does only work on \"Just Created\" meta data. "
+"Necessary steps: <placeholder type=\"orderedlist\" id=\"0\"/>"
+msgstr ""
+"このオプションは、ゼロから新規に構築する際に初期同期を省略するために使用す"
+"る。この方法は、作ったばかりのメタデータに対して効果がある。必要なステップは"
+"以下のとおり:<placeholder type=\"orderedlist\" id=\"0\"/>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"One obvious side-effect is that the replica is full of old garbage (unless "
+"you made them identical using other means), so any online-verify is expected "
+"to find any number of out-of-sync blocks."
+msgstr ""
+"この方法の明らかな欠点は、別の方法でディスク内容を同一にしない限り、複製物全"
+"体に古いゴミのデータが残ることである。このため、オンライン照合は多数の非同期"
+"ブロックを見出してしまう。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"<emphasis>You must not use this on pre-existing data!</emphasis> Even though "
+"it may appear to work at first glance, once you switch to the other node, "
+"your data is toast, as it never got replicated. So <emphasis>do not leave "
+"out the mkfs</emphasis> (or equivalent)."
+msgstr ""
+"<emphasis>この方法は、すでにデータのあるディスクに適用してはならない！</"
+"emphasis> 最初は動作しているように見えても、ノードの切り替えを行うとデータが"
+"壊れてしまい二度と使えなくなる。そのため、<emphasis>mkfs を省略してはならない"
+"</emphasis>　(またはそれに相当する操作)。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"This can also be used to shorten the initial resync of a cluster where the "
+"second node is added after the first node is gone into production, by means "
+"of disk shipping. This use-case works on disconnected devices only, the "
+"device may be in primary or secondary role."
+msgstr ""
+"このコマンドは、最初のノードを本稼働させた後でディスク自体を 2 番目のノードに"
+"移すという手法により、クラスタの初期化時間を短縮する目的にも適用できる。この"
+"方法は、切断されたデバイスに対してのみ有効である。デバイスのロールはプライマ"
+"リでもセカンダリでもよい。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><orderedlist><listitem><simpara>
+msgid ""
+"<command moreinfo=\"none\">drbdsetup new-current-uuid --clear-bitmap "
+"<replaceable>minor</replaceable> </command>"
+msgstr ""
+"<command moreinfo=\"none\">drbdsetup new-current-uuid --clear-bitmap "
+"<replaceable>minor</replaceable> </command>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><orderedlist><listitem><simpara>
+msgid ""
+"Take the copy of the current active server. E.g. by pulling a disk out of "
+"the RAID1 controller, or by copying with dd. You need to copy the actual "
+"data, and the meta data."
+msgstr ""
+"現在のアクティブなサーバのディスクをコピーする。たとえば RAID1 コントローラ配"
+"下のディスクを 1 本抜く、 dd でコピーするなど。実際のデータ領域とメタデータの"
+"両方をコピーする必要がある。"
+
+#. type: Content of: <refentry><refsect1><refsect2><para><orderedlist><listitem><simpara>
+msgid ""
+"<command moreinfo=\"none\">drbdsetup new-current-uuid <replaceable>minor</"
+"replaceable> </command>"
+msgstr ""
+"<command moreinfo=\"none\">drbdsetup new-current-uuid <replaceable>minor</"
+"replaceable> </command>"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"The necessary steps on the current active server are: <placeholder type="
+"\"orderedlist\" id=\"0\"/> Now add the disk to the new secondary node, and "
+"join it to the cluster. You will get a resync of that parts that were "
+"changed since the first call to <command moreinfo=\"none\">drbdsetup</"
+"command> in step 1."
+msgstr ""
+"必要なステップは以下のとおり:<placeholder type=\"orderedlist\" id=\"0\"/>この"
+"ディスクをセカンダリのノードに挿入してクラスタに参加させる。ステップ 1 での "
+"<command moreinfo=\"none\">drbdsetup</command> の実行以降に変更した箇所の再同"
+"期が行われる。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Examples"
+msgstr "Examples"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"For examples, please have a look at the <ulink url=\"http://www.drbd.org/"
+"users-guide/\"><citetitle>DRBD User's Guide</citetitle></ulink>."
+msgstr ""
+"詳しくは DRBD ユーザーズガイド <ulink url=\"http://www.drbd.org/users-guide/"
+"\"><citetitle>DRBD User's Guide</citetitle></ulink> を参照。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Version"
+msgstr "Version"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid "This document was revised for version 8.3.2 of the DRBD distribution."
+msgstr "このドキュメントは DRBD バージョン 8.3.2 向けに改訂されている。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Author"
+msgstr "Author"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid ""
+"Written by Philipp Reisner <email>philipp.reisner@linbit.com</email> and "
+"Lars Ellenberg <email>lars.ellenberg@linbit.com</email>"
+msgstr ""
+"Written by Philipp Reisner <email>philipp.reisner@linbit.com</email> and "
+"Lars Ellenberg <email>lars.ellenberg@linbit.com</email>"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Reporting Bugs"
+msgstr "Reporting Bugs"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid "Report bugs to <email>drbd-user@lists.linbit.com</email>."
+msgstr "Report bugs to <email>drbd-user@lists.linbit.com</email>."
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Copyright"
+msgstr "Copyright"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid ""
+"Copyright 2001-2008 LINBIT Information Technologies, Philipp Reisner, Lars "
+"Ellenberg.  This is free software; see the source for copying conditions. "
+"There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A "
+"PARTICULAR PURPOSE."
+msgstr ""
+"Copyright 2001-2008 LINBIT Information Technologies, Philipp Reisner, Lars "
+"Ellenberg.  This is free software; see the source for copying conditions. "
+"There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A "
+"PARTICULAR PURPOSE."
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "See Also"
+msgstr "See Also"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"<citerefentry> <refentrytitle>drbd.conf</refentrytitle> <manvolnum>5</"
+"manvolnum> </citerefentry>, <citerefentry> <refentrytitle>drbd</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry>, <citerefentry> "
+"<refentrytitle>drbddisk</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry>, <citerefentry> <refentrytitle>drbdadm</refentrytitle> "
+"<manvolnum>8</manvolnum> </citerefentry>, <ulink url=\"http://www.drbd.org/"
+"users-guide/\"><citetitle>DRBD User's Guide</citetitle></ulink>, <ulink url="
+"\"http://www.drbd.org/\"><citetitle>DRBD web site</citetitle></ulink>"
+msgstr ""
+"<citerefentry> <refentrytitle>drbd.conf</refentrytitle> <manvolnum>5</"
+"manvolnum> </citerefentry>, <citerefentry> <refentrytitle>drbd</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry>, <citerefentry> "
+"<refentrytitle>drbddisk</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry>, <citerefentry> <refentrytitle>drbdadm</refentrytitle> "
+"<manvolnum>8</manvolnum> </citerefentry>, <ulink url=\"http://www.drbd.org/"
+"users-guide/\"><citetitle>DRBD User's Guide</citetitle></ulink>, <ulink url="
+"\"http://www.drbd.org/\"><citetitle>DRBD web site</citetitle></ulink>"

@@ -1,0 +1,150 @@
+# SOME DESCRIPTIVE TITLE
+# Copyright (C) YEAR Free Software Foundation, Inc.
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: 2018-11-02 13:05+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. type: Content of: <refentry><refmeta><refentrytitle>
+msgid "drbddisk"
+msgstr "drbddisk"
+
+#. type: Content of: <refentry><refnamediv><refpurpose>
+msgid "Script to mark devices as primary and mount file systems"
+msgstr "デバイスをプライマリに設定し、ファイルシステムをマウントするスクリプト"
+
+#. type: Content of: <refentry><refentryinfo>
+msgid ""
+"<date>15 Oct 2008</date> <productname>DRBD</productname> "
+"<productnumber>8.3.2</productnumber>"
+msgstr ""
+"<date>15 Oct 2008</date> <productname>DRBD</productname> "
+"<productnumber>8.3.2</productnumber>"
+
+#. type: Content of: <refentry><refmeta><manvolnum>
+msgid "8"
+msgstr "8"
+
+#. type: Content of: <refentry><refmeta><refmiscinfo>
+msgid "System Administration"
+msgstr "System Administration"
+
+#. type: Content of: <refentry><refsynopsisdiv><cmdsynopsis>
+msgid ""
+"<command moreinfo=\"none\">/etc/ha.d/resource.d/drbddisk</command> <arg "
+"choice=\"opt\" rep=\"norepeat\"> <replaceable>resource</replaceable> </arg> "
+"<arg choice=\"req\" rep=\"norepeat\"> <group choice=\"plain\" rep=\"norepeat"
+"\"> <arg choice=\"req\" rep=\"norepeat\">start</arg> <arg choice=\"req\" rep="
+"\"norepeat\">stop</arg> <arg choice=\"req\" rep=\"norepeat\">status</arg> </"
+"group> </arg>"
+msgstr ""
+"<command moreinfo=\"none\">/etc/ha.d/resource.d/drbddisk</command> <arg "
+"choice=\"opt\" rep=\"norepeat\"> <replaceable>resource</replaceable> </arg> "
+"<arg choice=\"req\" rep=\"norepeat\"> <group choice=\"plain\" rep=\"norepeat"
+"\"> <arg choice=\"req\" rep=\"norepeat\">start</arg> <arg choice=\"req\" rep="
+"\"norepeat\">stop</arg> <arg choice=\"req\" rep=\"norepeat\">status</arg> </"
+"group> </arg>"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Introduction"
+msgstr "Introduction"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"The <option>/etc/ha.d/resource.d/drbddisk</option> script brings the local "
+"device of <replaceable>resource</replaceable> into primary role. It is "
+"designed to be used by Heartbeat."
+msgstr ""
+"<option>/etc/ha.d/resource.d/drbddisk</option> スクリプトは、"
+"<replaceable>resource</replaceable> のローカルデバイスをプライマリに設定す"
+"る。ハートビートで使用するように設計されている。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"In order to use <option>/etc/ha.d/resource.d/drbddisk</option> you must "
+"define a resource, a host, and any other configuration options in the DRBD "
+"configuration file.  See <option>/etc/drbd.conf</option> for details.  If "
+"<replaceable>resource</replaceable> is omitted, then all of the resources "
+"listed in the config file are affected."
+msgstr ""
+"<option>/etc/ha.d/resource.d/drbddisk</option> を使用するには、 drbd 構成ファ"
+"イルにリソース、ホスト、その他の設定オプションを定義する必要がある。詳細につ"
+"いては <option>/etc/drbd.conf</option> を参照。<replaceable>resource</"
+"replaceable> を省略すると、構成ファイルにリストされているすべてのリソースが影"
+"響を受ける。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Version"
+msgstr "Version"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid "This document was revised for version 8.0.14 of the DRBD distribution."
+msgstr "This document was revised for version 8.0.14 of the DRBD distribution."
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Author"
+msgstr "Author"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid ""
+"Written by Philipp Reisner <email>philipp.reisner@linbit.com</email> and "
+"Lars Ellenberg <email>lars.ellenberg@linbit.com</email>."
+msgstr ""
+"Written by Philipp Reisner <email>philipp.reisner@linbit.com</email> and "
+"Lars Ellenberg <email>lars.ellenberg@linbit.com</email>."
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Reporting Bugs"
+msgstr "Reporting Bugs"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid "Report bugs to <email>drbd-user@lists.linbit.com</email>."
+msgstr "Report bugs to <email>drbd-user@lists.linbit.com</email>."
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Copyright"
+msgstr "Copyright"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid ""
+"Copyright 2001-2008 LINBIT Information Technologies, Philipp Reisner, Lars "
+"Ellenberg. This is free software; see the source for copying conditions.  "
+"There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A "
+"PARTICULAR PURPOSE."
+msgstr ""
+"Copyright 2001-2008 LINBIT Information Technologies, Philipp Reisner, Lars "
+"Ellenberg. This is free software; see the source for copying conditions.  "
+"There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A "
+"PARTICULAR PURPOSE."
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "See Also"
+msgstr "See Also"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"<citerefentry><refentrytitle>drbd.conf</refentrytitle><manvolnum>5</"
+"manvolnum></citerefentry>, <citerefentry><refentrytitle>drbd</"
+"refentrytitle><manvolnum>8</manvolnum></citerefentry>, "
+"<citerefentry><refentrytitle>drbdsetup</refentrytitle><manvolnum>8</"
+"manvolnum></citerefentry><citerefentry><refentrytitle>drbdadm</"
+"refentrytitle><manvolnum>8</manvolnum></citerefentry><ulink url=\"http://www."
+"drbd.org/\"><citetitle>DRBD Homepage</citetitle></ulink>"
+msgstr ""
+"<citerefentry><refentrytitle>drbd.conf</refentrytitle><manvolnum>5</"
+"manvolnum></citerefentry>, <citerefentry><refentrytitle>drbd</"
+"refentrytitle><manvolnum>8</manvolnum></citerefentry>, "
+"<citerefentry><refentrytitle>drbdsetup</refentrytitle><manvolnum>8</"
+"manvolnum></citerefentry><citerefentry><refentrytitle>drbdadm</"
+"refentrytitle><manvolnum>8</manvolnum></citerefentry><ulink url=\"http://www."
+"drbd.org/\"><citetitle>DRBD Homepage</citetitle></ulink>"

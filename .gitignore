@@ -40,19 +40,33 @@ user/v84/Makefile
 user/windrbd/.*.d
 user/windrbd/Makefile
 
-documentation/v9/Makefile
 documentation/v9/drbd.8
 documentation/v9/drbd.conf.5
 documentation/v9/drbdadm.8
 documentation/v9/drbddisk.8
 documentation/v9/drbdmeta.8
+documentation/v9/drbdmon.8
 documentation/v9/drbdsetup.8
 documentation/v9/manpage.links
 documentation/v9/manpage.refs
 documentation/v9/drbdsetup_*.xml
 documentation/v9/drbd.conf.xml
 documentation/v9/drbdsetup.xml
+documentation/v9/*.pot
 
-documentation/v84/*.xml
+documentation/v84/drbdsetup_*.xml
+documentation/v84/*.5
 documentation/v84/*.8
-documentation/v84/Makefile
+documentation/v84/*.pot
+
+documentation/common/Makefile_v84_com
+documentation/common/Makefile_v9_com
+
+documentation/ja/v84/*.xml
+documentation/ja/v84/*.5
+documentation/ja/v84/*.8
+
+documentation/ja/v9/*.xml
+documentation/ja/v9/*.xml.in
+documentation/ja/v9/*.5
+documentation/ja/v9/*.8

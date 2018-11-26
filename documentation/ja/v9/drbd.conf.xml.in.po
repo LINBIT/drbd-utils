@@ -1,0 +1,1494 @@
+# SOME DESCRIPTIVE TITLE
+# Copyright (C) YEAR Free Software Foundation, Inc.
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: 2018-11-02 13:06+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. type: Content of: <refentry><refentryinfo>
+msgid ""
+"<date>17 January 2018</date> <productname>DRBD</productname> "
+"<productnumber>9.0.x</productnumber>"
+msgstr ""
+"<date>17 January 2018</date> <productname>DRBD</productname> "
+"<productnumber>9.0.x</productnumber>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><primary>
+msgid "drbd.conf"
+msgstr "drbd.conf"
+
+#. type: Content of: <refentry><refmeta><manvolnum>
+msgid "5"
+msgstr "5"
+
+#. type: Content of: <refentry><refmeta><refmiscinfo>
+msgid "Configuration Files"
+msgstr "Configuration Files"
+
+#. type: Content of: <refentry><refnamediv><refpurpose>
+msgid "DRBD Configuration Files<placeholder type=\"indexterm\" id=\"0\"/>"
+msgstr "DRBD 構成ファイル<placeholder type=\"indexterm\" id=\"0\"/>"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Introduction"
+msgstr "Introduction"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"DRBD implements block devices which replicate their data to all nodes of a "
+"cluster.  The actual data and associated metadata are usually stored "
+"redundantly on \"ordinary\" block devices on each cluster node."
+msgstr ""
+"DRBD は、データをクラスタのすべてのノードに複製するブロックデバイスを実装す"
+"る。実際のデータおよび関連するメタデータは、通常、各クラスタノードの「通常"
+"の」ブロックデバイスに格納される。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"Replicated block devices are called <option>/dev/drbd<replaceable>minor</"
+"replaceable></option> by default. They are grouped into resources, with one "
+"or more devices per resource.  Replication among the devices in a resource "
+"takes place in chronological order. With DRBD, we refer to the devices "
+"inside a resource as <emphasis>volumes</emphasis>."
+msgstr ""
+"複製されたブロックデバイスは、 デフォルトで <option>/dev/"
+"drbd<replaceable>minor</replaceable></option> で呼ばれる。それらはリソースに"
+"グループ化され、リソースごとに 1 つ以上のデバイスが含まる。リソース内のデバイ"
+"ス間のレプリケーションは、時間順に行われる。DRBD では、リソース内のデバイス"
+"を <emphasis>volumes</emphasis> で参照する。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"In DRBD 9, a resource can be replicated between two or more cluster nodes.  "
+"The connections between cluster nodes are point-to-point links, and use TCP "
+"or a TCP-like protocol.  All nodes must be directly connected."
+msgstr ""
+"DRBD 9 では、2 つ以上のクラスタノード間でリソースを複製できる。クラスタノード"
+"間の接続はポイントツーポイントリンクであり、TCP または TCP のようなプロトコル"
+"を使用する。すべてのノードを直接接続する必要がある。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"DRBD consists of low-level user-space components which interact with the "
+"kernel and perform basic operations (<option>drbdsetup</option>, "
+"<option>drbdmeta</option>), a high-level user-space component which "
+"understands and processes the DRBD configuration and translates it into "
+"basic operations of the low-level components (<option>drbdadm</option>), and "
+"a kernel component."
+msgstr ""
+"DRBD は、カーネルと相互作用し、基本的な操作を実行する低レベルのユーザー空間コ"
+"ンポーネント （<option>drbdsetup</option>、 <option>drbdmeta</option>） 、"
+"DRBD の構成を理解、処理し、それを低レベルコンポーネントの基本操作に変換する高"
+"レベルのユーザー空間コンポーネント（<option>drbdadm</option>）、およびカーネ"
+"ルコンポーネントで構成される。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"The default DRBD configuration consists of <option>/etc/drbd.conf</option> "
+"and of additional files included from there, usually <option>global_common."
+"conf</option> and all <option><replaceable>*</replaceable>.res</option> "
+"files inside <option>/etc/drbd.d/</option>.  It has turned out to be useful "
+"to define each resource in a separate <option><replaceable>*</replaceable>."
+"res</option> file."
+msgstr ""
+"デフォルトの DRBD 構成は、 <option>/etc/drbd.conf</option> とそこからインク"
+"ルードされる追加のファイル、通常は、 <option>/etc/drbd.d/</option> の "
+"<option>global_common.conf</option>, すべての <option><replaceable>*</"
+"replaceable>.res</option> ファイルから成り立つ。各リソースを "
+"<option><replaceable>*</replaceable>.res</option> ファイルで別々に定義するこ"
+"とは有用である。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"The configuration files are designed so that each cluster node can contain "
+"an identical copy of the entire cluster configuration. The host name of each "
+"node determines which parts of the configuration apply (<option>uname -n</"
+"option>).  It is highly recommended to keep the cluster configuration on all "
+"nodes in sync by manually copying it to all nodes, or by automating the "
+"process with <option>csync2</option> or a similar tool."
+msgstr ""
+"構成ファイルは、各クラスタノードがクラスタ構成全体で同一のコピーを含むことが"
+"できるように設計されている。各ノードのホスト名によって、構成のどの部分が適用"
+"されるかが決まる<option>uname -n</option>）。すべてのノードのクラスタ構成を同"
+"期させておくことを推奨する。手動でノードをすべてのノードにコピーするか、 "
+"<option>csync2</option> または同様のツールそ使用する。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Example Configuration File"
+msgstr "設定ファイルの例"
+
+#. type: Content of: <refentry><refsect1><para><programlisting>
+#, no-wrap
+msgid ""
+"global {\n"
+"\tusage-count yes;\n"
+"\tudev-always-use-vnr;\n"
+"}\n"
+"resource r0 {\n"
+"      net {\n"
+"\t      cram-hmac-alg sha1;\n"
+"\t      shared-secret \"FooFunFactory\";\n"
+"      }\n"
+"      volume 0 {\n"
+"\t      device    /dev/drbd1;\n"
+"\t      disk      /dev/sda7;\n"
+"\t      meta-disk internal;\n"
+"      }\n"
+"      on alice {\n"
+"\t      node-id   0;\n"
+"\t      address   10.1.1.31:7000;\n"
+"      }\n"
+"      on bob {\n"
+"\t      node-id   1;\n"
+"\t      address   10.1.1.32:7000;\n"
+"      }\n"
+"      connection {\n"
+"\t      host      alice  port 7000;\n"
+"\t      host      bob    port 7000;\n"
+"\t      net {\n"
+"\t\t\tprotocol C;\n"
+"\t      }\n"
+"      }\n"
+"}"
+msgstr ""
+"global {\n"
+"\tusage-count yes;\n"
+"\tudev-always-use-vnr;\n"
+"}\n"
+"resource r0 {\n"
+"      net {\n"
+"\t      cram-hmac-alg sha1;\n"
+"\t      shared-secret \"FooFunFactory\";\n"
+"      }\n"
+"      volume 0 {\n"
+"\t      device    /dev/drbd1;\n"
+"\t      disk      /dev/sda7;\n"
+"\t      meta-disk internal;\n"
+"      }\n"
+"      on alice {\n"
+"\t      node-id   0;\n"
+"\t      address   10.1.1.31:7000;\n"
+"      }\n"
+"      on bob {\n"
+"\t      node-id   1;\n"
+"\t      address   10.1.1.32:7000;\n"
+"      }\n"
+"      connection {\n"
+"\t      host      alice  port 7000;\n"
+"\t      host      bob    port 7000;\n"
+"\t      net {\n"
+"\t\t\tprotocol C;\n"
+"\t      }\n"
+"      }\n"
+"}"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"<placeholder type=\"programlisting\" id=\"0\"/> This example defines a "
+"resource <option>r0</option> which contains a single replicated device with "
+"volume number 0.  The resource is replicated among hosts <option>alice</"
+"option> and <option>bob</option>, which have the IPv4 addresses "
+"<option>10.1.1.31</option> and <option>10.1.1.32</option> and the node "
+"identifiers 0 and 1, respectively.  On both hosts, the replicated device is "
+"called <option>/dev/drbd1</option>, and the actual data and metadata are "
+"stored on the lower-level device <option>/dev/sda7</option>.  The connection "
+"between the hosts uses protocol C."
+msgstr ""
+"<placeholder type=\"programlisting\" id=\"0\"/>この例では、ボリューム番号が "
+"0 の単一の複製デバイスが含まれるリソース <option>r0</option> を定義する。この"
+"リソースは、ホスト <option>alice</option>, <option>bob</option> 間で複製さ"
+"れ、それぞれ IPv4 アドレス <option>10.1.1.31</option>, <option>10.1.1.32</"
+"option>、ノード識別子 0, 1 を持つ。両方のホストで複製されたデバイスは "
+"<option>/dev/drbd1</option> で呼び出され、実際のデータとメタデータは下位のデ"
+"バイス <option>/dev/sda7</option> に格納される。ホスト間の接続はプロトコル C "
+"を使用する。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"Please refer to the <ulink url=\"http://www.drbd.org/users-guide/"
+"\"><citetitle>DRBD User's Guide</citetitle></ulink> for more examples."
+msgstr ""
+"詳しくは <ulink url=\"http://www.drbd.org/users-guide/\"><citetitle>DRBD "
+"User's Guide</citetitle></ulink> を参照。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "File Format"
+msgstr "File Format"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"DRBD configuration files consist of sections, which contain other sections "
+"and parameters depending on the section types. Each section consists of one "
+"or more keywords, sometimes a section name, an opening brace (<quote>{</"
+"quote>), the section's contents, and a closing brace (<quote>}</quote>). "
+"Parameters inside a section consist of a keyword, followed by one or more "
+"keywords or values, and a semicolon (<quote>;</quote>)."
+msgstr ""
+"DRBD 構成ファイルはセクションで構成され、セクションには他のセクションとパラ"
+"メータが含まれる。各セクションは、1 つ以上のキーワード、場合によってはセク"
+"ション名、開始ブレース（<quote>{</quote>）、セクションの内容、および閉じ括弧"
+"（<quote>}</quote>） で構成される。セクション内のパラメータは、キーワード、1 "
+"つ以上のキーワードまたは値、セミコロン（<quote>;</quote>） で構成される。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"Some parameter values have a default scale which applies when a plain number "
+"is specified (for example Kilo, or 1024 times the numeric value).  Such "
+"default scales can be overridden by using a suffix (for example, <option>M</"
+"option> for Mega).  The common suffixes <option>K</option> = 2^10 = 1024, "
+"<option>M</option> = 1024 K, and <option>G</option> = 1024 M are supported."
+msgstr ""
+"一部のパラメータ値には、素の数値が指定されたときに適用されるデフォルトのス"
+"ケールがある（たとえば、Kilo は数値の1024倍）。このようなデフォルトのスケール"
+"は、接尾辞を使用して上書きすることができる。（メガの場合は M）。共通の接尾語 "
+"K = 2^10 = 1024, M = 1024 K, G = 1024 M はサポートされている。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"Comments start with a hash sign (<quote>#</quote>) and extend to the end of "
+"the line. In addition, any section can be prefixed with the keyword "
+"<option>skip</option>, which causes the section and any sub-sections to be "
+"ignored."
+msgstr ""
+"コメントはハッシュ記号で始まり（<quote>＃</quote>）、行の最後までコメントとみ"
+"なされる。さらに、どのセクションにもキーワード <option>skip</option> 接頭辞を"
+"付けることができ、セクションおよびすべてのサブセクションを無効にするのに使用"
+"できる。。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"Additional files can be included with the <option>include <replaceable>file-"
+"pattern</replaceable></option> statement (see "
+"<citerefentry><refentrytitle>glob</refentrytitle><manvolnum>7</manvolnum></"
+"citerefentry> for the expressions supported in <replaceable>file-pattern</"
+"replaceable>).  Include statements are only allowed outside of sections."
+msgstr ""
+"追加ファイルは <option>include <replaceable>file-pattern</replaceable></"
+"option> キーワードでインクルードできる。サポートされている形式は "
+"<citerefentry><refentrytitle>glob</refentrytitle><manvolnum>7</manvolnum></"
+"citerefentry> マニュアルを参照。インクルード形式はセクションの外部でのみ許可"
+"される。"
+
+#. type: Content of: <refentry><refsect1><para><programlisting>
+#, no-wrap
+msgid ""
+"common\n"
+"   [disk]\n"
+"   [handlers]\n"
+"   [net]\n"
+"   [options]\n"
+"   [startup]\n"
+"global\n"
+"resource\n"
+"   connection\n"
+"      path\n"
+"      net\n"
+"        volume\n"
+"           peer-device-options\n"
+"      [peer-device-options]\n"
+"   connection-mesh\n"
+"      net\n"
+"   [disk]\n"
+"   floating\n"
+"   handlers\n"
+"   [net]\n"
+"   on\n"
+"      volume\n"
+"         disk\n"
+"         [disk]\n"
+"   options\n"
+"   stacked-on-top-of\n"
+"   startup"
+msgstr ""
+"common\n"
+"   [disk]\n"
+"   [handlers]\n"
+"   [net]\n"
+"   [options]\n"
+"   [startup]\n"
+"global\n"
+"resource\n"
+"   connection\n"
+"      path\n"
+"      net\n"
+"        volume\n"
+"           peer-device-options\n"
+"      [peer-device-options]\n"
+"   connection-mesh\n"
+"      net\n"
+"   [disk]\n"
+"   floating\n"
+"   handlers\n"
+"   [net]\n"
+"   on\n"
+"      volume\n"
+"         disk\n"
+"         [disk]\n"
+"   options\n"
+"   stacked-on-top-of\n"
+"   startup"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"The following sections are defined (indentation indicates in which context): "
+"<placeholder type=\"programlisting\" id=\"0\"/> Sections in brackets affect "
+"other parts of the configuration: inside the <option>common</option> "
+"section, they apply to all resources. A <option>disk</option> section inside "
+"a <option>resource</option> or <option>on</option> section applies to all "
+"volumes of that resource, and a <option>net</option> section inside a "
+"<option>resource</option> section applies to all connections of that "
+"resource. This allows to avoid repeating identical options for each "
+"resource, connection, or volume. Options can be overridden in a more "
+"specific <option>resource</option>, <option>connection</option>, <option>on</"
+"option>, or <option>volume</option> section."
+msgstr ""
+"次のセクションが定義されている（インデントはどのコンテキストにあるかを示"
+"す）。<placeholder type=\"programlisting\" id=\"0\"/>角括弧 [] 内のセクション"
+"は、設定の他の部分にも影響する。 <option>common</option> セクションはすべての"
+"リソースに適用される。<option>resource</option> または <option>on</option> 内"
+"の <option>disk</option> セクションは、そのリソース内のすべてのボリュームに適"
+"用される。<option>resource</option> 内の<option>net</option> セクションはその"
+"リソースのすべての接続に適用される。これにより、各リソース、接続、またはボ"
+"リュームに対して同じオプションを繰り返すのを避けることができる。オプションは "
+"<option>resource</option>, <option>connection</option>, <option>on</option>, "
+"<option>volume</option> セクションでオーバーライドできる。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"<option>peer-device-options</option> are <option>resync-rate</option>, "
+"<option>c-plan-ahead</option>, <option>c-delay-target</option>, <option>c-"
+"fill-target</option>, <option>c-max-rate</option> and <option>c-min-rate</"
+"option>.  Due to backward comapatibility they can be specified in any disk "
+"options section as well.  They are inherited into all relevant connections. "
+"If they are given on <option>connection</option> level they are inherited to "
+"all volumes on that connection. A <option>peer-device-options</option> "
+"section is started with the <option>disk</option> keyword."
+msgstr ""
+"<option>peer-device-options</option> は <option>resync-rate</option>, "
+"<option>c-plan-ahead</option>, <option>c-delay-target</option>, <option>c-"
+"fill-target</option>, <option>c-max-rate</option>, <option>c-min-rate</"
+"option> のどれかである. 後方互換性のため、disk オプションセクションでも指定で"
+"きる。それらはすべての関連する接続に継​​承される。<option>connection</option> "
+"レベルでそれらが与えられた場合、その接続上のすべてのボリュームに継承される。"
+"<option>peer-device-options</option> セクションは <option>disk</option> キー"
+"ワードで始まる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "Sections"
+msgstr "セクション"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>common</option>"
+msgstr "<option>common</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "common"
+msgstr "common"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> This section can contain each a "
+"<option>disk</option>, <option>handlers</option>, <option>net</option>, "
+"<option>options</option>, and <option>startup</option> section. All "
+"resources inherit the parameters in these sections as their default values."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>このセクションには、<option>disk</"
+"option>, <option>handlers</option>, <option>net</option>, <option>options</"
+"option>, <option>startup</option> セクションが含まれる。すべてのリソースは、"
+"これらのセクションのパラメータをデフォルト値として継承する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>connection <replaceable><optional>name</optional></replaceable></"
+"option>"
+msgstr ""
+"<option>connection <replaceable><optional>name</optional></replaceable></"
+"option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "connection"
+msgstr "connection"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define a connection between two "
+"hosts. This section must contain two <option>host</option> parameters or "
+"multiple <option>path sections</option>.  The optional <replaceable>name</"
+"replaceable> is used to refer to the connection in the system log and in "
+"other messages. If no name is specified, the peer's host name is used "
+"instead."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>2 つのホスト間の接続を定義する。こ"
+"のセクションには、2 つの <option>host</option> パラメータまたは複数の"
+"<option>path sections</option> を含む必要がある。オプション "
+"<replaceable>name</replaceable> は、システムログやその他のメッセージの接続を"
+"参照するために使用する。name を指定しない場合、代わりに対向ノードのホスト名が"
+"使用される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>path</option>"
+msgstr "<option>path</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "path"
+msgstr "path"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define a path between two hosts. "
+"This section must contain two <option>host</option> parameters."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>2 つのホスト間のパスを定義する。こ"
+"のセクションには、2 つの <option>host</option> パラメータを含む必要がある。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>connection-mesh</option>"
+msgstr "<option>connection-mesh</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "connection-mesh"
+msgstr "connection-mesh"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define a connection mesh between "
+"multiple hosts. This section must contain a <option>hosts</option> "
+"parameter, which has the host names as arguments. This section is a shortcut "
+"to define many connections which share the same network options."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>複数のホスト間に接続網を定義する。"
+"このセクションは、 ホスト名を引数とする <option>hosts</option> パラメータを含"
+"む必要がある。このセクションは、同じネットワークオプションを共有する多くの接"
+"続を定義するためのショートカットである。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>disk</option>"
+msgstr "<option>disk</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "disk"
+msgstr "disk"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define parameters for a volume. "
+"All parameters in this section are optional."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>ボリュームのパラメータを定義する。"
+"このセクションのすべてのパラメータはオプションである。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>floating <replaceable><optional>address-family</optional></"
+"replaceable> <replaceable>addr</replaceable>:<replaceable>port</"
+"replaceable></option>"
+msgstr ""
+"<option>floating <replaceable><optional>address-family</optional></"
+"replaceable> <replaceable>addr</replaceable>:<replaceable>port</"
+"replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "floating"
+msgstr "floating"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Like the <option>on</option> "
+"section, except that instead of the host name a network address is used to "
+"determine if it matches a <option>floating</option> section."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/><option>on</option> と同様である"
+"が、ホスト名の代わりにネットワークアドレスが <option>floating</option> セク"
+"ションとマッチするかに使用される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The <option>node-id</option> parameter in this section is required.  If the "
+"<option>address</option> parameter is not provided, no connections to peers "
+"will be created by default.  The <option>device</option>, <option>disk</"
+"option>, and <option>meta-disk</option> parameters must be defined in, or "
+"inherited by, this section."
+msgstr ""
+"このセクションの <option>node-id</option> パラメータは必須である。"
+"<option>address</option> パラメータが指定されていない場合、デフォルトで対向"
+"ノードへの接続は作成されない。<option>device</option>, <option>disk</"
+"option>, <option>meta-disk</option> パラメータは定義もしくは継承されている必"
+"要がある。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>global</option>"
+msgstr "<option>global</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "global"
+msgstr "global"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define some global parameters.  "
+"All parameters in this section are optional.  Only one <option>global</"
+"option> section is allowed in the configuration."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>いくつかのグローバルパラメータを定"
+"義する。このセクションのすべてのパラメータはオプションである。"
+"<option>global</option> セクションは一回だけ記述できる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>handlers</option>"
+msgstr "<option>handlers</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "handlers"
+msgstr "handlers"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define handlers to be invoked "
+"when certain events occur. The kernel passes the resource name in the first "
+"command-line argument and sets the following environment variables depending "
+"on the event's context:"
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>特定のイベントが発生したときに呼び"
+"出されるハンドラを定義する。カーネルは、コマンドラインの最初の引数にリソース"
+"名を渡し、イベントのコンテキストに応じて次の環境変数を設定する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><itemizedlist><listitem><para>
+msgid ""
+"For events related to a particular device: the device's minor number in "
+"<option>DRBD_MINOR</option>, the device's volume number in "
+"<option>DRBD_VOLUME</option>."
+msgstr ""
+"特定のデバイスに関連するイベントの場合、デバイスのマイナー番号は "
+"<option>DRBD_MINOR</option>、デバイスのボリューム番号は <option>DRBD_VOLUME</"
+"option> に設定される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><itemizedlist><listitem><para>
+msgid ""
+"For events related to a particular device on a particular peer: the "
+"connection endpoints in <option>DRBD_MY_ADDRESS</option>, "
+"<option>DRBD_MY_AF</option>, <option>DRBD_PEER_ADDRESS</option>, and "
+"<option>DRBD_PEER_AF</option>; the device's local minor number in "
+"<option>DRBD_MINOR</option>, and the device's volume number in "
+"<option>DRBD_VOLUME</option>."
+msgstr ""
+"特定の対向ノード上の特定のデバイスに関連するイベントの場合、 "
+"<option>DRBD_MY_ADDRESS</option>, <option>DRBD_MY_AF</option>, "
+"<option>DRBD_PEER_ADDRESS</option>, <option>DRBD_PEER_AF</option>; デバイスの"
+"ローカルマイナー番号は <option>DRBD_MINOR</option>, デバイスのボリューム番号"
+"は <option>DRBD_VOLUME</option> に設定される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><itemizedlist><listitem><para>
+msgid ""
+"For events related to a particular connection: the connection endpoints in "
+"<option>DRBD_MY_ADDRESS</option>, <option>DRBD_MY_AF</option>, "
+"<option>DRBD_PEER_ADDRESS</option>, and <option>DRBD_PEER_AF</option>; and, "
+"for each device defined for that connection: the device's minor number in "
+"<option>DRBD_MINOR_<replaceable>volume-number</replaceable></option>."
+msgstr ""
+"特定の接続に関連するイベントの場合、接続エンドポイントは "
+"<option>DRBD_MY_ADDRESS</option>, <option>DRBD_MY_AF</option>, "
+"<option>DRBD_PEER_ADDRESS</option>, <option>DRBD_PEER_AF</option>; その接続用"
+"に定義された各デバイスについて、デバイスのマイナー番号は "
+"<option>DRBD_MINOR_<replaceable>volume-number</replaceable></option> に設定さ"
+"れる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><itemizedlist><listitem><para>
+msgid ""
+"For events that identify a device, if a lower-level device is attached, the "
+"lower-level device's device name is passed in <option>DRBD_BACKING_DEV</"
+"option> (or <option>DRBD_BACKING_DEV_<replaceable>volume-number</"
+"replaceable></option>)."
+msgstr ""
+"デバイスを識別するイベントの場合、下位デバイスが接続されている場合は、下位デ"
+"バイスのデバイス名が渡される <option>DRBD_BACKING_DEV</option> （または"
+"<option>DRBD_BACKING_DEV_<replaceable>volume-number</replaceable></"
+"option>）。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"All parameters in this section are optional. Only a single handler can be "
+"defined for each event; if no handler is defined, nothing will happen."
+msgstr ""
+"このセクションのすべてのパラメータはオプションである。イベントごとに 1 つのハ"
+"ンドラしか定義できない。ハンドラが定義されていなければ何も起こらない。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<anchor xml:id=\"net\"/><option>net</option>"
+msgstr "<anchor xml:id=\"net\"/><option>net</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "net"
+msgstr "net"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define parameters for a "
+"connection. All parameters in this section are optional."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>接続のパラメータを定義する。このセ"
+"クションのすべてのパラメータはオプションである。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>on</option> <option><replaceable>host-name</replaceable></option> "
+"<replaceable><optional>...</optional></replaceable>"
+msgstr ""
+"<option>on</option> <option><replaceable>host-name</replaceable></option> "
+"<replaceable><optional>...</optional></replaceable>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "on"
+msgstr "on"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define the properties of a "
+"resource on a particular host or set of hosts. Specifying more than one host "
+"name can make sense in a setup with IP address failover, for example. The "
+"<replaceable>host-name</replaceable> argument must match the Linux host name "
+"(<option>uname -n</option>)."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>特定のホストまたはホストのセット上"
+"のリソースのプロパティを定義する。複数のホスト名を指定することは、たとえば "
+"IP アドレスのフェイルオーバーを使用する設定で意味がある。<replaceable>host-"
+"name</replaceable> 引数は Linux のホスト名と一致する必要がある "
+"（<option>uname -n</option>）。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Usually contains or inherits at least one <option>volume</option> section. "
+"The <option>node-id</option> and <option>address</option> parameters must be "
+"defined in this section. The <option>device</option>, <option>disk</option>, "
+"and <option>meta-disk</option> parameters must be defined in, or inherited "
+"by, this section."
+msgstr ""
+"通常、少なくとも 1 つの <option>volume</option> セクションを含むか継承する。"
+"<option>node-id</option> と <option>address</option> パラメータはこのセクショ"
+"ンで定義する必要がある。<option>device</option>, <option>disk</option>, "
+"<option>meta-disk</option> パラメータは定義もしくは継承されている必要がある。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"A normal configuration file contains two or more <option>on</option> "
+"sections for each resource. Also see the <option>floating</option> section."
+msgstr ""
+"通常の構成ファイルには、各リソースで 2 つ以上の <option>on</option> セクショ"
+"ンが含まれる。<option>floating</option> セクションも参照。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>options</option>"
+msgstr "<option>options</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "options"
+msgstr "options"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define parameters for a resource. "
+"All parameters in this section are optional."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>リソースのパラメータを定義する。こ"
+"のセクションのすべてのパラメータはオプションである。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>resource</option> <option><replaceable>name</replaceable></option>"
+msgstr ""
+"<option>resource</option> <option><replaceable>name</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "resource"
+msgstr "resource"
+
+#.  FIXME? auto-mesh? 
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define a resource. Usually "
+"contains at least two <option>on</option> sections and at least one "
+"<option>connection</option> section."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>リソースを定義する。通常、少なくと"
+"も 2 つの <option>on</option> セクションと少なくとも 1 つの "
+"<option>connection</option> セクションを含む。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>stacked-on-top-of <replaceable>resource</replaceable></option>"
+msgstr "<option>stacked-on-top-of <replaceable>resource</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "stacked-on-top-of"
+msgstr "stacked-on-top-of"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Used instead of an <option>on</"
+"option> section for configuring a stacked resource with three to four nodes."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>3〜4 つのノードを持つスタック型リ"
+"ソースを構成するため <option>on</option> セクションに代わり使われる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Starting with DRBD 9, stacking is deprecated.  It is advised to use "
+"resources which are replicated among more than two nodes instead."
+msgstr ""
+"DRBD 9 以降、スタッキングは推奨しない。代わりに 2 つ以上のノード間で複製され"
+"るリソースを使用することを推奨する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>startup</option>"
+msgstr "<option>startup</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "startup"
+msgstr "startup"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> The parameters in this section "
+"determine the behavior of a resource at startup time."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>このセクションのパラメータは、起動"
+"時のリソースの動作を決定する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>volume</option> <option><replaceable>volume-number</replaceable></"
+"option>"
+msgstr ""
+"<option>volume</option> <option><replaceable>volume-number</replaceable></"
+"option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "volume"
+msgstr "volume"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define a volume within a "
+"resource. The volume numbers in the various <option>volume</option> sections "
+"of a resource define which devices on which hosts form a replicated device."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>リソース内のボリュームを定義する。"
+"リソースの <option>volume</option> セクションのボリューム番号は、どのホスト上"
+"のどのデバイスが複製されたデバイスを形成するかを定義する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "Section <option>connection</option> Parameters"
+msgstr "<option>connection</option> セクションのパラメータ"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>host <replaceable>name</replaceable></option> "
+"<optional><option>address <optional>address-family</optional> "
+"<replaceable>address</replaceable></option></optional> "
+"<optional><option>port <replaceable>port-number</replaceable></option></"
+"optional>"
+msgstr ""
+"<option>host <replaceable>name</replaceable></option> "
+"<optional><option>address <optional>address-family</optional> "
+"<replaceable>address</replaceable></option></optional> "
+"<optional><option>port <replaceable>port-number</replaceable></option></"
+"optional>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "host"
+msgstr "host"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Defines an endpoint for a "
+"connection. Each <option>host</option> statement refers to an <option>on</"
+"option> section in a resource.  If a port number is defined, this endpoint "
+"will use the specified port instead of the port defined in the <option>on</"
+"option> section.  Each <option>connection</option> section must contain "
+"exactly two <option>host</option> parameters. Instead of two <option>host</"
+"option> parameters the connection may contain multiple <option>path</option> "
+"sections."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>接続のエンドポイントを定義する。各 "
+"<option>host</option> ステートメントは、リソースの <option>on</option> セク"
+"ションを参照する。ポート番号が定義されている場合、このエンドポイントは、"
+"<option>on</option> セクションで定義されたポートの代わりに指定されたポートを"
+"使用する。各 <option>connection</option> セクションには 2 つ <option>host</"
+"option> パラメータが必要である。2 つ <option>host</option> パラメータに代わっ"
+"て、複数の <option>path</option> セクションを含むかもしれない。"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "Section <option>path</option> Parameters"
+msgstr "<option>path</option> セクションのパラメータ"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Defines an endpoint for a "
+"connection. Each <option>host</option> statement refers to an <option>on</"
+"option> section in a resource.  If a port number is defined, this endpoint "
+"will use the specified port instead of the port defined in the <option>on</"
+"option> section.  Each <option>path</option> section must contain exactly "
+"two <option>host</option> parameters."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>接続のエンドポイントを定義する。各 "
+"<option>host</option> ステートメントは、リソースの <option>on</option> セク"
+"ションを参照する。ポート番号が定義されている場合、このエンドポイントは、"
+"<option>on</option> セクションで定義されたポートの代わりに指定されたポートを"
+"使用する。各 <option>path</option> セクションには 2 つ <option>host</option> "
+"パラメータが必要である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "Section <option>connection-mesh</option> Parameters"
+msgstr "<option>connection-mesh</option> セクションのパラメータ"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>hosts <arg choice=\"plain\" rep=\"repeat\"><replaceable>name</"
+"replaceable></arg></option>"
+msgstr ""
+"<option>hosts <arg choice=\"plain\" rep=\"repeat\"><replaceable>name</"
+"replaceable></arg></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Defines all nodes of a mesh. Each "
+"<option><replaceable>name</replaceable></option> refers to an <option>on</"
+"option> section in a resource. The port that is defined in the <option>on</"
+"option> section will be used."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>すべてのノード網を定義する。各 "
+"<option><replaceable>name</replaceable></option> は、リソースの <option>on</"
+"option> セクションを参照する。<option>on</option> セクションで定義されている"
+"ポートが使用される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "Section <option>disk</option> Parameters"
+msgstr "<option>disk</option> セクションのパラメータ"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "Section <option>peer-device-options</option> Parameters"
+msgstr "<option>peer-device-options</option> セクションのパラメータ"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"Please note that you open the section with the <option>disk</option> keyword."
+msgstr "<option>disk</option> キーワードでセクションを開くこともできる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "Section <option>global</option> Parameters"
+msgstr "<option>global</option> セクションのパラメータ"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "Section <option>handlers</option> Parameters"
+msgstr "<option>handlers</option> セクションのパラメータ"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>after-resync-target <replaceable>cmd</replaceable></option>"
+msgstr "<option>after-resync-target <replaceable>cmd</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "after-resync-target"
+msgstr "after-resync-target"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Called on a resync target when a "
+"node state changes from <option>Inconsistent</option> to <option>Consistent</"
+"option> when a resync finishes.  This handler can be used for removing the "
+"snapshot created in the <option>before-resync-target</option> handler."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>再同期が完了したとき、ノードの状態"
+"が <option>Inconsistent</option> から <option>Consistent</option> に変化した"
+"ときに再同期ターゲットで呼び出される。このハンドラは <option>before-resync-"
+"target</option> ハンドラで作成したスナップショットを削除するのに使用できる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>before-resync-target <replaceable>cmd</replaceable></option>"
+msgstr "<option>before-resync-target <replaceable>cmd</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "before-resync-target"
+msgstr "before-resync-target"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Called on a resync target before "
+"a resync begins.  This handler can be used for creating a snapshot of the "
+"lower-level device for the duration of the resync: if the resync source "
+"becomes unavailable during a resync, reverting to the snapshot can restore a "
+"consistent state."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>再同期の開始前に再同期ターゲットで"
+"呼び出される。このハンドラは、再同期中に下位レベルのデバイスのスナップショッ"
+"トを作成するために使用できる。再同期中に再同期ソースが使用できなくなった場"
+"合、スナップショットに戻すことで consistent 状態が復元される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>fence-peer <replaceable>cmd</replaceable></option>"
+msgstr "<option>fence-peer <replaceable>cmd</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "fence-peer"
+msgstr "fence-peer"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Called when a node should fence a "
+"resource on a particular peer. The handler should not use the same "
+"communication path that DRBD uses for talking to the peer."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>ノードが特定の対向ノード上のリソー"
+"スをフェンシングする必要があるときに呼び出される。ハンドラは、DRBD が対向ノー"
+"ドとのコミュニケーションに使用するのと同じ通信パスを使用すべきでない。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>unfence-peer <replaceable>cmd</replaceable></option>"
+msgstr "<option>unfence-peer <replaceable>cmd</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "unfence-peer"
+msgstr "unfence-peer"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Called when a node should remove "
+"fencing constraints from other nodes."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>ノードが他のノードからのフェンシン"
+"グ制約を削除するときに呼び出される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>initial-split-brain <replaceable>cmd</replaceable></option>"
+msgstr "<option>initial-split-brain <replaceable>cmd</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "initial-split-brain"
+msgstr "initial-split-brain"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Called when DRBD connects to a "
+"peer and detects that the peer is in a split-brain state with the local "
+"node.  This handler is also called for split-brain scenarios which will be "
+"resolved automatically."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>DRBD が対向ノードに接続し、対向ノー"
+"ドがローカルノードとスプリットブレイン状態にあることを検出すると呼び出され"
+"る。このハンドラは自動解決されるスプリットブレインシナリオでも呼び出される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>local-io-error <replaceable>cmd</replaceable></option>"
+msgstr "<option>local-io-error <replaceable>cmd</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "local-io-error"
+msgstr "local-io-error"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Called when an I/O error occurs "
+"on a lower-level device."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>下位レベルのデバイスで I/O エラーが"
+"発生したときに呼び出される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>pri-lost <replaceable>cmd</replaceable></option>"
+msgstr "<option>pri-lost <replaceable>cmd</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "pri-lost"
+msgstr "pri-lost"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> The local node is currently "
+"primary, but DRBD believes that it should become a sync target. The node "
+"should give up its primary role."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>ノードが現在プライマリであるにもか"
+"かわらず、 DRBD が同期先だと判断した場合に呼び出される。ノードは、プライマリ"
+"役割を断念すべきである。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>pri-lost-after-sb <replaceable>cmd</replaceable></option>"
+msgstr "<option>pri-lost-after-sb <replaceable>cmd</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "pri-lost-after-sb"
+msgstr "pri-lost-after-sb"
+
+#.  FIXME: What is "abandon a node" supposed to mean? 
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> The local node is currently "
+"primary, but it has lost the after-split-brain auto recovery procedure. The "
+"node should be abandoned."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>ノードが現在プライマリで、スプリッ"
+"トブレイン後の自動回復プロセスが失敗したときに呼び出される。ノードのデータは"
+"放棄されるべきである。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>pri-on-incon-degr <replaceable>cmd</replaceable></option>"
+msgstr "<option>pri-on-incon-degr <replaceable>cmd</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "pri-on-incon-degr"
+msgstr "pri-on-incon-degr"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> The local node is primary, and "
+"neither the local lower-level device nor a lower-level device on a peer is "
+"up to date.  (The primary has no device to read from or to write to.)"
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>ローカルノードはプライマリであり、"
+"ローカルの下位レベルのデバイスも対向ノードの下位レベルのデバイスも最新でない"
+"ときに呼び出される。（プライマリには読み書きするデバイスがない）。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>split-brain <replaceable>cmd</replaceable></option>"
+msgstr "<option>split-brain <replaceable>cmd</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "split-brain"
+msgstr "split-brain"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> DRBD has detected a split-brain "
+"situation which could not be resolved automatically.  Manual recovery is "
+"necessary. This handler can be used to call for administrator attention."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>DRBD が自動的に解決できないスプリッ"
+"トブレイン状況を検出した。修復のための手作業が必要なので、このハンドラは、管"
+"理者の注意を呼び出すために使用できる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "Section <option>net</option> Parameters"
+msgstr "<option>net</option> セクションのパラメータ"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "Section <option>on</option> Parameters"
+msgstr "<option>on</option> セクションのパラメータ"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>address <replaceable><optional>address-family</optional></"
+"replaceable> <replaceable>address</replaceable>:<replaceable>port</"
+"replaceable></option>"
+msgstr ""
+"<option>address <replaceable><optional>address-family</optional></"
+"replaceable> <replaceable>address</replaceable>:<replaceable>port</"
+"replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "address"
+msgstr "address"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Defines the address family, "
+"address, and port of a connection endpoint."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>接続エンドポイントのアドレスファミ"
+"リ、アドレス、およびポートを定義する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The address families <option>ipv4</option>, <option>ipv6</option>, "
+"<option>ssocks</option> (Dolphin Interconnect Solutions' \"super sockets\"), "
+"<option>sdp</option> (Infiniband Sockets Direct Protocol), and <option>sci</"
+"option> are supported (<option>sci</option> is an alias for <option>ssocks</"
+"option>).  If no address family is specified, <option>ipv4</option> is "
+"assumed.  For all address families except <option>ipv6</option>, the address "
+"is specified in IPV4 address notation (for example, 1.2.3.4).  For "
+"<option>ipv6</option>, the address is enclosed in brackets and uses IPv6 "
+"address notation (for example, <literal moreinfo=\"none\">[fd01:2345:6789:"
+"abcd::1]</literal>).  The port is always specified as a decimal number from "
+"1 to 65535."
+msgstr ""
+"アドレスファミリは <option>ipv4</option>, <option>ipv6</option>, "
+"<option>ssocks</option> (Dolphin Interconnect Solutions の「スーパーソケッ"
+"ト」), <option>sdp</option> (Infiniband Sockets Direct Protocol), "
+"<option>sci</option> がサポートされる (<option>sci</option> は "
+"<option>ssocks</option> の別名である)。アドレスファミリが指定されていない場"
+"合、 <option>ipv4</option> が仮定される。<option>ipv6</option> アドレスファミ"
+"リ以外は、 address に IPv4 アドレス表記を使用する（たとえば、1.2.3.4）。"
+"<option>ipv6</option> アドレスは角括弧で囲み、 IPv6 アドレス表記法を使用する"
+"（たとえば、 [fd01：2345：6789：abcd :: 1]）。ポートは常に 1〜65535 の 10 進"
+"数で指定される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"On each host, the port numbers must be unique for each address; ports cannot "
+"be shared."
+msgstr ""
+"各ホストで、ポート番号は各アドレスごとに一意でなければならない。ポートは共有"
+"できない。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>node-id <replaceable>value</replaceable></option>"
+msgstr "<option>node-id <replaceable>value</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "node-id"
+msgstr "node-id"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Defines the unique node "
+"identifier for a node in the cluster.  Node identifiers are used to identify "
+"individual nodes in the network protocol, and to assign bitmap slots to "
+"nodes in the metadata."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>クラスタ内のノードの一意のノード識"
+"別子を定義する。ノード識別子は、ネットワークプロトコル内の個々のノードを識別"
+"し、ビットマップスロットをメタデータ内のノードに割り当てるために使用される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"Node identifiers can only be reasssigned in a cluster when the cluster is "
+"down.  It is essential that the node identifiers in the configuration and in "
+"the device metadata are changed consistently on all hosts.  To change the "
+"metadata, dump the current state with <command>drbdmeta dump-md</command>, "
+"adjust the bitmap slot assignment, and update the metadata with "
+"<command>drbdmeta restore-md</command>."
+msgstr ""
+"ノード識別子は、クラスタがダウンしている場合にのみ、クラスタ内で再割り当てす"
+"ることができる。構成内およびデバイスメタデータ内のノード識別子が、すべてのホ"
+"スト上で一貫して変更されることが不可欠である。メタデータを変更するには、 "
+"<command>drbdmeta dump-md</command> でダンプし、ビットマップスロット割り当て"
+"を調整し、<command>drbdmeta restore-md</command> でメタデータを更新する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The <option>node-id</option> parameter exists since DRBD 9.  Its value "
+"ranges from 0 to 16; there is no default."
+msgstr ""
+"<option>node-id</option> パラメータは DRBD 9 以降存在する。その値の範囲は 0 "
+"から 16 である。デフォルトはない。"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "Section <option>options</option> Parameters (Resource Options)"
+msgstr "<option>options</option> セクションのパラメータ (リソース options)"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "Section <option>startup</option> Parameters"
+msgstr "<option>startup</option> セクションのパラメータ"
+
+#. type: Content of: <refentry><refsect1><refsect2><para>
+msgid ""
+"The parameters in this section define the behavior of DRBD at system startup "
+"time, in the DRBD init script.  They have no effect once the system is up "
+"and running."
+msgstr ""
+"このセクションのパラメータは、DRBD init スクリプトでシステム起動時の DRBD の"
+"動作を定義する。システムが起動し、実行後には効果がない。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>stacked-timeouts</option>"
+msgstr "<option>stacked-timeouts</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"On stacked devices, the <option>wfc-timeout</option> and <option>degr-wfc-"
+"timeout</option> parameters in the configuration are usually ignored, and "
+"both timeouts are set to twice the <option>connect-int</option> timeout.  "
+"The <option>stacked-timeouts</option> parameter tells DRBD to use the "
+"<option>wfc-timeout</option> and <option>degr-wfc-timeout</option> "
+"parameters as defined in the configuration, even on stacked devices.  Only "
+"use this parameter if the peer of the stacked resource is usually not "
+"available, or will not become primary.  Incorrect use of this parameter can "
+"lead to unexpected split-brain scenarios."
+msgstr ""
+"スタックデバイスでは、通常は <option>wfc-timeout</option> および "
+"<option>degr-wfc-timeout</option> は無視される。これらのタイムアウト値には、"
+"代わりに<option>connect-int</option> の 2 倍のタイムアウト値が使われる。"
+"<option>stacked-timeouts</option> パラメータを指定すると、DRBD はスタックデバ"
+"イスに対しても <option>wfc-timeout</option> および <option>degr-wfc-timeout</"
+"option> にもとづいて動作するようになる。スタックデバイスの対向ノードが多くの"
+"場合に利用できないケースや対向ノードがプライマリにならない場合に限って、この"
+"オプションを指定すべきである。このパラメータを誤って使用すると、スプリットブ"
+"レインにつながる可能性がある。"
+
+#. type: Content of: <refentry><refsect1><refsect2><title>
+msgid "Section <option>volume</option> Parameters"
+msgstr "<option>volume</option> セクションのパラメータ"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>device /dev/drbd<replaceable>minor-number</replaceable></option>"
+msgstr ""
+"<option>device /dev/drbd<replaceable>minor-number</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "device"
+msgstr "device"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define the device name and minor "
+"number of a replicated block device.  This is the device that applications "
+"are supposed to access; in most cases, the device is not used directly, but "
+"as a file system. This parameter is required and the standard device naming "
+"convention is assumed."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>複製されたブロックデバイスのデバイ"
+"ス名とマイナー番号を定義する。これは、アプリケーションがアクセスするデバイス"
+"である。ほとんどの場合、デバイスは直接使用されるのではなく、ファイルシステム"
+"として使用される。このパラメータは必須で、標準のデバイス命名規則が適用され"
+"る。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"In addition to this device, udev will create <option>/dev/drbd/by-res/"
+"<replaceable>resource</replaceable>/<replaceable>volume</replaceable></"
+"option> and <option>/dev/drbd/by-disk/<replaceable>lower-level-device</"
+"replaceable></option> symlinks to the device."
+msgstr ""
+"このデバイスに加えて、udev は、 <option>/dev/drbd/by-res/"
+"<replaceable>resource</replaceable>/<replaceable>volume</replaceable></"
+"option>, <option>/dev/drbd/by-disk/<replaceable>lower-level-device</"
+"replaceable></option> シンボリックリンクをデバイスに作成する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>disk</option> <group choice=\"req\" rep=\"norepeat\"> <arg rep="
+"\"norepeat\">disk</arg> <arg choice=\"plain\" rep=\"norepeat\"><option>none</"
+"option></arg> </group>"
+msgstr ""
+"<option>disk</option> <group choice=\"req\" rep=\"norepeat\"> <arg rep="
+"\"norepeat\">disk</arg> <arg choice=\"plain\" rep=\"norepeat\"><option>none</"
+"option></arg> </group>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define the lower-level block "
+"device that DRBD will use for storing the actual data.  While the replicated "
+"drbd device is configured, the lower-level device must not be used "
+"directly.  Even read-only access with tools like <citerefentry> "
+"<refentrytitle>dumpe2fs</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry> and similar is not allowed. The keyword <option>none</option> "
+"specifies that no lower-level block device is configured; this also "
+"overrides inheritance of the lower-level device."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>DRBD が実際のデータを格納するために"
+"使用する下位ブロックデバイスを定義する。複製された DRBD デバイスが設定されて"
+"いる間は、下位レベルのデバイスを直接使用してはならない。読み取りアクセス専用"
+"のツール <citerefentry> <refentrytitle>dumpe2fs</refentrytitle> "
+"<manvolnum>8</manvolnum> </citerefentry> や同様のツールも許可されない。キー"
+"ワード <option>none</option> は、下位ブロックデバイスが設定されていないことを"
+"指定する。下位レベルデバイスの継承もこれにより上書きされる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>meta-disk internal</option>"
+msgstr "<option>meta-disk internal</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>meta-disk <replaceable>device</replaceable></option>"
+msgstr "<option>meta-disk <replaceable>device</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>meta-disk <replaceable>device</replaceable> [<replaceable>index</"
+"replaceable>]</option>"
+msgstr ""
+"<option>meta-disk <replaceable>device</replaceable> [<replaceable>index</"
+"replaceable>]</option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "meta-disk"
+msgstr "meta-disk"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define where the metadata of a "
+"replicated block device resides: it can be <option>internal</option>, "
+"meaning that the lower-level device contains both the data and the metadata, "
+"or on a separate device."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>複製されたブロックデバイスのメタ"
+"データが存在する場所を定義する。 <option>internal</option> は、下位レベルのデ"
+"バイスにデータとメタデータの両方が含まれていることを意味する。別のデバイスに"
+"格納されている場合は、これを指定する。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"When the <replaceable>index</replaceable> form of this parameter is used, "
+"multiple replicated devices can share the same metadata device, each using a "
+"separate index.  Each index occupies 128 MiB of data, which corresponds to a "
+"replicated device size of at most 4 TiB with two cluster nodes.  We "
+"recommend not to share metadata devices anymore, and to instead use the lvm "
+"volume manager for creating metadata devices as needed."
+msgstr ""
+"<replaceable>index</replaceable> を指定すると、複数のレプリケートされたデバイ"
+"スが同じメタデータデバイスを共有でき、それぞれ別のインデックスを使用する。各"
+"インデックスは 128 MiB のデータを占有し、2 つのクラスタノードで最大 4 TiB の"
+"複製されたデバイスサイズに対応する。メタデータデバイスは共有しないで、必要に"
+"応じて lvm ボリュームマネージャを使用してメタデータデバイスを作成することを推"
+"奨する。"
+
+#.  FIXME: al-striping, al-extents 65536? 
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"When the <replaceable>index</replaceable> form of this parameter is not "
+"used, the size of the lower-level device determines the size of the "
+"metadata.  The size needed is 36 KiB + (size of lower-level device) / 32K * "
+"(number of nodes - 1).  If the metadata device is bigger than that, the "
+"extra space is not used."
+msgstr ""
+"<replaceable>index</replaceable> を指定しない場合、下位レベルのデバイスのサイ"
+"ズによってメタデータのサイズが決定される。必要なサイズは 36 KiB +（下位デバイ"
+"スのサイズ） / 32K *（ノード数-1） である。もしメタデータデバイスがそれよりも"
+"大きい場合、余分なスペースは使用されない。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"This parameter is required if a <option>disk</option> other than "
+"<option>none</option> is specified, and ignored if <option>disk</option> is "
+"set to <option>none</option>.  A <option>meta-disk</option> parameter "
+"without a <option>disk</option> parameter is not allowed."
+msgstr ""
+"このパラメータは、<option>disk</option> が <option>none</option> 以外に設定さ"
+"れている場合は必須で、<option>disk</option> が <option>none</option> に設定さ"
+"れている場合は無視される。<option>disk</option> パラメータなしの "
+"<option>meta-disk</option> パラメータは使用できない。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Notes on data integrity"
+msgstr "データ整合性に関する注意"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"DRBD supports two different mechanisms for data integrity checking: first, "
+"the <option>data-integrity-alg</option> network parameter allows to add a "
+"checksum to the data sent over the network.  Second, the online verification "
+"mechanism (<command moreinfo=\"none\">drbdadm verify</command> and the "
+"<option>verify-alg</option> parameter) allows to check for differences in "
+"the on-disk data."
+msgstr ""
+"DRBD は、データの整合性チェックのための 2 つの異なるメカニズムをサポートす"
+"る。 <option>data-integrity-alg</option> ネットワークパラメータを使用すると、"
+"ネットワーク経由で送信されたデータにチェックサムを追加できる。もう １ つのオ"
+"ンライン照合メカニズム（<command moreinfo=\"none\">drbdadm verify</command>, "
+"<option>verify-alg</option> パラメータ）を使用すると、ディスク上のデータの違"
+"いをチェックできる。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"Both mechanisms can produce false positives if the data is modified during I/"
+"O (i.e., while it is being sent over the network or written to disk).  This "
+"does not always indicate a problem: for example, some file systems and "
+"applications do modify data under I/O for certain operations.  Swap space "
+"can also undergo changes while under I/O."
+msgstr ""
+"両方のメカニズムは、データが I/O 中に変更された場合（つまり、ネットワークを介"
+"して送信されている間、またはディスクに書き込まれている間）、誤検出を引き起こ"
+"す可能性がある。これは常に問題を示すとは限らない。たとえば、一部のファイルシ"
+"ステムやアプリケーションでは、特定の操作のために I/O 下のデータを変更する。ス"
+"ワップ領域も I/O 中に変更される可能性がある。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"Network data integrity checking tries to identify data modification during I/"
+"O by verifying the checksums on the sender side after sending the data.  If "
+"it detects a mismatch, it logs an error.  The receiver also logs an error "
+"when it detects a mismatch.  Thus, an error logged only on the receiver side "
+"indicates an error on the network, and an error logged on both sides "
+"indicates data modification under I/O."
+msgstr ""
+"ネットワークデータの整合性チェックは、データの送信後に送信側のチェックサムを"
+"検証することによって、 I/O 中のデータ変更を識別しようとする。不一致が検出され"
+"た場合は、エラーを記録する。また、受信側も、不一致を検出するとエラーをログに"
+"記録する。したがって、受信側でのみ記録されるエラーはネットワーク上のエラーを"
+"示し、両側に記録されたエラーは I/O でのデータ変更を示す。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"The most recent example of systematic data corruption was identified as a "
+"bug in the TCP offloading engine and driver of a certain type of GBit NIC in "
+"2007: the data corruption happened on the DMA transfer from core memory to "
+"the card. Because the TCP checksum were calculated on the card, the TCP/IP "
+"protocol checksums did not reveal this problem."
+msgstr ""
+"直近の例 (2007 年) では系統的なデータ損傷のケースがあり、特定の種類のギガビッ"
+"ト NIC の TCP オフロードエンジンとドライバのバグが原因であった。データの破損"
+"が、コアメモリからカードへの DMA 転送で発生していた。TCP チェックサムはカード"
+"上で計算されたため、 TCP/IP プロトコルチェックサムではこの問題を検出できませ"
+"んでした。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Version"
+msgstr "Version"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid "This document was revised for version 9.0.0 of the DRBD distribution."
+msgstr "このドキュメントは DRBD バージョン 9.0.0 向けに改訂されている。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Author"
+msgstr "Author"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid ""
+"Written by Philipp Reisner <email>philipp.reisner@linbit.com</email> and "
+"Lars Ellenberg <email>lars.ellenberg@linbit.com</email>."
+msgstr ""
+"Written by Philipp Reisner <email>philipp.reisner@linbit.com</email> and "
+"Lars Ellenberg <email>lars.ellenberg@linbit.com</email>."
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Reporting Bugs"
+msgstr "Reporting Bugs"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid "Report bugs to <email>drbd-user@lists.linbit.com</email>."
+msgstr "Report bugs to <email>drbd-user@lists.linbit.com</email>."
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Copyright"
+msgstr "Copyright"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid ""
+"Copyright 2001-2018 LINBIT Information Technologies, Philipp Reisner, Lars "
+"Ellenberg.  This is free software; see the source for copying conditions. "
+"There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A "
+"PARTICULAR PURPOSE."
+msgstr ""
+"Copyright 2001-2018 LINBIT Information Technologies, Philipp Reisner, Lars "
+"Ellenberg.  This is free software; see the source for copying conditions. "
+"There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A "
+"PARTICULAR PURPOSE."
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "See Also"
+msgstr "See Also"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"<citerefentry> <refentrytitle>drbd</refentrytitle> <manvolnum>8</manvolnum> "
+"</citerefentry>, <citerefentry> <refentrytitle>drbdsetup</refentrytitle> "
+"<manvolnum>8</manvolnum> </citerefentry>, <citerefentry> "
+"<refentrytitle>drbdadm</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry>, <ulink url=\"http://www.drbd.org/users-guide/"
+"\"><citetitle>DRBD User's Guide</citetitle></ulink>, <ulink url=\"http://www."
+"drbd.org/\"><citetitle>DRBD Web Site</citetitle></ulink>"
+msgstr ""
+"<citerefentry> <refentrytitle>drbd</refentrytitle> <manvolnum>8</manvolnum> "
+"</citerefentry>, <citerefentry> <refentrytitle>drbdsetup</refentrytitle> "
+"<manvolnum>8</manvolnum> </citerefentry>, <citerefentry> "
+"<refentrytitle>drbdadm</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry>, <ulink url=\"http://www.drbd.org/users-guide/"
+"\"><citetitle>DRBD User's Guide</citetitle></ulink>, <ulink url=\"http://www."
+"drbd.org/\"><citetitle>DRBD Web Site</citetitle></ulink>"

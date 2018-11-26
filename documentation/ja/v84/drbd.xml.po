@@ -1,0 +1,167 @@
+# SOME DESCRIPTIVE TITLE
+# Copyright (C) YEAR Free Software Foundation, Inc.
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: 2018-11-02 13:05+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. type: Content of: <refentry><refmeta><refentrytitle>
+msgid "drbd"
+msgstr "drbd"
+
+#. type: Content of: <refentry><refnamediv><refpurpose>
+msgid "The start and stop script for DRBD"
+msgstr "DRBD の起動と停止スクリプト"
+
+#. type: Content of: <refentry><refentryinfo>
+msgid ""
+"<productname>DRBD</productname> <productnumber>8.3.2</productnumber> "
+"<date>15 Oct 2008</date>"
+msgstr ""
+"<productname>DRBD</productname> <productnumber>8.3.2</productnumber> "
+"<date>15 Oct 2008</date>"
+
+#. type: Content of: <refentry><refmeta><manvolnum>
+msgid "8"
+msgstr "8"
+
+#. type: Content of: <refentry><refmeta><refmiscinfo>
+msgid "System Administration"
+msgstr "System Administration"
+
+#. type: Content of: <refentry><refsynopsisdiv><cmdsynopsis>
+msgid ""
+"<command moreinfo=\"none\">/etc/init.d/drbd</command> <arg choice=\"opt\" "
+"rep=\"norepeat\"> <replaceable>resource</replaceable> </arg> <arg choice="
+"\"req\" rep=\"norepeat\"> <group choice=\"plain\" rep=\"norepeat\"> <arg "
+"choice=\"req\" rep=\"norepeat\">start</arg> <arg choice=\"req\" rep="
+"\"norepeat\">stop</arg> <arg choice=\"req\" rep=\"norepeat\">status</arg> "
+"<arg choice=\"req\" rep=\"norepeat\">reload</arg> <arg choice=\"req\" rep="
+"\"norepeat\">restart</arg> <arg choice=\"req\" rep=\"norepeat\">force-"
+"reload</arg> </group> </arg>"
+msgstr ""
+"<command moreinfo=\"none\">/etc/init.d/drbd</command> <arg choice=\"opt\" "
+"rep=\"norepeat\"> <replaceable>resource</replaceable> </arg> <arg choice="
+"\"req\" rep=\"norepeat\"> <group choice=\"plain\" rep=\"norepeat\"> <arg "
+"choice=\"req\" rep=\"norepeat\">start</arg> <arg choice=\"req\" rep="
+"\"norepeat\">stop</arg> <arg choice=\"req\" rep=\"norepeat\">status</arg> "
+"<arg choice=\"req\" rep=\"norepeat\">reload</arg> <arg choice=\"req\" rep="
+"\"norepeat\">restart</arg> <arg choice=\"req\" rep=\"norepeat\">force-"
+"reload</arg> </group> </arg>"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Introduction"
+msgstr "Introduction"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"The <option>/etc/init.d/drbd</option> script is used to start and stop drbd "
+"on a system V style init system."
+msgstr ""
+"System V スタイルの init システムで drbd を起動および停止するには、 <option>/"
+"etc/init.d/drbd</option> スクリプトを使用する。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"In order to use <option>/etc/init.d/drbd</option> you must define a "
+"resource, a host, and any other configuration options in the drbd "
+"configuration file.  See <option>/etc/drbd.conf</option> for details.  If "
+"<replaceable>resource</replaceable> is omitted, then all of the resources "
+"listed in the config file are configured."
+msgstr ""
+"<option>/etc/init.d/drbd</option> を使用するには、 drbd 構成ファイルにリソー"
+"ス、ホスト、その他の設定オプションを定義する必要がある。詳細については "
+"<option>/etc/drbd.conf</option> を参照。<replaceable>resource</replaceable> "
+"を省略すると、構成ファイルにリストされているすべてのリソースが構成される。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"This script might ask you <quote>Do you want to abort waiting for other "
+"server and make this one primary?</quote>"
+msgstr ""
+"このスクリプトは、<quote>Do you want to abort waiting for other server and "
+"make this one primary?</quote> と尋ねるかもしれない。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"Only answer this question with <quote>yes</quote> if you are sure that it is "
+"impossible to repair the other node."
+msgstr ""
+"他のノードを修復できないことが確かな場合は、<quote>yes</quote> でこの質問に答"
+"える。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Version"
+msgstr "Version"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid "This document was revised for version 8.3.2 of the DRBD distribution."
+msgstr "このドキュメントは DRBD バージョン 8.3.2 向けに改訂されている。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Author"
+msgstr "Author"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid ""
+"Written by Philipp Reisner <email>philipp.reisner@linbit.com</email> and "
+"Lars Ellenberg <email>lars.ellenberg@linbit.com</email>."
+msgstr ""
+"Written by Philipp Reisner <email>philipp.reisner@linbit.com</email> and "
+"Lars Ellenberg <email>lars.ellenberg@linbit.com</email>."
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Reporting Bugs"
+msgstr "Reporting Bugs"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid "Report bugs to <email>drbd-user@lists.linbit.com</email>."
+msgstr "Report bugs to <email>drbd-user@lists.linbit.com</email>."
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Copyright"
+msgstr "Copyright"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid ""
+"Copyright 2001-2008 LINBIT Information Technologies, Philipp Reisner, Lars "
+"Ellenberg. This is free software; see the source for copying conditions.  "
+"There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A "
+"PARTICULAR PURPOSE."
+msgstr ""
+"Copyright 2001-2008 LINBIT Information Technologies, Philipp Reisner, Lars "
+"Ellenberg. This is free software; see the source for copying conditions.  "
+"There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A "
+"PARTICULAR PURPOSE."
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "See Also"
+msgstr "See Also"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"<citerefentry><refentrytitle>drbd.conf</refentrytitle><manvolnum>5</"
+"manvolnum></citerefentry>, <citerefentry><refentrytitle>drbddisk</"
+"refentrytitle><manvolnum>8</manvolnum></citerefentry>, "
+"<citerefentry><refentrytitle>drbdsetup</refentrytitle><manvolnum>8</"
+"manvolnum></citerefentry><citerefentry><refentrytitle>drbdadm</"
+"refentrytitle><manvolnum>8</manvolnum></citerefentry><ulink url=\"http://www."
+"drbd.org/\"><citetitle>DRBD Homepage</citetitle></ulink>"
+msgstr ""
+"<citerefentry><refentrytitle>drbd.conf</refentrytitle><manvolnum>5</"
+"manvolnum></citerefentry>, <citerefentry><refentrytitle>drbddisk</"
+"refentrytitle><manvolnum>8</manvolnum></citerefentry>, "
+"<citerefentry><refentrytitle>drbdsetup</refentrytitle><manvolnum>8</"
+"manvolnum></citerefentry><citerefentry><refentrytitle>drbdadm</"
+"refentrytitle><manvolnum>8</manvolnum></citerefentry><ulink url=\"http://www."
+"drbd.org/\"><citetitle>DRBD Homepage</citetitle></ulink>"

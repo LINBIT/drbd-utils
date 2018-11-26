@@ -16,60 +16,6 @@
 # along with drbd; see the file COPYING.  If not, write to
 # the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 
-# variables set by configure
-mandir = @mandir@
-datarootdir = @datarootdir@
-XSLTPROC = @XSLTPROC@
-
-# features enabled or disabled by configure
-WITH_83_SUPPORT = @WITH_83_SUPPORT@
-WITH_84_SUPPORT = @WITH_84_SUPPORT@
-WITH_UDEV = @WITH_UDEV@
-WITH_XEN = @WITH_XEN@
-WITH_PACEMAKER = @WITH_PACEMAKER@
-WITH_HEARTBEAT = @WITH_HEARTBEAT@
-WITH_RGMANAGER = @WITH_RGMANAGER@
-WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
-WITH_WINDRBD = @WITH_WINDRBD@
-
-# variables meant to be overridden from the make command line
-ifeq ($(WITH_WINDRBD),yes)
-DESTDIR ?=
-else
-DESTDIR ?= /
-endif
-
-# Needed for pattern substitution
-SHELL=/bin/bash
-
-MANPAGES       := drbdsetup.8 drbd.conf.5 drbd.8 drbdadm.8 drbdmeta.8
-ifeq ($(WITH_HEARTBEAT),yes)
-MANPAGES += drbddisk.8
-endif
-
-STYLESHEET_PREFIX ?= http://docbook.sourceforge.net/release/xsl/current
-MANPAGES_STYLESHEET ?= $(STYLESHEET_PREFIX)/manpages/docbook.xsl
-HTML_STYLESHEET ?= $(STYLESHEET_PREFIX)/xhtml/docbook.xsl
-FO_STYLESHEET ?= $(STYLESHEET_PREFIX)/fo/docbook.xsl
-
-XSLTPROC_OPTIONS ?= --xinclude
-XSLTPROC_OPTIONS += --stringparam variablelist.term.break.after 1
-#XSLTPROC_OPTIONS += --stringparam variablelist.term.separator ""
-XSLTPROC_MANPAGES_OPTIONS ?= $(XSLTPROC_OPTIONS)
-XSLTPROC_HTML_OPTIONS ?= $(XSLTPROC_OPTIONS)
-XSLTPROC_FO_OPTIONS ?= $(XSLTPROC_OPTIONS)
-
-DRBDSETUP_CMDS = new-resource new-minor del-resource del-minor
-DRBDSETUP_CMDS += attach connect disk-options net-options resource-options
-DRBDSETUP_CMDS += disconnect detach primary secondary verify invalidate invalidate-remote
-DRBDSETUP_CMDS += down wait-connect wait-sync role cstate dstate
-DRBDSETUP_CMDS += resize check-resize pause-sync resume-sync
-DRBDSETUP_CMDS += outdate show-gi get-gi show events events2
-DRBDSETUP_CMDS += status suspend-io resume-io new-current-uuid
-
-make_doc := $(shell $(XSLTPROC)				\
-	$(XSLTPROC_MANPAGES_OPTIONS)			\
-	$(MANPAGES_STYLESHEET) < /dev/null > /dev/null 2>&1 && echo doc )
 
 ifeq ($(make_doc),doc)
 all: doc
@@ -111,27 +57,42 @@ doc-clean: distclean
 	$(XSLTPROC_FO_OPTIONS) \
 	$(FO_STYLESHEET) $<
 
-../../user/v84/drbdsetup.o: FORCE
+$(TOPDIR)/user/v84/drbdsetup.o: FORCE
 	$(MAKE) -C $(@D) drbdsetup-84
+
+%.xml.in: %.xml.in.po
+	$(PO4A_TRANSLATE) -m ../../v84/$@ -p $< -l $@
+
+%.xml: %.xml.po
+	$(PO4A_TRANSLATE) -m ../../v84/$@ -p $< -l $@
+
+%.xml.in.pot: %.xml.in
+	$(PO4A_GETTEXTIZE) -m $< -p $@
+
+%.xml.pot: %.xml
+	$(PO4A_GETTEXTIZE) -m $< -p $@
+
 
 .PHONY: FORCE
 FORCE:
 
 # Don't try to re-make files tracked in git
-FILES_IN_GIT := # $(shell git ls-files)
-FILES_IN_GIT += Makefile.in drbd.conf.xml drbd.xml drbdadm.xml drbddisk.xml
-FILES_IN_GIT += drbdmeta.xml drbdsetup.xml xml-usage-to-docbook.xsl
+FILES_IN_GIT_ := # $(shell git ls-files)
+FILES_IN_GIT  += $(FILES_IN_GIT_)
+FILES_IN_GIT  += Makefile.in xml-usage-to-docbook.xsl
+FILES_IN_GIT  += $(FILES_IN_GIT_ADD)
+
 $(FILES_IN_GIT): ;
 
 
 drbdsetup_X.xml := $(patsubst %,drbdsetup_%.xml,$(DRBDSETUP_CMDS))
 drbdsetup_xml-help_X.xml := $(patsubst %,drbdsetup_xml-help_%.xml,$(DRBDSETUP_CMDS))
 
-$(drbdsetup_xml-help_X.xml): ../../user/v84/drbdsetup.o
+$(drbdsetup_xml-help_X.xml): $(TOPDIR)/user/v84/drbdsetup.o
 $(drbdsetup_X.xml): xml-usage-to-docbook.xsl
 
 drbdsetup_xml-help_%.xml:
-	../../user/v84/drbdsetup-84 xml-help $* > $@
+	$(TOPDIR)/user/v84/drbdsetup-84 xml-help $* > $@
 
 drbdsetup_%.xml: drbdsetup_xml-help_%.xml
 	$(XSLTPROC) -o $@ xml-usage-to-docbook.xsl $<
@@ -141,11 +102,11 @@ ifeq ($(make_doc),doc)
 	rm -f *.[58] manpage.links manpage.refs *~ manpage.log
 endif
 	rm -f *.ps.gz *.pdf *.ps *.html pod2htm*
-	rm -f drbdsetup_*.xml
+	rm -f $(FILES_REMOVE_ADD)
 
 #######
 
-man:	$(MANPAGES)
+man:	$(MANPAGES) $(FILES_POT)
 
 install:
 ifeq ($(WITH_84_SUPPORT),yes)
@@ -155,7 +116,7 @@ ifeq ($(WITH_84_SUPPORT),yes)
 	set -e; for f in $(MANPAGES) ; do \
 		s=$${f##*.}; \
 		b=$${f%.[0-9]}; \
-		install -v -D -m 644 $$f $(DESTDIR)$(mandir)/man$$s/$$b-8.4.$$s ; \
+		install -v -D -m 644 $$f $(DESTDIR)$(mandir)/$(MANLANG)/man$$s/$$b-8.4.$$s ; \
 	done
 endif
 
@@ -164,7 +125,7 @@ ifeq ($(WITH_84_SUPPORT),yes)
 	@ set -e; for f in $(MANPAGES) ; do \
 		s=$${f##*.}; \
 		b=$${f%.[0-9]}; \
-		rm -vf $(DESTDIR)$(mandir)/man$$s/$$b-8.4.$$s ; \
+		rm -vf $(DESTDIR)$(mandir)/$(MANLANG)/man$$s/$$b-8.4.$$s ; \
 	done
 endif
 
@@ -175,9 +136,9 @@ ps:	$(addsuffix .ps,$(basename $(MANPAGES)))
 drbdsetup.8: drbdsetup.xml $(drbdsetup_X.xml)
 
 .PHONY: install uninstall clean distclean
-../../configure:
+$(TOPDIR)/configure:
 	@echo "please (re-)run ./autogen.sh with appropriate arguments"; exit 1
-../../config.status: ../../configure
+$(TOPDIR)/config.status: $(TOPDIR)/configure
 	@echo "please (re-)run ./configure with appropriate arguments"; exit 1
-Makefile: Makefile.in ../../config.status
-	cd ../.. && ./config.status documentation/v84/Makefile
+$(TOPDIR)/documentation/Makefile_v84_com: $(TOPDIR)/documentation/Makefile_v84_com.in $(TOPDIR)/config.status
+	cd $(TOPDIR) && ./config.status documentation/Makefile_v84_com

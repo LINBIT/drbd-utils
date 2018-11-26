@@ -1,0 +1,221 @@
+# SOME DESCRIPTIVE TITLE
+# Copyright (C) YEAR Free Software Foundation, Inc.
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: 2018-11-02 13:06+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. type: Content of: <refentry><refentryinfo>
+msgid ""
+"  <date>9 November 2016</date> <productname>DRBD</productname> "
+"<productnumber>9.0.0</productnumber> <author> <personname> "
+"<firstname>Robert</firstname> <surname>Altnoeder</surname> </personname> "
+"<email>robert.altnoeder@linbit.com</email> <contrib>Primary author of "
+"drbdmon</contrib> </author> <author> <personname> <firstname>Sam</firstname> "
+"<surname>Leonard</surname> </personname> <email>sam@linbit.com</email> "
+"<contrib>man page and build system integration</contrib> </author>"
+msgstr ""
+"  <date>9 November 2016</date> <productname>DRBD</productname> "
+"<productnumber>9.0.0</productnumber> <author> <personname> "
+"<firstname>Robert</firstname> <surname>Altnoeder</surname> </personname> "
+"<email>robert.altnoeder@linbit.com</email> <contrib>Primary author of "
+"drbdmon</contrib> </author> <author> <personname> <firstname>Sam</firstname> "
+"<surname>Leonard</surname> </personname> <email>sam@linbit.com</email> "
+"<contrib>man page and build system integration</contrib> </author>"
+
+#. type: Content of: <refentry><refnamediv><refpurpose><indexterm><primary>
+msgid "drbdmon"
+msgstr "drbdmon"
+
+#. type: Content of: <refentry><refmeta><manvolnum>
+msgid "8"
+msgstr "8"
+
+#. type: Content of: <refentry><refmeta><refmiscinfo>
+msgid "System Administration"
+msgstr "System Administration"
+
+#. type: Content of: <refentry><refnamediv><refpurpose>
+msgid ""
+"Monitor DRBD resources realtime<placeholder type=\"indexterm\" id=\"0\"/>"
+msgstr ""
+"DRBD リソースをリアルタイムで監視する<placeholder type=\"indexterm\" id="
+"\"0\"/>"
+
+#. type: Content of: <refentry><refsynopsisdiv><cmdsynopsis>
+msgid ""
+"  <command moreinfo=\"none\">drbdmon</command> <arg choice=\"opt\" rep="
+"\"repeat\">options</arg> <arg choice=\"opt\" rep=\"norepeat\">--<arg choice="
+"\"opt\" rep=\"repeat\"><replaceable>backend-options</replaceable></arg></"
+"arg> <arg choice=\"req\" rep=\"norepeat\"><replaceable>command</"
+"replaceable></arg> <arg choice=\"req\" rep=\"repeat\"><replaceable>context</"
+"replaceable></arg>"
+msgstr ""
+"  <command moreinfo=\"none\">drbdmon</command> <arg choice=\"opt\" rep="
+"\"repeat\">options</arg> <arg choice=\"opt\" rep=\"norepeat\">--<arg choice="
+"\"opt\" rep=\"repeat\"><replaceable>backend-options</replaceable></arg></"
+"arg> <arg choice=\"req\" rep=\"norepeat\"><replaceable>command</"
+"replaceable></arg> <arg choice=\"req\" rep=\"repeat\"><replaceable>context</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Description"
+msgstr "Description"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"The <option>drbdmon</option> utility is used for monitoring volumes and "
+"connections realtime, as defined in DRBD resource files. See <citerefentry> "
+"<refentrytitle>drbd.conf</refentrytitle> <manvolnum>5</manvolnum> </"
+"citerefentry> for more information."
+msgstr ""
+"<option>drbdmon</option> ユーティリティは、 DRBD リ ソースファイルで定義され"
+"ているボリュームとの接続をリアルタイムで監視するために使用される。次のマニュ"
+"アルを参照: <citerefentry> <refentrytitle>drbd.conf</refentrytitle> "
+"<manvolnum>5</manvolnum> </citerefentry>。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Options"
+msgstr "Options"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid "<option>-d</option>, <option>--dry-run</option>"
+msgstr "<option>-d</option>, <option>--dry-run</option>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"Show which commands <option>drbdmon</option> would execute instead of "
+"actually executing them (for example, <command moreinfo=\"none\">drbdmon -d "
+"up <replaceable>resource</replaceable></command>).  This can be a useful way "
+"to learn how <command moreinfo=\"none\">drbdsetup</command> and <command "
+"moreinfo=\"none\">drbdmeta</command> are used."
+msgstr ""
+"<option>drbdmon</option> がどのコマンドを実行するか、それらを実際に実行する代"
+"わりに表示する （たとえば、 <command moreinfo=\"none\">drbdmon -d up "
+"<replaceable>resource</replaceable></command>）。これは、<command moreinfo="
+"\"none\">drbdsetup</command>、<command moreinfo=\"none\">drbdmeta</command> "
+"がどのように使用されてるかを学習するのに便利な方法である。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid "<option>--ascii</option>"
+msgstr "<option>--ascii</option>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid "Use only ascii characters (no Unicode)."
+msgstr "ASCII 文字 （Unicode なし） のみを使用する。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid "<option>--no-header</option>"
+msgstr "<option>--no-header</option>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid "Do not display the drbdmon header line"
+msgstr "drbdmon ヘッダー行を表示しない。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid "<option>--no-hotkeys</option>"
+msgstr "<option>--no-hotkeys</option>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid "Do not display the hotkeys line."
+msgstr "ホットキーの行を表示しない。"
+
+#. type: Content of: <refentry><refsect1><refsect1><title>
+msgid "Commands"
+msgstr "Commands"
+
+#. type: Content of: <refentry><refsect1><refsect1><variablelist><varlistentry><term>
+msgid ""
+"c <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</replaceable></"
+"arg>"
+msgstr ""
+"c <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</replaceable></"
+"arg>"
+
+#. type: Content of: <refentry><refsect1><refsect1><variablelist><varlistentry><listitem><para>
+msgid "Clear screen."
+msgstr "画面をクリアする。"
+
+#. type: Content of: <refentry><refsect1><refsect1><variablelist><varlistentry><term>
+msgid "r"
+msgstr "r"
+
+#. type: Content of: <refentry><refsect1><refsect1><variablelist><varlistentry><listitem><para>
+msgid "Repaint display."
+msgstr "再表示する。"
+
+#. type: Content of: <refentry><refsect1><refsect1><variablelist><varlistentry><term>
+msgid "q"
+msgstr "q"
+
+#. type: Content of: <refentry><refsect1><refsect1><variablelist><varlistentry><listitem><para>
+msgid "Quit."
+msgstr "終了する。"
+
+#. type: Content of: <refentry><refsect1><refsect1><title>
+msgid "Version"
+msgstr "Version"
+
+#. type: Content of: <refentry><refsect1><refsect1><simpara>
+msgid "This document was revised for version 9.0.0 of the DRBD distribution."
+msgstr "このドキュメントは DRBD バージョン 9.0.0 向けに改訂されている。"
+
+#. type: Content of: <refentry><refsect1><refsect1><title>
+msgid "Reporting Bugs"
+msgstr "Reporting Bugs"
+
+#. type: Content of: <refentry><refsect1><refsect1><simpara>
+msgid "Report bugs to <email>drbd-user@lists.linbit.com</email>."
+msgstr "Report bugs to <email>drbd-user@lists.linbit.com</email>."
+
+#. type: Content of: <refentry><refsect1><refsect1><title>
+msgid "Copyright"
+msgstr "Copyright"
+
+#. type: Content of: <refentry><refsect1><refsect1><simpara>
+msgid ""
+"Copyright 2016-2017 LINBIT Information Technologies, Robert Altnoeder, Sam "
+"Leonard.  This is free software; see the source for copying conditions. "
+"There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A "
+"PARTICULAR PURPOSE."
+msgstr ""
+"Copyright 2016-2017 LINBIT Information Technologies, Robert Altnoeder, Sam "
+"Leonard.  This is free software; see the source for copying conditions. "
+"There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A "
+"PARTICULAR PURPOSE."
+
+#. type: Content of: <refentry><refsect1><refsect1><title>
+msgid "See Also"
+msgstr "See Also"
+
+#. type: Content of: <refentry><refsect1><refsect1><para>
+msgid ""
+"<citerefentry> <refentrytitle>drbd.conf</refentrytitle> <manvolnum>5</"
+"manvolnum> </citerefentry>, <citerefentry> <refentrytitle>drbd</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry>, <citerefentry> "
+"<refentrytitle>drbddisk</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry>, <citerefentry> <refentrytitle>drbdsetup</refentrytitle> "
+"<manvolnum>8</manvolnum> </citerefentry>, <citerefentry> "
+"<refentrytitle>drbdmeta</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry> and the <ulink url=\"http://www.drbd.org/\"><citetitle>DRBD "
+"project web site</citetitle></ulink>"
+msgstr ""
+"<citerefentry> <refentrytitle>drbd.conf</refentrytitle> <manvolnum>5</"
+"manvolnum> </citerefentry>, <citerefentry> <refentrytitle>drbd</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry>, <citerefentry> "
+"<refentrytitle>drbddisk</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry>, <citerefentry> <refentrytitle>drbdsetup</refentrytitle> "
+"<manvolnum>8</manvolnum> </citerefentry>, <citerefentry> "
+"<refentrytitle>drbdmeta</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry> and the <ulink url=\"http://www.drbd.org/\"><citetitle>DRBD "
+"project web site</citetitle></ulink>"

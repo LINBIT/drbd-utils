@@ -1,0 +1,1199 @@
+# SOME DESCRIPTIVE TITLE
+# Copyright (C) YEAR Free Software Foundation, Inc.
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: 2018-11-02 13:06+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. type: Content of: <refentry><refentryinfo>
+msgid ""
+"<date>17 January 2018</date> <productname>DRBD</productname> "
+"<productnumber>9.0.x</productnumber>"
+msgstr ""
+"<date>17 January 2018</date> <productname>DRBD</productname> "
+"<productnumber>9.0.x</productnumber>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><primary>
+msgid "drbdadm"
+msgstr "drbdadm"
+
+#. type: Content of: <refentry><refmeta><manvolnum>
+msgid "8"
+msgstr "8"
+
+#. type: Content of: <refentry><refmeta><refmiscinfo>
+msgid "System Administration"
+msgstr "System Administration"
+
+#. type: Content of: <refentry><refnamediv><refpurpose>
+msgid ""
+"Utility for DRBD administration<placeholder type=\"indexterm\" id=\"0\"/>"
+msgstr ""
+"DRBD 管理のためのユーティリティ<placeholder type=\"indexterm\" id=\"0\"/>"
+
+#.       <group choice="opt" rep="norepeat">
+#.         <arg choice="req" rep="norepeat">all</arg>
+#.         <arg choice="req" rep="repeat"><replaceable>resource<arg choice="opt"
+#.         rep="norepeat">/volume</arg></replaceable></arg>
+#.       </group>
+#.       
+#. type: Content of: <refentry><refsynopsisdiv><cmdsynopsis>
+msgid ""
+"<command moreinfo=\"none\">drbdadm</command> <arg choice=\"opt\" rep=\"repeat"
+"\">options</arg> <arg choice=\"opt\" rep=\"norepeat\">--<arg choice=\"opt\" "
+"rep=\"repeat\"><replaceable>backend-options</replaceable></arg></arg> <arg "
+"choice=\"req\" rep=\"norepeat\"><replaceable>command</replaceable></arg> "
+"<arg choice=\"req\" rep=\"repeat\"><replaceable>context</replaceable></arg>"
+msgstr ""
+"<command moreinfo=\"none\">drbdadm</command> <arg choice=\"opt\" rep=\"repeat"
+"\">options</arg> <arg choice=\"opt\" rep=\"norepeat\">--<arg choice=\"opt\" "
+"rep=\"repeat\"><replaceable>backend-options</replaceable></arg></arg> <arg "
+"choice=\"req\" rep=\"norepeat\"><replaceable>command</replaceable></arg> "
+"<arg choice=\"req\" rep=\"repeat\"><replaceable>context</replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Description"
+msgstr "Description"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"The <option>drbdadm</option> utility is used for managing DRBD based on its "
+"configuration files, see <citerefentry> <refentrytitle>drbd.conf</"
+"refentrytitle> <manvolnum>5</manvolnum> </citerefentry>.  It translates high-"
+"level commands into one or more lower-level commands for the "
+"<option>drbdsetup</option> and <option>drbdmeta</option> utilities, which "
+"control the kernel module and manipulate the on-disk metadata."
+msgstr ""
+"<option>drbdadm</option> ユーティリティーは、構成ファイルに基づいて DRBD を管"
+"理するために使用される。次のマニュアルを参照: <citerefentry> "
+"<refentrytitle>drbd.conf</refentrytitle> <manvolnum>5</manvolnum> </"
+"citerefentry>。これは、高レベルのコマンドを 1 つまたは複数の下位レベルのコマ"
+"ンド <option>drbdsetup</option>、<option>drbdmeta</option> に変換する。これら"
+"のコマンドはカーネルモジュールを制御し、ディスク上のメタデータを操作する。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"Depending on the command, the <option>drbdadm</option> utility operates on "
+"one or more resources, devices, connections, or peer devices.  The following "
+"command contexts are defined:"
+msgstr ""
+"コマンドに応じて、 <option>drbdadm</option> ユーティリティは、 1 つまたは複数"
+"のリソース、デバイス、接続、または対向ノード上で動作する。次のコマンドコンテ"
+"キストが有効である。"
+
+#. type: Content of: <refentry><refsect1><para><variablelist><varlistentry><term>
+msgid "<replaceable>resource</replaceable>"
+msgstr "<replaceable>resource</replaceable>"
+
+#. type: Content of: <refentry><refsect1><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"A resource specified by name, or the keyword <option>all</option> for all "
+"defined resources."
+msgstr ""
+"resource で指定されたリソース、またはキーワード <option>all</option> は定義さ"
+"れたすべてのリソースを意味する。"
+
+#. type: Content of: <refentry><refsect1><para><variablelist><varlistentry><term>
+msgid "<replaceable>device</replaceable>"
+msgstr "<replaceable>device</replaceable>"
+
+#. type: Content of: <refentry><refsect1><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"A device, specified by minor number (<option>minor-</"
+"option><replaceable>minornumber</replaceable>, e.g. <option>minor-</"
+"option><replaceable>0</replaceable>) or by resource and volume number "
+"(<replaceable>resource</replaceable>/<replaceable>volume</replaceable>).  If "
+"only a <replaceable>resource</replaceable> is specified, the command "
+"iterates over all devices of that resource."
+msgstr ""
+"マイナー番号で指定されたデバイス （例えば <option>minor-</"
+"option><replaceable>0</replaceable>） またはリソースとボリューム番号 "
+"（<replaceable>resource</replaceable>/<replaceable>volume</replaceable>）。"
+"<replaceable>resource</replaceable> が指定された場合、コマンドはそのリソース"
+"のすべてのデバイスに対して反復処理を行う。"
+
+#. type: Content of: <refentry><refsect1><para><variablelist><varlistentry><term>
+msgid "<replaceable>connection</replaceable>"
+msgstr "<replaceable>connection</replaceable>"
+
+#. type: Content of: <refentry><refsect1><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"A connection, specified by resource and connection name "
+"(<replaceable>resource</replaceable>:<replaceable>connection-name</"
+"replaceable>).  If only a <replaceable>resource</replaceable> is specified, "
+"the command iterates over all connections of that resource."
+msgstr ""
+"リソースと接続名で指定された接続 （<replaceable>resource</replaceable>:"
+"<replaceable>connection-name</replaceable>)。<replaceable>resource</"
+"replaceable> が指定された場合、コマンドはそのリソースのすべての接続に対して反"
+"復処理を行う。"
+
+#. type: Content of: <refentry><refsect1><para><variablelist><varlistentry><term>
+msgid "<replaceable>peer_device</replaceable>"
+msgstr "<replaceable>peer_device</replaceable>"
+
+#. type: Content of: <refentry><refsect1><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"A peer device, specified by resource, connection name, and volume number "
+"(<replaceable>resource</replaceable>:<replaceable>connection-name</"
+"replaceable>/<replaceable>volume</replaceable>).  If only a "
+"<replaceable>resource</replaceable>, <replaceable>device</replaceable>, or "
+"<replaceable>connection</replaceable> is specified, the command iterates "
+"over all peer devices of that resource, device, or connection."
+msgstr ""
+"リソース、接続名、およびボリューム番号で指定された対向ノード "
+"（<replaceable>resource</replaceable>:<replaceable>connection-name</"
+"replaceable>/<replaceable>volume</replaceable>）。<replaceable>resource</"
+"replaceable>, <replaceable>device</replaceable>, <replaceable>connection</"
+"replaceable> が指定された場合、コマンドはそのリソース、デバイス、または接続の"
+"すべての対向ノード上に対して反復処理を行う。"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid "<placeholder type=\"variablelist\" id=\"0\"/>"
+msgstr "<placeholder type=\"variablelist\" id=\"0\"/>"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"All options following a double-dash are passed through to the lower-level "
+"utilities as specified.  In addition, <option>drbdadm</option> understands "
+"most of the options of <option>drbdsetup</option>, and will pass them "
+"through even without the double-dash."
+msgstr ""
+"二重ダッシュに続くすべてのオプションは、指定された下位レベルのユーティリティ"
+"に渡される。さらに <option>drbdadm</option> は <option>drbdsetup</option> の"
+"多くのオプションを理解する。二重ダッシュを使わなくてもそれらを drbdsetup に渡"
+"せる。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Options"
+msgstr "Options"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid "<option>-d</option>, <option>--dry-run</option>"
+msgstr "<option>-d</option>, <option>--dry-run</option>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"Show which commands <option>drbdadm</option> would execute instead of "
+"actually executing them (for example, <command moreinfo=\"none\">drbdadm -d "
+"up <replaceable>resource</replaceable></command>).  This can be a useful way "
+"to learn how <command moreinfo=\"none\">drbdsetup</command> and <command "
+"moreinfo=\"none\">drbdmeta</command> are used."
+msgstr ""
+"<option>drbdadm</option> がどのコマンドを実行するか、それらを実際に実行する代"
+"わりに表示する （たとえば、 <command moreinfo=\"none\">drbdadm -d up "
+"<replaceable>resource</replaceable></command>）。これは、<command moreinfo="
+"\"none\">drbdsetup</command>、<command moreinfo=\"none\">drbdmeta</command> "
+"がどのように使用されてるかを学習するのに便利な方法である。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"<option>-c</option>, <option>--config-file</option> <replaceable>file</"
+"replaceable>"
+msgstr ""
+"<option>-c</option>, <option>--config-file</option> <replaceable>file</"
+"replaceable>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"Use an alternative configuration file.  By default, <option>drbdadm</option> "
+"will use the the first of the following files that exists: <option>/etc/"
+"drbd-90.conf</option>, <option>/etc/drbd-84.conf</option>, <option>/etc/"
+"drbd-83.conf</option>, <option>/etc/drbd-82.conf</option>, <option>/etc/"
+"drbd-08.conf</option>, <option>/etc/drbd.conf</option>."
+msgstr ""
+"代わりの設定ファイルを指定する。デフォルトで <option>drbdadm</option> は、存"
+"在する次のファイルのうちの最初のものを使用する。 <option>/etc/drbd-90.conf</"
+"option>、 <option>/etc/drbd-84.conf</option>、 <option>/etc/drbd-83.conf</"
+"option>、 <option>/etc/drbd-82.conf</option>、 <option>/etc/drbd-08.conf</"
+"option>、 <option>/etc/drbd.conf</option>。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"<option>-t</option>, <option>--config-to-test</option> <replaceable>file</"
+"replaceable>"
+msgstr ""
+"<option>-t</option>, <option>--config-to-test</option> <replaceable>file</"
+"replaceable>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"Check an additional configuration file.  This option is only allowed with "
+"the dump and the sh-nop commands."
+msgstr ""
+"追加の構成ファイルを確認する。dump コマンドまたは sh-nop コマンドと共に使用す"
+"る場合のみ有効である。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"<option>-s</option>, <option>--drbdsetup</option> <replaceable>file</"
+"replaceable>"
+msgstr ""
+"<option>-s</option>, <option>--drbdsetup</option> <replaceable>file</"
+"replaceable>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"Specifies the full path to the <option>drbdsetup</option> program. If this "
+"option is omitted, drbdadm will look for it beneath itself first, and then "
+"in the PATH."
+msgstr ""
+"<option>drbdsetup</option> プログラムのフルパスを指定する。省略すると、自身の"
+"コマンド配置場所配下と、$PATH が参照される。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"<option>-m</option>, <option>--drbdmeta</option> <replaceable>file</"
+"replaceable>"
+msgstr ""
+"<option>-m</option>, <option>--drbdmeta</option> <replaceable>file</"
+"replaceable>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"Specifies the full path to the <option>drbdmeta</option> program. If this "
+"option is omitted, drbdadm will look for it beneath itself first, and then "
+"in the PATH."
+msgstr ""
+"<option>drbdmeta</option> プログラムのフルパスを指定する。省略すると、自身の"
+"コマンド配置場所配下と、$PATH が参照される。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid "<option>-S</option>, <option>--stacked</option>"
+msgstr "<option>-S</option>, <option>--stacked</option>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid "Perform the command on a stacked resource."
+msgstr "スタックリソースに対してコマンドを実行する。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Commands"
+msgstr "Commands"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"adjust <arg choice=\"req\" rep=\"norepeat\"><replaceable>resource</"
+"replaceable></arg>"
+msgstr ""
+"adjust <arg choice=\"req\" rep=\"norepeat\"><replaceable>resource</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "adjust"
+msgstr "adjust"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Adjust the configuration of the "
+"kernel module so that it matches the configuration files.  The result should "
+"be the same as when stopping and restarting all resources (<command moreinfo="
+"\"none\">drbdadm down all</command> followed by <command moreinfo=\"none"
+"\">drbdadm up all</command>), but without the interruptions."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>カーネルモジュールの設定を、設定"
+"ファイルと一致するように調整する。結果は、すべてのリソースを停止して再起動す"
+"る場合と同じになる （<command moreinfo=\"none\">drbdadm down all</command> の"
+"後に <command moreinfo=\"none\">drbdadm up all</command>）。中断することない"
+"だけが違いである。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"Note that the adjust command can misinterpret the configuration change in "
+"some cases.  To be safe, check what the command would do (with the <option>--"
+"dry-run</option> option) before running the actual command."
+msgstr ""
+"adjust コマンドは、場合によっては設定変更を誤って解釈する可能性があるので注意"
+"すべきである。安全を期すために、実行前にコマンドが何をするのかを <option>--"
+"dry-run</option> オプションを使用して確認すること。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"adjust-with-progress <arg choice=\"req\" rep=\"norepeat"
+"\"><replaceable>resource</replaceable></arg>"
+msgstr ""
+"adjust-with-progress <arg choice=\"req\" rep=\"norepeat"
+"\"><replaceable>resource</replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "adjust-with-progress"
+msgstr "adjust-with-progress"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> The same as <option>adjust</"
+"option>, but with some more information about the command's progress."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/><option>adjust</option> と同じだ"
+"が、コマンドの進捗状況についてさらに詳しい情報がある。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"apply-al <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+msgstr ""
+"apply-al <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "apply-al"
+msgstr "apply-al"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Apply the activity log of the "
+"specified device.  See <citerefentry> <refentrytitle>drbdmeta</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>指定したデバイスのアクティビティロ"
+"グを適用する。次のマニュアルを参照: <citerefentry> <refentrytitle>drbdmeta</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"attach <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+msgstr ""
+"attach <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"Attach a lower-level device to an existing replicated device.  See "
+"<citerefentry> <refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</"
+"manvolnum> </citerefentry> for details."
+msgstr ""
+"下位デバイスを既存の複製デバイスに接続する。次のマニュアルを参照: "
+"<citerefentry> <refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</"
+"manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"check-resize <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+msgstr ""
+"check-resize <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "check-resize"
+msgstr "check-resize"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Call drbdmeta to eventually move "
+"internal meta data. If the backing device was resized, while DRBD was not "
+"running, meta data has to be moved to the end of the device, so that the "
+"next <option>attach</option> command can succeed."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>内部メタデータの移動のために "
+"drbdmeta を呼び出す。DRBD の停止中に下位デバイスのサイズが変更された場合、次"
+"回の <option>attach</option> コマンドが成功するように、メタデータをデバイスの"
+"最後に移動する必要がある。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"connect <arg choice=\"req\" rep=\"norepeat\"><replaceable>connection</"
+"replaceable></arg>"
+msgstr ""
+"connect <arg choice=\"req\" rep=\"norepeat\"><replaceable>connection</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "connect"
+msgstr "connect"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Activate an exisiting connection "
+"to a peer. The connection needs to be created first with the <option>new-"
+"peer</option> command, and have at least one path created with the "
+"<option>new-path</option> command.  See <citerefentry> "
+"<refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>対向ノードへの既存の接続をアクティ"
+"ブにする。最初に <option>new-peer</option> コマンドを使用して接続を作成する必"
+"要があり、少なくとも １ つ作られている必要がある。次のマニュアルを参照: "
+"<citerefentry> <refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</"
+"manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"create-md <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+msgstr ""
+"create-md <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "create-md"
+msgstr "create-md"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Initialize the metadata of a "
+"device. This is necessary before a device can be attached; see "
+"<citerefentry> <refentrytitle>drbdmeta</refentrytitle> <manvolnum>8</"
+"manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>デバイスのメタデータを初期化する。"
+"これは、デバイスを接続する前に必要である。次のマニュアルを参照: "
+"<citerefentry> <refentrytitle>drbdmeta</refentrytitle> <manvolnum>8</"
+"manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"cstate <arg choice=\"req\" rep=\"norepeat\"><replaceable>connection</"
+"replaceable></arg>"
+msgstr ""
+"cstate <arg choice=\"req\" rep=\"norepeat\"><replaceable>connection</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "cstate"
+msgstr "cstate"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Show the current state of a "
+"connection.  See <citerefentry> <refentrytitle>drbdsetup</refentrytitle> "
+"<manvolnum>8</manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>接続の現在の状態を表示する。次のマ"
+"ニュアルを参照: <citerefentry> <refentrytitle>drbdsetup</refentrytitle> "
+"<manvolnum>8</manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"detach <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+msgstr ""
+"detach <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "detach"
+msgstr "detach"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Detach the lower-level device of "
+"a replicated device. See <citerefentry> <refentrytitle>drbdsetup</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>複製されたデバイスの下位デバイスを"
+"切り離す。次のマニュアルを参照: <citerefentry> <refentrytitle>drbdsetup</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"disconnect <arg choice=\"req\" rep=\"norepeat\"><replaceable>connection</"
+"replaceable></arg>"
+msgstr ""
+"disconnect <arg choice=\"req\" rep=\"norepeat\"><replaceable>connection</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "disconnect"
+msgstr "disconnect"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Remove a connection to a peer "
+"host.  See <citerefentry> <refentrytitle>drbdsetup</refentrytitle> "
+"<manvolnum>8</manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>対向ノードへの接続を削除する。次の"
+"マニュアルを参照: <citerefentry> <refentrytitle>drbdsetup</refentrytitle> "
+"<manvolnum>8</manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"disk-options <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+msgstr ""
+"disk-options <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "disk-options"
+msgstr "disk-options"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Change the disk options of an "
+"attached lower-level device.  See <citerefentry> <refentrytitle>drbdsetup</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>接続された下位デバイスのディスクオ"
+"プションを変更する。次のマニュアルを参照: <citerefentry> "
+"<refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"down <arg choice=\"req\" rep=\"norepeat\"><replaceable>resource</"
+"replaceable></arg>"
+msgstr ""
+"down <arg choice=\"req\" rep=\"norepeat\"><replaceable>resource</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "down"
+msgstr "down"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Take a resource down by removing "
+"all volumes, connections, and the resource itself.  See <citerefentry> "
+"<refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>すべてのボリューム、接続、およびリ"
+"ソース自体を削除して、リソースを落とす。次のマニュアルを参照: <citerefentry> "
+"<refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"dstate <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+msgstr ""
+"dstate <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "dstate"
+msgstr "dstate"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Show the current disk state of a "
+"lower-level device.  See <citerefentry> <refentrytitle>drbdsetup</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>下位デバイスの現在のディスク状態を"
+"表示する。次のマニュアルを参照: <citerefentry> <refentrytitle>drbdsetup</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"dump <arg choice=\"req\" rep=\"norepeat\"><replaceable>resource</"
+"replaceable></arg>"
+msgstr ""
+"dump <arg choice=\"req\" rep=\"norepeat\"><replaceable>resource</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "dump"
+msgstr "dump"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Parse the configuration file and "
+"dump it to stdout.  This will fail if the configuration file is "
+"syntactically incorrect."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>設定ファイルを解析して標準出力に出"
+"力する。構成ファイルが構文的に正しくない場合、失敗する。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"dump-md <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+msgstr ""
+"dump-md <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "dump-md"
+msgstr "dump-md"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Dump the metadata of a device in "
+"text form, including the bitmap and activity log.  See <citerefentry> "
+"<refentrytitle>drbdmeta</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>ビットマップおよびアクティビティロ"
+"グを含むデバイスのメタデータをテキスト形式でダンプする。次のマニュアルを参"
+"照: <citerefentry> <refentrytitle>drbdmeta</refentrytitle> <manvolnum>8</"
+"manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"get-gi <arg choice=\"req\" rep=\"norepeat\"><replaceable>peer_device</"
+"replaceable></arg>"
+msgstr ""
+"get-gi <arg choice=\"req\" rep=\"norepeat\"><replaceable>peer_device</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "get-gi"
+msgstr "get-gi"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Show the data generation "
+"identifiers for a device on a particular connection.  Uses "
+"<option>drbdsetup</option> for attached devices and <option>drbdmeta</"
+"option> for unattached devices.  See <citerefentry> "
+"<refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>特定の接続上のデバイスのデータ世代"
+"識別子を表示する。接続されたデバイスには <option>drbdsetup</option> を、接続"
+"されていないデバイスには <option>drbdmeta</option> を使用する。次のマニュアル"
+"を参照: <citerefentry> <refentrytitle>drbdsetup</refentrytitle> "
+"<manvolnum>8</manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid "hidden-commands"
+msgstr "hidden-commands"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid "Shows all commands which are not explicitly documented."
+msgstr "明示的に文書化されていないすべてのコマンドを表示する。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"invalidate <arg choice=\"req\" rep=\"norepeat\"><replaceable>peer_device</"
+"replaceable></arg>"
+msgstr ""
+"invalidate <arg choice=\"req\" rep=\"norepeat\"><replaceable>peer_device</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "invalidate"
+msgstr "invalidate"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Replace the local data of a "
+"device with that of a peer.  See <citerefentry> <refentrytitle>drbdsetup</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>デバイスのローカルデータを対向ノー"
+"ドのローカルデータで置き換える。次のマニュアルを参照: <citerefentry> "
+"<refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"invalidate-remote <arg choice=\"req\" rep=\"norepeat"
+"\"><replaceable>peer_device</replaceable></arg>"
+msgstr ""
+"invalidate-remote <arg choice=\"req\" rep=\"norepeat"
+"\"><replaceable>peer_device</replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "invalidate-remote"
+msgstr "invalidate-remote"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Replace a peer device's data of a "
+"resource with the local data.  See <citerefentry> <refentrytitle>drbdsetup</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>対向ノードのリソースデータをローカ"
+"ルデータで置き換える。次のマニュアルを参照: <citerefentry> "
+"<refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"net-options <arg choice=\"req\" rep=\"norepeat\"><replaceable>connection</"
+"replaceable></arg>"
+msgstr ""
+"net-options <arg choice=\"req\" rep=\"norepeat\"><replaceable>connection</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "net-options"
+msgstr "net-options"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Change the network options of an "
+"existing connection.  See <citerefentry> <refentrytitle>drbdsetup</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>既存の接続のネットワークオプション"
+"を変更する。次のマニュアルを参照: <citerefentry> <refentrytitle>drbdsetup</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"new-current-uuid <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+msgstr ""
+"new-current-uuid <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "new-current-uuid"
+msgstr "new-current-uuid"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Generate a new currend UUID.  See "
+"<citerefentry> <refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</"
+"manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>新しい currend UUID を生成する。次"
+"のマニュアルを参照: <citerefentry> <refentrytitle>drbdsetup</refentrytitle> "
+"<manvolnum>8</manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"outdate <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+msgstr ""
+"outdate <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "outdate"
+msgstr "outdate"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Mark the data on a lower-level "
+"device as outdated.  See <citerefentry> <refentrytitle>drbdsetup</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>下位デバイスのデータ内容が「無効」"
+"であるとマークする。次のマニュアルを参照: <citerefentry> "
+"<refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"pause-sync <arg choice=\"req\" rep=\"norepeat\"><replaceable>peer_device</"
+"replaceable></arg>"
+msgstr ""
+"pause-sync <arg choice=\"req\" rep=\"norepeat\"><replaceable>peer_device</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "pause-sync"
+msgstr "pause-sync"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Stop resynchronizing between a "
+"local and a peer device by setting the local pause flag.  See <citerefentry> "
+"<refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>ローカルポーズフラグを設定して、"
+"ローカルデバイスと対向ノードとの再同期を停止する。次のマニュアルを参照: "
+"<citerefentry> <refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</"
+"manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"primary <arg choice=\"req\" rep=\"norepeat\"><replaceable>resource</"
+"replaceable></arg>"
+msgstr ""
+"primary <arg choice=\"req\" rep=\"norepeat\"><replaceable>resource</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "primary"
+msgstr "primary"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Change the role of a node in a "
+"resource to primary.  See <citerefentry> <refentrytitle>drbdsetup</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>リソース内のノードの役割をプライマ"
+"リに変更する。次のマニュアルを参照: <citerefentry> <refentrytitle>drbdsetup</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"resize <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+msgstr ""
+"resize <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "resize"
+msgstr "resize"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Resize the lower-level devices of "
+"a replicated device on all nodes.  This combines the <option>check-resize</"
+"option> and <option>resize</option> lower-level commands; see <citerefentry> "
+"<refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>すべてのノードで、複製されたデバイ"
+"スの下位デバイスのサイズを変更する。これは <option>check-resize</option> と下"
+"位レベルの <option>resize</option> コマンドを組み合わせる。以下のマニュアルを"
+"参照: <citerefentry> <refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</"
+"manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"resource-options <arg choice=\"req\" rep=\"norepeat\"><replaceable>resource</"
+"replaceable></arg>"
+msgstr ""
+"resource-options <arg choice=\"req\" rep=\"norepeat\"><replaceable>resource</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "resource-options"
+msgstr "resource-options"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Change the resource options of an "
+"existing resource.  See <citerefentry> <refentrytitle>drbdsetup</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>既存のリソースのリソースオプション"
+"を変更する。次のマニュアルを参照: <citerefentry> <refentrytitle>drbdsetup</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"resume-sync <arg choice=\"req\" rep=\"norepeat\"><replaceable>peer_device</"
+"replaceable></arg>"
+msgstr ""
+"resume-sync <arg choice=\"req\" rep=\"norepeat\"><replaceable>peer_device</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "resume-sync"
+msgstr "resume-sync"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Allow resynchronization to resume "
+"by clearing the local sync pause flag.  See <citerefentry> "
+"<refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>ローカル同期の一時停止フラグをクリ"
+"アして、再同期を再開できるようにする。次のマニュアルを参照: <citerefentry> "
+"<refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"role <arg choice=\"req\" rep=\"norepeat\"><replaceable>resource</"
+"replaceable></arg>"
+msgstr ""
+"role <arg choice=\"req\" rep=\"norepeat\"><replaceable>resource</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "role"
+msgstr "role"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Show the current role of a "
+"resource."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>リソースの現在の役割を表示する。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"secondary <arg choice=\"req\" rep=\"norepeat\"><replaceable>resource</"
+"replaceable></arg>"
+msgstr ""
+"secondary <arg choice=\"req\" rep=\"norepeat\"><replaceable>resource</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "secondary"
+msgstr "secondary"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Change the role of a node in a "
+"resource to secondary.  This command fails if the replicated device is in "
+"use."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>リソース内のノードの役割をセカンダ"
+"リに変更する。複製されたデバイスが使用中の場合、このコマンドは失敗する。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"show-gi <arg choice=\"req\" rep=\"norepeat\"><replaceable>peer_device</"
+"replaceable></arg>"
+msgstr ""
+"show-gi <arg choice=\"req\" rep=\"norepeat\"><replaceable>peer_device</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "show-gi"
+msgstr "show-gi"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Show the data generation "
+"identifiers for a device on a particular connection. In addition, explain "
+"the output.  See <citerefentry> <refentrytitle>drbdsetup</refentrytitle> "
+"<manvolnum>8</manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>特定の接続上のデバイスのデータ世代"
+"識別子を表示する。さらに、出力の説明を行う。次のマニュアルを参照: "
+"<citerefentry> <refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</"
+"manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"state <arg choice=\"req\" rep=\"norepeat\"><replaceable>resource</"
+"replaceable></arg>"
+msgstr ""
+"state <arg choice=\"req\" rep=\"norepeat\"><replaceable>resource</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "state"
+msgstr "state"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> This is an alias for <command "
+"moreinfo=\"none\">drbdsetup role</command>. Deprecated."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>これは <command moreinfo=\"none"
+"\">drbdsetup role</command> の別名である。推奨しない。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"up <arg choice=\"req\" rep=\"norepeat\"><replaceable>resource</replaceable></"
+"arg>"
+msgstr ""
+"up <arg choice=\"req\" rep=\"norepeat\"><replaceable>resource</replaceable></"
+"arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "up"
+msgstr "up"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Bring up a resource by applying "
+"the activity log of all volumes, creating the resource, creating the "
+"replicated devices, attaching the lower-level devices, and connecting to all "
+"peers.  See the <option>apply-al</option> drbdmeta command and the "
+"<option>new-resource</option>, <option>new-device</option>, <option>new-"
+"minor</option>, <option>attach</option>, and <option>connect</option> "
+"drbdsetup commands."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>すべてのボリュームのアクティビ"
+"ティ・ログを適用し、リソースを作成し、複製されたデバイスを作成し、下位デバイ"
+"スを接続し、すべての対向ノードに接続することにより、リソースを起動する。"
+"drbdmeta コマンドの <option>apply-al</option> , drbdsetup コマンドの "
+"<option>new-resource</option>, <option>new-device</option>, <option>new-"
+"minor</option>, <option>attach</option>, <option>connect</option> を参照。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"verify <arg choice=\"req\" rep=\"norepeat\"><replaceable>peer_device</"
+"replaceable></arg>"
+msgstr ""
+"verify <arg choice=\"req\" rep=\"norepeat\"><replaceable>peer_device</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "verify"
+msgstr "verify"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Start online verification, change "
+"which part of the device will be verified, or stop online verification.  See "
+"<citerefentry> <refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</"
+"manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>オンライン照合を開始するか、デバイ"
+"スの検証部分を変更するか、オンライン照合を停止する。次のマニュアルを参照: "
+"<citerefentry> <refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</"
+"manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"wait-connect <group choice=\"req\"> <arg><replaceable>device</replaceable></"
+"arg> <arg><replaceable>connection</replaceable></arg> "
+"<arg><replaceable>resource</replaceable></arg> </group>"
+msgstr ""
+"wait-connect <group choice=\"req\"> <arg><replaceable>device</replaceable></"
+"arg> <arg><replaceable>connection</replaceable></arg> "
+"<arg><replaceable>resource</replaceable></arg> </group>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "wait-connect"
+msgstr "wait-connect"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Wait until a device on a peer, "
+"all devices over a connection, or all devices on all peers are visible. See "
+"<citerefentry> <refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</"
+"manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>対向ノード上のデバイス、接続上のす"
+"べてのデバイス、またはすべての対向ノード上のすべてのデバイスが見つかるまで待"
+"つ。次のマニュアルを参照: <citerefentry> <refentrytitle>drbdsetup</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"wait-sync <group choice=\"req\"> <arg><replaceable>device</replaceable></"
+"arg> <arg><replaceable>connection</replaceable></arg> "
+"<arg><replaceable>resource</replaceable></arg> </group>"
+msgstr ""
+"wait-sync <group choice=\"req\"> <arg><replaceable>device</replaceable></"
+"arg> <arg><replaceable>connection</replaceable></arg> "
+"<arg><replaceable>resource</replaceable></arg> </group>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "wait-sync"
+msgstr "wait-sync"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Wait until a device is connected "
+"and has finished eventual resync operation. Also available on connection and "
+"resource level.  See <citerefentry> <refentrytitle>drbdsetup</refentrytitle> "
+"<manvolnum>8</manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>デバイスが接続され、最終的に再同期"
+"操作が終了するまで待つ。接続とリソースレベルでも使用できる。次のマニュアルを"
+"参照: <citerefentry> <refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</"
+"manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"wipe-md <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+msgstr ""
+"wipe-md <arg choice=\"req\" rep=\"norepeat\"><replaceable>device</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "wipe-md"
+msgstr "wipe-md"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Wipe out the DRBD metadata of a "
+"device.  See <citerefentry> <refentrytitle>drbdmeta</refentrytitle> "
+"<manvolnum>8</manvolnum> </citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>デバイスのDRBDメタデータを消去す"
+"る。次のマニュアルを参照: <citerefentry> <refentrytitle>drbdmeta</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><term>
+msgid ""
+"forget-peer <arg choice=\"req\" rep=\"norepeat\"><replaceable>connection</"
+"replaceable></arg>"
+msgstr ""
+"forget-peer <arg choice=\"req\" rep=\"norepeat\"><replaceable>connection</"
+"replaceable></arg>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "forget-peer"
+msgstr "forget-peer"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Completely remove any reference "
+"to a unconnected peer from meta-data.  See <citerefentry> "
+"<refentrytitle>drbdmeta</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry> for details."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>接続されていない対向ノードへの参照"
+"をすべてメタデータから完全に削除する。次のマニュアルを参照: <citerefentry> "
+"<refentrytitle>drbdmeta</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry>"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Version"
+msgstr "Version"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid "This document was revised for version 9.0.0 of the DRBD distribution."
+msgstr "このドキュメントは DRBD バージョン 9.0.0 向けに改訂されている。"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Author"
+msgstr "Author"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid ""
+"Written by Philipp Reisner <email>philipp.reisner@linbit.com</email> and "
+"Lars Ellenberg <email>lars.ellenberg@linbit.com</email>"
+msgstr ""
+"Written by Philipp Reisner <email>philipp.reisner@linbit.com</email> and "
+"Lars Ellenberg <email>lars.ellenberg@linbit.com</email>"
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Reporting Bugs"
+msgstr "Reporting Bugs"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid "Report bugs to <email>drbd-user@lists.linbit.com</email>."
+msgstr "Report bugs to <email>drbd-user@lists.linbit.com</email>."
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "Copyright"
+msgstr "Copyright"
+
+#. type: Content of: <refentry><refsect1><simpara>
+msgid ""
+"Copyright 2001-2018 LINBIT Information Technologies, Philipp Reisner, Lars "
+"Ellenberg.  This is free software; see the source for copying conditions. "
+"There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A "
+"PARTICULAR PURPOSE."
+msgstr ""
+"Copyright 2001-2018 LINBIT Information Technologies, Philipp Reisner, Lars "
+"Ellenberg.  This is free software; see the source for copying conditions. "
+"There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A "
+"PARTICULAR PURPOSE."
+
+#. type: Content of: <refentry><refsect1><title>
+msgid "See Also"
+msgstr "See Also"
+
+#. type: Content of: <refentry><refsect1><para>
+msgid ""
+"<citerefentry> <refentrytitle>drbd.conf</refentrytitle> <manvolnum>5</"
+"manvolnum> </citerefentry>, <citerefentry> <refentrytitle>drbd</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry>, <citerefentry> "
+"<refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry>, <citerefentry> <refentrytitle>drbdmeta</refentrytitle> "
+"<manvolnum>8</manvolnum> </citerefentry> and the <ulink url=\"http://www."
+"drbd.org/\"><citetitle>DRBD project web site</citetitle></ulink>"
+msgstr ""
+"<citerefentry> <refentrytitle>drbd.conf</refentrytitle> <manvolnum>5</"
+"manvolnum> </citerefentry>, <citerefentry> <refentrytitle>drbd</"
+"refentrytitle> <manvolnum>8</manvolnum> </citerefentry>, <citerefentry> "
+"<refentrytitle>drbdsetup</refentrytitle> <manvolnum>8</manvolnum> </"
+"citerefentry>, <citerefentry> <refentrytitle>drbdmeta</refentrytitle> "
+"<manvolnum>8</manvolnum> </citerefentry> and the <ulink url=\"http://www."
+"drbd.org/\"><citetitle>DRBD project web site</citetitle></ulink>"

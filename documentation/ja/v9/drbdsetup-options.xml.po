@@ -1,0 +1,2495 @@
+# SOME DESCRIPTIVE TITLE
+# Copyright (C) YEAR Free Software Foundation, Inc.
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"POT-Creation-Date: 2018-11-02 13:06+0900\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>al-extents <replaceable>extents</replaceable></option>"
+msgstr "<option>al-extents <replaceable>extents</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><primary>
+msgid "drbd.conf"
+msgstr "drbd.conf"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "al-extents"
+msgstr "al-extents"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> DRBD automatically maintains a "
+"\"hot\" or \"active\" disk area likely to be written to again soon based on "
+"the recent write activity.  The \"active\" disk area can be written to "
+"immediately, while \"inactive\" disk areas must be \"activated\" first, "
+"which requires a meta-data write.  We also refer to this active disk area as "
+"the \"activity log\"."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>DRBD は、直近の書き込み活動に基づい"
+"て、すぐに書き直される可能性のある「ホット」または「アクティブ」ディスク領域"
+"を自動的に維持する。「アクティブ」ディスク領域はすぐに書き込むことができる"
+"が、「非アクティブ」ディスク領域は最初に「アクティブ化」する必要があり、この"
+"ためのメタデータ書き込みが必要である。このアクティブなディスク領域を「アク"
+"ティビティログ」として参照する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The activity log saves meta-data writes, but the whole log must be resynced "
+"upon recovery of a failed node.  The size of the activity log is a major "
+"factor of how long a resync will take and how fast a replicated disk will "
+"become consistent after a crash."
+msgstr ""
+"アクティビティーログはメタデータに書き込まれるが、失敗したノードのリカバリー"
+"時にはログ全体を再同期化する必要がある。アクティビティログのサイズは、再同期"
+"にかかる時間やクラッシュ後に複製されるディスクが整合状態になる時間に影響を与"
+"える。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The activity log consists of a number of 4-Megabyte segments; the "
+"<replaceable>al-extents</replaceable> parameter determines how many of those "
+"segments can be active at the same time.  The default value for "
+"<replaceable>al-extents</replaceable> is 1237, with a minimum of 7 and a "
+"maximum of 65536."
+msgstr ""
+"アクティビティログは、4メガバイトのセグメントから構成される。その "
+"<replaceable>al-extents</replaceable> パラメータは、同時にアクティブにできる"
+"セグメントの数を決定する。<replaceable>al-extents</replaceable> のデフォルト"
+"値は 1237、 最小値は 7、 最大値は 65536 である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Note that the effective maximum may be smaller, depending on how you created "
+"the device meta data, see also <citerefentry><refentrytitle>drbdmeta</"
+"refentrytitle><manvolnum>8</manvolnum></citerefentry> The effective maximum "
+"is 919 * (available on-disk activity-log ring-buffer area/4kB -1), the "
+"default 32kB ring-buffer effects a maximum of 6433 (covers more than 25 GiB "
+"of data)  We recommend to keep this well within the amount your backend "
+"storage and replication link are able to resync inside of about 5 minutes."
+msgstr ""
+"有効な最大値はもっと小さくなる点に注意が必要であり、メタデータのデバイスの作"
+"成方法によっても異なる。次のマニュアルページを参照、"
+"<citerefentry><refentrytitle>drbdmeta</refentrytitle><manvolnum>8</"
+"manvolnum></citerefentry>。有効な最大値は 919 * (使用できる オンディスクのア"
+"クティビティログのリングバッファ領域 /4KB -1)  である。リングバッファはデフォ"
+"ルトで 32KB で、有効な最大値は 6433 である (データは 25GiB 以上カバーしてい"
+"る)。下位デバイスの量とレプリケーションリンク全体が 5 分以内で再同期できるよ"
+"うにすることを推奨する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid ""
+"<option>al-updates <group choice=\"req\" rep=\"norepeat\"> <arg choice="
+"\"plain\" rep=\"norepeat\">yes</arg> <arg choice=\"plain\" rep=\"norepeat"
+"\">no</arg> </group> </option>"
+msgstr ""
+"<option>al-updates <group choice=\"req\" rep=\"norepeat\"> <arg choice="
+"\"plain\" rep=\"norepeat\">yes</arg> <arg choice=\"plain\" rep=\"norepeat"
+"\">no</arg> </group> </option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "al-updates"
+msgstr "al-updates"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> With this parameter, the activity "
+"log can be turned off entirely (see the <option>al-extents</option> "
+"parameter). This will speed up writes because fewer meta-data writes will be "
+"necessary, but the entire device needs to be resynchronized opon recovery of "
+"a failed primary node.  The default value for <option>al-updates</option> is "
+"<option>yes</option>."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>このパラメータを使用すると、アク"
+"ティビティログを完全にオフにすることができる（<option>al-extents</option> パ"
+"ラメータを参照）。メタデータの書き込みが少なくて済むため、書き込みが高速にな"
+"るが、故障したプライマリノードの回復のためにデバイス全体を再同期する必要があ"
+"る。<option>al-updates</option> のデフォルト値は <option>yes</option> であ"
+"る。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>c-delay-target <replaceable>delay_target</replaceable></option>"
+msgstr ""
+"<option>c-delay-target <replaceable>delay_target</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>c-fill-target <replaceable>fill_target</replaceable></option>"
+msgstr "<option>c-fill-target <replaceable>fill_target</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>c-max-rate <replaceable>max_rate</replaceable></option>"
+msgstr "<option>c-max-rate <replaceable>max_rate</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>c-plan-ahead <replaceable>plan_time</replaceable></option>"
+msgstr "<option>c-plan-ahead <replaceable>plan_time</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Dynamically control the resync speed.  This mechanism is enabled by setting "
+"the <option>c-plan-ahead</option> parameter to a positive value.  The goal "
+"is to either fill the buffers along the data path with a defined amount of "
+"data if <option>c-fill-target</option> is defined, or to have a defined "
+"delay along the path if <option>c-delay-target</option> is defined. The "
+"maximum bandwidth is limited by the <option>c-max-rate</option> parameter."
+msgstr ""
+"再同期速度を動的に制御する。これは <option>c-plan-ahead</option> を正の値に設"
+"定すると有効になる。<option>c-fill-target</option> が指定されている場合は、"
+"バッファが指定された値を満たすよう、<option>c-delay-target</option> が指定さ"
+"れている場合は、指定した遅延になるように制御する。最大帯域幅は、 <option>c-"
+"max-rate</option> で制限する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The <option>c-plan-ahead</option> parameter defines how fast drbd adapts to "
+"changes in the resync speed.  It should be set to five times the network "
+"round-trip time or more.  Common values for <option>c-fill-target</option> "
+"for \"normal\" data paths range from 4K to 100K. If drbd-proxy is used, it "
+"is advised to use <option>c-delay-target</option> instead of <option>c-fill-"
+"target</option>. The <option>c-delay-target</option> parameter is used if "
+"the <option>c-fill-target</option> parameter is undefined or set to 0.  The "
+"<option>c-delay-target</option> parameter should be set to five times the "
+"network round-trip time or more. The <option>c-max-rate</option> option "
+"should be set to either the bandwidth available between the DRBD-hosts and "
+"the machines hosting DRBD-proxy, or to the available disk bandwidth."
+msgstr ""
+"<option>c-plan-ahead</option> は、DRBD が再同期速度の変化にどのくらい速く適応"
+"するかを定義する。ネットワークのラウンドトリップタイム (RTT) の 5 倍以上に設"
+"定するのが望まれる。「通常の」データパスで <option>c-fill-target</option> の"
+"共通の値の範囲は 4K から 100K である。drbd-proxy を使用している場合は、 "
+"<option>c-fill-target</option> の代わりに <option>c-delay-target</option> を"
+"使用することを推奨する。<option>c-delay-target</option> は、 <option>c-fill-"
+"target</option> が定義されていないか、または 0 に設定されているときに使用され"
+"る。<option>c-delay-target</option> は、ネットワークのラウンドトリップタイム "
+"(RTT) の 5 倍以上に設定するのが望まれる。<option>c-max-rate</option> には "
+"DRBD 間または DRBD-Proxy 間の帯域幅あるいはディスク帯域幅を指定する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The default values of these parameters are: <option>c-plan-ahead</option> = "
+"20 (in units of 0.1 seconds), <option>c-fill-target</option> = 0 (in units "
+"of sectors), <option>c-delay-target</option> = 1 (in units of 0.1 seconds), "
+"and <option>c-max-rate</option> = 102400 (in units of KiB/s)."
+msgstr ""
+"これらのパラメータのデフォルト値は次のとおり。 <option>c-plan-ahead</option> "
+"= 20 （0.1 秒単位）、 <option>c-fill-target</option> = 0 （セクタ単位）、 "
+"<option>c-delay-target</option> = 1 （単位 0.1 秒）、および <option>c-max-"
+"rate</option> = 102400 （単位 KiB/s）。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid "Dynamic resync speed control is available since DRBD 8.3.9."
+msgstr "動的な再同期速度制御は DRBD 8.3.9 から有効である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>c-min-rate <replaceable>min_rate</replaceable></option>"
+msgstr "<option>c-min-rate <replaceable>min_rate</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"A node which is primary and sync-source has to schedule application I/O "
+"requests and resync I/O requests. The <option>c-min-rate</option> parameter "
+"limits how much bandwidth is available for resync I/O; the remaining "
+"bandwidth is used for application I/O."
+msgstr ""
+"同期元のプライマリノードは、アプリケーションの書き込みと再同期の書き込みの配"
+"分を管理する必要がある。<option>c-min-rate</option> は、再同期の書き込みに使"
+"用できる帯域幅を制限する。残りの帯域幅はアプリケーションの書き込みに使用され"
+"る。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"A <option>c-min-rate</option> value of 0 means that there is no limit on the "
+"resync I/O bandwidth. This can slow down application I/O significantly. Use "
+"a value of 1 (1 KiB/s) for the lowest possible resync rate."
+msgstr ""
+"<option>c-min-rate</option> の値 0 は、再同期の書き込みに使用できる帯域幅に制"
+"限がないことを意味する。これにより、アプリケーションの書き込みが大幅に遅くな"
+"る可能性がある。再同期速度の最低値は 1（1 KiB/s） である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The default value of <option>c-min-rate</option> is 4096, in units of KiB/s."
+msgstr ""
+"<option>c-min-rate</option> のデフォルト値は 4096 で、 単位は KiB/s である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><term>
+msgid "<option>disk-barrier</option>"
+msgstr "<option>disk-barrier</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><term>
+msgid "<option>disk-flushes</option>"
+msgstr "<option>disk-flushes</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><term>
+msgid "<option>disk-drain</option>"
+msgstr "<option>disk-drain</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "disk-barrier"
+msgstr "disk-barrier"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "disk-flushes"
+msgstr "disk-flushes"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "disk-drain"
+msgstr "disk-drain"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> <placeholder type=\"indexterm\" "
+"id=\"1\"/> <placeholder type=\"indexterm\" id=\"2\"/>"
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/> <placeholder type=\"indexterm\" "
+"id=\"1\"/> <placeholder type=\"indexterm\" id=\"2\"/>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"Use disk barriers to make sure that requests are written to disk in the "
+"right order. Barriers ensure that all requests submitted before a barrier "
+"make it to the disk before any requests submitted after the barrier.  This "
+"is implemented using 'tagged command queuing' on SCSI devices and 'native "
+"command queuing' on SATA devices. Only some devices and device stacks "
+"support this method. The device mapper (LVM) only supports barriers in some "
+"configurations."
+msgstr ""
+"ディスクバリアを使用して、リクエストが正しい順序でディスクに書き込まれるよう"
+"にする。バリアの前に提出されたすべてのリクエストが、バリアの後に提出されたリ"
+"クエストの前にディスクに書き込まれることを保証する。これは、SCSI デバイスの "
+"'tagged command queuing' と SATA デバイスの 'native command queuing' を使用し"
+"て実装される。一部のデバイスおよびデバイススタックのみがこの方法をサポートす"
+"る。デバイスマッパー （LVM） は、一部の構成でのみバリアをサポートする。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"Note that on systems which do not support disk barriers, enabling this "
+"option can lead to data loss or corruption. Until DRBD 8.4.1, <option>disk-"
+"barrier</option> was turned on if the I/O stack below DRBD did support "
+"barriers.  Kernels since linux-2.6.36 (or 2.6.32 RHEL6) no longer allow to "
+"detect if barriers are supported. Since drbd-8.4.2, this option is off by "
+"default and needs to be enabled explicitly."
+msgstr ""
+"ディスクバリアをサポートしていないシステムで、このオプションを有効にすると"
+"データが消失または破損する可能性がある。DRBD 8.4.1 までは、下位デバイスがバリ"
+"アをサポートする場合 <option>disk-barrier</option> が有効でした。しかし、"
+"linux-2.6.36 （または RHEL6 の 2.6.32） 以降のカーネルでは、バリアがサポート"
+"されているかどうかを検出できなくなりました。drbd-8.4.2 以降、このオプションは"
+"デフォルトでは無効であり、使用する場合は明示的に有効にする必要がある。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"Use disk flushes between dependent write requests, also referred to as "
+"'force unit access' by drive vendors. This forces all data to disk. This "
+"option is enabled by default."
+msgstr ""
+"依存書き込みリクエスト間でディスクフラッシュを使用する（ドライブベンダーによ"
+"り 'force unit access' とも呼ばれる）。これにより、すべてのデータが強制的に"
+"ディスクに格納される。このオプションは、デフォルトで有効である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"Wait for the request queue to \"drain\" (that is, wait for the requests to "
+"finish) before submitting a dependent write request. This method requires "
+"that requests are stable on disk when they finish. Before DRBD 8.0.9, this "
+"was the only method implemented. This option is enabled by default. Do not "
+"disable in production environments."
+msgstr ""
+"依存書き込みリクエストを送信する前に、リクエストキューが排出されるまで待つ"
+"（つまり、リクエストが完了するのを待つ）。この方法は、リクエストが完了すると"
+"ディスク上で安定している。DRBD 8.0.9 より前は、これが実装された唯一の方法でし"
+"た。このオプションは、デフォルトで有効である。運用環境では無効にしないことを"
+"推奨する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"DRBD has three methods of handling the ordering of dependent write requests: "
+"<placeholder type=\"variablelist\" id=\"0\"/> From these three methods, drbd "
+"will use the first that is enabled and supported by the backing storage "
+"device.  If all three of these options are turned off, DRBD will submit "
+"write requests without bothering about dependencies. Depending on the I/O "
+"stack, write requests can be reordered, and they can be submitted in a "
+"different order on different cluster nodes. This can result in data loss or "
+"corruption. Therefore, turning off all three methods of controlling write "
+"ordering is strongly discouraged."
+msgstr ""
+"DRBD は、依存書き込みリクエストの順序を処理する 3 つの方法がある: "
+"<placeholder type=\"variablelist\" id=\"0\"/>これらの3つの方法から、DRBD は設"
+"定が有効で、下位デバイスもサポートしている最初のものを使用する。これらの3つの"
+"オプションがすべて無効になっている場合、DRBD は依存関係を気にせずに書き込みリ"
+"クエストを送信する。下位デバイスによって、書き込みリクエストを並べ替えること"
+"ができ、異なるクラスタノード上で異なる順序で書き込みリクエストを送信できる。"
+"これは、データの損失または破損の原因となる。したがって、書き込み順序を制御す"
+"る 3 つの方法をすべて無効にしないことを推奨する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"A general guideline for configuring write ordering is to use disk barriers "
+"or disk flushes when using ordinary disks (or an ordinary disk array) with a "
+"volatile write cache. On storage without cache or with a battery backed "
+"write cache, disk draining can be a reasonable choice."
+msgstr ""
+"書込み順序を設定する一般的なガイドラインは、揮発性書込みキャッシュを備えた通"
+"常のディスク（または通常のディスクアレイ）を使用する場合は、disk-barrier また"
+"は disk-flushes を使用することである。キャッシュを持たないストレージまたは"
+"バッテリバックアップのライトキャッシュでは、 disk-drain が適している。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>disk-timeout</option>"
+msgstr "<option>disk-timeout</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "disk-timeout"
+msgstr "disk-timeout"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition>
+msgid "<placeholder type=\"indexterm\" id=\"0\"/>"
+msgstr "<placeholder type=\"indexterm\" id=\"0\"/>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"If the lower-level device on which a DRBD device stores its data does not "
+"finish an I/O request within the defined <option>disk-timeout</option>, DRBD "
+"treats this as a failure. The lower-level device is detached, and the "
+"device's disk state advances to Diskless.  If DRBD is connected to one or "
+"more peers, the failed request is passed on to one of them."
+msgstr ""
+"DRBD デバイスのデータを格納する下位レベルデバイスが、指定した <option>disk-"
+"timeout</option> 以内で I/O リクエストを完了しない場合、DRBD はこれを障害とみ"
+"なす。下位デバイスは切り離され、デバイスのディスク状態はディスクレス状態にな"
+"る。DRBD が 1 台以上の対向ノードに接続したとき、失敗したリクエストはそのうち"
+"の 1 台に伝えられる。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"This option is <emphasis>dangerous and may lead to kernel panic!</emphasis>"
+msgstr ""
+"このオプションは <emphasis>カーネルパニックを引き起こす可能性があり、注意が必"
+"要である</emphasis>。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"\"Aborting\" requests, or force-detaching the disk, is intended for "
+"completely blocked/hung local backing devices which do no longer complete "
+"requests at all, not even do error completions.  In this situation, usually "
+"a hard-reset and failover is the only way out."
+msgstr ""
+"リクエストの「中断」あるいはディスクの強制切り離しは、完全に下位デバイスをブ"
+"ロックまたはハンギングして、リクエストをまったく処理せずエラーも処理しなくな"
+"る。この状況ではハードリセットとフェイルオーバ以外になす術がない。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"By \"aborting\", basically faking a local error-completion, we allow for a "
+"more graceful swichover by cleanly migrating services.  Still the affected "
+"node has to be rebooted \"soon\"."
+msgstr ""
+"「中断」すると、基本的にローカルエラーの完了を装い、すみやかにサービスの移行"
+"を行うことで安全な切り替えを行う。それでもなお、影響を受けるノードは &quot;す"
+"ぐ&quot; に再起動される必要はある。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"By completing these requests, we allow the upper layers to re-use the "
+"associated data pages."
+msgstr ""
+"リクエストを完了することで、上位レイヤーに関連するデータページを再利用させる"
+"ことができる。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"If later the local backing device \"recovers\", and now DMAs some data from "
+"disk into the original request pages, in the best case it will just put "
+"random data into unused pages; but typically it will corrupt meanwhile "
+"completely unrelated data, causing all sorts of damage."
+msgstr ""
+"後にローカルの下位デバイスが「復帰」すると、ディスクから元のリクエストページ"
+"への DMA のデータは、うまくいくと未使用のページへランダムなデータを送るが、多"
+"くの場合その間に関係のないデータに変形してしまい、様々なダメージの原因にな"
+"る。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Which means delayed successful completion, especially for READ requests, is "
+"a reason to panic().  We assume that a delayed *error* completion is OK, "
+"though we still will complain noisily about it."
+msgstr ""
+"つまり遅延した正常な完了は、特に読み込みリクエストの場合 panic() の原因にな"
+"る。遅延した「エラー」完了は、その都度に通知は行うが、問題ないと考えてよい。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The default value of <option>disk-timeout</option> is 0, which stands for an "
+"infinite timeout.  Timeouts are specified in units of 0.1 seconds. This "
+"option is available since DRBD 8.3.12."
+msgstr ""
+"<option>disk-timeout</option> のデフォルト値は 0 であり、無限のタイムアウトを"
+"意味する。タイムアウトは 0.1 秒単位で指定する。このオプションは DRBD 8.3.12. "
+"から有効である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>fencing <replaceable>fencing_policy</replaceable></option>"
+msgstr "<option>fencing <replaceable>fencing_policy</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "fencing"
+msgstr "fencing"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> <option>Fencing</option> is a "
+"preventive measure to avoid situations where both nodes are primary and "
+"disconnected. This is also known as a split-brain situation. DRBD supports "
+"the following fencing policies:"
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/> <option>フェンシング</option>は、"
+"両方のノードがプライマリで切断されている状態を回避するための予防措置である。"
+"これはスプリットブレイン状態とも呼ばれている。DRBDは、次のフェンシングポリ"
+"シーをサポートする："
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><term>
+msgid "<option>dont-care</option>"
+msgstr "<option>dont-care</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><listitem><para>
+msgid "No fencing actions are taken. This is the default policy."
+msgstr ""
+"フェンシングのためのアクションを実行しない。これがデフォルトのポリシーであ"
+"る。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><term>
+msgid "<option>resource-only</option>"
+msgstr "<option>resource-only</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><listitem><para>
+msgid ""
+"If a node becomes a disconnected primary, it tries to fence the peer.  This "
+"is done by calling the <option>fence-peer</option> handler. The handler is "
+"supposed to reach the peer over an alternative communication path and call "
+"'<option>drbdadm outdate minor</option>' there."
+msgstr ""
+"ノードが切り離されたプライマリ状態になると、対向ノードをフェンシングしようと"
+"する。この動作は <option>fence-peer</option> ハンドラによって行われる。このハ"
+"ンドラは、レプリケーション用とは別のネットワーク経由で対向ノードにアクセス"
+"し、 そこで '<option>drbdadm outdate minor</option>' の実行を想定する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><term>
+msgid "<option>resource-and-stonith</option>"
+msgstr "<option>resource-and-stonith</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><listitem><para>
+msgid ""
+"If a node becomes a disconnected primary, it freezes all its IO operations "
+"and calls its fence-peer handler. The fence-peer handler is supposed to "
+"reach the peer over an alternative communication path and call "
+"'<option>drbdadm outdate minor</option>' there. In case it cannot do that, "
+"it should stonith the peer. IO is resumed as soon as the situation is "
+"resolved. In case the fence-peer handler fails, I/O can be resumed manually "
+"with '<option>drbdadm resume-io</option>'."
+msgstr ""
+"ノードが切り離されたプライマリ状態になると、 DRBD はすべてのディスク I/O を停"
+"止して fence-peer ハンドラを呼び出す。このハンドラは、レプリケーション用とは"
+"別のネットワーク経由で対向ノードにアクセスし、 そこで '<option>drbdadm "
+"outdate minor</option>' の実行を想定する。これが実行できない場合、 STONITH 機"
+"能を使って対向ノードを強制排除する。これらが完了したら、ディスク I/O を再開す"
+"る。fence-peer ハンドラが失敗した場合、 '<option>drbdadm resume-io</option>' "
+"コマンドでディスク I/O を再開できる。"
+
+#.  FIXME: It is completely unclear how this option interacts with
+#. 	   after-sb-0pri, after-sb-1pri, and after-sb-2pri. 
+#.  FIXME: Refer to after-sb-0pri, after-sb-1pri, and after-sb-2pri. 
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition>
+msgid "<placeholder type=\"variablelist\" id=\"0\"/>"
+msgstr "<placeholder type=\"variablelist\" id=\"0\"/>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>md-flushes</option>"
+msgstr "<option>md-flushes</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "md-flushes"
+msgstr "md-flushes"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Enable disk flushes and disk barriers on the meta-data device.  This option "
+"is enabled by default.  See the <option>disk-flushes</option> parameter."
+msgstr ""
+"メタデータデバイスでディスクフラッシュとディスクバリアを有効にする。このオプ"
+"ションは、デフォルトで有効である。<option>disk-flushes</option> のパラーメー"
+"タを参照。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>on-io-error <replaceable>handler</replaceable></option>"
+msgstr "<option>on-io-error <replaceable>handler</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "on-io-error"
+msgstr "on-io-error"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><term>
+msgid "<option>pass_on</option>"
+msgstr "<option>pass_on</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"Change the disk status to Inconsistent, mark the failed block as "
+"inconsistent in the bitmap, and retry the I/O operation on a remote cluster "
+"node."
+msgstr ""
+"ディスクのステータスを inconsistent(不整合) にし、 I/O エラーを起こしたブロッ"
+"クに対応するビットマップにマークをつけ、リモートのクラスターノード上で I/O 操"
+"作を再度行う。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><term>
+msgid "<option>call-local-io-error</option>"
+msgstr "<option>call-local-io-error</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"Call the <option>local-io-error</option> handler (see the <option>handlers</"
+"option> section)."
+msgstr ""
+"<option>local-io-error</option> ハンドラを呼び出す (<option>handlers</"
+"option> セクションを参照)。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><term>
+msgid "<option>detach</option>"
+msgstr "<option>detach</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><listitem><para>
+msgid "Detach the lower-level device and continue in diskless mode."
+msgstr "下位レベルデバイスを切り離し、ディスクレスモードで続行する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Configure how DRBD reacts to I/O "
+"errors on a lower-level device. The following policies are defined: "
+"<placeholder type=\"variablelist\" id=\"1\"/>"
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>DRBD が下位レベルデバイスの I/O エ"
+"ラーにどのように反応するかを設定する。次のポリシーが定義される: <placeholder "
+"type=\"variablelist\" id=\"1\"/>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>read-balancing <replaceable>policy</replaceable></option>"
+msgstr "<option>read-balancing <replaceable>policy</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "read-balancing"
+msgstr "read-balancing"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Distribute read requests among cluster nodes as defined by "
+"<replaceable>policy</replaceable>. The supported policies are <option xml:id="
+"\"prefer-local\">prefer-local</option> (the default), <option xml:id="
+"\"prefer-remote\">prefer-remote</option>, <option xml:id=\"round-robin"
+"\">round-robin</option>, <option xml:id=\"least-pending\">least-pending</"
+"option>, <option xml:id=\"when-congested-remote\">when-congested-remote</"
+"option>, <option xml:id=\"_32K-striping\">32K-striping</option>, <option xml:"
+"id=\"_64K-striping\">64K-striping</option>, <option xml:id=\"_128K-striping"
+"\">128K-striping</option>, <option xml:id=\"_256K-striping\">256K-striping</"
+"option>, <option xml:id=\"_512K-striping\">512K-striping</option> and "
+"<option xml:id=\"_1M-striping\">1M-striping</option>."
+msgstr ""
+"<replaceable>policy</replaceable> 定義された読み取りリクエストで、クラスター"
+"ノード間に負荷分散する。次のポリシーがサポートされる: <option xml:id="
+"\"prefer-local\">prefer-local</option> (デフォルト), <option xml:id=\"prefer-"
+"remote\">prefer-remote</option>, <option xml:id=\"round-robin\">round-robin</"
+"option>, <option xml:id=\"least-pending\">least-pending</option>, <option "
+"xml:id=\"when-congested-remote\">when-congested-remote</option>, <option xml:"
+"id=\"_32K-striping\">32K-striping</option>, <option xml:id=\"_64K-striping"
+"\">64K-striping</option>, <option xml:id=\"_128K-striping\">128K-striping</"
+"option>, <option xml:id=\"_256K-striping\">256K-striping</option>, <option "
+"xml:id=\"_512K-striping\">512K-striping</option> and <option xml:id=\"_1M-"
+"striping\">1M-striping</option>."
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid "This option is available since DRBD 8.4.1."
+msgstr "このオプションは、DRBD 8.4.1 から有効である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid ""
+"<option>discard-zeroes-if-aligned <group choice=\"req\" rep=\"norepeat\"> "
+"<arg choice=\"plain\" rep=\"norepeat\">yes</arg> <arg choice=\"plain\" rep="
+"\"norepeat\">no</arg> </group></option>"
+msgstr ""
+"<option>discard-zeroes-if-aligned <group choice=\"req\" rep=\"norepeat\"> "
+"<arg choice=\"plain\" rep=\"norepeat\">yes</arg> <arg choice=\"plain\" rep="
+"\"norepeat\">no</arg> </group></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "discard-zeroes-if-aligned"
+msgstr "discard-zeroes-if-aligned"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> There are several aspects to "
+"discard/trim/unmap support on linux block devices.  Even if discard is "
+"supported in general, it may fail silently, or may partially ignore discard "
+"requests.  Devices also announce whether reading from unmapped blocks "
+"returns defined data (usually zeroes), or undefined data (possibly old data, "
+"possibly garbage)."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>Linux のブロックデバイスで discard/"
+"trim/unmap のサポートにはいくつかの側面がある。discard が一般的にサポートされ"
+"ていても、暗黙に失敗したり、discard リクエストを部分的に無視したりすることが"
+"ある。デバイスは、また、マップされていないブロックからの読み込みが、定義済み"
+"のデータ（通常はゼロ）、未定義のデータ（おそらく古いデータか、ゴミ）のどちら"
+"を返すか通知する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"If on different nodes, DRBD is backed by devices with differing discard "
+"characteristics, discards may lead to data divergence (old data or garbage "
+"left over on one backend, zeroes due to unmapped areas on the other "
+"backend). Online verify would now potentially report tons of spurious "
+"differences.  While probably harmless for most use cases (fstrim on a file "
+"system), DRBD cannot have that."
+msgstr ""
+"異なるノードで DRBD が discard 特性が異なるデバイスによって構成されている場"
+"合、discard はデータの不一致（古いデータまたはゴミが 1 つのバックエンドに残"
+"り、別のバックエンドではゼロが残る）の原因となる。オンライン照合は、数多くの"
+"偽の差異を報告する可能性がある。たぶんほとんどのユースケース （ファイルシステ"
+"ム上の fstrim） では無害であるが、DRBD はそれを持つことはできない。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"To play safe, we have to disable discard support, if our local backend (on a "
+"Primary) does not support \"discard_zeroes_data=true\".  We also have to "
+"translate discards to explicit zero-out on the receiving side, unless the "
+"receiving side (Secondary) supports \"discard_zeroes_data=true\", thereby "
+"allocating areas what were supposed to be unmapped."
+msgstr ""
+"安全に動作させるには、ローカルのバックエンド（プライマリ上）が &quot;"
+"discard_zeroes_data=true&quot; をサポートしていない場合、 discard のサポート"
+"を無効にする必要がある。受信側（セカンダリ）がマップされていなかった領域を割"
+"り当て、 &quot;discard_zeroes_data = true&quot; をサポートしていない場合、受"
+"信側で discard を明示的にゼロに変換する必要がある。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"There are some devices (notably the LVM/DM thin provisioning) that are "
+"capable of discard, but announce discard_zeroes_data=false.  In the case of "
+"DM-thin, discards aligned to the chunk size will be unmapped, and reading "
+"from unmapped sectors will return zeroes. However, unaligned partial head or "
+"tail areas of discard requests will be silently ignored."
+msgstr ""
+"discard をサポートしているのに、discard_zeroes_data = false をアナウンスする"
+"デバイス（特に LVM/DM シンプロビジョニング）がある。DM-thin の場合、チャンク"
+"サイズに合わせた discard はマップされず、マッピングされていないセクタからの読"
+"み込みはゼロを返す。ただし、discard リクエストのアライメントされていない部分"
+"ヘッドまたはテール領域は暗黙に無視する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"If we now add a helper to explicitly zero-out these unaligned partial areas, "
+"while passing on the discard of the aligned full chunks, we effectively "
+"achieve discard_zeroes_data=true on such devices."
+msgstr ""
+"整列したフル・チャンクの discard をパスし、これらの整列していない部分領域を明"
+"示的にゼロ・アウトするヘルパーを追加すると、そのようなデバイスでは "
+"discard_zeroes_data = true を効果的に達成する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Setting <option>discard-zeroes-if-aligned</option> to <option>yes</option> "
+"will allow DRBD to use discards, and to announce discard_zeroes_data=true, "
+"even on backends that announce discard_zeroes_data=false."
+msgstr ""
+"<option> discard-zeroes-if-aligned </option> を <option>yes</option> に設定す"
+"ると、 discard_zeroes_data = false を通知するバックエンドであっても DRBD は "
+"discard を使用し、 discard_zeroes_data = true を通知する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Setting <option>discard-zeroes-if-aligned</option> to <option>no</option> "
+"will cause DRBD to always fall-back to zero-out on the receiving side, and "
+"to not even announce discard capabilities on the Primary, if the respective "
+"backend announces discard_zeroes_data=false."
+msgstr ""
+"<option> discard-zeroes-if-aligned </option> を <option>no</option> に設定す"
+"ると、それぞれのバックエンドが discard_zeroes_data = false をアナウンスする場"
+"合、DRBD は常に受信側でゼロアウトにフォールバックし、プライマリ側では "
+"discard に関して通知しない。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"We used to ignore the discard_zeroes_data setting completely.  To not break "
+"established and expected behaviour, and suddenly cause fstrim on thin-"
+"provisioned LVs to run out-of-space instead of freeing up space, the default "
+"value is <option>yes</option>."
+msgstr ""
+"私たちは、 discard_zeroes_data 設定を完全に無視していました。確立し、期待され"
+"た動作を壊さず、シンプロビジョニング LV の fstrim がスペースを解放する代わり"
+"にスペースを使い果たさないためのデフォルト値は <option>yes</option> である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid "This option is available since 8.4.7."
+msgstr "このオプションは 8.4.7 から有効である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>rs-discard-granularity <replaceable>byte</replaceable></option>"
+msgstr ""
+"<option>rs-discard-granularity <replaceable>byte</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "rs-discard-granularity"
+msgstr "rs-discard-granularity"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"When <option>rs-discard-granularity</option> is set to a non zero, positive "
+"value then DRBD tries to do a resync operation in requests of this size.  In "
+"case such a block contains only zero bytes on the sync source node, the sync "
+"target node will issue a discard/trim/unmap command for the area."
+msgstr ""
+"<option> rs-discard-granularity </option> がゼロ以外の正の値に設定されている"
+"場合、DRBD はこのサイズで再同期操作をリクエストする。そのようなブロックが同期"
+"ソースノード上にゼロバイトしか含まない場合、同期ターゲットノードは、その領域"
+"に対して discard/trim/unmap コマンドを発行する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The value is constrained by the discard granularity of the backing block "
+"device. In case <option>rs-discard-granularity</option> is not a multiplier "
+"of the discard granularity of the backing block device DRBD rounds it up. "
+"The feature only gets active if the backing block device reads back zeroes "
+"after a discard command."
+msgstr ""
+"この値は、下位ブロックデバイスの discard 粒度によって制約される。<option> rs-"
+"discard-granularity </option>が下位ブロックデバイスの discard 粒度の乗数でな"
+"い場合、DRBD はそれを切り上げる。この機能は、下位ブロックデバイスが discard "
+"コマンドの後に、ゼロを読み戻す場合にのみアクティブになる。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid "The default value of is 0. This option is available since 8.4.7."
+msgstr "デフォルト値は 0 である。このオプションは 8.4.7 から有効である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term><only-drbdsetup>
+msgid "<option>resync-after <replaceable>minor</replaceable></option>"
+msgstr "<option>resync-after <replaceable>minor</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term><only-drbd-conf>
+msgid ""
+"<option>resync-after <replaceable>res-name</replaceable>/"
+"<replaceable>volume</replaceable></option>"
+msgstr ""
+"<option>resync-after <replaceable>res-name</replaceable>/"
+"<replaceable>volume</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "resync-after"
+msgstr "resync-after"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define that a device should only "
+"resynchronize after the specified other device. By default, no order between "
+"devices is defined, and all devices will resynchronize in parallel. "
+"Depending on the configuration of the lower-level devices, and the available "
+"network and disk bandwidth, this can slow down the overall resync process.  "
+"This option can be used to form a chain or tree of dependencies among "
+"devices."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>デバイスは、指定されたデバイスの後"
+"でのみ再同期する必要があることを定義する。デフォルトでは、デバイス間の順序は"
+"定義されず、すべてのデバイスが並行して再同期される。下位レベルデバイスの構"
+"成、および使用可能なネットワークとディスクの帯域幅によっては、全体の再同期プ"
+"ロセスが遅くなる可能性がある。このオプションは、デバイス間の依存関係チェーン"
+"やツリーを形成するために使用できる。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>resync-rate <replaceable>rate</replaceable></option>"
+msgstr "<option>resync-rate <replaceable>rate</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "resync-rate"
+msgstr "resync-rate"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define how much bandwidth DRBD "
+"may use for resynchronizing.  DRBD allows \"normal\" application I/O even "
+"during a resync. If the resync takes up too much bandwidth, application I/O "
+"can become very slow. This parameter allows to avoid that. Please note this "
+"is option only works when the dynamic resync controller is disabled."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>DRBD が再同期に使用できる帯域幅を定"
+"義する。DRBD では、再同期中でも「通常の」アプリケーション I/O が可能である。"
+"再同期の帯域幅が大きすぎると、アプリケーション I/O が非常に遅くなる可能性があ"
+"る。このパラメータは、これを避けることができる。これは、動的な再同期コント"
+"ローラが無効の場合にのみ機能する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>size <replaceable>size</replaceable></option>"
+msgstr "<option>size <replaceable>size</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Specify the size of the lower-level device explicitly instead of determining "
+"it automatically.  The device size must be determined once and is remembered "
+"for the lifetime of the device.  In order to determine it automatically, all "
+"the lower-level devices on all nodes must be attached, and all nodes must be "
+"connected.  If the size is specified explicitly, this is not necessary.  The "
+"<option>size</option> value is assumed to be in units of sectors (512 bytes) "
+"by default."
+msgstr ""
+"下位レベルデバイスのサイズを自動的に決定するのではなく、明示的に指定する。デ"
+"バイスサイズは一度決定されると、デバイスのライフタイムの間、維持される。自動"
+"的に決定するには、すべてのノードのすべての下位レベルデバイスの接続が必要であ"
+"るが、サイズが明示的に指定されている場合は、これが必要でない。<option>size</"
+"option> 値はデフォルトでセクタ （512バイト） 単位であるとみなされる。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>dialog-refresh <replaceable>time</replaceable></option>"
+msgstr "<option>dialog-refresh <replaceable>time</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "dialog-refresh"
+msgstr "dialog-refresh"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> The DRBD init script can be used "
+"to configure and start DRBD devices, which can involve waiting for other "
+"cluster nodes.  While waiting, the init script shows the remaining waiting "
+"time.  The <option>dialog-refresh</option> defines the number of seconds "
+"between updates of that countdown. The default value is 1; a value of 0 "
+"turns off the countdown."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>DRBD init スクリプトを使用してDRBD "
+"デバイスを構成および起動することができる。これには、他のクラスタノードを待機"
+"する必要がある。待機中、init スクリプトは残りの待機時間を表示する。"
+"<option>dialog-refresh</option> は、そのカウントダウンの更新間隔（秒）を定義"
+"する。デフォルト値は 1 で、0 はカウントダウンを無効にする。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>disable-ip-verification</option>"
+msgstr "<option>disable-ip-verification</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "disable-ip-verification"
+msgstr "disable-ip-verification"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Normally, DRBD verifies that the IP addresses in the configuration match the "
+"host names. Use the <option>disable-ip-verification</option> parameter to "
+"disable these checks."
+msgstr ""
+"通常、DRBD は構成内の IP アドレスがホスト名と一致することを確認する。これらの"
+"チェックを無効にするには <option>disable-ip-verification</option> を使用す"
+"る。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid ""
+"<option>usage-count <group choice=\"req\" rep=\"norepeat\"> <arg choice="
+"\"plain\" rep=\"norepeat\">yes</arg> <arg choice=\"plain\" rep=\"norepeat"
+"\">no</arg> <arg choice=\"plain\" rep=\"norepeat\">ask</arg> </group> </"
+"option>"
+msgstr ""
+"<option>usage-count <group choice=\"req\" rep=\"norepeat\"> <arg choice="
+"\"plain\" rep=\"norepeat\">yes</arg> <arg choice=\"plain\" rep=\"norepeat"
+"\">no</arg> <arg choice=\"plain\" rep=\"norepeat\">ask</arg> </group> </"
+"option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "usage-count"
+msgstr "usage-count"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"A explained on DRBD's <ulink url=\"http://usage.drbd.org\"><citetitle> "
+"Online Usage Counter</citetitle></ulink> web page, DRBD includes a mechanism "
+"for anonymously counting how many installations are using which versions of "
+"DRBD. The results are available on the web page for anyone to see."
+msgstr ""
+"DRBD の<ulink url=\"http://usage.drbd.org\"><citetitle>オンライン利用カウン"
+"ター</citetitle></ulink>で説明されているように、DRBD には、どのバージョンを使"
+"用しているかを匿名でカウントするメカニズムがある。結果は誰でも見ることができ"
+"るウェブページ上で公開されている。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"This parameter defines if a cluster node participates in the usage counter; "
+"the supported values are <option>yes</option>, <option>no</option>, and "
+"<option>ask</option> (ask the user, the default)."
+msgstr ""
+"このパラメータは、クラスタノードが利用カウンターに参加するかどうかを定義す"
+"る。サポートされている値は <option>yes</option>, <option>no</option>, "
+"<option>ask</option>（ユーザーに聞く、デフォルト） である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"We would like to ask users to participate in the online usage counter as "
+"this provides us valuable feedback for steering the development of DRBD."
+msgstr ""
+"DRBD の開発を推進する貴重なフィードバックを得るため、ユーザーにオンライン利用"
+"カウンターへの参加を依頼したいと考えている。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>udev-always-use-vnr</option>"
+msgstr "<option>udev-always-use-vnr</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "udev-always-use-vnr"
+msgstr "udev-always-use-vnr"
+
+#. type: CDATA
+#, no-wrap
+msgid ""
+"# implicit single volume without \"volume 0 {}\" block\n"
+"DEVICE=drbd<minor>\n"
+"SYMLINK_BY_RES=drbd/by-res/<resource-name>\n"
+"SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>\n"
+"\n"
+"# explicit volume definition: volume VNR { }\n"
+"DEVICE=drbd<minor>\n"
+"SYMLINK_BY_RES=drbd/by-res/<resource-name>/VNR\n"
+"SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>\n"
+msgstr ""
+"# implicit single volume without \"volume 0 {}\" block\n"
+"DEVICE=drbd<minor>\n"
+"SYMLINK_BY_RES=drbd/by-res/<resource-name>\n"
+"SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>\n"
+"\n"
+"# explicit volume definition: volume VNR { }\n"
+"DEVICE=drbd<minor>\n"
+"SYMLINK_BY_RES=drbd/by-res/<resource-name>/VNR\n"
+"SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>\n"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"When udev asks drbdadm for a list of device related symlinks, drbdadm would "
+"suggest symlinks with differing naming conventions, depending on whether the "
+"resource has explicit <literal>volume VNR { }</literal> definitions, or only "
+"one single volume with the implicit volume number 0: <placeholder type="
+"\"programlisting\" id=\"0\"/>"
+msgstr ""
+"udev が drbdadm にデバイス関連のシンボリックリンクのリストを要求すると、"
+"drbdadm は、リソースに明示的な <literal>volume VNR { }</literal> 定義がある"
+"か、暗黙的なボリューム番号 0 を持つ単一のボリュームしかないかによって、異なる"
+"命名規則でシンボリックリンクを提示する：<placeholder type=\"programlisting\" "
+"id=\"0\"/>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"If you define this parameter in the global section, drbdadm will always add "
+"the <literal>.../VNR</literal> part, and will not care for whether the "
+"volume definition was implicit or explicit."
+msgstr ""
+"global セクションでこのパラメータを定義すると、drbdadm は常に <literal>.../"
+"VNR</literal> の部分を追加し、ボリューム定義が暗黙的であるか明示的であるかを"
+"気にしない。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"For legacy backward compatibility, this is off by default, but we do "
+"recommend to enable it."
+msgstr ""
+"過去との互換性のために、これはデフォルトでは無効になっているが、有効にするこ"
+"とを推奨する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>after-sb-0pri <replaceable>policy</replaceable></option>"
+msgstr "<option>after-sb-0pri <replaceable>policy</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "after-sb-0pri"
+msgstr "after-sb-0pri"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Define how to react if a split-brain scenario is detected and none of the "
+"two nodes is in primary role.  (We detect split-brain scenarios when two "
+"nodes connect; split-brain decisions are always between two nodes.) The "
+"defined policies are:"
+msgstr ""
+"スプリットブレインが検出され、2 つのノードのいずれもプライマリでない場合の対"
+"応方法を定義する。（2 つのノードが接続されたときにスプリットブレインを検出す"
+"る、スプリットブレインの決定は常に2つのノード間である） 定義されたポリシーは"
+"次のとおり:"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><term>
+msgid "<option>disconnect</option>"
+msgstr "<option>disconnect</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><listitem><para>
+msgid "No automatic resynchronization; simply disconnect."
+msgstr "自動再同期はしない。単に切断する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><term>
+msgid "<option>discard-younger-primary</option>"
+msgstr "<option>discard-younger-primary</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><term>
+msgid "<option>discard-older-primary</option>"
+msgstr "<option>discard-older-primary</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><listitem><para>
+msgid ""
+"Resynchronize from the node which became primary first (<option>discard-"
+"younger-primary</option>) or last (<option>discard-older-primary</option>).  "
+"If both nodes became primary independently, the <option>discard-least-"
+"changes</option> policy is used."
+msgstr ""
+"最初（<option>discard-younger-primary</option>）、または最後"
+"（<option>discard-older-primary</option>） にプライマリなったノード から再同"
+"期する。両方のノードが独立してプライマリになった場合、 <option>discard-least-"
+"changes</option> ポリシーが使用される。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><term>
+msgid "<option>discard-zero-changes</option>"
+msgstr "<option>discard-zero-changes</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><listitem><para>
+msgid ""
+"If only one of the nodes wrote data since the split brain situation was "
+"detected, resynchronize from this node to the other.  If both nodes wrote "
+"data, disconnect."
+msgstr ""
+"スプリットブレイン状況が検出されてからノードの 1 つだけがデータを書き込んだ場"
+"合は、このノードからもう 1 つのノードに再同期する。両方のノードがデータを書き"
+"込んだ場合は切断する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><term>
+msgid "<option>discard-least-changes</option>"
+msgstr "<option>discard-least-changes</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><listitem><para>
+msgid "Resynchronize from the node with more modified blocks."
+msgstr "より多くの変更されたブロックを持つノードから再同期する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><term>
+msgid "<option>discard-node-<replaceable>nodename</replaceable></option>"
+msgstr "<option>discard-node-<replaceable>nodename</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><listitem><para>
+msgid "Always resynchronize to the named node."
+msgstr "名前付きノードと常に再同期する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>after-sb-1pri <replaceable>policy</replaceable></option>"
+msgstr "<option>after-sb-1pri <replaceable>policy</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "after-sb-1pri"
+msgstr "after-sb-1pri"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Define how to react if a split-brain scenario is detected, with one node in "
+"primary role and one node in secondary role.  (We detect split-brain "
+"scenarios when two nodes connect, so split-brain decisions are always among "
+"two nodes.)  The defined policies are:"
+msgstr ""
+"1 つのノードがプライマリ、もう 1 つのノードをセカンダリのときに、スプリットブ"
+"レインが検出された場合の対応方法を定義する。（2 つのノードが接続されたときに"
+"スプリットブレインを検出する、スプリットブレインの決定は常に2つのノード間であ"
+"る） 定義されたポリシーは次のとおり:"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><listitem><para>
+msgid "No automatic resynchronization, simply disconnect."
+msgstr "自動再同期を行わず接続を切断する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><term>
+msgid "<option>consensus</option>"
+msgstr "<option>consensus</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><listitem><para>
+msgid ""
+"Discard the data on the secondary node if the <option>after-sb-0pri</option> "
+"algorithm would also discard the data on the secondary node.  Otherwise, "
+"disconnect."
+msgstr ""
+"<option>after-sb-0pri</option> アルゴリズムの結果が現在のセカンダリノードの"
+"データを破棄することになる場合、セカンダリノードのデータを破棄する。それ以外"
+"の場合は切断する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><term>
+msgid "<option>violently-as0p</option>"
+msgstr "<option>violently-as0p</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><listitem><para>
+msgid ""
+"Always take the decision of the <option>after-sb-0pri</option> algorithm, "
+"even if it causes an erratic change of the primary's view of the data. This "
+"is only useful if a single-node file system (i.e., not OCFS2 or GFS) with "
+"the <option>allow-two-primaries</option> flag is used.  This option can "
+"cause the primary node to crash, and should not be used."
+msgstr ""
+"プライマリのデータに大きな変更がある場合でも、常に <option>after-sb-0pri</"
+"option> アルゴリズムの判断を採用する。このポリシーは <option>allow-two-"
+"primaries</option> オプションを指定し、 1 ノードファイルシステム (OCF2 や "
+"GFS ではない) を使用している場合のみ有用である。このオプションを使用すると、"
+"プライマリノードがクラッシュする可能性があり、推奨しない。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><term>
+msgid "<option>discard-secondary</option>"
+msgstr "<option>discard-secondary</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><listitem><para>
+msgid "Discard the data on the secondary node."
+msgstr "セカンダリノード上のデータを破棄する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><term>
+msgid "<option>call-pri-lost-after-sb</option>"
+msgstr "<option>call-pri-lost-after-sb</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><listitem><para>
+msgid ""
+"Always take the decision of the <option>after-sb-0pri</option> algorithm.  "
+"If the decision is to discard the data on the primary node, call the <option "
+"xml:id=\"pri-lost-after-sb\">pri-lost-after-sb</option> handler on the "
+"primary node."
+msgstr ""
+"常に <option>after-sb-0pri</option> アルゴリズムの判断を採用する。プライマリ"
+"ノードでデータを破棄することになる場合は、 プライマリノードで <option xml:id="
+"\"pri-lost-after-sb\">pri-lost-after-sb</option> ハンドラを呼び出す。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>after-sb-2pri <replaceable>policy</replaceable></option>"
+msgstr "<option>after-sb-2pri <replaceable>policy</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "after-sb-2pri"
+msgstr "after-sb-2pri"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Define how to react if a split-brain scenario is detected and both nodes are "
+"in primary role.  (We detect split-brain scenarios when two nodes connect, "
+"so split-brain decisions are always among two nodes.)  The defined policies "
+"are:"
+msgstr ""
+"スプリットブレインが検出され、両方のノードがプライマリである場合の対応方法を"
+"定義する。（2 つのノードが接続されたときにスプリットブレインを検出する、スプ"
+"リットブレインの決定は常に2つのノード間である） 定義されたポリシーは次のとお"
+"り:"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><listitem><para>
+msgid ""
+"See the <option>violently-as0p</option> policy for <option>after-sb-1pri</"
+"option>."
+msgstr ""
+"<option>after-sb-1pri</option> の <option>violently-as0p</option> ポリシーを"
+"参照。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><listitem><para>
+msgid ""
+"Call the <option>pri-lost-after-sb</option> helper program on one of the "
+"machines unless that machine can demote to secondary. The helper program is "
+"expected to reboot the machine, which brings the node into a secondary role. "
+"Which machine runs the helper program is determined by the <option>after-"
+"sb-0pri</option> strategy."
+msgstr ""
+"そのマシンがセカンダリに降格できる場合を除いて、いずれかのマシンの "
+"<option>pri-lost-after-sb</option> ヘルパープログラムを呼び出す。ヘルパープロ"
+"グラムはマシンを再起動することが期待され、ノードをセカンダリにする。どのマシ"
+"ンがヘルパープログラムを実行するかは、 <option>after-sb-0pri</option> ポリ"
+"シーによって決定される。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>allow-two-primaries</option>"
+msgstr "<option>allow-two-primaries</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "allow-two-primaries"
+msgstr "allow-two-primaries"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> The most common way to configure "
+"DRBD devices is to allow only one node to be primary (and thus writable) at "
+"a time."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>DRBD デバイスを構成する最も一般的な"
+"方法は、一度に 1 つのノードのみをプライマリ（したがって書き込み可能）にするこ"
+"とである。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"In some scenarios it is preferable to allow two nodes to be primary at once; "
+"a mechanism outside of DRBD then must make sure that writes to the shared, "
+"replicated device happen in a coordinated way.  This can be done with a "
+"shared-storage cluster file system like OCFS2 and GFS, or with virtual "
+"machine images and a virtual machine manager that can migrate virtual "
+"machines between physical machines."
+msgstr ""
+"いくつかのシナリオでは、2 つのノードを一度にプライマリにしたい場合がある。 "
+"DRBD 以外のメカニズムで、共有され複製されたデバイスへの書き込みが調整される方"
+"法を使用する必要がある。これは、OCFS2 や GFS などの共有ストレージクラスタファ"
+"イルシステム、または仮想マシンイメージと仮想マシンを物理マシン間で移動できる"
+"仮想マシンマネージャを使用して実行できる。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The <option>allow-two-primaries</option> parameter tells DRBD to allow two "
+"nodes to be primary at the same time. Never enable this option when using a "
+"non-distributed file system; otherwise, data corruption and node crashes "
+"will result!"
+msgstr ""
+"<option>allow-two-primaries</option> は、2つのノードを同時にプライマリにする"
+"ことを DRBD に指示する。非分散ファイルシステムを使用する場合は、このオプショ"
+"ンを有効にしてはならない。データ破損とノードクラッシュが発生する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>always-asbp</option>"
+msgstr "<option>always-asbp</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Normally the automatic after-split-brain policies are only used if current "
+"states of the UUIDs do not indicate the presence of a third node."
+msgstr ""
+"通常、3 番目のノードが存在しないことが現在の UUID 値から明らかな場合のみ、ス"
+"プリットブレイン発生後の修復ポリシーだけが適用される。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"With this option you request that the automatic after-split-brain policies "
+"are used as long as the data sets of the nodes are somehow related. This "
+"might cause a full sync, if the UUIDs indicate the presence of a third node. "
+"(Or double faults led to strange UUID sets.)"
+msgstr ""
+"このオプションを指定すると、両ノードのデータに関連性があるとして、スプリット"
+"ブレイン発生後のポリシーが適用される。UUID の分析により 3 番目のノードの存在"
+"が疑われる場合には、フル同期が行われることがある。(または、なんらかの別の原因"
+"によって間違った UUID セットで判断してしまった場合)"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>connect-int <replaceable>time</replaceable></option>"
+msgstr "<option>connect-int <replaceable>time</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "connect-int"
+msgstr "connect-int"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> As soon as a connection between "
+"two nodes is configured with <command moreinfo=\"none\">drbdsetup connect</"
+"command>, DRBD immediately tries to establish the connection. If this fails, "
+"DRBD waits for <option>connect-int</option> seconds and then repeats.  The "
+"default value of <option>connect-int</option> is 10 seconds."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>2つのノード間の接続が <command "
+"moreinfo=\"none\">drbdsetup connect</command> で構成される、DRBD はすぐに接続"
+"を確立しようとする。これが失敗すると、DRBD は<option>connect-int</option> 秒"
+"後に接続を試みる。<option>connect-int</option> のデフォルト値は 10 秒である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid ""
+"<option>cram-hmac-alg <replaceable>hash-algorithm</replaceable></option>"
+msgstr ""
+"<option>cram-hmac-alg <replaceable>hash-algorithm</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "cram-hmac-alg"
+msgstr "cram-hmac-alg"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Configure the hash-based message "
+"authentication code (HMAC) or secure hash algorithm to use for peer "
+"authentication. The kernel supports a number of different algorithms, some "
+"of which may be loadable as kernel modules. See the shash algorithms listed "
+"in /proc/crypto.  By default, <option>cram-hmac-alg</option> is unset.  Peer "
+"authentication also requires a <option>shared-secret</option> to be "
+"configured."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>対向ノードの認証に使用するハッシュ"
+"ベースのメッセージ認証コード （HMAC） またはセキュアハッシュアルゴリズムを構"
+"成する。カーネルはいくつかの異なるアルゴリズムをサポートしており、その中には"
+"カーネルモジュールとしてロード可能なものもある。/proc/crypto にリストされてい"
+"る shash アルゴリズムを参照。デフォルトで <option>cram-hmac-alg</option> は設"
+"定されていない。対向ノードの認証には、<option>shared-secret</option> も構成す"
+"る必要がある。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>csums-alg <replaceable>hash-algorithm</replaceable></option>"
+msgstr "<option>csums-alg <replaceable>hash-algorithm</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "csums-alg"
+msgstr "csums-alg"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Normally, when two nodes "
+"resynchronize, the sync target requests a piece of out-of-sync data from the "
+"sync source, and the sync source sends the data.  With many usage patterns, "
+"a significant number of those blocks will actually be identical."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>通常、2 つのノードが再同期すると"
+"き、同期ターゲットは同期ソースから非同期データ​​を要求し、同期ソースはデータを"
+"送信する。多くの使用パターンで、それらのブロックのかなりの数が実際には同一に"
+"なっている。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"When a <option>csums-alg</option> algorithm is specified, when requesting a "
+"piece of out-of-sync data, the sync target also sends along a hash of the "
+"data it currently has. The sync source compares this hash with its own "
+"version of the data.  It sends the sync target the new data if the hashes "
+"differ, and tells it that the data are the same otherwise. This reduces the "
+"network bandwidth required, at the cost of higher cpu utilization and "
+"possibly increased I/O on the sync target."
+msgstr ""
+"<option>csums-alg</option> アルゴリズムが指定されている場合、同期ターゲット"
+"は、非同期データの要求と、現在持っているデータのハッシュ値も送信する。同期"
+"ソースは、このハッシュ値とそれ自身のバージョンのデータを比較する。ハッシュ値"
+"が異なる場合、新しいデータを同期ターゲットに送信し、そうでない場合はデータが"
+"同じであることを通知する。これにより、必要なネットワーク帯域幅が削減される"
+"が、CPU 使用率が高くなり、同期ターゲットの I/O が増加する可能性がある。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The <option>csums-alg</option> can be set to one of the secure hash "
+"algorithms supported by the kernel; see the shash algorithms listed in /proc/"
+"crypto.  By default, <option>csums-alg</option> is unset."
+msgstr ""
+"<option>csums-alg</option> は、カーネルによってサポートされている安全なハッ"
+"シュアルゴリズムの 1 つに設定できる。 /proc/crypto にリストされている shash "
+"アルゴリズムを参照。デフォルトでは、 <option>csums-alg</option> 設定されてい"
+"ない。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>csums-after-crash-only</option>"
+msgstr "<option>csums-after-crash-only</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "csums-after-crash-only"
+msgstr "csums-after-crash-only"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Enabling this option (and csums-"
+"alg, above) makes it possible to use the checksum based resync only for the "
+"first resync after primary crash, but not for later \"network hickups\"."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>このオプション（および上記の csums-"
+"alg） を有効にすると、プライマリクラッシュ後の最初の再同期に対してのみチェッ"
+"クサムベースの再同期を使用するが、その後の「ネットワーク復帰」では使用しな"
+"い。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"In most cases, block that are marked as need-to-be-resynced are in fact "
+"changed, so calculating checksums, and both reading and writing the blocks "
+"on the resync target is all effective overhead."
+msgstr ""
+"ほとんどの場合、再同期が必要であるとマークされたブロックは実際に変更されてい"
+"るため、チェックサムの計算、および再同期ターゲット上のブロックの読み書きはす"
+"べてオーバーヘッドである。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The advantage of checksum based resync is mostly after primary crash "
+"recovery, where the recovery marked larger areas (those covered by the "
+"activity log)  as need-to-be-resynced, just in case. Introduced in 8.4.5."
+msgstr ""
+"チェックサムベースの再同期の利点は、大部分がプライマリのクラッシュリカバリの"
+"後である。リカバリでは、アクティビティログでカバーされるより大きな領域が再同"
+"期が必要なものとしてマークされている。8.4.5 から導入された。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>data-integrity-alg </option> <replaceable>alg</replaceable>"
+msgstr "<option>data-integrity-alg </option> <replaceable>alg</replaceable>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "data-integrity-alg"
+msgstr "data-integrity-alg"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"DRBD normally relies on the data integrity checks built into the TCP/IP "
+"protocol, but if a data integrity algorithm is configured, it will "
+"additionally use this algorithm to make sure that the data received over the "
+"network match what the sender has sent.  If a data integrity error is "
+"detected, DRBD will close the network connection and reconnect, which will "
+"trigger a resync."
+msgstr ""
+"DRBD は通常、 TCP/IP プロトコルに組み込まれたデータ整合性チェックに依存する"
+"が、データ整合性アルゴリズムが設定されている場合は、さらに、このアルゴリズム"
+"を使用して、ネットワーク経由で受信したデータが送信者のものと一致することを確"
+"認する。データの整合性エラーが検出された場合、DRBD はネットワーク接続を閉じ、"
+"再接続し、再同期を行う。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The <option>data-integrity-alg</option> can be set to one of the secure hash "
+"algorithms supported by the kernel; see the shash algorithms listed in /proc/"
+"crypto. By default, this mechanism is turned off."
+msgstr ""
+"<option>data-integrity-alg</option> は、カーネルによってサポートされている安"
+"全なハッシュアルゴリズムの 1 つに設定できる。 /proc/crypto にリストされてい"
+"る shash アルゴリズムを参照。デフォルトでは、このメカニズムは無効である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Because of the CPU overhead involved, we recommend not to use this option in "
+"production environments.  Also see the notes on data integrity below."
+msgstr ""
+"CPU のオーバーヘッドが発生するため、本番環境でこのオプションを使用しないこと"
+"を推奨する。また、「データ整合性に関する注意」も参照。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>ko-count <replaceable>number</replaceable></option>"
+msgstr "<option>ko-count <replaceable>number</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "ko-count"
+msgstr "ko-count"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> If a secondary node fails to "
+"complete a write request in <option>ko-count</option> times the "
+"<option>timeout</option> parameter, it is excluded from the cluster. The "
+"primary node then sets the connection to this secondary node to Standalone.  "
+"To disable this feature, you should explicitly set it to 0; defaults may "
+"change between versions."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>セカンダリノードが書き込みリクエス"
+"トを <option>timeout</option> 内で <option>ko-count</option> 回以上失敗した場"
+"合、そのセカンダリノードはクラスタから排除される。プライマリノードは、このセ"
+"カンダリノードへの接続をスタンドアロンに設定する。この機能を無効にするには、"
+"明示的に 0 に設定する必要がある。デフォルトはバージョン間で変更されている。"
+"8.4 は 7 がデフォルト値である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>max-buffers <replaceable>number</replaceable></option>"
+msgstr "<option>max-buffers <replaceable>number</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "max-buffers"
+msgstr "max-buffers"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Limits the memory usage per DRBD "
+"minor device on the receiving side, or for internal buffers during resync or "
+"online-verify.  Unit is PAGE_SIZE, which is 4 KiB on most systems.  The "
+"minimum possible setting is hard coded to 32 (=128 KiB).  These buffers are "
+"used to hold data blocks while they are written to/read from disk.  To avoid "
+"possible distributed deadlocks on congestion, this setting is used as a "
+"throttle threshold rather than a hard limit.  Once more than max-buffers "
+"pages are in use, further allocation from this pool is throttled.  You want "
+"to increase max-buffers if you cannot saturate the IO backend on the "
+"receiving side."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>再同期、オンライン照合を行う際に、"
+"受信側で DRBD マイナーデバイスあたりに使用するメモリを制限する。単位は "
+"PAGE_SIZE で、ほとんどのシステムで 4KiB である。設定できる最小値は 32 (=128 "
+"KiB) でハードコードされている。これらバッファはディスクからの読み書きの際に"
+"データブロックを保持するために使用される。輻輳時のデッドロックを回避するため"
+"に、この設定はハード制限というよりは閾値として使用される。最大バッファページ"
+"が使用されると、プールからのそれ以上の割り当てが制限される。受信側の I/O バッ"
+"クエンドに余裕がない場合には、 max-buffers を増やすとよい。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>max-epoch-size <replaceable>number</replaceable></option>"
+msgstr "<option>max-epoch-size <replaceable>number</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "max-epoch-size"
+msgstr "max-epoch-size"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define the maximum number of "
+"write requests DRBD may issue before issuing a write barrier.  The default "
+"value is 2048, with a minimum of 1 and a maximum of 20000.  Setting this "
+"parameter to a value below 10 is likely to decrease performance."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>書き込みバリアを発行する前に DRBD "
+"が発行できる書き込みリクエストの最大数を定義する。デフォルト値は 2048 で、最"
+"小値は 1 、最大値は 20000 である。このパラメータを 10 未満の値に設定すると、"
+"パフォーマンスが低下する可能性がある。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>on-congestion <replaceable>policy</replaceable></option>"
+msgstr "<option>on-congestion <replaceable>policy</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>congestion-fill <replaceable>threshold</replaceable></option>"
+msgstr "<option>congestion-fill <replaceable>threshold</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid ""
+"<option>congestion-extents <replaceable>threshold</replaceable></option>"
+msgstr ""
+"<option>congestion-extents <replaceable>threshold</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"By default, DRBD blocks when the TCP send queue is full. This prevents "
+"applications from generating further write requests until more buffer space "
+"becomes available again."
+msgstr ""
+"デフォルトでは、 TCP 送信キューが一杯になると、 DRBD は書き込みをブロックす"
+"る。これにより、より多くのバッファスペースが再び利用可能になるまで、アプリ"
+"ケーションがさらに書き込みリクエストを生成するのを防ぐ。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"When DRBD is used together with DRBD-proxy, it can be better to use the "
+"<option>pull-ahead</option> <option>on-congestion</option> policy, which can "
+"switch DRBD into ahead/behind mode before the send queue is full.  DRBD then "
+"records the differences between itself and the peer in its bitmap, but it no "
+"longer replicates them to the peer.  When enough buffer space becomes "
+"available again, the node resynchronizes with the peer and switches back to "
+"normal replication."
+msgstr ""
+"DRBD を DRBD-proxy と一緒に使用する場合は、 送信キューがいっぱいになる前に "
+"DRBD を AHEAD/BEAIND モードに切り替える <option>pull-ahead</option> "
+"<option>on-congestion</option> ポリシーといっしょに使用することが望ましい。"
+"DRBD は、自身と対向ノードとの間の違いをビットマップに記録するが、もはや対向"
+"ノードに複製はしない。十分なバッファスペースが再び利用可能になると、ノードは"
+"対向ノードと同期を再開し、通常の複製に戻る。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"This has the advantage of not blocking application I/O even when the queues "
+"fill up, and the disadvantage that peer nodes can fall behind much further.  "
+"Also, while resynchronizing, peer nodes will become inconsistent."
+msgstr ""
+"これには、キューがいっぱいになってもアプリケーションの I/O をブロックしないと"
+"いう利点があるが、対向ノードの同期が大幅に遅れるという欠点もある。また、再同"
+"期している間、対向ノードは inconsistent(不整合) になる。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The available congestion policies are <option>block</option> (the default) "
+"and <option>pull-ahead</option>.  The <option>congestion-fill</option> "
+"parameter defines how much data is allowed to be \"in flight\" in this "
+"connection.  The default value is 0, which disables this mechanism of "
+"congestion control, with a maximum of 10 GiBytes.  The <option>congestion-"
+"extents</option> parameter defines how many bitmap extents may be active "
+"before switching into ahead/behind mode, with the same default and limits as "
+"the <option>al-extents</option> parameter.  The <option>congestion-extents</"
+"option> parameter is effective only when set to a value smaller than "
+"<option>al-extents</option>."
+msgstr ""
+"利用可能な congestion ポリシーは <option>block</option> (デフォルト), "
+"<option>pull-ahead</option> である。<option>congestion-fill</option> は、この"
+"接続で動作中に許可されているデータ量を定義する。デフォルト値は 0 で、この輻輳"
+"制御のメカニズムを無効にする（最大 10 ギガバイト）。<option>congestion-"
+"extents</option> は、 AHEAD/BEAIND モードに切り替える前にアクティブにできる"
+"ビットマップエクステントの数を定義する。 <option>al-extents</option> と同じデ"
+"フォルトと制限をもつ。<option>congestion-extents</option> は、 <option>al-"
+"extents</option> より小さい値に設定した場合のみ有効である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid "Ahead/behind mode is available since DRBD 8.3.10."
+msgstr "AHEAD/BEHIND モードは DRBD 8.3.10 から有効である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>ping-int <replaceable>interval</replaceable></option>"
+msgstr "<option>ping-int <replaceable>interval</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "ping-int"
+msgstr "ping-int"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> When the TCP/IP connection to a "
+"peer is idle for more than <option>ping-int</option> seconds, DRBD will send "
+"a keep-alive packet to make sure that a failed peer or network connection is "
+"detected reasonably soon.  The default value is 10 seconds, with a minimum "
+"of 1 and a maximum of 120 seconds. The unit is seconds."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>対向ノードへの TCP/IP 接続で "
+"<option>ping-int</option> 秒間に何も通信が行われなかった場合、DRBD はキープア"
+"ライブパケットを送信して、対向ノードまたはネットワーク接続の失敗がすぐに検出"
+"されるようにする。デフォルト値は 10 秒で、最小値は 1 、最大値は 120 秒であ"
+"る。単位は秒である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>ping-timeout <replaceable>timeout</replaceable></option>"
+msgstr "<option>ping-timeout <replaceable>timeout</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "ping-timeout"
+msgstr "ping-timeout"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define the timeout for replies to "
+"keep-alive packets.  If the peer does not reply within <option>ping-timeout</"
+"option>, DRBD will close and try to reestablish the connection.  The default "
+"value is 0.5 seconds, with a minimum of 0.1 seconds and a maximum of 3 "
+"seconds.  The unit is tenths of a second."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>キープアライブパケットへの応答のタ"
+"イムアウトを定義する。対向ノードが <option>ping-timeout</option> 間で応答しな"
+"い場合、 DRBD は接続を終了し、再接続しようとする。デフォルト値は 0.5 秒で、最"
+"小値は 0.1 秒、最大値は 3 秒である。単位は 10 分の 1 秒である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid ""
+"<option>socket-check-timeout <replaceable>timeout</replaceable></option>"
+msgstr ""
+"<option>socket-check-timeout <replaceable>timeout</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "socket-check-timeout"
+msgstr "socket-check-timeout"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/>In setups involving a DRBD-proxy "
+"and connections that experience a lot of buffer-bloat it might be necessary "
+"to set <option>ping-timeout</option> to an unusual high value. By default "
+"DRBD uses the same value to wait if a newly established TCP-connection is "
+"stable. Since the DRBD-proxy is usually located in the same data center such "
+"a long wait time may hinder DRBD's connect process."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>DRBD-Proxy を使っていて大量のバッ"
+"ファを確保する必要がある環境では ping-timeout に非現実的な大きな値を指定しな"
+"ければならないことがある。TCP コネクションが開始したときの安定するのを待つ局"
+"面でも、 DRBD はデフォルトで ping-timeout を使ってしまう。DRBD-Proxy は通常、"
+"同じデータセンターに配置されているため、長い待機時間は DRBD の接続プロセスを"
+"妨げる可能性がある。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"In such setups <option>socket-check-timeout</option> should be set to at "
+"least to the round trip time between DRBD and DRBD-proxy. I.e. in most cases "
+"to 1."
+msgstr ""
+"このような場合、<option>socket-check-timeout</option> に DRBD と DRBD-Proxy "
+"間の round trip time(RTT) を設定するとよい。たいていの場合 1 である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The default unit is tenths of a second, the default value is 0 (which causes "
+"DRBD to use the value of <option>ping-timeout</option> instead).  Introduced "
+"in 8.4.5."
+msgstr ""
+"デフォルトの単位は 10 分の 1 秒である。デフォルト値は 0 で socket-check-"
+"timeout 値の代わりに <option>ping-timeout</option> 値を使用する。8.4.5 から導"
+"入された。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>protocol <replaceable>name</replaceable></option>"
+msgstr "<option>protocol <replaceable>name</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "protocol"
+msgstr "protocol"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><term>
+msgid "<option>A</option>"
+msgstr "<option>A</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"Writes to the DRBD device complete as soon as they have reached the local "
+"disk and the TCP/IP send buffer."
+msgstr ""
+"DRBD デバイスへの書き込みは、ローカルディスクへの書き込みと TCP/IP 送信バッ"
+"ファに到達した時点で完了とする。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><term>
+msgid "<option>B</option>"
+msgstr "<option>B</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"Writes to the DRBD device complete as soon as they have reached the local "
+"disk, and all peers have acknowledged the receipt of the write requests."
+msgstr ""
+"DRBD デバイスへの書き込みは、ローカルディスクへの書き込みと、すべての対向ノー"
+"ドが書き込みリクエストを受信をした時点で完了とする。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><term>
+msgid "<option>C</option>"
+msgstr "<option>C</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"Writes to the DRBD device complete as soon as they have reached the local "
+"and all remote disks."
+msgstr ""
+"DRBD デバイスへの書き込みは、ローカルディスクとすべてのリモートディスクへの書"
+"き込みが終わった時点で完了とする。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Use the specified protocol on this connection.  The supported protocols are: "
+"<placeholder type=\"variablelist\" id=\"0\"/>"
+msgstr ""
+"この接続で指定されたプロトコルを使用する。サポートされているプロトコルは次の"
+"とおり: <placeholder type=\"variablelist\" id=\"0\"/>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>rcvbuf-size <replaceable>size</replaceable></option>"
+msgstr "<option>rcvbuf-size <replaceable>size</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "rcvbuf-size"
+msgstr "rcvbuf-size"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Configure the size of the TCP/IP "
+"receive buffer.  A value of 0 (the default) causes the buffer size to adjust "
+"dynamically.  This parameter usually does not need to be set, but it can be "
+"set to a value up to 10 MiB.  The default unit is bytes."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>TCP/IP 受信バッファのサイズを指定す"
+"る。0（デフォルト） を指定すると、バッファサイズが動的に調整される。このパラ"
+"メータは通常設定する必要はないが、最大 10MiB まで設定できる。デフォルトの単位"
+"はバイトである。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>rr-conflict</option> <replaceable>policy</replaceable>"
+msgstr "<option>rr-conflict</option> <replaceable>policy</replaceable>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "rr-conflict"
+msgstr "rr-conflict"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"This option helps to solve the cases when the outcome of the resync decision "
+"is incompatible with the current role assignment in the cluster.  The "
+"defined policies are:"
+msgstr ""
+"このオプションは、再同期決定の結果がクラスタ内の現在のロール割り当てと互換性"
+"がない場合を解決するのに役立つ。定義されたポリシーは次のとおり:"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><term>
+msgid "<option>violently</option>"
+msgstr "<option>violently</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><listitem><para>
+msgid ""
+"Resync to the primary node is allowed, violating the assumption that data on "
+"a block device are stable for one of the nodes. <emphasis>Do not use this "
+"option, it is dangerous.</emphasis>"
+msgstr ""
+"プライマリノードへの再同期が許可され、ブロックデバイス上のデータがノードの 1 "
+"つに対して安定しているという前提に反す。<emphasis>このオプションは危険であ"
+"り、使ってはならない。</emphasis>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><term>
+msgid "<option>call-pri-lost</option>"
+msgstr "<option>call-pri-lost</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><listitem><para>
+msgid ""
+"Call the <option>pri-lost</option> handler on one of the machines. The "
+"handler is expected to reboot the machine, which puts it into secondary role."
+msgstr ""
+"どこか 1 つのマシンで <option>pri-lost</option> ハンドラを呼び出す。ハンドラ"
+"はマシンを再起動することが期待され、ノードをセカンダリにする。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>shared-secret <replaceable>secret</replaceable></option>"
+msgstr "<option>shared-secret <replaceable>secret</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "shared-secret"
+msgstr "shared-secret"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Configure the shared secret used "
+"for peer authentication.  The secret is a string of up to 64 characters. "
+"Peer authentication also requires the <option>cram-hmac-alg</option> "
+"parameter to be set."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>対向ノードの認証に使用する共有秘密"
+"鍵を設定する。secret は 64 文字までで指定する。対向ノードの認証には、 "
+"<option>cram-hmac-alg</option> も設定する必要がある。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>sndbuf-size <replaceable>size</replaceable></option>"
+msgstr "<option>sndbuf-size <replaceable>size</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "sndbuf-size"
+msgstr "sndbuf-size"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Configure the size of the TCP/IP "
+"send buffer.  Since DRBD 8.0.13 / 8.2.7, a value of 0 (the default) causes "
+"the buffer size to adjust dynamically.  Values below 32 KiB are harmful to "
+"the throughput on this connection.  Large buffer sizes can be useful "
+"especially when protocol A is used over high-latency networks; the maximum "
+"value supported is 10 MiB."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>TCP/IP 送信バッファのサイズを指定す"
+"る。DRBD 8.0.13/8.2.7 以降、 0 （デフォルト） を指定すると、バッファサイズが"
+"動的に調整される。32 KiB 未満の値は、この接続のスループットに有害である。大き"
+"なバッファサイズは、プロトコル A が遅延の大きいネットワークで使用される場合に"
+"特に有用である。サポートされる最大値は 10 MiB である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>tcp-cork</option>"
+msgstr "<option>tcp-cork</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "tcp-cork"
+msgstr "tcp-cork"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"By default, DRBD uses the TCP_CORK socket option to prevent the kernel from "
+"sending partial messages; this results in fewer and bigger packets on the "
+"network.  Some network stacks can perform worse with this optimization.  On "
+"these, the <option>tcp-cork</option> parameter can be used to turn this "
+"optimization off."
+msgstr ""
+"デフォルトで、DRBD は TCP_CORK ソケットオプションを使用して、カーネルが部分的"
+"なメッセージを送信しないようにする。その結果、ネットワーク上のパケット量が少"
+"なくなり、サイズが大きくなる。一部のネットワークスタックでは、この最適化で悪"
+"化する可能性がある。<option>tcp-cork</option> を使用してこの最適化を無効にす"
+"ることができる。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>timeout <replaceable>time</replaceable></option>"
+msgstr "<option>timeout <replaceable>time</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "timeout"
+msgstr "timeout"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define the timeout for replies "
+"over the network: if a peer node does not send an expected reply within the "
+"specified <option>timeout</option>, it is considered dead and the TCP/IP "
+"connection is closed.  The timeout value must be lower than <option>connect-"
+"int</option> and lower than <option>ping-int</option>.  The default is 6 "
+"seconds; the value is specified in tenths of a second."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>ネットワークを介した応答のタイムア"
+"ウトを定義する。対向ノードが指定された <option>timeout</option> 時間内で応答"
+"を送信しない場合、対向ノードが死んだと判断して TCP/IP コネクションを切断す"
+"る。タイムアウト値は、 <option>connect-int</option>、<option>ping-int</"
+"option> より小さい値でなければならない。デフォルトは 6 秒である。値は 10 分"
+"の 1 秒単位で指定する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>use-rle</option>"
+msgstr "<option>use-rle</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "use-rle"
+msgstr "use-rle"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Each replicated device on a "
+"cluster node has a separate bitmap for each of its peer devices.  The "
+"bitmaps are used for tracking the differences between the local and peer "
+"device: depending on the cluster state, a disk range can be marked as "
+"different from the peer in the device's bitmap, in the peer device's bitmap, "
+"or in both bitmaps.  When two cluster nodes connect, they exchange each "
+"other's bitmaps, and they each compute the union of the local and peer "
+"bitmap to determine the overall differences."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>クラスタノード上の複製された各デバ"
+"イスには、それぞれの対向ノードデバイス用の個別のビットマップがあある。この"
+"ビットマップは、ローカルデバイスと対向ノードデバイスの違いを追跡するために使"
+"用される。クラスタの状態によっては、デバイスのビットマップ、対向ノードデバイ"
+"スのビットマップ、または両方のビットマップにディスクが異なるとマークできる。2"
+"つのクラスタノードが接続すると、相互のビットマップを交換し、ローカルと対向"
+"ノードのビットマップを検査して全体的な違いを判断する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Bitmaps of very large devices are also relatively large, but they usually "
+"compress very well using run-length encoding.  This can save time and "
+"bandwidth for the bitmap transfers."
+msgstr ""
+"非常に大きなデバイスのビットマップは比較的大きいが、通常、ランレングス符号化"
+"を使用して非常にうまく圧縮される。これにより、ビットマップ転送の時間と帯域幅"
+"を節約できる。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The <option>use-rle</option> parameter determines if run-length encoding "
+"should be used.  It is on by default since DRBD 8.4.0."
+msgstr ""
+"<option>use-rle</option> は run-length エンコーディングを使用するかどうかを指"
+"定する。DRBD 8.4.0 以降デフォルトで有効である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>verify-alg <replaceable>hash-algorithm</replaceable></option>"
+msgstr "<option>verify-alg <replaceable>hash-algorithm</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Online verification (<command moreinfo=\"none\">drbdadm verify</command>) "
+"computes and compares checksums of disk blocks (i.e., hash values) in order "
+"to detect if they differ.  The <option>verify-alg</option> parameter "
+"determines which algorithm to use for these checksums. It must be set to one "
+"of the secure hash algorithms supported by the kernel before online verify "
+"can be used; see the shash algorithms listed in /proc/crypto."
+msgstr ""
+"オンライン照合（<command moreinfo=\"none\">drbdadm verify</command>） は、"
+"ディスクブロックのチェックサム（すなわち、ハッシュ値）を計算して比較し、それ"
+"らが異なるかどうかを検出する。<option>verify-alg</option> は、これらのチェッ"
+"クサムに使用するアルゴリズムを決定する。オンライン照合を使用するには、カーネ"
+"ルでサポートされている安全なハッシュアルゴリズムの1つに設定する必要がある。 /"
+"proc/crypto にリストされている shash アルゴリズムを参照。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"We recommend to schedule online verifications regularly during low-load "
+"periods, for example once a month.  Also see the notes on data integrity "
+"below."
+msgstr ""
+"低負荷の期間（例えば、月に1回）で定期的にオンライン照合をスケジュールすること"
+"を推奨する。また、「データ整合性に関する注意」も参照。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>discard-my-data</option>"
+msgstr "<option>discard-my-data</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Discard the local data and resynchronize with the peer that has the most up-"
+"to-data data.  Use this option to manually recover from a split-brain "
+"situation."
+msgstr ""
+"ローカルデータを破棄して、最新データを持つ対向ノードと再同期する。スプリット"
+"ブレイン状態から復旧するときに、このオプションを手作業で指定する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>tentative</option>"
+msgstr "<option>tentative</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Only determine if a connection to the peer can be established and if a "
+"resync is necessary (and in which direction) without actually establishing "
+"the connection or starting the resync.  Check the system log to see what "
+"DRBD would do without the <option>--tentative</option> option."
+msgstr ""
+"対向ノードへの接続が確立できるかどうか、および実際に接続を確立したり、再同期"
+"を開始したりすることなく、再同期が必要かどうか（また、その方向も）を判断す"
+"る。<option>--tentative</option> なしだと、DRBD が何をするかシステムログを調"
+"べて、確認する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>auto-promote <replaceable>bool-value</replaceable></option>"
+msgstr "<option>auto-promote <replaceable>bool-value</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "auto-promote"
+msgstr "auto-promote"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"A resource must be promoted to primary role before any of its devices can be "
+"mounted or opened for writing."
+msgstr ""
+"書き込みのためにデバイスをマウントまたはオープンする前に、リソースをプライマ"
+"リに昇格させる必要がある。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Before DRBD 9, this could only be done explicitly (\"drbdadm primary\").  "
+"Since DRBD 9, the <option>auto-promote</option> parameter allows to "
+"automatically promote a resource to primary role when one of its devices is "
+"mounted or opened for writing.  As soon as all devices are unmounted or "
+"closed with no more remaining users, the role of the resource changes back "
+"to secondary."
+msgstr ""
+"DRBD 9 より前は、これを明示的に行う必要があった（ &quot;drbdadm "
+"primary&quot;）。DRBD 9 以降、 <option>auto-promote</option> を使用すると、デ"
+"バイスの 1 つが書き込み用にマウントまたはオープンされるときに、リソースをプラ"
+"イマリに自動的に昇格させることができる。すべてのデバイスがアンマウントされる"
+"か、オープンしているユーザがいなくなると、すぐにリソースの役割がセカンダリに"
+"なる。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Automatic promotion only succeeds if the cluster state allows it (that is, "
+"if an explicit <command moreinfo=\"none\">drbdadm primary</command> command "
+"would succeed).  Otherwise, mounting or opening the device fails as it "
+"already did before DRBD 9: the <citerefentry><refentrytitle>mount</"
+"refentrytitle><manvolnum>2</manvolnum></citerefentry> system call fails with "
+"errno set to EROFS (Read-only file system); the "
+"<citerefentry><refentrytitle>open</refentrytitle><manvolnum>2</manvolnum></"
+"citerefentry> system call fails with errno set to EMEDIUMTYPE (wrong medium "
+"type)."
+msgstr ""
+"自動プロモーションは、クラスタの状態が許可する場合にのみ成功する（つまり、明"
+"示的な <command moreinfo=\"none\">drbdadm primary</command> コマンドが成功す"
+"るなら）。それ以外の場合は、DRBD 9 より前と同様にデバイスのマウントまたはオー"
+"プンが失敗する: <citerefentry><refentrytitle>mount</"
+"refentrytitle><manvolnum>2</manvolnum></citerefentry> システムコールは、 "
+"errno を EROFS（読み取り専用ファイルシステム） に設定して失敗する。"
+"<citerefentry><refentrytitle>open</refentrytitle><manvolnum>2</manvolnum></"
+"citerefentry> システムコールは、 errno を EMEDIUMTYPE（メディアタイプが間違っ"
+"ている） に設定してが失敗する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Irrespective of the <option>auto-promote</option> parameter, if a device is "
+"promoted explicitly (<command moreinfo=\"none\">drbdadm primary</command>), "
+"it also needs to be demoted explicitly (<command moreinfo=\"none\">drbdadm "
+"secondary</command>)."
+msgstr ""
+"<option>auto-promote</option> の設定に関係なく、デバイスが明示的に昇格された"
+"場合 （<command moreinfo=\"none\">drbdadm primary</command>）、明示的に降格す"
+"る必要がある（<command moreinfo=\"none\">drbdadm secondary</command>）。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The <option>auto-promote</option> parameter is available since DRBD 9.0.0, "
+"and defaults to <constant>yes</constant>."
+msgstr ""
+"<option>auto-promote</option> は DRBD 9.0.0 から有効で、デフォルトは "
+"<constant>yes</constant> である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>cpu-mask <replaceable>cpu-mask</replaceable></option>"
+msgstr "<option>cpu-mask <replaceable>cpu-mask</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "cpu-mask"
+msgstr "cpu-mask"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Set the cpu affinity mask for "
+"DRBD kernel threads.  The cpu mask is specified as a hexadecimal number.  "
+"The default value is 0, which lets the scheduler decide which kernel threads "
+"run on which CPUs.  CPU numbers in <option>cpu-mask</option> which do not "
+"exist in the system are ignored."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>DRBD のカーネルスレッドに CPU ア"
+"フィニティマスクを設定する。CPU マスクは 16 進数で指定する。デフォルト値は 0 "
+"で、スケジューラがどの CPU 上でカーネルスレッドを実行するかを決定する。システ"
+"ムに存在しない <option>cpu-mask</option> CPU番号は無視される。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid ""
+"<option>on-no-data-accessible <replaceable>policy</replaceable></option>"
+msgstr ""
+"<option>on-no-data-accessible <replaceable>policy</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><term>
+msgid "<option>io-error</option>"
+msgstr "<option>io-error</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><listitem><para>
+msgid "System calls fail with errno set to EIO."
+msgstr "errno を EIO に設定してシステムコールは失敗する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><term>
+msgid "<option>suspend-io</option>"
+msgstr "<option>suspend-io</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"The resource suspends I/O.  I/O can be resumed by (re)attaching the lower-"
+"level device, by connecting to a peer which has access to the data, or by "
+"forcing DRBD to resume I/O with <command moreinfo=\"none\">drbdadm resume-io "
+"<replaceable>res</replaceable></command>.  When no data is available, "
+"forcing I/O to resume will result in the same behavior as the <option>io-"
+"error</option> policy."
+msgstr ""
+"リソースは I/O を中断する。下位レベルのデバイスを接続（再接続）したり、データ"
+"にアクセスできる対向ノードに接続したり、<command moreinfo=\"none\">drbdadm "
+"resume-io <replaceable>res</replaceable></command> で DRBD に I/O を再開させ"
+"たりすることで、 再開できる。データがない場合、 I/O を強制的に再開すると、 "
+"<option>io-error</option> ポリシーと同じ結果になる。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"Determine how to deal with I/O requests when the requested data is not "
+"available locally or remotely (for example, when all disks have failed).  "
+"The defined policies are: <placeholder type=\"variablelist\" id=\"0\"/> This "
+"setting is available since DRBD 8.3.9; the default policy is <option>io-"
+"error</option>."
+msgstr ""
+"要求されたデータがローカルまたはリモートで使用できない場合に（たとえば、すべ"
+"てのディスクに障害が発生した場合など）、どのように I/O 要求を処理するかを決定"
+"する。定義されたポリシーは次のとおり: <placeholder type=\"variablelist\" id="
+"\"0\"/>この設定は、DRBD 8.3.9 から有効である。デフォルトのポリシーは "
+"<option>io-error</option> である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>peer-ack-window <replaceable>value</replaceable></option>"
+msgstr "<option>peer-ack-window <replaceable>value</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "peer-ack-window"
+msgstr "peer-ack-window"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> On each node and for each device, "
+"DRBD maintains a bitmap of the differences between the local and remote data "
+"for each peer device.  For example, in a three-node setup (nodes A, B, C) "
+"each with a single device, every node maintains one bitmap for each of its "
+"peers."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>各ノード上の各デバイスのために、"
+"DRBD は、ローカルデータと各対向ノードデバイスのリモートデータの差分のビット"
+"マップを維持する。例えば、それぞれが単一デバイスを有する 3 ノード構成 （ノー"
+"ド A、B、C） において、各ノードは、各対向ノードに対して 1 つのビットマップを"
+"維持する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"When nodes receive write requests, they know how to update the bitmaps for "
+"the writing node, but not how to update the bitmaps between themselves.  In "
+"this example, when a write request propagates from node A to B and C, nodes "
+"B and C know that they have the same data as node A, but not whether or not "
+"they both have the same data."
+msgstr ""
+"ノードが書き込みリクエストを受け取ると、書き込みノードのビットマップを更新す"
+"る方法はわかるが、ノード間のビットマップを更新する方法はわからない。この例で"
+"は、書き込みリクエストがノード A から B および C に伝搬するとき、ノード B お"
+"よび C はノード A と同じデータを有するが、両方が同じデータを有するか不明であ"
+"る。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"As a remedy, the writing node occasionally sends peer-ack packets to its "
+"peers which tell them which state they are in relative to each other."
+msgstr ""
+"是正措置として、書き込みノードは、時には、相手との間にどのような状態があるか"
+"を示すピアツーピアパケットを対向ノードに送信する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The <option>peer-ack-window</option> parameter specifies how much data a "
+"primary node may send before sending a peer-ack packet.  A low value causes "
+"increased network traffic; a high value causes less network traffic but "
+"higher memory consumption on secondary nodes and higher resync times between "
+"the secondary nodes after primary node failures. (Note: peer-ack packets may "
+"be sent due to other reasons as well, e.g. membership changes or expiry of "
+"the <option>peer-ack-delay</option> timer.)"
+msgstr ""
+"<option>peer-ack-window</option> は、peer-ack パケットを送信する前に、プライ"
+"マリノードが送信するデータ量を指定する。値が小さいとネットワークトラフィック"
+"が増加する。値が大きいとネットワークトラフィックは減少するが、セカンダリノー"
+"ドのメモリ消費量が大きくなり、プライマリノードの障害後に、セカンダリノード間"
+"の再同期時間が長くなる。（注：peer-ack パケットは、他の理由でも送信される場合"
+"がある。たとえば、メンバーシップの変更または <option>peer-ack-delay</option> "
+"タイマーの満了など）。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The default value for <option>peer-ack-window</option> is 2 MiB, the default "
+"unit is sectors.  This option is available since 9.0.0."
+msgstr ""
+"<option>peer-ack-window</option> のデフォルト値は、2 MiB であり、単位はセクタ"
+"である。このオプションは 9.0.0 から有効である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>peer-ack-delay <replaceable>expiry-time</replaceable></option>"
+msgstr "<option>peer-ack-delay <replaceable>expiry-time</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "peer-ack-delay"
+msgstr "peer-ack-delay"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> If after the last finished write "
+"request no new write request gets issued for <replaceable>expiry-time</"
+"replaceable>, then a peer-ack packet is sent.  If a new write request is "
+"issued before the timer expires, the timer gets reset to <replaceable>expiry-"
+"time</replaceable>. (Note: peer-ack packets may be sent due to other reasons "
+"as well, e.g. membership changes or the <option>peer-ack-window</option> "
+"option.)"
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>最後に終了した書き込みリクエストの"
+"後に <replaceable>expiry-time</replaceable> 間、新しい書き込みリクエストが発"
+"行されない場合、peer-ack パケットが送信される。タイマーが満了する前に新しい書"
+"き込みリクエストが発行されると、タイマーは <replaceable>expiry-time</"
+"replaceable> にリセットされる。（注：peer-ack パケットは、他の理由でも送信さ"
+"れる場合がある。たとえば、メンバーシップの変更または <option>peer-ack-"
+"window</option> オプションなど）。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"This parameter may influence resync behavior on remote nodes. Peer nodes "
+"need to wait until they receive an peer-ack for releasing a lock on an AL-"
+"extent.  Resync operations between peers may need to wait for for these "
+"locks."
+msgstr ""
+"このパラメータは、リモートノードの再同期動作に影響を与える可能性がある。対向"
+"ノードは、 AL-extent のロックを解除する peer-ack を受信するまで待つ必要があ"
+"る。対向ノード間の再同期操作は、これらのロックを待つ必要がある。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The default value for <option>peer-ack-delay</option> is 100 milliseconds, "
+"the default unit is milliseconds.  This option is available since 9.0.0."
+msgstr ""
+"<option>peer-ack-delay</option> のデフォルト値は、100 ミリ秒であり、単位はミ"
+"リ秒である。このオプションは 9.0.0 から有効である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>degr-wfc-timeout <replaceable>timeout</replaceable></option>"
+msgstr "<option>degr-wfc-timeout <replaceable>timeout</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "degr-wfc-timeout"
+msgstr "degr-wfc-timeout"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define how long to wait until all "
+"peers are connected in case the cluster consisted of a single node only when "
+"the system went down.  This parameter is usually set to a value smaller than "
+"<option>wfc-timeout</option>.  The assumption here is that peers which were "
+"unreachable before a reboot are less likely to be reachable after the "
+"reboot, so waiting is less likely to help."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>システムが停止したとき、クラスタが"
+"単一ノードで構成されている場合、すべてのピアが接続されるまで待機する時間を定"
+"義する。このパラメータは通常、 <option>wfc-timeout</option> より小さい値に設"
+"定する。再起動前に到達できなかった対向ノードが再起動後に到達できる可能性は低"
+"いため、待機が助けになる可能性は低いということである。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The timeout is specified in seconds. The default value is 0, which stands "
+"for an infinite timeout.  Also see the <option>wfc-timeout</option> "
+"parameter."
+msgstr ""
+"タイムアウトは秒単位で指定する。デフォルト値は 0 であり、無限のタイムアウトを"
+"意味する。<option>wfc-timeout</option> パラーメータも参照。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid ""
+"<option>outdated-wfc-timeout <replaceable>timeout</replaceable></option>"
+msgstr ""
+"<option>outdated-wfc-timeout <replaceable>timeout</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "outdated-wfc-timeout"
+msgstr "outdated-wfc-timeout"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define how long to wait until all "
+"peers are connected if all peers were outdated when the system went down.  "
+"This parameter is usually set to a value smaller than <option>wfc-timeout</"
+"option>.  The assumption here is that an outdated peer cannot have become "
+"primary in the meantime, so we don't need to wait for it as long as for a "
+"node which was alive before."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>システムが停止したとき、すべての対"
+"向ノードが outdated(無効) であった場合、すべての対向ノードが接続されるまで待"
+"機する時間を定義する。このパラメータは通常、 <option>wfc-timeout</option> よ"
+"り小さい値に設定する。outdated(無効) の対向ノードがその間にプライマリになるこ"
+"とはできないので、以前に生存していたノードを待つ必要がないということである。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>wait-after-sb</option>"
+msgstr "<option>wait-after-sb</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"This parameter causes DRBD to continue waiting in the init script even when "
+"a split-brain situation has been detected, and the nodes therefore refuse to "
+"connect to each other."
+msgstr ""
+"このパラメータは、スプリットブレイン状況が検出された場合でも、DRBD が init ス"
+"クリプトで待機し続けるため、ノード間の接続が拒否される。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>wfc-timeout <replaceable>timeout</replaceable></option>"
+msgstr "<option>wfc-timeout <replaceable>timeout</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "wfc-timeout"
+msgstr "wfc-timeout"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Define how long the init script "
+"waits until all peers are connected.  This can be useful in combination with "
+"a cluster manager which cannot manage DRBD resources: when the cluster "
+"manager starts, the DRBD resources will already be up and running.  With a "
+"more capable cluster manager such as Pacemaker, it makes more sense to let "
+"the cluster manager control DRBD resources.  The timeout is specified in "
+"seconds. The default value is 0, which stands for an infinite timeout.  Also "
+"see the <option>degr-wfc-timeout</option> parameter."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>すべての対向ノードが接続されるまで "
+"init スクリプトが待機する時間を定義する。これは、DRBD リソースを管理できない"
+"クラスタマネージャと組み合わせて使用​​する場合に便利である。クラスタマネージャ"
+"が起動すると、DRBD リ ソースはすでに起動して実行されている。Pacemaker などの"
+"より優れたクラスターマネージャを使用すると、クラスターマネージャが DRBD リ"
+"ソースを制御できるようになる。タイムアウトは秒単位で指定する。デフォルト値は "
+"0 であり、無限のタイムアウトを意味する。<option>degr-wfc-timeout</option> パ"
+"ラーメータも参照。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>quorum <replaceable>value</replaceable></option>"
+msgstr "<option>quorum <replaceable>value</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "quorum"
+msgstr "quorum"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> When activated, a cluster "
+"partition requires quorum in order to modify the replicated data set. That "
+"means a node in the cluster partition can only be promoted to primary if the "
+"cluster partition has quorum. Every node with a disk directly connected to "
+"the node that should be promoted counts.  If a primary node should execute a "
+"write request, but the cluster partition has lost quorum, it will freeze IO "
+"or reject the write request with an error (depending on the <option>on-no-"
+"quorum</option> setting). Upon loosing quorum a primary always invokes the "
+"<option>quorum-lost</option> handler. The handler is intended for "
+"notification purposes, its return code is ignored."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>有効にすると、レプリケートされた"
+"データセットを変更するために、クラスタパーティションはクォーラムを必要とす"
+"る。つまり、クラスタパーティション内のノードは、クラスタパーティションに"
+"クォーラムがある場合にのみプライマリに昇格できる。昇格すべきノードにディスク"
+"が直接接続されているすべてのノードが対象である。プライマリノードが書き込みリ"
+"クエストを実行する必要があるが、クラスタパーティションがクォーラムを失った場"
+"合、 I/O をフリーズするか、または書き込みリクエストを拒否する（<option>on-no-"
+"quorum</option> の設定に依存）。クォーラムが失われると、プライマリは常に "
+"<option>quorum-lost</option> ハンドラを呼び出す。ハンドラは通知のためのもので"
+"あり、リターンコードは無視される。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The option's value might be set to <option>off</option>, <option>majority</"
+"option>, <option>all</option> or a numeric value. If you set it to a numeric "
+"value, make sure that the value is greater than half of your number of "
+"nodes.  Quorum is a mechanism to avoid data divergence, it might be used "
+"instead of fencing when there are more than two repicas. It defaults to "
+"<option>off</option>"
+msgstr ""
+"オプションの値は、 <option>off</option>, <option>majority</option>, "
+"<option>all</option>, または数値である。数値を設定する場合は、値がノード数の"
+"半分を超えていることを確認すること。クォーラムはデータの不一致を回避するメカ"
+"ニズムであり、2 つ以上の複製が存在する場合にフェンシングの代わりに使用される"
+"ときがある。デフォルトは <option>off</option> である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"If all missing nodes are marked as outdated, a partition always has quorum, "
+"no matter how small it is. I.e. If you disconnect all secondary nodes "
+"gracefully a single primary continues to operate. In the moment a single "
+"secondary is lost, it has to be assumed that it forms a partition with all "
+"the missing outdated nodes. In case my partition might be smaller than the "
+"other, quorum is lost in this moment."
+msgstr ""
+"切断されたノードがすべて outdated(無効) としてマークされている場合、パーティ"
+"ションのサイズに関係なく、常にクォーラムを持つ。つまり、すべてのセカンダリ"
+"ノードを正常に切断すると、1 つのプライマリが動作し続ける。1 つのセカンダリが"
+"切断された瞬間に、切断されたすべてのセカンダリノードがパーティションを形成す"
+"ると仮定する。パーティションが他のパーティションよりも小さい場合、この時点で"
+"はクォーラムは失われる。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"In case you want to allow permanently diskless nodes to gain quorum it is "
+"recommendet to not use <option>majority</option> or <option>all</option>. It "
+"is recommended to specify an absolute number, since DBRD's heuristic to "
+"determine the complete number of diskfull nodes in the cluster is unreliable."
+msgstr ""
+"ディスクレスノードがクォーラムを常に取得できるようにする場合、"
+"<option>majority</option>, <option>all</option> オプションは使用しないことを"
+"推奨する。クラスタ内のディスクフルノードの完全な数を決定するための DBRD の"
+"ヒューリスティックな方法は正確でないため、絶対数を指定することを推奨する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The quorum implementation is available starting with the DRBD kernel driver "
+"version 9.0.7."
+msgstr ""
+"クォーラムの実装は、DRBD カーネルドライバのバージョン 9.0.7 から有効である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid ""
+"<option>quorum-minimum-redundancy <replaceable>value</replaceable></option>"
+msgstr ""
+"<option>quorum-minimum-redundancy <replaceable>value</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "quorum-minimum-redundancy"
+msgstr "quorum-minimum-redundancy"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> This option sets the minimal "
+"required number of nodes with an UpToDate disk to allow the partition to "
+"gain quorum. This is a different requirement than the plain <option>quorum</"
+"option> option expresses."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>このオプションは、パーティションが"
+"クォーラムを獲得できるように UpToDate のディスクを持つノードの必要最小限の数"
+"を設定する。これは、素の <option>quorum</option> とは異なる要件である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The option's value might be set to <option>off</option>, <option>majority</"
+"option>, <option>all</option> or a numeric value. If you set it to a numeric "
+"value, make sure that the value is greater than half of your number of nodes."
+msgstr ""
+"オプションの値は、 <option>off</option>, <option>majority</option>, "
+"<option>all</option>, または数値である。数値を設定する場合は、値がノード数の"
+"半分を超えていることを確認すること。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"This option is available starting with the DRBD kernel driver version 9.0.10."
+msgstr ""
+"このオプションは、DRBD カーネルドライバのバージョン 9.0.10 から有効である。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid ""
+"<option>on-no-quorum <group choice=\"req\" rep=\"norepeat\"> <arg choice="
+"\"plain\" rep=\"norepeat\">io-error</arg> <arg choice=\"plain\" rep="
+"\"norepeat\">suspend-io</arg> </group> </option>"
+msgstr ""
+"<option>on-no-quorum <group choice=\"req\" rep=\"norepeat\"> <arg choice="
+"\"plain\" rep=\"norepeat\">io-error</arg> <arg choice=\"plain\" rep="
+"\"norepeat\">suspend-io</arg> </group> </option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> By default DRBD freezes IO on a "
+"device, that lost quorum.  By setting the <option>on-no-quorum</option> to "
+"<option>io-error</option> it completes all IO operations with an error if "
+"quorum ist lost."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>デフォルトで DRBD はクォーラムを失"
+"うと、デバイス上の I/O をフリーズする。<option>on-no-quorum</option> を "
+"<option>io-error</option> に設定すると、クォーラムが失われた場合、すべての I/"
+"O 操作をエラーで完了する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The <option>on-no-quorum</option> options is available starting with the "
+"DRBD kernel driver version 9.0.8."
+msgstr ""
+"<option>on-no-quorum</option> オプションは、DRBD カーネルドライバのバージョ"
+"ン 9.0.8 から有効である。"
