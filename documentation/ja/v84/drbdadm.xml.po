@@ -6,7 +6,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2018-11-02 13:05+0900\n"
+"POT-Creation-Date: 2018-11-02 14:08+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -430,13 +430,27 @@ msgstr ""
 
 #. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
 msgid ""
+"Note that all of the following options are <option>backend-options</option> "
+"(i.e., separated via \"--\")."
+msgstr ""
+"以下のオプションはすべて <option>backend-options</option> である (\"--\" で分"
+"離される)。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><programlisting>
+#, no-wrap
+msgid "# drbdadm -- --size=10G resize r0"
+msgstr "# drbdadm -- --size=10G resize r0"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
 "The <option>--size</option> option can be used to online shrink the usable "
 "size of a drbd device. It's the users responsibility to make sure that a "
-"file system on the device is not truncated by that operation."
+"file system on the device is not truncated by that operation.  Example: "
+"<placeholder type=\"programlisting\" id=\"0\"/>"
 msgstr ""
 "<option>--size</option> オプションは DRBD デバイスで使用できるサイズのオンラ"
 "イン縮小に使用される。ファイルシステムがこの操作によって破損しないことはユー"
-"ザ責任において確認する。"
+"ザ責任において確認する。例: <placeholder type=\"programlisting\" id=\"0\"/>"
 
 #. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
 msgid ""

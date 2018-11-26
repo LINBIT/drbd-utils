@@ -6,7 +6,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2018-11-02 13:06+0900\n"
+"POT-Creation-Date: 2018-11-02 14:08+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -495,11 +495,11 @@ msgstr "両ノードでメタデータを初期化してデバイスを設定す
 
 #. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><orderedlist><listitem><simpara>
 msgid ""
-"<command moreinfo=\"none\">drbdadm create-md --force <replaceable>res</"
-"replaceable></command>"
+"<command moreinfo=\"none\">drbdadm create-md --force <replaceable>res/volume-"
+"number</replaceable></command>"
 msgstr ""
-"<command moreinfo=\"none\">drbdadm create-md --force <replaceable>res</"
-"replaceable></command>"
+"<command moreinfo=\"none\">drbdadm create-md --force <replaceable>res/volume-"
+"number</replaceable></command>"
 
 #. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><orderedlist><listitem><simpara>
 msgid "They need to do the initial handshake, so they know their sizes."

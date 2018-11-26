@@ -6,7 +6,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2018-11-02 13:06+0900\n"
+"POT-Creation-Date: 2018-11-02 14:08+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -930,6 +930,59 @@ msgstr ""
 "呼び出される。このハンドラは、再同期中に下位レベルのデバイスのスナップショッ"
 "トを作成するために使用できる。再同期中に再同期ソースが使用できなくなった場"
 "合、スナップショットに戻すことで consistent 状態が復元される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>before-resync-source <replaceable>cmd</replaceable></option>"
+msgstr "<option>before-resync-source <replaceable>cmd</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "before-resync-source"
+msgstr "before-resync-source"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Called on a resync source before "
+"a resync begins."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>再同期が始まる前に再同期のソース側"
+"で呼び出される。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>out-of-sync <replaceable>cmd</replaceable></option>"
+msgstr "<option>out-of-sync <replaceable>cmd</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "out-of-sync"
+msgstr "out-of-sync"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Called on all nodes after a "
+"<option>verify</option> finishes and out-of-sync blocks were found. This "
+"handler is mainly used for monitoring purposes.  An example would be to call "
+"a script that sends an alert SMS."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/><option>verify</option> が終了し "
+"out-of-sync ブロックが見つかった時にすべてのノードで呼び出される。例としては"
+"アラート SMS を送るスクリプトである。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid "<option>quorum-lost <replaceable>cmd</replaceable></option>"
+msgstr "<option>quorum-lost <replaceable>cmd</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "quorum-lost"
+msgstr "quorum-lost"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Called on a Primary that lost "
+"quorum.  This handler is usually used to reboot the node if it is not "
+"possible to restart the application that uses the storage on top of DRBD."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>クォーラムを失ったプライマリで呼び"
+"出される。このハンドラは DRBD ストレージを使用するアプリケーションを再起動で"
+"きない場合にノードをリブートするときに主に使われる。"
 
 #. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
 msgid "<option>fence-peer <replaceable>cmd</replaceable></option>"
