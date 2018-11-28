@@ -2031,8 +2031,23 @@ void _convert_after_option(struct d_resource *res, struct d_volume *vol)
 			return;
 		}
 
-		if (!depends_on_ctx.res || depends_on_ctx.res->ignore) {
-			vol->disk_options = del_opt(vol->disk_options, opt);
+		if (!depends_on_ctx.res || depends_on_ctx.res->ignore || !depends_on_ctx.vol) {
+			err(
+				"%s:%d: in resource %s:\n\tresource '%s' mentioned in "
+				"'resync-after' option is not known%s.\n",
+				res->config_file, res->start_line, res->name,
+				opt->value,
+				depends_on_ctx.res ? " on this host" : "");
+			/* Non-fatal if run from some script.
+			 * When deleting resources, it is an easily made
+			 * oversight to leave references to the deleted
+			 * resources in resync-after statements.  Don't fail on
+			 * every pacemaker-induced action, as it would
+			 * ultimately lead to all nodes committing suicide. */
+			if (no_tty)
+				vol->disk_options = del_opt(vol->disk_options, opt);
+			else
+				config_valid = 0;
 		} else {
 			free(opt->value);
 			m_asprintf(&opt->value, "%d", depends_on_ctx.vol->device_minor);
@@ -2320,6 +2335,9 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id)
 	char *name = strdupa(id);
 	char *vol_id = strchr(name, '/');
 	unsigned vol_nr = ~0U;
+
+	ctx->res = NULL;
+	ctx->vol = NULL;
 
 	if (vol_id) {
 		*vol_id++ = '\0';
@@ -2945,6 +2963,16 @@ void sanity_check_perm()
 	checked = 1;
 }
 
+static struct d_resource *res_by_name_ign_vol(const char *name)
+{
+	char *name_dup = strdupa(name);
+	char *slash = strchr(name_dup, '/');
+
+	if (slash) *slash = '\0';
+
+	return res_by_name(name_dup);
+}
+
 void validate_resource(struct d_resource *res, enum pp_flags flags)
 {
 	struct d_option *opt, *next;
@@ -2954,7 +2982,7 @@ void validate_resource(struct d_resource *res, enum pp_flags flags)
 	 * see commit 89cd0585 */
 	opt = res->disk_options;
 	while ((opt = find_opt(opt, "resync-after"))) {
-		struct d_resource *rs_after_res = res_by_name(opt->value);
+		struct d_resource *rs_after_res = res_by_name_ign_vol(opt->value);
 		next = opt->next;
 		if (rs_after_res == NULL ||
 		    (rs_after_res->ignore && !(flags & MATCH_ON_PROXY))) {
@@ -3739,8 +3767,6 @@ int main(int argc, char **argv)
 		} else {
 			/* explicit list of resources to work on */
 			for (i = 0; resource_names[i]; i++) {
-				ctx.res = NULL;
-				ctx.vol = NULL;
 				ctx_by_name(&ctx, resource_names[i]);
 				if (!ctx.res)
 					ctx_by_minor(&ctx, resource_names[i]);

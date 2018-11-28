@@ -3435,8 +3435,6 @@ int main(int argc, char **argv)
 				adjust_more_than_one_resource = 1;
 
 			for (i = 0; resource_names[i]; i++) {
-				ctx.res = NULL;
-				ctx.vol = NULL;
 				r = ctx_by_name(&ctx, resource_names[i], SETUP_MULTI);
 				if (!ctx.res) {
 					ctx_by_minor(&ctx, resource_names[i]);

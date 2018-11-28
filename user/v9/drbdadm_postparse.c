@@ -1618,7 +1618,7 @@ static void _convert_after_option(struct d_resource *res, struct d_volume *vol)
 			continue;
 		ctx_by_name(&depends_on_ctx, opt->value, SETUP_MULTI);
 		volumes = ctx_set_implicit_volume(&depends_on_ctx);
-		if (volumes > 1 && !strchr(res->name, '/')) {
+		if (volumes > 1) {
 			err("%s:%d: in resource %s:\n\t"
 			    "resync-after contains '%s', which is ambiguous, since it contains %d volumes\n",
 			    res->config_file, res->start_line, res->name,
@@ -1627,15 +1627,28 @@ static void _convert_after_option(struct d_resource *res, struct d_volume *vol)
 			return;
 		}
 
-		if (!depends_on_ctx.res || depends_on_ctx.res->ignore) {
-			struct d_option *next = STAILQ_NEXT(opt, link);
-			STAILQ_REMOVE(&vol->disk_options, opt, d_option, link);
-			free_opt(opt);
-			opt = next;
-			if (opt)
-				goto next;
-			else
-				break;
+		if (!depends_on_ctx.res || depends_on_ctx.res->ignore || !depends_on_ctx.vol) {
+			err("%s:%d: in resource %s:\n\tresource '%s' mentioned in "
+			    "'resync-after' option is not known%s.\n",
+			    res->config_file, res->start_line, res->name,
+			    opt->value, depends_on_ctx.res ? " on this host" : "");
+			/* Non-fatal if run from some script.
+			 * When deleting resources, it is an easily made
+			 * oversight to leave references to the deleted
+			 * resources in resync-after statements.  Don't fail on
+			 * every pacemaker-induced action, as it would
+			 * ultimately lead to all nodes committing suicide. */
+			if (no_tty) {
+				struct d_option *next = STAILQ_NEXT(opt, link);
+				STAILQ_REMOVE(&vol->disk_options, opt, d_option, link);
+				free_opt(opt);
+				opt = next;
+				if (opt)
+					goto next;
+				else
+					break;
+			} else
+				config_valid = 0;
 		} else {
 			free(opt->value);
 			m_asprintf(&opt->value, "%d", depends_on_ctx.vol->device_minor);
