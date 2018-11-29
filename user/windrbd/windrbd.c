@@ -452,6 +452,21 @@ static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 	return 0;
 }
 
+static size_t todos(char *dosbuf, const char *buf)
+{
+	int len = 0;
+
+	while (*buf) {
+		switch(*buf) {
+		case '\r': break;
+		case '\n': *dosbuf++ = '\r'; len++;
+			/* fallthru */
+		default: *dosbuf++ = *buf++; len++;
+		}
+	}
+	*dosbuf = '\0';
+	return len;
+}
 
 int log_server_op(const char *log_file)
 {
@@ -477,14 +492,18 @@ int log_server_op(const char *log_file)
 
 		/* See printk routine. We split lines longer than that. */
 	char buf[512];
+	char dosbuf[512];
 	ssize_t len;
+	size_t doslen;
 
-	printf("Waiting for log messages from windrbd kernel driver.\n");
-	printf("Press Ctrl-C to stop.\n");
+	printf("Waiting for log messages from windrbd kernel driver.\r\n");
+	printf("Press Ctrl-C to stop.\r\n");
 	while ((len = recv(s, buf, sizeof(buf), 0)) >= 0) {
-		write(1, buf, len);
+		buf[len] = '\0';
+		doslen = todos(dosbuf, buf);
+		write(1, dosbuf, doslen);
 		if (fd >= 0) {
-			if (write(fd, buf, len) < 0)
+			if (write(fd, dosbuf, doslen) < 0)
 				perror("write (ignored)");
 		}
 	}
