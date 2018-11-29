@@ -56,8 +56,8 @@ int windrbd_driver_loaded(void)
 	return 1;
 }
 
-static char drbd_version[256] = "Unknown DRBD version (driver not loaded?)";
-static char windrbd_version[256] = "Unknown WinDRBD version (driver not loaded?)";
+static char drbd_version[256] = "Unknown DRBD version (driver not loaded, do drbdadm status to load it)";
+static char windrbd_version[256] = "Unknown WinDRBD version (driver not loaded, do drbdadm status to load it)";
 static int got_version;
 
 static int get_driver_versions(void)
