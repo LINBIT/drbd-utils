@@ -639,9 +639,14 @@ static void check_volume_complete(struct d_resource *res, struct d_host_info *ho
 		if (!(vol->disk && !strcmp(vol->disk, "none"))) {
 			if (!vol->disk)
 				derror(host, res, "disk");
-			if (!vol->meta_disk)
+			if (!vol->meta_disk && !vol->meta_index) {
+				/* implicit internal */
+				vol->meta_disk = strdup("internal");
+				vol->meta_index = strdup("internal");
+			}
+			else if (!vol->meta_disk)
 				derror(host, res, "meta-disk");
-			if (!vol->meta_index)
+			else if (!vol->meta_index)
 				derror(host, res, "meta-index");
 		}
 	}
