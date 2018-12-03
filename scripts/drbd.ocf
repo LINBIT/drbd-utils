@@ -42,6 +42,7 @@
 # OCF_RESKEY_unfence_extra_args
 # OCF_RESKEY_require_drbd_module_version_ge
 # OCF_RESKEY_require_drbd_module_version_lt
+# OCF_RESKEY_connect_only_after_promote
 #
 # meta stuff this agent looks at:
 #	OCF_RESKEY_CRM_meta_clone_max
@@ -96,6 +97,13 @@ if ocf_is_true ${OCF_RESKEY_unfence_if_all_uptodate:=false}; then
 else
 	unfence_if_all_uptodate=false
 fi
+
+if ocf_is_true ${OCF_RESKEY_connect_only_after_promote:=false}; then
+	connect_only_after_promote=true
+else
+	connect_only_after_promote=false
+fi
+
 
 # The passed in OCF_CRM_meta_notify_* environment
 # is not reliably with pacemaker up to at least
@@ -304,6 +312,22 @@ module version &lt; 9.0 is available (effectively requires DRBD 8.4).
 Note: "lt", "less-than", exclusive.  Required format: x.y.z
 </longdesc>
 <content type="string" default="$OCF_RESKEY_drbd_module_version_lt_default"/>
+</parameter>
+
+<parameter name="connect_only_after_promote">
+<longdesc lang="en">
+This may be useful for "stacked" setups without proper fencing on the lower
+layer (which we obviously do not recommend), to avoid some of the ugly side
+effects that may arise after resolving a split-brain on the lower layer.
+
+Keep this DRBD instance disconnected until it is promoted.
+After promotion we issue an additional "adjust",
+which is supposed to initiate the connection attempts.
+
+This causes a new data generation identifier ("current uuid")
+to be generated after the failover of a "healthy" DRBD.
+</longdesc>
+<content type="boolean" default="false"/>
 </parameter>
 </parameters>
 
@@ -801,9 +825,10 @@ drbd_start()
 			# this is probably dead code.
 			# Also, ignore the exit code of adjust, as we are
 			# "running" already, anyways, right?
+			rc=$OCF_SUCCESS
+			$connect_only_after_promote && break
 			figure_out_drbd_peer_uname
 			do_drbdadm $DRBD_TO_PEER adjust $DRBD_RESOURCE
-			rc=$OCF_SUCCESS
 			break
 			;;
 		$OCF_NOT_RUNNING)
@@ -894,6 +919,10 @@ drbd_promote() {
 			;;
 		$OCF_RUNNING_MASTER)
 			rc=$OCF_SUCCESS
+			if $connect_only_after_promote; then
+				figure_out_drbd_peer_uname
+				do_drbdadm $DRBD_TO_PEER -v adjust $DRBD_RESOURCE
+			fi
 			break
 		esac
 		$first_try || sleep 1
@@ -1010,9 +1039,11 @@ drbd_notify() {
 		#
 		# We usually get /post/ notification for ourself and the peer.
 		# In both cases adjust should be a no-op.
-		drbd_set_status_variables
-		figure_out_drbd_peer_uname
-		do_drbdadm $DRBD_TO_PEER -v adjust $DRBD_RESOURCE
+		if ! $connect_only_after_promote; then
+			drbd_set_status_variables
+			figure_out_drbd_peer_uname
+			do_drbdadm $DRBD_TO_PEER -v adjust $DRBD_RESOURCE
+		fi
 		;;
 	post/*)
 		# After something has been done is a good time to
