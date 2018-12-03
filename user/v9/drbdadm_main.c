@@ -1153,18 +1153,14 @@ static int adm_attach(const struct cfg_ctx *ctx)
 		}
 		argv[NA(argc)] = vol->meta_index;
 	}
-	if (reset)
+	if (reset) {
+		struct d_option *option;
 		argv[NA(argc)] = "--set-defaults";
-	if (reset || do_attach) {
-		if (!do_attach) {
-			struct d_option *option;
-			STAILQ_FOREACH(option, &ctx->vol->disk_options, link)
-				if (!option->adj_skip)
-					make_option(argv[NA(argc)], option);
-		} else {
-			make_options(argv[NA(argc)], &ctx->vol->disk_options);
-		}
-	}
+		STAILQ_FOREACH(option, &ctx->vol->disk_options, link)
+			if (!option->adj_skip)
+				make_option(argv[NA(argc)], option);
+	} else
+		make_options(argv[NA(argc)], &ctx->vol->disk_options);
 	add_setup_options(argv, &argc, ctx->cmd->drbdsetup_ctx);
 	argv[NA(argc)] = 0;
 
