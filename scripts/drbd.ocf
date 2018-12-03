@@ -32,10 +32,16 @@
 #
 
 # OCF instance parameters
-#	OCF_RESKEY_drbd_resource
-#	OCF_RESKEY_drbdconf
-#	OCF_RESKEY_stop_outdates_secondary
-#	OCF_RESKEY_adjust_master_score
+#
+# OCF_RESKEY_drbd_resource
+# OCF_RESKEY_drbdconf
+# OCF_RESKEY_stop_outdates_secondary
+# OCF_RESKEY_adjust_master_score
+# OCF_RESKEY_ignore_missing_notifications
+# OCF_RESKEY_unfence_if_all_uptodate
+# OCF_RESKEY_unfence_extra_args
+# OCF_RESKEY_require_drbd_module_version_ge
+# OCF_RESKEY_require_drbd_module_version_lt
 #
 # meta stuff this agent looks at:
 #	OCF_RESKEY_CRM_meta_clone_max
@@ -82,6 +88,8 @@ fi
 # Defaults
 OCF_RESKEY_drbdconf_default="/etc/drbd.conf"
 OCF_RESKEY_unfence_extra_args_default="--quiet --flock-required --flock-timeout 0 --unfence-only-if-owner-match"
+OCF_RESKEY_require_drbd_module_version_ge_default=8.0.0
+OCF_RESKEY_require_drbd_module_version_lt_default=9.1.0
 
 if ocf_is_true ${OCF_RESKEY_unfence_if_all_uptodate:=false}; then
 	unfence_if_all_uptodate=true
@@ -108,6 +116,9 @@ OCF_RESKEY_stop_outdates_secondary_default="false"
 : ${OCF_RESKEY_drbdconf:=${OCF_RESKEY_drbdconf_default}}
 : ${OCF_RESKEY_stop_outdates_secondary:=${OCF_RESKEY_stop_outdates_secondary_default}}
 : ${OCF_RESKEY_adjust_master_score:=${OCF_RESKEY_adjust_master_score_default}}
+
+: ${OCF_RESKEY_require_drbd_module_version_ge:=$OCF_RESKEY_require_drbd_module_version_ge_default}
+: ${OCF_RESKEY_require_drbd_module_version_lt:=$OCF_RESKEY_require_drbd_module_version_lt_default}
 
 # Defaults according to "Configuration 1.0 Explained",
 # "Multi-state resource configuration options"
@@ -264,6 +275,35 @@ See description of unfence_if_all_uptodate.
 </longdesc>
 <shortdesc lang="en">Extra arguments for the unfence hook.</shortdesc>
 <content type="boolean" default="$OCF_RESKEY_unfence_extra_args_default"/>
+</parameter>
+
+<parameter name="require_drbd_module_version_ge">
+<longdesc lang="en">Use this you want to force failure of this resource agent
+if the detected DRBD kernel (module) driver version is lower than a required minimum.
+
+Example: use require_drbd_module_version_ge=9.0.16 to fail unless DRBD
+module version &gt;= 9.0.16 is available (effectively requires DRBD 9).
+
+The intention of this is to give a more useful failure message
+after accidentally downgrading the DRBD version
+by installing/upgrading a new kernel.
+
+Note: "ge", "greater-or-equal", inclusive.  Required format: x.y.z
+</longdesc>
+<shortdesc lang="en"></shortdesc>
+<content type="string" default="$OCF_RESKEY_drbd_module_version_ge_default"/>
+</parameter>
+
+<parameter name="require_drbd_module_version_lt">
+<longdesc lang="en">Use this you want to force failure of this resource agent
+if the detected DRBD kernel (module) driver version is higher than a required maximum.
+
+Example: use require_drbd_module_version_lt=9.0.0 to fail unless DRBD
+module version &lt; 9.0 is available (effectively requires DRBD 8.4).
+
+Note: "lt", "less-than", exclusive.  Required format: x.y.z
+</longdesc>
+<content type="string" default="$OCF_RESKEY_drbd_module_version_lt_default"/>
 </parameter>
 </parameters>
 
@@ -1031,6 +1071,29 @@ check_crm_feature_set()
 	# fi
 }
 
+require_drbd_module_version()
+{
+	local v k op version_code
+	for op in ge lt; do
+		k=OCF_RESKEY_require_drbd_module_version_$op
+		v=${!k}
+		if ! [[ $v =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+			drbd_ocf_exit_reason "require_drbd_module_version_$op: invalid version format '$v'"
+			: "$OCF_ERR_CONFIGURED = OCF_ERR_CONFIGURED"
+			return $OCF_ERR_CONFIGURED
+		fi
+		set -- ${BASH_REMATCH[@]:1}
+		version_code=$(( 10#$1 << 16 | 10#$2 << 8 | 10#$3 ))
+		case $op in
+			ge) (( $DRBD_KERNEL_VERSION_CODE >= $version_code )) && continue ;;
+			lt) (( $DRBD_KERNEL_VERSION_CODE < $version_code )) && continue ;;
+		esac
+		drbd_ocf_exit_reason "required DRBD kernel (module) version -$op $v, but found: $DRBD_KERNEL_VERSION_CODE"
+		: "$OCF_ERR_INSTALLED = OCF_ERR_INSTALLED"
+		return $OCF_ERR_INSTALLED
+	done
+}
+
 _drbd_validate_all () {
 	DRBDADM="drbdadm"
 	DRBDSETUP="drbdsetup"
@@ -1059,6 +1122,12 @@ _drbd_validate_all () {
 			modinfo -F version drbd |
 			sed -ne 's/^\([0-9]\+\)\.\([0-9]\+\)\.\([0-9]\+\).*$/\1 \2 \3/p'))
 	fi
+	if (( $DRBD_KERNEL_VERSION_CODE == 0x0 )); then
+		drbd_ocf_exit_reason "DRBD kernel (module) not available?"
+		: "$OCF_ERR_INSTALLED = OCF_ERR_INSTALLED"
+		return $OCF_ERR_INSTALLED
+	fi
+	require_drbd_module_version || return
 	if (( $DRBD_KERNEL_VERSION_CODE >= 0x080400 )); then
 		DRBD_HAS_MULTI_VOLUME=true
 	fi
@@ -1071,15 +1140,18 @@ _drbd_validate_all () {
 	check_crm_feature_set
 
 	if [[ $__OCF_ACTION != stop ]] ; then
-		# Check clone and M/S options.
-		$DRBD_IS_v9 || meta_expect clone-max -le 2	|| return
 		meta_expect clone-node-max = 1			|| return
 		meta_expect master-node-max = 1			|| return
 
+		# Check clone and M/S options.
 		# don't try to bump this, even the DRBD 9 kernel module
 		# can not reliably handle more than two primaries yet,
 		# without risking data corruption.
+		# Not even two primaries plus one-or-more-secondaries :-(
 		meta_expect master-max -le 2			|| return
+		if ! $DRBD_IS_v9 || [[ $OCF_RESKEY_CRM_meta_master_max = 2 ]]; then
+			meta_expect clone-max -le 2		|| return
+		fi
 	fi
 
 	# Rather than returning $OCF_ERR_CONFIGURED, we sometimes return
