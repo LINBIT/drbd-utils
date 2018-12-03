@@ -1165,7 +1165,7 @@ void check_volumes_complete(struct d_resource *res, struct d_host_info *host)
 		vol = vol->next;
 	}
 	if (any_implicit && any_non_zero_vnr) {
-		err("%s:%d: in resource %s: you must not mix implicit any explicit volumes\n",
+		err("%s:%d: in resource %s: you must not mix implicit and explicit volumes\n",
 		    config_file, line, res->name);
 		config_valid = 0;
 	}
