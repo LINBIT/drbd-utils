@@ -17,6 +17,7 @@
 #include <sys/wait.h>
 #include <ctype.h>
 #include <sys/queue.h>
+#include <assert.h>
 
 #include <winioctl.h>
 #include <shellapi.h>
@@ -452,20 +453,53 @@ static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 	return 0;
 }
 
-static size_t todos(char *dosbuf, const char *buf)
+// Converts UNIX-style line breaks (\n) to DOS-style line breaks (\r\n)
+//
+// Line breaks that are already in DOS-style (\r\n) are not converted
+//
+// src_bfr is only scanned for the first src_bfr_len bytes,
+// or up to the first '\0', whichever comes first.
+//
+// Parameters:
+//     src_bfr		Source buffer containing the text to convert
+//     src_bfr_len      Size of the source buffer
+//     dst_bfr          Destination buffer; receives converted output text
+//     dst_bfr_len      Size of the destination buffer
+//     truncated        Pointer to a bool variable or NULL pointer
+//                      If non-NULL, will be set to indicate whether the output was truncated
+//                      true if truncated, false otherwise
+static size_t unix_to_dos(
+	const char* const   src_bfr,
+	const size_t        src_bfr_len,
+	char *const         dst_bfr,
+	const size_t        dst_bfr_len,
+	bool *const         truncated
+)
 {
-	int len = 0;
+	assert(dst_bfr_len >= 1);
 
-	while (*buf) {
-		switch(*buf) {
-		case '\r': break;
-		case '\n': *dosbuf++ = '\r'; len++;
-			/* fallthru */
-		default: *dosbuf++ = *buf++; len++;
+	size_t src_idx = 0;
+	size_t dst_idx = 0;
+	bool cr_flag = false;
+
+	while (src_idx < src_bfr_len && dst_idx < dst_bfr_len - 1 && src_bfr[src_idx] != '\0') {
+		if (src_bfr[src_idx] == '\n' && !cr_flag) {
+			dst_bfr[dst_idx] = '\r';
+			cr_flag = true;
+		} else {
+			cr_flag = src_bfr[src_idx] == '\r';
+			dst_bfr[dst_idx] = src_bfr[src_idx];
+			++src_idx;
 		}
+		++dst_idx;
 	}
-	*dosbuf = '\0';
-	return len;
+	dst_bfr[dst_idx] = '\0';
+
+	if (truncated != NULL) {
+		*truncated = src_idx < src_bfr_len && src_bfr[src_idx] != '\0';
+	}
+
+	return dst_idx;
 }
 
 int log_server_op(const char *log_file)
@@ -503,7 +537,7 @@ int log_server_op(const char *log_file)
 			len = sizeof(buf)-1;
 
 		buf[len] = '\0';
-		doslen = todos(dosbuf, buf);
+		doslen = unix_to_dos(buf, len, dosbuf, sizeof(dosbuf), NULL);
 		write(1, dosbuf, doslen);
 		if (fd >= 0) {
 			if (write(fd, dosbuf, doslen) < 0)
