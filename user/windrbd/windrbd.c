@@ -17,6 +17,7 @@
 #include <sys/wait.h>
 #include <ctype.h>
 #include <sys/queue.h>
+#include <assert.h>
 
 #include <winioctl.h>
 #include <shellapi.h>
