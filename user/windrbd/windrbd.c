@@ -160,7 +160,7 @@ static int is_windrbd_device(HANDLE h)
 
         err = GetLastError();
 	if (err != ERROR_INVALID_FUNCTION)
-		printf("Warning: device returned strange error code %lu\n", err);
+		printf("Warning: device returned strange error code %lu\n", (unsigned long) err);
 
 	return 0;
 }
@@ -198,7 +198,7 @@ static int drive_letter_op(int minor, const char *drive, enum drive_letter_ops o
 
 	ret = DefineDosDevice(flag, t_drive, t_device);
 	if (!ret) {
-		fprintf(stderr, "Sorry that didn't work out. DefineDosDevice failed with error %lu\n", GetLastError());
+		fprintf(stderr, "Sorry that didn't work out. DefineDosDevice failed with error %lu\n", (unsigned long) GetLastError());
 		return 1;
 	}
 
@@ -221,7 +221,7 @@ static HANDLE do_open_device(const char *drive)
         err = GetLastError();
 
 	if (err != ERROR_SUCCESS) {
-		fprintf(stderr, "Couldn't open drive %s, error is %lu\n", drive, err);
+		fprintf(stderr, "Couldn't open drive %s, error is %lu\n", drive, (unsigned long) err);
 		if (err == ERROR_ACCESS_DENIED)
 			fprintf(stderr, "You have to be administrator to do that\n");
 
@@ -302,7 +302,7 @@ static int remount_volume(const char *drive)
 	swprintf(mount_point, sizeof(mount_point) / sizeof(*mount_point) -1, L"%s\\", drive);
 	if (GetVolumeNameForVolumeMountPoint(mount_point, guid, sizeof(guid) / sizeof(*guid) - 1) == 0) {
 		err = GetLastError();
-		fprintf(stderr, "Couldn't get volume mount point for drive %s, err = %lu\n", drive, err);
+		fprintf(stderr, "Couldn't get volume mount point for drive %s, err = %lu\n", drive, (unsigned long) err);
 		return 1;
 	}
 
@@ -333,7 +333,7 @@ static int remount_volume(const char *drive)
 #if 0
 	if (DeleteVolumeMountPoint(mount_point) == 0) {
 		err = GetLastError();
-		fprintf(stderr, "Couldn't delete volume mount point for drive %s, err = %lu\n", drive, err);
+		fprintf(stderr, "Couldn't delete volume mount point for drive %s, err = %lu\n", drive, (unsigned long) err);
 		return 1;
 	}
 
@@ -344,7 +344,7 @@ fgets(x, sizeof(x)-1, stdin);
 
 	if (SetVolumeMountPoint(mount_point, guid) == 0) {
 		err = GetLastError();
-		fprintf(stderr, "Couldn't set volume mount point for drive %s, err = %lu\n", drive, err);
+		fprintf(stderr, "Couldn't set volume mount point for drive %s, err = %lu\n", drive, (unsigned long) err);
 		return 1;
 	}
 printf("Mount point %s set.\n", drive);
@@ -360,7 +360,7 @@ static int dismount_volume(HANDLE h)
 
 	ret = DeviceIoControl(h, FSCTL_DISMOUNT_VOLUME, NULL, 0, NULL, 0, &size, NULL);
 	if (!ret) {
-		fprintf(stderr, "DeviceIoControl(.., FSCTL_DISMOUNT_VOLUME, ..) failed with error %lu\n", GetLastError());
+		fprintf(stderr, "DeviceIoControl(.., FSCTL_DISMOUNT_VOLUME, ..) failed with error %lu\n", (unsigned long) GetLastError());
 		return -1;
 	}
 	return 0;
@@ -394,7 +394,7 @@ static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
         ret = ReadFile(h, buf, sizeof(buf), &bytes_read,  NULL);
 	if (!ret || bytes_read != sizeof(buf)) {
 		err = GetLastError();
-		fprintf(stderr, "Couldn't read from drive %s, err = %lu bytes_read = %lu\n", drive, err, bytes_read);
+		fprintf(stderr, "Couldn't read from drive %s, err = %lu bytes_read = %lu\n", drive, (unsigned long) err, (unsigned long) bytes_read);
 
 		CloseHandle(h);
 		return 1;
@@ -429,7 +429,7 @@ static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 		ret = WriteFile(h, buf, sizeof(buf), &bytes_written,  NULL);
 		if (!ret || bytes_written != sizeof(buf)) {
 			err = GetLastError();
-			fprintf(stderr, "Couldn't write to drive %s, err = %lu bytes_written = %lu\n", drive, err, bytes_written);
+			fprintf(stderr, "Couldn't write to drive %s, err = %lu bytes_written = %lu\n", drive, (unsigned long) err, (unsigned long) bytes_written);
 
 			CloseHandle(h);
 			return 1;
@@ -547,7 +547,7 @@ int delete_mountpoint(const char *drive)
 
 	ret = DeleteVolumeMountPoint(t_mountpoint);
 	if (!ret) {
-		fprintf(stderr, "DeleteVolumeMountPoint(%ls) failed with error %lu\n", t_mountpoint, GetLastError());
+		fprintf(stderr, "DeleteVolumeMountPoint(%ls) failed with error %lu\n", t_mountpoint, (unsigned long) GetLastError());
 		return 1;
 	}
 	return 0;
@@ -565,7 +565,8 @@ int set_mountpoint(const char *drive, const char *guid)
 
 	ret = SetVolumeMountPoint(t_mountpoint, t_guid);
 	if (!ret) {
-		fprintf(stderr, "SetVolumeMountPoint(%ls, %ls) failed with error %lu\n", t_mountpoint, t_guid, err);
+		fprintf(stderr, "SetVolumeMountPoint(%ls, %ls) failed with error %lu\n", t_mountpoint, t_guid,
+		        (unsigned long) GetLastError());
 		return 1;
 	}
 	return 0;
@@ -688,7 +689,8 @@ static int inject_faults(const char *drive, enum fault_injection_location where,
 			else
 				printf("Injected faults on %s after %d requests.\n", s, after);
 		} else {
-			printf("Could not set fault injection (error code %lu), is this a WinDRBD device? Does the backing device exist (not Diskless)?\n", GetLastError());
+			printf("Could not set fault injection (error code %lu), is this a WinDRBD device? Does the backing device exist (not Diskless)?\n",
+			       (unsigned long) GetLastError());
 		}
 	}
 	CloseHandle(h);
@@ -752,7 +754,7 @@ static int check_for_retvals(void)
 				}
 				ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_SEND_USERMODE_HELPER_RETURN_VALUE, &rv, sizeof(rv), NULL, 0, &unused, NULL);
 				if (!ret) {
-					printf("Error in sending ioctl to kernel, err is %lu\n", GetLastError());
+					printf("Error in sending ioctl to kernel, err is %lu\n", (unsigned long) GetLastError());
 				}
 				break;
 			}
@@ -979,7 +981,7 @@ static int user_mode_helper_daemon(void)
 		ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_RECEIVE_USERMODE_HELPER, NULL, 0, &get_size, sizeof(get_size), &size, NULL);
 		if (!ret) {
 			err = GetLastError();
-			printf("Error in sending ioctl to kernel, err is %lu\n", err);
+			printf("Error in sending ioctl to kernel, err is %lu\n", (unsigned long) err);
 			break;
 		}
 		if (size > 0) {
@@ -993,11 +995,11 @@ static int user_mode_helper_daemon(void)
 			ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_RECEIVE_USERMODE_HELPER, NULL, 0, next_cmd, req_size, &size2, NULL);
 			if (!ret) {
 				err = GetLastError();
-				printf("Error in sending ioctl to kernel, err is %lu\n", err);
+				printf("Error in sending ioctl to kernel, err is %lu\n", (unsigned long) err);
 				break;
 			}
 			if (size2 != req_size) {
-				printf("Size mismatch from ioctl: expected %zu actual %lu\n", req_size, size2);
+				printf("Size mismatch from ioctl: expected %zu actual %lu\n", req_size, (unsigned long) size2);
 				break;
 			}
 			fork_and_exec_command(next_cmd);
@@ -1066,7 +1068,7 @@ int set_mount_point_for_minor(int minor, const char *mount_point)
 		if (err == ERROR_BUSY)
 			fprintf(stderr, "Device is mounted, please do a drbdadm secondary to change the mount point.\n");
 		else
-			fprintf(stderr, "Error in sending ioctl to kernel, err is %lu\n", err);
+			fprintf(stderr, "Error in sending ioctl to kernel, err is %lu\n", (unsigned long) err);
 
 		free(mmp);
 		return -1;
@@ -1096,7 +1098,7 @@ int dump_memory_allocations(void)
 	ret = DeviceIoControl(root_dev, IOCTL_WINDRBD_ROOT_DUMP_ALLOCATED_MEMORY, NULL, 0, NULL, 0, &unused, NULL);
 	if (!ret) {
 		err = GetLastError();
-		fprintf(stderr, "Error in sending ioctl to kernel, err is %lu\n", err);
+		fprintf(stderr, "Error in sending ioctl to kernel, err is %lu\n", (unsigned long) err);
 		return -1;
 	}
 	return 0;
