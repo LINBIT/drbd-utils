@@ -3,6 +3,14 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.7.0
+--------
+ * drbdadm,v9,v84: fix resync-after
+ * drbd.ocf: connect_only_after_promote, require kernel version
+ * drbdmon: display resync progress
+ * parser,v9: require-drbd-module-version
+ * windrbd: add WinDRBD support
+
 9.6.0
 --------
  * usage-count: also count notty users if possible.
