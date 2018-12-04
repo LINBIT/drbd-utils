@@ -478,7 +478,7 @@ int log_server_op(const char *log_file)
 	struct sockaddr_in my_addr;
 	my_addr.sin_family = AF_INET;
 	my_addr.sin_port = htons(514);
-	my_addr.sin_addr.s_addr = 0;
+	my_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
 	if (bind(s, (struct sockaddr*)&my_addr, sizeof(my_addr)) < 0) {
 		perror("bind");
@@ -492,13 +492,16 @@ int log_server_op(const char *log_file)
 
 		/* See printk routine. We split lines longer than that. */
 	char buf[512];
-	char dosbuf[512];
+	char dosbuf[1024];
 	ssize_t len;
 	size_t doslen;
 
 	printf("Waiting for log messages from windrbd kernel driver.\r\n");
 	printf("Press Ctrl-C to stop.\r\n");
-	while ((len = recv(s, buf, sizeof(buf), 0)) >= 0) {
+	while ((len = recv(s, buf, sizeof(buf)-1, 0)) >= 0) {
+		if (len > sizeof(buf)-1)	/* just to be sure ... */
+			len = sizeof(buf)-1;
+
 		buf[len] = '\0';
 		doslen = todos(dosbuf, buf);
 		write(1, dosbuf, doslen);
