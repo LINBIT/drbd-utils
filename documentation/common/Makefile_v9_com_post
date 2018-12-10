@@ -44,10 +44,15 @@ doc-clean: distclean
 
 .SUFFIXES: .sgml .5 .8 .html .pdf .ps
 
+ifeq ($(WITH_PREBUILTMAN),yes)
+%.5 %.8:
+	test -f $@
+else
 %.5 %.8: %.xml
 	$(XSLTPROC) \
 	$(XSLTPROC_MANPAGES_OPTIONS) \
 	$(MANPAGES_STYLESHEET) $<
+endif
 
 %.html: %.xml
 	$(XSLTPROC) -o $@ \
@@ -63,16 +68,16 @@ $(TOPDIR)/user/v9/drbdsetup.o: FORCE
 	$(MAKE) -C $(@D) drbdsetup
 
 %.xml.in: %.xml.in.po
-	$(PO4A_TRANSLATE) -m ../../v9/$@ -p $< -l $@
+	$(PO4A_TRANSLATE) $(PO4A_TRANSLATE_OPTIONS) -m ../../v9/$@ -p $< -l $@
 
 %.xml: %.xml.po
-	$(PO4A_TRANSLATE) -m ../../v9/$@ -p $< -l $@
+	$(PO4A_TRANSLATE) $(PO4A_TRANSLATE_OPTIONS) -m ../../v9/$@ -p $< -l $@
 
 %.xml.in.pot: %.xml.in
-	$(PO4A_GETTEXTIZE) -m $< -p $@
+	$(PO4A_GETTEXTIZE) $(PO4A_GETTEXTIZE_OPTIONS) -m $< -p $@
 
 %.xml.pot: %.xml
-	$(PO4A_GETTEXTIZE) -m $< -p $@
+	$(PO4A_GETTEXTIZE) $(PO4A_GETTEXTIZE_OPTIONS) -m $< -p $@
 
 .PHONY: FORCE
 FORCE:
@@ -115,7 +120,8 @@ endif
 
 #######
 
-man:	$(MANPAGES) $(FILES_POT)
+man: $(MANPAGES)
+pot: $(FILES_POT)
 
 install:
 	@ok=true; for f in $(MANPAGES) ; \
@@ -144,7 +150,12 @@ html:	$(addsuffix .html,$(basename $(MANPAGES)))
 pdf:	$(addsuffix .pdf,$(basename $(MANPAGES)))
 ps:	$(addsuffix .ps,$(basename $(MANPAGES)))
 
+ifeq ($(WITH_PREBUILTMAN),yes)
+drbdsetup.8:
+	test -f $@
+else
 drbdsetup.8: drbdsetup.xml $(drbdsetup_X.xml)
+endif
 
 
 .PHONY: install uninstall clean distclean

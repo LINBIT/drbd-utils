@@ -16,12 +16,17 @@ override_dh_auto_clean:
 configure_with = --prefix=/usr --localstatedir=/var --sysconfdir=/etc \
 		--sbindir=/usr/sbin --with-udev --with-xen \
 		--with-pacemaker --with-rgmanager --without-bashcompletion
+
 ifneq	($(WITH_SYSTEMD),)
 configure_with += --with-systemdunitdir=/lib/systemd/system \
 		--with-initscripttype=both
 # alternatively: --with-initscripttype=systemd,
 # if you want to drop the sysv script from the package. 
 # Need to adjust below, in that case.
+endif
+
+ifeq (,$(filter noprebuiltman,$(DEB_BUILD_OPTIONS)))
+configure_with += --with-prebuiltman
 endif
 
 override_dh_auto_configure:

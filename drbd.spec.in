@@ -36,6 +36,7 @@
 %bcond_without 83support
 %bcond_without 84support
 %bcond_without drbdmon
+%bcond_with prebuiltman
 %ifnarch %{ix86} x86_64
 %global _without_xen --without-xen
 %endif
@@ -356,7 +357,6 @@ management utility.
 %package man-ja
 Summary: Japanese man pages for DRBD
 Group: System Environment/Base
-BuildRequires: po4a
 @RPM_SUBPACKAGE_NOARCH@
 
 %description man-ja
@@ -413,6 +413,7 @@ autoconf
     %{?_without_83support} \
     %{?_without_84support} \
     %{?_without_manual} \
+    %{?_with_prebuiltman} \
     --with-initdir=%{_initddir} \
     %{?_tmpfilesdir:--with-tmpfilesdir=%{_tmpfilesdir}} \
     --with-initscripttype=%{initscripttype} \

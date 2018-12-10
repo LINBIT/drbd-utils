@@ -58,6 +58,7 @@ WITH_NOARCH_SUBPACKAGES=no
 WITH_MANUAL=yes
 WITH_DRBDMON=yes
 WITH_WINDRBD=no
+WITH_PREBUILTMAN=no
 AC_ARG_WITH([83support],
 	[AS_HELP_STRING([--without-83support],
 			[Do not include support for drbd driver/module <= 8.3])],
@@ -111,6 +112,10 @@ AC_ARG_WITH([manual],
 	[AS_HELP_STRING([--without-manual],
 			[Do not include manual pages])],
 	[WITH_MANUAL=$withval])
+AC_ARG_WITH([prebuiltman],
+	[AS_HELP_STRING([--with-prebuiltman],
+			[Do not try to (re)generate man pages])],
+	[WITH_PREBUILTMAN=$withval])
 
 AC_ARG_WITH([windrbd],
 	[AS_HELP_STRING([--with-windrbd],
@@ -138,6 +143,7 @@ AC_SUBST(WITH_HEARTBEAT)
 AC_SUBST(WITH_RGMANAGER)
 AC_SUBST(WITH_BASHCOMPLETION)
 AC_SUBST(WITH_MANUAL)
+AC_SUBST(WITH_PREBUILTMAN)
 
 dnl Check for functions
 AC_CHECK_FUNCS([getentropy])
@@ -223,6 +229,8 @@ AC_PATH_PROG(RPMBUILD, rpmbuild)
 AC_PATH_PROG(XSLTPROC, xsltproc)
 AC_PATH_PROG(TAR, tar)
 AC_PATH_PROG(GIT, git)
+AC_PATH_PROG(PO4A_TRANSLATE, po4a-translate)
+AC_PATH_PROG(PO4A_GETTEXTIZE, po4a-gettextize)
 AC_PATH_PROG(DPKG_BUILDPACKAGE, dpkg-buildpackage)
 AC_PATH_PROG(UDEVADM, udevadm, [false], [/sbin$PATH_SEPARATOR$PATH])
 AC_PATH_PROG(UDEVINFO, udevinfo, [false], [/sbin$PATH_SEPARATOR$PATH])
@@ -272,6 +280,20 @@ if test -z $XSLTPROC; then
    dnl so the error message about command not found makes sense
    dnl otherwise you get "--xinclude ... command not found" :-/
    XSLTPROC=xsltproc
+fi
+
+if test -z $PO4A_TRANSLATE; then
+   AC_MSG_WARN([Cannot build man pages without po4a-translage. You may safely ignore this warning when building from a tarball.])
+   dnl default to some sane value at least,
+   dnl so the error message about command not found makes sense
+   PO4A_TRANSLATE=po4a-translate
+fi
+
+if test -z $PO4A_GETTEXTIZE; then
+   AC_MSG_WARN([Cannot build man pages without po4a-gettextize. You may safely ignore this warning when building from a tarball.])
+   dnl default to some sane value at least,
+   dnl so the error message about command not found makes sense
+   PO4A_GETTEXTIZE=po4a-gettextize
 fi
 
 if test -z $GIT; then

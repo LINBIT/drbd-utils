@@ -10,8 +10,7 @@ Build-Depends: bash-completion,
                docbook-xsl,
                flex,
                udev,
-               xsltproc,
-               po4a
+               xsltproc
 Standards-Version: 3.9.5
 Homepage: http://www.drbd.org/
 Vcs-Browser: https://github.com/LINBIT/drbd-utils

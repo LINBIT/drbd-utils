@@ -272,14 +272,14 @@ rpmprep: tgz drbd.spec
 .PHONY: rpm
 rpm: rpmprep
 	$(RPMBUILD) -bb \
-	    $(RPMOPT) \
+	    --with prebuiltman $(RPMOPT) \
 	    drbd.spec
 	@echo "You have now:" ; find `rpm -E "%_rpmdir"` -name *.rpm
 
 .PHONY: srpm
 srpm: rpmprep
 	$(RPMBUILD) -bs \
-		$(RPMOPT) \
+		--with prebuiltman $(RPMOPT) \
 		drbd.spec
 	@echo "You have now:" ; find `rpm -E "%_srcrpmdir"` -name *.src.rpm
 endif

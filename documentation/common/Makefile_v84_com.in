@@ -20,6 +20,8 @@
 mandir = @mandir@
 datarootdir = @datarootdir@
 XSLTPROC = @XSLTPROC@
+PO4A_TRANSLATE = @PO4A_TRANSLATE@
+PO4A_GETTEXTIZE = @PO4A_GETTEXTIZE@
 
 # features enabled or disabled by configure
 WITH_83_SUPPORT = @WITH_83_SUPPORT@
@@ -30,6 +32,7 @@ WITH_PACEMAKER = @WITH_PACEMAKER@
 WITH_HEARTBEAT = @WITH_HEARTBEAT@
 WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
+WITH_PREBUILTMAN = @WITH_PREBUILTMAN@
 
 # variables meant to be overridden from the make command line
 DESTDIR ?= /
@@ -49,8 +52,8 @@ XSLTPROC_MANPAGES_OPTIONS ?= $(XSLTPROC_OPTIONS)
 XSLTPROC_HTML_OPTIONS ?= $(XSLTPROC_OPTIONS)
 XSLTPROC_FO_OPTIONS ?= $(XSLTPROC_OPTIONS)
 
-PO4A_TRANSLATE = /usr/bin/po4a-translate -f docbook -M utf-8 -L utf-8 -keep 0
-PO4A_GETTEXTIZE = /usr/bin/po4a-gettextize -f docbook -M utf-8
+PO4A_TRANSLATE_OPTIONS = -f docbook -M utf-8 -L utf-8 -keep 0
+PO4A_GETTEXTIZE_OPTIONS = -f docbook -M utf-8
 
 DRBDSETUP_CMDS = new-resource new-minor del-resource del-minor
 DRBDSETUP_CMDS += attach connect disk-options net-options resource-options
