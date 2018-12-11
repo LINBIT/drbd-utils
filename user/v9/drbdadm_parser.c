@@ -1195,10 +1195,19 @@ void parse_stacked_section(struct d_resource* res)
 			EXP(TK_INTEGER);
 			insert_volume(&host->volumes, parse_stacked_volume(atoi(yylval.txt)));
 			break;
+		case TK_NODE_ID:
+			EXP(TK_INTEGER);
+			range_check(R_NODE_ID, "node-id", yylval.txt);
+			host->node_id = yylval.txt;
+			STAILQ_FOREACH(h, &host->on_hosts, link)
+				check_upr("node-id statement", "%s:%s:node-id", res->name, h->name);
+			check_upr("node-id", "%s:%s", res->name, host->node_id);
+			EXP(';');
+			break;
 		case '}':
 			goto break_loop;
 		default:
-			pe_expected("device | address | proxy");
+			pe_expected("device | address | proxy | volume | node-id");
 		}
 	}
  break_loop:
