@@ -269,7 +269,8 @@ void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd
 			printf("%s=%s\n", sh_varname,
 					res_name ? shell_escape(res_name) : "");
 		while (*cmdline) {
-			printf("%s ", shell_escape(*cmdline++));
+			printf("%s", shell_escape(*cmdline++));
+			if (*cmdline) putchar(' ');
 		}
 		printf("\n");
 		if (dry_run) {
