@@ -1,0 +1,12 @@
+$ drbdadm -c ./man.res up -d r0 2>/dev/null; echo $?
+drbdsetup new-resource r0 0
+drbdsetup new-minor r0 1 0
+drbdsetup new-peer r0 1 --_name=bob --shared-secret=FooFunFactory --cram-hmac-alg=sha1 --protocol=C
+drbdsetup new-path r0 1 ipv4:10.1.1.31:7000 ipv4:10.1.1.32:7000
+drbdmeta 1 v09 /dev/sda7 internal apply-al
+drbdsetup attach 1 /dev/sda7 /dev/sda7 internal
+drbdsetup connect r0 1
+0
+$ drbdadm -c ./man.res up -d r23 2>/dev/null; test $? -ne 0; echo $?
+0
+$

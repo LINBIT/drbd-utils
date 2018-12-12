@@ -1,0 +1,5 @@
+$ drbdadm -c ./require-drbd-module-version.res up -d r0 >/dev/null 2>&1; echo $?
+0
+$ DRBD_DRIVER_VERSION_OVERRIDE=0.0.0 drbdadm -c ./require-drbd-module-version.res up -d r0 >/dev/null 2>&1; test $? -ne 0; echo $?
+0
+$

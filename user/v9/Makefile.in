@@ -52,6 +52,7 @@ WITH_PACEMAKER = @WITH_PACEMAKER@
 WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 WITH_WINDRBD = @WITH_WINDRBD@
+WITH_CLITEST = @WITH_CLITEST@
 
 # for some reason some of the commands below only work correctly in bash,
 # and not in e.g. dash. I'm too lazy to fix it to be compatible.
@@ -112,6 +113,14 @@ drbdsetup: $(drbdsetup-obj)
 
 drbdmeta: $(drbdmeta-obj)
 	$(LINK.c) $(LDFLAGS) -o $@ $^
+
+ifeq ($(WITH_CLITEST),yes)
+test: drbdadm
+	cd ../../tests/v9 && ln -sf ../../user/v9/drbdadm ./drbdadm
+	../../tests/run.sh ../../tests/v9/*.test
+else
+test:
+endif
 
 clean:
 	rm -f drbdadm_scanner.c

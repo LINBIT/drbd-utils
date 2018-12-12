@@ -1,0 +1,16 @@
+$ drbdadm -c ./drbdctrl.res up -d r0 2>/dev/null; echo $?
+drbdsetup new-resource r0 0
+drbdsetup new-minor r0 0 0
+drbdsetup new-minor r0 1 1
+drbdsetup new-peer r0 1 --_name=rckdebb --allow-two-primaries=no --shared-secret=Uwni5ZRVCvbqk3AwHD4K --cram-hmac-alg=sha256 --protocol=C
+drbdsetup new-peer r0 2 --_name=rckdebd --allow-two-primaries=no --shared-secret=Uwni5ZRVCvbqk3AwHD4K --cram-hmac-alg=sha256 --protocol=C
+drbdsetup new-path r0 1 ipv4:10.43.70.115:6999 ipv4:10.43.70.116:6999
+drbdsetup new-path r0 2 ipv4:10.43.70.115:6999 ipv4:10.43.70.118:6999
+drbdmeta 0 v09 /dev/drbdpool/.drbdctrl_0 internal apply-al
+drbdsetup attach 0 /dev/drbdpool/.drbdctrl_0 /dev/drbdpool/.drbdctrl_0 internal
+drbdmeta 1 v09 /dev/drbdpool/.drbdctrl_1 internal apply-al
+drbdsetup attach 1 /dev/drbdpool/.drbdctrl_1 /dev/drbdpool/.drbdctrl_1 internal
+drbdsetup connect r0 1
+drbdsetup connect r0 2
+0
+$

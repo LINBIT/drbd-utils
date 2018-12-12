@@ -1,0 +1,8 @@
+$ drbdadm -c ./man.res up -d r0 2>/dev/null; echo $?
+drbdsetup-84 new-resource r0
+drbdsetup-84 new-minor r0 1 0
+drbdmeta 1 v08 /dev/sda7 internal apply-al
+drbdsetup-84 attach 1 /dev/sda7 /dev/sda7 internal --resync-rate=10M
+drbdsetup-84 connect r0 ipv4:10.1.1.31:7789 ipv4:10.1.1.32:7789 --protocol=C --cram-hmac-alg=sha1 --shared-secret=FooFunFactory
+0
+$

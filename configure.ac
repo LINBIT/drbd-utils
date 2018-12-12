@@ -227,6 +227,7 @@ AC_PATH_PROG(GREP, grep)
 AC_PATH_PROG(FLEX, flex)
 AC_PATH_PROG(RPMBUILD, rpmbuild)
 AC_PATH_PROG(XSLTPROC, xsltproc)
+AC_PATH_PROG(CLITEST, clitest)
 AC_PATH_PROG(TAR, tar)
 AC_PATH_PROG(GIT, git)
 AC_PATH_PROG(PO4A_TRANSLATE, po4a-translate)
@@ -280,6 +281,13 @@ if test -z $XSLTPROC; then
    dnl so the error message about command not found makes sense
    dnl otherwise you get "--xinclude ... command not found" :-/
    XSLTPROC=xsltproc
+fi
+
+if test -z $CLITEST; then
+   AC_MSG_WARN([Cannot run tests without clitest, disabling test target.])
+   WITH_CLITEST=no
+else
+   WITH_CLITEST=yes
 fi
 
 if test -z $PO4A_TRANSLATE; then
@@ -430,6 +438,7 @@ AC_SUBST(RPM_REQ_BASH_COMPLETION)
 AC_SUBST(RPM_REQ_XEN)
 AC_SUBST(RPM_REQ_CHKCONFIG_POST)
 AC_SUBST(RPM_REQ_CHKCONFIG_PREUN)
+AC_SUBST(WITH_CLITEST)
 
 AH_TEMPLATE(DRBD_LIB_DIR, [Local state directory. Commonly
 			  /var/lib/drbd or /usr/local/var/lib/drbd])
