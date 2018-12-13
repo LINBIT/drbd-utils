@@ -1,0 +1,13 @@
+$ drbdadm -c ./release_9_1_1.res up -d r0 2>/dev/null; echo $?
+drbdsetup new-resource r0 1
+drbdsetup new-minor r0 143 0
+drbdsetup new-peer r0 2 --_name=pve3 --cram-hmac-alg=sha1 --shared-secret=EIUhGoz9e+FUY+XB/wX3 --allow-two-primaries=yes
+drbdsetup new-peer r0 0 --_name=pve2 --cram-hmac-alg=sha1 --shared-secret=EIUhGoz9e+FUY+XB/wX3 --allow-two-primaries=yes
+drbdsetup new-path r0 2 ipv4:10.1.1.1:7006 ipv4:10.1.1.3:7006
+drbdsetup new-path r0 0 ipv4:10.1.1.1:7006 ipv4:10.1.1.2:7006
+drbdmeta 143 v09 /dev/drbdpool/vm-105-disk-1_00 internal apply-al
+drbdsetup attach 143 /dev/drbdpool/vm-105-disk-1_00 /dev/drbdpool/vm-105-disk-1_00 internal --size=4194304k
+drbdsetup connect r0 2
+drbdsetup connect r0 0
+0
+$
