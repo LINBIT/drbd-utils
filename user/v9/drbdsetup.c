@@ -1685,7 +1685,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 	drbd_sock->s_seq_expect = 0;
 
 	for (;;) {
-		int received, rem;
+		int received, rem, ret;
 		struct nlmsghdr *nlh = (struct nlmsghdr *)iov.iov_base;
 		struct timeval before;
 
@@ -1694,15 +1694,15 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 		timeout_ms =
 			timeout_arg == MULTIPLE_TIMEOUTS ? shortest_timeout(u_ptr) : timeout_arg;
 
-		received = genl_recv_msgs_poll_hup(drbd_sock, &iov, &desc, -1);
-		if (received == -E_RCV_TIMEDOUT) {
-			err = 5;
+		ret = poll_hup(drbd_sock, timeout_ms);
+		if (ret > 0) { /* failed */
+			if (ret == E_POLL_TIMEOUT)
+				err = 5;
 			goto out2;
 		}
-		if (received == 0)
-			goto out2;
 
-		if (received < 0) {
+		received = genl_recv_msgs(drbd_sock, &iov, &desc, timeout_ms);
+		if (received <= 0) {
 			switch(received) {
 			case E_RCV_TIMEDOUT:
 				err = 5;
