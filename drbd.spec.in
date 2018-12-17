@@ -483,6 +483,9 @@ fi
 
 
 %changelog
+* Mon Dec 17 2018 Roland Kammerer <roland.kammerer@linbit.com> - 9.7.1-1
+-  New upstream release
+
 * Tue Dec 04 2018 Roland Kammerer <roland.kammerer@linbit.com> - 9.7.0-1
 -  New upstream release
 

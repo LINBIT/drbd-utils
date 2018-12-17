@@ -3,6 +3,10 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.7.1
+--------
+ * drbdsetup,v9: partially revert commit that broke wait-for
+
 9.7.0
 --------
  * drbdadm,v9,v84: fix resync-after
