@@ -44,9 +44,9 @@ int genl_join_mc_group_and_ctrl(struct genl_sock *s, const char *name)
 	return genl_join_mc_group(s, name);
 }
 
-int genl_recv_msgs_poll_hup(struct genl_sock *s, struct iovec *iov, char **err_desc, int timeout_ms)
+int poll_hup(struct genl_sock *s, int timeout_ms)
 {
-	return genl_recv_msgs(s, iov, err_desc, timeout_ms);
+	return 0;
 }
 
 static int run_command(const char *command, char *args[])
