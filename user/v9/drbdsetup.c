@@ -1695,9 +1695,14 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 			timeout_arg == MULTIPLE_TIMEOUTS ? shortest_timeout(u_ptr) : timeout_arg;
 
 		ret = poll_hup(drbd_sock, timeout_ms);
-		if (ret > 0) {
-			if (ret == 1)
+		if (ret <= 0) {
+			if (ret == 0) /* timed out */
 				err = 5;
+			else if (errno != EPIPE) /* actual error from poll */
+				err = 20;
+			/* else: errno == EPIPE; HUP on stdout,
+			 * consumer not interested anymore.
+			 * just do a clean exit. */
 			goto out2;
 		}
 

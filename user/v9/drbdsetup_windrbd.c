@@ -46,7 +46,7 @@ int genl_join_mc_group_and_ctrl(struct genl_sock *s, const char *name)
 
 int poll_hup(struct genl_sock *s, int timeout_ms)
 {
-	return 0;
+	return 1;
 }
 
 static int run_command(const char *command, char *args[])

@@ -96,13 +96,16 @@ int poll_hup(struct genl_sock *s, int timeout_ms)
 		},
 	};
 
+	errno = 0;
 	ret = poll(pollfds, 2, timeout_ms);
-	if (ret == 0)
-		return 1;
-	if (pollfds[0].revents == POLLERR || pollfds[0].revents == POLLHUP)
-		return 2;
+	if (ret <= 0)
+		return ret;
+	if (pollfds[0].revents == POLLERR || pollfds[0].revents == POLLHUP) {
+		errno = EPIPE;
+		return -1;
+	}
 
-	return 0;
+	return ret;
 }
 
 int modprobe_drbd(void)
