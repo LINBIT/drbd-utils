@@ -82,7 +82,7 @@ int genl_join_mc_group_and_ctrl(struct genl_sock *s, const char *name)
 	return ret;
 }
 
-int genl_recv_msgs_poll_hup(struct genl_sock *s, struct iovec *iov, char **err_desc, int timeout_ms)
+int poll_hup(struct genl_sock *s, int timeout_ms)
 {
 	int ret;
 	struct pollfd pollfds[2] = {
@@ -98,11 +98,11 @@ int genl_recv_msgs_poll_hup(struct genl_sock *s, struct iovec *iov, char **err_d
 
 	ret = poll(pollfds, 2, timeout_ms);
 	if (ret == 0)
-		return -1;
+		return E_POLL_TIMEOUT;
 	if (pollfds[0].revents == POLLERR || pollfds[0].revents == POLLHUP)
-		return 0;
+		return E_POLL_ERR;
 
-	return genl_recv_msgs(s, iov, err_desc, -1);
+	return 0;
 }
 
 int modprobe_drbd(void)

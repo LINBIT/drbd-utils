@@ -19,10 +19,15 @@ struct drbd_argument {
 				char *);
 };
 
+enum {
+	E_POLL_TIMEOUT = 1,
+	E_POLL_ERR,
+};
+
 bool kernel_older_than(int version, int patchlevel, int sublevel);
 int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 int genl_join_mc_group_and_ctrl(struct genl_sock *s, const char *name);
-int genl_recv_msgs_poll_hup(struct genl_sock *s, struct iovec *iov, char **err_desc, int timeout_ms);
+int poll_hup(struct genl_sock *s, int timeout_ms);
 int modprobe_drbd(void);
 
 #endif
