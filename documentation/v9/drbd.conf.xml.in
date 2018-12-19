@@ -160,6 +160,7 @@ common
    [options]
    [startup]
 global
+[require-drbd-module-version-{eq,ne,gt,ge,lt,le}]
 resource
    connection
       path
@@ -312,6 +313,21 @@ resource
               </indexterm> Define some global parameters.  All parameters in
               this section are optional.  Only one <option>global</option>
               section is allowed in the configuration.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>require-drbd-module-version-{eq,ne,gt,ge,lt,le}</option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>require-drbd-module-version-{eq,ne,gt,ge,lt,le}</secondary>
+              </indexterm> This statement contains one of the valid forms and a three digit version number
+				  (e.g., <option>require-drbd-module-version-eq&#160;9.0.16;</option>). If the currently loaded DRBD
+				  kernel module does not match the specification, parsing is aborted. Comparison operator names have
+              same semantic as in <citerefentry><refentrytitle>test</refentrytitle><manvolnum>1</manvolnum></citerefentry>.</para>
           </listitem>
         </varlistentry>
 
