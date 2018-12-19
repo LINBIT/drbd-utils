@@ -463,6 +463,17 @@
 	      </varlistentry>
 
 	      <varlistentry>
+		<term><option>--poll</option></term>
+
+		<listitem>
+			<para>This is completely ignored if <option>--now</option> is not given.
+		    In combination with <option>--now</option> it prints the current state once
+		    and then reads on stdin. If a <option>n</option> is read, this triggers another run.
+		    Newlines are ignored. Every other input terminates the command.</para>
+		</listitem>
+	      </varlistentry>
+
+	      <varlistentry>
 		<term><option>--statistics</option></term>
 
 		<listitem>
