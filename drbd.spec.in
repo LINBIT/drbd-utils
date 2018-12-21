@@ -357,6 +357,9 @@ management utility.
 %package man-ja
 Summary: Japanese man pages for DRBD
 Group: System Environment/Base
+%if %{without prebuiltman}
+BuildRequires: po4a
+%endif
 @RPM_SUBPACKAGE_NOARCH@
 
 %description man-ja
