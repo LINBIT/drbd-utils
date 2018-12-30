@@ -411,6 +411,12 @@ void *nla_reserve_nohdr(struct msg_buff *msg, int attrlen)
 void __nla_put(struct msg_buff *msg, int attrtype, int attrlen,
 			     const void *data)
 {
+const unsigned char *s = data;
+int i;
+fprintf(stderr, "attrtype: %d attrlen: %d\n", attrtype, attrlen);
+for (i=0;i<attrlen;i++) fprintf(stderr, "%x(%c)\n", s[i], s[i]);
+fprintf(stderr, "\n");
+
 	struct nlattr *nla;
 
 	nla = __nla_reserve(msg, attrtype, attrlen);
