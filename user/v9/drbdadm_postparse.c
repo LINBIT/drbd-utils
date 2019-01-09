@@ -93,7 +93,7 @@ void set_on_hosts_in_res(struct d_resource *res)
 			host->lower = l_res;
 
 			/* */
-			if (addr_scope_local(host->address.addr))
+			if (host->address.addr && addr_scope_local(host->address.addr))
 				STAILQ_FOREACH(h, &host->on_hosts, link)
 					check_uniq("IP", "%s:%s:%s", h->name, host->address.addr, host->address.port);
 
