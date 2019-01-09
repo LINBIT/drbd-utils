@@ -611,6 +611,8 @@ static int __call_cmd_fn(const struct cfg_ctx *ctx, enum on_error on_error)
 		struct path *path;
 
 		for_each_path(path, &tmp_ctx.conn->paths) {
+			if (path->ignore)
+				continue;
 			tmp_ctx.path = path;
 			rv = tmp_ctx.cmd->function(&tmp_ctx);
 			if (rv >= 20) {

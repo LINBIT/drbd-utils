@@ -365,6 +365,12 @@ void set_me_in_resource(struct d_resource* res, int match_on_proxy)
 			}
 
 			if (h) {
+				/* In case this is a path of a stacked resource ignore it if
+				   the path belongs to the "non local" node of the lower resource */
+				if (h->host_info->lower &&
+				    !hostname_in_list(h->name, &h->host_info->lower->me->on_hosts))
+					path->ignore = 1;
+
 				h->used_as_me = 1;
 				if (!path->my_address)
 					path->my_address = h->address.addr ? &h->address : &res->me->address;

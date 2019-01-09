@@ -172,6 +172,7 @@ struct path
 	unsigned int implicit:1;
 	unsigned int adj_seen:1;
 	unsigned int proxy_conn_is_down:1;
+	unsigned int ignore:1;
 	STAILQ_ENTRY(path) link;
 };
 STAILQ_HEAD(paths, path);

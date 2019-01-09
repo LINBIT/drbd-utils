@@ -214,6 +214,8 @@ static bool adjust_paths(const struct cfg_ctx *ctx, struct connection *running_c
 	bool del_path = false;
 
 	for_each_path(configured_path, &configured_conn->paths) {
+		if (configured_path->ignore)
+			continue;
 		running_path = find_path_by_addrs(running_conn, configured_path);
 		if (!running_path) {
 			tmp_ctx.path = configured_path;
