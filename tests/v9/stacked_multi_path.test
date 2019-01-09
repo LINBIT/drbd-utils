@@ -1,0 +1,16 @@
+$ ./drbdadm -c stacked_multi_path.res -S -d up stacked_multi_path 2>/dev/null; echo $?
+drbdsetup new-resource stacked_multi_path 0
+drbdsetup new-minor stacked_multi_path 10 0
+drbdsetup new-peer stacked_multi_path 1 --_name=charlie_delta --congestion-extents=1000 --congestion-fill=400M --on-congestion=pull-ahead --protocol=A
+drbdsetup new-peer stacked_multi_path 2 --_name=echo_foxtrott --congestion-extents=1000 --congestion-fill=400M --on-congestion=pull-ahead --protocol=A
+drbdsetup new-path stacked_multi_path 1 ipv4:192.168.23.21:7100 ipv4:192.168.24.21:7100
+drbdsetup new-path stacked_multi_path 1 ipv4:192.168.23.21:7100 ipv4:192.168.24.22:7100
+drbdsetup new-path stacked_multi_path 2 ipv4:192.168.23.21:7100 ipv4:192.168.25.21:7100
+drbdsetup new-path stacked_multi_path 2 ipv4:192.168.23.21:7100 ipv4:192.168.25.22:7100
+drbdsetup peer-device-options stacked_multi_path 1 0 --c-fill-target=10M
+drbdsetup peer-device-options stacked_multi_path 2 0 --c-fill-target=10M
+drbdmeta 10 v09 /dev/drbd0 internal apply-al
+drbdsetup attach 10 /dev/drbd0 /dev/drbd0 internal
+drbdsetup connect stacked_multi_path 1
+drbdsetup connect stacked_multi_path 2
+0
