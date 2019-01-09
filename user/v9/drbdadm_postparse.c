@@ -60,11 +60,7 @@ void set_on_hosts_in_res(struct d_resource *res)
 
 	for_each_host(host, &res->all_hosts) {
 		if (host->lower_name) {
-			for_each_resource(l_res, &config) {
-				if (!strcmp(l_res->name, host->lower_name))
-					break;
-			}
-
+			l_res = res_by_name(host->lower_name);
 			if (l_res == NULL) {
 				err("%s:%d: in resource %s, "
 				    "referenced resource '%s' not defined.\n",
