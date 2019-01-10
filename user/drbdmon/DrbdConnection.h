@@ -62,7 +62,7 @@ class DrbdConnection : public VolumesContainer, public DrbdRole, private StateFl
     virtual const std::string& get_name() const;
     virtual const uint8_t get_node_id() const;
 
-    // @throws EventMessageException
+    // @throws std::bad_alloc, EventMessageException
     virtual void update(PropsMap& event_props);
 
     virtual state get_connection_state() const;
@@ -88,7 +88,7 @@ class DrbdConnection : public VolumesContainer, public DrbdRole, private StateFl
     // @throws std::bad_alloc, EventMessageException
     static DrbdConnection* new_from_props(PropsMap& event_props);
 
-    // @throws EventMessageException
+    // @throws std::bad_alloc, EventMessageException
     static state parse_state(std::string& state_name);
 
   private:

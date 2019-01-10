@@ -33,7 +33,7 @@ l-obj := DrbdMon.o MessageLog.o CompactDisplay.o IntervalTimer.o
 l-obj += DrbdResource.o DrbdRole.o DrbdVolume.o DrbdConnection.o
 l-obj += VolumesContainer.o StateFlags.o EventsIo.o EventsSourceSpawner.o
 l-obj += Args.o ConfigOption.o
-l-obj += StringTokenizer.o comparators.o utils.o
+l-obj += StringTokenizer.o comparators.o utils.o exceptions.o
 
 ls-obj := drbdmon_main.o $(l-obj) $(dsaext-obj) $(integerparse-obj)
 

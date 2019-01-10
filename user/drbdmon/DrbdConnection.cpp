@@ -30,7 +30,7 @@ const std::string& DrbdConnection::get_name() const
     return name;
 }
 
-// @throws EventMessageException
+// @throws std::bad_alloc, EventMessageException
 void DrbdConnection::update(PropsMap& event_props)
 {
     std::string* role_prop = event_props.get(&PROP_KEY_ROLE);
@@ -211,7 +211,7 @@ StateFlags::state DrbdConnection::child_state_flags_changed()
     return obj_state;
 }
 
-// @throws EventMessageException
+// @throws std::bad_alloc, EventMessageException
 DrbdConnection::state DrbdConnection::parse_state(std::string& state_name)
 {
     DrbdConnection::state state = DrbdConnection::state::UNKNOWN;
@@ -268,7 +268,9 @@ DrbdConnection::state DrbdConnection::parse_state(std::string& state_name)
     else
     if (state_name != CS_LABEL_UNKNOWN)
     {
-        throw EventMessageException();
+        std::string error_msg("Invalid DRBD event: Invalid connection state");
+        std::string debug_info("Invalid connection state value");
+        throw EventMessageException(&error_msg, &debug_info, nullptr);
     }
 
     return state;
@@ -299,7 +301,8 @@ DrbdConnection* DrbdConnection::new_from_props(PropsMap& event_props)
     }
     if (new_conn == nullptr)
     {
-        throw EventMessageException();
+        std::string debug_info("Missing connection name, node id or unparsable node id");
+        throw EventMessageException(nullptr, &debug_info, nullptr);
     }
     return new_conn;
 }

@@ -78,7 +78,7 @@ class MessageLog
 
     // @throws std::bad_alloc
     virtual bool has_entries() const;
-    virtual void add_entry(log_level level, std::string& message);
+    virtual void add_entry(log_level level, const std::string& message);
     virtual void add_entry(log_level level, const char* message);
     virtual void clear();
     virtual void display_messages(std::FILE* out) const;

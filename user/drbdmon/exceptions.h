@@ -1,19 +1,36 @@
 #ifndef EXCEPTIONS_H
-#define	EXCEPTIONS_H
+#define EXCEPTIONS_H
 
 #include <stdexcept>
+#include <memory>
+#include <string>
 
 class EventException : public std::exception
 {
+  private:
+    std::unique_ptr<std::string> error_msg;
+    std::unique_ptr<std::string> debug_info;
+    std::unique_ptr<std::string> event_line;
   public:
     EventException() = default;
-    virtual ~EventException() noexcept
-    {
-    }
+    // @throws std::bad_alloc
+    EventException(
+        const std::string* const error_msg_ref,
+        const std::string* const debug_info_ref,
+        const std::string* const event_line_ref
+    );
+    virtual ~EventException() noexcept;
     EventException(const EventException& orig) = default;
     EventException& operator=(const EventException& orig) = default;
     EventException(EventException&& orig) = default;
     EventException& operator=(EventException&& orig) = default;
+    // @throws std::bad_alloc
+    virtual void set_debug_info(const std::string* const debug_info_ref);
+    // @throws std::bad_alloc
+    virtual void set_event_line(const std::string* const event_line_ref);
+    virtual const std::string* get_error_msg() const noexcept;
+    virtual const std::string* get_debug_info() const noexcept;
+    virtual const std::string* get_event_line() const noexcept;
 };
 
 // Thrown to indicate malformed / unparsable 'drbdsetup events2' lines
@@ -21,13 +38,16 @@ class EventMessageException : public EventException
 {
   public:
     EventMessageException() = default;
-    EventMessageException(const EventMessageException& orig) = default;
-    EventMessageException& operator=(const EventMessageException& orig) = default;
+    EventMessageException(
+        const std::string* const error_msg_ref,
+        const std::string* const debug_info_ref,
+        const std::string* const event_line_ref
+    );
+    virtual ~EventMessageException() noexcept;
+    EventMessageException(const EventMessageException& orig) = delete;
+    EventMessageException& operator=(const EventMessageException& orig) = delete;
     EventMessageException(EventMessageException&& orig) = default;
     EventMessageException& operator=(EventMessageException&& orig) = default;
-    virtual ~EventMessageException() noexcept
-    {
-    }
 };
 
 // Thrown to indicate that a 'drbdsetup events2' line references an object
@@ -36,13 +56,16 @@ class EventObjectException : public EventException
 {
   public:
     EventObjectException() = default;
-    EventObjectException(const EventObjectException& orig) = default;
-    EventObjectException& operator=(const EventObjectException& orig) = default;
+    EventObjectException(
+        const std::string* const error_msg_ref,
+        const std::string* const debug_info_ref,
+        const std::string* const event_line_ref
+    );
+    virtual ~EventObjectException() noexcept;
+    EventObjectException(const EventObjectException& orig) = delete;
+    EventObjectException& operator=(const EventObjectException& orig) = delete;
     EventObjectException(EventObjectException&& orig) = default;
     EventObjectException& operator=(EventObjectException&& orig) = default;
-    virtual ~EventObjectException() noexcept
-    {
-    }
 };
 
 // Thrown to indicate that DrbdMon should abort configuring options
