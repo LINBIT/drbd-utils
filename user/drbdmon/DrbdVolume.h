@@ -130,10 +130,10 @@ class DrbdVolume : private StateFlags
     virtual int32_t get_minor_nr() const;
     virtual uint16_t get_sync_perc() const;
 
-    // @throws EventMessageException
+    // @throws std::bad_alloc, EventMessageException
     virtual void set_minor_nr(int32_t value);
 
-    // @throws EventMessageException
+    // @throws std::bad_alloc, EventMessageException
     virtual void update(PropsMap& event_props);
 
     virtual disk_state get_disk_state() const;
@@ -164,10 +164,10 @@ class DrbdVolume : private StateFlags
     // @throws std::bad_alloc, EventMessageException
     static DrbdVolume* new_from_props(PropsMap& event_props);
 
-    // @throws EventMessageException
+    // @throws std::bad_alloc, EventMessageException
     static disk_state parse_disk_state(std::string& state_name);
 
-    // @throws EventMessageException
+    // @throws std::bad_alloc, EventMessageException
     static repl_state parse_repl_state(std::string& state_name);
 
     // @throws NumberFormatException
@@ -176,10 +176,10 @@ class DrbdVolume : private StateFlags
     // @throws NumberFormatException
     static int32_t parse_minor_nr(std::string& value_str);
 
-    // @throws EventMessageException
+    // @throws std::bad_alloc, EventMessageException
     static client_state parse_client_state(std::string& value_str);
 
-    // @throws EventMessageException
+    // @throws std::bad_alloc, EventMessageException
     static bool parse_quorum_state(std::string& value_str);
 
     // @throws NumberFormatException

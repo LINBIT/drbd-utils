@@ -42,7 +42,7 @@ bool MessageLog::has_entries() const
 }
 
 // @throws std::bad_alloc
-void MessageLog::add_entry(log_level level, std::string& message)
+void MessageLog::add_entry(log_level level, const std::string& message)
 {
     std::unique_ptr<std::string> message_copy;
     if (format_date())

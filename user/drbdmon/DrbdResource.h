@@ -54,7 +54,7 @@ class DrbdResource : public VolumesContainer, public DrbdRole, private StateFlag
     virtual DrbdConnection* get_connection(const std::string& connection_name) const;
     virtual void remove_connection(const std::string& connection_name);
 
-    // @throws EventMessageException
+    // @throws std::bad_alloc, EventMessageException
     virtual void update(PropsMap& event_props);
     virtual ConnectionsIterator connections_iterator();
 

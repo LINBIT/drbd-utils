@@ -27,7 +27,7 @@ const std::string& DrbdResource::get_name() const
     return name;
 }
 
-// @throws EventMessageException
+// @throws std::bad_alloc, EventMessageException
 void DrbdResource::update(PropsMap& event_props)
 {
     std::string* prop_role = event_props.get(&PROP_KEY_ROLE);
@@ -175,7 +175,9 @@ DrbdResource* DrbdResource::new_from_props(PropsMap& event_props)
     }
     if (new_res == nullptr)
     {
-        throw EventMessageException();
+        std::string error_msg("Invalid DRBD event: Missing resource name");
+        std::string debug_info("Missing resource name field:");
+        throw EventMessageException(&error_msg, &debug_info, nullptr);
     }
     return new_res;
 }

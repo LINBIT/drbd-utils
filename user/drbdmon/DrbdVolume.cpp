@@ -81,7 +81,7 @@ uint16_t DrbdVolume::get_sync_perc() const
     return sync_perc;
 }
 
-// @throws EventMessageException
+// @throws std::bad_alloc, EventMessageException
 void DrbdVolume::update(PropsMap& event_props)
 {
     std::string* prop_disk = event_props.get(&PROP_KEY_DISK);
@@ -110,7 +110,9 @@ void DrbdVolume::update(PropsMap& event_props)
         }
         catch (dsaext::NumberFormatException&)
         {
-            throw EventMessageException();
+            std::string error_msg("Invalid DRBD event: Invalid minor number");
+            std::string debug_info("Invalid minor number");
+            throw EventMessageException(&error_msg, &debug_info, nullptr);
         }
     }
 
@@ -186,7 +188,9 @@ void DrbdVolume::update(PropsMap& event_props)
                 }
                 catch (dsaext::NumberFormatException&)
                 {
-                    throw EventMessageException();
+                    std::string error_msg("Invalid DRBD event: Invalid sync percentage value");
+                    std::string debug_info("Invalid sync percentage value");
+                    throw EventMessageException(&error_msg, &debug_info, nullptr);
                 }
             }
         }
@@ -198,7 +202,7 @@ int32_t DrbdVolume::get_minor_nr() const
     return minor_nr;
 }
 
-// @throws EventMessageException
+// @throws std::bad_alloc, EventMessageException
 void DrbdVolume::set_minor_nr(int32_t value)
 {
     if (value >= -1 && value < 0x100000)
@@ -207,7 +211,9 @@ void DrbdVolume::set_minor_nr(int32_t value)
     }
     else
     {
-        throw EventMessageException();
+        std::string error_msg("Invalid DRBD event: Invalid minor number");
+        std::string debug_info("Invalid minor number");
+        throw EventMessageException(&error_msg, &debug_info, nullptr);
     }
 }
 
@@ -489,7 +495,7 @@ StateFlags::state DrbdVolume::child_state_flags_changed()
     return StateFlags::state::NORM;
 }
 
-// @throws EventMessageException
+// @throws std::bad_alloc, EventMessageException
 DrbdVolume::disk_state DrbdVolume::parse_disk_state(std::string& state_name)
 {
     DrbdVolume::disk_state state = DrbdVolume::disk_state::UNKNOWN;
@@ -541,13 +547,15 @@ DrbdVolume::disk_state DrbdVolume::parse_disk_state(std::string& state_name)
     else
     if (state_name != DS_LABEL_UNKNOWN)
     {
-        throw EventMessageException();
+        std::string error_msg("Invalid DRBD event: Invalid disk state");
+        std::string debug_info("Invalid disk state");
+        throw EventMessageException(&error_msg, &debug_info, nullptr);
     }
 
     return state;
 }
 
-// @throws EventMessageException
+// @throws std::bad_alloc, EventMessageException
 DrbdVolume::repl_state DrbdVolume::parse_repl_state(std::string& state_name)
 {
     DrbdVolume::repl_state state = DrbdVolume::repl_state::UNKNOWN;
@@ -629,13 +637,15 @@ DrbdVolume::repl_state DrbdVolume::parse_repl_state(std::string& state_name)
     else
     if (state_name != RS_LABEL_UNKNOWN)
     {
-        throw EventMessageException();
+        std::string error_msg("Invalid DRBD event: Invalid replication state");
+        std::string debug_info("Invalid replication state");
+        throw EventMessageException(&error_msg, &debug_info, nullptr);
     }
 
     return state;
 }
 
-// @throws EventMessageException
+// @throws std::bad_alloc, EventMessageException
 DrbdVolume::client_state DrbdVolume::parse_client_state(std::string& value_str)
 {
     DrbdVolume::client_state state = DrbdVolume::client_state::UNKNOWN;
@@ -652,13 +662,15 @@ DrbdVolume::client_state DrbdVolume::parse_client_state(std::string& value_str)
     else
     if (value_str != CS_LABEL_UNKNOWN)
     {
-        throw EventMessageException();
+        std::string error_msg("Invalid DRBD event: Invalid client (diskless) mode");
+        std::string debug_info("Invalid client mode value");
+        throw EventMessageException(&error_msg, &debug_info, nullptr);
     }
 
     return state;
 }
 
-// @throws EventMessageException
+// @throws std::bad_alloc, EventMessageException
 bool DrbdVolume::parse_quorum_state(std::string& value_str)
 {
     bool quorum_present {false};
@@ -670,7 +682,9 @@ bool DrbdVolume::parse_quorum_state(std::string& value_str)
     else
     if (value_str != QU_LABEL_LOST)
     {
-        throw EventMessageException();
+        std::string error_msg("Invalid DRBD event: Invalid quorum state");
+        std::string debug_info("Invalid quorum state");
+        throw EventMessageException(&error_msg, &debug_info, nullptr);
     }
 
     return quorum_present;
