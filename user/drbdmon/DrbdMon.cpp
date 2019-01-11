@@ -661,10 +661,10 @@ void DrbdMon::parse_event_props(StringTokenizer& tokens, PropsMap& event_props, 
         size_t split_index = prop_entry.find(":");
         if (split_index != std::string::npos)
         {
-            std::unique_ptr<std::string> key(new std::string(prop_entry.substr(0, split_index)));
+            std::unique_ptr<std::string> key(new std::string(prop_entry, 0, split_index));
             ++split_index;
             std::unique_ptr<std::string> value(
-                new std::string(prop_entry.substr(split_index, prop_entry.length() - split_index))
+                new std::string(prop_entry, split_index, prop_entry.length() - split_index)
             );
             try
             {
