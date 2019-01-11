@@ -1,0 +1,91 @@
+$ for node in alfa bravo charlie delta echo fox ; do __DRBD_NODE__=$node ./drbdadm -c stacked_multi_path_2sites_3nodes.res -d up stacked_multi_path ; echo $? ; done
+
+   found __DRBD_NODE__ in environment
+   PRETENDING that I am >>alfa<<
+
+drbdsetup new-resource stacked_multi_path 0
+drbdsetup new-minor stacked_multi_path 10 0
+drbdsetup new-peer stacked_multi_path 1 --_name=delta_echo_fox --congestion-extents=1000 --congestion-fill=400M --on-congestion=pull-ahead --protocol=A
+drbdsetup new-path stacked_multi_path 1 ipv4:192.168.1.17:7100 ipv4:192.168.4.17:7100
+drbdsetup new-path stacked_multi_path 1 ipv4:192.168.1.17:7100 ipv4:192.168.5.17:7100
+drbdsetup new-path stacked_multi_path 1 ipv4:192.168.1.17:7100 ipv4:192.168.6.17:7100
+drbdsetup peer-device-options stacked_multi_path 1 0 --c-fill-target=10M
+drbdmeta 10 v09 /dev/drbd0 internal apply-al
+drbdsetup attach 10 /dev/drbd0 /dev/drbd0 internal
+drbdsetup connect stacked_multi_path 1
+0
+
+   found __DRBD_NODE__ in environment
+   PRETENDING that I am >>bravo<<
+
+drbdsetup new-resource stacked_multi_path 0
+drbdsetup new-minor stacked_multi_path 10 0
+drbdsetup new-peer stacked_multi_path 1 --_name=delta_echo_fox --congestion-extents=1000 --congestion-fill=400M --on-congestion=pull-ahead --protocol=A
+drbdsetup new-path stacked_multi_path 1 ipv4:192.168.2.17:7100 ipv4:192.168.4.17:7100
+drbdsetup new-path stacked_multi_path 1 ipv4:192.168.2.17:7100 ipv4:192.168.5.17:7100
+drbdsetup new-path stacked_multi_path 1 ipv4:192.168.2.17:7100 ipv4:192.168.6.17:7100
+drbdsetup peer-device-options stacked_multi_path 1 0 --c-fill-target=10M
+drbdmeta 10 v09 /dev/drbd0 internal apply-al
+drbdsetup attach 10 /dev/drbd0 /dev/drbd0 internal
+drbdsetup connect stacked_multi_path 1
+0
+
+   found __DRBD_NODE__ in environment
+   PRETENDING that I am >>charlie<<
+
+drbdsetup new-resource stacked_multi_path 0
+drbdsetup new-minor stacked_multi_path 10 0
+drbdsetup new-peer stacked_multi_path 1 --_name=delta_echo_fox --congestion-extents=1000 --congestion-fill=400M --on-congestion=pull-ahead --protocol=A
+drbdsetup new-path stacked_multi_path 1 ipv4:192.168.3.17:7100 ipv4:192.168.4.17:7100
+drbdsetup new-path stacked_multi_path 1 ipv4:192.168.3.17:7100 ipv4:192.168.5.17:7100
+drbdsetup new-path stacked_multi_path 1 ipv4:192.168.3.17:7100 ipv4:192.168.6.17:7100
+drbdsetup peer-device-options stacked_multi_path 1 0 --c-fill-target=10M
+drbdmeta 10 v09 /dev/drbd0 internal apply-al
+drbdsetup attach 10 /dev/drbd0 /dev/drbd0 internal
+drbdsetup connect stacked_multi_path 1
+0
+
+   found __DRBD_NODE__ in environment
+   PRETENDING that I am >>delta<<
+
+drbdsetup new-resource stacked_multi_path 1
+drbdsetup new-minor stacked_multi_path 10 0
+drbdsetup new-peer stacked_multi_path 0 --_name=alfa_bravo_charlie --congestion-extents=1000 --congestion-fill=400M --on-congestion=pull-ahead --protocol=A
+drbdsetup new-path stacked_multi_path 0 ipv4:192.168.4.17:7100 ipv4:192.168.1.17:7100
+drbdsetup new-path stacked_multi_path 0 ipv4:192.168.4.17:7100 ipv4:192.168.2.17:7100
+drbdsetup new-path stacked_multi_path 0 ipv4:192.168.4.17:7100 ipv4:192.168.3.17:7100
+drbdsetup peer-device-options stacked_multi_path 0 0 --c-fill-target=10M
+drbdmeta 10 v09 /dev/drbd0 internal apply-al
+drbdsetup attach 10 /dev/drbd0 /dev/drbd0 internal
+drbdsetup connect stacked_multi_path 0
+0
+
+   found __DRBD_NODE__ in environment
+   PRETENDING that I am >>echo<<
+
+drbdsetup new-resource stacked_multi_path 1
+drbdsetup new-minor stacked_multi_path 10 0
+drbdsetup new-peer stacked_multi_path 0 --_name=alfa_bravo_charlie --congestion-extents=1000 --congestion-fill=400M --on-congestion=pull-ahead --protocol=A
+drbdsetup new-path stacked_multi_path 0 ipv4:192.168.5.17:7100 ipv4:192.168.1.17:7100
+drbdsetup new-path stacked_multi_path 0 ipv4:192.168.5.17:7100 ipv4:192.168.2.17:7100
+drbdsetup new-path stacked_multi_path 0 ipv4:192.168.5.17:7100 ipv4:192.168.3.17:7100
+drbdsetup peer-device-options stacked_multi_path 0 0 --c-fill-target=10M
+drbdmeta 10 v09 /dev/drbd0 internal apply-al
+drbdsetup attach 10 /dev/drbd0 /dev/drbd0 internal
+drbdsetup connect stacked_multi_path 0
+0
+
+   found __DRBD_NODE__ in environment
+   PRETENDING that I am >>fox<<
+
+drbdsetup new-resource stacked_multi_path 1
+drbdsetup new-minor stacked_multi_path 10 0
+drbdsetup new-peer stacked_multi_path 0 --_name=alfa_bravo_charlie --congestion-extents=1000 --congestion-fill=400M --on-congestion=pull-ahead --protocol=A
+drbdsetup new-path stacked_multi_path 0 ipv4:192.168.6.17:7100 ipv4:192.168.1.17:7100
+drbdsetup new-path stacked_multi_path 0 ipv4:192.168.6.17:7100 ipv4:192.168.2.17:7100
+drbdsetup new-path stacked_multi_path 0 ipv4:192.168.6.17:7100 ipv4:192.168.3.17:7100
+drbdsetup peer-device-options stacked_multi_path 0 0 --c-fill-target=10M
+drbdmeta 10 v09 /dev/drbd0 internal apply-al
+drbdsetup attach 10 /dev/drbd0 /dev/drbd0 internal
+drbdsetup connect stacked_multi_path 0
+0

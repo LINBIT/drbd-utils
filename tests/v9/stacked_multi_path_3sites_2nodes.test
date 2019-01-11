@@ -1,4 +1,4 @@
-$ ./drbdadm -c stacked_multi_path.res -S -d up stacked_multi_path 2>/dev/null; echo $?
+$ ./drbdadm -c stacked_multi_path_3sites_2nodes.res -S -d up stacked_multi_path 2>/dev/null; echo $?
 drbdsetup new-resource stacked_multi_path 0
 drbdsetup new-minor stacked_multi_path 10 0
 drbdsetup new-peer stacked_multi_path 1 --_name=charlie_delta --congestion-extents=1000 --congestion-fill=400M --on-congestion=pull-ahead --protocol=A
