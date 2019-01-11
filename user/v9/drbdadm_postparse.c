@@ -1094,6 +1094,11 @@ static void fixup_peer_devices(struct d_resource *res)
 		}
 
 		some_host = STAILQ_FIRST(&some_path->hname_address_pairs)->host_info;
+		if (!some_host) {
+			/* oops? not even one single host?? */
+			assert(config_valid == 0);
+			continue;
+		}
 		for_each_volume(vol, &some_host->volumes) {
 			peer_device = find_peer_device(conn, vol->vnr);
 			if (peer_device)
@@ -1325,6 +1330,10 @@ void expand_common(void)
 
 			STAILQ_FOREACH(ha, &some_path->hname_address_pairs, link) {
 				h = ha->host_info;
+				if (!h) {
+					assert(config_valid == 0);
+					continue;
+				}
 				for_each_volume(vol, &h->volumes) {
 					peer_device = find_peer_device(conn, vol->vnr);
 
