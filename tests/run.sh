@@ -50,6 +50,6 @@ echo "Test setup:"
 echo "cd $PWD"
 echo "PATH=$PATH \\"
 echo "__DRBD_NODE__=$__DRBD_NODE__  DRBD_DRIVER_VERSION_OVERRIDE=$DRBD_DRIVER_VERSION_OVERRIDE \\"
-echo "clitest --first" "${sortedtests[@]}"
+echo "bash clitest --first" "${sortedtests[@]}"
 echo
-clitest --first "${sortedtests[@]}"
+bash clitest --first "${sortedtests[@]}"

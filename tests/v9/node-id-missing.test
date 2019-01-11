@@ -1,7 +1,7 @@
-$ ./drbdadm -c node-id-missing.res dump ; echo $?
+$ drbdadm -d -c node-id-missing.res dump 2>&1 | sed -e 's,^/.*/,,'; echo ${PIPESTATUS[@]}
 
    found __DRBD_NODE__ in environment
    PRETENDING that I am >>undertest<<
 
-/home/lars/DRBD/drbd-utils/tests/v9/node-id-missing.res:16: in resource site1, on undertest { ... }: 'node-id' keyword missing.
-10
+node-id-missing.res:16: in resource site1, on undertest { ... }: 'node-id' keyword missing.
+10 0
