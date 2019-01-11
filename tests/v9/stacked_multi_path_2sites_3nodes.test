@@ -1,4 +1,4 @@
-$ for node in alfa bravo charlie delta echo fox ; do __DRBD_NODE__=$node ./drbdadm -c stacked_multi_path_2sites_3nodes.res -d up stacked_multi_path ; echo $? ; done
+$ for node in alfa bravo charlie delta echo fox ; do __DRBD_NODE__=$node drbdadm -c stacked_multi_path_2sites_3nodes.res -d up stacked_multi_path ; echo $? ; done
 
    found __DRBD_NODE__ in environment
    PRETENDING that I am >>alfa<<
