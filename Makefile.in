@@ -111,6 +111,7 @@ ifeq ($(WITH_84_SUPPORT),yes)
 	$(MAKE) -C documentation/ja/v84 doc
 endif
 
+.PHONY: test testorfail
 ifeq ($(WITH_CLITEST),yes)
 test:
 	$(MAKE) -C user/v9 test
@@ -119,6 +120,15 @@ ifeq ($(WITH_84_SUPPORT),yes)
 endif
 else
 test:
+	$(warning "clitest" not found, test target disabled)
+endif
+
+ifeq ($(WITH_CLITEST),yes)
+testorfail:
+	$(MAKE) test
+else
+testorfail:
+	$(error "clitest" not found, but tests are required for a release)
 endif
 
 # we cannot use 'git submodule foreach':
@@ -243,7 +253,7 @@ endif
 
 tools doc tgz: check-submods
 
-.PHONY: check_all_committed prepare_release tarball
+.PHONY: check_all_committed prepare_release release debrelease tarball
 check_all_committed:
 	@$(if $(FORCE),-,)modified=`$(GIT) ls-files -m -t`; 		\
 	if test -n "$$modified" ; then	\
@@ -251,13 +261,13 @@ check_all_committed:
 	       	false;			\
 	fi
 
-prepare_release:
+prepare_release: testorfail
 	$(MAKE) tarball
 
-release:
+release: testorfail
 	$(MAKE) tarball
 
-debrelease:
+debrelease: testorfail
 	$(MAKE) tarball PRESERVE_DEBIAN=1
 
 configure.ac: ;
