@@ -3,6 +3,28 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.8.0
+--------
+ * i18n: use propper po files
+ * v9,stacked: allow node-id in stacked section
+   but one should not use stacked with v9 anyways
+ * dry run: remove trailing white space
+   This eases test integration.
+   Mentioned here because strictly speaking output changed.
+ * regression tests: if at ./configure time "clitest" is detected,
+  one can run tests via "make test". Target is a noop otherwise.
+ * drbdsetup,v9: fix wait-for (same patch as in 9.7.1)
+ * doc,v9:  require-drbd-module-version-*, events2 --now --poll
+ * drbdadm,v9: allow stacked-on-top-of sections without address
+ * drbdadm,v9: bring up only the correct paths in multi-site scenaios.
+ * drbdadm,v9: fix parser segfault if node-id is missing.
+ * tests: require that they pass on release.
+ * drbdsetup,v9: fix key collision in show --json.
+
+9.7.1
+--------
+ * drbdsetup,v9: partially revert commit that broke wait-for
+
 9.7.0
 --------
  * drbdadm,v9,v84: fix resync-after
