@@ -18,6 +18,7 @@
 #include <ctype.h>
 #include <sys/queue.h>
 #include <assert.h>
+#include <stdbool.h>
 
 #include <winioctl.h>
 #include <shellapi.h>
