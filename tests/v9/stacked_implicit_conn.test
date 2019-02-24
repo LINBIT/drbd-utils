@@ -1,0 +1,9 @@
+$ drbdadm -c ../../tests/v9/stacked_implicit_conn.res -d up r0-U 2>/dev/null; echo $?
+drbdsetup new-resource r0-U 1
+drbdsetup new-minor r0-U 10 0
+drbdsetup new-peer r0-U 0 --_name=node_c --protocol=B
+drbdsetup new-path r0-U 0 ipv4:10.56.84.142:7788 ipv4:10.56.85.140:7788
+drbdmeta 10 v09 /dev/drbd0 internal apply-al
+drbdsetup attach 10 /dev/drbd0 /dev/drbd0 internal
+drbdsetup connect r0-U 0
+0
