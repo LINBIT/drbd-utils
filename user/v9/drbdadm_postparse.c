@@ -787,7 +787,7 @@ static void create_implicit_connections(struct d_resource *res)
 	for_each_host(host_info, &res->all_hosts) {
 		if (++hosts == 3) {
 			err("Resource %s:\n\t"
-			    "Use explicit 'connection' sections with more than two 'on' sections.\n",
+			    "Use explicit 'connection' sections (or a 'connection-mesh' section) with more than two 'on' sections.\n",
 		            res->name);
 			break;
 		}
