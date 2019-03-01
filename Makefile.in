@@ -49,6 +49,9 @@ WITH_CLITEST = @WITH_CLITEST@
 # and not in e.g. dash. I'm too lazy to fix it to be compatible.
 SHELL=/bin/bash
 
+PNAME	:= drbd-utils
+DOCKERREGISTRY = drbd.io
+DOCKERREGPATH = $(DOCKERREGISTRY)/$(PNAME)
 
 TOOLS_DIRS  := user/shared user/v9 scripts
 DOC_DIRS    := documentation/v9 documentation/ja/v9
@@ -214,7 +217,6 @@ check_changelogs_up2date:
 	   : do not fail the build because of outdated debian/changelog ; fi ; \
 	$$up2date
 
-PNAME	:= drbd-utils
 .PHONY: .filelist
 .filelist:
 	@set -e ; submodules=`$(GIT) submodule foreach --quiet 'echo $$path'`; \
@@ -304,6 +306,9 @@ srpm: rpmprep
 		drbd.spec
 	@echo "You have now:" ; find `rpm -E "%_srcrpmdir"` -name *.src.rpm
 endif
+
+dockerimage: debrelease
+	docker build -t $(DOCKERREGPATH) .
 
 Makefile.in: ;
 Makefile: Makefile.in config.status

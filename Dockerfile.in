@@ -1,0 +1,28 @@
+FROM ubuntu:xenial as builder
+
+ENV DRBD_UTILS_VERSION @PACKAGE_VERSION@
+
+ENV DRBD_UTILS_PKGNAME drbd-utils
+ENV DRBD_UTILS_TGZ ${DRBD_UTILS_PKGNAME}-${DRBD_UTILS_VERSION}.tar.gz
+
+RUN groupadd makepkg # !lbbuild
+RUN useradd -m -g makepkg makepkg # !lbbuild
+
+RUN apt-get update -y # !lbbuild
+
+RUN apt-get install -y bash-completion debhelper devscripts dh-systemd mount docbook-xsl flex xsltproc udev # !lbbuild
+
+COPY /${DRBD_UTILS_TGZ} /tmp/
+
+USER makepkg
+RUN cd ${HOME} && \
+	cp /tmp/${DRBD_UTILS_TGZ} ${HOME} && \
+	tar xvf ${DRBD_UTILS_TGZ} && \
+	cd ${DRBD_UTILS_PKGNAME}-${DRBD_UTILS_VERSION} && \
+	debuild -us -uc -i -b
+
+FROM ubuntu:xenial
+MAINTAINER Roland Kammerer <roland.kammerer@linbit.com>
+COPY --from=builder /home/makepkg/*.deb /tmp/
+RUN apt-get update -y && apt-get install -y python-natsort python-protobuf && dpkg -i /tmp/*.deb && rm /tmp/*.deb && apt-get clean -y
+RUN echo 'global { usage-count no; }' > /etc/drbd.d/global_common.conf
