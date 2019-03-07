@@ -314,6 +314,12 @@ dockerimage:
 endif
 	docker build -t $(DOCKERREGPATH) .
 
+# this tarkget is used in lbbuild to decide which docker tags to push
+# usually DOCKERREGPATH should be returned
+# but this docker image is only used as base for linstor-satellite. at least for now
+dockerpath:
+	@echo ""
+
 Makefile.in: ;
 Makefile: Makefile.in config.status
 	./config.status Makefile
