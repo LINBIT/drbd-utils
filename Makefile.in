@@ -307,7 +307,11 @@ srpm: rpmprep
 	@echo "You have now:" ; find `rpm -E "%_srcrpmdir"` -name *.src.rpm
 endif
 
+ifneq ($(FORCE),1)
 dockerimage: debrelease
+else
+dockerimage:
+endif
 	docker build -t $(DOCKERREGPATH) .
 
 Makefile.in: ;
