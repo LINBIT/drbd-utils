@@ -1300,6 +1300,23 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
     </definition>
   </drbdsetup_option>
 
+  <drbdsetup_option name="transport">
+    <term xml:id="transport"><option>transport <replaceable>type</replaceable></option></term>
+
+    <definition>
+      <para><indexterm significance="normal">
+	  <primary>drbd.conf</primary>
+
+	  <secondary>transport</secondary>
+	</indexterm> With DRBD9 the network transport used by DRBD is loaded as a
+      seperate module. With this option you can specify which transport and
+      module to load. At present only two options exist, <option>tcp</option>
+      and <option>rdma</option>. Please note that currently the RDMA transport
+      module is only available with a license purchased from LINBIT. Default
+      is <option>tcp</option>.</para>
+    </definition>
+  </drbdsetup_option>
+
   <drbdsetup_option name="use-rle">
     <term xml:id="use-rle"><option>use-rle</option></term>
 
