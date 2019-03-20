@@ -1785,7 +1785,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				.attrs = global_attrs,
 			};
 
-			dbg(3, "received type:%x\n", nlh->nlmsg_type);
+			dbg(3, "received type:%x seq: %d\n", nlh->nlmsg_type, nlh->nlmsg_seq);
 			if (nlh->nlmsg_type < NLMSG_MIN_TYPE) {
 				/* Ignore netlink control messages. */
 				continue;

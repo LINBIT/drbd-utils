@@ -27,6 +27,7 @@ static void fill_in_header(struct genl_sock *s, struct msg_buff *msg)
 	n->nlmsg_flags |= NLM_F_REQUEST;
 	n->nlmsg_seq = s->s_seq_expect = s->s_seq_next++;
 	n->nlmsg_pid = getpid();
+	dbg(2, "about to send message for %d\n", n->nlmsg_pid);
 }
 
 static int verify_header(struct genl_sock *s, struct iovec *iov, size_t c, char ** err_desc)
@@ -40,7 +41,7 @@ static int verify_header(struct genl_sock *s, struct iovec *iov, size_t c, char 
 		return -E_RCV_MSG_TRUNC;
 	}
 	if (s->s_seq_expect && nlh->nlmsg_seq != s->s_seq_expect) {
-		dbg(2, "sequence mismatch: 0x%x != 0x%x, type:%x flags:%x sportid:%x\n",
+		dbg(2, "sequence mismatch: %d != %d, type:%x flags:%x sportid:%x\n",
 			nlh->nlmsg_seq, s->s_seq_expect, nlh->nlmsg_type, nlh->nlmsg_flags, nlh->nlmsg_pid);
 
 		if (err_desc)
@@ -84,6 +85,7 @@ int genl_join_mc_group(struct genl_sock *s, const char *name)
 
 	strncpy(m.name, name, sizeof(m.name));
 	m.portid = getpid();
+	dbg(2, "about to join multicast group %d\n", m.portid);
 
         if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_JOIN_MC_GROUP, (void*) &m, sizeof(m), NULL, 0, &unused, NULL) == 0) {
 	        err = GetLastError();
@@ -163,6 +165,7 @@ int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int 
 	int forever;
 
 	p.portid = getpid();
+	dbg(2, "about to receive messages for %d\n", p.portid);
 	forever = timeout_ms < 0;
 	while (forever || timeout_ms > 0) {
 	        if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_RECEIVE_NL_PACKET, &p, sizeof(p), iov->iov_base, iov->iov_len, &size, NULL) == 0) {
