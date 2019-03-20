@@ -31,7 +31,7 @@
 #define SOL_NETLINK 270
 #endif
 
-#define DEBUG_LEVEL 1
+#define DEBUG_LEVEL 5
 
 #define dbg(lvl, fmt, arg...)				\
 do {							\
