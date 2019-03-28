@@ -6,7 +6,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2018-11-02 13:06+0900\n"
+"POT-Creation-Date: 2019-03-28 11:43+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1887,6 +1887,30 @@ msgstr ""
 "る。タイムアウト値は、 <option>connect-int</option>、<option>ping-int</"
 "option> より小さい値でなければならない。デフォルトは 6 秒である。値は 10 分"
 "の 1 秒単位で指定する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid "<option>transport <replaceable>type</replaceable></option>"
+msgstr "<option>transport <replaceable>type</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para><indexterm><secondary>
+msgid "transport"
+msgstr "transport"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> With DRBD9 the network transport "
+"used by DRBD is loaded as a seperate module. With this option you can "
+"specify which transport and module to load. At present only two options "
+"exist, <option>tcp</option> and <option>rdma</option>. Please note that "
+"currently the RDMA transport module is only available with a license "
+"purchased from LINBIT. Default is <option>tcp</option>."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/> DRBD9 では、DRBD によって使用され"
+"るネットワークトランスポートは個別のモジュールとしてロードされる。このオプ"
+"ションを使用すると、ロードするトランスポートとモジュールを指定できる。現在の"
+"ところ、<option>tcp</option> と <option>rdma</option> の 2 つのみをサポートす"
+"る。RDMA トランスポートモジュールは LINBIT から購入したライセンスでのみ利用可"
+"能である。デフォルトは <option>tcp</option>。"
 
 #. type: Content of: <drbdsetup_options><drbdsetup_option><term>
 msgid "<option>use-rle</option>"

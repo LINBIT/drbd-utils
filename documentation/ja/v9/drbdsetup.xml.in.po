@@ -6,7 +6,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2018-11-02 14:08+0900\n"
+"POT-Creation-Date: 2019-03-28 11:43+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -384,6 +384,22 @@ msgid ""
 msgstr ""
 "現在の状態を報告した後に終了する。デフォルトでは、継続的に監視し、状態の変化"
 "を報告する。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><term>
+msgid "<option>--poll</option>"
+msgstr "<option>--poll</option>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"This is completely ignored if <option>--now</option> is not given.  In "
+"combination with <option>--now</option> it prints the current state once and "
+"then reads on stdin. If a <option>n</option> is read, this triggers another "
+"run.  Newlines are ignored. Every other input terminates the command."
+msgstr ""
+"<option>--now</option> が与えられていない場合は無視される。 <option>--now</"
+"option> と組み合わせて、現在の状態を一度出力した後、標準入力から読み込む。 "
+"<option>n</option> を読み込むと、別の実行を引き起こす。改行は無視される。他の"
+"すべての入力はコマンドを終了させる。"
 
 #. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><term>
 msgid "<option>--statistics</option>"
