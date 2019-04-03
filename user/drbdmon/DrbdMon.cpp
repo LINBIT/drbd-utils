@@ -500,22 +500,22 @@ void DrbdMon::process_event_message(
 
         if (event_type == TYPE_CONNECTION)
         {
-            create_connection(event_props);
+            create_connection(event_props, event_line);
         }
         else
         if (event_type == TYPE_DEVICE)
         {
-            create_device(event_props);
+            create_device(event_props, event_line);
         }
         else
         if (event_type == TYPE_PEER_DEVICE)
         {
-            create_peer_device(event_props);
+            create_peer_device(event_props, event_line);
         }
         else
         if (event_type == TYPE_RESOURCE)
         {
-            create_resource(event_props);
+            create_resource(event_props, event_line);
         }
         else
         if (event_type == TYPE_SEPARATOR && event_mode == MODE_EXISTS)
@@ -582,22 +582,22 @@ void DrbdMon::process_event_message(
 
         if (event_type == TYPE_CONNECTION)
         {
-            update_connection(event_props);
+            update_connection(event_props, event_line);
         }
         else
         if (event_type == TYPE_DEVICE)
         {
-            update_device(event_props);
+            update_device(event_props, event_line);
         }
         else
         if (event_type == TYPE_PEER_DEVICE)
         {
-            update_peer_device(event_props);
+            update_peer_device(event_props, event_line);
         }
         else
         if (event_type == TYPE_RESOURCE)
         {
-            update_resource(event_props);
+            update_resource(event_props, event_line);
         }
         // unknown object types are skipped
     }
@@ -614,22 +614,22 @@ void DrbdMon::process_event_message(
 
         if (event_type == TYPE_CONNECTION)
         {
-            destroy_connection(event_props);
+            destroy_connection(event_props, event_line);
         }
         else
         if (event_type == TYPE_DEVICE)
         {
-            destroy_device(event_props);
+            destroy_device(event_props, event_line);
         }
         else
         if (event_type == TYPE_PEER_DEVICE)
         {
-            destroy_peer_device(event_props);
+            destroy_peer_device(event_props, event_line);
         }
         else
         if (event_type == TYPE_RESOURCE)
         {
-            destroy_resource(event_props);
+            destroy_resource(event_props, event_line);
         }
         // unknown object types are skipped
     }
@@ -703,11 +703,11 @@ void DrbdMon::clear_event_props(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::create_connection(PropsMap& event_props)
+void DrbdMon::create_connection(PropsMap& event_props, const std::string& event_line)
 {
     try
     {
-        DrbdResource& res = get_resource(event_props);
+        DrbdResource& res = get_resource(event_props, event_line);
 
         std::unique_ptr<DrbdConnection> conn(DrbdConnection::new_from_props(event_props));
         conn->update(event_props);
@@ -722,16 +722,16 @@ void DrbdMon::create_connection(PropsMap& event_props)
     {
         std::string error_msg("Invalid DRBD event: Duplicate connection creation");
         std::string debug_info("Duplicate connection creation");
-        throw EventMessageException(&error_msg, &debug_info, nullptr);
+        throw EventMessageException(&error_msg, &debug_info, &event_line);
     }
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::create_device(PropsMap& event_props)
+void DrbdMon::create_device(PropsMap& event_props, const std::string& event_line)
 {
     try
     {
-        DrbdResource& res = get_resource(event_props);
+        DrbdResource& res = get_resource(event_props, event_line);
 
         std::unique_ptr<DrbdVolume> vol(DrbdVolume::new_from_props(event_props));
         vol->update(event_props);
@@ -746,17 +746,17 @@ void DrbdMon::create_device(PropsMap& event_props)
     {
         std::string error_msg("Invalid DRBD event: Duplicate volume creation");
         std::string debug_info("Duplicate device (volume) creation");
-        throw EventMessageException(&error_msg, &debug_info, nullptr);
+        throw EventMessageException(&error_msg, &debug_info, &event_line);
     }
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::create_peer_device(PropsMap& event_props)
+void DrbdMon::create_peer_device(PropsMap& event_props, const std::string& event_line)
 {
     try
     {
-        DrbdResource& res = get_resource(event_props);
-        DrbdConnection& conn = get_connection(res, event_props);
+        DrbdResource& res = get_resource(event_props, event_line);
+        DrbdConnection& conn = get_connection(res, event_props, event_line);
 
         std::unique_ptr<DrbdVolume> vol(DrbdVolume::new_from_props(event_props));
         vol->update(event_props);
@@ -773,12 +773,12 @@ void DrbdMon::create_peer_device(PropsMap& event_props)
     {
         std::string error_msg("Invalid DRBD event: Duplicate peer volume creation");
         std::string debug_info("Duplicate peer device (peer volume) creation");
-        throw EventMessageException(&error_msg, &debug_info, nullptr);
+        throw EventMessageException(&error_msg, &debug_info, &event_line);
     }
 }
 
 // @throws std::bad_alloc, EventMessageException
-void DrbdMon::create_resource(PropsMap& event_props)
+void DrbdMon::create_resource(PropsMap& event_props, const std::string& event_line)
 {
     try
     {
@@ -798,15 +798,15 @@ void DrbdMon::create_resource(PropsMap& event_props)
     {
         std::string error_msg("Invalid DRBD event: Duplicate resource creation");
         std::string debug_info("Duplicate resource creation");
-        throw EventMessageException(&error_msg, &debug_info, nullptr);
+        throw EventMessageException(&error_msg, &debug_info, &event_line);
     }
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::update_connection(PropsMap& event_props)
+void DrbdMon::update_connection(PropsMap& event_props, const std::string& event_line)
 {
-    DrbdResource& res = get_resource(event_props);
-    DrbdConnection& conn = get_connection(res, event_props);
+    DrbdResource& res = get_resource(event_props, event_line);
+    DrbdConnection& conn = get_connection(res, event_props, event_line);
     conn.update(event_props);
 
     // Adjust connection state flags
@@ -823,10 +823,10 @@ void DrbdMon::update_connection(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::update_device(PropsMap& event_props)
+void DrbdMon::update_device(PropsMap& event_props, const std::string& event_line)
 {
-    DrbdResource& res = get_resource(event_props);
-    DrbdVolume& vol = get_device(dynamic_cast<VolumesContainer&> (res), event_props);
+    DrbdResource& res = get_resource(event_props, event_line);
+    DrbdVolume& vol = get_device(dynamic_cast<VolumesContainer&> (res), event_props, event_line);
     vol.update(event_props);
 
     // Adjust volume state flags
@@ -839,11 +839,11 @@ void DrbdMon::update_device(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::update_peer_device(PropsMap& event_props)
+void DrbdMon::update_peer_device(PropsMap& event_props, const std::string& event_line)
 {
-    DrbdResource& res = get_resource(event_props);
-    DrbdConnection& conn = get_connection(res, event_props);
-    DrbdVolume& vol = get_device(dynamic_cast<VolumesContainer&> (conn), event_props);
+    DrbdResource& res = get_resource(event_props, event_line);
+    DrbdConnection& conn = get_connection(res, event_props, event_line);
+    DrbdVolume& vol = get_device(dynamic_cast<VolumesContainer&> (conn), event_props, event_line);
     vol.update(event_props);
 
     // Adjust volume state flags
@@ -867,9 +867,9 @@ void DrbdMon::update_peer_device(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::update_resource(PropsMap& event_props)
+void DrbdMon::update_resource(PropsMap& event_props, const std::string& event_line)
 {
-    DrbdResource& res = get_resource(event_props);
+    DrbdResource& res = get_resource(event_props, event_line);
     res.update(event_props);
 
     StateFlags::state res_last_state = res.get_state();
@@ -878,12 +878,12 @@ void DrbdMon::update_resource(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::destroy_connection(PropsMap& event_props)
+void DrbdMon::destroy_connection(PropsMap& event_props, const std::string& event_line)
 {
-    DrbdResource& res = get_resource(event_props);
+    DrbdResource& res = get_resource(event_props, event_line);
     bool conn_marked = false;
     {
-        DrbdConnection& conn = get_connection(res, event_props);
+        DrbdConnection& conn = get_connection(res, event_props, event_line);
         conn_marked = conn.has_mark_state();
         res.remove_connection(conn.get_name());
     }
@@ -897,12 +897,12 @@ void DrbdMon::destroy_connection(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::destroy_device(PropsMap& event_props)
+void DrbdMon::destroy_device(PropsMap& event_props, const std::string& event_line)
 {
-    DrbdResource& res = get_resource(event_props);
+    DrbdResource& res = get_resource(event_props, event_line);
     bool vol_marked = false;
     {
-        DrbdVolume& vol = get_device(dynamic_cast<VolumesContainer&> (res), event_props);
+        DrbdVolume& vol = get_device(dynamic_cast<VolumesContainer&> (res), event_props, event_line);
         vol_marked = vol.has_mark_state();
         res.remove_volume(vol.get_volume_nr());
     }
@@ -916,14 +916,14 @@ void DrbdMon::destroy_device(PropsMap& event_props)
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::destroy_peer_device(PropsMap& event_props)
+void DrbdMon::destroy_peer_device(PropsMap& event_props, const std::string& event_line)
 {
-    DrbdResource& res = get_resource(event_props);
-    DrbdConnection& conn = get_connection(res, event_props);
+    DrbdResource& res = get_resource(event_props, event_line);
+    DrbdConnection& conn = get_connection(res, event_props, event_line);
     bool peer_vol_marked = false;
     {
         // May report non-existing volume if required
-        DrbdVolume& peer_vol =  get_device(dynamic_cast<VolumesContainer&> (conn), event_props);
+        DrbdVolume& peer_vol =  get_device(dynamic_cast<VolumesContainer&> (conn), event_props, event_line);
         peer_vol_marked = peer_vol.has_mark_state();
     }
 
@@ -946,19 +946,19 @@ void DrbdMon::destroy_peer_device(PropsMap& event_props)
         {
             std::string error_msg("Invalid DRBD event: Unparsable volume number");
             std::string debug_info("Unparsable volume number");
-            throw EventMessageException(&error_msg, &debug_info, nullptr);
+            throw EventMessageException(&error_msg, &debug_info, &event_line);
         }
     }
     else
     {
         std::string error_msg("Invalid DRBD event: Missing volume number");
         std::string debug_info("Missing volume number");
-        throw EventMessageException(&error_msg, &debug_info, nullptr);
+        throw EventMessageException(&error_msg, &debug_info, &event_line);
     }
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::destroy_resource(PropsMap& event_props)
+void DrbdMon::destroy_resource(PropsMap& event_props, const std::string& event_line)
 {
     std::string* res_name = event_props.get(&DrbdResource::PROP_KEY_RES_NAME);
     if (res_name != nullptr)
@@ -979,19 +979,19 @@ void DrbdMon::destroy_resource(PropsMap& event_props)
         {
             std::string error_msg("DRBD event line references a non-existent resource");
             std::string debug_info("DRBD event line references a non-existent resource");
-            throw EventObjectException(&error_msg, &debug_info, nullptr);
+            throw EventObjectException(&error_msg, &debug_info, &event_line);
         }
     }
     else
     {
         std::string error_msg("Received DRBD event line does not contain a resource name");
         std::string debug_info("DRBD event line contains no resource name");
-        throw EventMessageException(&error_msg, &debug_info, nullptr);
+        throw EventMessageException(&error_msg, &debug_info, &event_line);
     }
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-DrbdConnection& DrbdMon::get_connection(DrbdResource& res, PropsMap& event_props)
+DrbdConnection& DrbdMon::get_connection(DrbdResource& res, PropsMap& event_props, const std::string& event_line)
 {
     DrbdConnection* conn {nullptr};
     std::string* conn_name = event_props.get(&DrbdConnection::PROP_KEY_CONN_NAME);
@@ -1003,19 +1003,19 @@ DrbdConnection& DrbdMon::get_connection(DrbdResource& res, PropsMap& event_props
     {
         std::string error_msg("Invalid DRBD event: Missing connection information");
         std::string debug_info("Missing 'connection' field");
-        throw EventMessageException(&error_msg, &debug_info, nullptr);
+        throw EventMessageException(&error_msg, &debug_info, &event_line);
     }
     if (conn == nullptr)
     {
         std::string error_msg("Non-existent connection referenced by the DRBD events source");
         std::string debug_info("DRBD event line references a non-existent connection");
-        throw EventObjectException(&error_msg, &debug_info, nullptr);
+        throw EventObjectException(&error_msg, &debug_info, &event_line);
     }
     return *conn;
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-DrbdVolume& DrbdMon::get_device(VolumesContainer& vol_con, PropsMap& event_props)
+DrbdVolume& DrbdMon::get_device(VolumesContainer& vol_con, PropsMap& event_props, const std::string& event_line)
 {
     DrbdVolume* vol {nullptr};
     std::string* vol_nr_str = event_props.get(&DrbdVolume::PROP_KEY_VOL_NR);
@@ -1030,26 +1030,26 @@ DrbdVolume& DrbdMon::get_device(VolumesContainer& vol_con, PropsMap& event_props
         {
             std::string error_msg("Invalid DRBD event: Invalid volume number");
             std::string debug_info("Unparsable volume number");
-            throw EventMessageException(&error_msg, &debug_info, nullptr);
+            throw EventMessageException(&error_msg, &debug_info, &event_line);
         }
     }
     else
     {
         std::string error_msg("Invalid DRBD event: Missing volume number");
         std::string debug_info("Missing volume number");
-        throw EventMessageException(&error_msg, &debug_info, nullptr);
+        throw EventMessageException(&error_msg, &debug_info, &event_line);
     }
     if (vol == nullptr)
     {
         std::string error_msg("Non-existent volume id referenced by the DRBD events source");
         std::string debug_info("DRBD event line references a non-existent volume id");
-        throw EventObjectException(&error_msg, &debug_info, nullptr);
+        throw EventObjectException(&error_msg, &debug_info, &event_line);
     }
     return *vol;
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
-DrbdResource& DrbdMon::get_resource(PropsMap& event_props)
+DrbdResource& DrbdMon::get_resource(PropsMap& event_props, const std::string& event_line)
 {
     DrbdResource* res {nullptr};
     std::string* res_name = event_props.get(&DrbdResource::PROP_KEY_RES_NAME);
@@ -1061,13 +1061,13 @@ DrbdResource& DrbdMon::get_resource(PropsMap& event_props)
     {
         std::string error_msg("Received DRBD event line does not contain a resource name");
         std::string debug_info("DRBD event line contains no resource name");
-        throw EventMessageException(&error_msg, &debug_info, nullptr);
+        throw EventMessageException(&error_msg, &debug_info, &event_line);
     }
     if (res == nullptr)
     {
         std::string error_msg("Non-existent resource referenced by the DRBD events source");
         std::string debug_info("DRBD event line references a non-existent resource");
-        throw EventObjectException(&error_msg, &debug_info, nullptr);
+        throw EventObjectException(&error_msg, &debug_info, &event_line);
     }
     return *res;
 }

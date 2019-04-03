@@ -184,38 +184,38 @@ class DrbdMon : public Configurable, public Configurator
     bool use_dflt_freq_lmt {true};
 
     // @throws std::bad_alloc, EventMessageException
-    void create_connection(PropsMap& event_props);
+    void create_connection(PropsMap& event_props, const std::string& event_line);
     // @throws std::bad_alloc, EventMessageException
-    void create_device(PropsMap& event_props);
+    void create_device(PropsMap& event_props, const std::string& event_line);
     // @throws std::bad_alloc, EventMessageException
-    void create_peer_device(PropsMap& event_props);
+    void create_peer_device(PropsMap& event_props, const std::string& event_line);
     // @throws std::bad_alloc, EventMessageException
-    void create_resource(PropsMap& event_props);
+    void create_resource(PropsMap& event_props, const std::string& event_line);
 
     // @throws EventMessageException, EventObjectException
-    void update_connection(PropsMap& event_props);
+    void update_connection(PropsMap& event_props, const std::string& event_line);
     // @throws EventMessageException, EventObjectException
-    void update_device(PropsMap& event_props);
+    void update_device(PropsMap& event_props, const std::string& event_line);
     // @throws EventMessageException, EventObjectException
-    void update_peer_device(PropsMap& event_props);
+    void update_peer_device(PropsMap& event_props, const std::string& event_line);
     // @throws EventMessageException, EventObjectException
-    void update_resource(PropsMap& event_props);
+    void update_resource(PropsMap& event_props, const std::string& event_line);
 
     // @throws EventMessageException
-    void destroy_connection(PropsMap& event_props);
+    void destroy_connection(PropsMap& event_props, const std::string& event_line);
     // @throws EventMessageException
-    void destroy_device(PropsMap& event_props);
+    void destroy_device(PropsMap& event_props, const std::string& event_line);
     // @throws EventMessageException
-    void destroy_peer_device(PropsMap& event_props);
+    void destroy_peer_device(PropsMap& event_props, const std::string& event_line);
     // @throws EventMessageException
-    void destroy_resource(PropsMap& event_props);
+    void destroy_resource(PropsMap& event_props, const std::string& event_line);
 
     // @throws EventMessageException, EventObjectException
-    DrbdConnection& get_connection(DrbdResource& res, PropsMap& event_props);
+    DrbdConnection& get_connection(DrbdResource& res, PropsMap& event_props, const std::string& event_line);
     // @throws EventMessageException, EventObjectException
-    DrbdVolume& get_device(VolumesContainer& vol_con, PropsMap& event_props);
+    DrbdVolume& get_device(VolumesContainer& vol_con, PropsMap& event_props, const std::string& event_line);
     // @throws EventMessageException, EventObjectException
-    DrbdResource& get_resource(PropsMap& event_props);
+    DrbdResource& get_resource(PropsMap& event_props, const std::string& event_line);
 
     // Loads the event_props map with the properties contained in tokens
     //
