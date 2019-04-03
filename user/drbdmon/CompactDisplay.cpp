@@ -128,7 +128,7 @@ const int CompactDisplay::RES_NAME_WIDTH   = 48;
 const int CompactDisplay::ROLE_WIDTH       = 10;
 const int CompactDisplay::VOL_NR_WIDTH     = 5;
 const int CompactDisplay::MINOR_NR_WIDTH   = 7;
-const int CompactDisplay::CONN_NAME_WIDTH  = 20;
+const int CompactDisplay::CONN_NAME_WIDTH  = 48;
 const int CompactDisplay::CONN_STATE_WIDTH = 20;
 const int CompactDisplay::DISK_STATE_WIDTH = 20;
 const int CompactDisplay::REPL_STATE_WIDTH = 20;
@@ -527,10 +527,10 @@ bool CompactDisplay::list_resources()
             if (next_column(7 + RES_NAME_WIDTH + ROLE_WIDTH))
             {
                 write_fmt(
-                    "%s%s%sRES:%s",
+                    "%s%s%sRES:%s ",
                     f_mark, mark_icon, f_res, F_RES_NAME
                 );
-                write_string_field(res.get_name(), RES_NAME_WIDTH);
+                write_string_field(res.get_name(), RES_NAME_WIDTH, true);
                 write_fmt(
                     "%s %s%s%-*s%s",
                     F_RESET, f_role, role_icon, ROLE_WIDTH, res.get_role_label(), F_RESET
@@ -584,13 +584,20 @@ void CompactDisplay::list_connections(DrbdResource& res)
 
                 const std::string& conn_name = conn.get_name();
 
-                // Mark (1) + connection icon (1) + role icon (1) + name length
-                if (next_column(3 + conn_name.length()))
+                // Mark (1) + connection icon (1) + role icon (1) + min(name length, CONN_NAME_WIDTH)
+                if (
+                    next_column(
+                        3 +
+                        std::min(static_cast<uint16_t> (conn_name.length()), static_cast<uint16_t> (CONN_NAME_WIDTH))
+                    )
+                )
                 {
                     write_fmt(
-                        "%s%s%s%s%s%s%s",
-                        f_conn, mark_off, conn_good, f_role, role_icon, conn_name.c_str(), F_RESET
+                        "%s%s%s%s%s",
+                        f_conn, mark_off, conn_good, f_role, role_icon
                     );
+                    write_string_field(conn_name, CONN_NAME_WIDTH, false);
+                    write_text(F_RESET);
                 }
             }
         }
@@ -647,9 +654,13 @@ void CompactDisplay::list_connections(DrbdResource& res)
                 if (next_column(6 + CONN_NAME_WIDTH + CONN_STATE_WIDTH + ROLE_WIDTH))
                 {
                     write_fmt(
-                        "%s%s%s%s%s%-*s%s %s%-*s%s %s%s%-*s%s",
-                        F_MARK, mark_on, f_conn, conn_icon, role_icon, CONN_NAME_WIDTH,
-                        conn.get_name().c_str(), F_RESET, f_conn_state, CONN_STATE_WIDTH,
+                        "%s%s%s%s%s",
+                        F_MARK, mark_on, f_conn, conn_icon, role_icon
+                    );
+                    write_string_field(conn.get_name(), CONN_NAME_WIDTH, true);
+                    write_fmt(
+                        "%s %s%-*s%s %s%s%-*s%s",
+                        F_RESET, f_conn_state, CONN_STATE_WIDTH,
                         conn.get_connection_state_label(), F_RESET, f_role, role_icon,
                         ROLE_WIDTH, conn.get_role_label(), F_RESET
                     );
@@ -1225,7 +1236,11 @@ void CompactDisplay::write_fmt(const char* format, ...) const noexcept
     write_buffer(output_buffer, safe_length);
 }
 
-void CompactDisplay::write_string_field(const std::string& text, const size_t field_width) const noexcept
+void CompactDisplay::write_string_field(
+    const std::string& text,
+    const size_t field_width,
+    const bool fill
+) const noexcept
 {
     const size_t text_length = text.length();
     if (text_length <= field_width)
@@ -1237,11 +1252,14 @@ void CompactDisplay::write_string_field(const std::string& text, const size_t fi
                 static_cast<size_t> (field_width - text_length),
                 static_cast<size_t> (OUTPUT_BUFFER_SIZE)
             );
-            for (size_t idx = 0; idx < fill_length; ++idx)
+            if (fill)
             {
-                output_buffer[idx] = ' ';
+                for (size_t idx = 0; idx < fill_length; ++idx)
+                {
+                    output_buffer[idx] = ' ';
+                }
+                write_buffer(output_buffer, fill_length);
             }
-            write_buffer(output_buffer, fill_length);
         }
     }
     else
