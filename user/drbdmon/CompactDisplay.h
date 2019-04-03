@@ -306,8 +306,9 @@ class CompactDisplay : public GenericDisplay, public Configurable
     void write_char(const char ch) const noexcept;
     void write_text(const char* text) const noexcept;
     void write_fmt(const char* format, ...) const noexcept;
+    void write_string_field(const std::string& text, size_t field_width) const noexcept;
 
-    void write_buffer(const char* buffer, size_t length) const noexcept;
+    void write_buffer(const char* buffer, const size_t write_length) const noexcept;
 };
 
 #endif	/* COMPACTDISPLAY_H */

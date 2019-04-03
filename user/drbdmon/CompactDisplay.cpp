@@ -124,7 +124,7 @@ const uint16_t CompactDisplay::MAX_SIZE_X = 1024;
 const uint16_t CompactDisplay::MIN_SIZE_Y =   15;
 const uint16_t CompactDisplay::MAX_SIZE_Y = 1024;
 
-const int CompactDisplay::RES_NAME_WIDTH   = 32;
+const int CompactDisplay::RES_NAME_WIDTH   = 48;
 const int CompactDisplay::ROLE_WIDTH       = 10;
 const int CompactDisplay::VOL_NR_WIDTH     = 5;
 const int CompactDisplay::MINOR_NR_WIDTH   = 7;
@@ -527,9 +527,13 @@ bool CompactDisplay::list_resources()
             if (next_column(7 + RES_NAME_WIDTH + ROLE_WIDTH))
             {
                 write_fmt(
-                    "%s%s%sRES:%s %-*s%s %s%s%-*s%s",
-                    f_mark, mark_icon, f_res, F_RES_NAME, RES_NAME_WIDTH, res.get_name().c_str(), F_RESET,
-                    f_role, role_icon, ROLE_WIDTH, res.get_role_label(), F_RESET
+                    "%s%s%sRES:%s",
+                    f_mark, mark_icon, f_res, F_RES_NAME
+                );
+                write_string_field(res.get_name(), RES_NAME_WIDTH);
+                write_fmt(
+                    "%s %s%s%-*s%s",
+                    F_RESET, f_role, role_icon, ROLE_WIDTH, res.get_role_label(), F_RESET
                 );
             }
 
@@ -1221,6 +1225,42 @@ void CompactDisplay::write_fmt(const char* format, ...) const noexcept
     write_buffer(output_buffer, safe_length);
 }
 
+void CompactDisplay::write_string_field(const std::string& text, const size_t field_width) const noexcept
+{
+    const size_t text_length = text.length();
+    if (text_length <= field_width)
+    {
+        write_buffer(text.c_str(), text_length);
+        if (text_length < field_width)
+        {
+            const size_t fill_length = std::min(
+                static_cast<size_t> (field_width - text_length),
+                static_cast<size_t> (OUTPUT_BUFFER_SIZE)
+            );
+            for (size_t idx = 0; idx < fill_length; ++idx)
+            {
+                output_buffer[idx] = ' ';
+            }
+            write_buffer(output_buffer, fill_length);
+        }
+    }
+    else
+    {
+        // Print truncation indicator only in fields with a length of at least 6 bytes
+        if (field_width >= 6)
+        {
+            // Print truncated text and truncation indicator
+            write_buffer(text.c_str(), field_width - 3);
+            write_buffer("...", 3);
+        }
+        else
+        {
+            // Print truncated text without truncation indicator
+            write_buffer(text.c_str(), field_width);
+        }
+    }
+}
+
 /**
  * Writes buffered data to the output_fd file descriptor
  *
@@ -1230,8 +1270,9 @@ void CompactDisplay::write_fmt(const char* format, ...) const noexcept
  * @param buffer The buffered data to write
  * @param length Length of the buffered data in the (possibly larger) buffer
  */
-void CompactDisplay::write_buffer(const char* buffer, size_t length) const noexcept
+void CompactDisplay::write_buffer(const char* buffer, const size_t write_length) const noexcept
 {
+    size_t length = write_length;
     uint32_t loop_guard {0};
     ssize_t written {0};
     while (length > 0)
