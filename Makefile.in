@@ -50,8 +50,9 @@ WITH_CLITEST = @WITH_CLITEST@
 SHELL=/bin/bash
 
 PNAME	:= drbd-utils
-DOCKERREGISTRY = drbd.io
+DOCKERREGISTRY = quay.io/linbit
 DOCKERREGPATH = $(DOCKERREGISTRY)/$(PNAME)
+DOCKER_TAG ?= latest
 
 TOOLS_DIRS  := user/shared user/v9 scripts
 DOC_DIRS    := documentation/v9 documentation/ja/v9
@@ -211,6 +212,10 @@ check_changelogs_up2date:
 	then \
 	   echo -e "\n\tconfigure.ac needs update"; \
 	   up2date=false; fi ; \
+	if ! grep "ENV DRBD_UTILS_VERSION $$dver_re" >/dev/null 2>&1 Dockerfile; \
+	then \
+	   echo -e "\n\tDockerfile needs update"; \
+	   up2date=false; fi ; \
 	if ! grep "^drbd-utils ($$dver_re" >/dev/null 2>&1 debian/changelog; \
 	then \
 	   echo -e "\n\tdebian/changelog needs update [ignored]\n"; \
@@ -312,13 +317,12 @@ dockerimage: debrelease
 else
 dockerimage:
 endif
-	docker build -t $(DOCKERREGPATH) .
+	docker build -t $(DOCKERREGPATH):$(DOCKER_TAG) .
+	docker tag $(DOCKERREGPATH):$(DOCKER_TAG) $(DOCKERREGPATH):latest
 
-# this tarkget is used in lbbuild to decide which docker tags to push
-# usually DOCKERREGPATH should be returned
-# but this docker image is only used as base for linstor-satellite. at least for now
+.PHONY: dockerpath
 dockerpath:
-	@echo ""
+	@echo $(DOCKERREGPATH):latest $(DOCKERREGPATH):$(DOCKER_TAG)
 
 Makefile.in: ;
 Makefile: Makefile.in config.status
