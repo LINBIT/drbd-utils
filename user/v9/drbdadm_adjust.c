@@ -836,10 +836,12 @@ struct resources running_config = STAILQ_HEAD_INITIALIZER(running_config);
 struct d_resource *parse_drbdsetup_show(const char *name)
 {
 	struct d_resource *res = NULL;
+	char *fake_drbdsetup_show;
 	char* argv[4];
-	int pid, argc;
+	int pid = -1, argc;
 	int token;
 
+	fake_drbdsetup_show = getenv("FAKE_DRBDSETUP_SHOW");
 	/* disable check_uniq, so it won't interfere
 	 * with parsing of drbdsetup show output */
 	config_valid = 2;
@@ -855,8 +857,15 @@ struct d_resource *parse_drbdsetup_show(const char *name)
 		argv[argc++] = ssprintf("%s", name);
 	argv[argc++] = NULL;
 
-	/* actually parse drbdsetup show output */
-	yyin = m_popen(&pid,argv);
+	if (fake_drbdsetup_show) {
+		yyin = fopen(fake_drbdsetup_show, "r");
+		if (!yyin) {
+			err("Failed to open FAKE_DRBDSETUP_SHOW %s\n", fake_drbdsetup_show);
+			exit(E_USAGE);
+		}
+	} else {
+		yyin = m_popen(&pid, argv);
+	}
 	for (;;) {
 		token = yylex();
 		if (token == 0)
@@ -877,7 +886,8 @@ struct d_resource *parse_drbdsetup_show(const char *name)
 		insert_tail(&running_config, res);
 	}
 	fclose(yyin);
-	waitpid(pid, 0, 0);
+	if (pid != -1)
+		waitpid(pid, 0, 0);
 
 	post_parse(&running_config, DRBDSETUP_SHOW);
 
