@@ -1364,6 +1364,11 @@ void initialize_al(struct format *cfg)
 		 *
 		 * For 8.4 and 9.0, we initialize to something that is
 		 * valid magic, valid crc, and transaction_type = 0xffff.
+		 *
+		 * Even if this is a persistent memory device (NVDIMM), we
+		 * still initialize it using the block device format. DRBD
+		 * will overwrite it with the persistent memory format when
+		 * it detects that it can use it as such.
 		 */
 		struct al_transaction_on_disk *al = on_disk_buffer;
 		unsigned crc_be = 0;
@@ -1566,12 +1571,27 @@ void printf_al_84(struct format *cfg, struct al_transaction_on_disk *al_disk,
 		max_slot_nr, cfg->md.al_nr_extents);
 }
 
+void printf_al_pmem(struct format *cfg, struct al_on_pmem *al_on_pmem)
+{
+	unsigned int nr_extents = cfg->md.al_nr_extents;
+	int i;
+
+	for (i = 0; i < nr_extents; i++) {
+		uint32_t extent_nr = be32_to_cpu(al_on_pmem->slots[i].be);
+		if (extent_nr == ~0U)
+			printf("# slot[%u]:       FREE\n", i);
+		else
+			printf("# slot[%u]: %10u\n", i, extent_nr);
+	}
+}
+
 void printf_al(struct format *cfg)
 {
 	off_t al_on_disk_off = cfg->al_offset;
 	off_t al_size = cfg->md.al_stripes * cfg->md.al_stripe_size_4k * 4096;
 	struct al_sector_on_disk *al_512_disk = on_disk_buffer;
 	struct al_transaction_on_disk *al_4k_disk = on_disk_buffer;
+	struct al_on_pmem *al_on_pmem = on_disk_buffer;
 	unsigned block_nr_offset = 0;
 	unsigned N;
 
@@ -1597,6 +1617,12 @@ void printf_al(struct format *cfg)
 		 * transaction layouts */
 		if (format_version(cfg) < DRBD_V08)
 			printf_al_07(cfg, al_512_disk);
+
+		/* pmem optimized format */
+		else if (DRBD_AL_PMEM_MAGIC == be32_to_cpu(al_on_pmem->magic.be)) {
+			printf_al_pmem(cfg, al_on_pmem);
+			break;
+		}
 
 		/* looks like we have the new al format */
 		else if (is_al_84 ||
@@ -1742,7 +1768,7 @@ static unsigned int al_tr_number_to_on_disk_slot(struct format *cfg, unsigned in
  * Returns negative error code for non-interpretable data,
  * 0 for "just mark me clean, nothing more to do",
  * and positive if we have to apply something. */
-int replay_al_84(struct format *cfg, uint32_t *hot_extent)
+static int replay_al_84(struct format *cfg, uint32_t *hot_extent)
 {
 	const unsigned int mx = cfg->md.al_stripes * cfg->md.al_stripe_size_4k;
 	struct al_transaction_on_disk *al_disk = on_disk_buffer;
@@ -1860,6 +1886,23 @@ int replay_al_84(struct format *cfg, uint32_t *hot_extent)
 		}
 	}
 	return found_valid_updates;
+}
+
+/* Expects the AL to be read into on_disk_buffer already.
+ * Returns negative error code for non-interpretable data,
+ * 0 for "just mark me clean, nothing more to do",
+ * and positive if we have to apply something. */
+static int replay_al_pmem(struct format *cfg, uint32_t *hot_extent)
+{
+	struct al_on_pmem *al_on_pmem = on_disk_buffer;
+	unsigned int nr_extents = cfg->md.al_nr_extents;
+	unsigned int i;
+
+	for (i = 0; i < nr_extents; i++)
+		hot_extent[i] = be32_to_cpu(al_on_pmem->slots[i].be);
+
+	/* AL format is always valid, so return a positive value */
+	return 1;
 }
 
 int cmp_u32(const void *p1, const void *p2)
@@ -1986,6 +2029,7 @@ int meta_apply_al(struct format *cfg, char **argv __attribute((unused)), int arg
 {
 	off_t al_size;
 	struct al_transaction_on_disk *al_4k_disk = on_disk_buffer;
+	struct al_on_pmem *al_on_pmem = on_disk_buffer;
 	uint32_t hot_extent[AL_EXTENTS_MAX];
 	int need_to_update_md_flags = 0;
 	int re_initialize_anyways = 0;
@@ -2033,7 +2077,11 @@ int meta_apply_al(struct format *cfg, char **argv __attribute((unused)), int arg
 		 DRBD_AL_MAGIC == be32_to_cpu(al_4k_disk[0].magic.be) ||
 		 DRBD_AL_MAGIC == be32_to_cpu(al_4k_disk[1].magic.be) ||
 		 cfg->md.al_stripes != 1 || cfg->md.al_stripe_size_4k != 8) {
-		err = replay_al_84(cfg, hot_extent);
+		if (DRBD_AL_PMEM_MAGIC == be32_to_cpu(al_on_pmem->magic.be)) {
+			err = replay_al_pmem(cfg, hot_extent);
+		} else {
+			err = replay_al_84(cfg, hot_extent);
+		}
 	} else {
 		/* try the old al format anyways, this may be the first time we
 		* run after upgrading from < 8.4 to 8.4, and we need to
