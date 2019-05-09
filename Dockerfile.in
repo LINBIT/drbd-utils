@@ -24,5 +24,5 @@ RUN cd ${HOME} && \
 FROM ubuntu:xenial
 MAINTAINER Roland Kammerer <roland.kammerer@linbit.com>
 COPY --from=builder /home/makepkg/*.deb /tmp/
-RUN apt-get update -y && apt-get install -y python-natsort python-protobuf && dpkg -i /tmp/*.deb && rm /tmp/*.deb && apt-get clean -y
+RUN dpkg -i /tmp/*.deb && rm /tmp/*.deb && apt-get clean -y
 RUN echo 'global { usage-count no; }' > /etc/drbd.d/global_common.conf
