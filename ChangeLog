@@ -3,6 +3,15 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.9.0
+--------
+ * drbdadm,v9: do not ignore stacked/upper implicit paths.
+ * docker: provide initial integration.
+ * doc,v9: document transport keyword
+ * drbdmeta,v9: support for PMEM activity log format
+ * drbdadm: allow faking of drbdsetup show output
+ * drbdmeta,v9: fix forget-peer
+
 9.8.0
 --------
  * i18n: use propper po files
