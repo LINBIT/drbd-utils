@@ -4679,17 +4679,47 @@ int meta_chk_offline_resize(struct format *cfg, char **argv, int argc)
 	return v08_move_internal_md_after_resize(cfg);
 }
 
+static int day0_peer_id(struct format *cfg)
+{
+	int p;
+
+	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
+		if (p == cfg->md.node_id)
+			continue;
+		if (cfg->md.peers[p].bitmap_index == -1)
+			return p;
+	}
+	return -1;
+}
+
 int meta_forget_peer(struct format *cfg, char **argv, int argc)
 {
+	int day0_p;
 	int err;
+	int to_index;
 
 	err = cfg->ops->open(cfg);
 	if (err)
 		return -1;
 
+	day0_p = day0_peer_id(cfg);
+
+	to_index = cfg->md.peers[option_node_id].bitmap_index;
 	cfg->md.peers[option_node_id].bitmap_index = -1;
-	cfg->md.peers[option_node_id].bitmap_uuid = 0;
 	cfg->md.peers[option_node_id].flags = 0;
+	if (day0_p > -1) {
+		int from_index;
+		cfg->md.peers[option_node_id].bitmap_uuid = cfg->md.peers[day0_p].bitmap_uuid;
+		cfg->md.peers[option_node_id].bitmap_dagtag = cfg->md.peers[day0_p].bitmap_dagtag;
+		from_index = cfg->md.peers[day0_p].bitmap_index;
+		fprintf(stderr, "Copying bitmap slot %d to %d not implemented.\n"
+			"Do it with dump-md, edit, restore-md\n", from_index, to_index);
+	} else {
+		cfg->md.peers[option_node_id].bitmap_uuid = 0;
+		cfg->md.peers[option_node_id].bitmap_dagtag = 0;
+		fprintf(stderr, "Setting all bits in slot %d not implemented.\n"
+			"Do it with dump-md, edit, restore-md\n", to_index);
+	}
 
 	cfg->ops->md_cpu_to_disk(cfg);
 	err = cfg->ops->close(cfg) || err;
