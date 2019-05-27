@@ -2699,12 +2699,12 @@ static void peer_device_status_json(struct peer_devices_list *peer_device)
 		printf("          \"want\": %.2f,\n",
 				s->peer_dev_rs_c_sync_rate ? s->peer_dev_rs_c_sync_rate / 1024.0 : 0.0);
 
-		db = s->peer_dev_rs_db0_sectors;
+		db = (int64_t) s->peer_dev_rs_db0_sectors;
 		dt = s->peer_dev_rs_dt0_ms ?: 1;
 		printf("          \"db0/dt0 [MiB/s]\": %.2f,\n",
 			db/dt /* sectors/ms */
 			*1000.0/2048.0 /* MiB/s */);
-		db = s->peer_dev_rs_db1_sectors;
+		db = (int64_t) s->peer_dev_rs_db1_sectors;
 		dt = s->peer_dev_rs_dt1_ms ?: 1;
 		printf("          \"db1/dt1 [MiB/s]\": %.2f,\n", db/dt *1000.0/2048.0);
 
@@ -2714,7 +2714,7 @@ static void peer_device_status_json(struct peer_devices_list *peer_device)
 
 		/* estimate time-to-run, based on "db1/dt1" */
 		printf("          \"estimated-seconds-to-finish\": %.0f,\n",
-			db == 0 ? 987654321 : dt * 1e-3 * sectors_to_go / db);
+			db <= 0 ? 987654321 : dt * 1e-3 * sectors_to_go / db);
 
 		db = s->peer_dev_rs_total - sectors_to_go;
 		dt = s->peer_dev_rs_dt_start_ms - s->peer_dev_rs_paused_ms;
@@ -2913,19 +2913,19 @@ void print_peer_device_statistics(int indent,
 		dt = s->peer_dev_rs_dt_start_ms - s->peer_dev_rs_paused_ms;
 		wrap_printf(indent, " dbdt:%.2f", db/(dt?:1) *1000.0/2048.0);
 
-		db = s->peer_dev_rs_db0_sectors;
+		db = (int64_t) s->peer_dev_rs_db0_sectors;
 		dt = s->peer_dev_rs_dt0_ms ?: 1;
 		wrap_printf(indent, " dbdt0:%.2f",
 				db/dt /* sectors/ms */
 				*1000.0/2048.0 /* MiB/s */);
 	}
 
-	db = s->peer_dev_rs_db1_sectors;
+	db = (int64_t) s->peer_dev_rs_db1_sectors;
 	dt = s->peer_dev_rs_dt1_ms ?: 1;
 	wrap_printf(indent, " dbdt1:%.2f", db/dt *1000.0/2048.0);
 
 	/* estimate time-to-run, based on "db1/dt1" */
-	wrap_printf(indent, " eta:%.0f", db ? dt * 1e-3 * sectors_to_go / db : NAN);
+	wrap_printf(indent, " eta:%.0f", db > 0 ? dt * 1e-3 * sectors_to_go / db : NAN);
 }
 
 void resource_status(struct resources_list *resource)
