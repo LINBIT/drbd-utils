@@ -1327,7 +1327,7 @@ void re_initialize_md_offsets(struct format *cfg)
 		/* we need (slightly less than) ~ this much bitmap sectors: */
 		md_size_sect = bm_bytes(&cfg->md, cfg->bd_size >> 9) >> 9;
 		md_size_sect = ALIGN(md_size_sect, 8);    /* align on 4K blocks */
-		if (md_size_sect > (MD_BM_MAX_BYTE_FLEX>>9)) {
+		if (md_size_sect > (MD_BM_MAX_BYTE_FLEX>>9)*cfg->md.max_peers) {
 			fprintf(stderr, "Bitmap for that device got too large.\n");
 			if (BITS_PER_LONG == 32)
 				fprintf(stderr, "Maybe try a 64bit arch?\n");
