@@ -22,6 +22,7 @@ extern "C"
 #include <MessageLog.h>
 #include <Configurable.h>
 #include <ConfigOption.h>
+#include <colormodes.h>
 
 class DrbdMon;
 
@@ -42,43 +43,10 @@ class CompactDisplay : public GenericDisplay, public Configurable
     static const ConfigOption OPT_ASCII;
     static const ConfigOption OPT_PROBLEMS;
 
-    static const char* F_NORM;
-    static const char* F_WARN;
-    static const char* F_ALERT;
-    static const char* F_RESET;
-
-    static const char* F_MARK;
-
-    static const char* F_HEADER;
-
-    static const char* F_RES_NORM;
-    static const char* F_RES_NAME_NORM;
-    static const char* F_RES_NAME_ALERT;
-    static const char* F_VOL_NORM;
-    static const char* F_VOL_CLIENT;
-    static const char* F_VOL_MINOR;
-    static const char* F_CONN_NORM;
-    static const char* F_PRIMARY;
-    static const char* F_SECONDARY;
-    static const char* F_SYNC_PERC;
-    static const char* QUORUM_ALERT;
-
     static const int QUORUM_ALERT_WIDTH;
 
-    static const char* F_CONN_PRI_FG;
 
-    static const char* F_RES_NAME;
-    static const char* F_RES_COUNT;
-    static const char* F_PRB_COUNT;
-
-    static const char* F_CURSOR_POS;
-    static const char* F_HOTKEY;
-    static const char* F_PRB_HOTKEY;
-    static const char* F_ALERT_HOTKEY;
-
-    static const char* F_PAGE;
     static const int   PAGE_POS_R;
-    static const char* F_GOTO_PAGE;
     static const int   GOTO_PAGE_POS_R;
     static const int   GOTO_PAGE_CURSOR_POS;
 
@@ -154,7 +122,8 @@ class CompactDisplay : public GenericDisplay, public Configurable
         ResourcesMap& resources_map_ref,
         MessageLog&   log_ref,
         HotkeysMap&   hotkeys_info_ref,
-        const std::string* const node_name_ref
+        const std::string* const node_name_ref,
+        const color_mode colors
     );
     CompactDisplay(const CompactDisplay& orig) = delete;
     CompactDisplay& operator=(const CompactDisplay& orig) = delete;
@@ -192,6 +161,82 @@ class CompactDisplay : public GenericDisplay, public Configurable
         PAGE_NR
     };
 
+    class DisplayFormats
+    {
+      public:
+        const char* const F_NORM;
+        const char* const F_WARN;
+        const char* const F_ALERT;
+        const char* const F_RESET;
+
+        const char* const F_MARK;
+
+        const char* const F_HEADER;
+
+        const char* const F_RES_NORM;
+        const char* const F_VOL_NORM;
+        const char* const F_VOL_CLIENT;
+        const char* const F_VOL_MINOR;
+        const char* const F_CONN_NORM;
+        const char* const F_PRIMARY;
+        const char* const F_SECONDARY;
+        const char* const F_SYNC_PERC;
+        const char* const QUORUM_ALERT;
+
+        // Foreground color for the 'Primary' role highlighting
+        // of connections (peer resource role)
+        const char* const F_CONN_PRI_FG;
+
+        const char* const F_RES_NAME;
+        const char* const F_RES_COUNT;
+        const char* const F_PRB_COUNT;
+
+        const char* const F_CURSOR_POS;
+        const char* const F_HOTKEY;
+        const char* const F_PRB_HOTKEY;
+        const char* const F_ALERT_HOTKEY;
+
+        const char* const F_PAGE;
+        const char* const F_GOTO_PAGE;
+
+        const char* const F_SYNC_BLK;
+        const char* const F_UNSYNC_BLK;
+
+        DisplayFormats(
+            const char* const f_norm_ref,
+            const char* const f_warn_ref,
+            const char* const f_alert_ref,
+            const char* const f_reset_ref,
+            const char* const f_mark_ref,
+            const char* const f_header_ref,
+            const char* const f_res_norm_ref,
+            const char* const f_vol_norm_ref,
+            const char* const f_vol_client_ref,
+            const char* const f_vol_minor_ref,
+            const char* const f_conn_norm_ref,
+            const char* const f_primary_ref,
+            const char* const f_secondary_ref,
+            const char* const f_sync_perc_ref,
+            const char* const quorum_alert_ref,
+            const char* const f_conn_pri_fg_ref,
+            const char* const f_res_name_ref,
+            const char* const f_res_count_ref,
+            const char* const f_prb_count_ref,
+            const char* const f_cursor_pos_ref,
+            const char* const f_hotkey_ref,
+            const char* const f_prb_hotkey_ref,
+            const char* const f_alert_hotkey_ref,
+            const char* const f_page_ref,
+            const char* const f_goto_page_ref,
+            const char* const f_sync_blk_ref,
+            const char* const f_unsync_blk_ref
+        );
+        DisplayFormats(const DisplayFormats& orig) = default;
+        DisplayFormats(DisplayFormats&& orig) = default;
+        DisplayFormats& operator=(const DisplayFormats& orig) = delete;
+        DisplayFormats& operator=(DisplayFormats&& orig) = delete;
+    };
+
     class ProgressBar
     {
       public:
@@ -207,14 +252,12 @@ class CompactDisplay : public GenericDisplay, public Configurable
         static const char* ASCII_SYNC_BLK;
         static const char* ASCII_UNSYNC_BLK;
 
-        static const char* F_SYNC_BLK;
-        static const char* F_UNSYNC_BLK;
-
       private:
         CompactDisplay* dsp;
-        const bool pb_utf8_mode;
-        size_t utf8_sync_blk_width {0};
-        size_t utf8_unsync_blk_width {0};
+        size_t sync_blk_width {0};
+        size_t unsync_blk_width {0};
+        const char* sync_blk;
+        const char* unsync_blk;
         std::unique_ptr<char[]> sync_blk_buffer_mgr {nullptr};
         std::unique_ptr<char[]> unsync_blk_buffer_mgr {nullptr};
         const char* sync_blk_buffer {nullptr};
@@ -231,6 +274,9 @@ class CompactDisplay : public GenericDisplay, public Configurable
 
         virtual void display_progress_bar(const uint16_t width, const uint16_t sync_perc) const;
     };
+
+    static const DisplayFormats DSP_FMT_16COLOR;
+    static const DisplayFormats DSP_FMT_256COLOR;
 
     DrbdMon& drbdmon;
     ResourcesMap& resources_map;
@@ -284,6 +330,8 @@ class CompactDisplay : public GenericDisplay, public Configurable
 
     // 20 ms delay
     struct timespec write_retry_delay {0, 20000000};
+
+    const DisplayFormats* dsp_fmt;
 
     void page_nav_display() const;
     void page_nav_cursor() const;

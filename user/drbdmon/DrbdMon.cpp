@@ -1,6 +1,7 @@
 #include <new>
 #include <ios>
 #include <iostream>
+#include <iomanip>
 #include <stdexcept>
 #include <cstdlib>
 
@@ -33,6 +34,10 @@ const std::string DrbdMon::OPT_FREQ_LMT_KEY = "freqlmt";
 const ConfigOption DrbdMon::OPT_HELP(true, OPT_HELP_KEY);
 const ConfigOption DrbdMon::OPT_VERSION(true, OPT_VERSION_KEY);
 const ConfigOption DrbdMon::OPT_FREQ_LMT(false, OPT_FREQ_LMT_KEY);
+
+const char* DrbdMon::ENV_COLOR_MODE         = "DRBDMON_COLORS";
+const char* DrbdMon::COLOR_MODE_EXTENDED    = "extended";
+const char* DrbdMon::COLOR_MODE_BASIC       = "basic";
 
 const std::string DrbdMon::UNIT_SFX_SECONDS = "s";
 const std::string DrbdMon::UNIT_SFX_MILLISECONDS = "ms";
@@ -73,8 +78,10 @@ DrbdMon::DrbdMon(
     MessageLog& log_ref,
     MessageLog& debug_log_ref,
     fail_info&  fail_data_ref,
-    const std::string* const node_name_ref
+    const std::string* const node_name_ref,
+    const color_mode colors
 ):
+    drbdmon_colors(colors),
     arg_count(argc),
     arg_values(argv),
     resources_map(new ResourcesMap(&comparators::compare_string)),
@@ -128,7 +135,7 @@ void DrbdMon::run()
             // display interface unique_ptr initialization to ensure deallocation of the display
             // object if the current scope is left
             CompactDisplay* display_impl = new CompactDisplay(
-                *this, *resources_map, log, *hotkeys_info, node_name
+                *this, *resources_map, log, *hotkeys_info, node_name, drbdmon_colors
             );
             display = std::unique_ptr<GenericDisplay>(dynamic_cast<GenericDisplay*> (display_impl));
 
@@ -1239,6 +1246,11 @@ void DrbdMon::options_help() noexcept
     std::cerr << "    <interval>             Minimum delay between display updates [integer]\n";
     std::cerr << "    Supported unit suffixes: s (seconds), ms (milliseconds)\n";
     std::cerr << "    Default unit: s (seconds)\n";
+    std::cerr << '\n';
+    std::cerr << "Environment variables:\n";
+    std::cerr << "  " << std::left << std::setw(25) << ENV_COLOR_MODE << " Select color mode\n";
+    std::cerr << "    " << std::left << std::setw(23) << COLOR_MODE_EXTENDED << " Extended color mode (256 colors)\n";
+    std::cerr << "    " << std::left << std::setw(23) << COLOR_MODE_BASIC << " Basic color mode (16 colors)\n";
     std::cerr << std::endl;
 }
 
