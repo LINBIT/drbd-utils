@@ -21,6 +21,7 @@
 #include <Configurator.h>
 #include <comparators.h>
 #include <IntervalTimer.h>
+#include <colormodes.h>
 
 extern "C"
 {
@@ -43,6 +44,11 @@ class DrbdMon : public Configurable, public Configurator
     static const ConfigOption OPT_HELP;
     static const ConfigOption OPT_VERSION;
     static const ConfigOption OPT_FREQ_LMT;
+
+    // Environment variable for color mode selection
+    static const char* ENV_COLOR_MODE;
+    static const char* COLOR_MODE_EXTENDED;
+    static const char* COLOR_MODE_BASIC;
 
     static const std::string UNIT_SFX_SECONDS;
     static const std::string UNIT_SFX_MILLISECONDS;
@@ -98,6 +104,8 @@ class DrbdMon : public Configurable, public Configurator
         DEBUG_MODE
     };
 
+    const color_mode drbdmon_colors;
+
     // @throws std::bad_alloc
     DrbdMon(
         int argc,
@@ -105,7 +113,8 @@ class DrbdMon : public Configurable, public Configurator
         MessageLog& log_ref,
         MessageLog& debug_log_ref,
         fail_info& fail_data_ref,
-        const std::string* const node_name_ref
+        const std::string* const node_name_ref,
+        const color_mode colors
     );
     DrbdMon(const DrbdMon& orig) = delete;
     DrbdMon& operator=(const DrbdMon& orig) = delete;

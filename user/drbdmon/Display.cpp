@@ -2,40 +2,40 @@
 #include <Display.h>
 #include <DrbdMon.h>
 
-const char* Display::ANSI_CLEAR = "\x1b[f\x1b[0J\x1b[f";
-const char* Display::ANSI_CLEAR_LINE = "\x1b[K";
+const char* Display::ANSI_CLEAR = "\x1B[f\x1B[0J\x1B[f";
+const char* Display::ANSI_CLEAR_LINE = "\x1B[K";
 
 // Format of the header line
-const char* Display::FORMAT_HEADER = "\x1b[1;37;44m";
+const char* Display::FORMAT_HEADER = "\x1B[1;37;44m";
 
 // Resource formats
-const char* Display::RES_LABEL       = "\x1b[0;30;42mRES:\x1b[0m";
-const char* Display::RES_FORMAT_NAME = "\x1b[0;4;32m";
+const char* Display::RES_LABEL       = "\x1B[0;30;42mRES:\x1B[0m";
+const char* Display::RES_FORMAT_NAME = "\x1B[0;4;32m";
 
 // Role formats
-const char* Display::ROLE_LABEL            = "\x1b[0m";
-const char* Display::ROLE_FORMAT_PRIMARY   = "\x1b[0;1;36m";
-const char* Display::ROLE_FORMAT_SECONDARY = "\x1b[0;36m";
+const char* Display::ROLE_LABEL            = "\x1B[0m";
+const char* Display::ROLE_FORMAT_PRIMARY   = "\x1B[0;1;36m";
+const char* Display::ROLE_FORMAT_SECONDARY = "\x1B[0;36m";
 
 // Connection formats
-const char* Display::CONN_LABEL             = "\x1b[0;37;44mP:\x1b[0m";
-const char* Display::CONN_FORMAT_NAME       = "\x1b[0;4;37m";
-const char* Display::CONN_FORMAT_NODE_ID    = "\x1b[0m";
-const char* Display::CONN_FORMAT_STATE_NORM = "\x1b[0;32m";
+const char* Display::CONN_LABEL             = "\x1B[0;37;44mP:\x1B[0m";
+const char* Display::CONN_FORMAT_NAME       = "\x1B[0;4;37m";
+const char* Display::CONN_FORMAT_NODE_ID    = "\x1B[0m";
+const char* Display::CONN_FORMAT_STATE_NORM = "\x1B[0;32m";
 
 // Volume formats
-const char* Display::VOL_LABEL               = "\x1b[0;30;46mV:\x1b[0m";
-const char* Display::VOL_LABEL_MINOR         = "\x1b[0mminor #";
-const char* Display::VOL_FORMAT_NR           = "\x1b[0;32m";
-const char* Display::VOL_FORMAT_MINOR        = "\x1b[0;36m";
-const char* Display::VOL_FORMAT_STATE_NORM   = "\x1b[0;1;32m";
-const char* Display::VOL_FORMAT_STATE_CLIENT = "\x1b[0;1;33;44m";
-const char* Display::VOL_FORMAT_REPL_NORM    = "\x1b[0;32m";
+const char* Display::VOL_LABEL               = "\x1B[0;30;46mV:\x1B[0m";
+const char* Display::VOL_LABEL_MINOR         = "\x1B[0mminor #";
+const char* Display::VOL_FORMAT_NR           = "\x1B[0;32m";
+const char* Display::VOL_FORMAT_MINOR        = "\x1B[0;36m";
+const char* Display::VOL_FORMAT_STATE_NORM   = "\x1B[0;1;32m";
+const char* Display::VOL_FORMAT_STATE_CLIENT = "\x1B[0;1;33;44m";
+const char* Display::VOL_FORMAT_REPL_NORM    = "\x1B[0;32m";
 
 // Generic formats
-const char* Display::FORMAT_WARN  = "\x1b[0;30;43m";
-const char* Display::FORMAT_ALERT = "\x1b[1;33;41m";
-const char* Display::FORMAT_RESET = "\x1b[0m";
+const char* Display::FORMAT_WARN  = "\x1B[0;30;43m";
+const char* Display::FORMAT_ALERT = "\x1B[1;33;41m";
+const char* Display::FORMAT_RESET = "\x1B[0m";
 
 const uint16_t Display::MIN_SIZE_X =   40;
 const uint16_t Display::MAX_SIZE_X = 1024;

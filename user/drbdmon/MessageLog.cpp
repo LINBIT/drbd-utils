@@ -2,15 +2,15 @@
 
 #include <iostream>
 
-const char* MessageLog::MESSAGES_HEADER = "\x1b[0;30;42m MESSAGES \x1b[0m";
+const char* MessageLog::MESSAGES_HEADER = "\x1B[0;30;42m MESSAGES \x1B[0m";
 
-const char* MessageLog::F_ALERT_MARK = "\x1b[1;33;41m ALERT \x1b[0m";
-const char* MessageLog::F_WARN_MARK  = "\x1b[1;33;45m WARN  \x1b[0m";
-const char* MessageLog::F_INFO_MARK  = "\x1b[0;30;32m INFO  \x1b[0m";
-const char* MessageLog::F_ALERT      = "\x1b[1;31m";
-const char* MessageLog::F_WARN       = "\x1b[1;33m";
-const char* MessageLog::F_INFO       = "\x1b[1;32m";
-const char* MessageLog::F_RESET      = "\x1b[0m";
+const char* MessageLog::F_ALERT_MARK = "\x1B[1;33;41m ALERT \x1B[0m";
+const char* MessageLog::F_WARN_MARK  = "\x1B[1;33;45m WARN  \x1B[0m";
+const char* MessageLog::F_INFO_MARK  = "\x1B[0;30;32m INFO  \x1B[0m";
+const char* MessageLog::F_ALERT      = "\x1B[1;31m";
+const char* MessageLog::F_WARN       = "\x1B[1;33m";
+const char* MessageLog::F_INFO       = "\x1B[1;32m";
+const char* MessageLog::F_RESET      = "\x1B[0m";
 
 const std::string MessageLog::CAPACITY_ERROR = "MessageLog(): Illegal capacity (entries < 1)";
 
