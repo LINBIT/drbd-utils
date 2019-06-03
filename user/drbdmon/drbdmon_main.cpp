@@ -2,12 +2,14 @@
 #include <iostream>
 #include <cstdlib>
 #include <cstdio>
+#include <cstring>
 #include <new>
 #include <stdexcept>
 #include <memory>
 
 extern "C"
 {
+    #include <unistd.h>
     #include <time.h>
     #include <sys/wait.h>
     #include <signal.h>
@@ -18,13 +20,14 @@ extern "C"
 
 #include <DrbdMon.h>
 #include <MessageLog.h>
+#include <colormodes.h>
 
 // LOG_CAPACITY must be >= 1
 const size_t LOG_CAPACITY {10};
 const size_t DEBUG_LOG_CAPACITY {100};
 
 // Clear screen escape sequence
-const char* ANSI_CLEAR = "\x1b[H\x1b[2J";
+const char* ANSI_CLEAR = "\x1B[H\x1B[2J";
 
 const char* WINDOW_TITLE_APP = "LINBIT\xC2\xAE DrbdMon";
 
@@ -42,6 +45,7 @@ static bool adjust_ids(MessageLog* log, bool& ids_safe);
 static void query_node_name(std::unique_ptr<std::string>& node_name);
 static void set_window_title(const std::unique_ptr<std::string>& node_name);
 static void clear_window_title();
+static color_mode get_color_mode(const char*& invalid_value) noexcept;
 
 int main(int argc, char* argv[])
 {
@@ -71,6 +75,8 @@ int main(int argc, char* argv[])
         bool error_header_printed {false};
         try
         {
+            const char* invalid_color_value = nullptr;
+            color_mode colors = get_color_mode(invalid_color_value);
             if (log == nullptr)
             {
                 // std::out_of_range exception not handled, as it is
@@ -84,6 +90,16 @@ int main(int argc, char* argv[])
                 debug_log = std::unique_ptr<MessageLog>(new MessageLog(DEBUG_LOG_CAPACITY));
             }
 
+            if (invalid_color_value != nullptr)
+            {
+                std::string error_msg("Invalid environment value \"");
+                error_msg += invalid_color_value;
+                error_msg += "\" for key ";
+                error_msg += DrbdMon::ENV_COLOR_MODE;
+                error_msg += " ignored.";
+                log->add_entry(MessageLog::log_level::WARN, error_msg);
+            }
+
             if (node_name == nullptr)
             {
                 query_node_name(node_name);
@@ -93,7 +109,7 @@ int main(int argc, char* argv[])
             if (ids_safe || adjust_ids(log.get(), ids_safe))
             {
                 const std::unique_ptr<DrbdMon> dm_instance(
-                    new DrbdMon(argc, argv, *log, *debug_log, fail_data, node_name.get())
+                    new DrbdMon(argc, argv, *log, *debug_log, fail_data, node_name.get(), colors)
                 );
                 dm_instance->run();
                 fin_action = dm_instance->get_fin_action();
@@ -400,16 +416,40 @@ static void set_window_title(const std::unique_ptr<std::string>& node_name)
     if (node_name != nullptr)
     {
         std::string* node_name_ptr = node_name.get();
-        std::cout << "\x1b]2;" << WINDOW_TITLE_APP << "(Node " << *node_name_ptr << ")\x07";
+        std::cout << "\x1B]2;" << WINDOW_TITLE_APP << "(Node " << *node_name_ptr << ")\x07";
     }
     else
     {
-        std::cout << "\x1b]2;" << WINDOW_TITLE_APP << "\x07";
+        std::cout << "\x1B]2;" << WINDOW_TITLE_APP << "\x07";
     }
     std::cout << std::flush;
 }
 
 static void clear_window_title()
 {
-    std::cout << "\x1b]2; \x07" << std::flush;
+    std::cout << "\x1B]2; \x07" << std::flush;
+}
+
+static color_mode get_color_mode(const char*& invalid_value) noexcept
+{
+    // Default to extended color mode
+    color_mode result = color_mode::EXTENDED;
+    if (environ != nullptr)
+    {
+        const char* env_value = getenv(DrbdMon::ENV_COLOR_MODE);
+        if (env_value != nullptr)
+        {
+            // If the environment variable is set, but something else than extended color mode is selected,
+            // default to basic color mode
+            if (std::strcmp(DrbdMon::COLOR_MODE_EXTENDED, env_value) != 0)
+            {
+                result = color_mode::BASIC;
+                if (std::strcmp(DrbdMon::COLOR_MODE_BASIC, env_value) != 0)
+                {
+                    invalid_value = env_value;
+                }
+            }
+        }
+    }
+    return result;
 }
