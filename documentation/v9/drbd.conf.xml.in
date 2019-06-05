@@ -848,6 +848,7 @@ resource
         <pick_drbdsetup_option name="transport"/>
         <pick_drbdsetup_option name="use-rle"/>
         <pick_drbdsetup_option name="verify-alg"/>
+        <pick_drbdsetup_option name="allow-remote-read"/>
       </variablelist>
     </refsect2>
 

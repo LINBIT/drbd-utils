@@ -896,6 +896,7 @@ const struct en_map quorum_map[] = {
 	{ "socket-check-timeout", NUMERIC(sock_check_timeo, SOCKET_CHECK_TIMEO) },	\
 	{ "fencing", ENUM(fencing_policy, FENCING) },					\
 	{ "max-buffers", NUMERIC(max_buffers, MAX_BUFFERS) },				\
+	{ "allow-remote-read", BOOLEAN(allow_remote_read, ALLOW_REMOTE_READ) },					\
 	{ "_name", STRING(name) }
 
 struct context_def disk_options_ctx = {

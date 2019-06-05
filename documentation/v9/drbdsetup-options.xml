@@ -1361,6 +1361,31 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
     </definition>
   </drbdsetup_option>
 
+  <drbdsetup_option name="allow-remote-read">
+    <term xml:id="allow-remote-read"><option>allow-remote-read <replaceable>bool-value</replaceable></option></term>
+
+    <definition>
+      <indexterm significance="normal">
+	<primary>drbd.conf</primary>
+	<secondary>allow-remote-read</secondary>
+      </indexterm>
+
+      <para>Allows or disallows DRBD to read from a peer node.</para>
+
+      <para>When the disk of a primary node is detached, DRBD will try to
+      continue reading and writing from another node in the cluster. For this
+      purpose, it searches for nodes with up-to-date data, and uses any found
+      node to resume operations. In some cases it may not be desirable to read
+      back data from a peer node, because the node should only be used as a
+      replication target. In this case, the <option>allow-remote-read</option>
+      parameter can be set to <constant>no</constant>, which would prohibit
+      this node from reading data from the peer node.</para>
+
+      <para>The <option>allow-remote-read</option> parameter is available since DRBD
+      9.0.19, and defaults to <constant>yes</constant>.</para>
+    </definition>
+  </drbdsetup_option>
+
   <drbdsetup_option name="discard-my-data">
     <term xml:id="discard-my-data"><option>discard-my-data</option></term>
 
