@@ -1,14 +1,12 @@
-#include <iostream>
-#include <cstdio>
-
 #include <CompactDisplay.h>
 #include <DrbdMon.h>
 #include <ConfigOption.h>
+#include <iostream>
 
 #include <cstring>
 #include <cctype>
-#include <cstdio>
 #include <cstdarg>
+#include <cstdio>
 
 extern "C"
 {
@@ -227,7 +225,7 @@ void CompactDisplay::initial_display()
 
     if (log.has_entries() && dsp_msg_active)
     {
-        log.display_messages(stdout);
+        log.display_messages(std::cout);
     }
     else
     {
@@ -269,7 +267,7 @@ void CompactDisplay::status_display()
 
     if (log.has_entries() && dsp_msg_active)
     {
-        log.display_messages(stdout);
+        log.display_messages(std::cout);
     }
     else
     {
@@ -1023,13 +1021,13 @@ void CompactDisplay::announce_options(Configurator& collector)
 
 void CompactDisplay::options_help() noexcept
 {
-    std::fprintf(stderr, "%s display configuration options:\n", DrbdMon::PROGRAM_NAME.c_str());
-    std::fputs("  --ascii          Use only ASCII characters (no Unicode)\n", stderr);
-    std::fputs("  --no-header      Do not display the header line\n", stderr);
-    std::fputs("  --no-hotkeys     Do not display the hotkeys line\n", stderr);
-    std::fputs("  --problems       Start with the problems view\n", stderr);
-    std::fputc('\n', stderr);
-    std::fflush(stderr);
+    std::cerr.clear();
+    std::cerr << DrbdMon::PROGRAM_NAME << " display configuration options:\n";
+    std::cerr << "  --ascii          Use only ASCII characters (no Unicode)\n";
+    std::cerr << "  --no-header      Do not display the header line\n";
+    std::cerr << "  --no-hotkeys     Do not display the hotkeys line\n";
+    std::cerr << "  --problems       Start with the problems view\n";
+    std::cerr << std::endl;
 }
 
 // @throws std::bad_alloc

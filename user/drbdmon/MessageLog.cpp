@@ -1,8 +1,8 @@
 #include <MessageLog.h>
 
-#include <cstdio>
+#include <iostream>
 
-const char* MessageLog::MESSAGES_HEADER = "\x1b[0;30;42m MESSAGES \x1b[0m\n";
+const char* MessageLog::MESSAGES_HEADER = "\x1b[0;30;42m MESSAGES \x1b[0m";
 
 const char* MessageLog::F_ALERT_MARK = "\x1b[1;33;41m ALERT \x1b[0m";
 const char* MessageLog::F_WARN_MARK  = "\x1b[1;33;45m WARN  \x1b[0m";
@@ -19,7 +19,7 @@ const char*  MessageLog::DATE_FORMAT = "%FT%TZ ";
 const size_t MessageLog::DATE_LENGTH = 21;
 
 // @throws std::bad_alloc, std::out_of_range
-MessageLog::MessageLog(size_t entries):
+MessageLog::MessageLog(const size_t entries):
     capacity(entries)
 {
     if (capacity < 1)
@@ -42,7 +42,7 @@ bool MessageLog::has_entries() const
 }
 
 // @throws std::bad_alloc
-void MessageLog::add_entry(log_level level, const std::string& message)
+void MessageLog::add_entry(const log_level level, const std::string& message)
 {
     std::unique_ptr<std::string> message_copy;
     if (format_date())
@@ -79,7 +79,7 @@ void MessageLog::add_entry(log_level level, const std::string& message)
 }
 
 // @throws std::bad_alloc
-void MessageLog::add_entry(log_level level, const char* message)
+void MessageLog::add_entry(const log_level level, const char* message)
 {
     std::string message_str(message);
     add_entry(level, message_str);
@@ -102,11 +102,12 @@ void MessageLog::clear_impl() noexcept
     }
 }
 
-void MessageLog::display_messages(std::FILE* out) const
+void MessageLog::display_messages(std::ostream& out) const
 {
+    out.clear();
     if (filled || index > 0)
     {
-        std::fputs(MESSAGES_HEADER, out);
+        out << MESSAGES_HEADER << '\n';
 
         MessageLog::EntriesIterator iter(*this);
         size_t count = iter.get_size();
@@ -133,9 +134,9 @@ void MessageLog::display_messages(std::FILE* out) const
                     break;
             }
 
-            std::fprintf(out, "    %s %s%s%s\n", mark, format, log_entry->message->c_str(), F_RESET);
+            out << "    " << mark << " " << format << *(log_entry->message) << F_RESET << '\n';
         }
-        std::fflush(out);
+        out << std::flush;
     }
 }
 

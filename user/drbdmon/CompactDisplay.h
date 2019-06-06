@@ -2,9 +2,8 @@
 #define	COMPACTDISPLAY_H
 
 #include <new>
+#include <memory>
 #include <stdexcept>
-#include <iostream>
-#include <iomanip>
 #include <string>
 #include <cstdint>
 

@@ -3,7 +3,6 @@
 #include <iostream>
 #include <stdexcept>
 #include <cstdlib>
-#include <cstdio>
 
 extern "C"
 {
@@ -1232,15 +1231,15 @@ void DrbdMon::announce_options(Configurator& collector)
 
 void DrbdMon::options_help() noexcept
 {
-    std::fprintf(stderr, "%s configuration options:\n", DrbdMon::PROGRAM_NAME.c_str());
-    std::fputs("  --version        Display version information\n", stderr);
-    std::fputs("  --help           Display help\n", stderr);
-    std::fputs("  --freqlmt <interval>     Set a frequency limit for display updates\n", stderr);
-    std::fputs("    <interval>             Minimum delay between display updates [integer]\n", stderr);
-    std::fputs("    Supported unit suffixes: s (seconds), ms (milliseconds)\n", stderr);
-    std::fputs("    Default unit: s (seconds)\n", stderr);
-    std::fputc('\n', stderr);
-    std::fflush(stderr);
+    std::cerr.clear();
+    std::cerr << DrbdMon::PROGRAM_NAME << " configuration options:\n";
+    std::cerr << "  --version        Display version information\n";
+    std::cerr << "  --help           Display help\n";
+    std::cerr << "  --freqlmt <interval>     Set a frequency limit for display updates\n";
+    std::cerr << "    <interval>             Minimum delay between display updates [integer]\n";
+    std::cerr << "    Supported unit suffixes: s (seconds), ms (milliseconds)\n";
+    std::cerr << "    Default unit: s (seconds)\n";
+    std::cerr << std::endl;
 }
 
 // @throws std::bad_alloc, ConfigurationException
@@ -1259,7 +1258,7 @@ void DrbdMon::set_flag(std::string& key)
     else
     if (key == OPT_VERSION.key)
     {
-        std::fprintf(stdout, "%s v%s (%s)\n", PROGRAM_NAME.c_str(), VERSION.c_str(), GITHASH);
+        std::cout << PROGRAM_NAME << " v" << VERSION << " (" << GITHASH << ")" << std::endl;
         throw ConfigurationException();
     }
 }
