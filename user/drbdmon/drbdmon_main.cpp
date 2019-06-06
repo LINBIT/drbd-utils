@@ -34,10 +34,13 @@ static const long DELAY_NANOSECS = 0;
 
 static void reset_delay(struct timespec& delay) noexcept;
 static void clear_screen() noexcept;
-static void cond_print_error_header(bool& error_header_printed, const std::string* const node_name) noexcept;
+static void cond_print_error_header(
+    bool& error_header_printed,
+    const std::unique_ptr<std::string>& node_name
+) noexcept;
 static bool adjust_ids(MessageLog* log, bool& ids_safe);
 static void query_node_name(std::unique_ptr<std::string>& node_name);
-static void set_window_title(std::unique_ptr<std::string>& node_name);
+static void set_window_title(const std::unique_ptr<std::string>& node_name);
 static void clear_window_title();
 
 int main(int argc, char* argv[])
@@ -56,10 +59,15 @@ int main(int argc, char* argv[])
     std::unique_ptr<MessageLog> debug_log;
     std::unique_ptr<std::string> node_name;
 
+    std::ios_base::sync_with_stdio(true);
+
     bool ids_safe {false};
     while (fin_action != DrbdMon::finish_action::TERMINATE &&
            fin_action != DrbdMon::finish_action::TERMINATE_NO_CLEAR)
     {
+        std::cout.clear();
+        std::cerr.clear();
+
         bool error_header_printed {false};
         try
         {
@@ -106,22 +114,26 @@ int main(int argc, char* argv[])
             fail_data = DrbdMon::fail_info::OUT_OF_MEMORY;
         }
 
+        // Clear any possible stream error states
+        std::cout.clear();
+        std::cerr.clear();
+
         // Display any log messages
         if (log != nullptr)
         {
             if (log->has_entries())
             {
-                cond_print_error_header(error_header_printed, node_name.get());
-                std::fprintf(stdout, "** %s messages log\n\n", DrbdMon::PROGRAM_NAME.c_str());
-                log->display_messages(stdout);
-                fputc('\n', stdout);
+                cond_print_error_header(error_header_printed, node_name);
+                std::cout << "** " << DrbdMon::PROGRAM_NAME << " messages log\n\n";
+                log->display_messages(std::cout);
+                std::cout << std::endl;
             }
         }
 
         if (fail_data == DrbdMon::fail_info::OUT_OF_MEMORY)
         {
-            cond_print_error_header(error_header_printed, node_name.get());
-            std::fprintf(stdout, "** %s: Out of memory, trying to restart\n", DrbdMon::PROGRAM_NAME.c_str());
+            cond_print_error_header(error_header_printed, node_name);
+            std::cout << "** " << DrbdMon::PROGRAM_NAME << ": Out of memory, trying to restart" << std::endl;
         }
 
         // Cleanup any zombie child processes
@@ -134,15 +146,15 @@ int main(int argc, char* argv[])
 
         if (fin_action == DrbdMon::finish_action::DEBUG_MODE)
         {
-            std::fprintf(stdout, "** %s v%s (%s)\n", DrbdMon::PROGRAM_NAME.c_str(), DrbdMon::VERSION.c_str(), GITHASH);
-            std::fputs("** Debug messages log\n", stdout);
+            std::cout << "** " << DrbdMon::PROGRAM_NAME << " v" << DrbdMon::VERSION << " (" GITHASH << ")\n";
+            std::cout << "** Debug messages log\n";
             if (debug_log->has_entries())
             {
-                debug_log->display_messages(stdout);
+                debug_log->display_messages(std::cout);
             }
             else
             {
-                std::fputs("The log contains no debug messages\n", stdout);
+                std::cout << "The log contains no debug messages" << std::endl;
             }
 
             // Attempt to set blocking mode on stdin
@@ -155,20 +167,21 @@ int main(int argc, char* argv[])
             bool skip_prompt = false;
             while (fin_action == DrbdMon::finish_action::DEBUG_MODE)
             {
+                std::cout.clear();
                 if (skip_prompt)
                 {
                     skip_prompt = false;
                 }
                 else
                 {
-                    std::fputs("\n[C] Clear debug messages, [Q] Quit, [R] Restart\n", stdout);
+                    std::cout << "\n[C] Clear debug messages, [Q] Quit, [R] Restart" << std::endl;
                 }
 
                 int key = std::fgetc(stdin);
                 if (key == 'c' || key == 'C')
                 {
                     debug_log->clear();
-                    std::fputs("Debug messages log cleared\n", stdout);
+                    std::cout << "Debug messages log cleared" << std::endl;
                 }
                 else
                 if (key == 'q' || key == 'Q')
@@ -193,10 +206,9 @@ int main(int argc, char* argv[])
 
         if (fin_action == DrbdMon::finish_action::RESTART_DELAYED)
         {
-            cond_print_error_header(error_header_printed, node_name.get());
-            std::fprintf(stdout, "** %s: Reinitializing in %u seconds\n",
-                         DrbdMon::PROGRAM_NAME.c_str(),
-                         static_cast<unsigned int> (delay.tv_sec));
+            cond_print_error_header(error_header_printed, node_name);
+            std::cout << "** " << DrbdMon::PROGRAM_NAME << ": Reinitializing in " <<
+                static_cast<unsigned int> (delay.tv_sec) << " seconds" << std::endl;
 
             // Attempt to unblock signals before waiting, so one can
             // easily exit the program immediately by hitting Ctrl-C,
@@ -222,8 +234,8 @@ int main(int argc, char* argv[])
         else
         if (fin_action == DrbdMon::finish_action::RESTART_IMMED)
         {
-            cond_print_error_header(error_header_printed, node_name.get());
-            std::fprintf(stdout, "** %s: Reinitializing immediately\n", DrbdMon::PROGRAM_NAME.c_str());
+            cond_print_error_header(error_header_printed, node_name);
+            std::cout << "** " << DrbdMon::PROGRAM_NAME << ": Reinitializing immediately" << std::endl;
         }
     }
     clear_window_title();
@@ -242,18 +254,20 @@ static void reset_delay(struct timespec& delay) noexcept
 
 static void clear_screen() noexcept
 {
-    std::fputs(ANSI_CLEAR, stdout);
-    std::fflush(stdout);
+    std::cout << ANSI_CLEAR << std::flush;
 }
 
-static void cond_print_error_header(bool& error_header_printed, const std::string* const node_name) noexcept
+static void cond_print_error_header(
+    bool& error_header_printed, const std::unique_ptr<std::string>& node_name
+) noexcept
 {
     if (!error_header_printed)
     {
-        std::fprintf(stdout, "** %s v%s\n", DrbdMon::PROGRAM_NAME.c_str(), DrbdMon::VERSION.c_str());
+        std::cout << "** " << DrbdMon::PROGRAM_NAME << " v" << DrbdMon::VERSION << '\n';
         if (node_name != nullptr)
         {
-            std::fprintf(stdout, "   Node %s\n", node_name->c_str());
+            std::string* node_name_ptr = node_name.get();
+            std::cout << "    Node " << *node_name_ptr << '\n';
         }
         error_header_printed = true;
     }
@@ -381,23 +395,21 @@ static void query_node_name(std::unique_ptr<std::string>& node_name)
     }
 }
 
-static void set_window_title(std::unique_ptr<std::string>& node_name)
+static void set_window_title(const std::unique_ptr<std::string>& node_name)
 {
-    std::string* node_name_text = node_name.get();
-    if (node_name_text != nullptr)
+    if (node_name != nullptr)
     {
-        std::fprintf(stdout, "\x1b]2;%s (Node %s)\x07", WINDOW_TITLE_APP, node_name_text->c_str());
-        std::fflush(stdout);
+        std::string* node_name_ptr = node_name.get();
+        std::cout << "\x1b]2;" << WINDOW_TITLE_APP << "(Node " << *node_name_ptr << ")\x07";
     }
     else
     {
-        std::fprintf(stdout, "\x1b]2;%s\x07", WINDOW_TITLE_APP);
-        std::fflush(stdout);
+        std::cout << "\x1b]2;" << WINDOW_TITLE_APP << "\x07";
     }
+    std::cout << std::flush;
 }
 
 static void clear_window_title()
 {
-    std::fputs("\x1b]2; \x07", stdout);
-    std::fflush(stdout);
+    std::cout << "\x1b]2; \x07" << std::flush;
 }
