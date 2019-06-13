@@ -6,7 +6,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2019-03-28 11:43+0900\n"
+"POT-Creation-Date: 2019-06-13 13:45+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1985,6 +1985,47 @@ msgid ""
 msgstr ""
 "低負荷の期間（例えば、月に1回）で定期的にオンライン照合をスケジュールすること"
 "を推奨する。また、「データ整合性に関する注意」も参照。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><term>
+msgid ""
+"<option>allow-remote-read <replaceable>bool-value</replaceable></option>"
+msgstr ""
+"<option>allow-remote-read <replaceable>bool-value</replaceable></option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><indexterm><secondary>
+msgid "allow-remote-read"
+msgstr "allow-remote-read"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid "Allows or disallows DRBD to read from a peer node."
+msgstr "DRBDが対向ノードから読み取ることを許可または禁止する。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"When the disk of a primary node is detached, DRBD will try to continue "
+"reading and writing from another node in the cluster. For this purpose, it "
+"searches for nodes with up-to-date data, and uses any found node to resume "
+"operations. In some cases it may not be desirable to read back data from a "
+"peer node, because the node should only be used as a replication target. In "
+"this case, the <option>allow-remote-read</option> parameter can be set to "
+"<constant>no</constant>, which would prohibit this node from reading data "
+"from the peer node."
+msgstr ""
+"プライマリノードのディスクが切り離されると、DRBDはクラスタ内の別のノードから"
+"読み書きを続ける。このために、up-to-date データを持つノードを検索し、見つかっ"
+"たノードを使用してオペレーションを再開する。しかし、対向ノードは複製ターゲッ"
+"トとしてのみ使用されるため、対向ノードからデータを読み戻すことが望ましくない"
+"場合もある。この場合、 <option>allow-remote-read</option> を <constant>no</"
+"constant> にセットすることで、このノードが対向ノードからデータを読み取ること"
+"を禁止できる。"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
+msgid ""
+"The <option>allow-remote-read</option> parameter is available since DRBD "
+"9.0.19, and defaults to <constant>yes</constant>."
+msgstr ""
+"<option>allow-remote-read</option> パラメータは DRBD 9.0.19 から利用可能であ"
+"る。デフォルトは <constant>yes</constant> 。"
 
 #. type: Content of: <drbdsetup_options><drbdsetup_option><term>
 msgid "<option>discard-my-data</option>"
