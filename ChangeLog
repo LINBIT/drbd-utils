@@ -3,6 +3,15 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.10.0
+--------
+ * drbdmon: limit desplay lenght, minor fixes
+ * drbdsetup,v9: avoid underflow when resync regresses
+ * drbdmeta,v9: allow huge (~1PB volumes)
+ * drbdsetup,v9: add allow-remote-read flag
+ * docker: switch to UBI images
+ * doc: update JA doc
+
 9.9.0
 --------
  * drbdadm,v9: do not ignore stacked/upper implicit paths.
