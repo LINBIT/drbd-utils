@@ -14,6 +14,7 @@
 #include <dsaext.h>
 #include <utils.h>
 #include <exceptions.h>
+#include <drbdvsn.h>
 
 class DrbdConnection : public VolumesContainer, public DrbdRole, private StateFlags
 {
@@ -37,6 +38,8 @@ class DrbdConnection : public VolumesContainer, public DrbdRole, private StateFl
     static const std::string PROP_KEY_CONN_NAME;
     static const std::string PROP_KEY_PEER_NODE_ID;
 
+    static const std::string DFLT_CONN_NAME;
+
     static const char* CS_LABEL_STANDALONE;
     static const char* CS_LABEL_DISCONNECTING;
     static const char* CS_LABEL_UNCONNECTED;
@@ -50,7 +53,7 @@ class DrbdConnection : public VolumesContainer, public DrbdRole, private StateFl
     static const char* CS_LABEL_UNKNOWN;
 
     // @throws std::bad_alloc
-    DrbdConnection(std::string& connection_name, uint8_t node_id);
+    DrbdConnection(const std::string& connection_name, uint8_t node_id);
     DrbdConnection(const DrbdConnection& orig) = delete;
     DrbdConnection& operator=(const DrbdConnection& orig) = delete;
     DrbdConnection(DrbdConnection&& orig) = delete;
@@ -86,7 +89,7 @@ class DrbdConnection : public VolumesContainer, public DrbdRole, private StateFl
     // @param event_props Reference to the map of properties from a 'drbdsetup events2' line
     // @return Pointer to a newly created DrbdConnection object
     // @throws std::bad_alloc, EventMessageException
-    static DrbdConnection* new_from_props(PropsMap& event_props);
+    static DrbdConnection* new_from_props(PropsMap& event_props, DrbdVersion drbd_vsn);
 
     // @throws std::bad_alloc, EventMessageException
     static state parse_state(std::string& state_name);

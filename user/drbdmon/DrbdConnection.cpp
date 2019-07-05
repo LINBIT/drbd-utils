@@ -6,6 +6,8 @@ const std::string DrbdConnection::PROP_KEY_CONNECTION = "connection";
 const std::string DrbdConnection::PROP_KEY_CONN_NAME = "conn-name";
 const std::string DrbdConnection::PROP_KEY_PEER_NODE_ID = "peer-node-id";
 
+const std::string DrbdConnection::DFLT_CONN_NAME = "peer";
+
 const char* DrbdConnection::CS_LABEL_STANDALONE           = "StandAlone";
 const char* DrbdConnection::CS_LABEL_DISCONNECTING        = "Disconnecting";
 const char* DrbdConnection::CS_LABEL_UNCONNECTED          = "Unconnected";
@@ -19,7 +21,7 @@ const char* DrbdConnection::CS_LABEL_CONNECTED            = "Connected";
 const char* DrbdConnection::CS_LABEL_UNKNOWN              = "Unknown";
 
 // @throws std::bad_alloc
-DrbdConnection::DrbdConnection(std::string& connection_name, uint8_t peer_node_id):
+DrbdConnection::DrbdConnection(const std::string& connection_name, uint8_t peer_node_id):
     name(connection_name),
     node_id(peer_node_id)
 {
@@ -282,21 +284,37 @@ DrbdConnection::state DrbdConnection::parse_state(std::string& state_name)
 // @param event_props Reference to the map of properties from a 'drbdsetup events2' line
 // @return Pointer to a newly created DrbdConnection object
 // @throws std::bad_alloc, EventMessageException
-DrbdConnection* DrbdConnection::new_from_props(PropsMap& event_props)
+DrbdConnection* DrbdConnection::new_from_props(PropsMap& event_props, const DrbdVersion drbd_vsn)
 {
     DrbdConnection* new_conn {nullptr};
-    std::string* conn_name = event_props.get(&PROP_KEY_CONN_NAME);
-    std::string* node_id_str = event_props.get(&PROP_KEY_PEER_NODE_ID);
-    if (conn_name != nullptr && node_id_str != nullptr)
+    const std::string* conn_name = event_props.get(&PROP_KEY_CONN_NAME);
+    const std::string* node_id_str = event_props.get(&PROP_KEY_PEER_NODE_ID);
+    if (drbd_vsn == DrbdVersion::DRBD_8_4)
     {
-        try
+        if (conn_name == nullptr)
         {
-            uint8_t new_node_id = dsaext::parse_unsigned_int8(*node_id_str);
-            new_conn = new DrbdConnection(*conn_name, new_node_id);
+            conn_name = &DFLT_CONN_NAME;
         }
-        catch (dsaext::NumberFormatException&)
+        uint8_t new_node_id = 0;
+        if (node_id_str != nullptr)
         {
-            // no-op
+            new_node_id = dsaext::parse_unsigned_int8(*node_id_str);
+        }
+        new_conn = new DrbdConnection(*conn_name, new_node_id);
+    }
+    else
+    {
+        if (conn_name != nullptr && node_id_str != nullptr)
+        {
+            try
+            {
+                uint8_t new_node_id = dsaext::parse_unsigned_int8(*node_id_str);
+                new_conn = new DrbdConnection(*conn_name, new_node_id);
+            }
+            catch (dsaext::NumberFormatException&)
+            {
+                // no-op
+            }
         }
     }
     if (new_conn == nullptr)

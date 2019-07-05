@@ -168,6 +168,15 @@ void DrbdMon::run()
                 log.add_entry(MessageLog::log_level::WARN, "Adjusting the terminal mode failed");
             }
 
+            // Attempt to determine the DRBD version
+            // If the DRBD kernel module was not loaded when DrbdMon spawned drbdsetup, then drbdsetup attempts
+            // to insert the kernel module, which can race with DrbdMon's DRBD version check.
+            // In this case, the version remains undetermined until it is queried by calling
+            // get_drbd_version(), which should be done only after drbdsetup has started supplying event data
+            // (and therefore, it would have completed inserting the kernel module), which will retry
+            // identifying the DRBD version.
+            drbd_vsn = probe_drbd_version();
+
             // Show an initial display while reading the initial DRBD status
             display->initial_display();
 
@@ -715,7 +724,7 @@ void DrbdMon::create_connection(PropsMap& event_props, const std::string& event_
     {
         DrbdResource& res = get_resource(event_props, event_line);
 
-        std::unique_ptr<DrbdConnection> conn(DrbdConnection::new_from_props(event_props));
+        std::unique_ptr<DrbdConnection> conn(DrbdConnection::new_from_props(event_props, get_drbd_version()));
         conn->update(event_props);
         static_cast<void> (conn->update_state_flags());
         res.add_connection(conn.get());
@@ -1005,10 +1014,16 @@ DrbdConnection& DrbdMon::get_connection(DrbdResource& res, PropsMap& event_props
     {
         conn = res.get_connection(*conn_name);
     }
+    if (get_drbd_version() == DrbdVersion::DRBD_8_4)
+    {
+        conn = res.get_connection(DrbdConnection::DFLT_CONN_NAME);
+    }
     else
     {
         std::string error_msg("Invalid DRBD event: Missing connection information");
-        std::string debug_info("Missing 'connection' field");
+        std::string debug_info("Missing '");
+        debug_info += DrbdConnection::PROP_KEY_CONN_NAME;
+        debug_info += "' field";
         throw EventMessageException(&error_msg, &debug_info, &event_line);
     }
     if (conn == nullptr)
@@ -1338,6 +1353,23 @@ void DrbdMon::set_option(std::string& key, std::string& value)
 uint64_t DrbdMon::get_problem_count() const noexcept
 {
     return problem_count;
+}
+
+// @throws std::bad_alloc
+DrbdVersion DrbdMon::get_drbd_version()
+{
+    // If the DRBD version could not be determined initially,
+    // retry identifying it once
+    if (drbd_vsn == DrbdVersion::UNDETERMINED)
+    {
+        drbd_vsn = probe_drbd_version();
+        if (drbd_vsn == DrbdVersion::UNDETERMINED)
+        {
+            // Avoid further retries
+            drbd_vsn = DrbdVersion::UNRECOGNIZED;
+        }
+    }
+    return drbd_vsn;
 }
 
 void DrbdMon::problem_counter_update(StateFlags::state res_last_state, StateFlags::state res_new_state) noexcept

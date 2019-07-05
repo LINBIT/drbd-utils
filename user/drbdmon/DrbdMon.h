@@ -19,9 +19,10 @@
 #include <MessageLog.h>
 #include <Configurable.h>
 #include <Configurator.h>
-#include <comparators.h>
 #include <IntervalTimer.h>
+#include <comparators.h>
 #include <colormodes.h>
+#include <drbdvsn.h>
 
 extern "C"
 {
@@ -155,6 +156,9 @@ class DrbdMon : public Configurable, public Configurator
 
     virtual uint64_t get_problem_count() const noexcept;
 
+    // @throws std::bad_alloc
+    virtual DrbdVersion get_drbd_version();
+
   private:
     typedef struct option_entry_s
     {
@@ -191,6 +195,8 @@ class DrbdMon : public Configurable, public Configurator
     struct timespec prev_timestamp {0, 0};
     struct timespec cur_timestamp {0, 0};
     bool use_dflt_freq_lmt {true};
+
+    DrbdVersion drbd_vsn = DrbdVersion::UNDETERMINED;
 
     // @throws std::bad_alloc, EventMessageException
     void create_connection(PropsMap& event_props, const std::string& event_line);
