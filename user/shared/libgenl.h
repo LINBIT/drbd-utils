@@ -31,6 +31,10 @@
 #define SOL_NETLINK 270
 #endif
 
+#ifndef NLA_F_NESTED
+#define NLA_F_NESTED 0
+#endif
+
 #define DEBUG_LEVEL 1
 
 #define dbg(lvl, fmt, arg...)				\
