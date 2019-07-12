@@ -863,7 +863,7 @@ static inline struct nlattr *nla_nest_start(struct msg_buff *msg, int attrtype)
 {
 	struct nlattr *start = (struct nlattr *)msg->tail;
 
-	if (nla_put(msg, attrtype, 0, NULL) < 0)
+	if (nla_put(msg, attrtype | NLA_F_NESTED, 0, NULL) < 0)
 		return NULL;
 
 	return start;
