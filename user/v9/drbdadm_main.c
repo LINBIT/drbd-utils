@@ -2157,7 +2157,7 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check)
 
 	/* resource name only (e.g., r0) and in check state
 	 * this would enable all connectionst that are not ignored */
-	if (!conn_or_hostname && check == WOULD_ENABLE_MULTI_TIMES)
+	if (!vol_id && !conn_or_hostname && check == WOULD_ENABLE_MULTI_TIMES)
 		for_each_connection(conn, &res->connections)
 			if (!conn->ignore) {
 				if (!conn->ignore_tmp)
