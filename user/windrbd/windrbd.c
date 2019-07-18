@@ -72,6 +72,8 @@ void usage_and_exit(void)
 	fprintf(stderr, "		Print (UNIX) path to this program\n");
 	fprintf(stderr, "	windrbd [opt] dump-memory-allocations\n");
 	fprintf(stderr, "		Cause kernel to dump (via printk) currently allocated memory\n");
+	fprintf(stderr, "	windrbd [opt] parser-test\n");
+	fprintf(stderr, "		Cause kernel to run DRBD URI parser test (output via printk)\n");
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
 	fprintf(stderr, "	-f (force): do it even if it is dangerous.\n");
@@ -1121,6 +1123,26 @@ int dump_memory_allocations(void)
 	return 0;
 }
 
+int run_parser_test(void)
+{
+	HANDLE root_dev;
+	DWORD unused;
+	BOOL ret;
+	int err;
+
+	root_dev = do_open_root_device(quiet);
+	if (root_dev == INVALID_HANDLE_VALUE)
+		return 1;
+
+	ret = DeviceIoControl(root_dev, IOCTL_WINDRBD_ROOT_RUN_PARSER_TEST, NULL, 0, NULL, 0, &unused, NULL);
+	if (!ret) {
+		err = GetLastError();
+		fprintf(stderr, "Error in sending ioctl to kernel, err is %d\n", err);
+		return -1;
+	}
+	return 0;
+}
+
 int main(int argc, char ** argv)
 {
 	const char *op;
@@ -1257,6 +1279,9 @@ int main(int argc, char ** argv)
 
 	if (strcmp(op, "dump-memory-allocations") == 0)
 		return dump_memory_allocations();
+
+	if (strcmp(op, "parser-test") == 0)
+		return run_parser_test();
 
 	usage_and_exit();
 	return 0;
