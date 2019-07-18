@@ -1251,10 +1251,7 @@ void expand_common(void)
 					vol->meta_disk = NULL;
 					vol->meta_index = NULL;
 				}
-
-				if (!vol->device)
-					m_asprintf(&vol->device, "/dev/drbd%u",
-						   vol->device_minor);
+				assign_default_device(vol);
 			}
 		}
 

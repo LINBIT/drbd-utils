@@ -18,6 +18,8 @@
 #include <ctype.h>
 #include <sys/queue.h>
 #include <assert.h>
+#include <setupapi.h>
+#include <newdev.h>
 
 #include <winioctl.h>
 #include <shellapi.h>
@@ -72,6 +74,18 @@ void usage_and_exit(void)
 	fprintf(stderr, "		Print (UNIX) path to this program\n");
 	fprintf(stderr, "	windrbd [opt] dump-memory-allocations\n");
 	fprintf(stderr, "		Cause kernel to dump (via printk) currently allocated memory\n");
+	fprintf(stderr, "	windrbd [opt] install-bus-device <inf-file>\n");
+	fprintf(stderr, "		Installs the WinDRBD Virtual Bus device on the system.\n");
+	fprintf(stderr, "	windrbd [opt] remove-bus-device <inf-file>\n");
+	fprintf(stderr, "		Removes the WinDRBD Virtual Bus device from the system.\n");
+	fprintf(stderr, "	windrbd [opt] scan-partitions-for-minor <minor>\n");
+	fprintf(stderr, "		Reread partition table of disk minor (will cause drives to appear\n");
+	fprintf(stderr, "	windrbd [opt] set-syslog-ip <syslog-ipv4>\n");
+	fprintf(stderr, "		Directs network printk's to ip syslog-ipv4.\n");
+	fprintf(stderr, "	windrbd [opt] create-resource-from-url <DRBD-URL>\n");
+	fprintf(stderr, "		Create a DRBD resource described by URL.\n");
+	fprintf(stderr, "	windrbd [opt] run-test <test-spec>\n");
+	fprintf(stderr, "		Cause kernel to run a self test DRBD test defined by test-spec.\n");
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
 	fprintf(stderr, "	-f (force): do it even if it is dangerous.\n");
@@ -239,6 +253,7 @@ static int patch_boot_sector(char *buffer, int to_fs, int test_mode)
 {
         static const char *fs_signatures[][2] = {
                 { "NTFS", "DRBD" },
+                { "ReFS", "ReDR" },
                 { "MSDOS5.0", "FATDRBD" },
                 { "EXFAT", "EDRBD" },
                 { NULL, NULL }};
@@ -453,39 +468,41 @@ static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 	return 0;
 }
 
-// Converts UNIX-style line breaks (\n) to DOS-style line breaks (\r\n)
-//
-// Line breaks that are already in DOS-style (\r\n) are not converted
-//
-// src_bfr is only scanned for the first src_bfr_len bytes,
-// or up to the first '\0', whichever comes first.
-//
-// Parameters:
-//     src_bfr		Source buffer containing the text to convert
-//     src_bfr_len      Size of the source buffer
-//     dst_bfr          Destination buffer; receives converted output text
-//     dst_bfr_len      Size of the destination buffer
-//     truncated        Pointer to a bool variable or NULL pointer
-//                      If non-NULL, will be set to indicate whether the output was truncated
-//                      true if truncated, false otherwise
+/* Converts UNIX-style line breaks (\n) to DOS-style line breaks (\r\n)
+
+Line breaks that are already in DOS-style (\r\n) are not converted
+
+src_bfr is only scanned for the first src_bfr_len bytes,
+or up to the first '\0', whichever comes first.
+
+Parameters:
+	src_bfr		Source buffer containing the text to convert
+	src_bfr_len     Size of the source buffer
+	dst_bfr         Destination buffer; receives converted output text
+	dst_bfr_len     Size of the destination buffer
+	truncated       Pointer to a int variable or NULL pointer
+			If non-NULL, will be set to indicate whether the output was truncated
+			non-zero if truncated, zero otherwise
+*/
+
 static size_t unix_to_dos(
 	const char* const   src_bfr,
 	const size_t        src_bfr_len,
 	char *const         dst_bfr,
 	const size_t        dst_bfr_len,
-	bool *const         truncated
+	int *const         truncated
 )
 {
 	assert(dst_bfr_len >= 1);
 
 	size_t src_idx = 0;
 	size_t dst_idx = 0;
-	bool cr_flag = false;
+	int cr_flag = 0;
 
 	while (src_idx < src_bfr_len && dst_idx < dst_bfr_len - 1 && src_bfr[src_idx] != '\0') {
 		if (src_bfr[src_idx] == '\n' && !cr_flag) {
 			dst_bfr[dst_idx] = '\r';
-			cr_flag = true;
+			cr_flag = 1;
 		} else {
 			cr_flag = src_bfr[src_idx] == '\r';
 			dst_bfr[dst_idx] = src_bfr[src_idx];
@@ -1121,6 +1138,226 @@ int dump_memory_allocations(void)
 	return 0;
 }
 
+int send_string_ioctl(int ioctl, const char *parameter)
+{
+	HANDLE root_dev;
+	DWORD unused;
+	BOOL ret;
+	int err;
+	size_t len;
+
+	if (parameter == NULL)
+		parameter = "";
+	len = strlen(parameter)+1;
+
+	root_dev = do_open_root_device(quiet);
+	if (root_dev == INVALID_HANDLE_VALUE)
+		return 1;
+
+	ret = DeviceIoControl(root_dev, ioctl, (void*)parameter, len, NULL, 0, &unused, NULL);
+	if (!ret) {
+		err = GetLastError();
+		fprintf(stderr, "Error in sending ioctl to kernel, err is %d\n", err);
+		return -1;
+	}
+	return 0;
+}
+
+void print_windows_error_code(const char *func)
+{
+	int err = GetLastError();
+
+	printf("%s failed: error code %x\n", func, err);
+}
+
+	/* This iterates over all devices on the system and deletes
+	 * all devices with hardware ID WinDRBD.
+	 */
+
+static int remove_all_windrbd_bus_devices(int delete_them)
+{
+	HDEVINFO h;
+	SP_DEVINFO_DATA info;
+	int i;
+	int num_deleted = 0;
+	TCHAR buf[1024];
+	int err;
+
+	h = SetupDiGetClassDevsExA(NULL, NULL, NULL, DIGCF_ALLCLASSES, NULL, NULL, NULL);
+	if (h == INVALID_HANDLE_VALUE) {
+		print_windows_error_code("SetupDiGetClassDevsExA");
+		return -1;
+	}
+	info.cbSize = sizeof(info);
+
+	i=0;
+	while (1) {
+		if (!SetupDiEnumDeviceInfo(h, i, &info)) {
+			err = GetLastError();
+			if (err != 0x103)	/* last item */
+				print_windows_error_code("SetupDiEnumDeviceInfo");
+			break;
+		}
+		if (!SetupDiGetDeviceRegistryProperty(h, &info, SPDRP_HARDWAREID, NULL, (unsigned char *) buf, sizeof(buf), NULL)) {
+			err = GetLastError();
+				/* invalid data, insufficient buffer: */
+				/* both do not happen with WinDRBD bus device */
+			if (err == 0xd || err == 0x7a)
+				goto next;
+
+			print_windows_error_code("SetupDiGetDeviceRegistryProperty buf");
+			break;
+		}
+/*		printf("device %d is %S\n", i, buf); */
+		if (wcscmp(buf, L"WinDRBD") == 0) {
+			if (delete_them) {
+				if (!SetupDiCallClassInstaller(DIF_REMOVE, h, &info)) {
+					print_windows_error_code("SetupDiCallClassInstaller");
+				} else {
+					num_deleted++;
+				}
+			} else {
+				num_deleted++;
+			}
+		}
+next:
+		i++;
+	}
+
+	if (!quiet)
+		printf("%s %d WinDRBD bus device%s\n", delete_them ? "Deleted" : "Found", num_deleted, num_deleted == 1 ? "" : "s");
+
+	return num_deleted;
+}
+
+	/* This installs or removes the WinDRBD bus device object.
+	 * This code has been adapted from WinAoE (www.winaoe.org)
+	 * loader.c file.
+	 */
+
+static int install_windrbd_bus_device(int remove, const char *inf_file)
+{
+	HDEVINFO DeviceInfoSet = 0;
+	SP_DEVINFO_DATA DeviceInfoData;
+	GUID ClassGUID;
+	TCHAR ClassName[MAX_CLASS_NAME];
+	HINSTANCE Library;
+	PROC UpdateDriverForPlugAndPlayDevicesA;
+	BOOL RebootRequired = FALSE;
+	TCHAR FullFilePath[1024];
+	TCHAR InfFile[1024];
+	int num_deleted;
+	int ret;
+
+	if ((ret = MultiByteToWideChar(CP_UTF8, 0, inf_file, -1, &InfFile[0], sizeof(InfFile) / sizeof(InfFile[0]) - 1)) == 0) {
+		print_windows_error_code("MultiByteToWideChar");
+		return -1;
+	}
+	if (!GetFullPathNameW(&InfFile[0], sizeof(FullFilePath) / sizeof(FullFilePath[0]) - 1, FullFilePath, NULL)) {
+		print_windows_error_code("GetFullPathName");
+		return -1;
+	}
+	if ((Library = LoadLibrary(L"newdev.dll")) == NULL) {
+		print_windows_error_code("LoadLibraryError");
+		return -1;
+	}
+	if ((UpdateDriverForPlugAndPlayDevicesA = GetProcAddress(Library, "UpdateDriverForPlugAndPlayDevicesA")) == NULL) {
+		print_windows_error_code("GetProcAddress");
+		return -1;
+	}
+	if (!SetupDiGetINFClass(FullFilePath, &ClassGUID, ClassName, sizeof(ClassName), 0)) {
+		print_windows_error_code("SetupDiGetINFClass");
+		return -1;
+	}
+	if ((DeviceInfoSet = SetupDiCreateDeviceInfoList(&ClassGUID, 0)) == INVALID_HANDLE_VALUE) {
+		print_windows_error_code("SetupDiCreateDeviceInfoList");
+		return -1;
+	}
+	DeviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
+	if (!SetupDiCreateDeviceInfo(DeviceInfoSet, ClassName, &ClassGUID, NULL, 0, DICD_GENERATE_ID, &DeviceInfoData)) {
+		print_windows_error_code("SetupDiCreateDeviceInfo");
+		goto cleanup_deviceinfo;
+	}
+	if (!SetupDiSetDeviceRegistryProperty(DeviceInfoSet, &DeviceInfoData, SPDRP_HARDWAREID, (unsigned char*) L"WinDRBD\0\0\0", (lstrlen(L"WinDRBD\0\0\0")+1+1) * sizeof(TCHAR))) {
+		print_windows_error_code("SetupDiSetDeviceRegistryProperty");
+		goto cleanup_deviceinfo;
+	}
+	if (!force && remove == 0) {
+		num_deleted = remove_all_windrbd_bus_devices(0);
+		if (num_deleted == 1) {	/* nothing to do */
+			if (!quiet) {
+				printf("WinDRBD bus device already there, not doing anything.\n");
+			}
+			SetupDiDestroyDeviceInfoList(DeviceInfoSet);
+			return 0;
+		}
+	}
+
+	num_deleted = remove_all_windrbd_bus_devices(1);
+	if (num_deleted < 0)
+		goto cleanup_deviceinfo;
+
+	if (remove == 0) {
+		if (!SetupDiCallClassInstaller(DIF_REGISTERDEVICE, DeviceInfoSet, &DeviceInfoData)) {
+			print_windows_error_code("SetupDiCallClassInstaller");
+			goto cleanup_deviceinfo;
+		}
+		if (!UpdateDriverForPlugAndPlayDevices(0, L"WinDRBD\0\0\0", FullFilePath, INSTALLFLAG_FORCE, &RebootRequired)) {
+			print_windows_error_code("UpdateDriverForPlugAndPlayDevices");
+			goto remove_class;
+		}
+		printf("Installed 1 WinDRBD bus device\n");
+	}
+	if (RebootRequired || num_deleted > 0) {
+		printf("Your system has to rebooted for changes to take effect.\n");
+		return 1;   /* can check with if errorlevel 1 from cmd script */
+	}
+	return 0;
+
+remove_class:
+	if (!SetupDiCallClassInstaller(DIF_REMOVE, DeviceInfoSet, &DeviceInfoData)) {
+		print_windows_error_code("SetupDiCallClassInstaller");
+	}
+cleanup_deviceinfo:
+	SetupDiDestroyDeviceInfoList(DeviceInfoSet);
+
+	return -1;
+}
+
+int scan_partitions_for_minor(int minor)
+{
+	HANDLE h;
+	struct _PARTITION_INFORMATION_EX pi;
+	DWORD size;
+	BOOL ret;
+	int err;
+	wchar_t fname[256];
+	int retries;
+
+	swprintf(fname, sizeof(fname)/sizeof(fname[0])-1, L"\\\\.\\Drbd%d", minor);
+
+	for (retries=0;retries<10;retries++) {
+		h = CreateFile(fname, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (h != INVALID_HANDLE_VALUE)
+			break;
+		sleep(1);
+	}
+	if (h == INVALID_HANDLE_VALUE) {
+		printf("Could not open DRBD device %ls, error is %d\n", fname, GetLastError());
+		return -1;
+	}
+	ret = DeviceIoControl(h, IOCTL_DISK_GET_PARTITION_INFO_EX, NULL, 0, &pi, sizeof(pi), &size, NULL);
+	if (!ret) {
+		err = GetLastError();
+		fprintf(stderr, "Error in sending ioctl to kernel, err is %d\n", err);
+		CloseHandle(h);
+
+		return -1;
+	}
+	CloseHandle(h);
+	return 0;
+}
+
 int main(int argc, char ** argv)
 {
 	const char *op;
@@ -1257,6 +1494,49 @@ int main(int argc, char ** argv)
 
 	if (strcmp(op, "dump-memory-allocations") == 0)
 		return dump_memory_allocations();
+
+	if (strcmp(op, "install-bus-device") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		return install_windrbd_bus_device(0, argv[optind+1]);
+	}
+	if (strcmp(op, "remove-bus-device") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		return install_windrbd_bus_device(1, argv[optind+1]);
+	}
+	if (strcmp(op, "scan-partitions-for-minor") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		int minor = atoi(argv[optind+1]);
+
+		return scan_partitions_for_minor(minor);
+	}
+		/* Those are all ioctl's that send a string and return
+		 * nothing.
+		 */
+
+	if (strcmp(op, "run-test") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		return send_string_ioctl(IOCTL_WINDRBD_ROOT_RUN_TEST, argv[optind+1]);
+	}
+	if (strcmp(op, "set-syslog-ip") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		return send_string_ioctl(IOCTL_WINDRBD_ROOT_SET_SYSLOG_IP, argv[optind+1]);
+	}
+	if (strcmp(op, "create-resource-from-url") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		return send_string_ioctl(IOCTL_WINDRBD_ROOT_CREATE_RESOURCE_FROM_URL, argv[optind+1]);
+	}
 
 	usage_and_exit();
 	return 0;

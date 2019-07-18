@@ -25,12 +25,20 @@ int is_guid(const char *arg)
 HANDLE do_open_root_device(int quiet)
 {
         HANDLE h;
-        DWORD err;
+        DWORD err = ERROR_SUCCESS;
 
         h = CreateFile("\\\\.\\" WINDRBD_ROOT_DEVICE_NAME, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (h == INVALID_HANDLE_VALUE && !quiet) {
+	if (h == INVALID_HANDLE_VALUE) {
 	        err = GetLastError();
 
+		if (err == ERROR_ACCESS_DENIED) {
+			h = CreateFile("\\\\.\\" WINDRBD_USER_DEVICE_NAME, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+			if (h == INVALID_HANDLE_VALUE)
+				err = GetLastError();
+		}
+	}
+
+	if (h == INVALID_HANDLE_VALUE && !quiet) {
 	        if (err != ERROR_SUCCESS) {
 			fprintf(stderr, "Couldn't open root device, error is %d\n", err);
 			switch (err) {

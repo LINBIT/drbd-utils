@@ -10,7 +10,7 @@ sysconfdir = @sysconfdir@
 WITH_WINDRBD = @WITH_WINDRBD@
 CC = @CC@
 CFLAGS = @CFLAGS@
-LDFLAGS = @LDFLAGS@
+LDFLAGS = @LDFLAGS@ -L/cygdrive/c/Windows/System32 -lsetupapi -lnewdev --disable-stdcall-fixup
 
 # variables meant to be overridden from the make command line
 ifeq ($(WITH_WINDRBD),yes)

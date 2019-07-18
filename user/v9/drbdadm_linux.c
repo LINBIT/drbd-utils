@@ -116,3 +116,14 @@ out:
 void print_platform_specific_versions(void)
 {
 }
+
+void assign_default_device(struct d_volume *vol)
+{
+	if (vol == NULL) {
+		fprintf(stderr, "BUG: vol is NULL in assign_default_device()\n");
+		exit(E_THINKO);
+	}
+	if (!vol->device)
+		m_asprintf(&vol->device, "/dev/drbd%u",
+			   vol->device_minor);
+}

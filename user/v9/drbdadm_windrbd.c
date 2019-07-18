@@ -45,7 +45,7 @@ static int is_driveletter(const char *drive)
 	return 1;
 }
 
-static int call_windrbd(char *res_name, char *path, ...)
+static int call_windrbd(char *res_name, int flags, char *path, ...)
 {
         char *argv[40];
 	int argc = 0;
@@ -67,12 +67,12 @@ static int call_windrbd(char *res_name, char *path, ...)
 	argv[argc++] = NULL;
 	va_end(ap);
 
-        return m_system_ex(argv, SLEEPS_SHORT, res_name);
+        return m_system_ex(argv, flags, res_name);
 }
 
 int before_attach(const struct cfg_ctx *ctx)
 {
-	return call_windrbd(ctx->res->name, windrbd, "-q", "hide-filesystem", ctx->vol->disk, NULL);
+	return call_windrbd(ctx->res->name, SLEEPS_SHORT, windrbd, "-q", "hide-filesystem", ctx->vol->disk, NULL);
 }
 
 int after_new_minor(const struct cfg_ctx *ctx)
@@ -80,9 +80,8 @@ int after_new_minor(const struct cfg_ctx *ctx)
         if (is_driveletter(ctx->vol->device) || ctx->vol->device[0] == '\0') {
                 char minor_str[10];
                 snprintf(minor_str, sizeof(minor_str)-1, "%d", ctx->vol->device_minor);
-                call_windrbd(ctx->res->name, windrbd, "-q", "set-mount-point-for-minor", minor_str, ctx->vol->device, NULL);
-        } else
-                printf("Warning: %s is not a valid Windows drive letter or empty. The windrbd device\nwill not be mounted.\nTo mount it, do a\n\twindrbd set-mount-point-for-minor %d <drive-letter>:\n", ctx->vol->device, ctx->vol->device_minor);
+                call_windrbd(ctx->res->name, SLEEPS_SHORT, windrbd, "-q", "set-mount-point-for-minor", minor_str, ctx->vol->device, NULL);
+        }
 
 	return 0;
 }
@@ -91,9 +90,11 @@ int after_primary(const struct cfg_ctx *ctx)
 {
 	struct d_volume *vol;
 
-	for_each_volume(vol, &ctx->res->me->volumes)
-		if (is_driveletter(vol->device))
-			call_windrbd(ctx->res->name, windrbd, "-q", "add-drive-in-explorer", vol->device, NULL);
+	for_each_volume(vol, &ctx->res->me->volumes) {
+		if (is_driveletter(vol->device)) {
+			call_windrbd(ctx->res->name, SLEEPS_SHORT, windrbd, "-q", "add-drive-in-explorer", vol->device, NULL);
+		}
+	}
 
 	return 0;
 }
@@ -104,7 +105,7 @@ int after_secondary(const struct cfg_ctx *ctx)
 
 	for_each_volume(vol, &ctx->res->me->volumes)
 		if (is_driveletter(vol->device))
-			call_windrbd(ctx->res->name, windrbd, "-q", "remove-drive-in-explorer", vol->device, NULL);
+			call_windrbd(ctx->res->name, SLEEPS_SHORT, windrbd, "-q", "remove-drive-in-explorer", vol->device, NULL);
 
 	return 0;
 }
@@ -170,4 +171,14 @@ void print_platform_specific_versions(void)
 {
 	char *windrbd_version = windrbd_get_windrbd_version();
 	printf("WINDRBD_VERSION=%s\n", shell_escape(windrbd_version));
+}
+
+void assign_default_device(struct d_volume *vol)
+{
+	if (vol == NULL) {
+		fprintf(stderr, "BUG: vol is NULL in assign_default_device()\n");
+		exit(E_THINKO);
+	}
+	if (!vol->device)
+		m_asprintf(&vol->device, "");
 }
