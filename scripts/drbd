@@ -13,7 +13,7 @@
 # Required-Stop:  $local_fs $network $syslog
 # Should-Start:   sshd multipathd
 # Should-Stop:    sshd multipathd
-# Default-Start:
+# Default-Start:  2 3 4 5
 # Default-Stop:   0 1 6
 # X-Start-Before: heartbeat corosync
 # X-Stop-After:   heartbeat corosync
