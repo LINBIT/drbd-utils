@@ -328,6 +328,29 @@ struct peer_devices_list {
 static struct peer_devices_list *list_peer_devices(char *);
 static void free_peer_devices(struct peer_devices_list *);
 
+struct event_node {
+	char                *buffer;
+	size_t              capacity;
+	size_t              length;
+	struct event_node   *next;
+};
+
+struct event_queue {
+	struct event_node *head;
+	struct event_node *tail;
+};
+
+typedef enum {
+	EVENT_PRINT_OK,
+	EVENT_PRINT_RETRY,
+	EVENT_ALLOC_FAILED
+} event_print_rc;
+
+// Initial size for the event line buffer of queued events
+static const size_t INIT_EVENT_BUFFER_SIZE = 200;
+// Preferred minimum size for increasing the size of an event's text buffer
+static const size_t EVENT_BUFFER_MIN_INCREASE = 50;
+
 struct option wait_cmds_options[] = {
 	{ "wfc-timeout", required_argument, 0, 't' },
 	{ "degr-wfc-timeout", required_argument, 0, 'd'},
@@ -2503,28 +2526,190 @@ static const char *susp_str(struct resource_info *info)
 	return buffer;
 }
 
-__attribute__((format(printf, 2, 3)))
-int nowrap_printf(int indent, const char *format, ...)
+__attribute__((format(printf, 2, 0)))
+int nowrap_vprintf(int indent, const char *format, va_list ap)
 {
-	va_list ap;
-	int ret;
-
-	va_start(ap, format);
-	ret = vprintf(format, ap);
-	va_end(ap);
-
-	return ret;
+	return vprintf(format, ap);
 }
 
 typedef
-__attribute__((format(printf, 2, 3)))
-int (*wrap_printf_fn_t)(int indent, const char *format, ...);
+__attribute__((format(printf, 2, 0)))
+int (*wrap_vprintf_fn_t)(int indent, const char *format, va_list ap);
 
-void print_resource_statistics(int indent,
-			       struct resource_statistics *old,
-			       struct resource_statistics *new,
-			       wrap_printf_fn_t wrap_printf)
+/**
+ * Allocates and queues a new event
+ *
+ * Returns: Pointer to the new event, or NULL to indicate a memory allocation failure
+ */
+static struct event_node *queue_new_event(struct event_queue *const queue)
 {
+	struct event_node *node = malloc(sizeof (struct event_node));
+	if (node != NULL) {
+		node->length = 0;
+		node->capacity = INIT_EVENT_BUFFER_SIZE;
+		node->next = NULL;
+		node->buffer = malloc(node->capacity);
+		if (node->buffer != NULL) {
+			node->buffer[0] = '\0';
+			if (queue->tail == NULL) {
+				queue->head = node;
+				queue->tail = node;
+			} else {
+				queue->tail->next = node;
+				queue->tail = node;
+			}
+		} else {
+			free(node);
+			node = NULL;
+			errno = ENOMEM;
+		}
+	} else {
+		errno = ENOMEM;
+	}
+	return node;
+}
+
+/**
+ * Clears the event queue
+ */
+static void clear_event_queue(struct event_queue *const queue)
+{
+	struct event_node *node = queue->head;
+	while (node != NULL) {
+		struct event_node *const next_node = node->next;
+		free(node->buffer);
+		free(node);
+		node = next_node;
+	}
+	queue->head = NULL;
+	queue->tail = NULL;
+}
+
+/**
+ * Prints the queued events
+ */
+static void print_queued_events(struct event_queue *const queue) {
+	struct event_node *node;
+	for (node = queue->head; node != NULL; node = node->next) {
+		fputs(node->buffer, stdout);
+	}
+}
+
+/**
+ * Increases the size of a queued event's text buffer
+ *
+ * An attempt is made to increase the size of the text buffer by at least
+ * EVENT_BUFFER_MIN_INCREASE bytes, otherwise by the size requested by the
+ * parameter "increase".
+ *
+ * Returns: true to indicate a successful size increase, false to indicate a memory allocation failure
+ */
+static bool event_increase_capacity(struct event_node *const node, const size_t increase) {
+	bool success_flag = false;
+	size_t add_capacity = increase;
+	if (~((size_t) 0) - add_capacity >= node->capacity) {
+		if (add_capacity < EVENT_BUFFER_MIN_INCREASE && ~((size_t) 0) - EVENT_BUFFER_MIN_INCREASE >= node->capacity) {
+			add_capacity = EVENT_BUFFER_MIN_INCREASE;
+		}
+		const size_t new_capacity = node->capacity + add_capacity;
+		char *const new_buffer = realloc(node->buffer, new_capacity);
+		if (new_buffer != NULL) {
+			node->buffer = new_buffer;
+			node->capacity = new_capacity;
+			success_flag = true;
+		} else {
+			errno = ENOMEM;
+		}
+	} else {
+		errno = ENOMEM;
+	}
+	return success_flag;
+}
+
+/**
+ * Appends text to a queued event
+ *
+ * Returns: EVENT_PRINT_OK      if appending the text succeeded
+ *          EVENT_PRINT_RETRY   if the function call should be repeated (due to reallocation of the text buffer)
+ *          EVENT_ALLOC_FAILED  if a memory allocation failed
+ */
+static event_print_rc queued_event_vprintf(struct event_node *const node, const char *const format, va_list vars) {
+	event_print_rc rc = EVENT_PRINT_RETRY;
+	const size_t remain_capacity = node->capacity - node->length;
+	// vsnprintf(...) returns the length excluding the trailing \0 byte
+	const size_t req_capacity = vsnprintf(&node->buffer[node->length], remain_capacity, format, vars);
+	if (req_capacity < remain_capacity) {
+		node->length += req_capacity;
+		rc = EVENT_PRINT_OK;
+	} else {
+		// 1 additional byte is required for the trailing \0 byte
+		const size_t increase = (req_capacity - remain_capacity) + 1;
+		if (!event_increase_capacity(node, increase)) {
+			rc = EVENT_ALLOC_FAILED;
+		}
+	}
+	return rc;
+}
+
+/**
+ * Prints text if node == NULL, or appends text to a queued event instead if node != NULL
+ *
+ * Returns: true to indicate success, false to indicate a memory allocation failure
+ */
+static bool printf_or_queue(struct event_node *const node, const char *const format, ...) {
+	bool success_flag = false;
+	va_list vars;
+	if (node != NULL) {
+		event_print_rc rc;
+		do {
+			va_start(vars, format);
+			rc = queued_event_vprintf(node, format, vars);
+			success_flag = rc == EVENT_PRINT_OK;
+			va_end(vars);
+		} while (rc == EVENT_PRINT_RETRY);
+	} else {
+		va_start(vars, format);
+		vprintf(format, vars);
+		va_end(vars);
+		success_flag = true;
+	}
+	return success_flag;
+}
+
+/**
+ * Prints text using a custom vprintf function if node == NULL, or appends text to a queued event instead if node != NULL
+ *
+ * Returns: true to indicate success, false to indicate a memory allocation failure
+ */
+static bool wrap_vprintf_or_queue(struct event_node *const node, const wrap_vprintf_fn_t custom_vprintf, const int indent, const char *const format, ...) {
+	bool success_flag = false;
+	va_list vars;
+	if (node != NULL) {
+		event_print_rc rc;
+		do {
+			va_start(vars, format);
+			rc = queued_event_vprintf(node, format, vars);
+			success_flag = rc == EVENT_PRINT_OK;
+			va_end(vars);
+		} while (rc == EVENT_PRINT_RETRY);
+	} else {
+		va_start(vars, format);
+		custom_vprintf(indent, format, vars);
+		va_end(vars);
+		success_flag = true;
+	}
+	return success_flag;
+}
+
+bool print_or_queue_resource_statistics(
+	struct event_node *const node,
+	int indent,
+	struct resource_statistics *old,
+	struct resource_statistics *new,
+	wrap_vprintf_fn_t wrap_vprintf
+)
+{
+	bool success_flag = true;
 	static const char *write_ordering_str[] = {
 		[WO_NONE] = "none",
 		[WO_DRAIN_IO] = "drain",
@@ -2537,36 +2722,55 @@ void print_resource_statistics(int indent,
 	     old->res_stat_write_ordering != wo) &&
 	    wo < ARRAY_SIZE(write_ordering_str) &&
 	    write_ordering_str[wo]) {
-		wrap_printf(indent, " write-ordering:%s", write_ordering_str[wo]);
+		success_flag &= wrap_vprintf_or_queue(
+			node, wrap_vprintf, indent, " write-ordering:%s", write_ordering_str[wo]);
 	}
+	return success_flag;
 }
 
-void print_device_statistics(int indent,
-			     struct device_statistics *old,
-			     struct device_statistics *new,
-			     wrap_printf_fn_t wrap_printf)
+void print_resource_statistics(
+	int indent,
+	struct resource_statistics *old,
+	struct resource_statistics *new,
+	wrap_vprintf_fn_t wrap_vprintf
+)
 {
+	print_or_queue_resource_statistics(NULL, indent, old, new, wrap_vprintf);
+}
+
+bool print_or_queue_device_statistics(
+	struct event_node *const node,
+	int indent,
+	struct device_statistics *old,
+	struct device_statistics *new,
+	wrap_vprintf_fn_t wrap_vprintf
+)
+{
+	bool success_flag = true;
 	if (opt_statistics) {
-		if (opt_verbose)
-			wrap_printf(indent, " size:" U64,
-				    (uint64_t)new->dev_size / 2);
-		wrap_printf(indent, " read:" U64,
-			    (uint64_t)new->dev_read / 2);
-		wrap_printf(indent, " written:" U64,
+		if (opt_verbose) {
+			success_flag &= wrap_vprintf_or_queue( node, wrap_vprintf, indent, " size:" U64,
+				(uint64_t)new->dev_size / 2);
+		}
+
+		success_flag &= wrap_vprintf_or_queue(node, wrap_vprintf, indent, " read:" U64,
+			(uint64_t)new->dev_read / 2);
+		success_flag &= wrap_vprintf_or_queue(node, wrap_vprintf, indent, " written:" U64,
 			    (uint64_t)new->dev_write / 2);
 		if (opt_verbose) {
-			wrap_printf(indent, " al-writes:" U64,
-				    (uint64_t)new->dev_al_writes);
-			wrap_printf(indent, " bm-writes:" U64,
-				    (uint64_t)new->dev_bm_writes);
-			wrap_printf(indent, " upper-pending:" U32,
-				    new->dev_upper_pending);
-			wrap_printf(indent, " lower-pending:" U32,
-				    new->dev_lower_pending);
+			success_flag &= wrap_vprintf_or_queue(node, wrap_vprintf, indent, " al-writes:" U64,
+				(uint64_t)new->dev_al_writes);
+			success_flag &= wrap_vprintf_or_queue(node, wrap_vprintf, indent, " bm-writes:" U64,
+				(uint64_t)new->dev_bm_writes);
+			success_flag &= wrap_vprintf_or_queue(node, wrap_vprintf, indent, " upper-pending:" U32,
+				new->dev_upper_pending);
+			success_flag &= wrap_vprintf_or_queue(node, wrap_vprintf, indent, " lower-pending:" U32,
+				new->dev_lower_pending);
 			if (!old ||
-			    old->dev_al_suspended != new->dev_al_suspended)
-				wrap_printf(indent, " al-suspended:%s",
-					    new->dev_al_suspended ? "yes" : "no");
+			    old->dev_al_suspended != new->dev_al_suspended) {
+				success_flag &= wrap_vprintf_or_queue(node, wrap_vprintf, indent, " al-suspended:%s",
+					new->dev_al_suspended ? "yes" : "no");
+			}
 		}
 	}
 	if ((!old ||
@@ -2587,25 +2791,56 @@ void print_device_statistics(int indent,
 			x2 = ",lower" + first;
 			first = false;
 		}
-		if (first)
+		if (first) {
 			x1 = "no";
+		}
 
-		wrap_printf(indent, " blocked:%s%s", x1, x2);
+		success_flag &= wrap_vprintf_or_queue(node, wrap_vprintf, indent, " blocked:%s%s", x1, x2);
 	}
+	return success_flag;
 }
 
-void print_connection_statistics(int indent,
-				 struct connection_statistics *old,
-				 struct connection_statistics *new,
-				 wrap_printf_fn_t wrap_printf)
+void print_device_statistics(
+	int indent,
+	struct device_statistics *old,
+	struct device_statistics *new,
+	wrap_vprintf_fn_t wrap_vprintf
+)
 {
+	print_or_queue_device_statistics(NULL, indent, old, new, wrap_vprintf);
+}
+
+bool print_or_queue_connection_statistics(
+	struct event_node *const node,
+	int indent,
+	struct connection_statistics *old,
+	struct connection_statistics *new,
+	wrap_vprintf_fn_t wrap_vprintf
+)
+{
+	bool success_flag = true;
 	if (!old ||
-	    old->conn_congested != new->conn_congested)
-		wrap_printf(indent, " congested:%s", new->conn_congested ? "yes" : "no");
-	if (new->ap_in_flight != -1ULL) {
-		wrap_printf(indent, " ap-in-flight:"U64, (uint64_t)new->ap_in_flight);
-		wrap_printf(indent, " rs-in-flight:"U64, (uint64_t)new->rs_in_flight);
+	    old->conn_congested != new->conn_congested) {
+		success_flag &= wrap_vprintf_or_queue(
+			node, wrap_vprintf, indent, " congested:%s", new->conn_congested ? "yes" : "no");
 	}
+	if (new->ap_in_flight != -1ULL) {
+		success_flag &= wrap_vprintf_or_queue(
+			node, wrap_vprintf, indent, " ap-in-flight:"U64, (uint64_t)new->ap_in_flight);
+		success_flag &= wrap_vprintf_or_queue(
+			node, wrap_vprintf, indent, " rs-in-flight:"U64, (uint64_t)new->rs_in_flight);
+	}
+	return success_flag;
+}
+
+void print_connection_statistics(
+	int indent,
+	struct connection_statistics *old,
+	struct connection_statistics *new,
+	wrap_vprintf_fn_t wrap_vprintf
+)
+{
+	print_or_queue_connection_statistics(NULL, indent, old, new, wrap_vprintf);
 }
 
 static char *bool2json(bool b)
@@ -2842,12 +3077,15 @@ static void resource_status_json(struct resources_list *resource)
 	       write_ordering_str[resource->statistics.res_stat_write_ordering]);
 }
 
-
-void print_peer_device_statistics(int indent,
-				  struct peer_device_statistics *old,
-				  struct peer_device_statistics *s,
-				  wrap_printf_fn_t wrap_printf)
+bool print_or_queue_peer_device_statistics(
+	struct event_node *const node,
+	int indent,
+	struct peer_device_statistics *old,
+	struct peer_device_statistics *s,
+	wrap_vprintf_fn_t wrap_vprintf
+)
 {
+	bool success_flag = true;
 	double db, dt;
 	uint64_t sectors_to_go = 0;
 	bool sync_details =
@@ -2860,72 +3098,104 @@ void print_peer_device_statistics(int indent,
 
 	if (indent == 0) { /* called from print_notifications() */
 		if (sync_details)
-			wrap_printf(indent, " done:%.2f", 100.0 *
+			success_flag &= wrap_vprintf_or_queue(node, wrap_vprintf, indent, " done:%.2f", 100.0 *
 					(double)(s->peer_dev_rs_total - sectors_to_go) /
 					(double)s->peer_dev_rs_total);
-		if (!opt_statistics)
-			return;
+		if (!opt_statistics) {
+			return success_flag;
+		}
 	}
 	/* else (indent != 0), called from peer_device_status(),
 	 * we printed the "done" percentage already */
 
-	wrap_printf(indent, " received:" U64,
+	success_flag &= wrap_vprintf_or_queue(node, wrap_vprintf, indent, " received:" U64,
 		    (uint64_t)s->peer_dev_received / 2);
-	wrap_printf(indent, " sent:" U64,
+	success_flag &= wrap_vprintf_or_queue(node, wrap_vprintf, indent, " sent:" U64,
 		    (uint64_t)s->peer_dev_sent / 2);
 	if (opt_verbose || s->peer_dev_out_of_sync)
-		wrap_printf(indent, " out-of-sync:" U64,
+		success_flag &= wrap_vprintf_or_queue(node, wrap_vprintf, indent, " out-of-sync:" U64,
 			    (uint64_t)s->peer_dev_out_of_sync / 2);
-	if (!opt_verbose)
-		return;
+	if (!opt_verbose) {
+		return success_flag;
+	}
 
-	wrap_printf(indent, " pending:" U32,
+	success_flag &= wrap_vprintf_or_queue(node, wrap_vprintf, indent, " pending:" U32,
 		    s->peer_dev_pending);
-	wrap_printf(indent, " unacked:" U32,
+	success_flag &= wrap_vprintf_or_queue(node, wrap_vprintf, indent, " unacked:" U32,
 		    s->peer_dev_unacked);
 
-	if (!sync_details)
-		return;
+	if (!sync_details) {
+		return success_flag;
+	}
 
 	if (opt_verbose > 1) {
-		wrap_printf(indent, " rs-total:" U64, (uint64_t) s->peer_dev_rs_total);
-		wrap_printf(indent, " rs-dt-start-ms:" D64, (uint64_t) s->peer_dev_rs_dt_start_ms);
-		wrap_printf(indent, " rs-paused-ms:" D64, (uint64_t) s->peer_dev_rs_paused_ms);
-		wrap_printf(indent, " rs-dt0-ms:" D64, (uint64_t) s->peer_dev_rs_dt0_ms);
-		wrap_printf(indent, " rs-db0-sectors:" D64, (uint64_t) s->peer_dev_rs_db0_sectors);
-		wrap_printf(indent, " rs-dt1-ms:" D64, (uint64_t) s->peer_dev_rs_dt1_ms);
-		wrap_printf(indent, " rs-db1-sectors:" D64, (uint64_t) s->peer_dev_rs_db1_sectors);
+		success_flag &= wrap_vprintf_or_queue(
+			node, wrap_vprintf, indent, " rs-total:" U64, (uint64_t) s->peer_dev_rs_total);
+		success_flag &= wrap_vprintf_or_queue(
+			node, wrap_vprintf, indent, " rs-dt-start-ms:" D64, (uint64_t) s->peer_dev_rs_dt_start_ms);
+		success_flag &= wrap_vprintf_or_queue(
+			node, wrap_vprintf, indent, " rs-paused-ms:" D64, (uint64_t) s->peer_dev_rs_paused_ms);
+		success_flag &= wrap_vprintf_or_queue(
+			node, wrap_vprintf, indent, " rs-dt0-ms:" D64, (uint64_t) s->peer_dev_rs_dt0_ms);
+		success_flag &= wrap_vprintf_or_queue(
+			node, wrap_vprintf, indent, " rs-db0-sectors:" D64, (uint64_t) s->peer_dev_rs_db0_sectors);
+		success_flag &= wrap_vprintf_or_queue(
+			node, wrap_vprintf, indent, " rs-dt1-ms:" D64, (uint64_t) s->peer_dev_rs_dt1_ms);
+		success_flag &= wrap_vprintf_or_queue(
+			node, wrap_vprintf, indent, " rs-db1-sectors:" D64, (uint64_t) s->peer_dev_rs_db1_sectors);
 		if (s->peer_dev_ov_left) {
-			wrap_printf(indent, " ov-start-sector:"U64, (uint64_t)s->peer_dev_ov_start_sector);
-			wrap_printf(indent, " ov-stop-sector:"U64, (uint64_t)s->peer_dev_ov_stop_sector);
-			wrap_printf(indent, " ov-position:"D64, (uint64_t)s->peer_dev_ov_position);
-			wrap_printf(indent, " ov-left:"U64, (uint64_t)s->peer_dev_ov_left);
-			wrap_printf(indent, " ov-skipped:"U64, (uint64_t)s->peer_dev_ov_skipped);
+			success_flag &= wrap_vprintf_or_queue(
+				node, wrap_vprintf, indent, " ov-start-sector:"U64, (uint64_t)s->peer_dev_ov_start_sector);
+			success_flag &= wrap_vprintf_or_queue(
+				node, wrap_vprintf, indent, " ov-stop-sector:"U64, (uint64_t)s->peer_dev_ov_stop_sector);
+			success_flag &= wrap_vprintf_or_queue(
+				node, wrap_vprintf, indent, " ov-position:"D64, (uint64_t)s->peer_dev_ov_position);
+			success_flag &= wrap_vprintf_or_queue(
+				node, wrap_vprintf, indent, " ov-left:"U64, (uint64_t)s->peer_dev_ov_left);
+			success_flag &= wrap_vprintf_or_queue(
+				node, wrap_vprintf, indent, " ov-skipped:"U64, (uint64_t)s->peer_dev_ov_skipped);
 		} else {
-			wrap_printf(indent, " rs-failed:"U64, (uint64_t)s->peer_dev_resync_failed);
-			wrap_printf(indent, " rs-same-csum:"U64, (uint64_t)s->peer_dev_rs_same_csum);
+			success_flag &= wrap_vprintf_or_queue(
+				node, wrap_vprintf, indent, " rs-failed:"U64, (uint64_t)s->peer_dev_resync_failed);
+			success_flag &= wrap_vprintf_or_queue(
+				node, wrap_vprintf, indent, " rs-same-csum:"U64, (uint64_t)s->peer_dev_rs_same_csum);
 		}
 
-		if (s->peer_dev_rs_c_sync_rate)
-			wrap_printf(indent, " want:%.2f", s->peer_dev_rs_c_sync_rate / 1024.0);
+		if (s->peer_dev_rs_c_sync_rate) {
+			success_flag &= wrap_vprintf_or_queue(
+				node, wrap_vprintf, indent, " want:%.2f", s->peer_dev_rs_c_sync_rate / 1024.0);
+		}
 
 		db = s->peer_dev_rs_total - sectors_to_go;
 		dt = s->peer_dev_rs_dt_start_ms - s->peer_dev_rs_paused_ms;
-		wrap_printf(indent, " dbdt:%.2f", db/(dt?:1) *1000.0/2048.0);
+		success_flag &= wrap_vprintf_or_queue(
+			node, wrap_vprintf, indent, " dbdt:%.2f", db/(dt?:1) *1000.0/2048.0);
 
 		db = (int64_t) s->peer_dev_rs_db0_sectors;
 		dt = s->peer_dev_rs_dt0_ms ?: 1;
-		wrap_printf(indent, " dbdt0:%.2f",
-				db/dt /* sectors/ms */
-				*1000.0/2048.0 /* MiB/s */);
+		success_flag &= wrap_vprintf_or_queue(node, wrap_vprintf, indent, " dbdt0:%.2f",
+			db/dt /* sectors/ms */
+			*1000.0/2048.0 /* MiB/s */);
 	}
 
 	db = (int64_t) s->peer_dev_rs_db1_sectors;
 	dt = s->peer_dev_rs_dt1_ms ?: 1;
-	wrap_printf(indent, " dbdt1:%.2f", db/dt *1000.0/2048.0);
+	success_flag &= wrap_vprintf_or_queue(node, wrap_vprintf, indent, " dbdt1:%.2f", db/dt *1000.0/2048.0);
 
 	/* estimate time-to-run, based on "db1/dt1" */
-	wrap_printf(indent, " eta:%.0f", db > 0 ? dt * 1e-3 * sectors_to_go / db : NAN);
+	success_flag &= wrap_vprintf_or_queue(
+		node, wrap_vprintf, indent, " eta:%.0f", db > 0 ? dt * 1e-3 * sectors_to_go / db : NAN);
+	return success_flag;
+}
+
+void print_peer_device_statistics(
+	int indent,
+	struct peer_device_statistics *old,
+	struct peer_device_statistics *s,
+	wrap_vprintf_fn_t wrap_vprintf
+)
+{
+	print_or_queue_peer_device_statistics(NULL, indent, old, s, wrap_vprintf);
 }
 
 void resource_status(struct resources_list *resource)
@@ -2949,7 +3219,7 @@ void resource_status(struct resources_list *resource)
 		wrap_printf(4, " suspended:%s", susp_str(&resource->info));
 	if (opt_statistics && opt_verbose) {
 		wrap_printf(4, "\n");
-		print_resource_statistics(4, NULL, &resource->statistics, wrap_printf);
+		print_resource_statistics(4, NULL, &resource->statistics, wrap_vprintf);
 	}
 	wrap_printf(0, "\n");
 }
@@ -2978,7 +3248,7 @@ static void device_status(struct devices_list *device, bool single_device, bool 
 	if (device->statistics.dev_size != -1) {
 		if (opt_statistics)
 			wrap_printf(indent, "\n");
-		print_device_statistics(indent, NULL, &device->statistics, wrap_printf);
+		print_device_statistics(indent, NULL, &device->statistics, wrap_vprintf);
 	}
 	wrap_printf(indent, "\n");
 }
@@ -3079,7 +3349,7 @@ static void peer_device_status(struct peer_devices_list *peer_device, bool singl
 				    resync_susp_str(&peer_device->info));
 		if (opt_statistics && peer_device->statistics.peer_dev_received != -1) {
 			wrap_printf(indent, "\n");
-			print_peer_device_statistics(indent, NULL, &peer_device->statistics, wrap_printf);
+			print_peer_device_statistics(indent, NULL, &peer_device->statistics, wrap_vprintf);
 		}
 	}
 
@@ -3125,7 +3395,7 @@ static void connection_status(struct connections_list *connection,
 			    role_color_stop(role, false));
 	}
 	if (opt_verbose || connection->statistics.conn_congested > 0)
-		print_connection_statistics(6, NULL, &connection->statistics, wrap_printf);
+		print_connection_statistics(6, NULL, &connection->statistics, wrap_vprintf);
 	wrap_printf(0, "\n");
 	if (opt_verbose || opt_statistics || connection->info.conn_connection_state == C_CONNECTED)
 		peer_devices_status(&connection->ctx, peer_devices, single_device, is_a_tty);
@@ -4021,6 +4291,8 @@ fail:
 	exit(20);
 }
 
+
+
 static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 {
 	static const char *action_name[] = {
@@ -4043,12 +4315,17 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 	static bool last_seq_known;
 	static struct timeval tv;
 	static bool keep_tv;
+	static struct event_queue queue_obj = {NULL, NULL};
+	static struct event_queue *queue = &queue_obj;
+	static bool exists_done = false;
 
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U, };
 	struct drbd_notification_header nh = { .nh_type = -1U };
 	enum drbd_notification_type action;
 	struct drbd_genlmsghdr *dh;
 	char *key = NULL;
+	struct event_node *node = NULL;
+	bool success_flag = true;
 
 	if (!info) {
 		keep_tv = false;
@@ -4064,7 +4341,7 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 	if (drbd_notification_header_from_attrs(&nh, info))
 		return 0;
 	action = nh.nh_type & ~NOTIFY_FLAGS;
-	if (action >= ARRAY_SIZE(action_name) ||
+	if (action < 0 || action >= ARRAY_SIZE(action_name) ||
 	    !action_name[action]) {
 		dbg(1, "unknown notification type\n");
 		goto out;
@@ -4092,6 +4369,13 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 		}
 		last_seq = info->nlhdr->nlmsg_seq;
 		last_seq_known = true;
+
+		if (!exists_done) {
+			node = queue_new_event(queue);
+			if (node == NULL) {
+				goto out;
+			}
+		}
 	}
 
 	if (opt_timestamps) {
@@ -4102,12 +4386,14 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 		keep_tv = !!(nh.nh_type & NOTIFY_CONTINUES);
 
 		tm = localtime(&tv.tv_sec);
-		printf("%04u-%02u-%02uT%02u:%02u:%02u.%06u%+03d:%02u ",
-		       tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
-		       tm->tm_hour, tm->tm_min, tm->tm_sec,
-		       (int)tv.tv_usec,
-		       (int)(tm->tm_gmtoff / 3600),
-		       (int)((abs(tm->tm_gmtoff) / 60) % 60));
+		success_flag &= printf_or_queue(
+			node,
+			"%04u-%02u-%02uT%02u:%02u:%02u.%06u%+03d:%02u ",
+			tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
+			tm->tm_hour, tm->tm_min, tm->tm_sec,
+			(int)tv.tv_usec,
+			(int)(tm->tm_gmtoff / 3600),
+			(int)((abs(tm->tm_gmtoff) / 60) % 60));
 	}
 	if (info->genlhdr->cmd != DRBD_INITIAL_STATE_DONE) {
 		const char *name = object_name[info->genlhdr->cmd];
@@ -4121,9 +4407,18 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 			goto fail;
 		event_key(key, size + 1, name, dh->minor, &ctx);
 	}
-	printf("%s %s",
+	success_flag &= printf_or_queue(node, "%s %s",
 	       action_name[action],
 	       key ? key : "-");
+	if (action == NOTIFY_EXISTS && key == NULL) {
+		/* Print the cached change events */
+		fputs("\n", stdout);
+		print_queued_events(queue);
+		clear_event_queue(queue);
+		node = NULL;
+		exists_done = true;
+		goto out;
+	}
 
 	switch(info->genlhdr->cmd) {
 	case DRBD_RESOURCE_STATE:
@@ -4147,22 +4442,27 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 			if (old && !have_new_stats)
 				new.s = old->s;
 
-			if (!old || new.i.res_role != old->i.res_role)
-				printf(" role:%s%s%s",
-						ROLE_COLOR_STRING(new.i.res_role, 1));
+			if (!old || new.i.res_role != old->i.res_role) {
+				success_flag &= printf_or_queue(node, " role:%s%s%s",
+				       ROLE_COLOR_STRING(new.i.res_role, 1));
+			}
 			if (!old ||
 			    new.i.res_susp != old->i.res_susp ||
 			    new.i.res_susp_nod != old->i.res_susp_nod ||
 			    new.i.res_susp_fen != old->i.res_susp_fen ||
-			    new.i.res_susp_quorum != old->i.res_susp_quorum)
-				printf(" suspended:%s",
-				       susp_str(&new.i));
-			if (opt_statistics && have_new_stats)
-				print_resource_statistics(0, old ? &old->s : NULL,
-							  &new.s, nowrap_printf);
+			    new.i.res_susp_quorum != old->i.res_susp_quorum) {
+				success_flag &= printf_or_queue(
+					node, " suspended:%s",
+					susp_str(&new.i));
+			}
+			if (opt_statistics && have_new_stats) {
+				success_flag &= print_or_queue_resource_statistics(
+					node, 0, old ? &old->s : NULL, &new.s, nowrap_vprintf);
+			}
 			free(old);
-		} else
+		} else {
 			update_info(&key, NULL, 0);
+		}
 		break;
 	case DRBD_DEVICE_STATE:
 		if (action != NOTIFY_DESTROY) {
@@ -4188,17 +4488,22 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 			if (!old || new.i.dev_disk_state != old->i.dev_disk_state ||
 			    new.i.dev_has_quorum != old->i.dev_has_quorum) {
 				bool intentional = new.i.is_intentional_diskless == 1;
-				printf(" disk:%s%s%s",
-						DISK_COLOR_STRING(new.i.dev_disk_state, intentional, true));
-				printf(" client:%s", intentional_diskless_str(&new.i));
-				printf(" quorum:%s", new.i.dev_has_quorum ? "yes" : "no");
+				success_flag &= printf_or_queue(
+					node, " disk:%s%s%s",
+					DISK_COLOR_STRING(new.i.dev_disk_state, intentional, true));
+				success_flag &= printf_or_queue(
+					node, " client:%s", intentional_diskless_str(&new.i));
+				success_flag &= printf_or_queue(
+					node, " quorum:%s", new.i.dev_has_quorum ? "yes" : "no");
 			}
-			if (opt_statistics && have_new_stats)
-				print_device_statistics(0, old ? &old->s : NULL,
-							&new.s, nowrap_printf);
+			if (opt_statistics && have_new_stats) {
+				success_flag &= print_or_queue_device_statistics(
+					node, 0, old ? &old->s : NULL, &new.s, nowrap_vprintf);
+			}
 			free(old);
-		} else
+		} else {
 			update_info(&key, NULL, 0);
+		}
 		break;
 	case DRBD_CONNECTION_STATE:
 		if (action != NOTIFY_DESTROY) {
@@ -4222,18 +4527,20 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 				new.s = old->s;
 			if (!old ||
 			    new.i.conn_connection_state != old->i.conn_connection_state)
-				printf(" connection:%s%s%s",
-						CONN_COLOR_STRING(new.i.conn_connection_state));
+				success_flag &= printf_or_queue(node, " connection:%s%s%s",
+					CONN_COLOR_STRING(new.i.conn_connection_state));
 			if (!old ||
 			    new.i.conn_role != old->i.conn_role)
-				printf(" role:%s%s%s",
+				success_flag &= printf_or_queue(node, " role:%s%s%s",
 						ROLE_COLOR_STRING(new.i.conn_role, 0));
-			if (opt_statistics && have_new_stats)
-				print_connection_statistics(0, old ? &old->s : NULL,
-							    &new.s, nowrap_printf);
+			if (opt_statistics && have_new_stats) {
+				success_flag &= print_or_queue_connection_statistics(
+					node, 0, old ? &old->s : NULL, &new.s, nowrap_vprintf);
+			}
 			free(old);
-		} else
+		} else {
 			update_info(&key, NULL, 0);
+		}
 		break;
 	case DRBD_PEER_DEVICE_STATE:
 		if (action != NOTIFY_DESTROY) {
@@ -4260,28 +4567,31 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 				new.s = old->s;
 
 			if (!old || new.i.peer_repl_state != old->i.peer_repl_state)
-				printf(" replication:%s%s%s",
-						REPL_COLOR_STRING(new.i.peer_repl_state));
+				success_flag &= printf_or_queue(node, " replication:%s%s%s",
+					REPL_COLOR_STRING(new.i.peer_repl_state));
 			if (!old || new.i.peer_disk_state != old->i.peer_disk_state) {
 				bool intentional = new.i.peer_is_intentional_diskless == 1;
-				printf(" peer-disk:%s%s%s",
-						DISK_COLOR_STRING(new.i.peer_disk_state, intentional,  false));
-				printf(" peer-client:%s", peer_intentional_diskless_str(&new.i));
+				success_flag &= printf_or_queue(node, " peer-disk:%s%s%s",
+					DISK_COLOR_STRING(new.i.peer_disk_state, intentional,  false));
+				success_flag &= printf_or_queue(
+					node, " peer-client:%s", peer_intentional_diskless_str(&new.i));
 			}
 			if (!old ||
 			    new.i.peer_resync_susp_user != old->i.peer_resync_susp_user ||
 			    new.i.peer_resync_susp_peer != old->i.peer_resync_susp_peer ||
-			    new.i.peer_resync_susp_dependency != old->i.peer_resync_susp_dependency)
-				printf(" resync-suspended:%s",
-				       resync_susp_str(&new.i));
+			    new.i.peer_resync_susp_dependency != old->i.peer_resync_susp_dependency) {
+				success_flag &= printf_or_queue(
+					node, " resync-suspended:%s", resync_susp_str(&new.i));
+			}
 
-			if (have_new_stats)
-				print_peer_device_statistics(0, old ? &old->s : NULL,
-							     &new.s, nowrap_printf);
-
+			if (have_new_stats) {
+				success_flag &= print_or_queue_peer_device_statistics(
+					node, 0, old ? &old->s : NULL, &new.s, nowrap_vprintf);
+			}
 			free(old);
-		} else
+		} else {
 			update_info(&key, NULL, 0);
+		}
 		break;
 	case DRBD_PATH_STATE:
 		if (action != NOTIFY_DESTROY) {
@@ -4292,20 +4602,23 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 				goto nl_out;
 			}
 			old = update_info(&key, &new, sizeof(new));
-			if (!old || old->path_established != new.path_established)
-				printf(" established:%s",
-				       new.path_established ? "yes" : "no");
+			if (!old || old->path_established != new.path_established) {
+				success_flag &= printf_or_queue(
+					node, " established:%s", new.path_established ? "yes" : "no");
+			}
 			free(old);
-		} else
+		} else {
 			update_info(&key, NULL, 0);
+		}
 		break;
 	case DRBD_HELPER: {
 		struct drbd_helper_info helper_info;
 
 		if (!drbd_helper_info_from_attrs(&helper_info, info)) {
-			printf(" helper:%s", helper_info.helper_name);
-			if (action == NOTIFY_RESPONSE)
-				printf(" status:%u", helper_info.helper_status);
+			success_flag &= printf_or_queue(node, " helper:%s", helper_info.helper_name);
+			if (action == NOTIFY_RESPONSE) {
+				success_flag &= printf_or_queue(node, " status:%u", helper_info.helper_status);
+			}
 		} else {
 			dbg(1, "helper info missing\n");
 			goto nl_out;
@@ -4317,10 +4630,15 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 	}
 
 nl_out:
-	printf("\n");
+	success_flag &= printf_or_queue(node, "\n");
 out:
 	free(key);
 	fflush(stdout);
+	if (!success_flag) {
+		/* Out of memory while queueing events */
+		clear_event_queue(queue);
+		goto fail;
+	}
 	if (opt_now && info->genlhdr->cmd == DRBD_INITIAL_STATE_DONE)
 		return -1;
 	return 0;

@@ -4,11 +4,11 @@
 #include <string.h>
 #include <sys/ioctl.h>
 
-__attribute__((format(printf, 2, 3)))
-int wrap_printf(int indent, const char *format, ...)
+__attribute__((format(printf, 2, 0)))
+int wrap_vprintf(int indent, const char *format, va_list ap1)
 {
 	static int columns, col;
-	va_list ap1, ap2;
+	va_list ap2;
 	int n;
 	const char *nl;
 
@@ -21,10 +21,8 @@ int wrap_printf(int indent, const char *format, ...)
 			columns = 80;
 	}
 
-	va_start(ap1, format);
 	va_copy(ap2, ap1);
 	n = vsnprintf(NULL, 0, format, ap1);
-	va_end(ap1);
 	if (col + n > columns) {
 		putchar('\n');
 		if (*format == '\n')
@@ -48,6 +46,17 @@ int wrap_printf(int indent, const char *format, ...)
 		col = 0;
 
 	return n;
+}
+
+__attribute__((format(printf, 2, 3)))
+int wrap_printf(int indent, const char *format, ...)
+{
+    int rc;
+    va_list ap;
+    va_start(ap, format);
+    rc = wrap_vprintf(indent, format, ap);
+    va_end(ap);
+    return rc;
 }
 
 int wrap_printf_wordwise(int indent, const char *str)
