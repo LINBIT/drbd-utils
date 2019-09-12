@@ -76,9 +76,9 @@ void usage_and_exit(void)
 	fprintf(stderr, "		Cause kernel to dump (via printk) currently allocated memory\n");
 	fprintf(stderr, "	windrbd [opt] parser-test\n");
 	fprintf(stderr, "		Cause kernel to run DRBD URI parser test (output via printk)\n");
-	fprintf(stderr, "	windrbd [opt] install-bus-device\n");
+	fprintf(stderr, "	windrbd [opt] install-bus-device <inf-file>\n");
 	fprintf(stderr, "		Installs the WinDRBD Virtual Bus device on the system.\n");
-	fprintf(stderr, "	windrbd [opt] remove-bus-device\n");
+	fprintf(stderr, "	windrbd [opt] remove-bus-device <inf-file>\n");
 	fprintf(stderr, "		Removes the WinDRBD Virtual Bus device from the system.\n");
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
@@ -1217,7 +1217,7 @@ next:
 	 * loader.c file.
 	 */
 
-static int install_windrbd_bus_device(int remove)
+static int install_windrbd_bus_device(int remove, const char *inf_file)
 {
 	HDEVINFO DeviceInfoSet = 0;
 	SP_DEVINFO_DATA DeviceInfoData;
@@ -1227,13 +1227,18 @@ static int install_windrbd_bus_device(int remove)
 	PROC UpdateDriverForPlugAndPlayDevicesA;
 	BOOL RebootRequired = FALSE;
 	TCHAR FullFilePath[1024];
+	TCHAR InfFile[1024];
 	int num_deleted;
+	int ret;
 
-	if (!GetFullPathName(L"windrbd.inf", sizeof(FullFilePath), FullFilePath, NULL)) {
+	if ((ret = MultiByteToWideChar(CP_UTF8, 0, inf_file, -1, &InfFile[0], sizeof(InfFile) / sizeof(InfFile[0]) - 1)) == 0) {
+		print_windows_error_code("MultiByteToWideChar");
+		return -1;
+	}
+	if (!GetFullPathNameW(&InfFile[0], sizeof(FullFilePath) / sizeof(FullFilePath[0]) - 1, FullFilePath, NULL)) {
 		print_windows_error_code("GetFullPathName");
 		return -1;
 	}
-printf("full file path is %S\n", FullFilePath);
 	if ((Library = LoadLibrary(L"newdev.dll")) == NULL) {
 		print_windows_error_code("LoadLibraryError");
 		return -1;
@@ -1272,9 +1277,11 @@ printf("full file path is %S\n", FullFilePath);
 			print_windows_error_code("UpdateDriverForPlugAndPlayDevices");
 			goto remove_class;
 		}
+		printf("Installed 1 WinDRBD bus device\n");
 	}
 	if (RebootRequired || num_deleted > 0) {
 		printf("Your system has to rebooted for changes to take effect.\n");
+		return 1;   /* can check with if errorlevel 1 from cmd script */
 	}
 	return 0;
 
@@ -1428,11 +1435,18 @@ int main(int argc, char ** argv)
 	if (strcmp(op, "parser-test") == 0)
 		return run_parser_test();
 
-	if (strcmp(op, "install-bus-device") == 0)
-		return install_windrbd_bus_device(0);
-
-	if (strcmp(op, "remove-bus-device") == 0)
-		return install_windrbd_bus_device(1);
+	if (strcmp(op, "install-bus-device") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		return install_windrbd_bus_device(0, argv[optind+1]);
+	}
+	if (strcmp(op, "remove-bus-device") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		return install_windrbd_bus_device(1, argv[optind+1]);
+	}
 
 	usage_and_exit();
 	return 0;
