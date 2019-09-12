@@ -1202,6 +1202,65 @@ printf("full file path is %S\n", FullFilePath);
 		print_windows_error_code("SetupDiSetDeviceRegistryProperty");
 		goto cleanup_deviceinfo;
 	}
+	if (!SetupDiCallClassInstaller(DIF_DETECT, DeviceInfoSet, NULL)) {
+		print_windows_error_code("SetupDiSetDeviceRegistryProperty DIF_DETECT");
+	} else {
+		printf("SetupDiCallClassInstaller returned TRUE\n");
+	}
+	HDEVINFO h;
+	// h = SetupDiGetClassDevsExA(&ClassGUID, "SCSI", NULL, 0, NULL, NULL, NULL);
+	h = SetupDiGetClassDevsExA(NULL, NULL, NULL, DIGCF_ALLCLASSES, NULL, NULL, NULL);
+	if (h == INVALID_HANDLE_VALUE) {
+		print_windows_error_code("SetupDiGetClassDevsExA");
+	} else {
+		printf("Handle is %p\n", h);
+		SP_DEVINFO_DATA info;
+		int i;
+		unsigned char *buf;
+		DWORD size;
+
+		info.cbSize = sizeof(info);
+
+		i=0;
+		while (1) {
+			if (!SetupDiEnumDeviceInfo(h, i, &info)) {
+				print_windows_error_code("SetupDiEnumDeviceInfo");
+				break;
+			}
+
+printf("i is %d\n", i);
+/*			if (!SetupDiGetDeviceRegistryProperty(h, &info, SPDRP_HARDWAREID, NULL, NULL, 0, &size)) {
+				print_windows_error_code("SetupDiGetDeviceRegistryProperty");
+				break;
+			}
+*/
+			size = 1024;
+printf("size is %d\n", size);
+			buf = malloc(size+1);
+			if (buf == NULL) {
+				printf("malloc failed\n");
+				break;
+			}
+			if (!SetupDiGetDeviceRegistryProperty(h, &info, SPDRP_HARDWAREID, NULL, buf, size, NULL)) {
+				int err = GetLastError();
+				print_windows_error_code("SetupDiGetDeviceRegistryProperty buf");
+				if (err == 0xd || err == 0x7a) {
+					goto next;
+				}
+				break;
+			}
+			printf("device %d is %S\n", i, buf);
+			if (wcscmp(buf, L"WinDRBD") == 0) {
+				printf("About to delete WinDRBD bus device\n");
+				if (!SetupDiCallClassInstaller(DIF_REMOVE, h, &info)) {
+					print_windows_error_code("SetupDiCallClassInstaller");
+				}
+			}
+next:
+			free(buf);
+			i++;
+		}
+	}
 	if (!SetupDiCallClassInstaller(remove ? DIF_REMOVE : DIF_REGISTERDEVICE, DeviceInfoSet, &DeviceInfoData)) {
 		print_windows_error_code("SetupDiCallClassInstaller");
 		goto cleanup_deviceinfo;
