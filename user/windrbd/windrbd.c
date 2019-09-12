@@ -1156,12 +1156,68 @@ void print_windows_error_code(const char *func)
 	printf("%s failed: error code %x\n", func, err);
 }
 
+	/* This iterates over all devices on the system and deletes
+	 * all devices with hardware ID WinDRBD.
+	 */
+
+static int remove_all_windrbd_bus_devices(void)
+{
+	HDEVINFO h;
+	SP_DEVINFO_DATA info;
+	int i;
+	int num_deleted = 0;
+	TCHAR buf[1024];
+	int err;
+
+	h = SetupDiGetClassDevsExA(NULL, NULL, NULL, DIGCF_ALLCLASSES, NULL, NULL, NULL);
+	if (h == INVALID_HANDLE_VALUE) {
+		print_windows_error_code("SetupDiGetClassDevsExA");
+		return -1;
+	}
+	info.cbSize = sizeof(info);
+
+	i=0;
+	while (1) {
+		if (!SetupDiEnumDeviceInfo(h, i, &info)) {
+			err = GetLastError();
+			if (err != 0x103)	/* last item */
+				print_windows_error_code("SetupDiEnumDeviceInfo");
+			break;
+		}
+		if (!SetupDiGetDeviceRegistryProperty(h, &info, SPDRP_HARDWAREID, NULL, (unsigned char *) buf, sizeof(buf), NULL)) {
+			err = GetLastError();
+				/* invalid data, insufficient buffer: */
+				/* both do not happen with WinDRBD bus device */
+			if (err == 0xd || err == 0x7a)
+				goto next;
+
+			print_windows_error_code("SetupDiGetDeviceRegistryProperty buf");
+			break;
+		}
+/*		printf("device %d is %S\n", i, buf); */
+		if (wcscmp(buf, L"WinDRBD") == 0) {
+			if (!SetupDiCallClassInstaller(DIF_REMOVE, h, &info)) {
+				print_windows_error_code("SetupDiCallClassInstaller");
+			} else {
+				num_deleted++;
+			}
+		}
+next:
+		i++;
+	}
+
+	if (!quiet)
+		printf("Deleted %d WinDRBD bus device%s\n", num_deleted, num_deleted == 1 ? "" : "s");
+
+	return num_deleted;
+}
+
 	/* This installs or removes the WinDRBD bus device object.
 	 * This code has been adapted from WinAoE (www.winaoe.org)
 	 * loader.c file.
 	 */
 
-int install_windrbd_bus_device(int remove)
+static int install_windrbd_bus_device(int remove)
 {
 	HDEVINFO DeviceInfoSet = 0;
 	SP_DEVINFO_DATA DeviceInfoData;
@@ -1171,6 +1227,7 @@ int install_windrbd_bus_device(int remove)
 	PROC UpdateDriverForPlugAndPlayDevicesA;
 	BOOL RebootRequired = FALSE;
 	TCHAR FullFilePath[1024];
+	int num_deleted;
 
 	if (!GetFullPathName(L"windrbd.inf", sizeof(FullFilePath), FullFilePath, NULL)) {
 		print_windows_error_code("GetFullPathName");
@@ -1202,75 +1259,23 @@ printf("full file path is %S\n", FullFilePath);
 		print_windows_error_code("SetupDiSetDeviceRegistryProperty");
 		goto cleanup_deviceinfo;
 	}
-	if (!SetupDiCallClassInstaller(DIF_DETECT, DeviceInfoSet, NULL)) {
-		print_windows_error_code("SetupDiSetDeviceRegistryProperty DIF_DETECT");
-	} else {
-		printf("SetupDiCallClassInstaller returned TRUE\n");
-	}
-	HDEVINFO h;
-	// h = SetupDiGetClassDevsExA(&ClassGUID, "SCSI", NULL, 0, NULL, NULL, NULL);
-	h = SetupDiGetClassDevsExA(NULL, NULL, NULL, DIGCF_ALLCLASSES, NULL, NULL, NULL);
-	if (h == INVALID_HANDLE_VALUE) {
-		print_windows_error_code("SetupDiGetClassDevsExA");
-	} else {
-		printf("Handle is %p\n", h);
-		SP_DEVINFO_DATA info;
-		int i;
-		unsigned char *buf;
-		DWORD size;
+	num_deleted = remove_all_windrbd_bus_devices();
+	if (num_deleted < 0)
+		goto cleanup_deviceinfo;
 
-		info.cbSize = sizeof(info);
-
-		i=0;
-		while (1) {
-			if (!SetupDiEnumDeviceInfo(h, i, &info)) {
-				print_windows_error_code("SetupDiEnumDeviceInfo");
-				break;
-			}
-
-printf("i is %d\n", i);
-/*			if (!SetupDiGetDeviceRegistryProperty(h, &info, SPDRP_HARDWAREID, NULL, NULL, 0, &size)) {
-				print_windows_error_code("SetupDiGetDeviceRegistryProperty");
-				break;
-			}
-*/
-			size = 1024;
-printf("size is %d\n", size);
-			buf = malloc(size+1);
-			if (buf == NULL) {
-				printf("malloc failed\n");
-				break;
-			}
-			if (!SetupDiGetDeviceRegistryProperty(h, &info, SPDRP_HARDWAREID, NULL, buf, size, NULL)) {
-				int err = GetLastError();
-				print_windows_error_code("SetupDiGetDeviceRegistryProperty buf");
-				if (err == 0xd || err == 0x7a) {
-					goto next;
-				}
-				break;
-			}
-			printf("device %d is %S\n", i, buf);
-			if (wcscmp(buf, L"WinDRBD") == 0) {
-				printf("About to delete WinDRBD bus device\n");
-				if (!SetupDiCallClassInstaller(DIF_REMOVE, h, &info)) {
-					print_windows_error_code("SetupDiCallClassInstaller");
-				}
-			}
-next:
-			free(buf);
-			i++;
+	if (remove == 0) {
+		if (!SetupDiCallClassInstaller(DIF_REGISTERDEVICE, DeviceInfoSet, &DeviceInfoData)) {
+			print_windows_error_code("SetupDiCallClassInstaller");
+			goto cleanup_deviceinfo;
+		}
+		if (!UpdateDriverForPlugAndPlayDevices(0, L"WinDRBD\0\0\0", FullFilePath, INSTALLFLAG_FORCE, &RebootRequired)) {
+			print_windows_error_code("UpdateDriverForPlugAndPlayDevices");
+			goto remove_class;
 		}
 	}
-	if (!SetupDiCallClassInstaller(remove ? DIF_REMOVE : DIF_REGISTERDEVICE, DeviceInfoSet, &DeviceInfoData)) {
-		print_windows_error_code("SetupDiCallClassInstaller");
-		goto cleanup_deviceinfo;
-	}
-	if (!UpdateDriverForPlugAndPlayDevices(0, L"WinDRBD\0\0\0", FullFilePath, INSTALLFLAG_FORCE, &RebootRequired)) {
-		print_windows_error_code("UpdateDriverForPlugAndPlayDevices");
-		goto remove_class;
-	}
-	if (RebootRequired)
+	if (RebootRequired || num_deleted > 0) {
 		printf("Your system has to rebooted for changes to take effect.\n");
+	}
 	return 0;
 
 remove_class:
