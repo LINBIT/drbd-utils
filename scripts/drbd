@@ -141,6 +141,25 @@ _udev_settle()
 	fi
 }
 
+# Set up/detach linstor loopback devices for LINSTOR file based pools
+handle_linstor_loopback()
+{
+	mappingfile=/var/lib/linstor/loop_device_mapping
+	[ -f "$mappingfile" ] || return 0
+	DONE=false
+	until $DONE; do
+		read -r mapping || DONE=true
+		dev=$( echo "$mapping" | cut -f1 -d':')
+		file=$(echo "$mapping" | cut -f2 -d':')
+		case "$1" in
+			start) losetup "$dev" 2>/dev/null || losetup "$dev" "$file";;
+			stop)  losetup "$dev" 2>/dev/null && losetup -d "$dev";;
+		esac
+	done <"$mappingfile"
+
+	return 0
+}
+
 run_hook()
 {
 	n="hook_$1"
@@ -170,6 +189,7 @@ case "$1" in
 	    exit 6 # LSB for "not configured"
 	fi
 
+	handle_linstor_loopback "$1"
 	$DRBDADM adjust-with-progress all
 	[[ $? -gt 1 ]] && exit 20
 
@@ -249,6 +269,7 @@ case "$1" in
 		for res in $($DRBDADM --stacked sh-resources) $($DRBDADM sh-resources); do
 			$DRBDSETUP down "$res" || stop_failed=1
 		done
+		handle_linstor_loopback "$1"
 		_udev_settle &> /dev/null
 		if [ -d /sys/module/drbd/holders ]; then
 			(cd /sys/module/drbd/holders; for tr in *; do [ -d ${tr} ] && ${RMMOD} ${tr}; done)
