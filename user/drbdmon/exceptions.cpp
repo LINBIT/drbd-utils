@@ -93,3 +93,31 @@ EventObjectException::EventObjectException(
 EventObjectException::~EventObjectException() noexcept
 {
 }
+
+// @throws std::bad_alloc
+EventsSourceException::EventsSourceException(
+    const std::string* const error_msg_ref,
+    const std::string* const debug_info_ref,
+    const std::string* const event_line_ref
+):
+    EventException::EventException(error_msg_ref, debug_info_ref, event_line_ref)
+{
+}
+
+EventsSourceException::~EventsSourceException() noexcept
+{
+}
+
+// @throws std::bad_alloc
+EventsIoException::EventsIoException(
+    const std::string* const error_msg_ref,
+    const std::string* const debug_info_ref,
+    const std::string* const event_line_ref
+):
+    EventException::EventException(error_msg_ref, debug_info_ref, event_line_ref)
+{
+}
+
+EventsIoException::~EventsIoException() noexcept
+{
+}

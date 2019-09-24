@@ -153,7 +153,9 @@ void DrbdMon::run()
             }
 
             events_source->spawn_source();
-            events_io = std::unique_ptr<EventsIo>(new EventsIo(events_source->get_events_source_fd()));
+            events_io = std::unique_ptr<EventsIo>(
+                new EventsIo(events_source->get_events_out_fd(), events_source->get_events_err_fd())
+            );
 
             // Cleanup any zombies that might not have been collected,
             // because SIGCHLD is blocked during reinitialization
@@ -362,21 +364,53 @@ void DrbdMon::run()
             fin_action = DrbdMon::finish_action::RESTART_DELAYED;
             fail_data = DrbdMon::fail_info::EVENTS_IO;
         }
-        catch (EventsSourceException&)
+        catch (EventsSourceException& src_exc)
         {
             log.add_entry(
                 MessageLog::log_level::ALERT,
                 "The external process that provides DRBD events exited"
             );
+            const std::string* const error_msg = src_exc.get_error_msg();
+            if (error_msg != nullptr)
+            {
+                log.add_entry(
+                    MessageLog::log_level::ALERT,
+                    *error_msg
+                );
+            }
+            const std::string* const debug_info = src_exc.get_debug_info();
+            if (debug_info != nullptr)
+            {
+                debug_log.add_entry(
+                    MessageLog::log_level::ALERT,
+                    *debug_info
+                );
+            }
             fin_action = DrbdMon::finish_action::RESTART_DELAYED;
             fail_data = DrbdMon::fail_info::EVENTS_SOURCE;
         }
-        catch (EventsIoException&)
+        catch (EventsIoException& io_exc)
         {
             log.add_entry(
                 MessageLog::log_level::ALERT,
                 "DRBD events source I/O error"
             );
+            const std::string* const error_msg = io_exc.get_error_msg();
+            if (error_msg != nullptr)
+            {
+                log.add_entry(
+                    MessageLog::log_level::ALERT,
+                    *error_msg
+                );
+            }
+            const std::string* const debug_info = io_exc.get_debug_info();
+            if (debug_info != nullptr)
+            {
+                debug_log.add_entry(
+                    MessageLog::log_level::ALERT,
+                    *debug_info
+                );
+            }
             fin_action = DrbdMon::finish_action::RESTART_DELAYED;
             fail_data = DrbdMon::fail_info::EVENTS_IO;
         }

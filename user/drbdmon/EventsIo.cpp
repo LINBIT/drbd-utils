@@ -1,4 +1,5 @@
 #include <EventsIo.h>
+#include <utils.h>
 #include <cstring>
 
 extern "C"
@@ -8,18 +9,21 @@ extern "C"
 
 // epoll_event datastructure slot indices
 const int EventsIo::EVENTS_CTL_INDEX = 0;
-const int EventsIo::SIG_CTL_INDEX    = 1;
-const int EventsIo::STDIN_CTL_INDEX  = 2;
+const int EventsIo::ERROR_CTL_INDEX  = 1;
+const int EventsIo::SIG_CTL_INDEX    = 2;
+const int EventsIo::STDIN_CTL_INDEX  = 3;
 // Number of epoll_event datastructure slots
-const int EventsIo::CTL_SLOTS_COUNT  = 3;
+const int EventsIo::CTL_SLOTS_COUNT  = 4;
 
 // @throws std::bad_alloc, std::ios_base::failure
-EventsIo::EventsIo(int events_input_fd):
+EventsIo::EventsIo(const int events_input_fd, const int events_error_fd):
     events_fd(events_input_fd),
+    error_fd(events_error_fd),
     ctl_events(new struct epoll_event[CTL_SLOTS_COUNT]),
     fired_events(new struct epoll_event[CTL_SLOTS_COUNT]),
     signal_buffer(new struct signalfd_siginfo),
-    events_buffer(new char[MAX_LINE_LENGTH])
+    events_buffer(new char[MAX_LINE_LENGTH]),
+    error_buffer(new char[ERROR_BUFFER_SIZE])
 {
     try
     {
@@ -33,7 +37,10 @@ EventsIo::EventsIo(int events_input_fd):
         poll_fd = epoll_create1(EPOLL_CLOEXEC);
         if (poll_fd == -1)
         {
-            throw EventsIoException();
+            std::string error_msg("I/O channel selector initialization failed");
+            std::string debug_info("epoll_create1(...) failed, errno=");
+            debug_info += std::to_string(errno);
+            throw EventsIoException(&error_msg, &debug_info, nullptr);
         }
 
         // Initialize signalfds to enable polling for signals
@@ -51,7 +58,10 @@ EventsIo::EventsIo(int events_input_fd):
         sig_fd = signalfd(-1, &mask, SFD_NONBLOCK | SFD_CLOEXEC);
         if (sig_fd == -1)
         {
-            throw EventsIoException();
+            std::string error_msg("Signal handler initialization failed");
+            std::string debug_info("signalfd(...) failed, errno=");
+            debug_info += std::to_string(errno);
+            throw EventsIoException(&error_msg, &debug_info, nullptr);
         }
 
         // Initialize poll event data structures
@@ -62,6 +72,7 @@ EventsIo::EventsIo(int events_input_fd):
 
         // Register the epoll() events
         register_poll(events_fd, &(ctl_events[EVENTS_CTL_INDEX]), EPOLLIN);
+        register_poll(error_fd, &(ctl_events[ERROR_CTL_INDEX]), EPOLLIN);
         register_poll(sig_fd, &(ctl_events[SIG_CTL_INDEX]), EPOLLIN);
         register_poll(stdin_fd, &(ctl_events[STDIN_CTL_INDEX]), EPOLLIN);
     }
@@ -90,7 +101,7 @@ EventsIo::~EventsIo() noexcept
     cleanup();
 }
 
-// @throws EventsIoException
+// @throws std::bad_alloc, EventsIoException
 void EventsIo::register_poll(int fd, struct epoll_event* event_ctl_slot, uint32_t event_mask)
 {
     event_ctl_slot->data.fd = fd;
@@ -98,11 +109,14 @@ void EventsIo::register_poll(int fd, struct epoll_event* event_ctl_slot, uint32_
     int rc = epoll_ctl(poll_fd, EPOLL_CTL_ADD, fd, event_ctl_slot);
     if (rc != 0)
     {
-        throw EventsIoException();
+        std::string error_msg("I/O channel registration failed");
+        std::string debug_info("epoll_ctl(...) failed, errno=");
+        debug_info += std::to_string(errno);
+        throw EventsIoException(&error_msg, &debug_info, nullptr);
     }
 }
 
-// @throws EventsIoException
+// @throws std::bad_alloc, EventsIoException
 EventsIo::event EventsIo::wait_event()
 {
     EventsIo::event event_id = EventsIo::event::NONE;
@@ -136,7 +150,10 @@ EventsIo::event EventsIo::wait_event()
                 else
                 if (errno != 0 && errno != EINTR)
                 {
-                    throw EventsIoException();
+                    std::string error_msg("I/O channel selection failed");
+                    std::string debug_info("epoll_wait(...) failed, errno=");
+                    debug_info += std::to_string(errno);
+                    throw EventsIoException(&error_msg, &debug_info, nullptr);
                 }
             }
             while (!pending_events);
@@ -148,7 +165,8 @@ EventsIo::event EventsIo::wait_event()
             // Events source data available
             if (events_eof)
             {
-                throw EventsIoException();
+                std::string error_msg("The events stream was closed");
+                throw EventsIoException(&error_msg, nullptr, nullptr);
             }
 
             read_events();
@@ -156,6 +174,19 @@ EventsIo::event EventsIo::wait_event()
             {
                 event_id = EventsIo::event::EVENT_LINE;
             }
+        }
+        else
+        if (fired_fd == error_fd)
+        {
+            if (errors_eof)
+            {
+                std::string error_msg("The events source error stream was closed");
+                throw EventsIoException(&error_msg, nullptr, nullptr);
+            }
+
+            read_errors();
+            std::string error_msg("The events source wrote to the stderr channel");
+            throw EventsIoException(&error_msg, nullptr, nullptr);
         }
         else
         if (fired_fd == sig_fd)
@@ -172,7 +203,8 @@ EventsIo::event EventsIo::wait_event()
         else
         {
             // Unknown data source ready, this is not supposed to happen
-            throw EventsIoException();
+            std::string error_msg("Internal error: An unregistered I/O channel became ready");
+            throw EventsIoException(&error_msg, nullptr, nullptr);
         }
 
         // Select the next event for processing
@@ -186,7 +218,7 @@ EventsIo::event EventsIo::wait_event()
     return event_id;
 }
 
-// @throws EventsIoException
+// @throws std::bad_alloc, EventsIoException
 int EventsIo::get_signal()
 {
     int signal_id = 0;
@@ -203,14 +235,18 @@ int EventsIo::get_signal()
         else
         if (read_size == 0)
         {
-            throw EventsIoException();
+            std::string error_msg("The signal handling channel was closed");
+            throw EventsIoException(&error_msg, nullptr, nullptr);
         }
     }
     while (read_size == -1 && errno == EINTR);
 
     if (read_size == -1)
     {
-        throw EventsIoException();
+        std::string error_msg("Reading from the signal handling channel failed");
+        std::string debug_info("read(sig_fd, ...) failed, errno=");
+        debug_info += std::to_string(errno);
+        throw EventsIoException(&error_msg, &debug_info, nullptr);
     }
 
     return signal_id;
@@ -242,7 +278,7 @@ void EventsIo::restore_terminal()
     }
 }
 
-// @throws EventsIoException
+// @throws std::bad_alloc, EventsIoException
 void EventsIo::read_events()
 {
     // If there is space remaining in the buffer,
@@ -267,7 +303,10 @@ void EventsIo::read_events()
         {
             if (errno != EAGAIN)
             {
-                throw EventsIoException();
+                std::string error_msg("Reading from the events channel failed");
+                std::string debug_info("read(events_fd, ...) failed, errno=");
+                debug_info += std::to_string(errno);
+                throw EventsIoException(&error_msg, &debug_info, nullptr);
             }
         }
         else
@@ -280,6 +319,33 @@ void EventsIo::read_events()
     }
 }
 
+// @throws std::bad_alloc, EventsIoException
+void EventsIo::read_errors()
+{
+    ssize_t read_count = 0;
+    do
+    {
+        read_count = read(error_fd, &(error_buffer[0]), ERROR_BUFFER_SIZE);
+    }
+    while (read_count == -1 && errno == EINTR);
+    if (read_count == 0)
+    {
+        errors_eof = true;
+    }
+    else
+    if (read_count == -1)
+    {
+        if (errno != EAGAIN)
+        {
+            std::string error_msg("Reading from the error channel failed");
+            std::string debug_info("read(error_fd, ...) failed, errno=");
+            debug_info += std::to_string(errno);
+            throw EventsIoException(&error_msg, &debug_info, nullptr);
+        }
+    }
+}
+
+// @throws std::bad_alloc, EventsIoException
 std::string* EventsIo::get_event_line()
 {
     if (event_line == nullptr)
@@ -371,7 +437,8 @@ bool EventsIo::prepare_line()
                 // Currently, a too long line is considered an error
                 // If throwing the exception is removed, too long lines
                 // will simply be discarded instead
-                throw EventsIoException();
+                std::string error_msg("Event line exceeded maximum permitted length");
+                throw EventsIoException(&error_msg, nullptr, nullptr);
             }
         }
     }
@@ -391,23 +458,9 @@ void EventsIo::checked_int_rc(int rc) const
 
 void EventsIo::cleanup() noexcept
 {
-    if (poll_fd != -1)
-    {
-        close(poll_fd);
-        poll_fd = -1;
-    }
-
-    if (events_fd != -1)
-    {
-        close(events_fd);
-        events_fd = -1;
-    }
-
-    if (sig_fd != -1)
-    {
-        close(sig_fd);
-        sig_fd = -1;
-    }
-
+    posix::close_fd(poll_fd);
+    posix::close_fd(events_fd);
+    posix::close_fd(error_fd);
+    posix::close_fd(sig_fd);
     // stdin_fd is not closed
 }
