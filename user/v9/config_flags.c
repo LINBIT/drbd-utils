@@ -1030,6 +1030,7 @@ struct context_def new_current_uuid_cmd_ctx = {
 	.nla_type = DRBD_NLA_NEW_C_UUID_PARMS,
 	.fields = {
 		{ "clear-bitmap", FLAG(clear_bm) },
+		{ "force-resync", FLAG(force_resync) },
 		{ } },
 };
 

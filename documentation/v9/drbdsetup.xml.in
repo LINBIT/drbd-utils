@@ -574,6 +574,12 @@
 		  <para>Clears the sync bitmap in addition to generating a new current UUID.</para>
 		</listitem>
 	      </varlistentry>
+	      <varlistentry>
+		<term><option>--force-resync</option></term>
+		<listitem>
+		  <para>Forces an initial resync in addition to generating a new current UUID.</para>
+		</listitem>
+	      </varlistentry>
 	    </variablelist></para>
 
 	  <para>This can be used to skip the initial sync, if you want to start from scratch. This
