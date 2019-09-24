@@ -28,9 +28,10 @@ class EventsIo
     };
 
     static const size_t MAX_LINE_LENGTH {1024};
+    static const size_t ERROR_BUFFER_SIZE {1024};
 
     // @throws std::bad_alloc, std::ios_base::failure
-    explicit EventsIo(int events_input_fd);
+    explicit EventsIo(int events_input_fd, int events_error_fd);
     virtual ~EventsIo() noexcept;
 
     EventsIo(const EventsIo& orig) = delete;
@@ -39,10 +40,11 @@ class EventsIo
     EventsIo(EventsIo&& orig) = default;
     EventsIo& operator=(EventsIo&& orig) = delete;
 
-    // @throws EventsIoException
+    // @throws std::bad_alloc, EventsIoException
     virtual event wait_event();
 
     // Returns the current event line
+    // @throws std::bad_alloc, EventsIoException
     virtual std::string* get_event_line();
 
     // Can be called optionally to free the current event line
@@ -50,6 +52,7 @@ class EventsIo
     // event line is prepared, or upon destruction of the EventsIo instance
     virtual void free_event_line();
 
+    // @throws std::bad_alloc, EventsIoException
     virtual int get_signal();
 
     // @throws EventsIoException
@@ -57,7 +60,7 @@ class EventsIo
     virtual void restore_terminal();
 
   private:
-    // @throws EventsIoException
+    // @throws std::bad_alloc, EventsIoException
     void register_poll(int fd, struct epoll_event* event_ctl, uint32_t event_mask);
 
     // @throws EventsIoException
@@ -66,6 +69,7 @@ class EventsIo
 
     // epoll_event datastructure slot indices
     static const int EVENTS_CTL_INDEX;
+    static const int ERROR_CTL_INDEX;
     static const int SIG_CTL_INDEX;
     static const int STDIN_CTL_INDEX;
     // Number of epoll_event datastructure slots
@@ -73,6 +77,7 @@ class EventsIo
 
     int poll_fd   {-1};
     int events_fd {-1};
+    int error_fd  {-1};
     int sig_fd    {-1};
     int stdin_fd  {STDIN_FILENO};
 
@@ -87,11 +92,13 @@ class EventsIo
 
     // Events processing
     const std::unique_ptr<char[]> events_buffer;
+    const std::unique_ptr<char[]> error_buffer;
     std::unique_ptr<std::string> event_line;
 
     size_t event_begin_pos {0};
     size_t events_length   {0};
     bool   events_eof      {false};
+    bool   errors_eof      {false};
     bool   discard_line    {false};
     bool   line_pending    {false};
     bool   data_pending    {false};
@@ -100,22 +107,14 @@ class EventsIo
     struct termios orig_termios;
     struct termios adjusted_termios;
 
-    // @throws EventsIoException
+    // @throws std::bad_alloc, EventsIoException
     void read_events();
 
     // @throws std::bad_alloc, EventsIoException
-    bool prepare_line();
-};
+    void read_errors();
 
-class EventsIoException : public EventException
-{
-  public:
-    EventsIoException() = default;
-    virtual ~EventsIoException() noexcept = default;
-    EventsIoException(const EventsIoException& orig) = delete;
-    EventsIoException& operator=(const EventsIoException& orig) = delete;
-    EventsIoException(EventsIoException&& orig) = default;
-    EventsIoException& operator=(EventsIoException&& orig) = default;
+    // @throws std::bad_alloc, EventsIoException
+    bool prepare_line();
 };
 
 #endif	/* EVENTSIO_H */

@@ -18,9 +18,6 @@ class EventsSourceSpawner
     static const char* EVENTS_PROGRAM;
     static const char* EVENTS_PROGRAM_ARGS[];
 
-    static const int PIPE_READ_SIDE;
-    static const int PIPE_WRITE_SIDE;
-
     EventsSourceSpawner(MessageLog& logRef);
     virtual ~EventsSourceSpawner();
 
@@ -30,10 +27,11 @@ class EventsSourceSpawner
     EventsSourceSpawner& operator=(EventsSourceSpawner&& orig) = default;
 
     virtual pid_t get_process_id();
-    virtual int get_events_source_fd();
+    virtual int get_events_out_fd();
+    virtual int get_events_err_fd();
 
     // @throws std::bad_alloc, EventSourceException
-    virtual int spawn_source();
+    virtual void spawn_source();
 
     // @throws EventsSourceException
     virtual void cleanup_child_processes();
@@ -41,6 +39,8 @@ class EventsSourceSpawner
     MessageLog& log;
 
     void close_pipe();
+
+    void set_nonblocking(int fd);
 
     // @throws EventsSourceException
     void checked_int_rc(int rc) const;
@@ -55,19 +55,8 @@ class EventsSourceSpawner
     void terminate_child_process() noexcept;
 
     pid_t spawned_pid {-1};
-    int   pipe_fd[2]  {-1, -1};
-};
-
-class EventsSourceException : public EventException
-{
-  public:
-    EventsSourceException() = default;
-    virtual ~EventsSourceException() noexcept = default;
-
-    EventsSourceException(const EventsSourceException& orig) = delete;
-    EventsSourceException& operator=(const EventsSourceException& orig) = delete;
-    EventsSourceException(EventsSourceException&& orig) = default;
-    EventsSourceException& operator=(EventsSourceException&& orig) = default;
+    int   out_pipe_fd[2]  {-1, -1};
+    int   err_pipe_fd[2]  {-1, -1};
 };
 
 #endif	/* EVENTSSOURCESPAWNER_H */

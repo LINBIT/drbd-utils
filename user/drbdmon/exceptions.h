@@ -38,6 +38,7 @@ class EventMessageException : public EventException
 {
   public:
     EventMessageException() = default;
+    // @throws std::bad_alloc
     EventMessageException(
         const std::string* const error_msg_ref,
         const std::string* const debug_info_ref,
@@ -56,6 +57,7 @@ class EventObjectException : public EventException
 {
   public:
     EventObjectException() = default;
+    // @throws std::bad_alloc
     EventObjectException(
         const std::string* const error_msg_ref,
         const std::string* const debug_info_ref,
@@ -66,6 +68,40 @@ class EventObjectException : public EventException
     EventObjectException& operator=(const EventObjectException& orig) = delete;
     EventObjectException(EventObjectException&& orig) = default;
     EventObjectException& operator=(EventObjectException&& orig) = default;
+};
+
+class EventsSourceException : public EventException
+{
+  public:
+    EventsSourceException() = default;
+    // @throws std::bad_alloc
+    EventsSourceException(
+        const std::string* const error_msg_ref,
+        const std::string* const debug_info_ref,
+        const std::string* const event_line_ref
+    );
+    virtual ~EventsSourceException() noexcept;
+    EventsSourceException(const EventsSourceException& orig) = delete;
+    EventsSourceException& operator=(const EventsSourceException& orig) = delete;
+    EventsSourceException(EventsSourceException&& orig) = default;
+    EventsSourceException& operator=(EventsSourceException&& orig) = default;
+};
+
+class EventsIoException : public EventException
+{
+  public:
+    EventsIoException() = default;
+    // @throws std::bad_alloc
+    EventsIoException(
+        const std::string* const error_msg_ref,
+        const std::string* const debug_info_ref,
+        const std::string* const event_line_ref
+    );
+    virtual ~EventsIoException() noexcept;
+    EventsIoException(const EventsIoException& orig) = delete;
+    EventsIoException& operator=(const EventsIoException& orig) = delete;
+    EventsIoException(EventsIoException&& orig) = default;
+    EventsIoException& operator=(EventsIoException&& orig) = default;
 };
 
 // Thrown to indicate that DrbdMon should abort configuring options

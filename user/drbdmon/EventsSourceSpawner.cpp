@@ -1,6 +1,7 @@
 #include <EventsSourceSpawner.h>
 #include <memory>
 #include <cstring>
+#include <utils.h>
 
 extern "C"
 {
@@ -20,9 +21,6 @@ const char* EventsSourceSpawner::EVENTS_PROGRAM_ARGS[] =
     "all",
     nullptr
 };
-
-const int EventsSourceSpawner::PIPE_READ_SIDE  = 0;
-const int EventsSourceSpawner::PIPE_WRITE_SIDE = 1;
 
 EventsSourceSpawner::EventsSourceSpawner(MessageLog& logRef):
     log(logRef)
@@ -52,167 +50,95 @@ pid_t EventsSourceSpawner::get_process_id()
     return spawned_pid;
 }
 
-int EventsSourceSpawner::get_events_source_fd()
+int EventsSourceSpawner::get_events_out_fd()
 {
-    return pipe_fd[PIPE_READ_SIDE];
+    return out_pipe_fd[posix::PIPE_READ_SIDE];
+}
+
+int EventsSourceSpawner::get_events_err_fd()
+{
+    return err_pipe_fd[posix::PIPE_READ_SIDE];
 }
 
 // @throws std::bad_alloc, EventSourceException
-int EventsSourceSpawner::spawn_source()
+void EventsSourceSpawner::spawn_source()
 {
-    const std::unique_ptr<posix_spawn_file_actions_t> pipe_init_actions_alloc(new posix_spawn_file_actions_t);
-    const std::unique_ptr<posix_spawnattr_t> spawn_attr_alloc(new posix_spawnattr_t);
+    // Initialize the pipes
+    posix::Pipe out_pipe_mgr(&out_pipe_fd);
+    posix::Pipe err_pipe_mgr(&err_pipe_fd);
 
-    posix_spawn_file_actions_t* pipe_init_actions {nullptr};
-    posix_spawnattr_t* spawn_attr {nullptr};
-    char** spawn_args {nullptr};
+    // Make the pipes' read end nonblocking
+    set_nonblocking(out_pipe_fd[posix::PIPE_READ_SIDE]);
+    set_nonblocking(err_pipe_fd[posix::PIPE_READ_SIDE]);
 
-    // Indicates that posix_spawn_file_actions_init() was executed on pipe_init_actions
-    // and requires cleanup by executing posix_spawn_file_actions_destroy()
-    bool cleanup_pipe_init_actions {false};
-    // Indicates that posix_spawnattr_init() was executed on spawn_attr
-    // and requires cleanup by executing posix_spawnattr_destroy()
-    bool cleanup_spawn_attr {false};
+    // Make stdin nonblocking
+    set_nonblocking(STDIN_FILENO);
 
-    try
+    // Initialize the datastructures for posix_spawn())
+    posix::SpawnFileActions pipe_init;
+    posix::SpawnAttr spawn_attr;
+    posix::SpawnArgs spawn_args(EVENTS_PROGRAM_ARGS);
+
+    // Redirect stdout to the pipes write side
+    checked_int_rc(
+        posix_spawn_file_actions_adddup2(
+            pipe_init.actions,
+            out_pipe_fd[posix::PIPE_WRITE_SIDE],
+            STDOUT_FILENO
+        )
+    );
+    checked_int_rc(
+        posix_spawn_file_actions_adddup2(
+            pipe_init.actions,
+            err_pipe_fd[posix::PIPE_WRITE_SIDE],
+            STDERR_FILENO
+        )
+    );
+    // Close the read end of the pipes
+    checked_int_rc(
+        posix_spawn_file_actions_addclose(
+            pipe_init.actions,
+            out_pipe_fd[posix::PIPE_READ_SIDE]
+        )
+    );
+    checked_int_rc(
+        posix_spawn_file_actions_addclose(
+            pipe_init.actions,
+            err_pipe_fd[posix::PIPE_READ_SIDE]
+        )
+    );
+
+    // Reset ignored signals to the default action
+    sigset_t mask;
+    checked_int_rc(sigemptyset(&mask));
+    checked_int_rc(sigaddset(&mask, SIGTERM));
+    checked_int_rc(sigaddset(&mask, SIGHUP));
+    checked_int_rc(sigaddset(&mask, SIGINT));
+    checked_int_rc(sigaddset(&mask, SIGWINCH));
+    checked_int_rc(sigaddset(&mask, SIGCHLD));
+    checked_int_rc(posix_spawnattr_setsigdefault(spawn_attr.attr, &mask));
+    checked_int_rc(posix_spawnattr_setflags(spawn_attr.attr, POSIX_SPAWN_SETSIGDEF));
+
+    // Attempt to spawn the events source program
+    int spawn_rc = posix_spawnp(&spawned_pid, EVENTS_PROGRAM, pipe_init.actions, spawn_attr.attr,
+                                spawn_args.args, environ);
+    if (spawn_rc != 0)
     {
-        // Initialize the pipe
-        checked_int_rc(pipe2(pipe_fd, 0));
-
-        // Make the pipe's read end nonblocking
-        {
-            int io_flags = fcntl(pipe_fd[PIPE_READ_SIDE], F_GETFL, 0);
-            fcntl(pipe_fd[PIPE_READ_SIDE], F_SETFL, io_flags | O_NONBLOCK);
-        }
-
-        // Make stdin nonblocking
-        {
-            int io_flags = fcntl(STDIN_FILENO, F_GETFL, 0);
-            fcntl(STDIN_FILENO, F_SETFL, io_flags | O_NONBLOCK);
-        }
-
-        // Initialize the datastructures for posix_spawn())
-        {
-            // Use direct pointers
-            pipe_init_actions = pipe_init_actions_alloc.get();
-            spawn_attr = spawn_attr_alloc.get();
-
-            // Initialize a copy of the spawn arguments
-            spawn_args = init_spawn_args();
-
-            checked_int_rc(posix_spawn_file_actions_init(pipe_init_actions));
-            cleanup_pipe_init_actions = true;
-
-            // Redirect stdout to the pipe's write side
-            checked_int_rc(
-                posix_spawn_file_actions_adddup2(
-                    pipe_init_actions,
-                    pipe_fd[PIPE_WRITE_SIDE],
-                    STDOUT_FILENO
-                )
-            );
-            // Close the read end of the pipe
-            checked_int_rc(
-                posix_spawn_file_actions_addclose(
-                    pipe_init_actions,
-                    pipe_fd[PIPE_READ_SIDE]
-                )
-            );
-
-            checked_int_rc(posix_spawnattr_init(spawn_attr));
-            cleanup_spawn_attr = true;
-
-            // Reset ignored signals to the default action
-            sigset_t mask;
-            checked_int_rc(sigemptyset(&mask));
-            checked_int_rc(sigaddset(&mask, SIGTERM));
-            checked_int_rc(sigaddset(&mask, SIGHUP));
-            checked_int_rc(sigaddset(&mask, SIGINT));
-            checked_int_rc(sigaddset(&mask, SIGWINCH));
-            checked_int_rc(sigaddset(&mask, SIGCHLD));
-            checked_int_rc(posix_spawnattr_setsigdefault(spawn_attr, &mask));
-            checked_int_rc(posix_spawnattr_setflags(spawn_attr, POSIX_SPAWN_SETSIGDEF));
-
-            // Attempt to spawn the events source program
-            int spawn_rc = posix_spawnp(&spawned_pid, EVENTS_PROGRAM, pipe_init_actions, spawn_attr,
-                                        spawn_args, environ);
-            if (spawn_rc != 0)
-            {
-                spawned_pid = -1;
-                log.add_entry(
-                    MessageLog::log_level::ALERT,
-                    "Spawning the events source process failed"
-                );
-                throw EventsSourceException();
-            }
-
-            destroy_spawn_args(spawn_args);
-
-            // Close the local write side of the pipe
-            {
-                int close_rc = 0;
-                do
-                {
-                    errno = 0;
-                    close_rc = close(pipe_fd[PIPE_WRITE_SIDE]);
-                }
-                while (close_rc != 0 && errno == EINTR);
-            }
-
-            // Cleanup pipe_init_actions
-            static_cast<void> (posix_spawn_file_actions_destroy(pipe_init_actions));
-            cleanup_pipe_init_actions = false;
-            // Cleanup spawn_attr
-            static_cast<void> (posix_spawnattr_destroy(spawn_attr));
-            cleanup_spawn_attr = false;
-        }
-    }
-    catch (EventsSourceException&)
-    {
-        // Cleanup calls below may change errno, so the relevant
-        // information must be cached
-        bool spawn_out_of_memory = (errno == ENOMEM);
-
-        if (cleanup_pipe_init_actions)
-        {
-            static_cast<void> (posix_spawn_file_actions_destroy(pipe_init_actions));
-        }
-
-        if (cleanup_spawn_attr)
-        {
-            static_cast<void> (posix_spawnattr_destroy(spawn_attr));
-        }
-
-        destroy_spawn_args(spawn_args);
-
-        close_pipe();
-
-        if (spawn_out_of_memory)
-        {
-            throw std::bad_alloc();
-        }
-        throw;
-    }
-    catch (std::bad_alloc&)
-    {
-        if (cleanup_pipe_init_actions)
-        {
-            static_cast<void> (posix_spawn_file_actions_destroy(pipe_init_actions));
-        }
-
-        if (cleanup_spawn_attr)
-        {
-            static_cast<void> (posix_spawnattr_destroy(spawn_attr));
-        }
-
-        destroy_spawn_args(spawn_args);
-
-        close_pipe();
-
-        throw;
+        spawned_pid = -1;
+        log.add_entry(
+            MessageLog::log_level::ALERT,
+            "Spawning the events source process failed"
+        );
+        throw EventsSourceException();
     }
 
-    return pipe_fd[PIPE_READ_SIDE];
+    // Close the local write side of the pipes
+    out_pipe_mgr.close_write_side();
+    err_pipe_mgr.close_write_side();
+
+    // Keep the pipes open when leaving scope
+    out_pipe_mgr.release();
+    err_pipe_mgr.release();
 }
 
 // @throws EventsSourceException
@@ -253,31 +179,11 @@ void EventsSourceSpawner::terminate_child_process() noexcept
     }
 }
 
-void EventsSourceSpawner::close_pipe()
+// Sets O_NONBLOCK on the specified filedescriptor
+void EventsSourceSpawner::set_nonblocking(int fd)
 {
-    // Close the pipe file descriptors
-    if (pipe_fd[PIPE_READ_SIDE] != -1)
-    {
-        int rc = 0;
-        do
-        {
-            errno = 0;
-            rc = close(pipe_fd[PIPE_READ_SIDE]);
-        }
-        while (rc != 0 && errno == EINTR);
-        pipe_fd[PIPE_READ_SIDE] = -1;
-    }
-    if (pipe_fd[PIPE_WRITE_SIDE] != -1)
-    {
-        int rc = 0;
-        do
-        {
-            errno = 0;
-            rc = close(pipe_fd[PIPE_WRITE_SIDE]);
-        }
-        while (rc != 0 && errno == EINTR);
-        pipe_fd[PIPE_WRITE_SIDE] = -1;
-    }
+    int io_flags = fcntl(fd, F_GETFL, 0);
+    fcntl(fd, F_SETFL, io_flags | O_NONBLOCK);
 }
 
 // Throws EventsSourceException if rc is not equal to 0
@@ -287,54 +193,5 @@ void EventsSourceSpawner::checked_int_rc(int rc) const
     if (rc != 0)
     {
         throw EventsSourceException();
-    }
-}
-
-// @throws std::bad_alloc
-char** EventsSourceSpawner::init_spawn_args() const
-{
-    char** spawn_args = nullptr;
-
-    try
-    {
-        // Number of arguments, excluding the trailing null pointer
-        size_t args_count = 0;
-        while (EVENTS_PROGRAM_ARGS[args_count] != nullptr)
-        {
-            ++args_count;
-        }
-
-        // Allocate slots for the arguments and an additional one for
-        // the trailing null pointer
-        spawn_args = new char*[args_count + 1];
-        for (size_t index = 0; index < args_count; ++index)
-        {
-            size_t arg_length = std::strlen(EVENTS_PROGRAM_ARGS[index]) + 1;
-            // If the allocation fails, make sure there is a null pointer in this slot
-            // Required for clean deallocation
-            spawn_args[index] = nullptr;
-            spawn_args[index] = new char[arg_length];
-            std::strcpy(spawn_args[index], EVENTS_PROGRAM_ARGS[index]);
-        }
-        spawn_args[args_count] = nullptr;
-    }
-    catch (std::bad_alloc&)
-    {
-        destroy_spawn_args(spawn_args);
-        throw;
-    }
-
-    return spawn_args;
-}
-
-void EventsSourceSpawner::destroy_spawn_args(char** spawn_args) const noexcept
-{
-    if (spawn_args != nullptr)
-    {
-        for (size_t index = 0; spawn_args[index] != nullptr; ++index)
-        {
-            delete[] spawn_args[index];
-        }
-        delete[] spawn_args;
     }
 }
