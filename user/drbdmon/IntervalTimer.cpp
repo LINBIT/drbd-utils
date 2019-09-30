@@ -1,4 +1,5 @@
 #include <IntervalTimer.h>
+#include <cstring>
 
 // throws std::bad_alloc, ConfigurationException
 IntervalTimer::IntervalTimer(MessageLog& log, uint16_t interval_msecs)
@@ -6,6 +7,7 @@ IntervalTimer::IntervalTimer(MessageLog& log, uint16_t interval_msecs)
     std::unique_ptr<struct sigevent> timer_evt_cfg_mgr(new struct sigevent);
 
     struct sigevent* timer_evt_cfg = timer_evt_cfg_mgr.get();
+    std::memset(timer_evt_cfg, 0, sizeof (struct sigevent));
     timer_evt_cfg->sigev_notify = SIGEV_SIGNAL;
     timer_evt_cfg->sigev_signo = SIGALRM;
     int rc = timer_create(CLOCK_MONOTONIC, timer_evt_cfg, &interval_timer_id);
