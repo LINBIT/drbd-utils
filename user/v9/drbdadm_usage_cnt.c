@@ -48,7 +48,7 @@
 
 #define HTTP_PORT 80
 #define HTTP_HOST "usage.drbd.org"
-#define HTTP_ADDR "212.69.161.111"
+#define HTTP_ADDR "159.69.154.96"
 #define NODE_ID_FILE DRBD_LIB_DIR"/node_id"
 
 
