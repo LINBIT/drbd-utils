@@ -142,21 +142,26 @@ _udev_settle()
 }
 
 # Set up/detach linstor loopback devices for LINSTOR file based pools
+# FIXME I think setting up these loop device mappings should be done elsewhere,
+# and not in the DRBD init file; possibly we need proper support in drbdadm.
 handle_linstor_loopback()
 {
-	mappingfile=/var/lib/linstor/loop_device_mapping
-	[ -f "$mappingfile" ] || return 0
-	DONE=false
-	until $DONE; do
-		read -r mapping || DONE=true
-		dev=$( echo "$mapping" | cut -f1 -d':')
-		file=$(echo "$mapping" | cut -f2 -d':')
+	local line dev file
+	# || [[ -n $line ]]: in case there is no newline at EOF
+	while read -r line || [[ -n $line ]] ; do
+		dev=${line%%:*}
+		file=${line#*:}
+		test -f "$file" && test -r "$file" && test -w "$file" || continue
+		# should -f be allowed?
+		[[ $dev = loop* ]] || [[ $dev = /dev/loop* ]] || continue
 		case "$1" in
+			# what about existing, but "wrong", mappings?
 			start) losetup "$dev" 2>/dev/null || losetup "$dev" "$file";;
 			stop)  losetup "$dev" 2>/dev/null && losetup -d "$dev";;
 		esac
-	done <"$mappingfile"
+	done < /var/lib/linstor/loop_device_mapping
 
+	# at least we tried.
 	return 0
 }
 
