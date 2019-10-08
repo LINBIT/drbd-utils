@@ -1208,6 +1208,13 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	    <para>No automatic resynchronization, simply disconnect.</para>
 	  </listitem>
 	</varlistentry>
+	<varlistentry>
+	  <term xml:id="retry-connect"><option>retry-connect</option></term>
+
+	  <listitem>
+	    <para>Disconnect now, and retry to connect immediatly afterwards.</para>
+	  </listitem>
+	</varlistentry>
 
 	<varlistentry>
 	  <term xml:id="violently"><option>violently</option></term>
