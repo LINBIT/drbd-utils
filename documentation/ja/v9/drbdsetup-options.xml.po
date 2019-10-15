@@ -6,7 +6,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2019-06-13 13:45+0900\n"
+"POT-Creation-Date: 2019-10-16 05:10+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1773,6 +1773,14 @@ msgid ""
 msgstr ""
 "このオプションは、再同期決定の結果がクラスタ内の現在のロール割り当てと互換性"
 "がない場合を解決するのに役立つ。定義されたポリシーは次のとおり:"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><term>
+msgid "<option>retry-connect</option>"
+msgstr "<option>retry-connect</option>"
+
+#. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><listitem><para>
+msgid "Disconnect now, and retry to connect immediatly afterwards."
+msgstr "今すぐ切断し、その後すぐに再接続する。"
 
 #. type: Content of: <drbdsetup_options><drbdsetup_option><definition><variablelist><varlistentry><term>
 msgid "<option>violently</option>"
