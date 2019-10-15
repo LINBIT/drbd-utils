@@ -39,8 +39,8 @@ uint16_t TermSize::get_size_y() const
 
 namespace posix
 {
-    constexpr const size_t PIPE_READ_SIDE   = 0;
-    constexpr const size_t PIPE_WRITE_SIDE  = 1;
+    const size_t PIPE_READ_SIDE   = 0;
+    const size_t PIPE_WRITE_SIDE  = 1;
 
     void close_fd(int& fd) noexcept
     {
