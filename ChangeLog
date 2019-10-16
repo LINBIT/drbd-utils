@@ -3,6 +3,15 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.11.0
+--------
+ * drbdsetup,all: prepare for netlink changes (linux v5.2+)
+ * drbdadm,v9: fix a check for setting up connections multiple times
+ * init: setup file backed loop devices (mapping from LINSTOR)
+ * rr-conflict: add retry-connect option (>=drbd 9.0.20)
+ * drbdmon: 256/16 colors; events2 handler improvements
+ * drbdsetup,v9: new flag: force-resync (>=drbd 9.0.21)
+
 9.10.0
 --------
  * drbdmon: limit desplay lenght, minor fixes
