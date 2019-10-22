@@ -81,8 +81,7 @@ int after_new_minor(const struct cfg_ctx *ctx)
                 char minor_str[10];
                 snprintf(minor_str, sizeof(minor_str)-1, "%d", ctx->vol->device_minor);
                 call_windrbd(ctx->res->name, windrbd, "-q", "set-mount-point-for-minor", minor_str, ctx->vol->device, NULL);
-        } else
-                printf("Warning: %s is not a valid Windows drive letter or empty. The windrbd device\nwill not be mounted.\nTo mount it, do a\n\twindrbd set-mount-point-for-minor %d <drive-letter>:\n", ctx->vol->device, ctx->vol->device_minor);
+        }
 
 	return 0;
 }
@@ -91,9 +90,15 @@ int after_primary(const struct cfg_ctx *ctx)
 {
 	struct d_volume *vol;
 
-	for_each_volume(vol, &ctx->res->me->volumes)
-		if (is_driveletter(vol->device))
+	for_each_volume(vol, &ctx->res->me->volumes) {
+		if (vol->device[0] == '\0') {
+			char minor_str[10];
+			snprintf(minor_str, sizeof(minor_str)-1, "%d", ctx->vol->device_minor);
+			call_windrbd(ctx->res->name, windrbd, "-q", "scan-partitions-for-minor", minor_str, NULL);
+		} else if (is_driveletter(vol->device)) {
 			call_windrbd(ctx->res->name, windrbd, "-q", "add-drive-in-explorer", vol->device, NULL);
+		}
+	}
 
 	return 0;
 }
