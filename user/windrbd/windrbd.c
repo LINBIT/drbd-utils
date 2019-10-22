@@ -80,6 +80,8 @@ void usage_and_exit(void)
 	fprintf(stderr, "		Installs the WinDRBD Virtual Bus device on the system.\n");
 	fprintf(stderr, "	windrbd [opt] remove-bus-device <inf-file>\n");
 	fprintf(stderr, "		Removes the WinDRBD Virtual Bus device from the system.\n");
+	fprintf(stderr, "	windrbd [opt] scan-partitions-for-minor <minor>\n");
+	fprintf(stderr, "		Reread partition table of disk minor (will cause drives to appear\n");
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
 	fprintf(stderr, "	-f (force): do it even if it is dangerous.\n");
@@ -1295,6 +1297,34 @@ cleanup_deviceinfo:
 	return -1;
 }
 
+int scan_partitions_for_minor(int minor)
+{
+	HANDLE h;
+	struct _PARTITION_INFORMATION_EX pi;
+	DWORD size;
+	BOOL ret;
+	int err;
+	wchar_t fname[256];
+
+	swprintf(fname, sizeof(fname)/sizeof(fname[0])-1, L"\\\\.\\Drbd%d", minor);
+	h = CreateFile(fname, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+	if (h == INVALID_HANDLE_VALUE) {
+		printf("Could not open DRBD device %ls, error is %d\n", fname, GetLastError());
+		return -1;
+	}
+	ret = DeviceIoControl(h, IOCTL_DISK_GET_PARTITION_INFO_EX, NULL, 0, &pi, sizeof(pi), &size, NULL);
+	if (!ret) {
+		err = GetLastError();
+		fprintf(stderr, "Error in sending ioctl to kernel, err is %d\n", err);
+		CloseHandle(h);
+
+		return -1;
+	}
+	CloseHandle(h);
+	return 0;
+}
+
 int main(int argc, char ** argv)
 {
 	const char *op;
@@ -1446,6 +1476,14 @@ int main(int argc, char ** argv)
 			usage_and_exit();
 		}
 		return install_windrbd_bus_device(1, argv[optind+1]);
+	}
+	if (strcmp(op, "scan-partitions-for-minor") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		int minor = atoi(argv[optind+1]);
+
+		return scan_partitions_for_minor(minor);
 	}
 
 	usage_and_exit();
