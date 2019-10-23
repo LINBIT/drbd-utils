@@ -93,7 +93,7 @@ int after_primary(const struct cfg_ctx *ctx)
 	for_each_volume(vol, &ctx->res->me->volumes) {
 		if (vol->device[0] == '\0') {
 			char minor_str[10];
-			snprintf(minor_str, sizeof(minor_str)-1, "%d", ctx->vol->device_minor);
+			snprintf(minor_str, sizeof(minor_str)-1, "%d", vol->device_minor);
 			call_windrbd(ctx->res->name, windrbd, "-q", "scan-partitions-for-minor", minor_str, NULL);
 		} else if (is_driveletter(vol->device)) {
 			call_windrbd(ctx->res->name, windrbd, "-q", "add-drive-in-explorer", vol->device, NULL);
