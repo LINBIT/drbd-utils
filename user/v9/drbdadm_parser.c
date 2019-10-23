@@ -947,6 +947,7 @@ int parse_volume_stmt(struct d_volume *vol, struct names* on_hosts, int token)
 	default:
 		return 0;
 	}
+printf("parse_volume_stmt: vol->device is \"%s\"\n", vol->device);
 	return 1;
 }
 
@@ -969,6 +970,7 @@ struct d_volume *parse_volume(int vnr, struct names* on_hosts)
 					token);
 	}
 
+printf("parse_volume: vol->device is \"%s\"\n", vol->device);
 	return vol;
 }
 
