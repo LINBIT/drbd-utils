@@ -116,3 +116,10 @@ out:
 void print_platform_specific_versions(void)
 {
 }
+
+void assign_default_volume(struct d_volume *vol)
+{
+	if (!vol->device)
+		m_asprintf(&vol->device, "/dev/drbd%u",
+			   vol->device_minor);
+}

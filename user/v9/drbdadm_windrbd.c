@@ -176,3 +176,9 @@ void print_platform_specific_versions(void)
 	char *windrbd_version = windrbd_get_windrbd_version();
 	printf("WINDRBD_VERSION=%s\n", shell_escape(windrbd_version));
 }
+
+void assign_default_volume(struct d_volume *vol)
+{
+	if (!vol->device)
+		m_asprintf(&vol->device, "");
+}
