@@ -62,6 +62,10 @@ _drbd_set_status_variables_from_sh_status() {
 	*)	status_unconfigured=true ;;
 	esac
 
+	case ${DRBD_ROLE_REMOTE[*]} in
+	*Primary*) status_some_peer_primary=true ;;
+	esac
+
 	local tmp
 	status_pdsk_all_up_to_date=true
 	status_pdsk_any_unknown=false
@@ -222,6 +226,10 @@ _drbd_set_status_variables_from_events2()
 	Unconfigured) status_unconfigured=true ;;
 	esac
 
+	case "${_peer_role[*]}" in
+	*Primary*) status_some_peer_primary=true ;;
+	esac
+
 	status_disk_all_up_to_date=$_disk_all_up_to_date
 	status_disk_all_consistent=$_disk_all_consistent
 	status_disk_transitional_state=$_disk_transitional_state
@@ -283,6 +291,7 @@ drbd_set_status_variables()
 {
 	# "return" values:
 	status_primary=false
+	status_some_peer_primary=false
 	status_diskless_client=false
 	status_have_quorum=true
 
@@ -312,6 +321,7 @@ drbd_set_status_variables()
 	fi
 
 	: == DEBUG == status_primary                      == $status_primary ==
+	: == DEBUG == status_some_peer_primary            == $status_some_peer_primary ==
 	: == DEBUG == status_diskless_client              == $status_diskless_client ==
 	: == DEBUG == status_have_quorum                  == $status_have_quorum ==
 	: == DEBUG == status_disk_all_up_to_date          == $status_disk_all_up_to_date ==
