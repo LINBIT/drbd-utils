@@ -43,6 +43,7 @@
 # OCF_RESKEY_require_drbd_module_version_ge
 # OCF_RESKEY_require_drbd_module_version_lt
 # OCF_RESKEY_connect_only_after_promote
+# OCF_RESKEY_wfc_timeout
 #
 # meta stuff this agent looks at:
 #	OCF_RESKEY_CRM_meta_clone_max
@@ -103,6 +104,21 @@ if ocf_is_true ${OCF_RESKEY_connect_only_after_promote:=false}; then
 else
 	connect_only_after_promote=false
 fi
+
+# if explicitly set to the empty string,
+# or any non-digit, we don't wait at all
+wfc_timeouts=""
+OCF_RESKEY_wfc_timeout_default="5"
+: OCF_RESKEY_wfc_timeout = "${OCF_RESKEY_wfc_timeout:=$OCF_RESKEY_wfc_timeout_default}"
+t=$OCF_RESKEY_wfc_timeout
+if [[ -n $t ]] ; then
+    if [[ $t != *[!0-9]* ]] ; then
+	wfc_timeouts="--wfc-timeout=$t --degr-wfc-timeout=$t --outdated-wfc-timeout=$t"
+    else
+	ocf_log debug "non-digits in wfc_timeout ($t), going to not wait at all"
+    fi
+fi
+unset t
 
 
 # The passed in OCF_CRM_meta_notify_* environment
@@ -255,6 +271,16 @@ Allow to disable notifications without patching this resource agent.
 </longdesc>
 <shortdesc lang="en">ignore missing notify=true</shortdesc>
 <content type="boolean" default="false"/>
+</parameter>
+
+<parameter name="wfc_timeout">
+<longdesc lang="en">
+Unless set to the empty string or any non-digits, wait (at most)
+this many seconds for the connection(s) to be established
+after bringing them up during "start".
+</longdesc>
+<shortdesc lang="en">wait for connections with timeout</shortdesc>
+<content type="numeric" default="$OCF_RESKEY_wfc_timeout_default"/>
 </parameter>
 
 <parameter name="unfence_if_all_uptodate">
@@ -757,6 +783,10 @@ figure_out_drbd_peer_uname()
 		$OCF_RESKEY_CRM_meta_notify_demote_uname |
 		grep -vix -m1 -e "$HOSTNAME" )
 	DRBD_TO_PEER=${x:+ --peer $x}
+	DRBD_PRIMARY_PEER_according_to_pcmk=$(
+		crm_resource --resource "$OCF_RESOURCE_INSTANCE" --locate |
+		sed -ne 's/^.*is running on: \([^ ]*\) Master.*$/\1/p' |
+		grep -vix -m1 -e "$HOSTNAME")
 }
 
 my_udevsettle()
@@ -801,6 +831,46 @@ do_attach()
 	fi
 }
 
+wait_connect_84()
+{
+	[[ -z $wfc_timeouts ]] && return
+	local dev
+	for dev in "${DRBD_DEVICES[@]}"; do
+		do_cmd drbdsetup wait-connect $dev $wfc_timeouts
+	done
+}
+
+wait_connect_90()
+{
+	[[ -z $wfc_timeouts ]] && return
+	local res=$1 peer=$2
+	# drbdadm wait-connect is not smart enough yet
+	# work around our own tools
+	# FIXME
+	if [[ -n "$peer" ]]; then
+		local cmd=$(drbdadm -d connect $res:$peer | sed -e 's/ connect / wait-connect-connection /')
+		do_cmd $cmd $wfc_timeouts
+	else
+		do_cmd drbdsetup wait-connect-resource $res $wfc_timeouts
+	fi
+}
+
+do_connect()
+{
+	figure_out_drbd_peer_uname
+	if $DRBD_IS_v9; then
+		if [[ -n $DRBD_PRIMARY_PEER_according_to_pcmk ]] ; then
+			do_drbdadm adjust $DRBD_RESOURCE:$DRBD_PRIMARY_PEER_according_to_pcmk
+			wait_connect_90 $DRBD_RESOURCE $DRBD_PRIMARY_PEER_according_to_pcmk
+		fi
+		do_drbdadm adjust $DRBD_RESOURCE
+		wait_connect_90 $DRBD_RESOURCE
+	else
+		do_drbdadm $DRBD_TO_PEER adjust $DRBD_RESOURCE
+		wait_connect_84
+	fi
+}
+
 drbd_start()
 {
 	local rc
@@ -833,8 +903,7 @@ drbd_start()
 			# "running" already, anyways, right?
 			rc=$OCF_SUCCESS
 			$connect_only_after_promote && break
-			figure_out_drbd_peer_uname
-			do_drbdadm $DRBD_TO_PEER adjust $DRBD_RESOURCE
+			do_connect
 			break
 			;;
 		$OCF_NOT_RUNNING)
