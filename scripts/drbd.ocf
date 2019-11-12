@@ -761,11 +761,17 @@ figure_out_drbd_peer_uname()
 
 my_udevsettle()
 {
+	# We have an endless loop below.
+	# If caller wants to enforce some timeout,
+	# allow to report a useful error message by catching TERM here.
+	trap 'ocf_exit_reason "expected device nodes did not appear (in time)"; exit $OCF_ERR_GENERIC' TERM
+
 	for dev in "${DRBD_DEVICES[@]}"; do
 		while ! test -b $dev; do
 			sleep 1;
 		done
 	done
+	trap - TERM
 	return 0
 }
 create_device_udev_settle()
@@ -805,7 +811,7 @@ drbd_start()
 
 	if ! is_drbd_enabled; then
 		do_cmd modprobe -s drbd `$DRBDADM sh-mod-parms` || {
-			ocf_log err "Cannot load the drbd module.";
+			ocf_exit_reason "Cannot load the drbd module.";
 			: "$OCF_ERR_INSTALLED = OCF_ERR_INSTALLED"
 			return $OCF_ERR_INSTALLED
 		}
@@ -837,7 +843,9 @@ drbd_start()
 			$first_try && do_drbdadm check-resize $DRBD_RESOURCE
 			figure_out_drbd_peer_uname
 			if ! create_device_udev_settle; then
-				# We cannot even create the objects
+				# We cannot even create the objects.
+				# This is supposedly never reached, btw,
+				# my_udevsettle is supposed to exit via trap on TERM.
 				exit $OCF_ERR_GENERIC
 			fi
 			if ! do_attach; then
@@ -845,7 +853,10 @@ drbd_start()
 				# it is unlikely to get better.  Don't wait for
 				# this operation to timeout, but short circuit
 				# exit with generic error.
-				$first_try || exit $OCF_ERR_GENERIC
+				$first_try || {
+					ocf_exit_reason "failed to attach"
+					exit $OCF_ERR_GENERIC
+				}
 				sleep 1
 			fi
 			;;
@@ -909,12 +920,12 @@ drbd_promote() {
 				# or I am consistent, but failed to fence the peer.
 				# Cannot become primary.
 				# No need to retry indefinitely.
-				ocf_log crit "Refusing to be promoted to Primary without UpToDate data"
+				ocf_exit_reason "%s" "Refusing to be promoted to Primary without access to UpToDate data"
 				break
 			fi
 			;;
 		$OCF_NOT_RUNNING)
-			ocf_log error "Trying to promote a resource that was not started"
+			ocf_exit_reason "%s" "cannot promote a resource that was not started"
 			break
 			;;
 		$OCF_RUNNING_MASTER)
@@ -1198,14 +1209,14 @@ _drbd_validate_all () {
 		: ;;
 	*[!-%+./0-9:=@A-Z_a-z]*)
 		# no, I do not trust the configurable cib parameters.
-		ocf_log err "drbdconf name must only contain [-%+./0-9:=@A-Z_a-z]"
+		ocf_exit_reason "%s" "drbdconf name must only contain [-%+./0-9:=@A-Z_a-z]"
 		: "$OCF_ERR_CONFIGURED = OCF_ERR_CONFIGURED"
 		return $OCF_ERR_CONFIGURED
 		;;
 	*)
 		# Check if we can read the configuration file.
 		if [ ! -r "${OCF_RESKEY_drbdconf}" ]; then
-			ocf_log err "Configuration file ${OCF_RESKEY_drbdconf} does not exist or is not readable!"
+			ocf_exit_reason "Configuration file ${OCF_RESKEY_drbdconf} does not exist or is not readable!"
 			: "$OCF_ERR_INSTALLED = OCF_ERR_INSTALLED"
 			return $OCF_ERR_INSTALLED
 		fi
@@ -1215,13 +1226,13 @@ _drbd_validate_all () {
 	# check drbd_resource plausibility
 	case "$OCF_RESKEY_drbd_resource" in
 	"")
-		ocf_log err "No resource name specified!"
+		ocf_exit_reason "No resource name specified!"
 		: "$OCF_ERR_CONFIGURED = OCF_ERR_CONFIGURED"
 		return $OCF_ERR_CONFIGURED
 		;;
 	*[!-%+./0-9:=@A-Z_a-z]*)
 		# no, I do not trust the configurable cib parameters.
-		ocf_log err "Resource name must only contain [-%+./0-9:=@A-Z_a-z]"
+		ocf_exit_reason "%s" "Resource name must only contain [-%+./0-9:=@A-Z_a-z]"
 		: "$OCF_ERR_CONFIGURED = OCF_ERR_CONFIGURED"
 		return $OCF_ERR_CONFIGURED
 	esac
@@ -1251,7 +1262,7 @@ _drbd_validate_all () {
 		else
 			# hm. probably misconfigured constraint somewhere.
 			# sorry. don't retry anywhere.
-			ocf_log err "DRBD resource ${DRBD_RESOURCE} not found in configuration file ${OCF_RESKEY_drbdconf}."
+			ocf_exit_reason "%s" "DRBD resource ${DRBD_RESOURCE} not found in configuration file ${OCF_RESKEY_drbdconf}."
 			remove_master_score
 			: "$OCF_ERR_INSTALLED = OCF_ERR_INSTALLED"
 			return $OCF_ERR_INSTALLED
@@ -1265,7 +1276,7 @@ _drbd_validate_all () {
 		if ! $DRBDADM -d -v dump $DRBD_RESOURCE 2>/dev/null |
 			grep -q -Ee '^[[:space:]]*allow-two-primaries([[:space:]]+yes)?;$'
 		then
-			ocf_log err "master-max > 1, but DRBD resource $DRBD_RESOURCE does not allow-two-primaries."
+			ocf_exit_reason "%s" "master-max > 1, but DRBD resource $DRBD_RESOURCE does not allow-two-primaries."
 			: "$OCF_ERR_CONFIGURED = OCF_ERR_CONFIGURED"
 			return $OCF_ERR_CONFIGURED
 		fi
@@ -1284,7 +1295,7 @@ _drbd_validate_all () {
 			: "ignore" ;
 		elif ! ocf_is_true ${OCF_RESKEY_CRM_meta_notify} &&
 		   [[ ${OCF_RESKEY_CRM_meta_notify_start_uname- NOT SET } = " NOT SET " ]]; then
-			ocf_log err "you really should enable notify when using this RA (or set ignore_missing_notifications=true)"
+			ocf_exit_reason "you really should enable notify when using this RA (or set ignore_missing_notifications=true)"
 			: "$OCF_ERR_CONFIGURED = OCF_ERR_CONFIGURED"
 			return $OCF_ERR_CONFIGURED
 		fi
