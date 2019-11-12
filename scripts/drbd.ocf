@@ -875,7 +875,7 @@ drbd_start()
 {
 	local rc
 	local status
-	local first_try=true
+	local first_try=true local attach_failed=false
 
 	rc=$OCF_ERR_GENERIC
 
@@ -895,6 +895,16 @@ drbd_start()
 		status=$?
 		case "$status" in
 		$OCF_SUCCESS)
+			# With DRBD 9, once resource and minor have been
+			# created, it reports as "configured Secondary"
+			# (which maps to OCF_SUCCESS),
+			# so we need to retry the attach here, instead of the
+			# second try in the OCF_NOT_RUNNING branch below.
+			if $attach_failed && ! do_attach; then
+				ocf_exit_reason "failed to attach"
+				exit $OCF_ERR_GENERIC
+			fi
+
 			# Just in case we have to adjust something, this is a
 			# good place to do it.  Actually, we don't expect to be
 			# called to "start" an already "running" resource, so
@@ -926,6 +936,7 @@ drbd_start()
 					ocf_exit_reason "failed to attach"
 					exit $OCF_ERR_GENERIC
 				}
+				attach_failed=true
 				sleep 1
 			fi
 			;;
