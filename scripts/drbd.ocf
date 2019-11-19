@@ -44,6 +44,7 @@
 # OCF_RESKEY_require_drbd_module_version_lt
 # OCF_RESKEY_connect_only_after_promote
 # OCF_RESKEY_wfc_timeout
+# OCF_RESKEY_remove_master_score_if_peer_primary
 #
 # meta stuff this agent looks at:
 #	OCF_RESKEY_CRM_meta_clone_max
@@ -92,6 +93,12 @@ OCF_RESKEY_drbdconf_default="/etc/drbd.conf"
 OCF_RESKEY_unfence_extra_args_default="--quiet --flock-required --flock-timeout 0 --unfence-only-if-owner-match"
 OCF_RESKEY_require_drbd_module_version_ge_default=8.0.0
 OCF_RESKEY_require_drbd_module_version_lt_default=9.1.0
+
+if ocf_is_true ${OCF_RESKEY_remove_master_score_if_peer_primary:=false}; then
+	remove_master_score_if_peer_primary=true
+else
+	remove_master_score_if_peer_primary=false
+fi
 
 if ocf_is_true ${OCF_RESKEY_unfence_if_all_uptodate:=false}; then
 	unfence_if_all_uptodate=true
@@ -244,7 +251,7 @@ Special considerations:
 If a Secondary DRBD is connected to a peer in Primary role, but Pacemaker does
 not know about any Primary (using crm_resource --locate), we conclude that
 there likely is a cluster-split-brain, and try to "help" Pacemaker by removing
-the master-score.
+the master-score.  Also see "remove_master_score_if_peer_primary".
 </longdesc>
 <shortdesc lang="en">master score adjustments</shortdesc>
 <content type="string" default="${OCF_RESKEY_adjust_master_score_default}"/>
@@ -288,6 +295,22 @@ after bringing them up during "start".
 </longdesc>
 <shortdesc lang="en">wait for connections with timeout</shortdesc>
 <content type="numeric" default="$OCF_RESKEY_wfc_timeout_default"/>
+</parameter>
+
+<parameter name="remove_master_score_if_peer_primary">
+<longdesc lang="en">
+See also "adjust_master_score".
+
+To prevent a potentially failed promotion attempt in case of cluster split-brain
+(Pacemaker communication loss) while DRBD is still connected to a Primary,
+you can request to remove any master score while DRBD is connected to a Primary
+(and that Primary is either "diskless client", or has all disks up-to-date).
+
+This may delay legitimate failovers after Primary crash by up to some TCP timeout
+(until DRBD realizes that the Primary is gone) plus one monitoring interval.
+</longdesc>
+<shortdesc lang="en">remove master score if we are connected to a primary peer</shortdesc>
+<content type="boolean" default="false"/>
 </parameter>
 
 <parameter name="unfence_if_all_uptodate">
@@ -571,6 +594,30 @@ unexpected_primary_rejects_promote()
 	return 0
 }
 
+removed_master_score_because_peer_is_primary()
+{
+	: "remove master score if peer primary?"; $remove_master_score_if_peer_primary || return 1
+	: "primary myself?"; $status_primary && return 1
+	: "some peer primary?"; $status_some_peer_primary || return 1
+
+	if : "diskless client?"; $status_diskless_client ; then
+		: "don't check peer disk states, there are none to be expected"
+	elif : "SOME peer ALL up-to-date?"; $status_some_peer_all_up_to_date ; then
+		# FIXME this should check if that same primary peer has all healthy
+		# disks, not if "some" peer has all healthy disks.
+		# But I think this option only makes sense in two node setups,
+		# so "some" peer becomes "the" peer anyways.
+		: "Okay, Primary peer apparently has healthy disks"
+	else
+		: "peer is primary, but does not look healthy, use regular master score adjustment"
+		return 1
+	fi
+
+	: "connected to (apparently healthy) Primary peer, do not allow promote"
+	remove_master_score
+	return 0
+}
+
 drbd_update_master_score() {
 	set -- $OCF_RESKEY_adjust_master_score
 	local only_consistent=$1 only_remote=$2 local_ok=$3 as_good_as_it_gets=$4
@@ -627,6 +674,10 @@ drbd_update_master_score() {
 		# esac
 
 		remove_master_score
+		return
+	fi
+
+	if removed_master_score_because_peer_is_primary ; then
 		return
 	fi
 
