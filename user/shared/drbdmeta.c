@@ -2890,7 +2890,7 @@ int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc
 
 	if (!al_is_clean)
 		/* So we have been forced. Still cause a parse error for restore-md. */
-		printf("This_is_an_unclean_meta_data_dump._Don't_trust_the_bitmap.\n"
+		printf("# This_is_an_unclean_meta_data_dump._Don't_trust_the_bitmap.\n"
 			"# You should \"apply-al\" first, if you plan to restore this.\n\n");
 
 	if (format_version(cfg) >= DRBD_V09)
