@@ -45,6 +45,7 @@
 # OCF_RESKEY_connect_only_after_promote
 # OCF_RESKEY_wfc_timeout
 # OCF_RESKEY_remove_master_score_if_peer_primary
+# OCF_RESKEY_fail_promote_early_if_peer_primary
 #
 # meta stuff this agent looks at:
 #	OCF_RESKEY_CRM_meta_clone_max
@@ -98,6 +99,12 @@ if ocf_is_true ${OCF_RESKEY_remove_master_score_if_peer_primary:=false}; then
 	remove_master_score_if_peer_primary=true
 else
 	remove_master_score_if_peer_primary=false
+fi
+
+if ocf_is_true ${OCF_RESKEY_fail_promote_early_if_peer_primary:=false}; then
+	fail_promote_early_if_peer_primary=true
+else
+	fail_promote_early_if_peer_primary=false
 fi
 
 if ocf_is_true ${OCF_RESKEY_unfence_if_all_uptodate:=false}; then
@@ -299,7 +306,7 @@ after bringing them up during "start".
 
 <parameter name="remove_master_score_if_peer_primary">
 <longdesc lang="en">
-See also "adjust_master_score".
+See also "adjust_master_score" and "fail_promote_early_if_peer_primary".
 
 To prevent a potentially failed promotion attempt in case of cluster split-brain
 (Pacemaker communication loss) while DRBD is still connected to a Primary,
@@ -310,6 +317,27 @@ This may delay legitimate failovers after Primary crash by up to some TCP timeou
 (until DRBD realizes that the Primary is gone) plus one monitoring interval.
 </longdesc>
 <shortdesc lang="en">remove master score if we are connected to a primary peer</shortdesc>
+<content type="boolean" default="false"/>
+</parameter>
+
+<parameter name="fail_promote_early_if_peer_primary">
+<longdesc lang="en">
+See also "adjust_master_score" and "remove_master_score_if_peer_primary".
+
+To avoid a useless retry loop during promotion attempts in case of cluster
+split-brain (Pacemaker communication loss) while DRBD is still connected to a
+Primary, you can chose to give up after the first try if this situation is detected.
+
+If a Primary "vanishes", TCP may not immediately detect this, and an idle DRBD
+may take some time until it does in-DRBD-protocol "pings". Pacemaker may well
+detect Primary loss earlier than DRBD, and try to promote while DRBD thinks it
+can still see a Primary. Which means, in general, trying to promote at least
+once is necessary, as that implies an in-DRBD-protocol "peer alive" check.
+
+But if that does not succeed, re-trying until we hit the operation timeout may
+not be desired, so you can disable it.
+</longdesc>
+<shortdesc lang="en">try promote only once when connected to a primary peer</shortdesc>
 <content type="boolean" default="false"/>
 </parameter>
 
@@ -1094,10 +1122,14 @@ drbd_promote() {
 		status=$?
 		case "$status" in
 		$OCF_SUCCESS)
-			if unexpected_primary_rejects_promote; then
-				ocf_exit_reason "I am connected to a Primary that Pacemaker does not know about! Cluster split-brain? Removing master score."
-				remove_master_score
-				return $rc
+			if ! $first_try && unexpected_primary_rejects_promote ; then
+				if $fail_promote_early_if_peer_primary ; then
+					ocf_exit_reason "Peer node already/still Primary"
+					remove_master_score
+					break
+				else
+					ocf_log warn "Peer node already/still Primary, promote will likely fail or need several attempts. Retrying anyways."
+				fi
 			fi
 			do_drbdadm primary $DRBD_RESOURCE
 			if [[ $? = 17 ]]; then
