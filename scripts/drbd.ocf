@@ -196,16 +196,25 @@ meta_data() {
 	cat <<END
 <?xml version="1.0"?>
 <!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
-<resource-agent name="drbd">
-<version>1.3</version>
+<!-- version attribute is version of this resource agent -->
+<resource-agent name="drbd" version="LINBIT 1.4">
+
+<!-- Version number of the standard this agent complies with -->
+<version>1.0</version>
 
 <longdesc lang="en">
 This resource agent manages a DRBD resource as a master/slave resource.
 DRBD is a shared-nothing replicated storage device.
-Note that you should configure resource level fencing in DRBD,
-this cannot be done from this resource agent.
+
+NOTE:
+To avoid data-divergence, you should enable either
+DRBD "quorum" and "on-no-quorum io-error" (recommended),
+or configure proper fencing policies in both DRBD
+*and* Pacemaker (fencing resource-and-stonith).
+This cannot be done from this resource agent alone.
+
 See the DRBD User's Guide for more information.
-http://www.drbd.org/docs/applications/
+https://docs.linbit.com/
 </longdesc>
 
 <shortdesc lang="en">Manages a DRBD device as a Master/Slave resource</shortdesc>
