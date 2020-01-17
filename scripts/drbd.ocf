@@ -75,18 +75,32 @@
 # pointing to the new one, but people seem to get it wrong all the time.
 # Try several locations.
 
-if test -n "${OCF_FUNCTIONS_DIR}" ; then
-	if test -e "${OCF_FUNCTIONS_DIR}/ocf-shellfuncs" ; then
-		. "${OCF_FUNCTIONS_DIR}/ocf-shellfuncs"
-	elif test -e "${OCF_FUNCTIONS_DIR}/.ocf-shellfuncs" ; then
-		. "${OCF_FUNCTIONS_DIR}/.ocf-shellfuncs"
-	fi
-else
-	if test -e "${OCF_ROOT}/lib/heartbeat/ocf-shellfuncs" ; then
-		. "${OCF_ROOT}/lib/heartbeat/ocf-shellfuncs"
-	elif test -e "${OCF_ROOT}/resource.d/heartbeat/.ocf-shellfuncs"; then
-		. "${OCF_ROOT}/resource.d/heartbeat/.ocf-shellfuncs"
-	fi
+: OCF_ROOT          = ${OCF_ROOT:=/usr/lib/ocf}
+: OCF_FUNCTIONS_DIR = ${OCF_FUNCTIONS_DIR:=${OCF_ROOT}/lib/heartbeat}
+
+for s in \
+	"${OCF_FUNCTIONS_DIR}/ocf-shellfuncs" \
+	"${OCF_FUNCTIONS_DIR}/.ocf-shellfuncs" \
+	"${OCF_ROOT}/lib/heartbeat/ocf-shellfuncs" \
+	"${OCF_ROOT}/resource.d/heartbeat/.ocf-shellfuncs" ;
+do
+	test -e "$s" || continue
+	. "$s"
+	break
+done
+
+: __OFC_ACTION=${__OCF_ACTION:=$1} : $1
+
+if ! command -v ocf_is_true &> /dev/null ; then
+	# Avoid error messages from init_optional_params below
+	# if called without ocf-shellfuncs, for example when trying
+	# to "just get the meta-data" for generating a man page.
+	ocf_is_true() { 
+		case "$1" in
+		yes|true|1|YES|TRUE|ja|on|ON) true ;;
+		*)	false ;;
+		esac
+	}
 fi
 
 # Defaults
@@ -95,44 +109,46 @@ OCF_RESKEY_unfence_extra_args_default="--quiet --flock-required --flock-timeout 
 OCF_RESKEY_require_drbd_module_version_ge_default=8.0.0
 OCF_RESKEY_require_drbd_module_version_lt_default=9.1.0
 
-if ocf_is_true ${OCF_RESKEY_remove_master_score_if_peer_primary:=false}; then
-	remove_master_score_if_peer_primary=true
-else
-	remove_master_score_if_peer_primary=false
-fi
+init_optional_params()
+{
+	if ocf_is_true ${OCF_RESKEY_remove_master_score_if_peer_primary:=false}; then
+		remove_master_score_if_peer_primary=true
+	else
+		remove_master_score_if_peer_primary=false
+	fi
 
-if ocf_is_true ${OCF_RESKEY_fail_promote_early_if_peer_primary:=false}; then
-	fail_promote_early_if_peer_primary=true
-else
-	fail_promote_early_if_peer_primary=false
-fi
+	if ocf_is_true ${OCF_RESKEY_fail_promote_early_if_peer_primary:=false}; then
+		fail_promote_early_if_peer_primary=true
+	else
+		fail_promote_early_if_peer_primary=false
+	fi
 
-if ocf_is_true ${OCF_RESKEY_unfence_if_all_uptodate:=false}; then
-	unfence_if_all_uptodate=true
-else
-	unfence_if_all_uptodate=false
-fi
+	if ocf_is_true ${OCF_RESKEY_unfence_if_all_uptodate:=false}; then
+		unfence_if_all_uptodate=true
+	else
+		unfence_if_all_uptodate=false
+	fi
 
-if ocf_is_true ${OCF_RESKEY_connect_only_after_promote:=false}; then
-	connect_only_after_promote=true
-else
-	connect_only_after_promote=false
-fi
+	if ocf_is_true ${OCF_RESKEY_connect_only_after_promote:=false}; then
+		connect_only_after_promote=true
+	else
+		connect_only_after_promote=false
+	fi
 
-# if explicitly set to the empty string,
-# or any non-digit, we don't wait at all
-wfc_timeouts=""
-OCF_RESKEY_wfc_timeout_default="5"
-: OCF_RESKEY_wfc_timeout = "${OCF_RESKEY_wfc_timeout:=$OCF_RESKEY_wfc_timeout_default}"
-t=$OCF_RESKEY_wfc_timeout
-if [[ -n $t ]] ; then
-    if [[ $t != *[!0-9]* ]] ; then
-	wfc_timeouts="--wfc-timeout=$t --degr-wfc-timeout=$t --outdated-wfc-timeout=$t"
-    else
-	ocf_log debug "non-digits in wfc_timeout ($t), going to not wait at all"
-    fi
-fi
-unset t
+	# if explicitly set to the empty string,
+	# or any non-digit, we don't wait at all
+	wfc_timeouts=""
+	OCF_RESKEY_wfc_timeout_default="5"
+	: OCF_RESKEY_wfc_timeout = "${OCF_RESKEY_wfc_timeout:=$OCF_RESKEY_wfc_timeout_default}"
+	local t=$OCF_RESKEY_wfc_timeout
+	if [[ -n $t ]] ; then
+	    if [[ $t != *[!0-9]* ]] ; then
+		wfc_timeouts="--wfc-timeout=$t --degr-wfc-timeout=$t --outdated-wfc-timeout=$t"
+	    else
+		ocf_log debug "non-digits in wfc_timeout ($t), going to not wait at all"
+	    fi
+	fi
+}
 
 
 # The passed in OCF_CRM_meta_notify_* environment
@@ -1582,6 +1598,8 @@ fi
 # if $__OCF_ACTION = monitor, but meta_interval not set,
 # this is a "probe". we could change behaviour.
 : ${OCF_RESKEY_CRM_meta_interval=0}
+
+init_optional_params
 
 case $__OCF_ACTION in
 meta-data)
