@@ -45,10 +45,10 @@ doc-clean: distclean
 .SUFFIXES: .sgml .5 .8 .html .pdf .ps
 
 ifeq ($(WITH_PREBUILTMAN),yes)
-%.5 %.8:
+%.5 %.7 %.8:
 	test -f $@
 else
-%.5 %.8: %.xml
+%.5 %.7 %.8: %.xml
 	$(XSLTPROC) \
 	$(XSLTPROC_MANPAGES_OPTIONS) \
 	$(MANPAGES_STYLESHEET) $<
@@ -109,14 +109,27 @@ drbd.conf.xml: drbd.conf.xml.in drbd.conf.xsl drbdsetup-options.xml
 drbdsetup.xml: drbdsetup.xml.in drbdsetup.xsl drbdsetup-options.xml
 	$(XSLTPROC) -o $@ drbdsetup.xsl $<
 
+
+# cosmetics: where does the ocf_linbit_drbd man page live?
+# on .deb platforms, we have just one package, drbd-utils,
+# on .rpm platforms, its in the drbd-pacemaker sub-package
+# but who cares ...
+ocf_linbit_drbd.xml: ../../scripts/drbd.ocf ../ra2refentry.xsl
+	../../scripts/drbd.ocf meta-data |\
+	$(XSLTPROC) --novalid \
+		--stringparam package "drbd-pacemaker" \
+		--stringparam provider linbit \
+		--stringparam version "$(PACKAGE_VERSION)" \
+		--output $@ ../ra2refentry.xsl -
+
 distclean:
 ifeq ($(make_doc),doc)
-	rm -f *.[58] manpage.links manpage.refs *~ manpage.log
+	rm -f *.[578] manpage.links manpage.refs *~ manpage.log
 endif
 	rm -f *.ps.gz *.pdf *.ps *.html pod2htm*
 	rm -f $(FILES_REMOVE_ADD)
 
-.PRECIOUS: drbd.conf.xml drbdsetup.xml
+.PRECIOUS: drbd.conf.xml drbdsetup.xml ocf_linbit_drbd.xml
 
 #######
 
@@ -130,10 +143,14 @@ install:
 	set -e; for f in $(MANPAGES) ; do \
 		s=$${f##*.}; \
 		b=$${f%.[0-9]}; \
+		case $$f in ocf_linbit_drbd.7) \
+			install -v -D -m 644 $$f $(DESTDIR)$(mandir)/$(MANLANG)/man$$s/$$f ; \
+			continue ;; \
+		esac ; \
 		install -v -D -m 644 $$f $(DESTDIR)$(mandir)/$(MANLANG)/man$$s/$$b-$(ORIG_VERSION).$$s ; \
 		if [ "$(CREATE_MAN_LINK)" = "yes" ]; then \
 			ML=$(MAN_LINK); \
-			if [ $$f = "drbdmon.8" ]; then ML=$(ORIG_VERSION); fi ; \
+			case $$f in drbdmon.8) ML=$(ORIG_VERSION);; esac ; \
 			ln -sf $$b-$$ML.$$s $(DESTDIR)$(mandir)/$(MANLANG)/man$$s/$$f ; \
 		fi \
 	done
@@ -163,5 +180,5 @@ $(TOPDIR)/configure:
 	@echo "please (re-)run ./autogen.sh with appropriate arguments"; exit 1
 $(TOPDIR)/config.status: $(TOPDIR)/configure
 	@echo "please (re-)run ./configure with appropriate arguments"; exit 1
-$(TOPDIR)/documentation/Makefile_v9_com: $(TOPDIR)/documentation/Makefile_v9_com.in $(TOPDIR)/config.status
-	cd $(TOPDIR) && ./config.status documentation/Makefile_v9_com
+$(TOPDIR)/documentation/common/Makefile_v9_com: $(TOPDIR)/documentation/common/Makefile_v9_com.in $(TOPDIR)/config.status
+	cd $(TOPDIR) && ./config.status documentation/common/Makefile_v9_com

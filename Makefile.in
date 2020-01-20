@@ -232,7 +232,7 @@ check_changelogs_up2date:
 	@$(GIT) submodule foreach --quiet 'git ls-files | sed -e "s,^,$(PNAME)-$(DIST_VERSION)/$$path/,"' | \
 		grep -v "gitignore\|gitmodules" >> .filelist
 	@[ -s .filelist ] # assert there is something in .filelist now
-	@find documentation -name "[^.]*.[58]" -o -name "*.html" | \
+	@find documentation -name "[^.]*.[578]" -o -name "*.html" | \
 	sed "s/^/$(PNAME)-$(DIST_VERSION)\//"              >> .filelist ; \
 	echo $(PNAME)-$(DIST_VERSION)/user/shared/drbd_buildtag.h >> .filelist ; \
 	echo $(PNAME)-$(DIST_VERSION)/user/shared/config.h.in  >> .filelist ; \

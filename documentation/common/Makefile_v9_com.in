@@ -35,6 +35,8 @@ WITH_DRBDMON=@WITH_DRBDMON@
 WITH_PREBUILTMAN = @WITH_PREBUILTMAN@
 WITH_WINDRBD = @WITH_WINDRBD@
 
+PACKAGE_VERSION = @PACKAGE_VERSION@
+
 # variables meant to be overridden from the make command line
 ifeq ($(WITH_WINDRBD),yes)
 DESTDIR ?=

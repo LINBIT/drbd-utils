@@ -447,10 +447,10 @@ to be generated after the failover of a "healthy" DRBD.
 <action name="demote"	timeout="90" />
 <action name="notify"	timeout="90" />
 <action name="stop"    timeout="100" />
-<action name="monitor" depth="0"  timeout="20" interval="20" role="Slave" />
-<action name="monitor" depth="0"  timeout="20" interval="10" role="Master" />
+<action name="monitor"  timeout="20" interval="20" role="Slave" />
+<action name="monitor"  timeout="20" interval="10" role="Master" />
 <action name="meta-data"  timeout="5" />
-<action name="validate-all"  timeout="30" />
+<action name="validate-all" />
 </actions>
 </resource-agent>
 END

@@ -16,16 +16,17 @@
 # along with drbd; see the file COPYING.  If not, write to
 # the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 
-include ../common/Makefile_v9_com
-
 #
 # WITH_DRBDMON is defined in Makefile_v9_com so need to be checked
 # after Makefile_v9_com is included. The others are referenced in
 # Makefile_v9_com_post.
 #
 TOPDIR = ../..
+include $(TOPDIR)/documentation/common/Makefile_v9_com
+
 
 MANPAGES	= drbdsetup.8 drbd.conf.5 drbd.8 drbdadm.8 drbdmeta.8
+MANPAGES += ocf_linbit_drbd.7
 ifeq ($(WITH_DRBDMON), yes)
 MANPAGES	+= drbdmon.8
 endif
@@ -38,4 +39,4 @@ FILES_POT = $(FILES_IN_GIT_ADD:=.pot)
 
 FILES_REMOVE_ADD = drbdsetup_*.xml *.pot
 
-include ../common/Makefile_v9_com_post
+include $(TOPDIR)/documentation/common/Makefile_v9_com_post
