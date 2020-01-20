@@ -332,18 +332,18 @@ int is_valid_md(enum md_format f,
 		return 0;
 	}
 
-	if (md->max_peers < 1 || md->max_peers > DRBD_PEERS_MAX) {
+	if (md->max_peers < 1 || md->max_peers > DRBD_PEERS_MAX - 1) {
 		fprintf(stderr, "%s max-peers value %d out of bounds\n",
 			v, md->max_peers);
 		return 0;
 	}
-	if (md->node_id < -1 || md->node_id > DRBD_PEERS_MAX + 1) {
+	if (md->node_id < -1 || md->node_id > DRBD_PEERS_MAX - 1) {
 		fprintf(stderr, "%s device node-id value %d out of bounds\n",
 			v, md->node_id);
 		return 0;
 	}
 	for (n = 0; n < md->max_peers; n++) {
-		if (md->peers[n].bitmap_index < -1 || md->peers[n].bitmap_index > DRBD_PEERS_MAX + 1) {
+		if (md->peers[n].bitmap_index < -1 || md->peers[n].bitmap_index > DRBD_PEERS_MAX - 1) {
 			fprintf(stderr, "%s peer device %d node-id value %d out of bounds\n",
 				v, n, md->peers[n].bitmap_index);
 			return 0;
@@ -607,8 +607,9 @@ void md_disk_09_to_cpu(struct md_cpu *cpu, const struct meta_data_on_disk_9 *dis
 	cpu->al_stripes = be32_to_cpu(disk->al_stripes.be);
 	cpu->al_stripe_size_4k = be32_to_cpu(disk->al_stripe_size_4k.be);
 
-	if (cpu->max_peers > DRBD_PEERS_MAX)
-		cpu->max_peers = DRBD_PEERS_MAX;
+	if (cpu->max_peers > DRBD_PEERS_MAX - 1) {
+		cpu->max_peers = DRBD_PEERS_MAX - 1;
+	}
 
 	cpu->current_uuid = be64_to_cpu(disk->current_uuid.be);
 	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
@@ -4304,8 +4305,8 @@ int meta_create_md(struct format *cfg, char **argv __attribute((unused)), int ar
 	} else if (argc > 0)
 		fprintf(stderr, "Ignoring additional arguments\n");
 
-	if (max_peers < 1 || max_peers > DRBD_PEERS_MAX) {
-		fprintf(stderr, "MAX_PEERS argument not in allowed range 1 .. %d.\n", DRBD_PEERS_MAX);
+	if (max_peers < 1 || max_peers > DRBD_PEERS_MAX - 1) {
+		fprintf(stderr, "MAX_PEERS argument not in allowed range 1 .. %d.\n", DRBD_PEERS_MAX - 1);
 		exit(20);
 	}
 
