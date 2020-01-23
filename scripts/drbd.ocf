@@ -505,21 +505,34 @@ if $USE_DEBUG_LOG ; then
 	}
 fi
 
+do_cmd_success_log_level=""
 do_cmd() {
 	# Run a command, return its exit code, capture any output, and log
 	# everything if appropriate.
-	local cmd="$*" cmd_out ret
+	local cmd="$*" cmd_out cmd_err ret=125
+	local success_log_level=${do_cmd_success_log_level:-debug}
 	ocf_log debug "$DRBD_RESOURCE: Calling $cmd"
-	cmd_out=$( "$@" )
-	ret=$?
+
+	# capture stdout, stderr, and exit code
+	eval	"$(exec 3>&1;
+			printf "cmd_err=%q\n" \
+				"$( exec 2>&1 1>&3 3>&-; \
+					out=$( "$@" ); \
+					ex=$?; \
+				printf "cmd_out=%q\nret=%q\n" "$out" "$ex" )"
+		)"
 
 	if [ $ret != 0 ]; then
 		ocf_log err "$DRBD_RESOURCE: Called $cmd"
 		ocf_log err "$DRBD_RESOURCE: Exit code $ret"
 		ocf_log err "$DRBD_RESOURCE: Command output: $cmd_out"
+		ocf_log err "$DRBD_RESOURCE: Command stderr: $cmd_err"
 	else
-		ocf_log debug "$DRBD_RESOURCE: Exit code $ret"
-		ocf_log debug "$DRBD_RESOURCE: Command output: $cmd_out"
+		[[ $do_cmd_success_log_level ]] &&
+		ocf_log $success_log_level "$DRBD_RESOURCE: Called $cmd"
+		ocf_log $success_log_level "$DRBD_RESOURCE: Exit code $ret"
+		ocf_log $success_log_level "$DRBD_RESOURCE: Command output: $cmd_out"
+		ocf_log $success_log_level "$DRBD_RESOURCE: Command stderr: $cmd_err"
 	fi
 
 	[ -n "$cmd_out" ] && echo "$cmd_out"
@@ -1187,6 +1200,7 @@ drbd_promote() {
 	local rc
 	local status
 	local first_try=true
+	local do_cmd_success_log_level
 
 	rc=$OCF_ERR_GENERIC
 
@@ -1203,7 +1217,8 @@ drbd_promote() {
 					remove_master_score
 					break
 				else
-					ocf_log warn "Peer node already/still Primary, promote will likely fail or need several attempts. Retrying anyways."
+					ocf_log info "Peer node already/still Primary, promote will likely fail or need several attempts. Retrying anyways."
+					do_cmd_success_log_level=info
 				fi
 			fi
 			do_drbdadm primary $DRBD_RESOURCE
@@ -1373,7 +1388,7 @@ meta_expect()
 	local val=${!whatvar}
 	if [[ -n $val ]]; then
 		# [, not [[, or it won't work ;)
-		eval "[ $val $op $expect ]" && return
+		[ "$val" $op $expect ] && return
 	fi
 	ocf_exit_reason "%s" "meta parameter misconfigured, expected $what $op $expect, but found ${val:-unset}."
 	return $OCF_ERR_CONFIGURED
