@@ -86,6 +86,7 @@ for s in \
 do
 	test -e "$s" || continue
 	. "$s"
+	set_logtag
 	break
 done
 
