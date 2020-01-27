@@ -146,7 +146,10 @@ create_or_modify_constraint()
 			break
 			;;
 
-		205)	: "205 aka pcmk_err_old_data ==> going to retry in a bit"
+			# see pacemaker commit f7e5558d6 Refactor: all: use consistent exit status codes
+			# Relevant for Pacemaker 2.0+
+			# 103/CRM_EX_OLD is Pacemaker 2, 205 aka pcmk_err_old_data is Pacemaker 1.1
+		103|205)	: "103 aka CRM_EX_OLD, or 205 aka pcmk_err_old_data ==> going to retry in a bit"
 			(( $SECONDS >= $timeout )) && break
 			sleep 1
 			continue
