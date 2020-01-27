@@ -202,10 +202,14 @@ if ls_stat_is_dir_0700_root $DEBUG_LOG_DIR &&
 then
 	USE_DEBUG_LOG=true
 	# PS4='+[`date +%F\ %T.%3N`] '
+	PS4='+$(date +"%F_%T.%3N"): $HA_LOGTAG $__OCF_ACTION: ${FUNCNAME[0]:+${FUNCNAME[0]}:}${LINENO}: '
 	exec 8>>"$DEBUG_LOG"
-	date >&8
-	echo "$0 $*" >&8
-	env | grep '^OCF_' | sort >&8
+	(
+	printf "%s " "$(date "+%F_%T.%3N: $HA_LOGTAG ")"
+	bash -c 'for v in ${!OCF_*}; do printf "%s=%q " "$v" "${!v}"; done;'
+	printf " %q" "$0" "$@"
+	printf "\n"
+	) >&8
 else
 	exec 8>/dev/null
 fi
