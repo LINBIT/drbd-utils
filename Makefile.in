@@ -84,7 +84,7 @@ ifdef FORCE
 # or to forcefully include the FIXME to be done: latest change date;
 # for now, include the git hash of the latest commit
 # in the tgz name:
-#   make distclean doc tgz FORCE=1
+#   make distclean doc .filelist && make tgz FORCE=1
 #
 REL_VERSION := $(REL_VERSION)-$(shell $(GIT) rev-parse HEAD)
 endif
