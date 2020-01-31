@@ -516,6 +516,7 @@ do_cmd() {
 	# everything if appropriate.
 	local cmd="$*" cmd_out cmd_err ret=125
 	local success_log_level=${do_cmd_success_log_level:-debug}
+	local failure_log_level=${do_cmd_failure_log_level:-err}
 	ocf_log debug "$DRBD_RESOURCE: Calling $cmd"
 
 	# capture stdout, stderr, and exit code
@@ -528,10 +529,10 @@ do_cmd() {
 		)"
 
 	if [ $ret != 0 ]; then
-		ocf_log err "$DRBD_RESOURCE: Called $cmd"
-		ocf_log err "$DRBD_RESOURCE: Exit code $ret"
-		ocf_log err "$DRBD_RESOURCE: Command output: $cmd_out"
-		ocf_log err "$DRBD_RESOURCE: Command stderr: $cmd_err"
+		ocf_log $failure_log_level "$DRBD_RESOURCE: Called $cmd"
+		ocf_log $failure_log_level "$DRBD_RESOURCE: Exit code $ret"
+		ocf_log $failure_log_level "$DRBD_RESOURCE: Command output: $cmd_out"
+		ocf_log $failure_log_level "$DRBD_RESOURCE: Command stderr: $cmd_err"
 	else
 		[[ $do_cmd_success_log_level ]] &&
 		ocf_log $success_log_level "$DRBD_RESOURCE: Called $cmd"
@@ -1054,6 +1055,7 @@ do_attach()
 wait_connect_84()
 {
 	[[ -z $wfc_timeouts ]] && return
+	local do_cmd_failure_log_level=info
 	local dev
 	for dev in "${DRBD_DEVICES[@]}"; do
 		do_cmd drbdsetup wait-connect $dev $wfc_timeouts
@@ -1064,6 +1066,7 @@ wait_connect_90()
 {
 	[[ -z $wfc_timeouts ]] && return
 	local res=$1 peer=$2
+	local do_cmd_failure_log_level=info
 	# drbdadm wait-connect is not smart enough yet
 	# work around our own tools
 	# FIXME
