@@ -2394,12 +2394,7 @@ static void show_resource_list_json(struct resources_list *resources_list, char*
 
 		nla = nla_find_nested(resource->res_opts, __nla_type(T_node_id));
 		if (nla)
-		{
-			printI("\"node-id\": %d", *(uint32_t *)nla_data(nla));
-			if (devices)
-				printf(",");
-			printf("\n");
-		}
+			printI("\"node-id\": %d,\n", *(uint32_t *)nla_data(nla));
 
 		printI(QUOTED("volumes") ": [\n");
 		indent++;
