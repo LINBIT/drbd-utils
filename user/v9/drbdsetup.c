@@ -2190,14 +2190,12 @@ static void show_connection_json(struct connections_list *connection, struct pee
 {
 	struct peer_devices_list *peer_device;
 
-	printI(QUOTED("_peer_node_id") ": %d,\n", connection->ctx.ctx_peer_node_id);
-
 	bool has_disk_options = connection_has_disk_options(connection->ctx.ctx_peer_node_id, peer_devices);
 
 	print_paths(connection);
 	if (connection->info.conn_connection_state == C_STANDALONE)
 		printI(QUOTED("_is_standalone") ": true,\n");
-	print_options_json(connection->net_conf, &show_net_options_ctx, "net", false, has_disk_options);
+	print_options_json(connection->net_conf, &show_net_options_ctx, "net", false, true);
 
 	if (has_disk_options)
 	{
@@ -2225,8 +2223,10 @@ static void show_connection_json(struct connections_list *connection, struct pee
 				printed++;
 			}
 		}
-		printI("]\n");
+		printI("],\n");
 	}
+
+	printI(QUOTED("_peer_node_id") ": %d\n", connection->ctx.ctx_peer_node_id);
 }
 
 static void show_volume_json(struct devices_list *device)
