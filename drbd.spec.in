@@ -44,7 +44,7 @@
 Name: drbd
 Summary: DRBD driver for Linux
 Version: @PACKAGE_VERSION@
-Release: 0rc1
+Release: 1@RPM_DIST_TAG@
 Source: http://www.drbd.org/download/drbd/utils/drbd-utils-%{version}.tar.gz
 License: GPLv2+
 ExclusiveOS: linux
@@ -489,6 +489,9 @@ fi
 
 
 %changelog
+* Tue Feb 18 2020 Roland Kammerer <roland.kammerer@linbit.com> - 9.12.0-1
+-  New upstream release
+
 * Wed Oct 16 2019 Roland Kammerer <roland.kammerer@linbit.com> - 9.11.0-1
 -  New upstream release
 
