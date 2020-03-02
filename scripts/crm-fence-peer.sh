@@ -366,7 +366,7 @@ drbd_peer_fencing()
 {
 	local rc
 	# input to fence_peer_init:
-	# $DRBD_RESOURCE is set by command line of from environment.
+	# $DRBD_RESOURCE is set by command line or from environment.
 	# $id_prefix is set by command line or default.
 	# $master_id is set by command line or will be parsed from the cib.
 	# output of fence_peer_init:
