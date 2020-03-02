@@ -51,15 +51,28 @@ fence_peer_init()
 {
 	# we know which instance we are: $OCF_RESOURCE_INSTANCE.
 	# but we do not know the xml ID of the <master/> :(
+
+	# with Pacemaker 2, its "promotable clones" instead of the
+	# "master" (which was deemed a bad naming choice).
+	# detect older pacemaker by crm_feature_set < 3.1.0
+	local clone_or_master=clone
+	case $crm_feature_set in
+		3.0.*|[012].*)	: "pacemaker version < 2, master slave"
+			clone_or_master=master ;;
+	esac
+
 	# cibadmin -Ql --xpath \
 	# '//master[primitive[@type="drbd" and instance_attributes/nvpair[@name = "drbd_resource" and @value="r0"]]]/@id'
 	# but I'd have to pipe that through sed anyways, because @attribute
 	# xpath queries are not supported.
 	# and I'd be incompatible with older cibadmin not supporting --xpath.
-	# be cool, sed it out:
+	# be cool, sed it out.
+	# I could be more strict about primitive class:provider:type,
+	# or double check that it is in fact a promotable="true" clone...
+	# But in the real world, this is good enough.
 	: ${master_id=$(set +x; echo "$cib_xml" |
-		sed -ne '/<master /,/<\/master>/ {
-			   /<master / h;
+		sed -ne "/<$clone_or_master /,/<\\/$clone_or_master>/ {
+			   /<$clone_or_master / h;"'
 			     /<primitive/,/<\/primitive/ {
 			       /<instance_attributes/,/<\/instance_attributes/ {
 				 /<nvpair .*\bname="drbd_resource"/ {
