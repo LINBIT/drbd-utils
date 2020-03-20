@@ -7,8 +7,8 @@
   </refnamediv>
   <refentryinfo>
     <productname>DRBD</productname>
-    <productnumber>8.3.2</productnumber>
-    <date>15 Oct 2008</date>
+    <productnumber>8.4.11</productnumber>
+    <date>20 Mar 2020</date>
   </refentryinfo>
   <refmeta>
     <refentrytitle>drbd</refentrytitle>
@@ -53,7 +53,7 @@
   </refsect1>
   <refsect1>
     <title>Version</title>
-    <simpara>This document was revised for version 8.3.2 of the DRBD distribution.
+    <simpara>This document was revised for version 8.4.11 of the DRBD distribution.
   </simpara>
   </refsect1>
   <refsect1>

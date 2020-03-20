@@ -2,9 +2,9 @@
 <!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.5//EN" "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd">
 <refentry id="re-drbdmeta">
   <refentryinfo>
-    <date>15 Oct 2008</date>
+    <date>20 Mar 2020</date>
     <productname>DRBD</productname>
-    <productnumber>8.3.2</productnumber>
+    <productnumber>8.4.11</productnumber>
   </refentryinfo>
   <refmeta>
     <refentrytitle>drbdmeta</refentrytitle>

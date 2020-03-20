@@ -6,9 +6,9 @@
     <refpurpose>Script to mark devices as primary and mount file systems</refpurpose>
   </refnamediv>
   <refentryinfo>
-    <date>15 Oct 2008</date>
+    <date>20 Mar 2020</date>
     <productname>DRBD</productname>
-    <productnumber>8.3.2</productnumber>
+    <productnumber>8.4.11</productnumber>
   </refentryinfo>
   <refmeta>
     <refentrytitle>drbddisk</refentrytitle>
