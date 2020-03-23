@@ -3,6 +3,10 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.12.1
+--------
+ * crm-fence-peer: detect pacemaker 2 "promotable clones"
+
 9.12.0
 --------
  * drbd.ocf: new wrc_timeout param, fail on attach failure,
