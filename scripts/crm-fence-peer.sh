@@ -39,9 +39,28 @@ remove_constraint()
 }
 
 cib_xml=""
+cib_xml_first_line=""
+crm_feature_set=""
+admin_epoch=""
+epoch=""
+num_updates=""
+have_quorum=""
 get_cib_xml() {
 	cibadmin_invocations=$(( $cibadmin_invocations + 1 ))
 	cib_xml=$( set +x; cibadmin "$@" )
+	cib_xml_first_line=${cib_xml%%>*}
+
+	set -- ${cib_xml_first_line}
+	local x
+	for x ; do
+	case $x in
+	crm_feature_set=*)	x=${x#*'="'}; x=${x%'"'}; crm_feature_set=$x ;;
+	admin_epoch=*)		x=${x#*'="'}; x=${x%'"'}; admin_epoch=$x ;;
+	epoch=*)		x=${x#*'="'}; x=${x%'"'}; epoch=$x ;;
+	num_updates=*)		x=${x#*'="'}; x=${x%'"'}; num_updates=$x ;;
+	have-quorum=*)		x=${x#*'="'}; x=${x%'"'}; have_quorum=$x ;;
+	esac
+	done
 }
 
 
