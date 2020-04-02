@@ -3,6 +3,10 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.12.2
+--------
+ * crm-fence-peer.sh: fix regression define crm_feture_set
+
 9.12.1
 --------
  * crm-fence-peer: detect pacemaker 2 "promotable clones"
