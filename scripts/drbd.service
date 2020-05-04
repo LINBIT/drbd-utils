@@ -2,6 +2,7 @@
 Description=DRBD -- please disable. Unless you are NOT using a cluster manager.
 Wants=network-online.target sshd.service
 After=network-online.target sshd.service
+Before=pacemaker.service drbdproxy.service
 
 [Service]
 Type=oneshot
