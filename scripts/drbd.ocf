@@ -609,12 +609,7 @@ call_unfence()
 	export OCF_RESKEY_unfence_extra_args
 	: ${OCF_RESKEY_unfence_extra_args:=$OCF_RESKEY_unfence_extra_args_default}
 
-	# The unfence-peer handler was introduced only in 8.9.5.
-	if (( DRBDADM_VERSION_CODE >= 0x080905 )) ; then
-		$DRBDADM unfence-peer $DRBD_RESOURCE
-	else
-		/usr/lib/drbd/crm-unfence-peer.sh -r $DRBD_RESOURCE
-	fi
+	$DRBDADM unfence-peer $DRBD_RESOURCE
 	: "unfence exit code: $?"
 }
 
@@ -1465,7 +1460,7 @@ _drbd_validate_all () {
 
 	local VERSION DRBD_KERNEL_VERSION_CODE=0 DRBDADM_VERSION_CODE=0
 	if VERSION="$($DRBDADM --version 2>/dev/null)"; then
-		eval $VERSION
+		eval "$VERSION"
 	fi
 	if (( $DRBD_KERNEL_VERSION_CODE == 0x0 )) ; then
 		# Maybe the DRBD module was not loaded (yet).
