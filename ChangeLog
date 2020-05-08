@@ -3,6 +3,16 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.13.0
+--------
+ * crm-fence-peer{,.9}.sh: detect Pacemaker 2 promotable clones
+ * submodules: switch to https, which makes it easier to clone
+   if you are behind some weird company firewalls.
+ * drbd.service: start pacemaker before drbd-proxy
+ * windrbd: various new commands including create-resource-from-url,
+   set-syslog-ip, scan-partitions-for-minor, install-bus-device,
+   remove-bus-device
+
 9.12.0
 --------
  * drbd.ocf: new wrc_timeout param, fail on attach failure,
