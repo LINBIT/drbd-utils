@@ -200,12 +200,9 @@ fence_peer_init()
 
 	# with Pacemaker 2, its "promotable clones" instead of the
 	# "master" (which was deemed a bad naming choice).
-	# detect older pacemaker by crm_feature_set < 3.1.0
-	local clone_or_master=clone
-	case $crm_feature_set in
-		3.0.*|[012].*)	: "pacemaker version < 2, master slave"
-			clone_or_master=master ;;
-	esac
+	# newer pacemaker does stil understand and may still use the old xml, though,
+	# and it is rather cumbersome to detect which is in use.
+	# just try both
 
 	# cibadmin -Ql --xpath \
 	# '//master[primitive[@type="drbd" and instance_attributes/nvpair[@name = "drbd_resource" and @value="r0"]]]/@id'
@@ -217,8 +214,8 @@ fence_peer_init()
 	# or double check that it is in fact a promotable="true" clone...
 	# But in the real world, this is good enough.
 	: ${master_id=$(set +x; echo "$cib_xml" |
-		sed -ne "/<$clone_or_master /,/<\\/$clone_or_master>/ {
-			   /<$clone_or_master / h;"'
+		sed -ne '/<\(clone\|master\) /,/<\\/\(clone\|master\)>/ {
+			   /<\(clone\|master\) / h;
 			     /<primitive/,/<\/primitive/ {
 			       /<instance_attributes/,/<\/instance_attributes/ {
 				 /<nvpair .*\bname="drbd_resource"/ {
