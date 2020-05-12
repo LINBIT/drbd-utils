@@ -114,7 +114,7 @@
       significantly. Use a value of 1 (1 KiB/s) for the lowest possible resync
       rate.</para>
 
-      <para>The default value of <option>c-min-rate</option> is 4096, in units of
+      <para>The default value of <option>c-min-rate</option> is 250, in units of
       KiB/s.</para>
     </definition>
   </drbdsetup_option>

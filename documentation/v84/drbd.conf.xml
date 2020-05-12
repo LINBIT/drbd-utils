@@ -1848,8 +1848,8 @@ SYMLINK_BY_RES=drbd/by-res/<resource-name>/VNR
             resync speed controller is free to lower the resync speed down to 0, completely
             independent of the <option>c-min-rate</option> setting.</para>
 
-            <para><replaceable>Min_rate</replaceable> has 4096 (4MiB/s) and KiB/s as default
-            unit.</para>
+            <para>The default value of <replaceable>min_rate</replaceable> is 250,
+	    in units of KiB/s</para>
           </listitem>
         </varlistentry>
 
