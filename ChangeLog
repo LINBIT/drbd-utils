@@ -3,6 +3,11 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.13.1
+--------
+ * crm-fence-peer{,.9}.sh: fix regex
+ * doc: fix c-min-rate
+
 9.13.0
 --------
  * crm-fence-peer{,.9}.sh: detect Pacemaker 2 promotable clones
