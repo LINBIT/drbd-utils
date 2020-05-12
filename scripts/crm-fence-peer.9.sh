@@ -214,7 +214,7 @@ fence_peer_init()
 	# or double check that it is in fact a promotable="true" clone...
 	# But in the real world, this is good enough.
 	: ${master_id=$(set +x; echo "$cib_xml" |
-		sed -ne '/<\(clone\|master\) /,/<\\/\(clone\|master\)>/ {
+		sed -ne '/<\(clone\|master\) /,/<\/\(clone\|master\)>/ {
 			   /<\(clone\|master\) / h;
 			     /<primitive/,/<\/primitive/ {
 			       /<instance_attributes/,/<\/instance_attributes/ {
