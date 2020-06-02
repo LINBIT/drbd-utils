@@ -1434,7 +1434,7 @@
 	      seconds. If the peer was working before this node was
 	      rebooted, the <replaceable>wfc_timeout</replaceable> is used. If the peer was already
 	      down before this node was rebooted, the <replaceable>degr_wfc_timeout</replaceable>
-	      is used. If the peer was sucessfully outdated before this
+	      is used. If the peer was successfully outdated before this
               node was rebooted the <replaceable>outdated_wfc_timeout</replaceable> is used.
 	      The default value for all those timeout values
 	      is 0 which means to wait forever.

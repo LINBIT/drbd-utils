@@ -1048,7 +1048,7 @@ _check_peer_node_reachable()
 
 		# So the cib does still indicate the peer was reachable.
 		#
-		# try crmadmin; if we can sucessfully query the state of the remote crmd,
+		# try crmadmin; if we can successfully query the state of the remote crmd,
 		# it is obviously reachable.
 		#
 		# Do this only after we have been able to reach a DC above.

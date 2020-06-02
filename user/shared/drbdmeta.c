@@ -4363,7 +4363,7 @@ int meta_create_md(struct format *cfg, char **argv __attribute((unused)), int ar
 		if (format_version(cfg) >= DRBD_V09 && max_peers != 1)
 			printf("Warning: setting max_peers to 1 instead of %d\n\n",
 			       max_peers);
-		err = 0; /* we have sucessfully converted somthing */
+		err = 0; /* we have successfully converted something */
 
 		check_for_existing_data(cfg);
 	}
