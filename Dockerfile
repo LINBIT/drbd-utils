@@ -47,7 +47,7 @@ LABEL name="drbd-utils" \
 
 COPY COPYING /licenses/gpl-2.0.txt
 
-COPY --from=builder /home/makepkg/rpmbuild/RPMS/x86_64/drbd-utils*.rpm /tmp/
+COPY --from=builder /home/makepkg/rpmbuild/RPMS/*/drbd-utils*.rpm /tmp/
 RUN yum -y update-minimal --security --sec-severity=Important --sec-severity=Critical && \
   yum install -y /tmp/drbd-utils*.rpm && yum clean all -y
 RUN echo 'global { usage-count no; }' > /etc/drbd.d/global_common.conf
