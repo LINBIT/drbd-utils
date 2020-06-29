@@ -50,7 +50,11 @@ WITH_CLITEST = @WITH_CLITEST@
 SHELL=/bin/bash
 
 PNAME	:= drbd-utils
-DOCKERREGISTRY = quay.io/linbit
+DOCKERREGISTRY := quay.io/linbit
+ARCH ?= amd64
+ifneq ($(strip $(ARCH)),)
+DOCKERREGISTRY := $(DOCKERREGISTRY)/$(ARCH)
+endif
 DOCKERREGPATH = $(DOCKERREGISTRY)/$(PNAME)
 DOCKER_TAG ?= latest
 
