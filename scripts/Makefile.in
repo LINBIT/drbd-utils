@@ -86,6 +86,8 @@ endif
 		install -d $(DESTDIR)$(sysconfdir)/drbd.d; \
 		install -m 644 global_common.conf $(DESTDIR)$(sysconfdir)/drbd.d; \
 	fi
+	install -d $(DESTDIR)$(sysconfdir)/multipath/conf.d
+	install -m 644 multipath/drbd.conf $(DESTDIR)$(sysconfdir)/multipath/conf.d
 	install -m 755 outdate-peer.sh $(DESTDIR)$(LIBDIR)
 	install -m 755 snapshot-resync-target-lvm.sh $(DESTDIR)$(LIBDIR)
 	install -m 755 notify.sh $(DESTDIR)$(LIBDIR)
