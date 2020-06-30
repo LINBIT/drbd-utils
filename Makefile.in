@@ -50,7 +50,7 @@ WITH_CLITEST = @WITH_CLITEST@
 SHELL=/bin/bash
 
 PNAME	:= drbd-utils
-DOCKERREGISTRY := quay.io/linbit
+DOCKERREGISTRY := drbd.io
 ARCH ?= amd64
 ifneq ($(strip $(ARCH)),)
 DOCKERREGISTRY := $(DOCKERREGISTRY)/$(ARCH)
