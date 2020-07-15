@@ -231,7 +231,7 @@ struct drbd_cmd {
 	int tla_id; /* top level attribute id */
 	int (*function)(struct drbd_cmd *, int, char **);
 	struct drbd_argument *drbd_args;
-	int (*show_function)(struct drbd_cmd*, struct genl_info *, void *u_ptr);
+	int (*handle_reply)(struct drbd_cmd*, struct genl_info *, void *u_ptr);
 	struct option *options;
 	bool missing_ok;
 	bool warn_on_missing;
@@ -362,7 +362,7 @@ static struct option status_cmd_options[] = {
 #define F_CONFIG_CMD	generic_config_cmd
 #define NO_PAYLOAD	0
 #define F_NEW_EVENTS_CMD(scmd)	DRBD_ADM_GET_INITIAL_STATE, NO_PAYLOAD, generic_get_cmd, \
-			.show_function = scmd
+			.handle_reply = scmd
 
 struct drbd_cmd commands[] = {
 	{"primary", CTX_RESOURCE, DRBD_ADM_PRIMARY, DRBD_NLA_SET_ROLE_PARMS,
@@ -1729,7 +1729,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 			case -E_RCV_NLMSG_DONE:
 				if (cm->continuous_poll)
 					continue;
-				err = cm->show_function(cm, NULL, u_ptr);
+				err = cm->handle_reply(cm, NULL, u_ptr);
 				if (err)
 					goto out2;
 				err = -*(int*)nlmsg_data(nlh);
@@ -1881,7 +1881,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				rv = NO_ERROR;
 			if (rv != NO_ERROR)
 				goto out2;
-			err = cm->show_function(cm, &info, u_ptr);
+			err = cm->handle_reply(cm, &info, u_ptr);
 			if (err) {
 				if (err < 0)
 					err = 0;
@@ -1890,7 +1890,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 		}
 		if (!cm->continuous_poll && !(flags & NLM_F_DUMP)) {
 			/* There will be no more reply packets.  */
-			err = cm->show_function(cm, NULL, u_ptr);
+			err = cm->handle_reply(cm, NULL, u_ptr);
 			goto out2;
 		}
 	}
@@ -2002,7 +2002,7 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	}
 
 	timeout_ms = -1;
-	if (cm->show_function == &wait_for_family) {
+	if (cm->handle_reply == &wait_for_family) {
 		struct peer_devices_list *peer_device;
 		struct msg_buff *smsg;
 		struct iovec iov;
@@ -2055,7 +2055,7 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		timeout_ms = 120000; /* normal "get" request, or "show" */
 
 	err = generic_get(cm, timeout_ms, peer_devices);
-	if (cm->show_function == &print_notifications &&
+	if (cm->handle_reply == &print_notifications &&
 			opt_now && opt_poll) { /* events2 --now --poll */
 		while ( (c = fgetc(stdin)) != EOF) {
 			switch (c) {
@@ -3477,7 +3477,7 @@ static struct resources_list *list_resources(void)
 {
 	struct drbd_cmd cmd = {
 		.cmd_id = DRBD_ADM_GET_RESOURCES,
-		.show_function = remember_resource,
+		.handle_reply = remember_resource,
 		.missing_ok = false,
 	};
 	struct resources_list *list = NULL, **tail = &list;
@@ -3545,7 +3545,7 @@ static struct devices_list *list_devices(char *resource_name)
 {
 	struct drbd_cmd cmd = {
 		.cmd_id = DRBD_ADM_GET_DEVICES,
-		.show_function = remember_device,
+		.handle_reply = remember_device,
 		.missing_ok = false,
 	};
 	struct devices_list *list = NULL, **tail = &list;
@@ -3654,7 +3654,7 @@ static struct connections_list *list_connections(char *resource_name)
 {
 	struct drbd_cmd cmd = {
 		.cmd_id = DRBD_ADM_GET_CONNECTIONS,
-		.show_function = remember_connection,
+		.handle_reply = remember_connection,
 		.missing_ok = true,
 	};
 	struct connections_list *list = NULL, **tail = &list;
@@ -3728,7 +3728,7 @@ static struct peer_devices_list *list_peer_devices(char *resource_name)
 {
 	struct drbd_cmd cmd = {
 		.cmd_id = DRBD_ADM_GET_PEER_DEVICES,
-		.show_function = remember_peer_device,
+		.handle_reply = remember_peer_device,
 		.missing_ok = false,
 	};
 	struct peer_devices_list *list = NULL, **tail = &list;
