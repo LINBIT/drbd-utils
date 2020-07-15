@@ -3401,29 +3401,38 @@ static char *address_str(char *buffer, void* address, int addr_len)
 		return NULL;
 }
 
+static struct resources_list *new_resource_from_info(struct genl_info *info)
+{
+	struct drbd_cfg_context cfg = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
+	struct nlattr *res_opts = global_attrs[DRBD_NLA_RESOURCE_OPTS];
+	struct resources_list *r;
+
+	drbd_cfg_context_from_attrs(&cfg, info);
+	if (!cfg.ctx_resource_name)
+		return NULL;
+
+	r = calloc(1, sizeof(*r));
+
+	r->name = strdup(cfg.ctx_resource_name);
+	if (res_opts) {
+		int size = nla_total_size(nla_len(res_opts));
+
+		r->res_opts = malloc(size);
+		memcpy(r->res_opts, res_opts, size);
+	}
+	resource_info_from_attrs(&r->info, info);
+	memset(&r->statistics, -1, sizeof(r->statistics));
+	resource_statistics_from_attrs(&r->statistics, info);
+
+	return r;
+}
+
 static int remember_resource(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
 {
 	struct resources_list ***tail = u_ptr;
-	struct drbd_cfg_context cfg = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
 
-	if (!info)
-		return 0;
-
-	drbd_cfg_context_from_attrs(&cfg, info);
-	if (cfg.ctx_resource_name) {
-		struct resources_list *r = calloc(1, sizeof(*r));
-		struct nlattr *res_opts = global_attrs[DRBD_NLA_RESOURCE_OPTS];
-
-		r->name = strdup(cfg.ctx_resource_name);
-		if (res_opts) {
-			int size = nla_total_size(nla_len(res_opts));
-
-			r->res_opts = malloc(size);
-			memcpy(r->res_opts, res_opts, size);
-		}
-		resource_info_from_attrs(&r->info, info);
-		memset(&r->statistics, -1, sizeof(r->statistics));
-		resource_statistics_from_attrs(&r->statistics, info);
+	if (info) {
+		struct resources_list *r = new_resource_from_info(info);
 		**tail = r;
 		*tail = &r->next;
 	}
@@ -3504,34 +3513,43 @@ static struct resources_list *list_resources(void)
 	return list;
 }
 
-static int remember_device(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
+static struct devices_list *new_device_from_info(struct genl_info *info)
 {
-	struct devices_list ***tail = u_ptr;
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
-
-	if (!info)
-		return 0;
+	struct nlattr *disk_conf_nl = global_attrs[DRBD_NLA_DISK_CONF];
+	struct devices_list *d = NULL;
 
 	drbd_cfg_context_from_attrs(&ctx, info);
 
-	if (ctx.ctx_volume != -1U) {
-		struct devices_list *d = calloc(1, sizeof(*d));
-		struct nlattr *disk_conf_nl = global_attrs[DRBD_NLA_DISK_CONF];
+	if (ctx.ctx_volume == -1U)
+		return NULL;
 
-		d->minor =  ((struct drbd_genlmsghdr*)(info->userhdr))->minor;
-		d->ctx = ctx;
-		if (disk_conf_nl) {
-			int size = nla_total_size(nla_len(disk_conf_nl));
+	d = calloc(1, sizeof(*d));
 
-			d->disk_conf_nl = malloc(size);
-			memcpy(d->disk_conf_nl, disk_conf_nl, size);
-		}
-		disk_conf_from_attrs(&d->disk_conf, info);
-		d->info.dev_disk_state = D_DISKLESS;
-		d->info.is_intentional_diskless = IS_INTENTIONAL_DEF;
-		device_info_from_attrs(&d->info, info);
-		memset(&d->statistics, -1, sizeof(d->statistics));
-		device_statistics_from_attrs(&d->statistics, info);
+	d->minor =  ((struct drbd_genlmsghdr*)(info->userhdr))->minor;
+	d->ctx = ctx;
+	if (disk_conf_nl) {
+		int size = nla_total_size(nla_len(disk_conf_nl));
+
+		d->disk_conf_nl = malloc(size);
+		memcpy(d->disk_conf_nl, disk_conf_nl, size);
+	}
+	disk_conf_from_attrs(&d->disk_conf, info);
+	d->info.dev_disk_state = D_DISKLESS;
+	d->info.is_intentional_diskless = IS_INTENTIONAL_DEF;
+	device_info_from_attrs(&d->info, info);
+	memset(&d->statistics, -1, sizeof(d->statistics));
+	device_statistics_from_attrs(&d->statistics, info);
+
+	return d;
+}
+
+static int remember_device(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
+{
+	struct devices_list ***tail = u_ptr;
+
+	if (info) {
+		struct devices_list *d = new_device_from_info(info);
 		**tail = d;
 		*tail = &d->next;
 	}
@@ -3581,35 +3599,44 @@ static void free_devices(struct devices_list *devices)
 	}
 }
 
+static struct connections_list *new_connection_from_info(struct genl_info *info)
+{
+	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
+	struct nlattr *net_conf = global_attrs[DRBD_NLA_NET_CONF];
+	struct nlattr *path_list = global_attrs[DRBD_NLA_PATH_PARMS];
+	struct connections_list *c;
+
+	drbd_cfg_context_from_attrs(&ctx, info);
+	if (!ctx.ctx_resource_name)
+		return NULL;
+
+	c = calloc(1, sizeof(*c));
+
+	c->ctx = ctx;
+	if (net_conf) {
+		int size = nla_total_size(nla_len(net_conf));
+
+		c->net_conf = malloc(size);
+		memcpy(c->net_conf, net_conf, size);
+	}
+	if (path_list) {
+		int size = nla_total_size(nla_len(path_list));
+		c->path_list = malloc(size);
+		memcpy(c->path_list, path_list, size);
+	}
+	connection_info_from_attrs(&c->info, info);
+	memset(&c->statistics, -1, sizeof(c->statistics));
+	connection_statistics_from_attrs(&c->statistics, info);
+
+	return c;
+}
+
 static int remember_connection(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
 {
 	struct connections_list ***tail = u_ptr;
-	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
 
-	if (!info)
-		return 0;
-
-	drbd_cfg_context_from_attrs(&ctx, info);
-	if (ctx.ctx_resource_name) {
-		struct connections_list *c = calloc(1, sizeof(*c));
-		struct nlattr *net_conf = global_attrs[DRBD_NLA_NET_CONF];
-		struct nlattr *path_list = global_attrs[DRBD_NLA_PATH_PARMS];
-
-		c->ctx = ctx;
-		if (net_conf) {
-			int size = nla_total_size(nla_len(net_conf));
-
-			c->net_conf = malloc(size);
-			memcpy(c->net_conf, net_conf, size);
-		}
-		if (path_list) {
-			int size = nla_total_size(nla_len(path_list));
-			c->path_list = malloc(size);
-			memcpy(c->path_list, path_list, size);
-		}
-		connection_info_from_attrs(&c->info, info);
-		memset(&c->statistics, -1, sizeof(c->statistics));
-		connection_statistics_from_attrs(&c->statistics, info);
+	if (info) {
+		struct connections_list *c = new_connection_from_info(info);
 		**tail = c;
 		*tail = &c->next;
 	}
@@ -3690,31 +3717,40 @@ static void free_connections(struct connections_list *connections)
 	}
 }
 
+static struct peer_devices_list *new_peer_device_from_info(struct genl_info *info)
+{
+	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
+	struct nlattr *peer_device_conf = global_attrs[DRBD_NLA_PEER_DEVICE_OPTS];
+	struct peer_devices_list *p;
+
+	drbd_cfg_context_from_attrs(&ctx, info);
+	if (!ctx.ctx_resource_name)
+		return NULL;
+
+	p = calloc(1, sizeof(*p));
+	if (!p)
+		exit(20);
+
+	p->ctx = ctx;
+	if (peer_device_conf) {
+		int size = nla_total_size(nla_len(peer_device_conf));
+		p->peer_device_conf = malloc(size);
+		memcpy(p->peer_device_conf, peer_device_conf, size);
+	}
+	p->info.peer_is_intentional_diskless = IS_INTENTIONAL_DEF;
+	peer_device_info_from_attrs(&p->info, info);
+	memset(&p->statistics, -1, sizeof(p->statistics));
+	peer_device_statistics_from_attrs(&p->statistics, info);
+
+	return p;
+
+}
 static int remember_peer_device(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
 {
 	struct peer_devices_list ***tail = u_ptr;
-	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
 
-	if (!info)
-		return 0;
-
-	drbd_cfg_context_from_attrs(&ctx, info);
-	if (ctx.ctx_resource_name) {
-		struct peer_devices_list *p = calloc(1, sizeof(*p));
-		struct nlattr *peer_device_conf = global_attrs[DRBD_NLA_PEER_DEVICE_OPTS];
-		if (!p)
-			exit(20);
-
-		p->ctx = ctx;
-		if (peer_device_conf) {
-			int size = nla_total_size(nla_len(peer_device_conf));
-			p->peer_device_conf = malloc(size);
-			memcpy(p->peer_device_conf, peer_device_conf, size);
-		}
-		p->info.peer_is_intentional_diskless = IS_INTENTIONAL_DEF;
-		peer_device_info_from_attrs(&p->info, info);
-		memset(&p->statistics, -1, sizeof(p->statistics));
-		peer_device_statistics_from_attrs(&p->statistics, info);
+	if (info) {
+		struct peer_devices_list *p = new_peer_device_from_info(info);
 		**tail = p;
 		*tail = &p->next;
 	}
