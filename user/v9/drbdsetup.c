@@ -1506,7 +1506,7 @@ int choose_timeout(struct choose_timeout_ctx *ctx)
 	char *desc = NULL;
 	struct drbd_genlmsghdr *dhdr;
 	struct nlattr *nla;
-	int rr;
+	int err, rr;
 
 	if (0 < ctx->wfc_timeout &&
 	      (ctx->wfc_timeout < ctx->degr_wfc_timeout || ctx->degr_wfc_timeout == 0)) {
@@ -1557,9 +1557,15 @@ int choose_timeout(struct choose_timeout_ctx *ctx)
 		}
 		if (rr != NO_ERROR)
 			goto error;
-		if (drbd_tla_parse(nlh)
-		|| timeout_parms_from_attrs(&parms, &info)) {
-			desc = "reply did not validate - "
+		err = drbd_tla_parse(nlh);
+		if (err) {
+			desc = "drbd_tla_parse() failed - "
+				"do you need to upgrade your userland tools?";
+			goto error;
+		}
+		err = timeout_parms_from_attrs(&parms, &info);
+		if (err) {
+			desc = "timeout_parms_from_attrs() failed - "
 				"do you need to upgrade your userland tools?";
 			goto error;
 		}
@@ -1832,7 +1838,8 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				 * Do we want to ignore broadcasts until the
 				 * initial get/dump requests is done? */
 
-				if (!drbd_cfg_context_from_attrs(&ctx, &info)) {
+				err = drbd_cfg_context_from_attrs(&ctx, &info);
+				if (!err) {
 					switch ((int)cm->ctx_key) {
 					case CTX_MINOR:
 						/* Assert that, for an unicast reply,
@@ -4044,6 +4051,7 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 	enum drbd_notification_type action;
 	struct drbd_genlmsghdr *dh;
 	char *key = NULL;
+	int err;
 
 	if (!info) {
 		keep_tv = false;
@@ -4056,7 +4064,8 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 	if (dh->ret_code != NO_ERROR)
 		return dh->ret_code;
 
-	if (drbd_notification_header_from_attrs(&nh, info))
+	err = drbd_notification_header_from_attrs(&nh, info);
+	if (err)
 		return 0;
 	action = nh.nh_type & ~NOTIFY_FLAGS;
 	if (action >= ARRAY_SIZE(action_name) ||
@@ -4069,7 +4078,8 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 		return 0;
 
 	if (info->genlhdr->cmd != DRBD_INITIAL_STATE_DONE) {
-		if (drbd_cfg_context_from_attrs(&ctx, info))
+		err = drbd_cfg_context_from_attrs(&ctx, info);
+		if (err)
 			return 0;
 		if (info->genlhdr->cmd >= ARRAY_SIZE(object_name) ||
 		    !object_name[info->genlhdr->cmd]) {
@@ -4129,12 +4139,14 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 				struct resource_statistics s;
 			} *old, new;
 
-			if (resource_info_from_attrs(&new.i, info)) {
+			err = resource_info_from_attrs(&new.i, info);
+			if (err) {
 				dbg(1, "resource info missing\n");
 				goto nl_out;
 			}
 			memset(&new.s, -1, sizeof(new.s));
-			if (resource_statistics_from_attrs(&new.s, info)) {
+			err = resource_statistics_from_attrs(&new.s, info);
+			if (err) {
 				dbg(1, "resource statistics missing\n");
 				have_new_stats = false;
 			}
@@ -4168,12 +4180,14 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 			} *old, new;
 
 			new.i.is_intentional_diskless = IS_INTENTIONAL_DEF;
-			if (device_info_from_attrs(&new.i, info)) {
+			err = device_info_from_attrs(&new.i, info);
+			if (err) {
 				dbg(1, "device info missing\n");
 				goto nl_out;
 			}
 			memset(&new.s, -1, sizeof(new.s));
-			if (device_statistics_from_attrs(&new.s, info)) {
+			err = device_statistics_from_attrs(&new.s, info);
+			if (err) {
 				dbg(1, "device statistics missing\n");
 				have_new_stats = false;
 			}
@@ -4203,12 +4217,14 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 				struct connection_statistics s;
 			} *old, new;
 
-			if (connection_info_from_attrs(&new.i, info)) {
+			err = connection_info_from_attrs(&new.i, info);
+			if (err) {
 				dbg(1, "connection info missing\n");
 				goto nl_out;
 			}
 			memset(&new.s, -1, sizeof(new.s));
-			if (connection_statistics_from_attrs(&new.s, info)) {
+			err = connection_statistics_from_attrs(&new.s, info);
+			if (err) {
 				dbg(1, "connection statistics missing\n");
 				have_new_stats = false;
 			}
@@ -4239,13 +4255,15 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 			} *old, new;
 
 			new.i.peer_is_intentional_diskless = IS_INTENTIONAL_DEF;
-			if (peer_device_info_from_attrs(&new.i, info)) {
+			err = peer_device_info_from_attrs(&new.i, info);
+			if (err) {
 				dbg(1, "peer device info missing\n");
 				goto nl_out;
 			}
 
 			memset(&new.s, -1, sizeof(new.s));
-			if (peer_device_statistics_from_attrs(&new.s, info)) {
+			err = peer_device_statistics_from_attrs(&new.s, info);
+			if (err) {
 				dbg(1, "peer device statistics missing\n");
 				have_new_stats = false;
 			}
@@ -4282,7 +4300,8 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 		if (action != NOTIFY_DESTROY) {
 			struct drbd_path_info new = {}, *old;
 
-			if (drbd_path_info_from_attrs(&new, info)) {
+			err = drbd_path_info_from_attrs(&new, info);
+			if (err) {
 				dbg(1, "path info missing\n");
 				goto nl_out;
 			}
@@ -4297,14 +4316,14 @@ static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void
 	case DRBD_HELPER: {
 		struct drbd_helper_info helper_info;
 
-		if (!drbd_helper_info_from_attrs(&helper_info, info)) {
-			printf(" helper:%s", helper_info.helper_name);
-			if (action == NOTIFY_RESPONSE)
-				printf(" status:%u", helper_info.helper_status);
-		} else {
+		err = drbd_helper_info_from_attrs(&helper_info, info);
+		if (err) {
 			dbg(1, "helper info missing\n");
 			goto nl_out;
 		}
+		printf(" helper:%s", helper_info.helper_name);
+		if (action == NOTIFY_RESPONSE)
+			printf(" status:%u", helper_info.helper_status);
 		}
 		break;
 	case DRBD_INITIAL_STATE_DONE:
@@ -4345,12 +4364,17 @@ static int wait_for_family(struct drbd_cmd *cm, struct genl_info *info, void *u_
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
 	struct drbd_notification_header nh = { .nh_type = -1U };
 	struct drbd_genlmsghdr *dh;
+	int err;
 
 	if (!info)
 		return 0;
 
-	if (drbd_cfg_context_from_attrs(&ctx, info) ||
-	    drbd_notification_header_from_attrs(&nh, info))
+	err = drbd_cfg_context_from_attrs(&ctx, info);
+	if (err)
+		return 0;
+
+	err = drbd_notification_header_from_attrs(&nh, info);
+	if (err)
 		return 0;
 
 	dh = info->userhdr;
@@ -4367,7 +4391,8 @@ static int wait_for_family(struct drbd_cmd *cm, struct genl_info *info, void *u_
 		if ((nh.nh_type & ~NOTIFY_FLAGS) == NOTIFY_CREATE)
 			break; /* Ignore C_STANDALONE while creating it */
 
-		if (connection_info_from_attrs(&connection_info, info)) {
+		err = connection_info_from_attrs(&connection_info, info);
+		if (err) {
 			dbg(1, "connection info missing\n");
 			break;
 		}
@@ -4388,7 +4413,8 @@ static int wait_for_family(struct drbd_cmd *cm, struct genl_info *info, void *u_
 		int nr_peer_devices = 0, nr_done = 0;
 		bool wait_connect;
 
-		if (peer_device_info_from_attrs(&peer_device_info, info)) {
+		err = peer_device_info_from_attrs(&peer_device_info, info);
+		if (err) {
 			dbg(1, "peer device info missing\n");
 			break;
 		}
