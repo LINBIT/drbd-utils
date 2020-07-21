@@ -1,0 +1,44 @@
+stages:
+  - build
+
+.setup-lbbuild:
+  before_script:
+    - . .gitlab/gitlab-utils.sh
+    - drbd_prepare_tools
+    - drbd_fetch_lbbuildctl
+
+# rules clause determining whether to build
+.rules-build:
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+    - if: $CI_COMMIT_BRANCH == 'master'
+
+build:
+  stage: build
+  extends: [ .rules-build, .setup-lbbuild ]
+  image: $LINBIT_DOCKER_REGISTRY/drbd-utils-build:latest
+  cache:
+    paths:
+      - download
+  script:
+    - |
+      mkdir -p source/drbd-test-bundle
+      curl -sSL $LINBIT_REGISTRY_URL/repository/test-suite/drbd-test-bundle.tgz | tar -C source/drbd-test-bundle -xvzf -
+    - |
+      ./autogen.sh
+
+      ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --without-83support --without-manual
+      make doc .filelist tgz PRESERVE_DEBIAN=yes FORCE=1
+      curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD --upload-file drbd-utils-*.tar.gz $LINBIT_REGISTRY_URL/repository/lbbuild-upstream/
+    - |
+      UTILS_VERSION=$(ls -1 drbd-utils-*.tar.gz | head -n1 | sed -r 's/drbd-utils-(.*)\.tar\.gz/\1/g')
+      META_JSON=$(rq -t < source/drbd-test-bundle/virter/vms.toml | jq '.vms[].metadata')
+      echo "$META_JSON" | jq -r '"-d " + .BuildDistribution' \
+        | sed -re 's/rhel([[:digit:]])\.[[:digit:]]/rhel\1.0/g' \
+        | sort | uniq \
+        | parallel --colsep ' ' -k -j24 \
+        lbbuildctl build drbd-utils --arch amd64 --ci -v "$UTILS_VERSION" -l \
+          -e LINBIT_REGISTRY_USER=$LINBIT_REGISTRY_USER \
+          -e LINBIT_REGISTRY_PASSWORD=$LINBIT_REGISTRY_PASSWORD \
+          -e LINBIT_REGISTRY_URL=$LINBIT_REGISTRY_URL \
+          {}
