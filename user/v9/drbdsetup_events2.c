@@ -115,7 +115,7 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 		[NOTIFY_CALL] = "call",
 		[NOTIFY_RESPONSE] = "response",
 	};
-	static char *object_name[] = {
+	static const char *object_name[] = {
 		[DRBD_RESOURCE_STATE] = "resource",
 		[DRBD_DEVICE_STATE] = "device",
 		[DRBD_CONNECTION_STATE] = "connection",
@@ -133,7 +133,8 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 	enum drbd_notification_type action;
 	struct drbd_genlmsghdr *dh;
 	char *key = NULL;
-	int err;
+	const char *name;
+	int err, size;
 
 	if (!info) {
 		keep_tv = false;
@@ -159,15 +160,18 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 	if (opt_now && action != NOTIFY_EXISTS)
 		return 0;
 
-	if (info->genlhdr->cmd != DRBD_INITIAL_STATE_DONE) {
-		err = drbd_cfg_context_from_attrs(&ctx, info);
-		if (err)
-			return 0;
-		if (info->genlhdr->cmd >= ARRAY_SIZE(object_name) ||
-		    !object_name[info->genlhdr->cmd]) {
-			dbg(1, "unknown notification\n");
-			goto out;
-		}
+	if (info->genlhdr->cmd == DRBD_INITIAL_STATE_DONE) {
+		printf("%s -\n", action_name[NOTIFY_EXISTS]);
+		return opt_now ? -1 : 0;
+	}
+
+	err = drbd_cfg_context_from_attrs(&ctx, info);
+	if (err)
+		return 0;
+	if (info->genlhdr->cmd >= ARRAY_SIZE(object_name) ||
+	    !object_name[info->genlhdr->cmd]) {
+		dbg(1, "unknown notification\n");
+		goto out;
 	}
 
 	if (action != NOTIFY_EXISTS) {
@@ -196,21 +200,17 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 		       (int)(tm->tm_gmtoff / 3600),
 		       (int)((abs(tm->tm_gmtoff) / 60) % 60));
 	}
-	if (info->genlhdr->cmd != DRBD_INITIAL_STATE_DONE) {
-		const char *name = object_name[info->genlhdr->cmd];
-		int size;
 
-		size = event_key(NULL, 0, name, dh->minor, &ctx);
-		if (size < 0)
-			goto fail;
-		key = malloc(size + 1);
-		if (!key)
-			goto fail;
-		event_key(key, size + 1, name, dh->minor, &ctx);
-	}
-	printf("%s %s",
-	       action_name[action],
-	       key ? key : "-");
+	name = object_name[info->genlhdr->cmd];
+	size = event_key(NULL, 0, name, dh->minor, &ctx);
+	if (size < 0)
+		goto fail;
+	key = malloc(size + 1);
+	if (!key)
+		goto fail;
+	event_key(key, size + 1, name, dh->minor, &ctx);
+
+	printf("%s %s", action_name[action], key);
 
 	switch(info->genlhdr->cmd) {
 	case DRBD_RESOURCE_STATE:
@@ -408,8 +408,6 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 			printf(" status:%u", helper_info.helper_status);
 		}
 		break;
-	case DRBD_INITIAL_STATE_DONE:
-		break;
 	}
 
 nl_out:
@@ -417,8 +415,6 @@ nl_out:
 out:
 	free(key);
 	fflush(stdout);
-	if (opt_now && info->genlhdr->cmd == DRBD_INITIAL_STATE_DONE)
-		return -1;
 	return 0;
 
 fail:
