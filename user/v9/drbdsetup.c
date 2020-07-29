@@ -48,7 +48,6 @@
 #include <stdarg.h>
 #include <libgen.h>
 #include <time.h>
-#include <search.h>
 #include <syslog.h>
 #include <math.h> /* for NAN */
 
@@ -57,26 +56,12 @@
 
 #include "drbdsetup.h"
 
-#define EXIT_NOMEM 20
-#define EXIT_NO_FAMILY 20
-#define EXIT_SEND_ERR 20
-#define EXIT_RECV_ERR 20
-#define EXIT_TIMED_OUT 20
-#define EXIT_NOSOCK 30
-#define EXIT_THINKO 42
-
-/* is_intentional is a boolean value we get via nl from kernel. if we use new
- * utils and old kernel we don't get it, so we set this default, get kernel
- * info, and then decide from the value if the kernel was new enough */
-#define IS_INTENTIONAL_DEF 3
-
 /*
  * We are not using libnl,
  * using its API for the few things we want to do
  * ends up being almost as much lines of code as
  * coding the necessary bits right here.
  */
-
 #include "libgenl.h"
 #include "drbd_nla.h"
 #include <linux/drbd_config.h>
@@ -90,6 +75,14 @@
 #include "config_flags.h"
 #include "wrap_printf.h"
 #include "drbdsetup_colors.h"
+
+#define EXIT_NOMEM 20
+#define EXIT_NO_FAMILY 20
+#define EXIT_SEND_ERR 20
+#define EXIT_RECV_ERR 20
+#define EXIT_TIMED_OUT 20
+#define EXIT_NOSOCK 30
+#define EXIT_THINKO 42
 
 char *progname;
 
@@ -163,26 +156,6 @@ enum usage_type {
 	XML,
 };
 
-/* Configuration requests typically need a context to operate on.
- * Possible keys are device minor/volume id (both fit in the drbd_genlmsghdr),
- * the replication link (aka connection) name,
- * and/or the replication group (aka resource) name */
-enum cfg_ctx_key {
-	/* Only one of these can be present in a command: */
-	CTX_RESOURCE = 1,
-	CTX_PEER_NODE_ID = 2,
-	CTX_MINOR = 4,
-	CTX_VOLUME = 8,
-	CTX_MY_ADDR = 16,
-	CTX_PEER_ADDR = 32,
-	CTX_ALL = 64,
-
-	CTX_MULTIPLE_ARGUMENTS = 128,
-
-	/* To identify a connection, we use (resource_name, peer_node_id) */
-	CTX_PEER_NODE = CTX_RESOURCE | CTX_PEER_NODE_ID | CTX_MULTIPLE_ARGUMENTS,
-	CTX_PEER_DEVICE = CTX_PEER_NODE | CTX_VOLUME,
-};
 
 enum cfg_ctx_key ctx_next_arg(enum cfg_ctx_key *key)
 {
@@ -224,32 +197,11 @@ const char *ctx_arg_string(enum cfg_ctx_key key, enum usage_type ut)
 	return "unknown argument";
 }
 
-struct drbd_cmd {
-	const char* cmd;
-	enum cfg_ctx_key ctx_key;
-	int cmd_id;
-	int tla_id; /* top level attribute id */
-	int (*function)(struct drbd_cmd *, int, char **);
-	struct drbd_argument *drbd_args;
-	int (*handle_reply)(struct drbd_cmd*, struct genl_info *, void *u_ptr);
-	struct option *options;
-	bool missing_ok;
-	bool warn_on_missing;
-	bool continuous_poll;
-	bool set_defaults;
-	bool lockless;
-	struct context_def *ctx;
-	const char *summary;
-};
-
 // other functions
 static int get_af_ssocks(int warn);
 static void print_command_usage(struct drbd_cmd *cm, enum usage_type);
 static void print_usage_and_exit(const char *addinfo)
 		__attribute__ ((noreturn));
-static const char *resync_susp_str(struct peer_device_info *info);
-static const char *intentional_diskless_str(struct device_info *info);
-static const char *peer_intentional_diskless_str(struct peer_device_info *info);
 
 // command functions
 static int generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv);
@@ -266,15 +218,13 @@ static int check_resize_cmd(struct drbd_cmd *cm, int argc, char **argv);
 static int show_or_get_gi_cmd(struct drbd_cmd *cm, int argc, char **argv);
 
 // sub commands for generic_get_cmd
-static int print_notifications(struct drbd_cmd *, struct genl_info *, void *);
+       int print_event(struct drbd_cmd *, struct genl_info *, void *); /* is in drbdsetup_events2.c */
 static int wait_for_family(struct drbd_cmd *, struct genl_info *, void *);
 static int remember_resource(struct drbd_cmd *, struct genl_info *, void *);
 static int remember_device(struct drbd_cmd *, struct genl_info *, void *);
 static int remember_connection(struct drbd_cmd *, struct genl_info *, void *);
 static int remember_peer_device(struct drbd_cmd *, struct genl_info *, void *);
 
-#define ADDRESS_STR_MAX 256
-static char *address_str(char *buffer, void* address, int addr_len);
 
 // convert functions for arguments
 static int conv_md_idx(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
@@ -512,7 +462,7 @@ struct drbd_cmd commands[] = {
 	{"check-resize", CTX_MINOR, 0, NO_PAYLOAD, check_resize_cmd,
 	 .lockless = true,
 	 .summary = "Remember the current size of a lower-level device." },
-	{"events2", CTX_RESOURCE | CTX_ALL, F_NEW_EVENTS_CMD(print_notifications),
+	{"events2", CTX_RESOURCE | CTX_ALL, F_NEW_EVENTS_CMD(print_event),
 	 .options = events_cmd_options,
 	 .missing_ok = true,
 	 .continuous_poll = true,
@@ -1633,11 +1583,11 @@ static bool parse_color_argument(void)
 	return 1;
 }
 
-static bool opt_now;
-static bool opt_poll;
-static int opt_verbose;
-static bool opt_statistics;
-static bool opt_timestamps;
+bool opt_now;
+bool opt_poll;
+int opt_verbose;
+bool opt_statistics;
+bool opt_timestamps;
 
 static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 {
@@ -2055,7 +2005,7 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		timeout_ms = 120000; /* normal "get" request, or "show" */
 
 	err = generic_get(cm, timeout_ms, peer_devices);
-	if (cm->handle_reply == &print_notifications &&
+	if (cm->handle_reply == &print_event &&
 			opt_now && opt_poll) { /* events2 --now --poll */
 		while ( (c = fgetc(stdin)) != EOF) {
 			switch (c) {
@@ -2485,7 +2435,7 @@ static int show_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	return 0;
 }
 
-static const char *susp_str(struct resource_info *info)
+const char *susp_str(struct resource_info *info)
 {
 	static char buffer[32];
 
@@ -2860,7 +2810,7 @@ void print_peer_device_statistics(int indent,
 		sectors_to_go = s->peer_dev_ov_left ?:
 			s->peer_dev_out_of_sync - s->peer_dev_resync_failed;
 
-	if (indent == 0) { /* called from print_notifications() */
+	if (indent == 0) { /* called from print_event() */
 		if (sync_details)
 			wrap_printf(indent, " done:%.2f", 100.0 *
 					(double)(s->peer_dev_rs_total - sectors_to_go) /
@@ -2996,16 +2946,16 @@ static const char *_intentional_diskless_str(unsigned char intentional_diskless)
 	}
 }
 
-static const char *intentional_diskless_str(struct device_info *info)
+const char *intentional_diskless_str(struct device_info *info)
 {
 	return _intentional_diskless_str(info->is_intentional_diskless);
 }
 
-static const char *peer_intentional_diskless_str(struct peer_device_info *info) {
+const char *peer_intentional_diskless_str(struct peer_device_info *info) {
 	return _intentional_diskless_str(info->peer_is_intentional_diskless);
 }
 
-static const char *resync_susp_str(struct peer_device_info *info)
+const char *resync_susp_str(struct peer_device_info *info)
 {
 	static char buffer[64];
 
@@ -3365,7 +3315,7 @@ static char *af_to_str(int af)
 	else return "unknown";
 }
 
-static char *address_str(char *buffer, void* address, int addr_len)
+char *address_str(char *buffer, void* address, int addr_len)
 {
 	union {
 		struct sockaddr     addr;
@@ -3961,423 +3911,6 @@ static int down_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	}
 	free_resources(resources);
 	return rv;
-}
-
-#define _EVPRINT(checksize, fstr, ...) do { \
-	ret = snprintf(key + pos, size, fstr, __VA_ARGS__); \
-	if (ret < 0) \
-		return ret; \
-	pos += ret; \
-	if (size && checksize) \
-		size -= ret; \
-} while(0)
-#define EVPRINT(...) _EVPRINT(1, __VA_ARGS__)
-/* for llvm static analyzer */
-#define EVPRINT_NOSIZE(...) _EVPRINT(0, __VA_ARGS__)
-static int event_key(char *key, int size, const char *name, unsigned minor,
-		     struct drbd_cfg_context *ctx)
-{
-	char addr[ADDRESS_STR_MAX];
-	int ret, pos = 0;
-
-	if (!ctx)
-		return -1;
-
-	EVPRINT("%s", name);
-
-	if (ctx->ctx_resource_name)
-		EVPRINT(" name:%s", ctx->ctx_resource_name);
-
-	if (ctx->ctx_peer_node_id != -1U)
-		EVPRINT(" peer-node-id:%d", ctx->ctx_peer_node_id);
-
-	if (ctx->ctx_conn_name_len)
-		EVPRINT(" conn-name:%s", ctx->ctx_conn_name);
-
-	if (ctx->ctx_my_addr_len &&
-	    address_str(addr, ctx->ctx_my_addr, ctx->ctx_my_addr_len))
-		EVPRINT(" local:%s", addr);
-
-	if (ctx->ctx_peer_addr_len &&
-	    address_str(addr, ctx->ctx_peer_addr, ctx->ctx_peer_addr_len))
-		EVPRINT(" peer:%s", addr);
-
-	if (ctx->ctx_volume != -1U)
-		EVPRINT(" volume:%u", ctx->ctx_volume);
-
-	if (minor != -1U)
-		EVPRINT_NOSIZE(" minor:%u", minor);
-
-	return pos;
-}
-
-static int known_objects_cmp(const void *a, const void *b) {
-	return strcmp(((const struct entry *)a)->key, ((const struct entry *)b)->key);
-}
-
-static void *update_info(char **key, void *value, size_t size)
-{
-	static void *known_objects;
-
-	struct entry entry = { .key = *key }, **found;
-
-	if (value) {
-		void *old_value = NULL;
-
-		found = tsearch(&entry, &known_objects, known_objects_cmp);
-		if (*found != &entry)
-			old_value = (*found)->data;
-		else {
-			*found = malloc(sizeof(**found));
-			if (!*found)
-				goto fail;
-			(*found)->key = *key;
-			*key = NULL;
-		}
-
-		(*found)->data = malloc(size);
-		if (!(*found)->data)
-			goto fail;
-		memcpy((*found)->data, value, size);
-
-		return old_value;
-	} else {
-		found = tfind(&entry, &known_objects, known_objects_cmp);
-		if (found) {
-			struct entry *entry = *found;
-
-			tdelete(entry, &known_objects, known_objects_cmp);
-			free(entry->data);
-			free(entry->key);
-			free(entry);
-		}
-		return NULL;
-	}
-
-fail:
-	perror(progname);
-	exit(20);
-}
-
-static int print_notifications(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
-{
-	static const char *action_name[] = {
-		[NOTIFY_EXISTS] = "exists",
-		[NOTIFY_CREATE] = "create",
-		[NOTIFY_CHANGE] = "change",
-		[NOTIFY_DESTROY] = "destroy",
-		[NOTIFY_CALL] = "call",
-		[NOTIFY_RESPONSE] = "response",
-	};
-	static char *object_name[] = {
-		[DRBD_RESOURCE_STATE] = "resource",
-		[DRBD_DEVICE_STATE] = "device",
-		[DRBD_CONNECTION_STATE] = "connection",
-		[DRBD_PEER_DEVICE_STATE] = "peer-device",
-		[DRBD_HELPER] = "helper",
-		[DRBD_PATH_STATE] = "path",
-	};
-	static uint32_t last_seq;
-	static bool last_seq_known;
-	static struct timeval tv;
-	static bool keep_tv;
-
-	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U, };
-	struct drbd_notification_header nh = { .nh_type = -1U };
-	enum drbd_notification_type action;
-	struct drbd_genlmsghdr *dh;
-	char *key = NULL;
-	int err;
-
-	if (!info) {
-		keep_tv = false;
-		return 0;
-	}
-
-	dh = info->userhdr;
-	if (dh->ret_code == ERR_MINOR_INVALID && cm->missing_ok)
-		return 0;
-	if (dh->ret_code != NO_ERROR)
-		return dh->ret_code;
-
-	err = drbd_notification_header_from_attrs(&nh, info);
-	if (err)
-		return 0;
-	action = nh.nh_type & ~NOTIFY_FLAGS;
-	if (action >= ARRAY_SIZE(action_name) ||
-	    !action_name[action]) {
-		dbg(1, "unknown notification type\n");
-		goto out;
-	}
-
-	if (opt_now && action != NOTIFY_EXISTS)
-		return 0;
-
-	if (info->genlhdr->cmd != DRBD_INITIAL_STATE_DONE) {
-		err = drbd_cfg_context_from_attrs(&ctx, info);
-		if (err)
-			return 0;
-		if (info->genlhdr->cmd >= ARRAY_SIZE(object_name) ||
-		    !object_name[info->genlhdr->cmd]) {
-			dbg(1, "unknown notification\n");
-			goto out;
-		}
-	}
-
-	if (action != NOTIFY_EXISTS) {
-		if (last_seq_known) {
-			int skipped = info->nlhdr->nlmsg_seq - (last_seq + 1);
-
-			if (skipped)
-				printf("- skipped %d\n", skipped);
-		}
-		last_seq = info->nlhdr->nlmsg_seq;
-		last_seq_known = true;
-	}
-
-	if (opt_timestamps) {
-		struct tm *tm;
-
-		if (!keep_tv)
-			gettimeofday(&tv, NULL);
-		keep_tv = !!(nh.nh_type & NOTIFY_CONTINUES);
-
-		tm = localtime(&tv.tv_sec);
-		printf("%04u-%02u-%02uT%02u:%02u:%02u.%06u%+03d:%02u ",
-		       tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday,
-		       tm->tm_hour, tm->tm_min, tm->tm_sec,
-		       (int)tv.tv_usec,
-		       (int)(tm->tm_gmtoff / 3600),
-		       (int)((abs(tm->tm_gmtoff) / 60) % 60));
-	}
-	if (info->genlhdr->cmd != DRBD_INITIAL_STATE_DONE) {
-		const char *name = object_name[info->genlhdr->cmd];
-		int size;
-
-		size = event_key(NULL, 0, name, dh->minor, &ctx);
-		if (size < 0)
-			goto fail;
-		key = malloc(size + 1);
-		if (!key)
-			goto fail;
-		event_key(key, size + 1, name, dh->minor, &ctx);
-	}
-	printf("%s %s",
-	       action_name[action],
-	       key ? key : "-");
-
-	switch(info->genlhdr->cmd) {
-	case DRBD_RESOURCE_STATE:
-		if (action != NOTIFY_DESTROY) {
-			bool have_new_stats = true;
-			struct {
-				struct resource_info i;
-				struct resource_statistics s;
-			} *old, new;
-
-			err = resource_info_from_attrs(&new.i, info);
-			if (err) {
-				dbg(1, "resource info missing\n");
-				goto nl_out;
-			}
-			memset(&new.s, -1, sizeof(new.s));
-			err = resource_statistics_from_attrs(&new.s, info);
-			if (err) {
-				dbg(1, "resource statistics missing\n");
-				have_new_stats = false;
-			}
-			old = update_info(&key, &new, sizeof(new));
-			if (old && !have_new_stats)
-				new.s = old->s;
-
-			if (!old || new.i.res_role != old->i.res_role)
-				printf(" role:%s%s%s",
-						ROLE_COLOR_STRING(new.i.res_role, 1));
-			if (!old ||
-			    new.i.res_susp != old->i.res_susp ||
-			    new.i.res_susp_nod != old->i.res_susp_nod ||
-			    new.i.res_susp_fen != old->i.res_susp_fen ||
-			    new.i.res_susp_quorum != old->i.res_susp_quorum)
-				printf(" suspended:%s",
-				       susp_str(&new.i));
-			if (opt_statistics && have_new_stats)
-				print_resource_statistics(0, old ? &old->s : NULL,
-							  &new.s, nowrap_printf);
-			free(old);
-		} else
-			update_info(&key, NULL, 0);
-		break;
-	case DRBD_DEVICE_STATE:
-		if (action != NOTIFY_DESTROY) {
-			bool have_new_stats = true;
-			struct {
-				struct device_info i;
-				struct device_statistics s;
-			} *old, new;
-
-			new.i.is_intentional_diskless = IS_INTENTIONAL_DEF;
-			err = device_info_from_attrs(&new.i, info);
-			if (err) {
-				dbg(1, "device info missing\n");
-				goto nl_out;
-			}
-			memset(&new.s, -1, sizeof(new.s));
-			err = device_statistics_from_attrs(&new.s, info);
-			if (err) {
-				dbg(1, "device statistics missing\n");
-				have_new_stats = false;
-			}
-			old = update_info(&key, &new, sizeof(new));
-			if (old && !have_new_stats)
-				new.s = old->s;
-			if (!old || new.i.dev_disk_state != old->i.dev_disk_state ||
-			    new.i.dev_has_quorum != old->i.dev_has_quorum) {
-				bool intentional = new.i.is_intentional_diskless == 1;
-				printf(" disk:%s%s%s",
-						DISK_COLOR_STRING(new.i.dev_disk_state, intentional, true));
-				printf(" client:%s", intentional_diskless_str(&new.i));
-				printf(" quorum:%s", new.i.dev_has_quorum ? "yes" : "no");
-			}
-			if (opt_statistics && have_new_stats)
-				print_device_statistics(0, old ? &old->s : NULL,
-							&new.s, nowrap_printf);
-			free(old);
-		} else
-			update_info(&key, NULL, 0);
-		break;
-	case DRBD_CONNECTION_STATE:
-		if (action != NOTIFY_DESTROY) {
-			bool have_new_stats = true;
-			struct {
-				struct connection_info i;
-				struct connection_statistics s;
-			} *old, new;
-
-			err = connection_info_from_attrs(&new.i, info);
-			if (err) {
-				dbg(1, "connection info missing\n");
-				goto nl_out;
-			}
-			memset(&new.s, -1, sizeof(new.s));
-			err = connection_statistics_from_attrs(&new.s, info);
-			if (err) {
-				dbg(1, "connection statistics missing\n");
-				have_new_stats = false;
-			}
-			old = update_info(&key, &new, sizeof(new));
-			if (old && !have_new_stats)
-				new.s = old->s;
-			if (!old ||
-			    new.i.conn_connection_state != old->i.conn_connection_state)
-				printf(" connection:%s%s%s",
-						CONN_COLOR_STRING(new.i.conn_connection_state));
-			if (!old ||
-			    new.i.conn_role != old->i.conn_role)
-				printf(" role:%s%s%s",
-						ROLE_COLOR_STRING(new.i.conn_role, 0));
-			if (opt_statistics && have_new_stats)
-				print_connection_statistics(0, old ? &old->s : NULL,
-							    &new.s, nowrap_printf);
-			free(old);
-		} else
-			update_info(&key, NULL, 0);
-		break;
-	case DRBD_PEER_DEVICE_STATE:
-		if (action != NOTIFY_DESTROY) {
-			bool have_new_stats = true;
-			struct {
-				struct peer_device_info i;
-				struct peer_device_statistics s;
-			} *old, new;
-
-			new.i.peer_is_intentional_diskless = IS_INTENTIONAL_DEF;
-			err = peer_device_info_from_attrs(&new.i, info);
-			if (err) {
-				dbg(1, "peer device info missing\n");
-				goto nl_out;
-			}
-
-			memset(&new.s, -1, sizeof(new.s));
-			err = peer_device_statistics_from_attrs(&new.s, info);
-			if (err) {
-				dbg(1, "peer device statistics missing\n");
-				have_new_stats = false;
-			}
-
-			old = update_info(&key, &new, sizeof(new));
-			if (old && !have_new_stats)
-				new.s = old->s;
-
-			if (!old || new.i.peer_repl_state != old->i.peer_repl_state)
-				printf(" replication:%s%s%s",
-						REPL_COLOR_STRING(new.i.peer_repl_state));
-			if (!old || new.i.peer_disk_state != old->i.peer_disk_state) {
-				bool intentional = new.i.peer_is_intentional_diskless == 1;
-				printf(" peer-disk:%s%s%s",
-						DISK_COLOR_STRING(new.i.peer_disk_state, intentional,  false));
-				printf(" peer-client:%s", peer_intentional_diskless_str(&new.i));
-			}
-			if (!old ||
-			    new.i.peer_resync_susp_user != old->i.peer_resync_susp_user ||
-			    new.i.peer_resync_susp_peer != old->i.peer_resync_susp_peer ||
-			    new.i.peer_resync_susp_dependency != old->i.peer_resync_susp_dependency)
-				printf(" resync-suspended:%s",
-				       resync_susp_str(&new.i));
-
-			if (have_new_stats)
-				print_peer_device_statistics(0, old ? &old->s : NULL,
-							     &new.s, nowrap_printf);
-
-			free(old);
-		} else
-			update_info(&key, NULL, 0);
-		break;
-	case DRBD_PATH_STATE:
-		if (action != NOTIFY_DESTROY) {
-			struct drbd_path_info new = {}, *old;
-
-			err = drbd_path_info_from_attrs(&new, info);
-			if (err) {
-				dbg(1, "path info missing\n");
-				goto nl_out;
-			}
-			old = update_info(&key, &new, sizeof(new));
-			if (!old || old->path_established != new.path_established)
-				printf(" established:%s",
-				       new.path_established ? "yes" : "no");
-			free(old);
-		} else
-			update_info(&key, NULL, 0);
-		break;
-	case DRBD_HELPER: {
-		struct drbd_helper_info helper_info;
-
-		err = drbd_helper_info_from_attrs(&helper_info, info);
-		if (err) {
-			dbg(1, "helper info missing\n");
-			goto nl_out;
-		}
-		printf(" helper:%s", helper_info.helper_name);
-		if (action == NOTIFY_RESPONSE)
-			printf(" status:%u", helper_info.helper_status);
-		}
-		break;
-	case DRBD_INITIAL_STATE_DONE:
-		break;
-	}
-
-nl_out:
-	printf("\n");
-out:
-	free(key);
-	fflush(stdout);
-	if (opt_now && info->genlhdr->cmd == DRBD_INITIAL_STATE_DONE)
-		return -1;
-	return 0;
-
-fail:
-	perror(progname);
-	exit(20);
 }
 
 void peer_devices_append(struct peer_devices_list *peer_devices, struct genl_info *info)
