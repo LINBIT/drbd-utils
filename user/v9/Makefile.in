@@ -78,7 +78,7 @@ drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_postparse.o \
 
 drbdsetup-obj = libnla.o registry.o drbdsetup.o drbdtool_common.o \
 		drbd_buildtag.o drbd_strings.o config_flags.o drbd_nla.o \
-		wrap_printf.o drbdsetup_colors.o shared_tool.o
+		wrap_printf.o drbdsetup_colors.o shared_tool.o drbdsetup_events2.o
 
 drbdmeta-obj = drbdmeta.o drbdmeta_scanner.o drbdtool_common.o drbd_buildtag.o \
 	       drbd_strings.o shared_tool.o
