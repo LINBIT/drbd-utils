@@ -75,6 +75,8 @@ struct resources_list {
 	struct nlattr *res_opts;
 	struct resource_info info;
 	struct resource_statistics statistics;
+	struct devices_list *devices; /* only used by events2 */
+	struct connections_list *connections; /* only used by events2 */
 };
 struct devices_list {
 	struct devices_list *next;
@@ -92,6 +94,7 @@ struct connections_list {
 	struct nlattr *net_conf;
 	struct connection_info info;
 	struct connection_statistics statistics;
+	struct peer_devices_list *peer_devices; /* only used by events2 */
 };
 struct peer_devices_list {
 	struct peer_devices_list *next;

@@ -9,100 +9,107 @@
 #include "drbd_strings.h"
 #include "drbdsetup_colors.h"
 
-#define _EVPRINT(checksize, fstr, ...) do { \
-	ret = snprintf(key + pos, size, fstr, __VA_ARGS__); \
-	if (ret < 0) \
-		return ret; \
-	pos += ret; \
-	if (size && checksize) \
-		size -= ret; \
-} while(0)
-#define EVPRINT(...) _EVPRINT(1, __VA_ARGS__)
-/* for llvm static analyzer */
-#define EVPRINT_NOSIZE(...) _EVPRINT(0, __VA_ARGS__)
-static int event_key(char *key, int size, const char *name, unsigned minor,
-		     struct drbd_cfg_context *ctx)
-{
-	char addr[ADDRESS_STR_MAX];
-	int ret, pos = 0;
+void *all_resources;
 
-	if (!ctx)
-		return -1;
-
-	EVPRINT("%s", name);
-
-	if (ctx->ctx_resource_name)
-		EVPRINT(" name:%s", ctx->ctx_resource_name);
-
-	if (ctx->ctx_peer_node_id != -1U)
-		EVPRINT(" peer-node-id:%d", ctx->ctx_peer_node_id);
-
-	if (ctx->ctx_conn_name_len)
-		EVPRINT(" conn-name:%s", ctx->ctx_conn_name);
-
-	if (ctx->ctx_my_addr_len &&
-	    address_str(addr, ctx->ctx_my_addr, ctx->ctx_my_addr_len))
-		EVPRINT(" local:%s", addr);
-
-	if (ctx->ctx_peer_addr_len &&
-	    address_str(addr, ctx->ctx_peer_addr, ctx->ctx_peer_addr_len))
-		EVPRINT(" peer:%s", addr);
-
-	if (ctx->ctx_volume != -1U)
-		EVPRINT(" volume:%u", ctx->ctx_volume);
-
-	if (minor != -1U)
-		EVPRINT_NOSIZE(" minor:%u", minor);
-
-	return pos;
-}
-
-static int known_objects_cmp(const void *a, const void *b) {
+static int resource_obj_cmp(const void *a, const void *b) {
 	return strcmp(((const struct entry *)a)->key, ((const struct entry *)b)->key);
 }
 
-static void *update_info(char **key, void *value, size_t size)
+static void store_resource(struct resources_list *resource)
 {
-	static void *known_objects;
+	struct entry **found;
+	struct entry entry = { .key = resource->name };
 
-	struct entry entry = { .key = *key }, **found;
+	found = tsearch(&entry, &all_resources, resource_obj_cmp);
+	(*found)->data = resource;
+}
 
-	if (value) {
-		void *old_value = NULL;
+static struct resources_list *find_resource(char *name)
+{
+	struct entry **found;
+	struct entry entry = { .key = name };
 
-		found = tsearch(&entry, &known_objects, known_objects_cmp);
-		if (*found != &entry)
-			old_value = (*found)->data;
-		else {
-			*found = malloc(sizeof(**found));
-			if (!*found)
-				goto fail;
-			(*found)->key = *key;
-			*key = NULL;
-		}
+	found = tfind(&entry, &all_resources, resource_obj_cmp);
+	if (found)
+		return (*found)->data;
+	return NULL;
+}
 
-		(*found)->data = malloc(size);
-		if (!(*found)->data)
-			goto fail;
-		memcpy((*found)->data, value, size);
+static void store_device(struct resources_list *resource, struct devices_list *new_device)
+{
+	struct devices_list *device, **tail = &resource->devices->next;
 
-		return old_value;
-	} else {
-		found = tfind(&entry, &known_objects, known_objects_cmp);
-		if (found) {
-			struct entry *entry = *found;
+	for (device = resource->devices; device; device = device->next)
+		tail = &device->next;
 
-			tdelete(entry, &known_objects, known_objects_cmp);
-			free(entry->data);
-			free(entry->key);
-			free(entry);
-		}
-		return NULL;
+	(*tail)->next = new_device;
+	new_device->next = NULL;
+}
+
+static struct devices_list *find_device(struct resources_list *resource, int minor)
+{
+	struct devices_list *device;
+	for (device = resource->devices; device; device = device->next) {
+		if (device->minor == minor)
+			return device;
 	}
+	return NULL;
+}
 
-fail:
-	perror(progname);
-	exit(20);
+static void store_connection(struct resources_list *resource, struct connections_list *new_connection)
+{
+	struct connections_list *connection, **tail = &resource->connections->next;
+
+	for (connection = resource->connections; connection; connection = connection->next)
+		tail = &connection->next;
+
+	(*tail)->next = new_connection;
+	new_connection->next = NULL;
+}
+
+static struct connections_list *find_connection(struct resources_list *resource, const char *name)
+{
+	struct connections_list *connection;
+	for (connection = resource->connections; connection; connection = connection->next) {
+		if (!strcmp(connection->ctx.ctx_conn_name, name))
+			return connection;
+	}
+	return NULL;
+}
+
+static void store_peer_device(struct resources_list *resource, struct peer_devices_list *new_peer_device)
+{
+	struct peer_devices_list *peer_device, **tail;
+	struct connections_list *connection;
+
+	connection = find_connection(resource, new_peer_device->ctx.ctx_conn_name);
+	if (!connection) {
+		fprintf(stderr, "Connection %s not found in resource %s", new_peer_device->ctx.ctx_conn_name, resource->name);
+		exit(20);
+	}
+	tail = &connection->peer_devices->next;
+	for (peer_device = connection->peer_devices; peer_device; peer_device = peer_device->next)
+		tail = &peer_device->next;
+	(*tail)->next = new_peer_device;
+	new_peer_device->next = NULL;
+}
+
+static struct peer_devices_list *find_peer_device(struct resources_list *resource, struct drbd_cfg_context *ctx)
+{
+	struct connections_list *connection;
+	struct peer_devices_list *peer_device;
+
+	connection = find_connection(resource, ctx->ctx_conn_name);
+	if (!connection) {
+		fprintf(stderr, "Connection %s not found in resource %s", ctx->ctx_conn_name, resource->name);
+		exit(20);
+	}
+	for (peer_device = connection->peer_devices; peer_device; peer_device = peer_device->next) {
+		if (peer_device->ctx.ctx_peer_node_id == ctx->ctx_peer_node_id &&
+		    peer_device->ctx.ctx_volume == ctx->ctx_volume)
+			return peer_device;
+	}
+	return NULL;
 }
 
 int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
@@ -131,10 +138,13 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U, };
 	struct drbd_notification_header nh = { .nh_type = -1U };
 	enum drbd_notification_type action;
+	struct resources_list *resource;
+	struct devices_list *device;
+	struct connections_list *connection;
+	struct peer_devices_list *peer_device;
 	struct drbd_genlmsghdr *dh;
 	char *key = NULL;
-	const char *name;
-	int err, size;
+	int err;
 
 	if (!info) {
 		keep_tv = false;
@@ -201,214 +211,80 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 		       (int)((abs(tm->tm_gmtoff) / 60) % 60));
 	}
 
-	name = object_name[info->genlhdr->cmd];
-	size = event_key(NULL, 0, name, dh->minor, &ctx);
-	if (size < 0)
+
+
+	resource = find_resource(ctx.ctx_resource_name);
+	if (action != NOTIFY_CREATE && action != NOTIFY_EXISTS && !resource) {
+		fprintf(stderr, "Resource %s not in data structure\n", ctx.ctx_resource_name);
 		goto fail;
-	key = malloc(size + 1);
-	if (!key)
-		goto fail;
-	event_key(key, size + 1, name, dh->minor, &ctx);
 
-	printf("%s %s", action_name[action], key);
-
-	switch(info->genlhdr->cmd) {
-	case DRBD_RESOURCE_STATE:
-		if (action != NOTIFY_DESTROY) {
-			bool have_new_stats = true;
-			struct {
-				struct resource_info i;
-				struct resource_statistics s;
-			} *old, new;
-
-			err = resource_info_from_attrs(&new.i, info);
-			if (err) {
-				dbg(1, "resource info missing\n");
-				goto nl_out;
-			}
-			memset(&new.s, -1, sizeof(new.s));
-			err = resource_statistics_from_attrs(&new.s, info);
-			if (err) {
-				dbg(1, "resource statistics missing\n");
-				have_new_stats = false;
-			}
-			old = update_info(&key, &new, sizeof(new));
-			if (old && !have_new_stats)
-				new.s = old->s;
-
-			if (!old || new.i.res_role != old->i.res_role)
-				printf(" role:%s%s%s",
-						ROLE_COLOR_STRING(new.i.res_role, 1));
-			if (!old ||
-			    new.i.res_susp != old->i.res_susp ||
-			    new.i.res_susp_nod != old->i.res_susp_nod ||
-			    new.i.res_susp_fen != old->i.res_susp_fen ||
-			    new.i.res_susp_quorum != old->i.res_susp_quorum)
-				printf(" suspended:%s",
-				       susp_str(&new.i));
-			if (opt_statistics && have_new_stats)
-				print_resource_statistics(0, old ? &old->s : NULL,
-							  &new.s, nowrap_printf);
-			free(old);
-		} else
-			update_info(&key, NULL, 0);
-		break;
-	case DRBD_DEVICE_STATE:
-		if (action != NOTIFY_DESTROY) {
-			bool have_new_stats = true;
-			struct {
-				struct device_info i;
-				struct device_statistics s;
-			} *old, new;
-
-			new.i.is_intentional_diskless = IS_INTENTIONAL_DEF;
-			err = device_info_from_attrs(&new.i, info);
-			if (err) {
-				dbg(1, "device info missing\n");
-				goto nl_out;
-			}
-			memset(&new.s, -1, sizeof(new.s));
-			err = device_statistics_from_attrs(&new.s, info);
-			if (err) {
-				dbg(1, "device statistics missing\n");
-				have_new_stats = false;
-			}
-			old = update_info(&key, &new, sizeof(new));
-			if (old && !have_new_stats)
-				new.s = old->s;
-			if (!old || new.i.dev_disk_state != old->i.dev_disk_state ||
-			    new.i.dev_has_quorum != old->i.dev_has_quorum) {
-				bool intentional = new.i.is_intentional_diskless == 1;
-				printf(" disk:%s%s%s",
-						DISK_COLOR_STRING(new.i.dev_disk_state, intentional, true));
-				printf(" client:%s", intentional_diskless_str(&new.i));
-				printf(" quorum:%s", new.i.dev_has_quorum ? "yes" : "no");
-			}
-			if (opt_statistics && have_new_stats)
-				print_device_statistics(0, old ? &old->s : NULL,
-							&new.s, nowrap_printf);
-			free(old);
-		} else
-			update_info(&key, NULL, 0);
-		break;
-	case DRBD_CONNECTION_STATE:
-		if (action != NOTIFY_DESTROY) {
-			bool have_new_stats = true;
-			struct {
-				struct connection_info i;
-				struct connection_statistics s;
-			} *old, new;
-
-			err = connection_info_from_attrs(&new.i, info);
-			if (err) {
-				dbg(1, "connection info missing\n");
-				goto nl_out;
-			}
-			memset(&new.s, -1, sizeof(new.s));
-			err = connection_statistics_from_attrs(&new.s, info);
-			if (err) {
-				dbg(1, "connection statistics missing\n");
-				have_new_stats = false;
-			}
-			old = update_info(&key, &new, sizeof(new));
-			if (old && !have_new_stats)
-				new.s = old->s;
-			if (!old ||
-			    new.i.conn_connection_state != old->i.conn_connection_state)
-				printf(" connection:%s%s%s",
-						CONN_COLOR_STRING(new.i.conn_connection_state));
-			if (!old ||
-			    new.i.conn_role != old->i.conn_role)
-				printf(" role:%s%s%s",
-						ROLE_COLOR_STRING(new.i.conn_role, 0));
-			if (opt_statistics && have_new_stats)
-				print_connection_statistics(0, old ? &old->s : NULL,
-							    &new.s, nowrap_printf);
-			free(old);
-		} else
-			update_info(&key, NULL, 0);
-		break;
-	case DRBD_PEER_DEVICE_STATE:
-		if (action != NOTIFY_DESTROY) {
-			bool have_new_stats = true;
-			struct {
-				struct peer_device_info i;
-				struct peer_device_statistics s;
-			} *old, new;
-
-			new.i.peer_is_intentional_diskless = IS_INTENTIONAL_DEF;
-			err = peer_device_info_from_attrs(&new.i, info);
-			if (err) {
-				dbg(1, "peer device info missing\n");
-				goto nl_out;
-			}
-
-			memset(&new.s, -1, sizeof(new.s));
-			err = peer_device_statistics_from_attrs(&new.s, info);
-			if (err) {
-				dbg(1, "peer device statistics missing\n");
-				have_new_stats = false;
-			}
-
-			old = update_info(&key, &new, sizeof(new));
-			if (old && !have_new_stats)
-				new.s = old->s;
-
-			if (!old || new.i.peer_repl_state != old->i.peer_repl_state)
-				printf(" replication:%s%s%s",
-						REPL_COLOR_STRING(new.i.peer_repl_state));
-			if (!old || new.i.peer_disk_state != old->i.peer_disk_state) {
-				bool intentional = new.i.peer_is_intentional_diskless == 1;
-				printf(" peer-disk:%s%s%s",
-						DISK_COLOR_STRING(new.i.peer_disk_state, intentional,  false));
-				printf(" peer-client:%s", peer_intentional_diskless_str(&new.i));
-			}
-			if (!old ||
-			    new.i.peer_resync_susp_user != old->i.peer_resync_susp_user ||
-			    new.i.peer_resync_susp_peer != old->i.peer_resync_susp_peer ||
-			    new.i.peer_resync_susp_dependency != old->i.peer_resync_susp_dependency)
-				printf(" resync-suspended:%s",
-				       resync_susp_str(&new.i));
-
-			if (have_new_stats)
-				print_peer_device_statistics(0, old ? &old->s : NULL,
-							     &new.s, nowrap_printf);
-
-			free(old);
-		} else
-			update_info(&key, NULL, 0);
-		break;
-	case DRBD_PATH_STATE:
-		if (action != NOTIFY_DESTROY) {
-			struct drbd_path_info new = {}, *old;
-
-			err = drbd_path_info_from_attrs(&new, info);
-			if (err) {
-				dbg(1, "path info missing\n");
-				goto nl_out;
-			}
-			old = update_info(&key, &new, sizeof(new));
-			if (!old || old->path_established != new.path_established)
-				printf(" established:%s",
-				       new.path_established ? "yes" : "no");
-			free(old);
-		} else
-			update_info(&key, NULL, 0);
-		break;
-	case DRBD_HELPER: {
-		struct drbd_helper_info helper_info;
-
-		err = drbd_helper_info_from_attrs(&helper_info, info);
-		if (err) {
-			dbg(1, "helper info missing\n");
-			goto nl_out;
+	switch (action) {
+	case NOTIFY_EXISTS:
+	case NOTIFY_CREATE:
+		switch(info->genlhdr->cmd) {
+		case DRBD_RESOURCE_STATE:
+			resource = new_resource_from_info(info);
+			store_resource(resource);
+			break;
+		case DRBD_DEVICE_STATE:
+			device = new_device_from_info(info);
+			store_device(resource, device);
+			break;
+		case DRBD_CONNECTION_STATE:
+			connection = new_connection_from_info(info);
+			store_connection(resource, connection);
+			break;
+		case DRBD_PEER_DEVICE_STATE:
+			peer_device = new_peer_device_from_info(info);
+			store_peer_device(resource, peer_device);
+			break;
+		case DRBD_PATH_STATE:
+			break;
 		}
-		printf(" helper:%s", helper_info.helper_name);
-		if (action == NOTIFY_RESPONSE)
-			printf(" status:%u", helper_info.helper_status);
+		break;
+	case NOTIFY_CHANGE:
+		switch(info->genlhdr->cmd) {
+		case DRBD_RESOURCE_STATE:
+			resource_info_from_attrs(&resource->info, info);
+			memset(&resource->statistics, -1, sizeof(resource->statistics));
+			resource_statistics_from_attrs(&resource->statistics, info);
+			break;
+		case DRBD_DEVICE_STATE:
+			device = find_device(resource, ((struct drbd_genlmsghdr*)(info->userhdr))->minor);
+			disk_conf_from_attrs(&device->disk_conf, info);
+			device->info.dev_disk_state = D_DISKLESS;
+			device->info.is_intentional_diskless = IS_INTENTIONAL_DEF;
+			device_info_from_attrs(&device->info, info);
+			memset(&device->statistics, -1, sizeof(device->statistics));
+			device_statistics_from_attrs(&device->statistics, info);
+			break;
+		case DRBD_CONNECTION_STATE:
+			connection = find_connection(resource, ctx.ctx_conn_name);
+			connection_info_from_attrs(&connection->info, info);
+			memset(&connection->statistics, -1, sizeof(connection->statistics));
+			connection_statistics_from_attrs(&connection->statistics, info);
+			break;
+		case DRBD_PEER_DEVICE_STATE:
+			peer_device = find_peer_device(resource, &ctx);
+			peer_device_info_from_attrs(&peer_device->info, info);
+			memset(&peer_device->statistics, -1, sizeof(peer_device->statistics));
+			peer_device_statistics_from_attrs(&peer_device->statistics, info);
+			break;
+		case DRBD_PATH_STATE:
+			break;
 		}
+
+		break;
+	case NOTIFY_DESTROY:
+		break;
+	case NOTIFY_CALL:
+	case NOTIFY_RESPONSE:
 		break;
 	}
+
+	if (!(nh.nh_type & NOTIFY_CONTINUES)) {
+		printf("%s %s", action_name[action], "something");
+        }
 
 nl_out:
 	printf("\n");

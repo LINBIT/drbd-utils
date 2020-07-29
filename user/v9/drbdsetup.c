@@ -3436,7 +3436,7 @@ struct devices_list *new_device_from_info(struct genl_info *info)
 
 	d = calloc(1, sizeof(*d));
 
-	d->minor =  ((struct drbd_genlmsghdr*)(info->userhdr))->minor;
+	d->minor = ((struct drbd_genlmsghdr*)(info->userhdr))->minor;
 	d->ctx = ctx;
 	if (disk_conf_nl) {
 		int size = nla_total_size(nla_len(disk_conf_nl));
