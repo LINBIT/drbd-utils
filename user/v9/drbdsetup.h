@@ -69,6 +69,40 @@ enum {
 	E_POLL_ERR,
 };
 
+struct resources_list {
+	struct resources_list *next;
+	char *name;
+	struct nlattr *res_opts;
+	struct resource_info info;
+	struct resource_statistics statistics;
+};
+struct devices_list {
+	struct devices_list *next;
+	unsigned minor;
+	struct drbd_cfg_context ctx;
+	struct nlattr *disk_conf_nl;
+	struct disk_conf disk_conf;
+	struct device_info info;
+	struct device_statistics statistics;
+};
+struct connections_list {
+	struct connections_list *next;
+	struct drbd_cfg_context ctx;
+	struct nlattr *path_list;
+	struct nlattr *net_conf;
+	struct connection_info info;
+	struct connection_statistics statistics;
+};
+struct peer_devices_list {
+	struct peer_devices_list *next;
+	struct drbd_cfg_context ctx;
+	struct nlattr *peer_device_conf;
+	struct peer_device_info info;
+	struct peer_device_statistics statistics;
+	struct devices_list *device;
+	int timeout_ms; /* used only by wait_for_family() */
+};
+
 typedef
 __attribute__((format(printf, 2, 3)))
 int (*wrap_printf_fn_t)(int indent, const char *format, ...);
@@ -108,5 +142,13 @@ void print_peer_device_statistics(int indent,
 				  wrap_printf_fn_t wrap_printf);
 __attribute__((format(printf, 2, 3)))
 int nowrap_printf(int indent, const char *format, ...);
+struct resources_list *new_resource_from_info(struct genl_info *info);
+struct devices_list *new_device_from_info(struct genl_info *info);
+struct connections_list *new_connection_from_info(struct genl_info *info);
+struct peer_devices_list *new_peer_device_from_info(struct genl_info *info);
+void free_resources(struct resources_list *);
+void free_devices(struct devices_list *);
+void free_connections(struct connections_list *);
+void free_peer_devices(struct peer_devices_list *);
 
 #endif

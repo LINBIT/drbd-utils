@@ -231,52 +231,12 @@ static int conv_md_idx(struct drbd_argument *ad, struct msg_buff *msg, struct dr
 static int conv_u32(struct drbd_argument *, struct msg_buff *, struct drbd_genlmsghdr *, char *);
 static int conv_addr(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 
-struct resources_list {
-	struct resources_list *next;
-	char *name;
-	struct nlattr *res_opts;
-	struct resource_info info;
-	struct resource_statistics statistics;
-};
 static struct resources_list *list_resources(void);
 static struct resources_list *sort_resources(struct resources_list *);
-static void free_resources(struct resources_list *);
-
-struct devices_list {
-	struct devices_list *next;
-	unsigned minor;
-	struct drbd_cfg_context ctx;
-	struct nlattr *disk_conf_nl;
-	struct disk_conf disk_conf;
-	struct device_info info;
-	struct device_statistics statistics;
-};
 static struct devices_list *list_devices(char *);
-static void free_devices(struct devices_list *);
-
-struct connections_list {
-	struct connections_list *next;
-	struct drbd_cfg_context ctx;
-	struct nlattr *path_list;
-	struct nlattr *net_conf;
-	struct connection_info info;
-	struct connection_statistics statistics;
-};
 static struct connections_list *sort_connections(struct connections_list *);
 static struct connections_list *list_connections(char *);
-static void free_connections(struct connections_list *);
-
-struct peer_devices_list {
-	struct peer_devices_list *next;
-	struct drbd_cfg_context ctx;
-	struct nlattr *peer_device_conf;
-	struct peer_device_info info;
-	struct peer_device_statistics statistics;
-	struct devices_list *device;
-	int timeout_ms; /* used only by wait_for_family() */
-};
 static struct peer_devices_list *list_peer_devices(char *);
-static void free_peer_devices(struct peer_devices_list *);
 
 struct option wait_cmds_options[] = {
 	{ "wfc-timeout", required_argument, 0, 't' },
@@ -3351,7 +3311,7 @@ char *address_str(char *buffer, void* address, int addr_len)
 		return NULL;
 }
 
-static struct resources_list *new_resource_from_info(struct genl_info *info)
+struct resources_list *new_resource_from_info(struct genl_info *info)
 {
 	struct drbd_cfg_context cfg = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
 	struct nlattr *res_opts = global_attrs[DRBD_NLA_RESOURCE_OPTS];
@@ -3389,7 +3349,7 @@ static int remember_resource(struct drbd_cmd *cmd, struct genl_info *info, void 
 	return 0;
 }
 
-static void free_resources(struct resources_list *resources)
+void free_resources(struct resources_list *resources)
 {
 	while (resources) {
 		struct resources_list *r = resources;
@@ -3463,7 +3423,7 @@ static struct resources_list *list_resources(void)
 	return list;
 }
 
-static struct devices_list *new_device_from_info(struct genl_info *info)
+struct devices_list *new_device_from_info(struct genl_info *info)
 {
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
 	struct nlattr *disk_conf_nl = global_attrs[DRBD_NLA_DISK_CONF];
@@ -3539,7 +3499,7 @@ static struct devices_list *list_devices(char *resource_name)
 	return list;
 }
 
-static void free_devices(struct devices_list *devices)
+void free_devices(struct devices_list *devices)
 {
 	while (devices) {
 		struct devices_list *d = devices;
@@ -3549,7 +3509,7 @@ static void free_devices(struct devices_list *devices)
 	}
 }
 
-static struct connections_list *new_connection_from_info(struct genl_info *info)
+struct connections_list *new_connection_from_info(struct genl_info *info)
 {
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
 	struct nlattr *net_conf = global_attrs[DRBD_NLA_NET_CONF];
@@ -3657,7 +3617,7 @@ static struct connections_list *list_connections(char *resource_name)
 	return list;
 }
 
-static void free_connections(struct connections_list *connections)
+void free_connections(struct connections_list *connections)
 {
 	while (connections) {
 		struct connections_list *l = connections;
@@ -3667,7 +3627,7 @@ static void free_connections(struct connections_list *connections)
 	}
 }
 
-static struct peer_devices_list *new_peer_device_from_info(struct genl_info *info)
+struct peer_devices_list *new_peer_device_from_info(struct genl_info *info)
 {
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
 	struct nlattr *peer_device_conf = global_attrs[DRBD_NLA_PEER_DEVICE_OPTS];
@@ -3740,7 +3700,7 @@ static struct peer_devices_list *list_peer_devices(char *resource_name)
 	return list;
 }
 
-static void free_peer_devices(struct peer_devices_list *peer_devices)
+void free_peer_devices(struct peer_devices_list *peer_devices)
 {
 	while (peer_devices) {
 		struct peer_devices_list *p = peer_devices;
