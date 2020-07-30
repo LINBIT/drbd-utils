@@ -192,6 +192,7 @@ This packages includes the DRBD administration tools.
 %config(noreplace) %{_sysconfdir}/drbd.conf
 %dir %{_sysconfdir}/drbd.d
 %config(noreplace) %{_sysconfdir}/drbd.d/global_common.conf
+%config(noreplace) %{_sysconfdir}/multipath/conf.d/drbd.conf
 %if %{with manual}
 %{_mandir}/man8/drbd-*
 %{_mandir}/man8/drbdsetup-*
