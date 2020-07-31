@@ -29,6 +29,7 @@ user/v9/drbdmeta.exe
 user/v9/drbdmeta_scanner.c
 user/v9/drbdsetup
 user/v9/drbdsetup.exe
+user/v9/test/drbdsetup_events2_instrumented
 user/windrbd/windrbd.exe
 
 user/v9/.*.d
@@ -39,6 +40,10 @@ user/v84/.*.d
 user/v84/Makefile
 user/windrbd/.*.d
 user/windrbd/Makefile
+
+tests/v84/drbdadm
+tests/v9/drbdadm
+tests/v9/drbdsetup_events2_instrumented
 
 documentation/v9/drbd.8
 documentation/v9/drbd.conf.5

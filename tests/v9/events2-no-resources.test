@@ -1,0 +1,3 @@
+$ echo initial_state_done | drbdsetup_events2_instrumented; echo $?
+exists -
+0

@@ -151,4 +151,6 @@ void free_devices(struct devices_list *);
 void free_connections(struct connections_list *);
 void free_peer_devices(struct peer_devices_list *);
 
+int drbdsetup_main(int argc, char **argv);
+
 #endif

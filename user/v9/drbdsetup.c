@@ -87,7 +87,7 @@
 char *progname;
 
 /* for parsing of messages */
-static struct nlattr *global_attrs[128];
+struct nlattr *global_attrs[128];
 /* there is an other table, nested_attr_tb, defined in genl_magic_func.h,
  * which can be used after <struct>_from_attrs,
  * to check for presence of struct fields. */
@@ -4142,7 +4142,7 @@ static void maybe_exec_legacy_drbdsetup(char **argv)
 	}
 }
 
-int main(int argc, char **argv)
+int drbdsetup_main(int argc, char **argv)
 {
 	struct drbd_cmd *cmd;
 	struct option *options;

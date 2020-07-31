@@ -1,0 +1,10 @@
+initial_state_done
+resource_create
+device_create
+connection_create
+peer_device_create
+path_create
+peer_device_destroy
+connection_destroy
+device_destroy
+resource_destroy

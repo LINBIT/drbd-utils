@@ -1,0 +1,12 @@
+$ cat events2-all-create-destroy.msgs | drbdsetup_events2_instrumented; echo $?
+exists -
+create resource name:some-resource role:Secondary suspended:no
+create device name:some-resource volume:0 minor:1000 disk:Diskless client:no quorum:yes
+create connection name:some-resource peer-node-id:1 conn-name:some-peer connection:StandAlone role:Unknown
+create peer-device name:some-resource peer-node-id:1 conn-name:some-peer volume:0 replication:Off peer-disk:DUnknown peer-client:no resync-suspended:no
+create path name:some-resource peer-node-id:1 conn-name:some-peer local:ipv4:1.2.3.4:7789 peer:ipv4:5.6.7.8:7790 established:no
+destroy peer-device name:some-resource peer-node-id:1 conn-name:some-peer volume:0
+destroy connection name:some-resource peer-node-id:1 conn-name:some-peer
+destroy device name:some-resource volume:0
+destroy resource name:some-resource
+0
