@@ -93,47 +93,6 @@ static struct nlattr *global_attrs[128];
  * to check for presence of struct fields. */
 #define ntb(t)	nested_attr_tb[__nla_type(t)]
 
-#ifdef PRINT_NLMSG_LEN
-/* I'm to lazy to check the maximum possible nlmsg length by hand */
-int main(void)
-{
-	static __u16 nla_attr_minlen[NLA_TYPE_MAX+1] __read_mostly = {
-		[NLA_U8]        = sizeof(__u8),
-		[NLA_U16]       = sizeof(__u16),
-		[NLA_U32]       = sizeof(__u32),
-		[NLA_U64]       = sizeof(__u64),
-		[NLA_NESTED]    = NLA_HDRLEN,
-	};
-	int i;
-	int sum_total = 0;
-#define LEN__(policy) do {					\
-	int sum = 0;						\
-	for (i = 0; i < ARRAY_SIZE(policy); i++) {		\
-		sum += nla_total_size(policy[i].len ?:		\
-			nla_attr_minlen[policy[i].type]);	\
-								\
-	}							\
-	sum += 4;						\
-	sum_total += sum;					\
-	printf("%-30s %4u [%4u]\n",				\
-			#policy ":", sum, sum_total);		\
-} while (0)
-#define LEN_(p) LEN__(p ## _nl_policy)
-	LEN_(disk_conf);
-	LEN_(syncer_conf);
-	LEN_(net_conf);
-	LEN_(set_role_parms);
-	LEN_(resize_parms);
-	LEN_(state_info);
-	LEN_(start_ov_parms);
-	LEN_(new_c_uuid_parms);
-	sum_total += sizeof(struct nlmsghdr) + sizeof(struct genlmsghdr)
-		+ sizeof(struct drbd_genlmsghdr);
-	printf("sum total inclusive hdr overhead: %4u\n", sum_total);
-	return 0;
-}
-#else
-
 #ifndef AF_INET_SDP
 #define AF_INET_SDP 27
 #define PF_INET_SDP AF_INET_SDP
@@ -4386,4 +4345,3 @@ int main(int argc, char **argv)
 		dt_unlock_drbd(lock_fd);
 	return rv;
 }
-#endif
