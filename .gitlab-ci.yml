@@ -35,7 +35,7 @@ build:
       ./build-helpers/dummy-release.sh drbd-utils "$DRBD_UTILS_VERSION" drbd.spec.in
       ./autogen.sh
       ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --without-83support --without-manual
-      make doc .filelist tgz FORCE=1 PRESERVE_DEBIAN=1 REL_VERSION="$DRBD_UTILS_VERSION"
+      make debrelease FORCE=1 REL_VERSION="$DRBD_UTILS_VERSION"
       curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD --upload-file drbd-utils-*.tar.gz $LINBIT_REGISTRY_URL/repository/lbbuild-upstream/
     - |
       META_JSON=$(rq -t < source/drbd-test-bundle/virter/vms.toml | jq '.vms[].metadata')
