@@ -227,6 +227,14 @@ void test_path_info(struct msg_buff *smsg, __u8 path_established)
 	nla_nest_end(smsg, nla);
 }
 
+void test_helper(struct msg_buff *smsg, __u32 status)
+{
+	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_HELPER);
+	nla_put_string(smsg, T_helper_name, "before-resync-target");
+	nla_put_u32(smsg, T_helper_status, status);
+	nla_nest_end(smsg, nla);
+}
+
 void test_initial_state_done(struct msg_buff *smsg)
 {
 	test_msg_put(smsg, DRBD_INITIAL_STATE_DONE, -1U);
@@ -358,6 +366,22 @@ void test_path_change_established(struct msg_buff *smsg)
 	test_path_info(smsg, true);
 }
 
+void test_helper_call(struct msg_buff *smsg)
+{
+	test_msg_put(smsg, DRBD_HELPER, -1U);
+	test_peer_device_context(smsg);
+	test_notification_header(smsg, NOTIFY_CALL);
+	test_helper(smsg, 0);
+}
+
+void test_helper_response(struct msg_buff *smsg)
+{
+	test_msg_put(smsg, DRBD_HELPER, -1U);
+	test_peer_device_context(smsg);
+	test_notification_header(smsg, NOTIFY_RESPONSE);
+	test_helper(smsg, 1);
+}
+
 int test_print_event(struct nlmsghdr *nlh)
 {
 	struct drbd_cmd cm;
@@ -405,6 +429,8 @@ int test_build_msg(struct msg_buff *smsg, char *msg_name)
 	TEST_MSG(peer_device_destroy);
 	TEST_MSG(path_create);
 	TEST_MSG(path_change_established);
+	TEST_MSG(helper_call);
+	TEST_MSG(helper_response);
 	fprintf(stderr, "unknown message '%s'\n", msg_name);
 	return 1;
 }
