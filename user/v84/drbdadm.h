@@ -251,7 +251,7 @@ struct setup_option {
 	bool explicit;
 	char *option;
 };
-struct setup_option *setup_options;
+extern struct setup_option *setup_options;
 
 extern void add_setup_option(bool explicit, char *option);
 
