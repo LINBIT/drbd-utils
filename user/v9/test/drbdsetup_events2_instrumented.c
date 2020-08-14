@@ -27,6 +27,7 @@
 #define _FILE_OFFSET_BITS 64
 
 #include <stdio.h>
+#include <getopt.h>
 
 #include <netinet/in.h>
 
@@ -109,6 +110,17 @@ void test_device_info(struct msg_buff *smsg, __u32 dev_disk_state)
 void test_device_statistics(struct msg_buff *smsg)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_DEVICE_STATISTICS);
+	nla_put_u64(smsg, T_dev_size, 10);
+	nla_put_u64(smsg, T_dev_read, 20);
+	nla_put_u64(smsg, T_dev_write, 30);
+	nla_put_u64(smsg, T_dev_al_writes, 40);
+	nla_put_u64(smsg, T_dev_bm_writes, 50);
+	nla_put_u32(smsg, T_dev_upper_pending, 60);
+	nla_put_u32(smsg, T_dev_lower_pending, 70);
+	nla_put_u8(smsg, T_dev_upper_blocked, false);
+	nla_put_u8(smsg, T_dev_lower_blocked, false);
+	nla_put_u8(smsg, T_dev_al_suspended, false);
+	nla_put_u32(smsg, T_dev_disk_flags, 0);
 	nla_nest_end(smsg, nla);
 }
 
@@ -132,6 +144,9 @@ void test_connection_info(struct msg_buff *smsg, __u32 conn_connection_state)
 void test_connection_statistics(struct msg_buff *smsg)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_CONNECTION_STATISTICS);
+	nla_put_u8(smsg, T_conn_congested, false);
+	nla_put_u64(smsg, T_ap_in_flight, 10);
+	nla_put_u64(smsg, T_rs_in_flight, 20);
 	nla_nest_end(smsg, nla);
 }
 
@@ -160,6 +175,27 @@ void test_peer_device_info(struct msg_buff *smsg, __u32 peer_repl_state, __u32 p
 void test_peer_device_statistics(struct msg_buff *smsg)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_PEER_DEVICE_STATISTICS);
+	nla_put_u64(smsg, T_peer_dev_received, 10);
+	nla_put_u64(smsg, T_peer_dev_sent, 20);
+	nla_put_u32(smsg, T_peer_dev_pending, 30);
+	nla_put_u32(smsg, T_peer_dev_unacked, 40);
+	nla_put_u64(smsg, T_peer_dev_out_of_sync, 50);
+	nla_put_u64(smsg, T_peer_dev_resync_failed, 0);
+	nla_put_u32(smsg, T_peer_dev_flags, 0);
+	nla_put_u64(smsg, T_peer_dev_rs_total, 0);
+	nla_put_u64(smsg, T_peer_dev_ov_start_sector, 0);
+	nla_put_u64(smsg, T_peer_dev_ov_stop_sector, 0);
+	nla_put_u64(smsg, T_peer_dev_ov_position, 0);
+	nla_put_u64(smsg, T_peer_dev_ov_left, 0);
+	nla_put_u64(smsg, T_peer_dev_ov_skipped, 0);
+	nla_put_u64(smsg, T_peer_dev_rs_same_csum, 0);
+	nla_put_u64(smsg, T_peer_dev_rs_dt_start_ms, 0);
+	nla_put_u64(smsg, T_peer_dev_rs_paused_ms, 0);
+	nla_put_u64(smsg, T_peer_dev_rs_dt0_ms, 0);
+	nla_put_u64(smsg, T_peer_dev_rs_db0_sectors, 0);
+	nla_put_u64(smsg, T_peer_dev_rs_dt1_ms, 0);
+	nla_put_u64(smsg, T_peer_dev_rs_db1_sectors, 0);
+	nla_put_u32(smsg, T_peer_dev_rs_c_sync_rate, 0);
 	nla_nest_end(smsg, nla);
 }
 
@@ -421,6 +457,47 @@ int test_events2()
  */
 int main(int argc, char **argv)
 {
+	struct option options[] = {
+		{ "help", no_argument, 0, 'h' },
+		{ "timestamps", no_argument, 0, 'T' },
+		{ "statistics", no_argument, 0, 's' },
+		{ "now", no_argument, 0, 'n' },
+		{ "color", no_argument, 0, 'c' },
+		{ }
+	};
+
 	opt_color = NEVER_COLOR;
+	for(;;) {
+		int c;
+		c = getopt_long(argc, argv, "hTsnc::", options, NULL);
+		if (c == -1)
+			break;
+		switch(c) {
+		default:
+		case 'h':
+		case '?':
+			fprintf(stderr, "drbdsetup_events2_instrumented - Fake drbdsetup events2 from messages on stdin\n\n");
+			fprintf(stderr, "USAGE: %s [options]\n", argv[0]);
+			fprintf(stderr, "    [--timestamps] [--statistics] [--now] [--color]\n");
+			return 1;
+
+		case 'n':
+			opt_now = true;
+			break;
+
+		case 's':
+			++opt_verbose;
+			opt_statistics = true;
+			break;
+
+		case 'T':
+			opt_timestamps = true;
+			break;
+
+		case 'c':
+			opt_color = ALWAYS_COLOR;
+			break;
+		}
+	}
 	return test_events2();
 }
