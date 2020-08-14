@@ -42,7 +42,9 @@ extern struct genl_family drbd_genl_family;
 
 static char *test_resource_name = "some-resource";
 static __u32 test_minor = 1000;
+static __u32 test_minor_b = 1001;
 static __u32 test_volume_number = 0;
+static __u32 test_volume_number_b = 1;
 static __u32 test_peer_node_id = 1;
 static char *test_peer_name = "some-peer";
 
@@ -90,11 +92,11 @@ void test_resource_statistics(struct msg_buff *smsg)
 	nla_nest_end(smsg, nla);
 }
 
-void test_device_context(struct msg_buff *smsg)
+void test_device_context(struct msg_buff *smsg, __u32 volume_number)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
 	nla_put_string(smsg, T_ctx_resource_name, test_resource_name);
-	nla_put_u32(smsg, T_ctx_volume, test_volume_number);
+	nla_put_u32(smsg, T_ctx_volume, volume_number);
 	nla_nest_end(smsg, nla);
 }
 
@@ -278,7 +280,16 @@ void test_resource_destroy(struct msg_buff *smsg)
 void test_device_create(struct msg_buff *smsg)
 {
 	test_msg_put(smsg, DRBD_DEVICE_STATE, test_minor);
-	test_device_context(smsg);
+	test_device_context(smsg, test_volume_number);
+	test_notification_header(smsg, NOTIFY_CREATE);
+	test_device_info(smsg, D_DISKLESS);
+	test_device_statistics(smsg);
+}
+
+void test_device_create_b(struct msg_buff *smsg)
+{
+	test_msg_put(smsg, DRBD_DEVICE_STATE, test_minor_b);
+	test_device_context(smsg, test_volume_number_b);
 	test_notification_header(smsg, NOTIFY_CREATE);
 	test_device_info(smsg, D_DISKLESS);
 	test_device_statistics(smsg);
@@ -287,7 +298,7 @@ void test_device_create(struct msg_buff *smsg)
 void test_device_change_disk(struct msg_buff *smsg)
 {
 	test_msg_put(smsg, DRBD_DEVICE_STATE, test_minor);
-	test_device_context(smsg);
+	test_device_context(smsg, test_volume_number);
 	test_notification_header(smsg, NOTIFY_CHANGE);
 	test_device_info(smsg, D_UP_TO_DATE);
 	test_device_statistics(smsg);
@@ -296,7 +307,14 @@ void test_device_change_disk(struct msg_buff *smsg)
 void test_device_destroy(struct msg_buff *smsg)
 {
 	test_msg_put(smsg, DRBD_DEVICE_STATE, -1U);
-	test_device_context(smsg);
+	test_device_context(smsg, test_volume_number);
+	test_notification_header(smsg, NOTIFY_DESTROY);
+}
+
+void test_device_destroy_b(struct msg_buff *smsg)
+{
+	test_msg_put(smsg, DRBD_DEVICE_STATE, -1U);
+	test_device_context(smsg, test_volume_number_b);
 	test_notification_header(smsg, NOTIFY_DESTROY);
 }
 
@@ -419,8 +437,10 @@ int test_build_msg(struct msg_buff *smsg, char *msg_name)
 	TEST_MSG(resource_change_role);
 	TEST_MSG(resource_destroy);
 	TEST_MSG(device_create);
+	TEST_MSG(device_create_b);
 	TEST_MSG(device_change_disk);
 	TEST_MSG(device_destroy);
+	TEST_MSG(device_destroy_b);
 	TEST_MSG(connection_create);
 	TEST_MSG(connection_change_connection);
 	TEST_MSG(connection_destroy);
