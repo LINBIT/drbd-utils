@@ -384,6 +384,13 @@ void test_path_change_established(struct msg_buff *smsg)
 	test_path_info(smsg, true);
 }
 
+void test_path_destroy(struct msg_buff *smsg)
+{
+	test_msg_put(smsg, DRBD_PATH_STATE, -1U);
+	test_path_context(smsg);
+	test_notification_header(smsg, NOTIFY_DESTROY);
+}
+
 void test_helper_call(struct msg_buff *smsg)
 {
 	test_msg_put(smsg, DRBD_HELPER, -1U);
@@ -449,6 +456,7 @@ int test_build_msg(struct msg_buff *smsg, char *msg_name)
 	TEST_MSG(peer_device_destroy);
 	TEST_MSG(path_create);
 	TEST_MSG(path_change_established);
+	TEST_MSG(path_destroy);
 	TEST_MSG(helper_call);
 	TEST_MSG(helper_response);
 	fprintf(stderr, "unknown message '%s'\n", msg_name);

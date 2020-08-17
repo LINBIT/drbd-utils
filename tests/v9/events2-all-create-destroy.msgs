@@ -4,6 +4,7 @@ device_create
 connection_create
 peer_device_create
 path_create
+path_destroy
 peer_device_destroy
 connection_destroy
 device_destroy
