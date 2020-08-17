@@ -75,6 +75,9 @@ struct resources_list {
 	struct nlattr *res_opts;
 	struct resource_info info;
 	struct resource_statistics statistics;
+	bool destroyed; /* only used by events2 */
+	struct devices_list *devices; /* only used by events2 */
+	struct connections_list *connections; /* only used by events2 */
 };
 struct devices_list {
 	struct devices_list *next;
@@ -92,6 +95,8 @@ struct connections_list {
 	struct nlattr *net_conf;
 	struct connection_info info;
 	struct connection_statistics statistics;
+	struct peer_devices_list *peer_devices; /* only used by events2 */
+	struct paths_list *paths; /* only used by events2 */
 };
 struct peer_devices_list {
 	struct peer_devices_list *next;
@@ -101,6 +106,11 @@ struct peer_devices_list {
 	struct peer_device_statistics statistics;
 	struct devices_list *device;
 	int timeout_ms; /* used only by wait_for_family() */
+};
+struct paths_list {
+	struct paths_list *next;
+	struct drbd_cfg_context ctx;
+	struct drbd_path_info info;
 };
 
 typedef
@@ -146,10 +156,12 @@ struct resources_list *new_resource_from_info(struct genl_info *info);
 struct devices_list *new_device_from_info(struct genl_info *info);
 struct connections_list *new_connection_from_info(struct genl_info *info);
 struct peer_devices_list *new_peer_device_from_info(struct genl_info *info);
+struct paths_list *new_path_from_info(struct genl_info *info);
 void free_resources(struct resources_list *);
 void free_devices(struct devices_list *);
 void free_connections(struct connections_list *);
 void free_peer_devices(struct peer_devices_list *);
+void free_paths(struct paths_list *);
 
 int drbdsetup_main(int argc, char **argv);
 

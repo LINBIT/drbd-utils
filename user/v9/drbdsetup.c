@@ -3395,7 +3395,7 @@ struct devices_list *new_device_from_info(struct genl_info *info)
 
 	d = calloc(1, sizeof(*d));
 
-	d->minor =  ((struct drbd_genlmsghdr*)(info->userhdr))->minor;
+	d->minor = ((struct drbd_genlmsghdr*)(info->userhdr))->minor;
 	d->ctx = ctx;
 	if (disk_conf_nl) {
 		int size = nla_total_size(nla_len(disk_conf_nl));
@@ -3581,7 +3581,10 @@ void free_connections(struct connections_list *connections)
 	while (connections) {
 		struct connections_list *l = connections;
 		connections = connections->next;
+		free(l->path_list);
 		free(l->net_conf);
+		free_peer_devices(l->peer_devices);
+		free_paths(l->paths);
 		free(l);
 	}
 }
@@ -3665,6 +3668,34 @@ void free_peer_devices(struct peer_devices_list *peer_devices)
 		struct peer_devices_list *p = peer_devices;
 		peer_devices = peer_devices->next;
 		free(p->peer_device_conf);
+		free(p);
+	}
+}
+
+struct paths_list *new_path_from_info(struct genl_info *info)
+{
+	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
+	struct paths_list *p;
+
+	drbd_cfg_context_from_attrs(&ctx, info);
+	if (!ctx.ctx_resource_name)
+		return NULL;
+
+	p = calloc(1, sizeof(*p));
+	if (!p)
+		exit(20);
+
+	p->ctx = ctx;
+	drbd_path_info_from_attrs(&p->info, info);
+
+	return p;
+}
+
+void free_paths(struct paths_list *paths)
+{
+	while (paths) {
+		struct paths_list *p = paths;
+		paths = paths->next;
 		free(p);
 	}
 }
