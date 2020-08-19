@@ -100,12 +100,12 @@ void test_device_context(struct msg_buff *smsg, __u32 volume_number)
 	nla_nest_end(smsg, nla);
 }
 
-void test_device_info(struct msg_buff *smsg, __u32 dev_disk_state)
+void test_device_info(struct msg_buff *smsg, __u32 dev_disk_state, __u8 dev_has_quorum)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_DEVICE_INFO);
 	nla_put_u32(smsg, T_dev_disk_state, dev_disk_state);
 	nla_put_u8(smsg, T_is_intentional_diskless, false);
-	nla_put_u8(smsg, T_dev_has_quorum, true);
+	nla_put_u8(smsg, T_dev_has_quorum, dev_has_quorum);
 	nla_nest_end(smsg, nla);
 }
 
@@ -135,11 +135,11 @@ void test_connection_context(struct msg_buff *smsg)
 	nla_nest_end(smsg, nla);
 }
 
-void test_connection_info(struct msg_buff *smsg, __u32 conn_connection_state)
+void test_connection_info(struct msg_buff *smsg, __u32 conn_connection_state, __u32 conn_role)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_CONNECTION_INFO);
 	nla_put_u32(smsg, T_conn_connection_state, conn_connection_state);
-	nla_put_u32(smsg, T_conn_role, R_UNKNOWN);
+	nla_put_u32(smsg, T_conn_role, conn_role);
 	nla_nest_end(smsg, nla);
 }
 
@@ -282,7 +282,7 @@ void test_device_create(struct msg_buff *smsg)
 	test_msg_put(smsg, DRBD_DEVICE_STATE, test_minor);
 	test_device_context(smsg, test_volume_number);
 	test_notification_header(smsg, NOTIFY_CREATE);
-	test_device_info(smsg, D_DISKLESS);
+	test_device_info(smsg, D_DISKLESS, true);
 	test_device_statistics(smsg);
 }
 
@@ -291,7 +291,7 @@ void test_device_create_b(struct msg_buff *smsg)
 	test_msg_put(smsg, DRBD_DEVICE_STATE, test_minor_b);
 	test_device_context(smsg, test_volume_number_b);
 	test_notification_header(smsg, NOTIFY_CREATE);
-	test_device_info(smsg, D_DISKLESS);
+	test_device_info(smsg, D_DISKLESS, true);
 	test_device_statistics(smsg);
 }
 
@@ -300,7 +300,16 @@ void test_device_change_disk(struct msg_buff *smsg)
 	test_msg_put(smsg, DRBD_DEVICE_STATE, test_minor);
 	test_device_context(smsg, test_volume_number);
 	test_notification_header(smsg, NOTIFY_CHANGE);
-	test_device_info(smsg, D_UP_TO_DATE);
+	test_device_info(smsg, D_UP_TO_DATE, true);
+	test_device_statistics(smsg);
+}
+
+void test_device_change_quorum(struct msg_buff *smsg)
+{
+	test_msg_put(smsg, DRBD_DEVICE_STATE, test_minor);
+	test_device_context(smsg, test_volume_number);
+	test_notification_header(smsg, NOTIFY_CHANGE);
+	test_device_info(smsg, D_UP_TO_DATE, false);
 	test_device_statistics(smsg);
 }
 
@@ -323,7 +332,7 @@ void test_connection_create(struct msg_buff *smsg)
 	test_msg_put(smsg, DRBD_CONNECTION_STATE, -1U);
 	test_connection_context(smsg);
 	test_notification_header(smsg, NOTIFY_CREATE);
-	test_connection_info(smsg, C_STANDALONE);
+	test_connection_info(smsg, C_STANDALONE, R_UNKNOWN);
 	test_connection_statistics(smsg);
 }
 
@@ -332,7 +341,16 @@ void test_connection_change_connection(struct msg_buff *smsg)
 	test_msg_put(smsg, DRBD_CONNECTION_STATE, -1U);
 	test_connection_context(smsg);
 	test_notification_header(smsg, NOTIFY_CHANGE);
-	test_connection_info(smsg, C_CONNECTED);
+	test_connection_info(smsg, C_CONNECTED, R_SECONDARY);
+	test_connection_statistics(smsg);
+}
+
+void test_connection_change_role(struct msg_buff *smsg)
+{
+	test_msg_put(smsg, DRBD_CONNECTION_STATE, -1U);
+	test_connection_context(smsg);
+	test_notification_header(smsg, NOTIFY_CHANGE);
+	test_connection_info(smsg, C_CONNECTED, R_PRIMARY);
 	test_connection_statistics(smsg);
 }
 
@@ -446,10 +464,12 @@ int test_build_msg(struct msg_buff *smsg, char *msg_name)
 	TEST_MSG(device_create);
 	TEST_MSG(device_create_b);
 	TEST_MSG(device_change_disk);
+	TEST_MSG(device_change_quorum);
 	TEST_MSG(device_destroy);
 	TEST_MSG(device_destroy_b);
 	TEST_MSG(connection_create);
 	TEST_MSG(connection_change_connection);
+	TEST_MSG(connection_change_role);
 	TEST_MSG(connection_destroy);
 	TEST_MSG(peer_device_create);
 	TEST_MSG(peer_device_change_replication);

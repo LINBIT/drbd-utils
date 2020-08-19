@@ -1,0 +1,9 @@
+$ cat events2-may-promote-quorum.msgs | drbdsetup_events2_instrumented; echo $?
+exists -
+create resource name:some-resource role:Secondary suspended:no may_promote:no
+create device name:some-resource volume:0 minor:1000 disk:Diskless client:no quorum:yes
+change resource name:some-resource may_promote:yes
+change device name:some-resource volume:0 minor:1000 disk:UpToDate client:no quorum:yes
+change resource name:some-resource may_promote:no
+change device name:some-resource volume:0 minor:1000 disk:UpToDate client:no quorum:no
+0

@@ -1,6 +1,6 @@
 $ cat events2-device-create-destroy.msgs | drbdsetup_events2_instrumented; echo $?
 exists -
-create resource name:some-resource role:Secondary suspended:no
+create resource name:some-resource role:Secondary suspended:no may_promote:no
 create device name:some-resource volume:0 minor:1000 disk:Diskless client:no quorum:yes
 create device name:some-resource volume:1 minor:1001 disk:Diskless client:no quorum:yes
 destroy device name:some-resource volume:1

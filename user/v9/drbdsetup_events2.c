@@ -496,11 +496,64 @@ static void free_resource(struct resources_list *resource)
 	free(resource);
 }
 
+static bool have_up_to_date(struct resources_list *resource, struct devices_list *device)
+{
+	struct connections_list *connection;
+	struct peer_devices_list *peer_device;
+
+	if (device->info.dev_disk_state == D_UP_TO_DATE)
+		return true;
+
+	for (connection = resource->connections; connection; connection = connection->next) {
+		for (peer_device = connection->peer_devices; peer_device; peer_device = peer_device->next) {
+			if (peer_device->ctx.ctx_volume == device->ctx.ctx_volume && peer_device->info.peer_disk_state == D_UP_TO_DATE)
+				return true;
+		}
+	}
+
+	return false;
+}
+
+static bool may_promote(struct resources_list *resource)
+{
+	struct devices_list *device;
+	struct connections_list *connection;
+
+	/* Strictly speaking, one may promote resources with no devices.
+	 * However, we return false here as a convenience so that resources
+	 * that are being configured do not briefly report that they can be
+	 * promoted. */
+	if (!resource->devices)
+		return false;
+
+	if (resource->info.res_role == R_PRIMARY)
+		return false;
+
+	for (device = resource->devices; device; device = device->next) {
+		if (!device->info.dev_has_quorum)
+			return false;
+
+		if (!have_up_to_date(resource, device))
+			return false;
+	}
+
+	for (connection = resource->connections; connection; connection = connection->next) {
+		if (connection->info.conn_role == R_PRIMARY)
+			return false;
+	}
+
+	return true;
+}
+
 static void print_resource_changes(const char *prefix, const char *action_new, struct resources_list *old_resource, struct resources_list *new_resource)
 {
+	bool new_may_promote;
 	bool role_changed;
 	bool info_changed;
 	bool statistics_changed;
+	bool may_promote_changed;
+
+	new_may_promote = may_promote(new_resource);
 
 	role_changed = !old_resource || new_resource->info.res_role != old_resource->info.res_role;
 	info_changed = !old_resource ||
@@ -511,8 +564,9 @@ static void print_resource_changes(const char *prefix, const char *action_new, s
 	statistics_changed = opt_statistics &&
 		(!old_resource ||
 		 memcmp(&new_resource->statistics, &old_resource->statistics, sizeof(struct resource_statistics)));
+	may_promote_changed = !old_resource || new_may_promote != may_promote(old_resource);
 
-	if (!role_changed && !info_changed && !statistics_changed)
+	if (!role_changed && !info_changed && !statistics_changed && !may_promote_changed)
 		return;
 
 	printf("%s%s ", prefix, old_resource ? action_change : action_new);
@@ -526,6 +580,8 @@ static void print_resource_changes(const char *prefix, const char *action_new, s
 	if (statistics_changed)
 		print_resource_statistics(0, old_resource ? &old_resource->statistics : NULL,
 				&new_resource->statistics, nowrap_printf);
+	if (may_promote_changed)
+		printf(" may_promote:%s", new_may_promote ? "yes" : "no");
 	printf("\n");
 }
 
