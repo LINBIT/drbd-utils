@@ -1119,6 +1119,7 @@ struct context_def handlers_ctx = {
 		{ "before-resync-source", .ops = &fc_string, .needs_double_quoting = true},
 		{ "out-of-sync", .ops = &fc_string, .needs_double_quoting = true},
 		{ "quorum-lost", .ops = &fc_string, .needs_double_quoting = true},
+		{ "disconnected", .ops = &fc_string, .needs_double_quoting = true},
 		{ } },
 };
 

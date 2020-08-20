@@ -813,6 +813,20 @@ resource
           </listitem>
         </varlistentry>
 
+        <varlistentry>
+          <term><option>disconnected <replaceable>cmd</replaceable></option></term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>disconnected</secondary>
+              </indexterm> A connection to a peer went down. The handler can
+	      learn about the reason for the disconnect from the <option>DRBD_CSTATE</option>
+	      environment variable.</para>
+          </listitem>
+        </varlistentry>
+
       </variablelist>
     </refsect2>
 

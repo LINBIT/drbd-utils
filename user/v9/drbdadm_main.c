@@ -406,6 +406,7 @@ static struct adm_cmd khelper10_cmd = {"split-brain", adm_khelper, ACF3_RES_HAND
 static struct adm_cmd khelper11_cmd = {"out-of-sync", adm_khelper, ACF3_RES_HANDLER};
 static struct adm_cmd khelper12_cmd = {"unfence-peer", adm_khelper, ACF3_RES_HANDLER};
 static struct adm_cmd khelper13_cmd = {"quorum-lost", adm_khelper, ACF3_RES_HANDLER};
+static struct adm_cmd khelper14_cmd = {"disconnected", adm_khelper, ACF3_RES_HANDLER};
 
 
 static struct adm_cmd suspend_io_cmd = {"suspend-io", adm_drbdsetup, ACF4_ADVANCED  .backend_res_name = 0 };
@@ -501,6 +502,7 @@ struct adm_cmd *cmds[] = {
 	&khelper11_cmd,
 	&khelper12_cmd,
 	&khelper13_cmd,
+	&khelper14_cmd,
 
 	&suspend_io_cmd,
 	&resume_io_cmd,
