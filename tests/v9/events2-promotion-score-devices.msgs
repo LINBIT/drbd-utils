@@ -1,0 +1,6 @@
+initial_state_done
+resource_create
+device_create
+device_change_disk
+device_create_b
+device_change_disk_b

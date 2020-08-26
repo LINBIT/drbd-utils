@@ -1,0 +1,8 @@
+initial_state_done
+resource_create
+device_create
+device_change_disk_inconsistent
+connection_create
+peer_device_create
+connection_change_connection
+peer_device_change_replication

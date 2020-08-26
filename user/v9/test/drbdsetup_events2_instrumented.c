@@ -304,6 +304,24 @@ void test_device_change_disk(struct msg_buff *smsg)
 	test_device_statistics(smsg);
 }
 
+void test_device_change_disk_b(struct msg_buff *smsg)
+{
+	test_msg_put(smsg, DRBD_DEVICE_STATE, test_minor_b);
+	test_device_context(smsg, test_volume_number_b);
+	test_notification_header(smsg, NOTIFY_CHANGE);
+	test_device_info(smsg, D_UP_TO_DATE, true);
+	test_device_statistics(smsg);
+}
+
+void test_device_change_disk_inconsistent(struct msg_buff *smsg)
+{
+	test_msg_put(smsg, DRBD_DEVICE_STATE, test_minor);
+	test_device_context(smsg, test_volume_number);
+	test_notification_header(smsg, NOTIFY_CHANGE);
+	test_device_info(smsg, D_INCONSISTENT, true);
+	test_device_statistics(smsg);
+}
+
 void test_device_change_quorum(struct msg_buff *smsg)
 {
 	test_msg_put(smsg, DRBD_DEVICE_STATE, test_minor);
@@ -464,6 +482,8 @@ int test_build_msg(struct msg_buff *smsg, char *msg_name)
 	TEST_MSG(device_create);
 	TEST_MSG(device_create_b);
 	TEST_MSG(device_change_disk);
+	TEST_MSG(device_change_disk_b);
+	TEST_MSG(device_change_disk_inconsistent);
 	TEST_MSG(device_change_quorum);
 	TEST_MSG(device_destroy);
 	TEST_MSG(device_destroy_b);

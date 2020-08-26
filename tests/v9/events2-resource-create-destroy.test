@@ -1,5 +1,5 @@
 $ cat events2-resource-create-destroy.msgs | drbdsetup_events2_instrumented; echo $?
 exists -
-create resource name:some-resource role:Secondary suspended:no may_promote:no
+create resource name:some-resource role:Secondary suspended:no may_promote:no promotion_score:0
 destroy resource name:some-resource
 0

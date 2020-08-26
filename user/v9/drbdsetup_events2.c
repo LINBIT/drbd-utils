@@ -37,6 +37,14 @@
 #include "drbd_strings.h"
 #include "drbdsetup_colors.h"
 
+#ifdef min
+#undef min
+#endif
+#define min(a,b) \
+	({ __typeof__ (a) _a = (a); \
+	 __typeof__ (b) _b = (b); \
+	 _a < _b ? _a : _b; })
+
 #define TIMESTAMP_LEN sizeof("....-..-..T..:..:.........+..:.. ")
 
 static const char *action_exists = "exists";
@@ -496,64 +504,112 @@ static void free_resource(struct resources_list *resource)
 	free(resource);
 }
 
-static bool have_up_to_date(struct resources_list *resource, struct devices_list *device)
+static int count_up_to_date_replicas(struct resources_list *resource, struct devices_list *device)
 {
 	struct connections_list *connection;
 	struct peer_devices_list *peer_device;
 
-	if (device->info.dev_disk_state == D_UP_TO_DATE)
-		return true;
+	int up_to_date_replicas = 0;
+
+	if (device->info.dev_disk_state == D_UP_TO_DATE) {
+		up_to_date_replicas++;
+	}
 
 	for (connection = resource->connections; connection; connection = connection->next) {
 		for (peer_device = connection->peer_devices; peer_device; peer_device = peer_device->next) {
 			if (peer_device->ctx.ctx_volume == device->ctx.ctx_volume && peer_device->info.peer_disk_state == D_UP_TO_DATE)
-				return true;
+				up_to_date_replicas++;
 		}
+	}
+
+	return up_to_date_replicas;
+}
+
+static bool have_primary(struct resources_list *resource)
+{
+	struct connections_list *connection;
+
+	if (resource->info.res_role == R_PRIMARY)
+		return true;
+
+	for (connection = resource->connections; connection; connection = connection->next) {
+		if (connection->info.conn_role == R_PRIMARY)
+			return true;
 	}
 
 	return false;
 }
 
-static bool may_promote(struct resources_list *resource)
+struct promotion_info {
+	bool may_promote;
+	int promotion_score;
+};
+
+static struct promotion_info compute_promotion_info(struct resources_list *resource)
 {
+	struct promotion_info info = {false, 0};
 	struct devices_list *device;
-	struct connections_list *connection;
+	int device_count = 0;
+	int up_to_date_devices = 0;
+	bool all_devices_have_disk = true;
+	int min_up_to_date_replicas = -1;
+	int all_local_devices_score;
+	int local_devices_score;
+	int replicas_score;
 
 	/* Strictly speaking, one may promote resources with no devices.
 	 * However, we return false here as a convenience so that resources
 	 * that are being configured do not briefly report that they can be
 	 * promoted. */
 	if (!resource->devices)
-		return false;
-
-	if (resource->info.res_role == R_PRIMARY)
-		return false;
+		return info;
 
 	for (device = resource->devices; device; device = device->next) {
+		int up_to_date_replicas = count_up_to_date_replicas(resource, device);
+		enum drbd_disk_state disk_state = device->info.dev_disk_state;
+
+		device_count++;
+
 		if (!device->info.dev_has_quorum)
-			return false;
+			return info;
 
-		if (!have_up_to_date(resource, device))
-			return false;
+		if (disk_state == D_UP_TO_DATE)
+			up_to_date_devices++;
+		else if (disk_state != D_CONSISTENT && disk_state != D_INCONSISTENT)
+			all_devices_have_disk = false;
+
+		if (min_up_to_date_replicas == -1 || up_to_date_replicas < min_up_to_date_replicas)
+			min_up_to_date_replicas = up_to_date_replicas;
 	}
 
-	for (connection = resource->connections; connection; connection = connection->next) {
-		if (connection->info.conn_role == R_PRIMARY)
-			return false;
-	}
+	if (min_up_to_date_replicas == -1 || min_up_to_date_replicas == 0)
+		return info;
 
-	return true;
+	/* Quorum and access to up-to-date data have already been handled, so
+	 * the only remaining condition to check is the role. */
+	info.may_promote = !have_primary(resource);
+
+	all_local_devices_score = all_devices_have_disk ? 1 : 0;
+	local_devices_score = min(up_to_date_devices, 99);
+	replicas_score = min_up_to_date_replicas != -1 ? min(min_up_to_date_replicas, 99) : 0;
+
+	info.promotion_score = all_local_devices_score * 10000 +
+		local_devices_score * 100 +
+		replicas_score;
+
+	return info;
 }
 
 static void print_resource_changes(const char *prefix, const char *action_new, struct resources_list *old_resource, struct resources_list *new_resource)
 {
-	bool new_may_promote;
+	struct promotion_info new_promotion_info;
+	struct promotion_info old_promotion_info;
 	bool role_changed;
 	bool info_changed;
 	bool statistics_changed;
-	bool may_promote_changed;
+	bool promotion_info_changed;
 
-	new_may_promote = may_promote(new_resource);
+	new_promotion_info = compute_promotion_info(new_resource);
 
 	role_changed = !old_resource || new_resource->info.res_role != old_resource->info.res_role;
 	info_changed = !old_resource ||
@@ -564,9 +620,16 @@ static void print_resource_changes(const char *prefix, const char *action_new, s
 	statistics_changed = opt_statistics &&
 		(!old_resource ||
 		 memcmp(&new_resource->statistics, &old_resource->statistics, sizeof(struct resource_statistics)));
-	may_promote_changed = !old_resource || new_may_promote != may_promote(old_resource);
 
-	if (!role_changed && !info_changed && !statistics_changed && !may_promote_changed)
+	if (old_resource) {
+		old_promotion_info = compute_promotion_info(old_resource);
+		promotion_info_changed = new_promotion_info.may_promote != old_promotion_info.may_promote ||
+			new_promotion_info.promotion_score != old_promotion_info.promotion_score;
+	} else {
+		promotion_info_changed = true;
+	}
+
+	if (!role_changed && !info_changed && !statistics_changed && !promotion_info_changed)
 		return;
 
 	printf("%s%s ", prefix, old_resource ? action_change : action_new);
@@ -580,8 +643,10 @@ static void print_resource_changes(const char *prefix, const char *action_new, s
 	if (statistics_changed)
 		print_resource_statistics(0, old_resource ? &old_resource->statistics : NULL,
 				&new_resource->statistics, nowrap_printf);
-	if (may_promote_changed)
-		printf(" may_promote:%s", new_may_promote ? "yes" : "no");
+	if (promotion_info_changed) {
+		printf(" may_promote:%s", new_promotion_info.may_promote ? "yes" : "no");
+		printf(" promotion_score:%d", new_promotion_info.promotion_score);
+	}
 	printf("\n");
 }
 
