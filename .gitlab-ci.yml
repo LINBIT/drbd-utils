@@ -2,7 +2,7 @@ stages:
   - build
 
 variables:
-  BUILD_HELPERS_VERSION: bd414c2ba2bce5090426774605f3fe4499b902b6
+  BUILD_HELPERS_VERSION: 880b246c84c398d63dd3478e8932a9fcdae72e9b
 
 .setup-lbbuild:
   before_script:
@@ -19,20 +19,17 @@ variables:
 build:
   stage: build
   extends: [ .rules-build, .setup-lbbuild ]
-  image: $LINBIT_DOCKER_REGISTRY/drbd-utils-build:latest
+  image: $LINBIT_DOCKER_REGISTRY/build-helpers:$BUILD_HELPERS_VERSION
   cache:
     paths:
       - download
   script:
     - DRBD_UTILS_VERSION=9.0.0.$CI_COMMIT_SHA
     - |
-      curl -sSfL -u gitlab-ci-token:$CI_JOB_TOKEN https://gitlab.at.linbit.com/linbit/build-helpers/-/archive/$BUILD_HELPERS_VERSION/ignored.tar.gz | tar -xvzf -
-      mv build-helpers-* build-helpers
-    - |
       mkdir -p source/drbd-test-bundle
       curl -sSL $LINBIT_REGISTRY_URL/repository/test-suite/drbd-test-bundle.tgz | tar -C source/drbd-test-bundle -xvzf -
     - |
-      ./build-helpers/dummy-release.sh drbd-utils "$DRBD_UTILS_VERSION" drbd.spec.in
+      dummy-release.sh drbd-utils "$DRBD_UTILS_VERSION" drbd.spec.in
       ./autogen.sh
       ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --without-83support --without-manual
       make debrelease FORCE=1 REL_VERSION="$DRBD_UTILS_VERSION"
