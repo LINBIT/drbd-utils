@@ -9,7 +9,7 @@ call helper name:some-resource peer-node-id:1 conn-name:some-peer volume:0 helpe
 response helper name:some-resource peer-node-id:1 conn-name:some-peer volume:0 helper:before-resync-target status:1
 0
 $ cat events2-all-create-helper.msgs | drbdsetup_events2_instrumented --timestamps | sed 's/....-..-..T..:..:.........+..:../TIME/'; echo $?
-exists -
+TIME exists -
 TIME create resource name:some-resource role:Secondary suspended:no may_promote:no promotion_score:0
 TIME create device name:some-resource volume:0 minor:1000 disk:Diskless client:no quorum:yes
 TIME create connection name:some-resource peer-node-id:1 conn-name:some-peer connection:StandAlone role:Unknown

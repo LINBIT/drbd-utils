@@ -889,16 +889,10 @@ static int format_timestamp(char *timestamp_prefix)
 	return 0;
 }
 
-static void print_helper(struct drbd_cfg_context *ctx, unsigned minor, bool response, struct drbd_helper_info *helper_info)
+static void print_helper(char *timestamp_prefix, struct drbd_cfg_context *ctx, unsigned minor, bool response, struct drbd_helper_info *helper_info)
 {
-	int ret;
-	char timestamp_prefix[TIMESTAMP_LEN];
 	char my_addr[ADDRESS_STR_MAX] = "";
 	char peer_addr[ADDRESS_STR_MAX] = "";
-
-	ret = format_timestamp(timestamp_prefix);
-	if (ret)
-		return;
 
 	if (ctx->ctx_my_addr_len && ctx->ctx_peer_addr_len) {
 		if (!path_address_strs(ctx, my_addr, peer_addr))
@@ -953,6 +947,7 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 	struct paths_list *path;
 	struct drbd_genlmsghdr *dh;
 	int err;
+	char timestamp_prefix[TIMESTAMP_LEN];
 
 	if (!info)
 		return 0;
@@ -971,9 +966,13 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 	if (opt_now && action != NOTIFY_EXISTS)
 		return 0;
 
+	err = format_timestamp(timestamp_prefix);
+	if (err)
+		exit(20);
+
 	if (info->genlhdr->cmd == DRBD_INITIAL_STATE_DONE) {
 		initial_state = false;
-		printf("%s -\n", action_exists);
+		printf("%s%s -\n", timestamp_prefix, action_exists);
 		return opt_now ? -1 : 0;
 	}
 
@@ -986,7 +985,7 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 			int skipped = info->nlhdr->nlmsg_seq - (last_seq + 1);
 
 			if (skipped)
-				printf("- skipped %d\n", skipped);
+				printf("%s- skipped %d\n", timestamp_prefix, skipped);
 		}
 		last_seq = info->nlhdr->nlmsg_seq;
 		last_seq_known = true;
@@ -1133,7 +1132,9 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 			goto out;
 		}
 
-		print_helper(&ctx, ((struct drbd_genlmsghdr*)(info->userhdr))->minor, action == NOTIFY_RESPONSE, &helper_info);
+		print_helper(timestamp_prefix, &ctx,
+				((struct drbd_genlmsghdr*)(info->userhdr))->minor,
+				action == NOTIFY_RESPONSE, &helper_info);
 		break;
 	}
 	default:
@@ -1142,13 +1143,7 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 	}
 
 	if (!(nh.nh_type & NOTIFY_CONTINUES)) {
-		int ret;
-		char timestamp_prefix[TIMESTAMP_LEN];
 		struct resources_list *next_resource;
-
-		ret = format_timestamp(timestamp_prefix);
-		if (ret)
-			exit(20);
 
 		for (new_resource = update_resources; new_resource; new_resource = next_resource) {
 			struct resources_list *old_resource = find_resource(new_resource->name);
