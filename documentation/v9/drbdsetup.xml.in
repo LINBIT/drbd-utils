@@ -444,13 +444,44 @@
 	    an event handler is called or it returns.  The second word indicates
 	    the object the event applies to: <option>resource</option>,
 	    <option>device</option>, <option>connection</option>,
-	    <option>peer-device</option>, <option>helper</option>, or a dash
-	    (<option>-</option>) to indicate that the current state has been
-	    dumped completely.</para>
+	    <option>peer-device</option>, <option>path</option>,
+	    <option>helper</option>, or a dash (<option>-</option>) to indicate
+	    that the current state has been dumped completely.</para>
 
 	  <para>The remaining words identify the object and describe the state
-	    that he object is in.  Available options:
+	    that the object is in. Some special keys are worth mentioning:
 
+	    <variablelist>
+	      <varlistentry>
+		<term>resource <option>may_promote:{yes|no}</option></term>
+
+		<listitem>
+		  <para>Whether promoting to primary is expected to succeed.
+		    When <option>quorum</option> is enabled, this can be used
+		    to trigger failover. When <option>may_promote:yes</option>
+		    is reported on this node, then no writes are possible on
+		    any other node, which generally means that the application
+		    can be started on this node, even when it has been running
+		    on another.</para>
+		</listitem>
+	      </varlistentry>
+
+	      <varlistentry>
+		<term>resource <option>promotion_score:<replaceable>score</replaceable></option></term>
+
+		<listitem>
+		  <para>An integer heuristic indicating the relative preference
+		    for promoting this resource. A higher score is better in
+		    terms of having local disks and having access to up-to-date
+		    data. The score may be positive even when some node is
+		    primary. It will be zero when promotion is impossible due
+		    to quorum or lack of any access to up-to-date data.</para>
+		</listitem>
+	      </varlistentry>
+	    </variablelist>
+	  </para>
+
+	  <para>Available options:
 	    <variablelist>
 	      <varlistentry>
 		<term><option>--now</option></term>
