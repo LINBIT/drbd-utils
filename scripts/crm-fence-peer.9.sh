@@ -110,12 +110,13 @@ create_or_modify_constraint()
 		export CIB_file=cib.xml
 
 		set -- $( crm_mon -1nL "$id_prefix-$master_id" | sed -n \
-			-e '/^Current DC:.*partition with quorum/ { s/.*/quorum=1/p };' \
+			-e '/Current DC:.*partition with quorum/ { s/.*/quorum=1/p };' \
 			-e '1,/^Negative Location Constraints:/ d' \
 			-e '/^ *\([^[:space:]]*\)[[:space:]]prevents '"$master_id"' from running.*on '"$HOSTNAME"'$/ { s/.*/already_rejected/p }' )
 
 		if [[ $# != 1 || $1 != "quorum=1" ]] ; then
 			: "sorry, want a quorate partition, and not be rejected by constraint already"
+			unset CIB_file
 			break
 		fi
 
