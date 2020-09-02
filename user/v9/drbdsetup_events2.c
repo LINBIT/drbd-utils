@@ -787,6 +787,11 @@ static void print_changes(const char *prefix, const char *action_new, struct res
 
 	print_resource_changes(prefix, action_new, old_resource, new_resource);
 
+	for (new_connection = new_resource->connections; new_connection; new_connection = new_connection->next) {
+		old_connection = old_resource ? find_connection(old_resource, new_connection->ctx.ctx_conn_name) : NULL;
+		print_connection_changes(prefix, action_new, new_resource->name, new_connection, old_connection);
+	}
+
 	for (new_device = new_resource->devices; new_device; new_device = new_device->next) {
 		old_device = old_resource ? find_device(old_resource, new_device->ctx.ctx_volume) : NULL;
 		print_device_changes(prefix, action_new, new_resource->name, new_device, old_device);
@@ -797,7 +802,6 @@ static void print_changes(const char *prefix, const char *action_new, struct res
 		struct paths_list *new_path, *old_path;
 
 		old_connection = old_resource ? find_connection(old_resource, new_connection->ctx.ctx_conn_name) : NULL;
-		print_connection_changes(prefix, action_new, new_resource->name, new_connection, old_connection);
 
 		for (new_peer_device = new_connection->peer_devices; new_peer_device; new_peer_device = new_peer_device->next) {
 			old_peer_device = old_connection ? connection_find_peer_device(old_connection, new_peer_device->ctx.ctx_volume) : NULL;
