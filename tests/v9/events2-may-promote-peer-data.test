@@ -5,6 +5,6 @@ create device name:some-resource volume:0 minor:1000 disk:Diskless client:no quo
 create connection name:some-resource peer-node-id:1 conn-name:some-peer connection:StandAlone role:Unknown
 create peer-device name:some-resource peer-node-id:1 conn-name:some-peer volume:0 replication:Off peer-disk:DUnknown peer-client:no resync-suspended:no
 change connection name:some-resource peer-node-id:1 conn-name:some-peer connection:Connected role:Secondary
-change resource name:some-resource may_promote:yes promotion_score:1
+change resource name:some-resource may_promote:no promotion_score:1
 change peer-device name:some-resource peer-node-id:1 conn-name:some-peer volume:0 replication:Established peer-disk:UpToDate peer-client:no
 0
