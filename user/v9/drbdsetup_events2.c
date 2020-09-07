@@ -975,6 +975,7 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 	if (info->genlhdr->cmd == DRBD_INITIAL_STATE_DONE) {
 		initial_state = false;
 		printf("%s%s -\n", timestamp_prefix, action_exists);
+		fflush(stdout);
 		return opt_now ? -1 : 0;
 	}
 
