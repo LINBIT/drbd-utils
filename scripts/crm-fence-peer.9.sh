@@ -80,6 +80,31 @@ restrict_existing_constraint_further()
 	done
 }
 
+# set CIB_file= in environment, unless you want to grab the "live" one.
+#
+# I'd like to use the optional prefix filter on the constraint id,
+# but pacemaker upstream broke that functionality (and later accidentally fixed it again)
+# :-( so I "grep"
+# Since "human readable" output is not stable enough for parsing, use
+# the "--as-xml" switch (in more recent pacemaker, that would be the
+# "--output-as=xml", but the --as-xml is still supported for the time being).
+crm_mon_xml_sed_for_quorum_and_ban()
+{
+	# Yes, modern bash has lowercase substitution,
+	# and gnu sed has case insensitive match,
+	# but people use DRBD in weird deployments sometimes,
+	# while insiting on having "camel case" hostnames...
+	local node_name=$( echo $1 | tr '[[:upper:]]' '[[:lower:]]' )
+	crm_mon --as-xml |
+	sed -n \
+		-e 's/^.*<current_dc .*with_quorum="true".*$/have_quorum/p' \
+		-e '/<ban /!d' \
+		-e '/ id="'$id_prefix-'\(rule-\)\?\<'$master_id'"/!d' \
+		-e '/ resource="'$master_id'"/!d' \
+		-e 'y/ABCDEFGHIJKLMNOPQRSTUVWXYZ/abcdefghijklmnopqrstuvwxyz/' \
+		-e '/ node="'$node_name'"/ { s/.*/already_rejected/p }'
+}
+
 create_or_modify_constraint()
 {
 	local DIR
@@ -109,12 +134,9 @@ create_or_modify_constraint()
 		cibadmin -Q | tee cib.xml.orig > cib.xml
 		export CIB_file=cib.xml
 
-		set -- $( crm_mon -1nL "$id_prefix-$master_id" | sed -n \
-			-e '/Current DC:.*partition with quorum/ { s/.*/quorum=1/p };' \
-			-e '1,/^Negative Location Constraints:/ d' \
-			-e '/^ *\([^[:space:]]*\)[[:space:]]prevents '"$master_id"' from running.*on '"$HOSTNAME"'$/ { s/.*/already_rejected/p }' )
-
-		if [[ $# != 1 || $1 != "quorum=1" ]] ; then
+		set -- $( crm_mon_xml_sed_for_quorum_and_ban $HOSTNAME )
+		if [[ $# != 1 || $1 != "have_quorum" ]] ; then
+			: "$*"
 			: "sorry, want a quorate partition, and not be rejected by constraint already"
 			unset CIB_file
 			break
@@ -403,7 +425,7 @@ try_place_constraint()
 	if $fail_if_no_quorum ; then
 		if [[ $have_quorum = 1 ]] ; then
 			# double check
-			have_quorum=$(crm_node --quorum -VVVVV)
+			have_quorum=$(crm_node --quorum -VVV)
 			[[ $have_quorum = 0 ]] && echo WARNING "Cib still had quorum, but no quorum according to crm_node --quorum"
 		fi
 		if [[ $have_quorum != 1 ]] ; then
@@ -634,8 +656,8 @@ _node_already_rejected()
 	#
 
 	# Maybe we better just ask crm_mon instead:
-	( set +x; echo "$cib_xml" | CIB_file=/proc/self/fd/0 crm_mon -1nL "$id_prefix-$master_id" |
-		grep -q "prevents $master_id from running .*\<on $node_name$" )
+	set -- $( set +x; echo "$cib_xml" | CIB_file=/proc/self/fd/0 crm_mon_xml_sed_for_quorum_and_ban $node_name )
+	[[ $* = *already_rejected ]]
 }
 
 # you should call have_expected_contraint() first.
