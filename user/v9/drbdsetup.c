@@ -2387,14 +2387,10 @@ int nowrap_printf(int indent, const char *format, ...)
 	return ret;
 }
 
-typedef
-__attribute__((format(printf, 2, 3)))
-int (*wrap_printf_fn_t)(int indent, const char *format, ...);
-
 void print_resource_statistics(int indent,
 			       struct resource_statistics *old,
 			       struct resource_statistics *new,
-			       wrap_printf_fn_t wrap_printf)
+			       wrap_printf_fn_t wrap_printf_f)
 {
 	static const char *write_ordering_str[] = {
 		[WO_NONE] = "none",
@@ -2408,7 +2404,7 @@ void print_resource_statistics(int indent,
 	     old->res_stat_write_ordering != wo) &&
 	    wo < ARRAY_SIZE(write_ordering_str) &&
 	    write_ordering_str[wo]) {
-		wrap_printf(indent, " write-ordering:%s", write_ordering_str[wo]);
+		wrap_printf_f(indent, " write-ordering:%s", write_ordering_str[wo]);
 	}
 }
 
