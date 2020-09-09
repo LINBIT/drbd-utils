@@ -3,6 +3,19 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.14.0
+--------
+ * pacemaker: various fixes/improvements for PM >=1.1.15
+   including the 2 series; crm-fence-peer.9.sh
+ * systemd dependency for drbd-proxy
+ * containers: multi-arch support, especially for s390x
+ * multipathd: blacklist drbd
+ * drbdsetup: code refactoring and improvements,
+   as well as tests for events2!
+   add "may_promote", "promotion_score". See man page.
+ * build: compile fixes for gcc-10; CI pipeline
+ * handlers: add "disconnected"
+
 9.13.0
 --------
  * crm-fence-peer{,.9}.sh: detect Pacemaker 2 promotable clones

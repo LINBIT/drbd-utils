@@ -490,6 +490,9 @@ fi
 
 
 %changelog
+* Wed Sep 09 2020 Roland Kammerer <roland.kammerer@linbit.com> - 9.14.0-1
+-  New upstream release
+
 * Fri May 08 2020 Roland Kammerer <roland.kammerer@linbit.com> - 9.13.0-1
 -  New upstream release
 
