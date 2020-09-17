@@ -1,0 +1,10 @@
+initial_state_done
+resource_create
+device_create
+connection_create
+peer_device_create
+path_create
+device_change_disk
+path_change_established
+connection_change_connection
+peer_device_change_sync

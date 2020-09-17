@@ -691,9 +691,8 @@ static void print_peer_device_changes(const char *prefix, const char *action_new
 		new_peer_device->info.peer_resync_susp_user != old_peer_device->info.peer_resync_susp_user ||
 		new_peer_device->info.peer_resync_susp_peer != old_peer_device->info.peer_resync_susp_peer ||
 		new_peer_device->info.peer_resync_susp_dependency != old_peer_device->info.peer_resync_susp_dependency;
-	statistics_changed = opt_statistics &&
-		(!old_peer_device ||
-		 memcmp(&new_peer_device->statistics, &old_peer_device->statistics, sizeof(struct peer_device_statistics)));
+	statistics_changed = !old_peer_device ||
+		 memcmp(&new_peer_device->statistics, &old_peer_device->statistics, sizeof(struct peer_device_statistics));
 
 	if (!repl_state_changed && !disk_changed && !resync_suspended_changed && !statistics_changed)
 		return;

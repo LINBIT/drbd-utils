@@ -174,17 +174,17 @@ void test_peer_device_info(struct msg_buff *smsg, __u32 peer_repl_state, __u32 p
 	nla_nest_end(smsg, nla);
 }
 
-void test_peer_device_statistics(struct msg_buff *smsg)
+void test_peer_device_statistics(struct msg_buff *smsg, bool resync)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_PEER_DEVICE_STATISTICS);
 	nla_put_u64(smsg, T_peer_dev_received, 10);
 	nla_put_u64(smsg, T_peer_dev_sent, 20);
 	nla_put_u32(smsg, T_peer_dev_pending, 30);
 	nla_put_u32(smsg, T_peer_dev_unacked, 40);
-	nla_put_u64(smsg, T_peer_dev_out_of_sync, 50);
+	nla_put_u64(smsg, T_peer_dev_out_of_sync, resync ? 5000 : 0);
 	nla_put_u64(smsg, T_peer_dev_resync_failed, 0);
 	nla_put_u32(smsg, T_peer_dev_flags, 0);
-	nla_put_u64(smsg, T_peer_dev_rs_total, 0);
+	nla_put_u64(smsg, T_peer_dev_rs_total, resync ? 8000 : 0);
 	nla_put_u64(smsg, T_peer_dev_ov_start_sector, 0);
 	nla_put_u64(smsg, T_peer_dev_ov_stop_sector, 0);
 	nla_put_u64(smsg, T_peer_dev_ov_position, 0);
@@ -195,8 +195,8 @@ void test_peer_device_statistics(struct msg_buff *smsg)
 	nla_put_u64(smsg, T_peer_dev_rs_paused_ms, 0);
 	nla_put_u64(smsg, T_peer_dev_rs_dt0_ms, 0);
 	nla_put_u64(smsg, T_peer_dev_rs_db0_sectors, 0);
-	nla_put_u64(smsg, T_peer_dev_rs_dt1_ms, 0);
-	nla_put_u64(smsg, T_peer_dev_rs_db1_sectors, 0);
+	nla_put_u64(smsg, T_peer_dev_rs_dt1_ms, resync ? 100 : 0);
+	nla_put_u64(smsg, T_peer_dev_rs_db1_sectors, resync ? 50 : 0);
 	nla_put_u32(smsg, T_peer_dev_rs_c_sync_rate, 0);
 	nla_nest_end(smsg, nla);
 }
@@ -385,7 +385,7 @@ void test_peer_device_create(struct msg_buff *smsg)
 	test_peer_device_context(smsg);
 	test_notification_header(smsg, NOTIFY_CREATE);
 	test_peer_device_info(smsg, L_OFF, D_UNKNOWN);
-	test_peer_device_statistics(smsg);
+	test_peer_device_statistics(smsg, false);
 }
 
 void test_peer_device_change_replication(struct msg_buff *smsg)
@@ -394,7 +394,16 @@ void test_peer_device_change_replication(struct msg_buff *smsg)
 	test_peer_device_context(smsg);
 	test_notification_header(smsg, NOTIFY_CHANGE);
 	test_peer_device_info(smsg, L_ESTABLISHED, D_UP_TO_DATE);
-	test_peer_device_statistics(smsg);
+	test_peer_device_statistics(smsg, false);
+}
+
+void test_peer_device_change_sync(struct msg_buff *smsg)
+{
+	test_msg_put(smsg, DRBD_PEER_DEVICE_STATE, -1U);
+	test_peer_device_context(smsg);
+	test_notification_header(smsg, NOTIFY_CHANGE);
+	test_peer_device_info(smsg, L_SYNC_SOURCE, D_INCONSISTENT);
+	test_peer_device_statistics(smsg, true);
 }
 
 void test_peer_device_destroy(struct msg_buff *smsg)
@@ -493,6 +502,7 @@ int test_build_msg(struct msg_buff *smsg, char *msg_name)
 	TEST_MSG(connection_destroy);
 	TEST_MSG(peer_device_create);
 	TEST_MSG(peer_device_change_replication);
+	TEST_MSG(peer_device_change_sync);
 	TEST_MSG(peer_device_destroy);
 	TEST_MSG(path_create);
 	TEST_MSG(path_change_established);

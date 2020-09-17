@@ -1,0 +1,26 @@
+$ cat events2-sync.msgs | drbdsetup_events2_instrumented; echo $?
+exists -
+create resource name:some-resource role:Secondary suspended:no may_promote:no promotion_score:0
+create device name:some-resource volume:0 minor:1000 disk:Diskless client:no quorum:yes
+create connection name:some-resource peer-node-id:1 conn-name:some-peer connection:StandAlone role:Unknown
+create peer-device name:some-resource peer-node-id:1 conn-name:some-peer volume:0 replication:Off peer-disk:DUnknown peer-client:no resync-suspended:no
+create path name:some-resource peer-node-id:1 conn-name:some-peer local:ipv4:1.2.3.4:7789 peer:ipv4:5.6.7.8:7790 established:no
+change resource name:some-resource may_promote:yes promotion_score:10101
+change device name:some-resource volume:0 minor:1000 disk:UpToDate client:no quorum:yes
+change path name:some-resource peer-node-id:1 conn-name:some-peer local:ipv4:1.2.3.4:7789 peer:ipv4:5.6.7.8:7790 established:yes
+change connection name:some-resource peer-node-id:1 conn-name:some-peer connection:Connected role:Secondary
+change peer-device name:some-resource peer-node-id:1 conn-name:some-peer volume:0 replication:SyncSource peer-disk:Inconsistent peer-client:no done:37.50
+0
+$ cat events2-sync.msgs | drbdsetup_events2_instrumented --statistics; echo $?
+exists -
+create resource name:some-resource role:Secondary suspended:no write-ordering:none may_promote:no promotion_score:0
+create device name:some-resource volume:0 minor:1000 disk:Diskless client:no quorum:yes size:5 read:10 written:15 al-writes:40 bm-writes:50 upper-pending:60 lower-pending:70 al-suspended:no blocked:no
+create connection name:some-resource peer-node-id:1 conn-name:some-peer connection:StandAlone role:Unknown congested:no ap-in-flight:10 rs-in-flight:20
+create peer-device name:some-resource peer-node-id:1 conn-name:some-peer volume:0 replication:Off peer-disk:DUnknown peer-client:no resync-suspended:no received:5 sent:10 out-of-sync:0 pending:30 unacked:40
+create path name:some-resource peer-node-id:1 conn-name:some-peer local:ipv4:1.2.3.4:7789 peer:ipv4:5.6.7.8:7790 established:no
+change resource name:some-resource may_promote:yes promotion_score:10101
+change device name:some-resource volume:0 minor:1000 disk:UpToDate client:no quorum:yes
+change path name:some-resource peer-node-id:1 conn-name:some-peer local:ipv4:1.2.3.4:7789 peer:ipv4:5.6.7.8:7790 established:yes
+change connection name:some-resource peer-node-id:1 conn-name:some-peer connection:Connected role:Secondary
+change peer-device name:some-resource peer-node-id:1 conn-name:some-peer volume:0 replication:SyncSource peer-disk:Inconsistent peer-client:no done:37.50 received:5 sent:10 out-of-sync:2500 pending:30 unacked:40 dbdt1:0.24 eta:10
+0
