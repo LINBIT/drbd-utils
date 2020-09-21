@@ -3,6 +3,10 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.14.1
+--------
+ * events2: fix regression to always print resync done
+
 9.14.0
 --------
  * pacemaker: various fixes/improvements for PM >=1.1.15
