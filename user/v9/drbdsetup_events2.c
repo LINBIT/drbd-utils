@@ -64,16 +64,7 @@ static const char *object_path = "path";
 void *all_resources;
 struct resources_list *update_resources;
 
-static void fail_bad_data(const char *format, ...)
-{
-	va_list ap;
-
-	va_start(ap, format);
-	vfprintf(stderr, format, ap);
-	va_end(ap);
-
-	exit(20);
-}
+static int apply_event(const char *prefix, struct genl_info *info, bool initial_state);
 
 static int resource_obj_cmp(const void *a, const void *b)
 {
@@ -119,36 +110,26 @@ static struct devices_list *find_device(struct resources_list *resource, unsigne
 	return NULL;
 }
 
-static struct devices_list *find_device_must(struct resources_list *resource, unsigned volume)
-{
-	struct devices_list *device = find_device(resource, volume);
-	if (device)
-		return device;
-	fail_bad_data("%s name:%s volume:%u not found\n",
-			object_device, resource->name, volume);
-	return NULL;
-}
-
 static void store_device(struct resources_list *resource, struct devices_list *new_device)
 {
 	new_device->next = resource->devices;
 	resource->devices = new_device;
 }
 
-static void store_device_must(struct resources_list *resource, struct devices_list *new_device)
+static void store_device_check(struct resources_list *resource, struct devices_list *new_device)
 {
 	struct devices_list *old_device;
 
 	old_device = find_device(resource, new_device->ctx.ctx_volume);
-	if (old_device)
-		fail_bad_data("%s name:%s volume:%u already exists\n",
-				object_device, resource->name,
-				old_device->ctx.ctx_volume);
+	if (old_device) {
+		free_device(new_device);
+		return;
+	}
 
 	store_device(resource, new_device);
 }
 
-static void delete_device_must(struct resources_list *resource, unsigned volume)
+static void delete_device(struct resources_list *resource, unsigned volume)
 {
 	struct devices_list *device, **previous_next = &resource->devices;
 	for (device = resource->devices; device; device = device->next) {
@@ -159,9 +140,6 @@ static void delete_device_must(struct resources_list *resource, unsigned volume)
 		}
 		previous_next = &device->next;
 	}
-
-	fail_bad_data("%s name:%s volume:%u not found\n",
-			object_device, resource->name, volume);
 }
 
 static struct connections_list *find_connection(struct resources_list *resource, const char *name)
@@ -174,36 +152,26 @@ static struct connections_list *find_connection(struct resources_list *resource,
 	return NULL;
 }
 
-static struct connections_list *find_connection_must(struct resources_list *resource, const char *name)
-{
-	struct connections_list *connection = find_connection(resource, name);
-	if (connection)
-		return connection;
-	fail_bad_data("%s name:%s conn-name:%s not found\n",
-			object_connection, resource->name, name);
-	return NULL;
-}
-
 static void store_connection(struct resources_list *resource, struct connections_list *new_connection)
 {
 	new_connection->next = resource->connections;
 	resource->connections = new_connection;
 }
 
-static void store_connection_must(struct resources_list *resource, struct connections_list *new_connection)
+static void store_connection_check(struct resources_list *resource, struct connections_list *new_connection)
 {
 	struct connections_list *old_connection;
 
 	old_connection = find_connection(resource, new_connection->ctx.ctx_conn_name);
-	if (old_connection)
-		fail_bad_data("%s name:%s conn-name:%s already exists\n",
-				object_connection, resource->name,
-				old_connection->ctx.ctx_conn_name);
+	if (old_connection) {
+		free_connection(new_connection);
+		return;
+	}
 
 	store_connection(resource, new_connection);
 }
 
-static void delete_connection_must(struct resources_list *resource, const char *name)
+static void delete_connection(struct resources_list *resource, const char *name)
 {
 	struct connections_list *connection, **previous_next = &resource->connections;
 	for (connection = resource->connections; connection; connection = connection->next) {
@@ -214,9 +182,6 @@ static void delete_connection_must(struct resources_list *resource, const char *
 		}
 		previous_next = &connection->next;
 	}
-
-	fail_bad_data("%s name:%s conn-name:%s not found\n",
-			object_connection, resource->name, name);
 }
 
 static struct peer_devices_list *connection_find_peer_device(struct connections_list *connection, unsigned volume)
@@ -229,20 +194,15 @@ static struct peer_devices_list *connection_find_peer_device(struct connections_
 	return NULL;
 }
 
-static struct peer_devices_list *find_peer_device_must(struct resources_list *resource, struct drbd_cfg_context *ctx)
+static struct peer_devices_list *find_peer_device(struct resources_list *resource, struct drbd_cfg_context *ctx)
 {
 	struct connections_list *connection;
-	struct peer_devices_list *peer_device;
 
-	connection = find_connection_must(resource, ctx->ctx_conn_name);
+	connection = find_connection(resource, ctx->ctx_conn_name);
+	if (!connection)
+		return NULL;
 
-	peer_device = connection_find_peer_device(connection, ctx->ctx_volume);
-	if (!peer_device)
-		fail_bad_data("%s name:%s conn-name:%s volume:%u not found\n",
-				object_peer_device, resource->name,
-				ctx->ctx_conn_name,
-				ctx->ctx_volume);
-	return peer_device;
+	return connection_find_peer_device(connection, ctx->ctx_volume);
 }
 
 static void connection_store_peer_device(struct connections_list *connection, struct peer_devices_list *new_peer_device)
@@ -251,29 +211,34 @@ static void connection_store_peer_device(struct connections_list *connection, st
 	connection->peer_devices = new_peer_device;
 }
 
-static void store_peer_device_must(struct resources_list *resource, struct peer_devices_list *new_peer_device)
+static void store_peer_device_check(struct resources_list *resource, struct peer_devices_list *new_peer_device)
 {
 	struct connections_list *connection;
 	struct peer_devices_list *old_peer_device;
 
-	connection = find_connection_must(resource, new_peer_device->ctx.ctx_conn_name);
+	connection = find_connection(resource, new_peer_device->ctx.ctx_conn_name);
+	if (!connection) {
+		free_peer_device(new_peer_device);
+		return;
+	}
 
 	old_peer_device = connection_find_peer_device(connection, new_peer_device->ctx.ctx_volume);
-	if (old_peer_device)
-		fail_bad_data("%s name:%s conn-name:%s volume:%u already exists\n",
-				object_peer_device, resource->name,
-				old_peer_device->ctx.ctx_conn_name,
-				old_peer_device->ctx.ctx_volume);
+	if (old_peer_device) {
+		free_peer_device(new_peer_device);
+		return;
+	}
 
 	connection_store_peer_device(connection, new_peer_device);
 }
 
-static void delete_peer_device_must(struct resources_list *resource, struct drbd_cfg_context *ctx)
+static void delete_peer_device(struct resources_list *resource, struct drbd_cfg_context *ctx)
 {
 	struct connections_list *connection;
 	struct peer_devices_list *peer_device, **previous_next;
 
-	connection = find_connection_must(resource, ctx->ctx_conn_name);
+	connection = find_connection(resource, ctx->ctx_conn_name);
+	if (!connection)
+		return;
 
 	previous_next = &connection->peer_devices;
 	for (peer_device = connection->peer_devices; peer_device; peer_device = peer_device->next) {
@@ -284,11 +249,6 @@ static void delete_peer_device_must(struct resources_list *resource, struct drbd
 		}
 		previous_next = &peer_device->next;
 	}
-
-	fail_bad_data("%s name:%s conn-name:%s volume:%u not found\n",
-			object_peer_device, resource->name,
-			ctx->ctx_conn_name,
-			ctx->ctx_volume);
 }
 
 static bool path_address_strs(struct drbd_cfg_context *ctx, char *my_addr, char *peer_addr)
@@ -340,15 +300,13 @@ static struct paths_list *connection_find_path(struct connections_list *connecti
 	return NULL;
 }
 
-/*
- * Find a path, validating the existence of the connection but not the path
- * itself.
- */
-static struct paths_list *find_path_connection_must(struct resources_list *resource, struct drbd_cfg_context *ctx)
+static struct paths_list *find_path(struct resources_list *resource, struct drbd_cfg_context *ctx)
 {
 	struct connections_list *connection;
 
-	connection = find_connection_must(resource, ctx->ctx_conn_name);
+	connection = find_connection(resource, ctx->ctx_conn_name);
+	if (!connection)
+		return NULL;
 
 	return connection_find_path(connection, ctx);
 }
@@ -359,40 +317,34 @@ static void connection_store_path(struct connections_list *connection, struct pa
 	connection->paths = new_path;
 }
 
-static void store_path_must(struct resources_list *resource, struct paths_list *new_path)
+static void store_path_check(struct resources_list *resource, struct paths_list *new_path)
 {
 	struct connections_list *connection;
 	struct paths_list *old_path;
 
-	connection = find_connection_must(resource, new_path->ctx.ctx_conn_name);
+	connection = find_connection(resource, new_path->ctx.ctx_conn_name);
+	if (!connection) {
+		free(new_path);
+		return;
+	}
 
 	old_path = connection_find_path(connection, &new_path->ctx);
 	if (old_path) {
-		char my_addr[ADDRESS_STR_MAX];
-		char peer_addr[ADDRESS_STR_MAX];
-
-		if (!path_address_strs(&old_path->ctx, my_addr, peer_addr))
-			exit(20);
-
-		fail_bad_data("%s name:%s conn-name:%s local:%s peer:%s already exists\n",
-				object_path, resource->name,
-				old_path->ctx.ctx_conn_name,
-				my_addr, peer_addr);
+		free(new_path);
+		return;
 	}
 
 	connection_store_path(connection, new_path);
 }
 
-/*
- * Delete a path, validating the existence of the connection but not the path
- * itself.
- */
-static void delete_path_connection_must(struct resources_list *resource, struct drbd_cfg_context *ctx)
+static void delete_path(struct resources_list *resource, struct drbd_cfg_context *ctx)
 {
 	struct connections_list *connection;
 	struct paths_list *path, **previous_next;
 
-	connection = find_connection_must(resource, ctx->ctx_conn_name);
+	connection = find_connection(resource, ctx->ctx_conn_name);
+	if (!connection)
+		return;
 
 	previous_next = &connection->paths;
 	for (path = connection->paths; path; path = path->next) {
@@ -885,7 +837,7 @@ static int format_timestamp(char *timestamp_prefix)
 	return 0;
 }
 
-static void print_helper(char *timestamp_prefix, struct drbd_cfg_context *ctx, unsigned minor, bool response, struct drbd_helper_info *helper_info)
+static void print_helper(const char *timestamp_prefix, struct drbd_cfg_context *ctx, unsigned minor, bool response, struct drbd_helper_info *helper_info)
 {
 	char my_addr[ADDRESS_STR_MAX] = "";
 	char peer_addr[ADDRESS_STR_MAX] = "";
@@ -925,22 +877,30 @@ static void print_helper(char *timestamp_prefix, struct drbd_cfg_context *ctx, u
 	printf("\n");
 }
 
+/* singly-linked list entry with a netlink message */
+struct nlmsg_entry {
+	struct nlmsg_entry *next;
+	struct nlmsghdr *nlh;
+};
+
+/* copy an entire netlink message */
+static struct nlmsg_entry *nlmsg_copy(struct genl_info *info)
+{
+	struct nlmsg_entry *entry = calloc(1, sizeof(struct nlmsg_entry));
+	entry->nlh = malloc(info->nlhdr->nlmsg_len);
+	memcpy(entry->nlh, info->nlhdr, info->nlhdr->nlmsg_len);
+	return entry;
+}
+
 int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 {
 	static uint32_t last_seq;
 	static bool last_seq_known;
 	static bool initial_state = true;
+	static struct nlmsg_entry *stored_messages = NULL;
 
-	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U, };
 	struct drbd_notification_header nh = { .nh_type = -1U };
 	enum drbd_notification_type action;
-	bool is_resource_create;
-	struct resources_list *new_resource;
-	struct resources_list *old_resource;
-	struct devices_list *device;
-	struct connections_list *connection;
-	struct peer_devices_list *peer_device;
-	struct paths_list *path;
 	struct drbd_genlmsghdr *dh;
 	int err;
 	char timestamp_prefix[TIMESTAMP_LEN];
@@ -967,26 +927,88 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 		exit(20);
 
 	if (info->genlhdr->cmd == DRBD_INITIAL_STATE_DONE) {
+		struct nlmsg_entry *entry, *next_entry;
 		initial_state = false;
 		printf("%s%s -\n", timestamp_prefix, action_exists);
 		fflush(stdout);
-		return opt_now ? -1 : 0;
-	}
+		if (opt_now)
+			return -1;
 
-	err = drbd_cfg_context_from_attrs(&ctx, info);
-	if (err)
+		/* now apply stored messages */
+		for (entry = stored_messages; entry; entry = next_entry) {
+			struct genl_info stored_info = {
+				.seq = entry->nlh->nlmsg_seq,
+				.nlhdr = entry->nlh,
+				.genlhdr = nlmsg_data(entry->nlh),
+				.userhdr = genlmsg_data(nlmsg_data(entry->nlh)),
+				.attrs = global_attrs,
+			};
+
+			err = drbd_tla_parse(entry->nlh);
+			if (err) {
+				fprintf(stderr, "drbd_tla_parse() failed");
+				return 1;
+			}
+
+			err = apply_event(timestamp_prefix, &stored_info, false);
+			if (err)
+				return err;
+
+			next_entry = entry->next;
+			free(entry->nlh);
+			free(entry);
+		}
+
 		return 0;
+	}
 
 	if (action != NOTIFY_EXISTS) {
 		if (last_seq_known) {
 			int skipped = info->nlhdr->nlmsg_seq - (last_seq + 1);
 
-			if (skipped)
+			if (skipped) {
 				printf("%s- skipped %d\n", timestamp_prefix, skipped);
+				fflush(stdout);
+			}
 		}
 		last_seq = info->nlhdr->nlmsg_seq;
 		last_seq_known = true;
+
+		if (initial_state) {
+			/* store message until initial state is finished */
+			struct nlmsg_entry *entry, **previous_next = &stored_messages;
+			for (entry = stored_messages; entry; entry = entry->next)
+				previous_next = &entry->next;
+			*previous_next = nlmsg_copy(info);
+			return 0;
+		}
 	}
+
+	return apply_event(timestamp_prefix, info, initial_state);
+}
+
+static int apply_event(const char *prefix, struct genl_info *info, bool initial_state)
+{
+	int err;
+	struct drbd_notification_header nh = { .nh_type = -1U };
+	enum drbd_notification_type action;
+	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U, };
+	bool is_resource_create;
+	struct resources_list *new_resource;
+	struct resources_list *old_resource;
+	struct devices_list *device;
+	struct connections_list *connection;
+	struct peer_devices_list *peer_device;
+	struct paths_list *path;
+
+	err = drbd_notification_header_from_attrs(&nh, info);
+	if (err)
+		return 0;
+	action = nh.nh_type & ~NOTIFY_FLAGS;
+
+	err = drbd_cfg_context_from_attrs(&ctx, info);
+	if (err)
+		return 0;
 
 	is_resource_create = info->genlhdr->cmd == DRBD_RESOURCE_STATE &&
 		(action == NOTIFY_CREATE || action == NOTIFY_EXISTS);
@@ -1001,13 +1023,13 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 
 	if (is_resource_create) {
 		if (new_resource || old_resource)
-			fail_bad_data("%s name:%s already exists\n", object_resource, ctx.ctx_resource_name);
+			return 0;
 
 		new_resource = new_resource_from_info(info);
 		store_update_resource(new_resource);
 	} else if (!new_resource) {
 		if (!old_resource)
-			fail_bad_data("%s name:%s not found\n", object_resource, ctx.ctx_resource_name);
+			return 0;
 
 		new_resource = deep_copy_resource(old_resource);
 		store_update_resource(new_resource);
@@ -1022,19 +1044,19 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 			break;
 		case DRBD_DEVICE_STATE:
 			device = new_device_from_info(info);
-			store_device_must(new_resource, device);
+			store_device_check(new_resource, device);
 			break;
 		case DRBD_CONNECTION_STATE:
 			connection = new_connection_from_info(info);
-			store_connection_must(new_resource, connection);
+			store_connection_check(new_resource, connection);
 			break;
 		case DRBD_PEER_DEVICE_STATE:
 			peer_device = new_peer_device_from_info(info);
-			store_peer_device_must(new_resource, peer_device);
+			store_peer_device_check(new_resource, peer_device);
 			break;
 		case DRBD_PATH_STATE:
 			path = new_path_from_info(info);
-			store_path_must(new_resource, path);
+			store_path_check(new_resource, path);
 			break;
 		default:
 			dbg(1, "unknown exists/create notification %d\n", info->genlhdr->cmd);
@@ -1049,7 +1071,9 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 			resource_statistics_from_attrs(&new_resource->statistics, info);
 			break;
 		case DRBD_DEVICE_STATE:
-			device = find_device_must(new_resource, ctx.ctx_volume);
+			device = find_device(new_resource, ctx.ctx_volume);
+			if (!device)
+				break;
 			disk_conf_from_attrs(&device->disk_conf, info);
 			device->info.dev_disk_state = D_DISKLESS;
 			device->info.is_intentional_diskless = IS_INTENTIONAL_DEF;
@@ -1058,13 +1082,17 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 			device_statistics_from_attrs(&device->statistics, info);
 			break;
 		case DRBD_CONNECTION_STATE:
-			connection = find_connection_must(new_resource, ctx.ctx_conn_name);
+			connection = find_connection(new_resource, ctx.ctx_conn_name);
+			if (!connection)
+				break;
 			connection_info_from_attrs(&connection->info, info);
 			memset(&connection->statistics, -1, sizeof(connection->statistics));
 			connection_statistics_from_attrs(&connection->statistics, info);
 			break;
 		case DRBD_PEER_DEVICE_STATE:
-			peer_device = find_peer_device_must(new_resource, &ctx);
+			peer_device = find_peer_device(new_resource, &ctx);
+			if (!peer_device)
+				break;
 			peer_device->info.peer_is_intentional_diskless = IS_INTENTIONAL_DEF;
 			peer_device_info_from_attrs(&peer_device->info, info);
 			memset(&peer_device->statistics, -1, sizeof(peer_device->statistics));
@@ -1074,12 +1102,12 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 			/* DRBD does not send initial exists messages for paths
 			 * so we have to be prepared for changes to unknown
 			 * paths */
-			path = find_path_connection_must(new_resource, &ctx);
+			path = find_path(new_resource, &ctx);
 			if (path) {
 				drbd_path_info_from_attrs(&path->info, info);
 			} else {
 				path = new_path_from_info(info);
-				store_path_must(new_resource, path);
+				store_path_check(new_resource, path);
 			}
 			break;
 		default:
@@ -1094,19 +1122,19 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 			new_resource->destroyed = true;
 			break;
 		case DRBD_DEVICE_STATE:
-			delete_device_must(new_resource, ctx.ctx_volume);
+			delete_device(new_resource, ctx.ctx_volume);
 			break;
 		case DRBD_CONNECTION_STATE:
-			delete_connection_must(new_resource, ctx.ctx_conn_name);
+			delete_connection(new_resource, ctx.ctx_conn_name);
 			break;
 		case DRBD_PEER_DEVICE_STATE:
-			delete_peer_device_must(new_resource, &ctx);
+			delete_peer_device(new_resource, &ctx);
 			break;
 		case DRBD_PATH_STATE:
 			/* DRBD does not send initial exists messages for paths
 			 * so we have to be prepared for destroy messages for
 			 * unknown paths */
-			delete_path_connection_must(new_resource, &ctx);
+			delete_path(new_resource, &ctx);
 			break;
 		default:
 			dbg(1, "unknown destroy notification %d\n", info->genlhdr->cmd);
@@ -1129,7 +1157,7 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 			goto out;
 		}
 
-		print_helper(timestamp_prefix, &ctx,
+		print_helper(prefix, &ctx,
 				((struct drbd_genlmsghdr*)(info->userhdr))->minor,
 				action == NOTIFY_RESPONSE, &helper_info);
 		break;
@@ -1145,7 +1173,7 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 		for (new_resource = update_resources; new_resource; new_resource = next_resource) {
 			struct resources_list *old_resource = find_resource(new_resource->name);
 
-			print_changes(timestamp_prefix, initial_state ? action_exists : action_create, old_resource, new_resource);
+			print_changes(prefix, initial_state ? action_exists : action_create, old_resource, new_resource);
 
 			if (old_resource) {
 				delete_resource(old_resource);

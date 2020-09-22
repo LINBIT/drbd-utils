@@ -1,0 +1,5 @@
+resource_exists
+device_exists
+initial_state_done
+resource_create
+device_create

@@ -1,0 +1,5 @@
+device_change_disk
+resource_change_role
+resource_exists
+device_exists
+initial_state_done
