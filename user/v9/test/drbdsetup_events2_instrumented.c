@@ -34,10 +34,8 @@
 #include "../drbdsetup.h"
 #include "../drbdsetup_colors.h"
 
-int drbd_tla_parse(struct nlmsghdr *nlh);
 int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
 
-extern struct nlattr *global_attrs[128];
 extern struct genl_family drbd_genl_family;
 
 static char *test_resource_name = "some-resource";
@@ -277,6 +275,15 @@ void test_resource_destroy(struct msg_buff *smsg)
 	test_notification_header(smsg, NOTIFY_DESTROY);
 }
 
+void test_device_exists(struct msg_buff *smsg)
+{
+	test_msg_put(smsg, DRBD_DEVICE_STATE, test_minor);
+	test_device_context(smsg, test_volume_number);
+	test_notification_header(smsg, NOTIFY_EXISTS);
+	test_device_info(smsg, D_DISKLESS, true);
+	test_device_statistics(smsg);
+}
+
 void test_device_create(struct msg_buff *smsg)
 {
 	test_msg_put(smsg, DRBD_DEVICE_STATE, test_minor);
@@ -488,6 +495,7 @@ int test_build_msg(struct msg_buff *smsg, char *msg_name)
 	TEST_MSG(resource_create);
 	TEST_MSG(resource_change_role);
 	TEST_MSG(resource_destroy);
+	TEST_MSG(device_exists);
 	TEST_MSG(device_create);
 	TEST_MSG(device_create_b);
 	TEST_MSG(device_change_disk);

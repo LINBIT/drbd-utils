@@ -64,6 +64,8 @@ static const char *object_path = "path";
 void *all_resources;
 struct resources_list *update_resources;
 
+static int apply_event(const char *prefix, struct genl_info *info, bool initial_state);
+
 static void fail_bad_data(const char *format, ...)
 {
 	va_list ap;
@@ -885,7 +887,7 @@ static int format_timestamp(char *timestamp_prefix)
 	return 0;
 }
 
-static void print_helper(char *timestamp_prefix, struct drbd_cfg_context *ctx, unsigned minor, bool response, struct drbd_helper_info *helper_info)
+static void print_helper(const char *timestamp_prefix, struct drbd_cfg_context *ctx, unsigned minor, bool response, struct drbd_helper_info *helper_info)
 {
 	char my_addr[ADDRESS_STR_MAX] = "";
 	char peer_addr[ADDRESS_STR_MAX] = "";
@@ -925,22 +927,30 @@ static void print_helper(char *timestamp_prefix, struct drbd_cfg_context *ctx, u
 	printf("\n");
 }
 
+/* singly-linked list entry with a netlink message */
+struct nlmsg_entry {
+	struct nlmsg_entry *next;
+	struct nlmsghdr *nlh;
+};
+
+/* copy an entire netlink message */
+static struct nlmsg_entry *nlmsg_copy(struct genl_info *info)
+{
+	struct nlmsg_entry *entry = calloc(1, sizeof(struct nlmsg_entry));
+	entry->nlh = malloc(info->nlhdr->nlmsg_len);
+	memcpy(entry->nlh, info->nlhdr, info->nlhdr->nlmsg_len);
+	return entry;
+}
+
 int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 {
 	static uint32_t last_seq;
 	static bool last_seq_known;
 	static bool initial_state = true;
+	static struct nlmsg_entry *stored_messages = NULL;
 
-	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U, };
 	struct drbd_notification_header nh = { .nh_type = -1U };
 	enum drbd_notification_type action;
-	bool is_resource_create;
-	struct resources_list *new_resource;
-	struct resources_list *old_resource;
-	struct devices_list *device;
-	struct connections_list *connection;
-	struct peer_devices_list *peer_device;
-	struct paths_list *path;
 	struct drbd_genlmsghdr *dh;
 	int err;
 	char timestamp_prefix[TIMESTAMP_LEN];
@@ -967,26 +977,88 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 		exit(20);
 
 	if (info->genlhdr->cmd == DRBD_INITIAL_STATE_DONE) {
+		struct nlmsg_entry *entry, *next_entry;
 		initial_state = false;
 		printf("%s%s -\n", timestamp_prefix, action_exists);
 		fflush(stdout);
-		return opt_now ? -1 : 0;
-	}
+		if (opt_now)
+			return -1;
 
-	err = drbd_cfg_context_from_attrs(&ctx, info);
-	if (err)
+		/* now apply stored messages */
+		for (entry = stored_messages; entry; entry = next_entry) {
+			struct genl_info stored_info = {
+				.seq = entry->nlh->nlmsg_seq,
+				.nlhdr = entry->nlh,
+				.genlhdr = nlmsg_data(entry->nlh),
+				.userhdr = genlmsg_data(nlmsg_data(entry->nlh)),
+				.attrs = global_attrs,
+			};
+
+			err = drbd_tla_parse(entry->nlh);
+			if (err) {
+				fprintf(stderr, "drbd_tla_parse() failed");
+				return 1;
+			}
+
+			err = apply_event(timestamp_prefix, &stored_info, false);
+			if (err)
+				return err;
+
+			next_entry = entry->next;
+			free(entry->nlh);
+			free(entry);
+		}
+
 		return 0;
+	}
 
 	if (action != NOTIFY_EXISTS) {
 		if (last_seq_known) {
 			int skipped = info->nlhdr->nlmsg_seq - (last_seq + 1);
 
-			if (skipped)
+			if (skipped) {
 				printf("%s- skipped %d\n", timestamp_prefix, skipped);
+				fflush(stdout);
+			}
 		}
 		last_seq = info->nlhdr->nlmsg_seq;
 		last_seq_known = true;
+
+		if (initial_state) {
+			/* store message until initial state is finished */
+			struct nlmsg_entry *entry, **previous_next = &stored_messages;
+			for (entry = stored_messages; entry; entry = entry->next)
+				previous_next = &entry->next;
+			*previous_next = nlmsg_copy(info);
+			return 0;
+		}
 	}
+
+	return apply_event(timestamp_prefix, info, initial_state);
+}
+
+static int apply_event(const char *prefix, struct genl_info *info, bool initial_state)
+{
+	int err;
+	struct drbd_notification_header nh = { .nh_type = -1U };
+	enum drbd_notification_type action;
+	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U, };
+	bool is_resource_create;
+	struct resources_list *new_resource;
+	struct resources_list *old_resource;
+	struct devices_list *device;
+	struct connections_list *connection;
+	struct peer_devices_list *peer_device;
+	struct paths_list *path;
+
+	err = drbd_notification_header_from_attrs(&nh, info);
+	if (err)
+		return 0;
+	action = nh.nh_type & ~NOTIFY_FLAGS;
+
+	err = drbd_cfg_context_from_attrs(&ctx, info);
+	if (err)
+		return 0;
 
 	is_resource_create = info->genlhdr->cmd == DRBD_RESOURCE_STATE &&
 		(action == NOTIFY_CREATE || action == NOTIFY_EXISTS);
@@ -1129,7 +1201,7 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 			goto out;
 		}
 
-		print_helper(timestamp_prefix, &ctx,
+		print_helper(prefix, &ctx,
 				((struct drbd_genlmsghdr*)(info->userhdr))->minor,
 				action == NOTIFY_RESPONSE, &helper_info);
 		break;
@@ -1145,7 +1217,7 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 		for (new_resource = update_resources; new_resource; new_resource = next_resource) {
 			struct resources_list *old_resource = find_resource(new_resource->name);
 
-			print_changes(timestamp_prefix, initial_state ? action_exists : action_create, old_resource, new_resource);
+			print_changes(prefix, initial_state ? action_exists : action_create, old_resource, new_resource);
 
 			if (old_resource) {
 				delete_resource(old_resource);
