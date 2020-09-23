@@ -1,0 +1,6 @@
+path_destroy
+peer_device_destroy
+connection_destroy
+device_destroy
+resource_destroy
+initial_state_done

@@ -64,7 +64,7 @@ static const char *object_path = "path";
 void *all_resources;
 struct resources_list *update_resources;
 
-static int apply_event(const char *prefix, struct genl_info *info, bool initial_state);
+static int apply_event(const char *prefix, struct genl_info *info, bool initial_state, bool strict);
 
 static void fail_bad_data(const char *format, ...)
 {
@@ -121,13 +121,14 @@ static struct devices_list *find_device(struct resources_list *resource, unsigne
 	return NULL;
 }
 
-static struct devices_list *find_device_must(struct resources_list *resource, unsigned volume)
+static struct devices_list *find_device_check(struct resources_list *resource, unsigned volume, bool strict)
 {
 	struct devices_list *device = find_device(resource, volume);
 	if (device)
 		return device;
-	fail_bad_data("%s name:%s volume:%u not found\n",
-			object_device, resource->name, volume);
+	if (strict)
+		fail_bad_data("%s name:%s volume:%u not found\n",
+				object_device, resource->name, volume);
 	return NULL;
 }
 
@@ -137,20 +138,26 @@ static void store_device(struct resources_list *resource, struct devices_list *n
 	resource->devices = new_device;
 }
 
-static void store_device_must(struct resources_list *resource, struct devices_list *new_device)
+static void store_device_check(struct resources_list *resource, struct devices_list *new_device, bool strict)
 {
 	struct devices_list *old_device;
 
 	old_device = find_device(resource, new_device->ctx.ctx_volume);
-	if (old_device)
-		fail_bad_data("%s name:%s volume:%u already exists\n",
-				object_device, resource->name,
-				old_device->ctx.ctx_volume);
+	if (old_device) {
+		if (strict) {
+			fail_bad_data("%s name:%s volume:%u already exists\n",
+					object_device, resource->name,
+					old_device->ctx.ctx_volume);
+		} else {
+			free_device(new_device);
+			return;
+		}
+	}
 
 	store_device(resource, new_device);
 }
 
-static void delete_device_must(struct resources_list *resource, unsigned volume)
+static void delete_device_check(struct resources_list *resource, unsigned volume, bool strict)
 {
 	struct devices_list *device, **previous_next = &resource->devices;
 	for (device = resource->devices; device; device = device->next) {
@@ -162,8 +169,9 @@ static void delete_device_must(struct resources_list *resource, unsigned volume)
 		previous_next = &device->next;
 	}
 
-	fail_bad_data("%s name:%s volume:%u not found\n",
-			object_device, resource->name, volume);
+	if (strict)
+		fail_bad_data("%s name:%s volume:%u not found\n",
+				object_device, resource->name, volume);
 }
 
 static struct connections_list *find_connection(struct resources_list *resource, const char *name)
@@ -176,13 +184,14 @@ static struct connections_list *find_connection(struct resources_list *resource,
 	return NULL;
 }
 
-static struct connections_list *find_connection_must(struct resources_list *resource, const char *name)
+static struct connections_list *find_connection_check(struct resources_list *resource, const char *name, bool strict)
 {
 	struct connections_list *connection = find_connection(resource, name);
 	if (connection)
 		return connection;
-	fail_bad_data("%s name:%s conn-name:%s not found\n",
-			object_connection, resource->name, name);
+	if (strict)
+		fail_bad_data("%s name:%s conn-name:%s not found\n",
+				object_connection, resource->name, name);
 	return NULL;
 }
 
@@ -192,20 +201,26 @@ static void store_connection(struct resources_list *resource, struct connections
 	resource->connections = new_connection;
 }
 
-static void store_connection_must(struct resources_list *resource, struct connections_list *new_connection)
+static void store_connection_check(struct resources_list *resource, struct connections_list *new_connection, bool strict)
 {
 	struct connections_list *old_connection;
 
 	old_connection = find_connection(resource, new_connection->ctx.ctx_conn_name);
-	if (old_connection)
-		fail_bad_data("%s name:%s conn-name:%s already exists\n",
-				object_connection, resource->name,
-				old_connection->ctx.ctx_conn_name);
+	if (old_connection) {
+		if (strict) {
+			fail_bad_data("%s name:%s conn-name:%s already exists\n",
+					object_connection, resource->name,
+					old_connection->ctx.ctx_conn_name);
+		} else {
+			free_connection(new_connection);
+			return;
+		}
+	}
 
 	store_connection(resource, new_connection);
 }
 
-static void delete_connection_must(struct resources_list *resource, const char *name)
+static void delete_connection_check(struct resources_list *resource, const char *name, bool strict)
 {
 	struct connections_list *connection, **previous_next = &resource->connections;
 	for (connection = resource->connections; connection; connection = connection->next) {
@@ -217,8 +232,9 @@ static void delete_connection_must(struct resources_list *resource, const char *
 		previous_next = &connection->next;
 	}
 
-	fail_bad_data("%s name:%s conn-name:%s not found\n",
-			object_connection, resource->name, name);
+	if (strict)
+		fail_bad_data("%s name:%s conn-name:%s not found\n",
+				object_connection, resource->name, name);
 }
 
 static struct peer_devices_list *connection_find_peer_device(struct connections_list *connection, unsigned volume)
@@ -231,20 +247,24 @@ static struct peer_devices_list *connection_find_peer_device(struct connections_
 	return NULL;
 }
 
-static struct peer_devices_list *find_peer_device_must(struct resources_list *resource, struct drbd_cfg_context *ctx)
+static struct peer_devices_list *find_peer_device_check(struct resources_list *resource, struct drbd_cfg_context *ctx, bool strict)
 {
 	struct connections_list *connection;
 	struct peer_devices_list *peer_device;
 
-	connection = find_connection_must(resource, ctx->ctx_conn_name);
+	connection = find_connection_check(resource, ctx->ctx_conn_name, strict);
+	if (!connection)
+		return NULL;
 
 	peer_device = connection_find_peer_device(connection, ctx->ctx_volume);
-	if (!peer_device)
+	if (peer_device)
+		return peer_device;
+	if (strict)
 		fail_bad_data("%s name:%s conn-name:%s volume:%u not found\n",
 				object_peer_device, resource->name,
 				ctx->ctx_conn_name,
 				ctx->ctx_volume);
-	return peer_device;
+	return NULL;
 }
 
 static void connection_store_peer_device(struct connections_list *connection, struct peer_devices_list *new_peer_device)
@@ -253,29 +273,41 @@ static void connection_store_peer_device(struct connections_list *connection, st
 	connection->peer_devices = new_peer_device;
 }
 
-static void store_peer_device_must(struct resources_list *resource, struct peer_devices_list *new_peer_device)
+static void store_peer_device_check(struct resources_list *resource, struct peer_devices_list *new_peer_device, bool strict)
 {
 	struct connections_list *connection;
 	struct peer_devices_list *old_peer_device;
 
-	connection = find_connection_must(resource, new_peer_device->ctx.ctx_conn_name);
+	connection = find_connection_check(resource, new_peer_device->ctx.ctx_conn_name, strict);
+	if (!connection) {
+		free_peer_device(new_peer_device);
+		return;
+	}
 
 	old_peer_device = connection_find_peer_device(connection, new_peer_device->ctx.ctx_volume);
-	if (old_peer_device)
-		fail_bad_data("%s name:%s conn-name:%s volume:%u already exists\n",
-				object_peer_device, resource->name,
-				old_peer_device->ctx.ctx_conn_name,
-				old_peer_device->ctx.ctx_volume);
+	if (old_peer_device) {
+		if (strict) {
+			fail_bad_data("%s name:%s conn-name:%s volume:%u already exists\n",
+					object_peer_device, resource->name,
+					old_peer_device->ctx.ctx_conn_name,
+					old_peer_device->ctx.ctx_volume);
+		} else {
+			free_peer_device(new_peer_device);
+			return;
+		}
+	}
 
 	connection_store_peer_device(connection, new_peer_device);
 }
 
-static void delete_peer_device_must(struct resources_list *resource, struct drbd_cfg_context *ctx)
+static void delete_peer_device_check(struct resources_list *resource, struct drbd_cfg_context *ctx, bool strict)
 {
 	struct connections_list *connection;
 	struct peer_devices_list *peer_device, **previous_next;
 
-	connection = find_connection_must(resource, ctx->ctx_conn_name);
+	connection = find_connection_check(resource, ctx->ctx_conn_name, strict);
+	if (!connection)
+		return;
 
 	previous_next = &connection->peer_devices;
 	for (peer_device = connection->peer_devices; peer_device; peer_device = peer_device->next) {
@@ -287,10 +319,11 @@ static void delete_peer_device_must(struct resources_list *resource, struct drbd
 		previous_next = &peer_device->next;
 	}
 
-	fail_bad_data("%s name:%s conn-name:%s volume:%u not found\n",
-			object_peer_device, resource->name,
-			ctx->ctx_conn_name,
-			ctx->ctx_volume);
+	if (strict)
+		fail_bad_data("%s name:%s conn-name:%s volume:%u not found\n",
+				object_peer_device, resource->name,
+				ctx->ctx_conn_name,
+				ctx->ctx_volume);
 }
 
 static bool path_address_strs(struct drbd_cfg_context *ctx, char *my_addr, char *peer_addr)
@@ -346,11 +379,13 @@ static struct paths_list *connection_find_path(struct connections_list *connecti
  * Find a path, validating the existence of the connection but not the path
  * itself.
  */
-static struct paths_list *find_path_connection_must(struct resources_list *resource, struct drbd_cfg_context *ctx)
+static struct paths_list *find_path_connection_check(struct resources_list *resource, struct drbd_cfg_context *ctx, bool strict)
 {
 	struct connections_list *connection;
 
-	connection = find_connection_must(resource, ctx->ctx_conn_name);
+	connection = find_connection_check(resource, ctx->ctx_conn_name, strict);
+	if (!connection)
+		return NULL;
 
 	return connection_find_path(connection, ctx);
 }
@@ -361,17 +396,26 @@ static void connection_store_path(struct connections_list *connection, struct pa
 	connection->paths = new_path;
 }
 
-static void store_path_must(struct resources_list *resource, struct paths_list *new_path)
+static void store_path_check(struct resources_list *resource, struct paths_list *new_path, bool strict)
 {
 	struct connections_list *connection;
 	struct paths_list *old_path;
 
-	connection = find_connection_must(resource, new_path->ctx.ctx_conn_name);
+	connection = find_connection_check(resource, new_path->ctx.ctx_conn_name, strict);
+	if (!connection) {
+		free(new_path);
+		return;
+	}
 
 	old_path = connection_find_path(connection, &new_path->ctx);
 	if (old_path) {
 		char my_addr[ADDRESS_STR_MAX];
 		char peer_addr[ADDRESS_STR_MAX];
+
+		if (!strict) {
+			free(new_path);
+			return;
+		}
 
 		if (!path_address_strs(&old_path->ctx, my_addr, peer_addr))
 			exit(20);
@@ -389,12 +433,14 @@ static void store_path_must(struct resources_list *resource, struct paths_list *
  * Delete a path, validating the existence of the connection but not the path
  * itself.
  */
-static void delete_path_connection_must(struct resources_list *resource, struct drbd_cfg_context *ctx)
+static void delete_path_connection_check(struct resources_list *resource, struct drbd_cfg_context *ctx, bool strict)
 {
 	struct connections_list *connection;
 	struct paths_list *path, **previous_next;
 
-	connection = find_connection_must(resource, ctx->ctx_conn_name);
+	connection = find_connection_check(resource, ctx->ctx_conn_name, strict);
+	if (!connection)
+		return;
 
 	previous_next = &connection->paths;
 	for (path = connection->paths; path; path = path->next) {
@@ -1000,7 +1046,7 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 				return 1;
 			}
 
-			err = apply_event(timestamp_prefix, &stored_info, false);
+			err = apply_event(timestamp_prefix, &stored_info, false, false);
 			if (err)
 				return err;
 
@@ -1034,10 +1080,10 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 		}
 	}
 
-	return apply_event(timestamp_prefix, info, initial_state);
+	return apply_event(timestamp_prefix, info, initial_state, true);
 }
 
-static int apply_event(const char *prefix, struct genl_info *info, bool initial_state)
+static int apply_event(const char *prefix, struct genl_info *info, bool initial_state, bool strict)
 {
 	int err;
 	struct drbd_notification_header nh = { .nh_type = -1U };
@@ -1072,14 +1118,22 @@ static int apply_event(const char *prefix, struct genl_info *info, bool initial_
 	old_resource = find_resource(ctx.ctx_resource_name);
 
 	if (is_resource_create) {
-		if (new_resource || old_resource)
-			fail_bad_data("%s name:%s already exists\n", object_resource, ctx.ctx_resource_name);
+		if (new_resource || old_resource) {
+			if (strict)
+				fail_bad_data("%s name:%s already exists\n", object_resource, ctx.ctx_resource_name);
+			else
+				return 0;
+		}
 
 		new_resource = new_resource_from_info(info);
 		store_update_resource(new_resource);
 	} else if (!new_resource) {
-		if (!old_resource)
-			fail_bad_data("%s name:%s not found\n", object_resource, ctx.ctx_resource_name);
+		if (!old_resource) {
+			if (strict)
+				fail_bad_data("%s name:%s not found\n", object_resource, ctx.ctx_resource_name);
+			else
+				return 0;
+		}
 
 		new_resource = deep_copy_resource(old_resource);
 		store_update_resource(new_resource);
@@ -1094,19 +1148,19 @@ static int apply_event(const char *prefix, struct genl_info *info, bool initial_
 			break;
 		case DRBD_DEVICE_STATE:
 			device = new_device_from_info(info);
-			store_device_must(new_resource, device);
+			store_device_check(new_resource, device, strict);
 			break;
 		case DRBD_CONNECTION_STATE:
 			connection = new_connection_from_info(info);
-			store_connection_must(new_resource, connection);
+			store_connection_check(new_resource, connection, strict);
 			break;
 		case DRBD_PEER_DEVICE_STATE:
 			peer_device = new_peer_device_from_info(info);
-			store_peer_device_must(new_resource, peer_device);
+			store_peer_device_check(new_resource, peer_device, strict);
 			break;
 		case DRBD_PATH_STATE:
 			path = new_path_from_info(info);
-			store_path_must(new_resource, path);
+			store_path_check(new_resource, path, strict);
 			break;
 		default:
 			dbg(1, "unknown exists/create notification %d\n", info->genlhdr->cmd);
@@ -1121,7 +1175,9 @@ static int apply_event(const char *prefix, struct genl_info *info, bool initial_
 			resource_statistics_from_attrs(&new_resource->statistics, info);
 			break;
 		case DRBD_DEVICE_STATE:
-			device = find_device_must(new_resource, ctx.ctx_volume);
+			device = find_device_check(new_resource, ctx.ctx_volume, strict);
+			if (!device)
+				break;
 			disk_conf_from_attrs(&device->disk_conf, info);
 			device->info.dev_disk_state = D_DISKLESS;
 			device->info.is_intentional_diskless = IS_INTENTIONAL_DEF;
@@ -1130,13 +1186,17 @@ static int apply_event(const char *prefix, struct genl_info *info, bool initial_
 			device_statistics_from_attrs(&device->statistics, info);
 			break;
 		case DRBD_CONNECTION_STATE:
-			connection = find_connection_must(new_resource, ctx.ctx_conn_name);
+			connection = find_connection_check(new_resource, ctx.ctx_conn_name, strict);
+			if (!connection)
+				break;
 			connection_info_from_attrs(&connection->info, info);
 			memset(&connection->statistics, -1, sizeof(connection->statistics));
 			connection_statistics_from_attrs(&connection->statistics, info);
 			break;
 		case DRBD_PEER_DEVICE_STATE:
-			peer_device = find_peer_device_must(new_resource, &ctx);
+			peer_device = find_peer_device_check(new_resource, &ctx, strict);
+			if (!peer_device)
+				break;
 			peer_device->info.peer_is_intentional_diskless = IS_INTENTIONAL_DEF;
 			peer_device_info_from_attrs(&peer_device->info, info);
 			memset(&peer_device->statistics, -1, sizeof(peer_device->statistics));
@@ -1146,12 +1206,12 @@ static int apply_event(const char *prefix, struct genl_info *info, bool initial_
 			/* DRBD does not send initial exists messages for paths
 			 * so we have to be prepared for changes to unknown
 			 * paths */
-			path = find_path_connection_must(new_resource, &ctx);
+			path = find_path_connection_check(new_resource, &ctx, strict);
 			if (path) {
 				drbd_path_info_from_attrs(&path->info, info);
 			} else {
 				path = new_path_from_info(info);
-				store_path_must(new_resource, path);
+				store_path_check(new_resource, path, strict);
 			}
 			break;
 		default:
@@ -1166,19 +1226,19 @@ static int apply_event(const char *prefix, struct genl_info *info, bool initial_
 			new_resource->destroyed = true;
 			break;
 		case DRBD_DEVICE_STATE:
-			delete_device_must(new_resource, ctx.ctx_volume);
+			delete_device_check(new_resource, ctx.ctx_volume, strict);
 			break;
 		case DRBD_CONNECTION_STATE:
-			delete_connection_must(new_resource, ctx.ctx_conn_name);
+			delete_connection_check(new_resource, ctx.ctx_conn_name, strict);
 			break;
 		case DRBD_PEER_DEVICE_STATE:
-			delete_peer_device_must(new_resource, &ctx);
+			delete_peer_device_check(new_resource, &ctx, strict);
 			break;
 		case DRBD_PATH_STATE:
 			/* DRBD does not send initial exists messages for paths
 			 * so we have to be prepared for destroy messages for
 			 * unknown paths */
-			delete_path_connection_must(new_resource, &ctx);
+			delete_path_connection_check(new_resource, &ctx, strict);
 			break;
 		default:
 			dbg(1, "unknown destroy notification %d\n", info->genlhdr->cmd);
