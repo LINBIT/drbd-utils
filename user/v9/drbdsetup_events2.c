@@ -154,8 +154,7 @@ static void delete_device_must(struct resources_list *resource, unsigned volume)
 	for (device = resource->devices; device; device = device->next) {
 		if (device->ctx.ctx_volume == volume) {
 			*previous_next = device->next;
-			free(device->disk_conf_nl);
-			free(device);
+			free_device(device);
 			return;
 		}
 		previous_next = &device->next;
@@ -210,10 +209,7 @@ static void delete_connection_must(struct resources_list *resource, const char *
 	for (connection = resource->connections; connection; connection = connection->next) {
 		if (!strcmp(connection->ctx.ctx_conn_name, name)) {
 			*previous_next = connection->next;
-			free(connection->path_list);
-			free(connection->net_conf);
-			free_peer_devices(connection->peer_devices);
-			free(connection);
+			free_connection(connection);
 			return;
 		}
 		previous_next = &connection->next;
@@ -283,8 +279,7 @@ static void delete_peer_device_must(struct resources_list *resource, struct drbd
 	for (peer_device = connection->peer_devices; peer_device; peer_device = peer_device->next) {
 		if (peer_device->ctx.ctx_volume == ctx->ctx_volume) {
 			*previous_next = peer_device->next;
-			free(peer_device->peer_device_conf);
-			free(peer_device);
+			free_peer_device(peer_device);
 			return;
 		}
 		previous_next = &peer_device->next;
