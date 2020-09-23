@@ -158,8 +158,11 @@ struct connections_list *new_connection_from_info(struct genl_info *info);
 struct peer_devices_list *new_peer_device_from_info(struct genl_info *info);
 struct paths_list *new_path_from_info(struct genl_info *info);
 void free_resources(struct resources_list *);
+void free_device(struct devices_list *);
 void free_devices(struct devices_list *);
+void free_connection(struct connections_list *);
 void free_connections(struct connections_list *);
+void free_peer_device(struct peer_devices_list *);
 void free_peer_devices(struct peer_devices_list *);
 void free_paths(struct paths_list *);
 

@@ -3454,13 +3454,18 @@ static struct devices_list *list_devices(char *resource_name)
 	return list;
 }
 
+void free_device(struct devices_list *device)
+{
+	free(device->disk_conf_nl);
+	free(device);
+}
+
 void free_devices(struct devices_list *devices)
 {
 	while (devices) {
 		struct devices_list *d = devices;
 		devices = devices->next;
-		free(d->disk_conf_nl);
-		free(d);
+		free_device(d);
 	}
 }
 
@@ -3572,16 +3577,21 @@ static struct connections_list *list_connections(char *resource_name)
 	return list;
 }
 
+void free_connection(struct connections_list *connection)
+{
+	free(connection->path_list);
+	free(connection->net_conf);
+	free_peer_devices(connection->peer_devices);
+	free_paths(connection->paths);
+	free(connection);
+}
+
 void free_connections(struct connections_list *connections)
 {
 	while (connections) {
 		struct connections_list *l = connections;
 		connections = connections->next;
-		free(l->path_list);
-		free(l->net_conf);
-		free_peer_devices(l->peer_devices);
-		free_paths(l->paths);
-		free(l);
+		free_connection(l);
 	}
 }
 
@@ -3658,13 +3668,18 @@ static struct peer_devices_list *list_peer_devices(char *resource_name)
 	return list;
 }
 
+void free_peer_device(struct peer_devices_list *peer_device)
+{
+	free(peer_device->peer_device_conf);
+	free(peer_device);
+}
+
 void free_peer_devices(struct peer_devices_list *peer_devices)
 {
 	while (peer_devices) {
 		struct peer_devices_list *p = peer_devices;
 		peer_devices = peer_devices->next;
-		free(p->peer_device_conf);
-		free(p);
+		free_peer_device(p);
 	}
 }
 
