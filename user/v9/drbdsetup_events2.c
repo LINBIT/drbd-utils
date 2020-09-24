@@ -1080,7 +1080,7 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 		}
 	}
 
-	return apply_event(timestamp_prefix, info, initial_state, true);
+	return apply_event(timestamp_prefix, info, initial_state, false);
 }
 
 static int apply_event(const char *prefix, struct genl_info *info, bool initial_state, bool strict)
