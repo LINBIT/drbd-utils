@@ -121,6 +121,13 @@ ocf_linbit_drbd.xml: ../../scripts/drbd.ocf ../ra2refentry.xsl
 		--stringparam provider linbit \
 		--stringparam version "$(PACKAGE_VERSION)" \
 		--output $@ ../ra2refentry.xsl -
+ocf_linbit_drbd-attr.xml: ../../scripts/drbd-attr ../ra2refentry.xsl
+	../../scripts/drbd-attr meta-data |\
+	$(XSLTPROC) --novalid \
+		--stringparam package "drbd-pacemaker" \
+		--stringparam provider linbit \
+		--stringparam version "$(PACKAGE_VERSION)" \
+		--output $@ ../ra2refentry.xsl -
 
 distclean:
 ifeq ($(make_doc),doc)
@@ -129,7 +136,7 @@ endif
 	rm -f *.ps.gz *.pdf *.ps *.html pod2htm*
 	rm -f $(FILES_REMOVE_ADD)
 
-.PRECIOUS: drbd.conf.xml drbdsetup.xml ocf_linbit_drbd.xml
+.PRECIOUS: drbd.conf.xml drbdsetup.xml ocf_linbit_drbd.xml ocf_linbit_drbd-attr.xml
 
 #######
 
@@ -143,7 +150,7 @@ install:
 	set -e; for f in $(MANPAGES) ; do \
 		s=$${f##*.}; \
 		b=$${f%.[0-9]}; \
-		case $$f in ocf_linbit_drbd.7) \
+		case $$f in ocf_linbit_drbd*.7) \
 			install -v -D -m 644 $$f $(DESTDIR)$(mandir)/$(MANLANG)/man$$s/$$f ; \
 			continue ;; \
 		esac ; \

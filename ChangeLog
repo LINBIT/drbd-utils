@@ -3,6 +3,8 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+ * New drbd-attr Pacemaker RA
+
 9.14.0
 --------
  * pacemaker: various fixes/improvements for PM >=1.1.15

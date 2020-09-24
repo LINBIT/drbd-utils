@@ -27,6 +27,7 @@ include $(TOPDIR)/documentation/common/Makefile_v9_com
 
 MANPAGES	= drbdsetup.8 drbd.conf.5 drbd.8 drbdadm.8 drbdmeta.8
 MANPAGES += ocf_linbit_drbd.7
+MANPAGES += ocf_linbit_drbd-attr.7
 ifeq ($(WITH_DRBDMON), yes)
 MANPAGES	+= drbdmon.8
 endif

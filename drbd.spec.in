@@ -198,6 +198,7 @@ This packages includes the DRBD administration tools.
 %{_mandir}/man8/drbdsetup-*
 %{_mandir}/man8/drbdadm-*
 %{_mandir}/man7/ocf_linbit_drbd.*
+%{_mandir}/man7/ocf_linbit_drbd-attr.*
 %{_mandir}/man5/drbd.conf-*
 %{_mandir}/man8/drbdmeta-*
 %if %{with drbdmon}
@@ -265,6 +266,7 @@ Pacemaker High Availability cluster manager.
 %{_prefix}/lib/drbd/crm-unfence-peer.9.sh
 %{_prefix}/lib/drbd/stonith_admin-fence-peer.sh
 %{_prefix}/lib/ocf/resource.d/linbit/drbd
+%{_prefix}/lib/ocf/resource.d/linbit/drbd-attr
 %{_prefix}/lib/ocf/resource.d/linbit/drbd.shellfuncs.sh
 %endif # with pacemaker
 
