@@ -96,7 +96,7 @@ monitor()
 
 list_existing_attributes()
 {
-	cibadmin -Q --xpath "//status/node_state[@id='$node_id']/transient_attributes/instance_attributes/nvpair[starts-with(@name,'${attr_name_prefix}-')]" |
+	cibadmin -Q --xpath "/cib/status/node_state[@id='$node_id']/transient_attributes/instance_attributes/nvpair[starts-with(@name,'${attr_name_prefix}-')]" |
 		sed -ne 's,^.* name="'"${attr_name_prefix}"'-\([^"]*\)".*,\1,p'
 }
 
