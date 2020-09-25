@@ -6,6 +6,7 @@
 
 OCF_RESKEY_dampening_delay_default=5
 OCF_RESKEY_attr_name_prefix_default=drbd-promotion-score
+OCF_RESKEY_record_event_details_default=false
 
 # see pacemaker:include/crm/crm.h CRM_SCORE_INFINITY
 MINUS_INFINITY=-1000000
@@ -46,6 +47,16 @@ You can chose that prefix here.
 </longdesc>
 <shortdesc lang="en">attrd_updater --name *prefix*-drbd_resource_name</shortdesc>
 <content type="string" default="$OCF_RESKEY_attr_name_prefix_default" />
+</parameter>
+
+<parameter name="record_event_details">
+<longdesc lang="en">
+It may be convenient to know which event lead to the current score.
+This setting toggles the recording of the event.
+The attributes will be named "*prefix*:event-details-drbd_resource_name".
+</longdesc>
+<shortdesc lang="en"></shortdesc>
+<content type="boolean" default="$OCF_RESKEY_record_event_details_default" />
 </parameter>
 </parameters>
 
@@ -109,6 +120,19 @@ re_init_daemon()
 	exec 0< <(exec drbdsetup events2 --timestamps)
 }
 
+delete_event_details()
+{
+	local name=$1
+	attrd_updater -n $attr_name_prefix:event-details-$name --delete
+}
+
+record_event_details()
+{
+	$record_event_details || return 0
+	local name=$1 ; shift # rest is "message"
+	attrd_updater -n $attr_name_prefix:event-details-$name --delay $dampening_delay --update-both "$*"
+}
+
 delete_name()
 {
 	local name=$1
@@ -116,6 +140,7 @@ delete_name()
 	# but no --update-delay-and-delete...
 	attrd_updater -n $attr_name_prefix-$name --delete
 	attrd_updater -n $attr_name_prefix-$name --update-delay --delay 0
+	delete_event_details $name
 }
 
 update_name_to_minus_inf()
@@ -155,10 +180,37 @@ handle_stale_attributes()
 	unset resources_known_to_drbdadm
 }
 
+remove_all_event_details()
+{
+	# !! NOT --delete --force --xpath,
+	# that would only manipulate the CIB,
+	# but the ATTRD would still remember.
+	local attr
+	for attr in $(
+		cibadmin -Q --xpath "/cib/status/node_state[@id='$node_id']/transient_attributes/instance_attributes/nvpair[starts-with(@name,'${attr_name_prefix}:event-details-')]" |
+			sed -ne 's,^.* name="\([^"]*\)".*,\1,p'
+		)
+	do
+		attrd_updater -n $attr --delete
+	done
+}
+
+toggle_event_details()
+{
+	if $record_event_details ; then
+		record_event_details=false
+		remove_all_event_details
+	else
+		record_event_details=true
+	fi
+}
+
 the-daemon()
 {
 	node_id=$(crm_node -i)
 	event=()
+
+	trap toggle_event_details USR1
 
 	re_init_daemon
 	trap "re_init_daemon" HUP
@@ -201,6 +253,7 @@ the-daemon()
 			event+=( "// attrd_updater failed with exit code $?" )
 			break
 		}
+		record_event_details $name "${event[*]}"
 
 		# let them know when we saw the last event, unless still within the initial state dump
 		[[ $status_delay ]] &&
@@ -257,6 +310,12 @@ stop()
 
 dampening_delay=${OCF_RESKEY_dampening_delay:=$OCF_RESKEY_dampening_delay_default}
 attr_name_prefix=${OCF_RESKEY_attr_name_prefix:=$OCF_RESKEY_attr_name_prefix_default}
+if ocf_is_true ${OCF_RESKEY_record_event_details:=$OCF_RESKEY_record_event_details_default} ; then
+	record_event_details=true
+else
+	record_event_details=false
+	remove_all_event_details
+fi
 
 PIDFILE=${HA_VARRUN%%/}/drbd-attr-${OCF_RESOURCE_INSTANCE}.pid
 
