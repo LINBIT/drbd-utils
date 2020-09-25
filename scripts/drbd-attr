@@ -106,7 +106,7 @@ re_init_daemon()
 	resources_known_to_drbdadm=$( drbadm sh-resources )
 	resources_seen_in_initial_dump=''
 	status_delay=''
-	exec 0< <(exec drbdsetup events2)
+	exec 0< <(exec drbdsetup events2 --timestamps)
 }
 
 delete_name()
@@ -158,16 +158,16 @@ handle_stale_attributes()
 the-daemon()
 {
 	node_id=$(crm_node -i)
-	tmp=()
+	event=()
 
 	re_init_daemon
 	trap "re_init_daemon" HUP
-	while prev=( "${tmp[@]}" ); read -a tmp; do
+	while prev=( "${event[@]}" ); read -a event; do
 		# Is this still *our* pidfile?
-		test $PIDFILE -ef /proc/self/fd/9 || { tmp="lost PIDFILE"; break; }
+		test $PIDFILE -ef /proc/self/fd/9 || { event="lost PIDFILE"; break; }
 
 		# handle end of initial state dump
-		if [[ "${tmp[0]} ${tmp[1]}" == "exists -" ]]; then
+		if [[ "${event[1]} ${event[2]}" == "exists -" ]]; then
 			handle_stale_attributes
 			attrd_updater -n $attr_name_prefix --update-both "(re)init completed at $(date "+%F %T") by $OCF_RESOURCE_INSTANCE [$BASHPID]" --delay 0
 			[[ $dampening_delay != 0 ]] && status_delay=$dampening_delay || status_delay=$OCF_RESKEY_dampening_delay_default
@@ -175,12 +175,12 @@ the-daemon()
 		fi
 
 		# ignore non-resource events for now
-		[[ ${tmp[1]} == resource ]] || continue
+		[[ ${event[2]} == resource ]] || continue
 
 		# parse the events line
 		name=''
 		promotion_score=''
-		for f in ${tmp[@]:2}; do
+		for f in ${event[@]:3}; do
 			k=${f%%:*}; v=${f#*:}
 			[[ $k == name ]]		&& name=$v
 			[[ $k == promotion_score ]]	&& promotion_score=$v
@@ -190,12 +190,12 @@ the-daemon()
 		[[ -n $name ]] || break
 
 		# record name, if still in initial state dump
-		[[ ${tmp[0]} == exists ]] && resources_seen_in_initial_dump+=" $name"
+		[[ ${event[1]} == exists ]] && resources_seen_in_initial_dump+=" $name"
 
 		# either this was a "destroy" event (and we remove the attribute),
 		# or the event contained a promotion_score,
 	        # or we ignore this line.
-		[[ ${tmp[0]} == destroy ]] || [[ $promotion_score ]] || continue
+		[[ ${event[1]} == destroy ]] || [[ $promotion_score ]] || continue
 
 		update_name_to_score $name $promotion_score
 
@@ -205,7 +205,7 @@ the-daemon()
 	done
 
 	# some means of "error reporting" ...
-	attrd_updater -n $attr_name_prefix --update-both "FAILED at $(date "+%F %T") as $OCF_RESOURCE_INSTANCE, inactive; last input: '${prev[*]}' // '${tmp[*]}'" --delay 0
+	attrd_updater -n $attr_name_prefix --update-both "FAILED at $(date "+%F %T") as $OCF_RESOURCE_INSTANCE, inactive; last input: '${prev[*]}' // '${event[*]}'" --delay 0
 
 	# Let them know we failed, but only do this if this script survived for
 	# a minute already, using the bash magic SECONDS variable.
