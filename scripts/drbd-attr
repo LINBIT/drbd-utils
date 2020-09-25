@@ -109,6 +109,52 @@ re_init_daemon()
 	exec 0< <(exec drbdsetup events2)
 }
 
+delete_name()
+{
+	local name=$1
+	# at the time of writing, there is only --update-both (delay and value),
+	# but no --update-delay-and-delete...
+	attrd_updater -n $attr_name_prefix-$name --delete
+	attrd_updater -n $attr_name_prefix-$name --update-delay --delay 0
+}
+
+update_name_to_minus_inf()
+{
+	local name=$1
+	attrd_updater -n $attr_name_prefix-$name --update-both $MINUS_INFINITY --delay 0
+}
+
+update_name_to_score()
+{
+	local name=$1 score=$2
+	case $score in
+	""|*[!0-9]*)
+		delete_name $name ;;
+	0)
+		update_name_to_minus_inf $name ;;
+	*)
+		attrd_updater -n $attr_name_prefix-$name --update-both $score --delay $dampening_delay
+	esac
+}
+
+handle_stale_attributes()
+{
+	local stale_and_unknown stale_but_known
+	stale_but_known=$(
+		join -v 2 <(printf "%s\n" $resources_seen_in_initial_dump | sort -u ) \
+			<(printf "%s\n" $resources_known_to_drbdadm | sort -u )
+		)
+	stale_and_unknown=$(
+		join -v 2 <(printf "%s\n" $resources_seen_in_initial_dump $resources_known_to_drbdadm | sort -u ) \
+			<(printf "%s\n" $resources_with_existing_attributes | sort )
+		)
+	for r in $stale_and_unknown ; do delete_name $r;  done
+	for r in $stale_but_known ; do update_name_to_minus_inf $r ; done
+	unset resources_with_existing_attributes
+	unset resources_seen_in_initial_dump
+	unset resources_known_to_drbdadm
+}
+
 the-daemon()
 {
 	node_id=$(crm_node -i)
@@ -117,64 +163,47 @@ the-daemon()
 	re_init_daemon
 	trap "re_init_daemon" HUP
 	while prev=( "${tmp[@]}" ); read -a tmp; do
+		# Is this still *our* pidfile?
 		test $PIDFILE -ef /proc/self/fd/9 || { tmp="lost PIDFILE"; break; }
-		if [[ ${tmp[*]} == "exists -" ]]; then
-			stale_but_known=$(
-				join -v 2 <(printf "%s\n" $resources_seen_in_initial_dump | sort -u ) \
-					<(printf "%s\n" $resources_known_to_drbdadm | sort -u )
-				)
-			stale_and_unknown=$(
-				join -v 2 <(printf "%s\n" $resources_seen_in_initial_dump $resources_known_to_drbdadm | sort -u ) \
-					<(printf "%s\n" $resources_with_existing_attributes | sort )
-				)
-			for r in $stale_and_unknown ; do
-				attrd_updater -n $attr_name_prefix-$r --delete
-			done
-			for r in $stale_but_known ; do
-				attrd_updater -n $attr_name_prefix-$r --update-both $MINUS_INFINITY --delay $dampening_delay
-			done
-			unset resources_with_existing_attributes
-			unset resources_seen_in_initial_dump
-			unset resources_known_to_drbdadm
-			unset stale_and_unknown
-			unset stale_but_known
+
+		# handle end of initial state dump
+		if [[ "${tmp[0]} ${tmp[1]}" == "exists -" ]]; then
+			handle_stale_attributes
 			attrd_updater -n $attr_name_prefix --update-both "(re)init completed at $(date "+%F %T") by $OCF_RESOURCE_INSTANCE [$BASHPID]" --delay 0
 			[[ $dampening_delay != 0 ]] && status_delay=$dampening_delay || status_delay=$OCF_RESKEY_dampening_delay_default
+			continue
 		fi
+
+		# ignore non-resource events for now
 		[[ ${tmp[1]} == resource ]] || continue
+
+		# parse the events line
 		name=''
-		# useless in this context :-(
-		# may_promote=''
-		# is_primary=''
 		promotion_score=''
-		for f in ${tmp[@]}; do
-			case $f in
-			name:*) name=${f##*:} ;;
-			# may_promote:*) may_promote=${f##*:} ;;
-			# role:Primary) is_primary=yes ;;
-			promotion_score:*) promotion_score=${f##*:} ;;
-			esac
+		for f in ${tmp[@]:2}; do
+			k=${f%%:*}; v=${f#*:}
+			[[ $k == name ]]		&& name=$v
+			[[ $k == promotion_score ]]	&& promotion_score=$v
 		done
-		if [[ -z $name ]] ; then
-			# "unexpected input: '${tmp[*]}'"
-			break
-		fi
+
+		# events lines must always contain the resource name
+		[[ -n $name ]] || break
+
+		# record name, if still in initial state dump
 		[[ ${tmp[0]} == exists ]] && resources_seen_in_initial_dump+=" $name"
 
-		# either this was a "destroy" event,
+		# either this was a "destroy" event (and we remove the attribute),
 		# or the event contained a promotion_score,
 	        # or we ignore this line.
 		[[ ${tmp[0]} == destroy ]] || [[ $promotion_score ]] || continue
 
-		if [[ $promotion_score != *[!0-9]* ]] ; then
-			[[ $promotion_score == 0 ]] && promotion_score=$MINUS_INFINITY
-			attrd_updater -n $attr_name_prefix-$name --update-both $promotion_score --delay $dampening_delay
-		else
-			attrd_updater -n $attr_name_prefix-$name --delete
-		fi
+		update_name_to_score $name $promotion_score
+
+		# let them know when we saw the last event, unless still within the initial state dump
 		[[ $status_delay ]] &&
-		attrd_updater -n $attr_name_prefix --update-both "Last update at $(date "+%F %T") by $OCF_RESOURCE_INSTANCE [$BASHPID]" --delay $status_delay
+		attrd_updater -n $attr_name_prefix --update-both "Last event at $(date "+%F %T") by $OCF_RESOURCE_INSTANCE [$BASHPID]" --delay $status_delay
 	done
+
 	# some means of "error reporting" ...
 	attrd_updater -n $attr_name_prefix --update-both "FAILED at $(date "+%F %T") as $OCF_RESOURCE_INSTANCE, inactive; last input: '${prev[*]}' // '${tmp[*]}'" --delay 0
 
