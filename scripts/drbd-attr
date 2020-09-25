@@ -82,8 +82,8 @@ validate-all()
 	# ocf_check_binary join
 
 	# we need at least drbd utils 9.14.1
-	if (( $(drbdadm -V | sed -ne 's/^DRBDADM_VERSION_CODE=\(0x[0-9a-f]*\)$/\1/p') < 0x090e01 )) ; then
-		ocf_exit_reason "need at least drbd-utils 9.14.1"
+	if (( $(drbdadm -V | sed -ne 's/^DRBDADM_VERSION_CODE=\(0x[0-9a-f]*\)$/\1/p') < 0x090e00 )) ; then
+		ocf_exit_reason "need at least drbd-utils 9.14.0"
 		return $OCF_ERR_INSTALLED
 	fi
 
