@@ -45,7 +45,7 @@ The attributes will be named "*prefix*-drbd_resource_name".
 You can chose that prefix here.
 </longdesc>
 <shortdesc lang="en">attrd_updater --name *prefix*-drbd_resource_name</shortdesc>
-<content type="integer" default="$OCF_RESKEY_attr_name_prefix_default" />
+<content type="string" default="$OCF_RESKEY_attr_name_prefix_default" />
 </parameter>
 </parameters>
 
