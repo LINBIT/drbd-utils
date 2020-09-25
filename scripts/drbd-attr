@@ -177,8 +177,13 @@ the-daemon()
 	done
 	# some means of "error reporting" ...
 	attrd_updater -n $attr_name_prefix --update-both "FAILED at $(date "+%F %T") as $OCF_RESOURCE_INSTANCE, inactive; last input: '${prev[*]}' // '${tmp[*]}'" --delay 0
-	# maybe?
-	# crm_resource --fail --resource $OCF_RESOURCE_INSTANCE
+
+	# Let them know we failed, but only do this if this script survived for
+	# a minute already, using the bash magic SECONDS variable.
+	# If we did not make it that long, don't immediately report that failure,
+	# I want to avoid a potentially "tight" recovery loop.
+	# Pacemaker will notice on the next monitoring interval,
+	(( $SECONDS >= 60 )) && crm_resource --fail --resource $OCF_RESOURCE_INSTANCE
 }
 
 start()
