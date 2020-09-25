@@ -197,7 +197,10 @@ the-daemon()
 	        # or we ignore this line.
 		[[ ${event[1]} == destroy ]] || [[ $promotion_score ]] || continue
 
-		update_name_to_score $name $promotion_score
+		update_name_to_score $name $promotion_score || {
+			event+=( "// attrd_updater failed with exit code $?" )
+			break
+		}
 
 		# let them know when we saw the last event, unless still within the initial state dump
 		[[ $status_delay ]] &&
