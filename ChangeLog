@@ -3,7 +3,11 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.15.0
+--------
  * New drbd-attr Pacemaker RA
+ * events2: handle mixed initial state and multicast events
+ * events2: fix regression to always print resync done
 
 9.14.0
 --------
