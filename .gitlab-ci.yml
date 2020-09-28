@@ -2,7 +2,7 @@ stages:
   - build
 
 variables:
-  BUILD_HELPERS_VERSION: 880b246c84c398d63dd3478e8932a9fcdae72e9b
+  BUILD_HELPERS_VERSION: fa389c8d20dd8f6a7a3b3973bdb14fc6597008cf
 
 .setup-lbbuild:
   before_script:
@@ -29,7 +29,7 @@ build:
       mkdir -p source/drbd-test-bundle
       curl -sSL $LINBIT_REGISTRY_URL/repository/test-suite/drbd-test-bundle.tgz | tar -C source/drbd-test-bundle -xvzf -
     - |
-      dummy-release.sh drbd-utils "$DRBD_UTILS_VERSION" drbd.spec.in
+      dummy-release.sh drbd-utils "$DRBD_UTILS_VERSION" 1 drbd.spec.in
       ./autogen.sh
       ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --without-83support --without-manual
       make debrelease FORCE=1 REL_VERSION="$DRBD_UTILS_VERSION"
