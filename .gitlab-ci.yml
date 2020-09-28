@@ -3,12 +3,42 @@ stages:
 
 variables:
   BUILD_HELPERS_VERSION: fa389c8d20dd8f6a7a3b3973bdb14fc6597008cf
+  # we have to change the way GitLab CI clones the repository.
+  # by default, it is shallow, which gives us a wrong commit count when
+  # we do `git rev-list --count origin/master` below.
+  GIT_DEPTH: 0
+  GIT_STRATEGY: clone
+  GIT_SUBMODULE_STRATEGY: normal
 
 .setup-lbbuild:
   before_script:
     - . .gitlab/gitlab-utils.sh
     - drbd_prepare_tools
     - drbd_fetch_lbbuildctl
+    - |
+      drbd_utils_build () {
+        local version="$1"
+        local release="$2"
+        mkdir -p source/drbd-test-bundle
+        curl -sSL $LINBIT_REGISTRY_URL/repository/test-suite/drbd-test-bundle.tgz | tar -C source/drbd-test-bundle -xvzf -
+
+        dummy-release.sh drbd-utils "$version" "$release" drbd.spec.in
+        ./autogen.sh
+        ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --without-83support --without-manual
+        make debrelease FORCE=1 REL_VERSION="$version"
+        curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD --upload-file drbd-utils-*.tar.gz $LINBIT_REGISTRY_URL/repository/lbbuild-upstream/
+
+        META_JSON=$(rq -t < source/drbd-test-bundle/virter/vms.toml | jq '.vms[].metadata')
+        echo "$META_JSON" | jq -r '"-d " + .BuildDistribution' \
+          | sed -re 's/rhel([[:digit:]])\.[[:digit:]]/rhel\1.0/g' \
+          | sort | uniq \
+          | parallel --colsep ' ' -k -j24 \
+          lbbuildctl build drbd-utils --arch amd64 --ci -v "$DRBD_UTILS_VERSION" -l \
+            -e LINBIT_REGISTRY_USER=$LINBIT_REGISTRY_USER \
+            -e LINBIT_REGISTRY_PASSWORD=$LINBIT_REGISTRY_PASSWORD \
+            -e LINBIT_REGISTRY_URL=$LINBIT_REGISTRY_URL \
+            {}
+      }
 
 # rules clause determining whether to build
 .rules-build:
@@ -25,23 +55,18 @@ build:
       - download
   script:
     - DRBD_UTILS_VERSION=9.0.0.$CI_COMMIT_SHA
-    - |
-      mkdir -p source/drbd-test-bundle
-      curl -sSL $LINBIT_REGISTRY_URL/repository/test-suite/drbd-test-bundle.tgz | tar -C source/drbd-test-bundle -xvzf -
-    - |
-      dummy-release.sh drbd-utils "$DRBD_UTILS_VERSION" 1 drbd.spec.in
-      ./autogen.sh
-      ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --without-83support --without-manual
-      make debrelease FORCE=1 REL_VERSION="$DRBD_UTILS_VERSION"
-      curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD --upload-file drbd-utils-*.tar.gz $LINBIT_REGISTRY_URL/repository/lbbuild-upstream/
-    - |
-      META_JSON=$(rq -t < source/drbd-test-bundle/virter/vms.toml | jq '.vms[].metadata')
-      echo "$META_JSON" | jq -r '"-d " + .BuildDistribution' \
-        | sed -re 's/rhel([[:digit:]])\.[[:digit:]]/rhel\1.0/g' \
-        | sort | uniq \
-        | parallel --colsep ' ' -k -j24 \
-        lbbuildctl build drbd-utils --arch amd64 --ci -v "$DRBD_UTILS_VERSION" -l \
-          -e LINBIT_REGISTRY_USER=$LINBIT_REGISTRY_USER \
-          -e LINBIT_REGISTRY_PASSWORD=$LINBIT_REGISTRY_PASSWORD \
-          -e LINBIT_REGISTRY_URL=$LINBIT_REGISTRY_URL \
-          {}
+    - drbd_utils_build $DRBD_UTILS_VERSION 1
+
+build-latest:
+  stage: build
+  rules:
+    - if: $CI_COMMIT_BRANCH == 'master'
+  extends: .setup-lbbuild
+  image: $LINBIT_DOCKER_REGISTRY/build-helpers:$BUILD_HELPERS_VERSION
+  cache:
+    paths:
+      - download
+  script:
+    - DRBD_UTILS_VERSION=9.0.0.latest
+    - DRBD_UTILS_RELEASE=$(git rev-list --count origin/master)
+    - drbd_utils_build $DRBD_UTILS_VERSION $DRBD_UTILS_RELEASE
