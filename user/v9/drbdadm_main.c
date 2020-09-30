@@ -59,6 +59,7 @@
 #include "drbdadm_dump.h"
 #include "shared_main.h"
 #include "drbdadm_parser.h"
+#include "drbdadm_on_demand_parsing.h"
 
 #define MAX_ARGS 40
 

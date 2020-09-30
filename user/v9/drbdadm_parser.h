@@ -23,7 +23,6 @@
 
  */
 
-
 enum range_checks
 {
 	R_MINOR_COUNT,
@@ -142,4 +141,3 @@ void pe_expected_got(const char *exp, int got);
 	}							\
 	token;							\
 })
-
