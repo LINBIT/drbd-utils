@@ -43,6 +43,7 @@
 #include "drbdtool_common.h"
 #include "drbdadm_parser.h"
 #include "shared_parser.h"
+#include "drbdadm_on_demand_parsing.h"
 #include <config_flags.h>
 
 YYSTYPE yylval;
@@ -1941,6 +1942,8 @@ void include_stmt(char *str)
 	r = glob(str, 0, NULL, &glob_buf);
 	if (r == 0) {
 		for (i=0; i<glob_buf.gl_pathc; i++) {
+			add_cfgfile_by_path(glob_buf.gl_pathv[i]);
+
 			if (was_file_already_seen(glob_buf.gl_pathv[i]))
 				continue;
 

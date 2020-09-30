@@ -65,7 +65,7 @@ else
 DESTDIR ?= /
 endif
 
-CFLAGS += -Wall -I../../drbd-headers -I.. -I. -I../shared
+CFLAGS += -Wall -std=gnu99 -I../../drbd-headers -I.. -I. -I../shared
 ifeq ($(WITH_WINDRBD),yes)
 CFLAGS += -I../windrbd-compat-headers
 endif
@@ -74,7 +74,8 @@ CFLAGS += $(EXTRA_CFLAGS)
 drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_postparse.o \
 	      drbdadm_main.o drbdadm_adjust.o drbdadm_dump.o drbdtool_common.o \
 	      drbdadm_usage_cnt.o drbd_buildtag.o registry.o config_flags.o \
-	      libnla.o drbd_nla.o shared_tool.o shared_main.o shared_parser.o
+	      libnla.o drbd_nla.o shared_tool.o shared_main.o shared_parser.o \
+	      drbdadm_on_demand_parsing.o
 
 drbdsetup-core-obj = libnla.o registry.o drbdsetup.o drbdtool_common.o \
 		     drbd_buildtag.o drbd_strings.o config_flags.o drbd_nla.o \
