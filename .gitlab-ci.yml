@@ -1,8 +1,11 @@
 stages:
   - build
+  - test
 
 variables:
-  BUILD_HELPERS_VERSION: fa389c8d20dd8f6a7a3b3973bdb14fc6597008cf
+  VIRTER_VERSION: v0.5.0
+  VMSHED_VERSION: v0.5.0
+  BUILD_HELPERS_VERSION: c0d39c0e5a2235262f21d072c4bf3b2dd62b2040
   # we have to change the way GitLab CI clones the repository.
   # by default, it is shallow, which gives us a wrong commit count when
   # we do `git rev-list --count origin/master` below.
@@ -19,8 +22,8 @@ variables:
       drbd_utils_build () {
         local version="$1"
         local release="$2"
-        mkdir -p source/drbd-test-bundle
-        curl -sSL $LINBIT_REGISTRY_URL/repository/test-suite/drbd-test-bundle.tgz | tar -C source/drbd-test-bundle -xvzf -
+        mkdir -p drbd-test-bundle
+        curl -sSL $LINBIT_REGISTRY_URL/repository/test-suite/drbd-test-bundle.tgz | tar -C drbd-test-bundle -xvzf -
 
         dummy-release.sh drbd-utils "$version" "$release" drbd.spec.in
         ./autogen.sh
@@ -28,7 +31,7 @@ variables:
         make debrelease FORCE=1 REL_VERSION="$version"
         curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD --upload-file drbd-utils-*.tar.gz $LINBIT_REGISTRY_URL/repository/lbbuild-upstream/
 
-        META_JSON=$(rq -t < source/drbd-test-bundle/virter/vms.toml | jq '.vms[].metadata')
+        META_JSON=$(rq -t < drbd-test-bundle/virter/vms.toml | jq '.vms[].metadata')
         echo "$META_JSON" | jq -r '"-d " + .BuildDistribution' \
           | sed -re 's/rhel([[:digit:]])\.[[:digit:]]/rhel\1.0/g' \
           | sort | uniq \
@@ -56,6 +59,11 @@ build:
   script:
     - DRBD_UTILS_VERSION=9.0.0.$CI_COMMIT_SHA
     - drbd_utils_build $DRBD_UTILS_VERSION 1
+  artifacts:
+    paths:
+      - drbd-test-bundle
+    expire_in: 1 week
+
 
 build-latest:
   stage: build
@@ -70,3 +78,40 @@ build-latest:
     - DRBD_UTILS_VERSION=9.0.0.latest
     - DRBD_UTILS_RELEASE=$(git rev-list --count origin/master)
     - drbd_utils_build $DRBD_UTILS_VERSION $DRBD_UTILS_RELEASE
+
+
+drbd-tests:
+  stage: test
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+  tags:
+    - libvirt
+  cache:
+    paths:
+      - download
+  script:
+    - curl -sSfL -u gitlab-ci-token:$CI_JOB_TOKEN $CI_SERVER_URL/linbit/build-helpers/-/archive/$BUILD_HELPERS_VERSION/ignored.tar.gz | tar -xvzf -
+    - mv build-helpers-* build-helpers
+    - . build-helpers/gitlab-utils.sh
+    - |
+      ci_prepare_tools
+      ci_fetch_rq
+      ci_fetch_binary virter virter-$VIRTER_VERSION https://github.com/LINBIT/virter/releases/download/$VIRTER_VERSION/virter-linux-amd64
+      ci_fetch_binary vmshed vmshed-$VMSHED_VERSION https://github.com/LINBIT/vmshed/releases/download/$VMSHED_VERSION/vmshed-linux-amd64
+    - docker image pull $LINBIT_DOCKER_REGISTRY/drbd9-tests:latest
+    - |
+      export DRBD_VERSION=9.0.0.latest
+      export DRBD_UTILS_VERSION=9.0.0.$CI_COMMIT_SHA-1
+      export DRBD9_TESTS_VERSION=latest
+      ./drbd-test-bundle/virter/run-test.sh
+  dependencies:
+    - build
+  artifacts:
+    # provide a convenient name so that the downloaded artifacts can be identified
+    name: $CI_PROJECT_NAME-$CI_JOB_ID
+    paths:
+      - tests-out/
+    when: always
+    reports:
+      junit: tests-out/test-results/*.xml
+
