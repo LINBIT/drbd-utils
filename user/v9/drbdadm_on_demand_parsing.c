@@ -1,6 +1,7 @@
 #include "drbdadm_on_demand_parsing.h"
 #include "shared_main.h"
 #include "shared_tool.h"
+#include "shared_parser.h"
 #include <stdio.h>
 #include <limits.h>
 #include <stdlib.h>
