@@ -2965,8 +2965,11 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 			config_test = optarg;
 			break;
 		case 'E':
-			/* Remember as absolute name */
-			was_file_already_seen(optarg);
+			{
+				/* Remember as absolute name */
+				struct parser_file_state *const file_state = add_cfgfile_by_path(optarg);
+				file_state->prevent_load = true;
+			}
 			break;
 		case 's':
 			{

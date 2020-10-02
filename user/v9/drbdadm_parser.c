@@ -1923,45 +1923,40 @@ static struct d_resource *template_file(const char *res_name)
 
 void include_stmt(char *str)
 {
+	const int cur_dir = pushd_to_current_config_file_unless_stdin();
+
 	glob_t glob_buf;
-	int cwd;
-	FILE *f;
-	size_t i;
-	int r;
-
-	cwd = pushd_to_current_config_file_unless_stdin();
-
-	r = glob(str, 0, NULL, &glob_buf);
-	if (r == 0) {
-		for (i=0; i<glob_buf.gl_pathc; i++) {
-			add_cfgfile_by_path(glob_buf.gl_pathv[i]);
-
-			if (was_file_already_seen(glob_buf.gl_pathv[i]))
-				continue;
-
-			f = fopen(glob_buf.gl_pathv[i], "re");
-			if (f) {
-				include_file(f, strdup(glob_buf.gl_pathv[i]));
-				fclose(f);
-			} else {
-				err("%s:%d: Failed to open include file '%s'.\n",
-				    config_save, line, glob_buf.gl_pathv[i]);
-				config_valid = 0;
+	const int glob_rc = glob(str, 0, NULL, &glob_buf);
+	if (glob_rc == 0) {
+		for (size_t idx = 0; idx < glob_buf.gl_pathc; ++idx) {
+			const char *const rel_path = glob_buf.gl_pathv[idx];
+			struct parser_file_state *const file_state = add_cfgfile_by_path(rel_path);
+			if (!(file_state->is_loaded || file_state->prevent_load)) {
+				FILE *const cfgfile = fopen(rel_path, "re");
+				if (cfgfile != NULL) {
+					include_file(cfgfile, strdup(rel_path));
+					fclose(cfgfile);
+					file_state->is_loaded = true;
+				} else {
+					err("%s:%d: Failed to open include file '%s'.\n",
+					    config_save, line, rel_path);
+					config_valid = 0;
+				}
 			}
 		}
 		globfree(&glob_buf);
-	} else if (r == GLOB_NOMATCH) {
+	} else if (glob_rc == GLOB_NOMATCH) {
 		if (!strchr(str, '?') && !strchr(str, '*') && !strchr(str, '[')) {
 			err("%s:%d: Failed to open include file '%s'.\n",
 			    config_save, line, str);
 			config_valid = 0;
 		}
 	} else {
-		err("glob() failed: %d\n", r);
+		err("glob() failed: %d\n", glob_rc);
 		exit(E_USAGE);
 	}
 
-	popd(cwd);
+	popd(cur_dir);
 }
 
 static void validate_kmod(int token)
