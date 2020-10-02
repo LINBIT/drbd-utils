@@ -45,7 +45,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <linux/sockios.h>
-#include <linux/netdevice.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>

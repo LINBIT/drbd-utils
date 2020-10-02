@@ -71,3 +71,11 @@ void include_file(FILE *f, char *name)
 	my_parse();
 	restore_parse_context(&buffer);
 }
+
+int btree_key_cmp(const void *const cur_data, const void *const other_data)
+{
+	const ENTRY *const cur_entry = (const ENTRY *)  cur_data;
+	const ENTRY *const other_entry = (const ENTRY *) other_data;
+
+	return strcmp((const char *) cur_entry->key, (const char *) other_entry->key);
+}

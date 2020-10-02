@@ -240,14 +240,6 @@ void *global_btree = NULL;
 /* some settings need only be unique within one resource definition. */
 void *per_resource_btree = NULL;
 
-int btree_key_cmp(const void *a, const void *b)
-{
-	ENTRY *ka = (ENTRY*)a;
-	ENTRY *kb = (ENTRY*)b;
-
-	return strcmp((char*)ka->key, (char*)kb->key);
-}
-
 void free_bt_node(void *node)
 {
 	ENTRY *e = node;

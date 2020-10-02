@@ -37,5 +37,6 @@ void restore_parse_context(struct include_file_buffer *buffer);
 int check_uniq(const char *what, const char *fmt, ...);
 int check_upr(const char *what, const char *fmt, ...);
 
+int btree_key_cmp(const void *cur_item, const void *other_item);
 
 #endif
