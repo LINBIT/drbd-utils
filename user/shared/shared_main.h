@@ -24,8 +24,11 @@
 #ifndef __SHARED_MAIN_H__
 #define __SHARED_MAIN_H__
 
-#include <netinet/in.h>		/* for IFNAMSIZ */
+// IFNAMSIZ is declared in net/if.h
+#include <net/if.h>
 #include <stdio.h>		/* for NULL */
+#include <stdint.h>
+#include <sys/types.h>
 
 #define CMD_TIMEOUT_SHORT_DEF 5
 #define CMD_TIMEOUT_MEDIUM_DEF 121
