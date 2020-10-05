@@ -107,8 +107,11 @@ monitor()
 
 list_existing_attributes()
 {
-	cibadmin -Q --xpath "/cib/status/node_state[@id='$node_id']/transient_attributes/instance_attributes/nvpair[starts-with(@name,'${attr_name_prefix}-')]" |
-		sed -ne 's,^.* name="'"${attr_name_prefix}"'-\([^"]*\)".*,\1,p'
+	local xpath
+	xpath="/cib/status/node_state[@id='$node_id']/transient_attributes"
+	xpath+="/instance_attributes/nvpair"
+	xpath+="[starts-with(@name,'${attr_name_prefix}-')]"
+	cibadmin -Q --xpath "$xpath" 2>/dev/null | sed -ne 's,^.* name="'"${attr_name_prefix}"'-\([^"]*\)".*,\1,p'
 }
 
 re_init_daemon()
@@ -185,9 +188,12 @@ remove_all_event_details()
 	# !! NOT --delete --force --xpath,
 	# that would only manipulate the CIB,
 	# but the ATTRD would still remember.
-	local attr
+	local attr xpath
+	xpath="/cib/status/node_state[@id='$node_id']/transient_attributes"
+	xpath+="/instance_attributes/nvpair"
+	xpath+="[starts-with(@name,'${attr_name_prefix}:event-details-')]"
 	for attr in $(
-		cibadmin -Q --xpath "/cib/status/node_state[@id='$node_id']/transient_attributes/instance_attributes/nvpair[starts-with(@name,'${attr_name_prefix}:event-details-')]" |
+		cibadmin -Q --xpath "$xpath" 2>/dev/null |
 			sed -ne 's,^.* name="\([^"]*\)".*,\1,p'
 		)
 	do
