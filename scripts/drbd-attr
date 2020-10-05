@@ -73,13 +73,13 @@ ___
 
 validate-all()
 {
-	ocf_check_binary drbdadm
-	ocf_check_binary drbdsetup
+	check_binary drbdadm
+	check_binary drbdsetup
 
 	# I think we can expect "coreutils"...
-	# ocf_check_binary stat
-	# ocf_check_binary sort
-	# ocf_check_binary join
+	# check_binary stat
+	# check_binary sort
+	# check_binary join
 
 	# we need at least drbd utils 9.14.1
 	if (( $(drbdadm -V | sed -ne 's/^DRBDADM_VERSION_CODE=\(0x[0-9a-f]*\)$/\1/p') < 0x090e00 )) ; then
