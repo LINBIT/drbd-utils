@@ -320,7 +320,7 @@ if ocf_is_true ${OCF_RESKEY_record_event_details:=$OCF_RESKEY_record_event_detai
 	record_event_details=true
 else
 	record_event_details=false
-	remove_all_event_details
+	case $__OCF_ACTION in start|stop) remove_all_event_details;; esac
 fi
 
 PIDFILE=${HA_VARRUN%%/}/drbd-attr-${OCF_RESOURCE_INSTANCE}.pid
