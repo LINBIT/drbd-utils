@@ -8,6 +8,8 @@
 #include <search.h>
 #include <string.h>
 
+static void load_resource_file_state(const void *const node, const VISIT phase, const int depth);
+static void load_all_resources_res_state(const void *const node, const VISIT phase, const int depth);
 static ENTRY *get_or_create_res_map_entry(const char *const path);
 static ENTRY *get_or_create_res_map_entry(const char *const path);
 static struct parser_file_state *create_parser_file_state(const char *const canon_path,
@@ -19,6 +21,8 @@ static void debug_list_global_res_map(void);
 static void debug_list_global_path_map(void);
 static void debug_list_res_state_node(const void *const node, const VISIT phase, const int depth);
 static void debug_list_file_state_node(const void *const node, const VISIT phase, const int depth);
+
+bool defer_load = true;
 
 /*
  * Map of canonical configuration file path to parser_res_state
@@ -138,6 +142,65 @@ struct parser_file_state *add_cfgfile_by_path(const char *const path)
 		}
 
 		return file_state;
+	}
+}
+
+/**
+ * Loads all configuration files that are associated with the specified resource name
+ */
+void load_resource(const char *const res_name)
+{
+	const ENTRY res_search_key = {(char *) res_name, NULL};
+	void *const res_entry_node = tfind(&res_search_key, &global_res_map, &btree_key_cmp);
+	if (res_entry_node != NULL) {
+		const ENTRY *const res_entry = *((ENTRY **) res_entry_node);
+		struct parser_res_state *const res_state = res_entry->data;
+		if (!res_state->is_loaded) {
+			twalk(res_state->parser_file_state_map, &load_resource_file_state);
+			res_state->is_loaded = true;
+		}
+	}
+}
+
+/**
+ * Loads all configuration files that are not loaded yet
+ */
+void load_all_resources(void)
+{
+	twalk(global_res_map, &load_all_resources_res_state);
+}
+
+/**
+ * Per-node handler function called by load_all_resources
+ */
+static void load_all_resources_res_state(const void *const node, const VISIT phase, const int depth)
+{
+	const ENTRY *const res_entry = *((ENTRY **) node);
+	struct parser_res_state *const res_state = res_entry->data;
+	if (!res_state->is_loaded) {
+		twalk(res_state->parser_file_state_map, &load_resource_file_state);
+	}
+	res_state->is_loaded = true;
+}
+
+/**
+ * Per-node handler function called by load_resources and load_all_resources
+ * (through its load_all_resoures_res_state per-node handler function)
+ *
+ * Initiates loading of the configuration file specified by an entry in the file state map
+ * associated with a resource. This function is called for each entry in the resource's
+ * file state map.
+ */
+static void load_resource_file_state(const void *const node, const VISIT phase, const int depth)
+{
+	if (phase == postorder || phase == leaf) {
+		const ENTRY *const file_entry = *((ENTRY **) node);
+		struct parser_file_state *const file_state = file_entry->data;
+		if (!file_state->is_loaded && !file_state->prevent_load) {
+			if (load_config_file(file_state->canon_path)) {
+				file_state->is_loaded = true;
+			}
+		}
 	}
 }
 

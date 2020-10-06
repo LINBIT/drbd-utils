@@ -24,7 +24,15 @@ struct parser_res_state {
 	bool is_loaded;
 };
 
+extern bool defer_load;
+
 void debug_on_demand_parsing(void);
 
 const char *create_res_name_from_path(const char *const path);
 struct parser_file_state *add_cfgfile_by_path(const char *const path);
+void load_resource(const char *const res_name);
+void load_all_resources(void);
+
+typedef bool (*config_file_loader_fn)(const char *file_name);
+
+extern bool load_config_file(const char *file_name);
