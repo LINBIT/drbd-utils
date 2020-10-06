@@ -109,6 +109,15 @@ static bool json_output = false;
 #define pJ(fmt, args...) do { if (json_output) printI(fmt, ##args); } while(0)
 #define pD(fmt, args...) do { if (!json_output) printI(fmt, ##args); } while(0)
 
+#define PTR_NONNULL_OR_EXIT(p) do { \
+	if ((p) == NULL) { \
+		fprintf(stderr, "%s: pointer NULL\n", __func__); \
+		exit(20); \
+	} \
+} while(0)
+
+#define PTR_NONNULL_OR_EXIT2(p) do { PTR_NONNULL_OR_EXIT(p); PTR_NONNULL_OR_EXIT(*p); } while(0)
+
 enum usage_type {
 	BRIEF,
 	FULL,
@@ -3298,6 +3307,7 @@ static int remember_resource(struct drbd_cmd *cmd, struct genl_info *info, void 
 
 	if (info) {
 		struct resources_list *r = new_resource_from_info(info);
+		PTR_NONNULL_OR_EXIT2(tail);
 		**tail = r;
 		*tail = &r->next;
 	}
@@ -3415,6 +3425,7 @@ static int remember_device(struct drbd_cmd *cm, struct genl_info *info, void *u_
 
 	if (info) {
 		struct devices_list *d = new_device_from_info(info);
+		PTR_NONNULL_OR_EXIT2(tail);
 		**tail = d;
 		*tail = &d->next;
 	}
@@ -3507,6 +3518,7 @@ static int remember_connection(struct drbd_cmd *cmd, struct genl_info *info, voi
 
 	if (info) {
 		struct connections_list *c = new_connection_from_info(info);
+		PTR_NONNULL_OR_EXIT2(tail);
 		**tail = c;
 		*tail = &c->next;
 	}
@@ -3629,6 +3641,7 @@ static int remember_peer_device(struct drbd_cmd *cmd, struct genl_info *info, vo
 
 	if (info) {
 		struct peer_devices_list *p = new_peer_device_from_info(info);
+		PTR_NONNULL_OR_EXIT2(tail);
 		**tail = p;
 		*tail = &p->next;
 	}
@@ -3876,7 +3889,7 @@ static int down_cmd(struct drbd_cmd *cm, int argc, char **argv)
 
 void peer_devices_append(struct peer_devices_list *peer_devices, struct genl_info *info)
 {
-	struct peer_devices_list *peer_device, **tail;
+	struct peer_devices_list *peer_device, **tail = NULL;
 
 	if (!peer_devices)
 		return;
