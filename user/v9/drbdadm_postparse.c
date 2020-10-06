@@ -31,6 +31,7 @@
 #include <assert.h>
 #include "drbdtool_common.h"
 #include "drbdadm.h"
+#include "drbdadm_on_demand_parsing.h"
 #include "config_flags.h"
 #include <search.h>
 #include <arpa/inet.h>
@@ -40,6 +41,7 @@
 static void inherit_volumes(struct volumes *from, struct d_host_info *host);
 static void check_volume_sets_equal(struct d_resource *, struct d_host_info *, struct d_host_info *);
 static void expand_opts(struct d_resource *, struct context_def *, struct options *, struct options *);
+static struct d_resource *res_by_name_lookup(const char *res_name);
 
 static void append_names(struct names *head, struct names *to_copy)
 {
@@ -1342,12 +1344,27 @@ void expand_common(void)
 	}
 }
 
-struct d_resource *res_by_name(const char *name)
+struct d_resource *res_by_name(const char *const res_name)
+{
+	load_resource(res_name);
+
+	struct d_resource *res = res_by_name_lookup(res_name);
+	if (res == NULL) {
+		// Fall back to loading all configuration files in an attempt to
+		// find the resource's configuration in a file with a file name
+		// that does not reflect the resource name
+		load_all_resources();
+		res = res_by_name_lookup(res_name);
+	}
+
+	return res;
+}
+
+static struct d_resource *res_by_name_lookup(const char *const res_name)
 {
 	struct d_resource *res;
-
 	for_each_resource(res, &config) {
-		if (strcmp(name, res->name) == 0)
+		if (strcmp(res_name, res->name) == 0)
 			return res;
 	}
 	return NULL;

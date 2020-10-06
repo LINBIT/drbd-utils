@@ -3345,6 +3345,8 @@ int main(int argc, char **argv)
 	else
 		config_save = canonify_path(config_file);
 
+	// Loading configuration files included by name pattern match
+	// is deferred initially, so this should only load explicitly included files
 	my_parse();
 
 	if (config_test) {
@@ -3365,6 +3367,9 @@ int main(int argc, char **argv)
 		config_file = saved_config_file;
 		config_save = saved_config_save;
 	}
+
+	// Turn off deferred loading of configuration files included by name pattern match
+	defer_load = false;
 
 	if (!config_valid)
 		exit(E_CONFIG_INVALID);

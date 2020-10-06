@@ -1931,7 +1931,7 @@ void include_stmt(char *str)
 		for (size_t idx = 0; idx < glob_buf.gl_pathc; ++idx) {
 			const char *const rel_path = glob_buf.gl_pathv[idx];
 			struct parser_file_state *const file_state = add_cfgfile_by_path(rel_path);
-			if (!(file_state->is_loaded || file_state->prevent_load)) {
+			if (!defer_load && !file_state->is_loaded && !file_state->prevent_load) {
 				FILE *const cfgfile = fopen(rel_path, "re");
 				if (cfgfile != NULL) {
 					include_file(cfgfile, strdup(rel_path));
@@ -1996,6 +1996,30 @@ static void validate_kmod(int token)
 				op, yylval.txt);
 		exit(E_CONFIG_INVALID);
 	}
+}
+
+bool load_config_file(const char *const file_name)
+{
+	char *const saved_config_file = config_file;
+
+	config_file = strdup(file_name);
+	if (config_file != NULL) {
+		yyin = fopen(file_name, "r");
+		if (yyin != NULL) {
+			my_parse();
+			fclose(yyin);
+		} else {
+			err("Cannot open configuration file \"%s\": %m\n", file_name);
+			exit(E_CONFIG_INVALID);
+		}
+		free(config_file);
+	} else {
+		err("Failed to load configuration file: Out of memory");
+		exit(E_THINKO);
+	}
+	config_file = saved_config_file;
+
+	return yyin != NULL;
 }
 
 void my_parse(void)
