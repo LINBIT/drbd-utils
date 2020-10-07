@@ -2015,6 +2015,8 @@ bool load_config_file(const char *const file_name)
 {
 	char *const saved_config_file = config_file;
 
+	const int cur_dir = pushd_to_current_config_file_unless_stdin();
+
 	config_file = strdup(file_name);
 	if (config_file != NULL) {
 		yyin = fopen(file_name, "r");
@@ -2031,6 +2033,8 @@ bool load_config_file(const char *const file_name)
 		exit(E_THINKO);
 	}
 	config_file = saved_config_file;
+
+	popd(cur_dir);
 
 	return yyin != NULL;
 }
