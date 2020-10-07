@@ -1925,35 +1925,48 @@ void include_stmt(char *str)
 {
 	const int cur_dir = pushd_to_current_config_file_unless_stdin();
 
-	glob_t glob_buf;
-	const int glob_rc = glob(str, 0, NULL, &glob_buf);
-	if (glob_rc == 0) {
-		for (size_t idx = 0; idx < glob_buf.gl_pathc; ++idx) {
-			const char *const rel_path = glob_buf.gl_pathv[idx];
-			struct parser_file_state *const file_state = add_cfgfile_by_path(rel_path);
-			if (!defer_load && !file_state->is_loaded && !file_state->prevent_load) {
-				FILE *const cfgfile = fopen(rel_path, "re");
-				if (cfgfile != NULL) {
-					include_file(cfgfile, strdup(rel_path));
-					fclose(cfgfile);
-					file_state->is_loaded = true;
-				} else {
-					err("%s:%d: Failed to open include file '%s'.\n",
-					    config_save, line, rel_path);
-					config_valid = 0;
+	if (strchr(str, '?') != 0 || strchr(str, '*') != 0 || strchr(str, '[') != 0) {
+		// File name pattern, load on demand
+		glob_t glob_buf;
+		const int glob_rc = glob(str, 0, NULL, &glob_buf);
+		if (glob_rc == 0) {
+			for (size_t idx = 0; idx < glob_buf.gl_pathc; ++idx) {
+				const char *const rel_path = glob_buf.gl_pathv[idx];
+				struct parser_file_state *const file_state = add_cfgfile_by_path(rel_path);
+				if (!defer_load && !file_state->is_loaded && !file_state->prevent_load) {
+					FILE *const cfgfile = fopen(rel_path, "re");
+					if (cfgfile != NULL) {
+						include_file(cfgfile, strdup(rel_path));
+						fclose(cfgfile);
+						file_state->is_loaded = true;
+					} else {
+						err("%s:%d: Failed to open include file '%s'.\n",
+						    config_save, line, rel_path);
+						config_valid = 0;
+					}
 				}
 			}
-		}
-		globfree(&glob_buf);
-	} else if (glob_rc == GLOB_NOMATCH) {
-		if (!strchr(str, '?') && !strchr(str, '*') && !strchr(str, '[')) {
-			err("%s:%d: Failed to open include file '%s'.\n",
-			    config_save, line, str);
-			config_valid = 0;
+			globfree(&glob_buf);
+		} else if (glob_rc != GLOB_NOMATCH) {
+			err("glob() failed: %d\n", glob_rc);
+			exit(E_USAGE);
 		}
 	} else {
-		err("glob() failed: %d\n", glob_rc);
-		exit(E_USAGE);
+		// Explicit include, load always
+		const char *const rel_path = str;
+		struct parser_file_state *const file_state = add_cfgfile_by_path(rel_path);
+		if (!file_state->is_loaded && !file_state->prevent_load) {
+			FILE *const cfgfile = fopen(rel_path, "re");
+			if (cfgfile != NULL) {
+				include_file(cfgfile, strdup(rel_path));
+				fclose(cfgfile);
+				file_state->is_loaded = true;
+			} else {
+				err("%s:%d: Failed to open include file '%s'.\n",
+				    config_save, line, str);
+				config_valid = 0;
+			}
+		}
 	}
 
 	popd(cur_dir);
