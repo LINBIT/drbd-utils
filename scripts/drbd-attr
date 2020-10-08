@@ -262,7 +262,7 @@ the-daemon()
 		record_event_details $name "${event[*]}"
 
 		# let them know when we saw the last event, unless still within the initial state dump
-		[[ $status_delay ]] &&
+		$record_event_details && [[ $status_delay ]] &&
 		attrd_updater -n $attr_name_prefix --update-both "Last event at $(date "+%F %T") by $OCF_RESOURCE_INSTANCE [$BASHPID]" --delay $status_delay
 	done
 
