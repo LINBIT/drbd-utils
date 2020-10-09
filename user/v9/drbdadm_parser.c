@@ -1933,7 +1933,8 @@ void include_stmt(char *str)
 			for (size_t idx = 0; idx < glob_buf.gl_pathc; ++idx) {
 				const char *const rel_path = glob_buf.gl_pathv[idx];
 				struct parser_file_state *const file_state = add_cfgfile_by_path(rel_path);
-				if (!defer_load && !file_state->is_loaded && !file_state->prevent_load) {
+				if ((!defer_load || is_defer_exempt(rel_path)) &&
+				    !file_state->is_loaded && !file_state->prevent_load) {
 					FILE *const cfgfile = fopen(rel_path, "re");
 					if (cfgfile != NULL) {
 						include_file(cfgfile, strdup(rel_path));

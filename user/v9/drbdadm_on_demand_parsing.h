@@ -33,6 +33,8 @@ struct parser_file_state *add_cfgfile_by_path(const char *const path);
 void load_resource(const char *const res_name);
 void load_all_resources(void);
 
+bool is_defer_exempt(const char *const path);
+
 typedef bool (*config_file_loader_fn)(const char *file_name);
 
 extern bool load_config_file(const char *file_name);

@@ -266,6 +266,17 @@ static ENTRY *create_entry(const char *const key, const void* const value) {
 	return new_entry;
 }
 
+bool is_defer_exempt(const char *const path)
+{
+	const char *file_name = strrchr(path, '/');
+	if (file_name != NULL) {
+		++file_name;
+	} else {
+		file_name = path;
+	}
+	return strcmp(file_name, "linstor-resources.res") == 0;
+}
+
 void debug_on_demand_parsing(void)
 {
 	debug_list_global_res_map();
