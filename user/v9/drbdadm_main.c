@@ -3358,6 +3358,11 @@ int main(int argc, char **argv)
 			err("no resources defined!\n");
 			exit(E_USAGE);
 		}
+	} else if (resource_names[0] != NULL) {
+		// Load the specified resources
+		for (int idx = 0; resource_names[idx] != NULL; ++idx) {
+			load_resource(resource_names[idx]);
+		}
 	}
 
 	if (!config_valid)
@@ -3390,8 +3395,6 @@ int main(int argc, char **argv)
 			for_each_resource(res, &config) {
 				verify_ips(res);
 			}
-			if (!config_valid)
-				exit(E_CONFIG_INVALID);
 
 			if (is_dump_xml)
 				print_dump_xml_header();
@@ -3419,11 +3422,6 @@ int main(int argc, char **argv)
 		} else {
 			/* explicit list of resources to work on */
 			struct connection *conn;
-
-			// Load the specified resources
-			for (int idx = 0; resource_names[idx] != NULL; ++idx) {
-				load_resource(resource_names[idx]);
-			}
 
 			/* first we execute some sanity checks,
 			 * the checks use ignore_tmp */
