@@ -2015,9 +2015,11 @@ static void validate_kmod(int token)
 bool load_config_file(const char *const file_name)
 {
 	char *const saved_config_file = config_file;
+	char *const saved_config_save = config_save;
 
 	const int cur_dir = pushd_to_current_config_file_unless_stdin();
 
+	config_save = canonify_path(file_name);
 	config_file = strdup(file_name);
 	if (config_file != NULL) {
 		yyin = fopen(file_name, "r");
@@ -2029,11 +2031,13 @@ bool load_config_file(const char *const file_name)
 			exit(E_CONFIG_INVALID);
 		}
 		free(config_file);
+		free(config_save);
 	} else {
 		err("Failed to load configuration file: Out of memory");
 		exit(E_THINKO);
 	}
 	config_file = saved_config_file;
+	config_save = saved_config_save;
 
 	popd(cur_dir);
 
