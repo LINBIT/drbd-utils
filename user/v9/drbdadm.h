@@ -306,8 +306,7 @@ struct cfg_ctx {
 	const struct adm_cmd *cmd;
 };
 
-
-extern char *canonify_path(char *path);
+extern char *canonify_path(const char *path);
 extern int pushd(const char *path);
 extern void popd(int fd);
 
@@ -410,13 +409,15 @@ extern int check_uniq_file_line(const char *file, const int line, const char *wh
 extern struct d_resource* parse_resource_for_adjust(const struct cfg_ctx *ctx);
 extern struct d_resource* parse_resource(char*, enum pr_flags);
 extern void post_parse(struct resources *, enum pp_flags);
+extern void run_post_parse(void);
+extern void count_resources(void);
 extern struct connection *alloc_connection();
 extern struct path *alloc_path();
 extern struct d_volume *alloc_volume(void);
 extern struct peer_device *alloc_peer_device();
 extern void free_connection(struct connection *connection);
 extern void expand_common(void);
-extern void global_validate_maybe_expand_die_if_invalid(int expand, enum pp_flags flags);
+extern void global_validate_maybe_expand_die_if_invalid(bool expand, enum pp_flags flags);
 extern struct d_option *new_opt(char *name, char *value);
 extern int hostname_in_list(const char *name, struct names *names);
 extern char *_names_to_str(char* buffer, struct names *names);
