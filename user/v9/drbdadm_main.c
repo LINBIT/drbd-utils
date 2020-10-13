@@ -59,6 +59,7 @@
 #include "drbdadm_dump.h"
 #include "shared_main.h"
 #include "drbdadm_parser.h"
+#include "drbdadm_cmd.h"
 #include "drbdadm_on_demand_parsing.h"
 
 #define MAX_ARGS 40
@@ -178,6 +179,8 @@ struct names backend_options = STAILQ_HEAD_INITIALIZER(backend_options);
 char *connect_to_host = NULL;
 
 STAILQ_HEAD(deferred_cmds, deferred_cmd) deferred_cmds[__CFG_LAST];
+
+struct drbdadm_cmd *current_cmd = NULL;
 
 int adm_adjust_wp(const struct cfg_ctx *ctx)
 {
@@ -2797,7 +2800,7 @@ void popd(int fd)
  * aborts if any allocation or syscall fails.
  * return value should be free()d, once no longer needed.
  */
-char *canonify_path(char *path)
+char *canonify_path(const char *const path)
 {
 	int cwd_fd = -1;
 	char *last_slash;
@@ -2924,7 +2927,7 @@ static void recognize_all_drbdsetup_options(void)
 
 struct adm_cmd *find_cmd(char *cmdname);
 
-int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_names)
+int parse_options(int argc, char **argv, struct adm_cmd **cmd, struct drbdadm_cmd *const current_cmd)
 {
 	const char *optstring = make_optstring(admopt);
 	struct names backend_options_check;
@@ -2933,7 +2936,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 
 	STAILQ_INIT(&backend_options_check);
 	*cmd = NULL;
-	*resource_names = calloc(argc + 1, sizeof(char *));
+	current_cmd->resource_names = calloc(argc + 1, sizeof(char *));
 
 	opterr = 1;
 	optind = 0;
@@ -3067,28 +3070,32 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 	}
 
 	first_arg_index = optind;
-	for (; optind < argc; optind++) {
-		optarg = argv[optind];
-		if (*cmd) {
-			static int last_idx = 0;
-			ensure_sanity_of_res_name(optarg);
-			(*resource_names)[last_idx++] = optarg;
-		}
-		else if (!strcmp(optarg, "help"))
-			help = true;
-		else {
-			*cmd = find_cmd(optarg);
-			if (!*cmd) {
-				/* Passing drbdsetup options like this is discouraged! */
-				insert_tail(&backend_options, names_from_str(optarg));
+
+	{
+		size_t last_idx = 0;
+		while (optind < argc) {
+			optarg = argv[optind];
+			if (*cmd != NULL) {
+				ensure_sanity_of_res_name(optarg);
+				current_cmd->resource_names[last_idx] = optarg;
+				++last_idx;
+				current_cmd->resource_count = last_idx;
+			} else if (strcmp(optarg, "help") == 0) {
+				help = true;
+			} else {
+				*cmd = find_cmd(optarg);
+				if (*cmd == NULL) {
+					// Passing drbdsetup options like this is discouraged!
+					insert_tail(&backend_options, names_from_str(optarg));
+				}
 			}
+			++optind;
 		}
 	}
-
-	if (help)
+	
+	if (help) {
 		print_usage_and_exit(*cmd, NULL, (*cmd == NULL) ? E_USAGE: 0);
-
-	if (*cmd == NULL) {
+	} else if (*cmd == NULL) {
 		if (first_arg_index < argc) {
 			err("%s: Unknown command '%s'\n", progname, argv[first_arg_index]);
 			return E_USAGE;
@@ -3217,6 +3224,10 @@ void count_resources(void)
 	struct d_resource *res;
 	struct d_volume *vol;
 
+	nr_resources[NORMAL] = 0;
+	nr_resources[STACKED] = 0;
+	nr_resources[IGNORED] = 0;
+
 	number_of_minors = 0;
 	for_each_resource(res, &config) {
 		if (res->ignore) {
@@ -3260,18 +3271,33 @@ void die_if_no_resources(void)
 	}
 }
 
+struct drbdadm_cmd *init_current_cmd(void)
+{
+	struct drbdadm_cmd *const cmd = malloc(sizeof (*current_cmd));
+	if (cmd == NULL) {
+		err("Cannot allocate memory for command parser datastructures: %m");
+		exit(E_THINKO);
+	}
+	cmd->resource_names = NULL;
+	cmd->resource_count = 0;
+	cmd->is_dump = false;
+	cmd->is_dump_xml = false;
+	cmd->is_adjust = false;
+	cmd->is_proxy_cmd = false;
+	cmd->is_all_resources_cmd = false;
+	return cmd;
+}
+
 int main(int argc, char **argv)
 {
 	size_t i;
 	int rv = 0, r;
 	struct adm_cmd *cmd = NULL;
-	char **resource_names = NULL;
 	struct d_resource *res;
 	char *env_drbd_nodename = NULL;
-	int is_dump_xml;
-	int is_dump;
-	int is_adjust;
 	struct cfg_ctx ctx = { };
+
+	current_cmd = init_current_cmd();
 
 	initialize_err();
 	initialize_deferred_cmds();
@@ -3299,7 +3325,7 @@ int main(int argc, char **argv)
 	maybe_exec_legacy_drbdadm(argv);
 
 	recognize_all_drbdsetup_options();
-	rv = parse_options(argc, argv, &cmd, &resource_names);
+	rv = parse_options(argc, argv, &cmd, current_cmd);
 	if (rv)
 		return rv;
 
@@ -3309,29 +3335,29 @@ int main(int argc, char **argv)
 		exit(E_USAGE);
 	}
 
-	is_dump_xml = (cmd == &dump_xml_cmd);
-	is_dump = (is_dump_xml || cmd == &dump_cmd);
-	is_adjust = (cmd == &adjust_cmd || cmd == &adjust_wp_cmd);
+	current_cmd->is_dump_xml = (cmd == &dump_xml_cmd);
+	current_cmd->is_dump = (current_cmd->is_dump_xml || cmd == &dump_cmd);
+	current_cmd->is_adjust = (cmd == &adjust_cmd || cmd == &adjust_wp_cmd);
 
-	if (is_adjust && find_backend_option("--skip-net"))
+	if (current_cmd->is_adjust && find_backend_option("--skip-net"))
 		do_verify_ips = 0;
 	else
 		do_verify_ips = cmd->verify_ips;
 
-	if (!resource_names[0]) {
-		if (!is_dump && cmd->res_name_required)
+	if (current_cmd->resource_names[0] == NULL) {
+		if (!current_cmd->is_dump && cmd->res_name_required)
 			print_usage_and_exit(cmd, "No resource names specified", E_USAGE);
-	} else if (resource_names[0]) {
+	} else {
 		if (cmd->backend_res_name)
 			/* Okay */  ;
 		else if (!cmd->res_name_required)
 			err("This command will ignore resource names!\n");
-		else if (resource_names[1] && cmd->use_cached_config_file)
+		else if (current_cmd->resource_names[1] != NULL && cmd->use_cached_config_file)
 			err("You should not use this command with multiple resources!\n");
 	}
 
 	if (!config_file && cmd->use_cached_config_file)
-		config_file = config_file_from_arg(resource_names[0]);
+		config_file = config_file_from_arg(current_cmd->resource_names[0]);
 
 	if (!config_file)
 		/* may exit if no config file can be used! */
@@ -3371,21 +3397,21 @@ int main(int argc, char **argv)
 	// Turn off deferred loading of configuration files included by name pattern match
 	defer_load = false;
 
-	if ((resource_names[0] != NULL && strcmp(resource_names[0], "all") == 0) ||
-	    (resource_names[0] == NULL && is_dump != 0)) {
+	if ((current_cmd->resource_names[0] != NULL && strcmp(current_cmd->resource_names[0], "all") == 0) ||
+	    (current_cmd->resource_names[0] == NULL && current_cmd->is_dump != 0)) {
 		// This is for two situations:
 		//   1. First resource argument is "all"
 		//   2. No resources arguments, but the command is a dump command
 		load_all_resources();
 
-		if (cmd->res_name_required != 0 && STAILQ_EMPTY(&config) && !is_dump) {
+		if (cmd->res_name_required != 0 && STAILQ_EMPTY(&config) && !current_cmd->is_dump) {
 			err("no resources defined!\n");
 			exit(E_USAGE);
 		}
-	} else if (resource_names[0] != NULL) {
+	} else if (current_cmd->resource_count >= 1) {
 		// Load the specified resources
-		for (int idx = 0; resource_names[idx] != NULL; ++idx) {
-			load_resource(resource_names[idx]);
+		for (size_t idx = 0; idx < current_cmd->resource_count; ++idx) {
+			load_resource(current_cmd->resource_names[idx]);
 		}
 	}
 
@@ -3393,46 +3419,37 @@ int main(int argc, char **argv)
 	// until something in the post_parse step thinks it isn't
 	config_valid = 1;
 
-	post_parse(&config, cmd->is_proxy_cmd ? MATCH_ON_PROXY : 0);
-
-	if (!is_dump || dry_run || verbose)
-		expand_common();
-	if (dry_run || config_from_stdin)
-		do_register = 0;
-
-	count_resources();
+	current_cmd->is_proxy_cmd = cmd->is_proxy_cmd;
 
 	if (cmd->uc_dialog)
 		uc_node(global_options.usage_count);
 
 	ctx.cmd = cmd;
-	if (cmd->res_name_required || resource_names[0]) {
-		global_validate_maybe_expand_die_if_invalid(!is_dump,
-							    cmd->is_proxy_cmd ? MATCH_ON_PROXY : 0);
+	if (cmd->res_name_required || current_cmd->resource_count != 0) {
+		if (current_cmd->resource_count == 0 ||
+		    strcmp(current_cmd->resource_names[0], "all") == 0) {
+			current_cmd->is_all_resources_cmd = true;
 
-		if (!resource_names[0] || !strcmp(resource_names[0], "all")) {
+			run_post_parse();
+
 			/* either no resource arguments at all,
 			 * but command is dump / dump-xml, so implicit "all",
 			 * or an explicit "all" argument is given */
-			if (!is_dump)
+			if (!current_cmd->is_dump)
 				die_if_no_resources();
-			/* verify ips first, for all of them */
-			for_each_resource(res, &config) {
-				verify_ips(res);
-			}
 
-			if (is_dump_xml)
+			if (current_cmd->is_dump_xml)
 				print_dump_xml_header();
-			else if (is_dump)
+			else if (current_cmd->is_dump)
 				print_dump_header();
-			if (is_adjust)
+			if (current_cmd->is_adjust)
 				adjust_more_than_one_resource = 1;
 
 			for_each_resource(res, &config) {
-				if (!is_dump && res->ignore)
+				if (!current_cmd->is_dump && res->ignore)
 					continue;
 
-				if (!is_dump && is_drbd_top != res->stacked)
+				if (!current_cmd->is_dump && is_drbd_top != res->stacked)
 					continue;
 				ctx.res = res;
 				ctx.vol = NULL;
@@ -3442,51 +3459,22 @@ int main(int argc, char **argv)
 				if (r > rv)
 					rv = r;
 			}
-			if (is_dump_xml)
+			if (current_cmd->is_dump_xml)
 				printf("</config>\n");
 		} else {
 			/* explicit list of resources to work on */
-			struct connection *conn;
+			current_cmd->is_all_resources_cmd = false;
 
-			/* first we execute some sanity checks,
-			 * the checks use ignore_tmp */
-			for_each_resource(res, &config)
-				for_each_connection(conn, &res->connections)
-					conn->ignore_tmp = conn->ignore;
+			run_post_parse();
 
-			/* check if we would enable a connection that should be ignored */
-			for (i = 0; resource_names[i]; i++)
-				if (ctx_by_name(&ctx, resource_names[i], WOULD_ENABLE_DISABLED) > 0) {
-					err("USAGE_BUG: Tried to enable disabled connections %s\n",
-					    resource_names[i]);
-					exit(E_USAGE);
-				}
-
-			/* check if we would enable a connection that was already enabled.
-			 * set all connections to ignore and then check if we would enable a
-			 * connection twice */
-			for_each_resource(res, &config)
-				for_each_connection(conn, &res->connections)
-					conn->ignore_tmp = true;
-
-			for (i = 0; resource_names[i]; i++)
-				if (ctx_by_name(&ctx, resource_names[i], WOULD_ENABLE_MULTI_TIMES) > 0) {
-					err("USAGE_BUG: %s would enable an already enabled connection\n",
-					    resource_names[i]);
-					exit(E_USAGE);
-				}
-
-			if (is_adjust && resource_names[1])
-				adjust_more_than_one_resource = 1;
-
-			for (i = 0; resource_names[i]; i++) {
-				r = ctx_by_name(&ctx, resource_names[i], SETUP_MULTI);
+			for (i = 0; current_cmd->resource_names[i]; i++) {
+				r = ctx_by_name(&ctx, current_cmd->resource_names[i], SETUP_MULTI);
 				if (!ctx.res) {
-					ctx_by_minor(&ctx, resource_names[i]);
+					ctx_by_minor(&ctx, current_cmd->resource_names[i]);
 					r = 0;
 				}
 				if (!ctx.res) {
-					err("'%s' not defined in your config (for this host).\n", resource_names[i]);
+					err("'%s' not defined in your config (for this host).\n", current_cmd->resource_names[i]);
 					exit(E_USAGE);
 				}
 				if (r)
@@ -3505,10 +3493,10 @@ int main(int argc, char **argv)
 				if (cmd->vol_id_required && !ctx.vol) {
 					err("%s requires a specific volume id, but none is specified.\n"
 					    "Try '%s minor-<minor_number>' or '%s %s/<vnr>'\n",
-					    cmd->name, cmd->name, cmd->name, resource_names[i]);
+					    cmd->name, cmd->name, cmd->name, current_cmd->resource_names[i]);
 					exit(E_USAGE);
 				}
-				if (ctx.res->ignore && !is_dump) {
+				if (ctx.res->ignore && !current_cmd->is_dump) {
 					err("'%s' ignored, since this host (%s) is not mentioned with an 'on' keyword.\n",
 					    ctx.res->name, hostname);
 					if (rv < E_USAGE)
@@ -3519,7 +3507,7 @@ int main(int argc, char **argv)
 				 * Also, don't break handlers called from kernel. */
 				is_drbd_top = ctx.res->stacked;
 				verify_ips(ctx.res);
-				if (!is_dump && !config_valid)
+				if (!current_cmd->is_dump && config_valid == 0)
 					exit(E_CONFIG_INVALID);
 				r = call_cmd(cmd, &ctx, EXIT_ON_FAIL);	/* does exit for r >= 20! */
 				if (r > rv)
@@ -3543,12 +3531,76 @@ int main(int argc, char **argv)
 		rv = r;
 
 	free_config();
-	free(resource_names);
 	if (admopt != general_admopt)
 		free(admopt);
 	free_btrees();
 
+	free(current_cmd->resource_names);
+	free(current_cmd);
+	current_cmd = NULL;
 	return rv;
+}
+
+void run_post_parse()
+{
+	post_parse(&config, current_cmd->is_proxy_cmd ? MATCH_ON_PROXY : 0);
+
+	if (!current_cmd->is_dump || dry_run != 0 || verbose != 0)
+		expand_common();
+	if (dry_run != 0 || config_from_stdin != 0)
+		do_register = 0;
+
+	count_resources();
+
+	global_validate_maybe_expand_die_if_invalid(
+		!current_cmd->is_dump,
+		current_cmd->is_proxy_cmd ? MATCH_ON_PROXY : 0
+	);
+
+	if (current_cmd->is_all_resources_cmd) {
+		struct d_resource *res = NULL;
+		struct connection *conn = NULL;
+		/* first we execute some sanity checks,
+		 * the checks use ignore_tmp */
+		for_each_resource(res, &config)
+			for_each_connection(conn, &res->connections)
+				conn->ignore_tmp = conn->ignore;
+
+		/* check if we would enable a connection that should be ignored */
+		for (size_t idx = 0; idx < current_cmd->resource_count; idx++) {
+			struct cfg_ctx ctx = {};
+			if (ctx_by_name(&ctx, current_cmd->resource_names[idx], WOULD_ENABLE_DISABLED) > 0) {
+				err("USAGE_BUG: Tried to enable disabled connections %s\n",
+				    current_cmd->resource_names[idx]);
+				exit(E_USAGE);
+			}
+		}
+
+		/* check if we would enable a connection that was already enabled.
+		 * set all connections to ignore and then check if we would enable a
+		 * connection twice */
+		for_each_resource(res, &config)
+			for_each_connection(conn, &res->connections)
+				conn->ignore_tmp = true;
+
+		for (size_t idx = 0; idx < current_cmd->resource_count; idx++) {
+			struct cfg_ctx ctx = {};
+			if (ctx_by_name(&ctx, current_cmd->resource_names[idx], WOULD_ENABLE_MULTI_TIMES) > 0) {
+				err("USAGE_BUG: %s would enable an already enabled connection\n",
+				    current_cmd->resource_names[idx]);
+				exit(E_USAGE);
+			}
+		}
+
+		if (current_cmd->is_adjust && current_cmd->resource_count > 1)
+			adjust_more_than_one_resource = 1;
+	} else {
+		struct d_resource *res = NULL;
+		/* verify ips first, for all of them */
+		for_each_resource(res, &config) {
+			verify_ips(res);
+		}
+	}
 }
 
 void yyerror(char *text)
