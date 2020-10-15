@@ -242,6 +242,8 @@ struct d_resource
 	unsigned int stacked_on_one:1; /* Stacked either on me or on peer */
 	unsigned int peers_addrs_set:1; /* all peer addresses set */
 	unsigned int no_bitmap_done:1;
+	// Indicates whether the resource has been post-parsed (1) or not (0)
+	unsigned int is_post_parsed:1;
 
 	/* if a prerequisite command failed, don't try any further commands.
 	 * see run_deferred_cmds() */
