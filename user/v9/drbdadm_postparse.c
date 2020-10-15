@@ -1126,59 +1126,66 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 
 	/* inherit volumes from resource level into the d_host_info objects */
 	for_each_resource(res, resources) {
-		struct d_host_info *host;
-		bool any_implicit = false;
-		bool any_non_zero_vnr = false;
-		for_each_host(host, &res->all_hosts) {
-			struct d_volume *vol;
+		if (res->is_post_parsed == 0) {
+			struct d_host_info *host;
+			bool any_implicit = false;
+			bool any_non_zero_vnr = false;
+			for_each_host(host, &res->all_hosts) {
+				struct d_volume *vol;
 
-			inherit_volumes(&res->volumes, host);
+				inherit_volumes(&res->volumes, host);
 
-			for_each_volume(vol, &host->volumes) {
-				any_implicit |= vol->implicit;
-				any_non_zero_vnr |= vol->vnr != 0;
+				for_each_volume(vol, &host->volumes) {
+					any_implicit |= vol->implicit;
+					any_non_zero_vnr |= vol->vnr != 0;
 
-				check_meta_disk(vol, host);
+					check_meta_disk(vol, host);
+				}
+
+				if (host->require_minor)
+					check_volumes_complete(res, host);
 			}
 
-			if (host->require_minor)
-				check_volumes_complete(res, host);
-		}
+			check_volumes_hosts(res);
 
-		check_volumes_hosts(res);
-
-		if (any_implicit && any_non_zero_vnr) {
-			err("%s:%d: in resource %s: you must not mix implicit and explicit volumes\n",
-			    config_file, line, res->name);
-			config_valid = 0;
+			if (any_implicit && any_non_zero_vnr) {
+				err("%s:%d: in resource %s: you must not mix implicit and explicit volumes\n",
+				    config_file, line, res->name);
+				config_valid = 0;
+			}
 		}
 	}
 
-	for_each_resource(res, resources)
-		if (res->stacked_on_one)
-			set_on_hosts_in_res(res); /* sets on_hosts and host->lower */
+	for_each_resource(res, resources) {
+		if (res->is_post_parsed == 0) {
+			if (res->stacked_on_one)
+				set_on_hosts_in_res(res); /* sets on_hosts and host->lower */
+		}
+	}
 
 	for_each_resource(res, resources) {
-		struct d_host_info *host;
-		struct mesh *mesh;
+		if (res->is_post_parsed == 0) {
+			struct d_host_info *host;
+			struct mesh *mesh;
 
-		if (!(flags & DRBDSETUP_SHOW)) {
+			if (!(flags & DRBDSETUP_SHOW)) {
+				for_each_connection(con, &res->connections)
+					must_have_two_hosts(res, con);
+			}
+
+			/* Other steps make no sense. */
+			if (!config_valid)
+				continue;
+
+			STAILQ_FOREACH(mesh, &res->meshes, link)
+				create_connections_from_mesh(res, mesh);
+			create_implicit_connections(res);
 			for_each_connection(con, &res->connections)
-				must_have_two_hosts(res, con);
-		}
-
-		/* Other steps make no sense. */
-		if (!config_valid)
-			continue;
-
-		STAILQ_FOREACH(mesh, &res->meshes, link)
-			create_connections_from_mesh(res, mesh);
-		create_implicit_connections(res);
-		for_each_connection(con, &res->connections)
-			set_host_info_in_host_address_pairs(res, con);
-		for_each_host(host, &res->all_hosts) {
-			if (!host->node_id)
-				derror(host, res, "node-id");
+				set_host_info_in_host_address_pairs(res, con);
+			for_each_host(host, &res->all_hosts) {
+				if (!host->node_id)
+					derror(host, res, "node-id");
+			}
 		}
 	}
 
@@ -1187,22 +1194,38 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 	}
 
 	/* Needs "on_hosts" and host->lower already set */
-	for_each_resource(res, resources)
-		if (!res->stacked_on_one)
-			set_me_in_resource(res, flags & MATCH_ON_PROXY);
+	for_each_resource(res, resources) {
+		if (res->is_post_parsed == 0) {
+			if (!res->stacked_on_one)
+				set_me_in_resource(res, flags & MATCH_ON_PROXY);
+		}
+	}
 
 	/* Needs host->lower->me already set */
-	for_each_resource(res, resources)
-		if (res->stacked_on_one)
-			set_me_in_resource(res, flags & MATCH_ON_PROXY);
+	for_each_resource(res, resources) {
+		if (res->is_post_parsed == 0) {
+			if (res->stacked_on_one)
+				set_me_in_resource(res, flags & MATCH_ON_PROXY);
+		}
+	}
 
 	// Needs "me" set already
-	for_each_resource(res, resources)
-		if (res->stacked_on_one)
-			set_stacked_disk_in_res(res);
+	for_each_resource(res, resources) {
+		if (res->is_post_parsed == 0) {
+			if (res->stacked_on_one)
+				set_stacked_disk_in_res(res);
+		}
+	}
 
-	for_each_resource(res, resources)
-		fixup_peer_devices(res);
+	for_each_resource(res, resources) {
+		if (res->is_post_parsed == 0) {
+			fixup_peer_devices(res);
+		}
+	}
+
+	for_each_resource(res, resources) {
+		res->is_post_parsed = 1;
+	}
 }
 
 static void expand_opts(struct d_resource *res, struct context_def *oc, struct options *common, struct options *options)
@@ -1240,110 +1263,107 @@ static void expand_opts(struct d_resource *res, struct context_def *oc, struct o
 void expand_common(void)
 {
 	// Expand options
-	struct d_resource *res;
 	struct d_volume *vol, *host_vol;
 	struct d_host_info *h;
 	struct connection *conn;
 	struct d_resource *template;
 
-	for_each_resource(res, &config) {
-		/* make sure vol->device is non-NULL */
+	/* make sure vol->device is non-NULL */
+	for_each_host(h, &res->all_hosts) {
+		for_each_volume(vol, &h->volumes) {
+			if (vol->disk && !strcmp(vol->disk, "none")) {
+				free(vol->disk);
+				free(vol->meta_disk);
+				free(vol->meta_index);
+				vol->disk = NULL;
+				vol->meta_disk = NULL;
+				vol->meta_index = NULL;
+			}
+			assign_default_device(vol);
+		}
+	}
+
+	if (res->template)
+		template = res->template;
+	else
+		template = common;
+
+	if (template) {
+		expand_opts(res, &show_net_options_ctx, &template->net_options, &res->net_options);
+		expand_opts(res, &disk_options_ctx, &template->disk_options, &res->disk_options);
+		expand_opts(res, &device_options_ctx, &template->pd_options, &res->pd_options);
+		expand_opts(res, &startup_options_ctx, &template->startup_options, &res->startup_options);
+		expand_opts(res, &proxy_options_ctx, &template->proxy_options, &res->proxy_options);
+		expand_opts(res, &handlers_ctx, &template->handlers, &res->handlers);
+		expand_opts(res, &resource_options_ctx, &template->res_options, &res->res_options);
+
+		if (template->stacked_timeouts)
+			res->stacked_timeouts = 1;
+
+		expand_opts(res, &wildcard_ctx, &template->proxy_plugins, &res->proxy_plugins);
+	}
+
+	/* now that common disk options (if any) have been propagated to the
+		* resource level, further propagate them to the volume level. */
+	for_each_host(h, &res->all_hosts) {
+		for_each_volume(vol, &h->volumes) {
+			expand_opts(res, &disk_options_ctx, &res->disk_options, &vol->disk_options);
+			expand_opts(res, &peer_device_options_ctx, &res->pd_options, &vol->pd_options);
+		}
+	}
+
+	/* now from all volume/disk-options on resource level to host level */
+	for_each_volume(vol, &res->volumes) {
 		for_each_host(h, &res->all_hosts) {
-			for_each_volume(vol, &h->volumes) {
-				if (vol->disk && !strcmp(vol->disk, "none")) {
-					free(vol->disk);
-					free(vol->meta_disk);
-					free(vol->meta_index);
-					vol->disk = NULL;
-					vol->meta_disk = NULL;
-					vol->meta_index = NULL;
-				}
-				assign_default_device(vol);
-			}
+			host_vol = volume_by_vnr(&h->volumes, vol->vnr);
+			expand_opts(res, &disk_options_ctx, &vol->disk_options, &host_vol->disk_options);
+			expand_opts(res, &peer_device_options_ctx, &vol->pd_options, &host_vol->pd_options);
 		}
+	}
 
-		if (res->template)
-			template = res->template;
-		else
-			template = common;
+	/* inherit network options from resource objects into connection objects */
+	for_each_connection(conn, &res->connections)
+		expand_opts(res, &show_net_options_ctx, &res->net_options, &conn->net_options);
 
-		if (template) {
-			expand_opts(res, &show_net_options_ctx, &template->net_options, &res->net_options);
-			expand_opts(res, &disk_options_ctx, &template->disk_options, &res->disk_options);
-			expand_opts(res, &device_options_ctx, &template->pd_options, &res->pd_options);
-			expand_opts(res, &startup_options_ctx, &template->startup_options, &res->startup_options);
-			expand_opts(res, &proxy_options_ctx, &template->proxy_options, &res->proxy_options);
-			expand_opts(res, &handlers_ctx, &template->handlers, &res->handlers);
-			expand_opts(res, &resource_options_ctx, &template->res_options, &res->res_options);
-
-			if (template->stacked_timeouts)
-				res->stacked_timeouts = 1;
-
-			expand_opts(res, &wildcard_ctx, &template->proxy_plugins, &res->proxy_plugins);
-		}
-
-		/* now that common disk options (if any) have been propagated to the
-		 * resource level, further propagate them to the volume level. */
-		for_each_host(h, &res->all_hosts) {
-			for_each_volume(vol, &h->volumes) {
-				expand_opts(res, &disk_options_ctx, &res->disk_options, &vol->disk_options);
-				expand_opts(res, &peer_device_options_ctx, &res->pd_options, &vol->pd_options);
-			}
-		}
-
-		/* now from all volume/disk-options on resource level to host level */
-		for_each_volume(vol, &res->volumes) {
-			for_each_host(h, &res->all_hosts) {
-				host_vol = volume_by_vnr(&h->volumes, vol->vnr);
-				expand_opts(res, &disk_options_ctx, &vol->disk_options, &host_vol->disk_options);
-				expand_opts(res, &peer_device_options_ctx, &vol->pd_options, &host_vol->pd_options);
-			}
-		}
-
-		/* inherit network options from resource objects into connection objects */
-		for_each_connection(conn, &res->connections)
-			expand_opts(res, &show_net_options_ctx, &res->net_options, &conn->net_options);
-
-		/* inherit proxy options from resource to the proxies in the connections */
-		for_each_connection(conn, &res->connections) {
-			struct path *path;
-			for_each_path(path, &conn->paths) {
-				struct hname_address *ha;
-				STAILQ_FOREACH(ha, &path->hname_address_pairs, link) {
-					if (!ha->proxy)
-						continue;
-
-					expand_opts(res, &proxy_options_ctx, &res->proxy_options, &ha->proxy->options);
-					expand_opts(res, &wildcard_ctx, &res->proxy_plugins, &ha->proxy->plugins);
-				}
-			}
-		}
-
-		/* inherit peer_device options from connections to peer_devices AND
-		   tie the peer_device options from the volume to peer_devices */
-		for_each_connection(conn, &res->connections) {
-			struct peer_device *peer_device;
+	/* inherit proxy options from resource to the proxies in the connections */
+	for_each_connection(conn, &res->connections) {
+		struct path *path;
+		for_each_path(path, &conn->paths) {
 			struct hname_address *ha;
-			struct path *some_path;
-
-			STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link)
-				expand_opts(res, &peer_device_options_ctx, &conn->pd_options, &peer_device->pd_options);
-
-			some_path = STAILQ_FIRST(&conn->paths);
-			if (!some_path)
-				continue;
-
-			STAILQ_FOREACH(ha, &some_path->hname_address_pairs, link) {
-				h = ha->host_info;
-				if (!h) {
-					assert(config_valid == 0);
+			STAILQ_FOREACH(ha, &path->hname_address_pairs, link) {
+				if (!ha->proxy)
 					continue;
-				}
-				for_each_volume(vol, &h->volumes) {
-					peer_device = find_peer_device(conn, vol->vnr);
 
-					expand_opts(res, &peer_device_options_ctx, &vol->pd_options, &peer_device->pd_options);
-				}
+				expand_opts(res, &proxy_options_ctx, &res->proxy_options, &ha->proxy->options);
+				expand_opts(res, &wildcard_ctx, &res->proxy_plugins, &ha->proxy->plugins);
+			}
+		}
+	}
+
+	/* inherit peer_device options from connections to peer_devices AND
+		tie the peer_device options from the volume to peer_devices */
+	for_each_connection(conn, &res->connections) {
+		struct peer_device *peer_device;
+		struct hname_address *ha;
+		struct path *some_path;
+
+		STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link)
+			expand_opts(res, &peer_device_options_ctx, &conn->pd_options, &peer_device->pd_options);
+
+		some_path = STAILQ_FIRST(&conn->paths);
+		if (!some_path)
+			continue;
+
+		STAILQ_FOREACH(ha, &some_path->hname_address_pairs, link) {
+			h = ha->host_info;
+			if (!h) {
+				assert(config_valid == 0);
+				continue;
+			}
+			for_each_volume(vol, &h->volumes) {
+				peer_device = find_peer_device(conn, vol->vnr);
+
+				expand_opts(res, &peer_device_options_ctx, &vol->pd_options, &peer_device->pd_options);
 			}
 		}
 	}
