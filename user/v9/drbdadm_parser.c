@@ -2019,7 +2019,7 @@ bool load_config_file(const char *const file_name)
 
 	const int cur_dir = pushd_to_current_config_file_unless_stdin();
 
-	config_save = canonify_path(file_name);
+	config_save = canonicalize_path(file_name);
 	config_file = strdup(file_name);
 	if (config_file != NULL) {
 		yyin = fopen(file_name, "r");

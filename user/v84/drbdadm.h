@@ -135,7 +135,7 @@ struct cfg_ctx {
 };
 
 
-extern char *canonify_path(char *path);
+extern char *canonicalize_path(char *path);
 
 extern int adm_adjust(struct cfg_ctx *);
 extern int adm_new_minor(struct cfg_ctx *ctx);

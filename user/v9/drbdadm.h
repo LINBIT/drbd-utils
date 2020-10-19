@@ -308,7 +308,7 @@ struct cfg_ctx {
 	const struct adm_cmd *cmd;
 };
 
-extern char *canonify_path(const char *path);
+extern char *canonicalize_path(const char *path);
 extern int pushd(const char *path);
 extern void popd(int fd);
 

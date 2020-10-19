@@ -97,7 +97,7 @@ struct d_resource
   unsigned int stacked_on_one:1; /* Stacked either on me or on peer */
 };
 
-extern char *canonify_path(char *path);
+extern char *canonicalize_path(char *path);
 extern int adm_attach(struct d_resource* ,const char* );
 extern int adm_connect(struct d_resource* ,const char* );
 extern int adm_resize(struct d_resource* ,const char* );

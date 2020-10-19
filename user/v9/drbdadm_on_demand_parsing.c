@@ -86,7 +86,7 @@ struct parser_file_state *add_cfgfile_by_path(const char *const path)
 		return file_state;
 	}
 
-	const char *const canon_path = realpath(path, NULL);
+	const char *const canon_path = canonicalize_path(path);
 	if (canon_path == NULL) {
 		err("Out of memory: Cannot allocate space required to canonicalize path");
 		exit(E_THINKO);
