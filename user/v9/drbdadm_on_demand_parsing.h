@@ -26,6 +26,8 @@ struct parser_res_state {
 
 extern bool defer_load;
 
+extern char *canonicalize_path(const char *path);
+
 void debug_on_demand_parsing(void);
 
 const char *create_res_name_from_path(const char *const path);

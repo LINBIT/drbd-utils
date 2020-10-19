@@ -2776,7 +2776,7 @@ void popd(int fd)
  * aborts if any allocation or syscall fails.
  * return value should be free()d, once no longer needed.
  */
-char *canonify_path(const char *const path)
+char *canonicalize_path(const char *const path)
 {
 	int cwd_fd = -1;
 	char *last_slash;
@@ -2785,7 +2785,7 @@ char *canonify_path(const char *const path)
 	char *abs_path;
 
 	if (!path || !path[0]) {
-		err("cannot canonify an empty path\n");
+		err("cannot canonicalize an empty path\n");
 		exit(E_USAGE);
 	}
 
@@ -3345,7 +3345,7 @@ int main(int argc, char **argv)
 	if (config_from_stdin)
 		config_save = config_file;
 	else
-		config_save = canonify_path(config_file);
+		config_save = canonicalize_path(config_file);
 
 	// Loading configuration files included by name pattern match
 	// is deferred initially, so this should only load explicitly included files
@@ -3356,7 +3356,7 @@ int main(int argc, char **argv)
 		char *saved_config_save = config_save;
 
 		config_file = config_test;
-		config_save = canonify_path(config_test);
+		config_save = canonicalize_path(config_test);
 
 		fclose(yyin);
 		yyin = fopen(config_test, "r");

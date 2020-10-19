@@ -48,7 +48,7 @@ void save_parse_context(struct include_file_buffer *buffer, FILE *f, char *name)
 
 	line = 1;
 	config_file = name;
-	config_save = canonify_path(name);
+	config_save = canonicalize_path(name);
 
 	my_yypush_buffer_state(f);
 
