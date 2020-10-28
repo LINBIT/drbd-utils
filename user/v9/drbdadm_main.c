@@ -138,6 +138,8 @@ int was_file_already_seen(char *fn);
 
 static char *get_opt_val(struct options *, const char *, char *);
 
+void debug_resource_config(void);
+
 char ss_buffer[1024];
 const char *hostname;
 int line = 1;
@@ -3068,7 +3070,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, struct drbdadm_cm
 			++optind;
 		}
 	}
-	
+
 	if (help) {
 		print_usage_and_exit(*cmd, NULL, (*cmd == NULL) ? E_USAGE: 0);
 	} else if (*cmd == NULL) {
@@ -3587,4 +3589,41 @@ void yyerror(char *text)
 {
 	err("%s:%d: %s\n", config_file, line, text);
 	exit(E_SYNTAX);
+}
+
+void debug_resource_config(void)
+{
+	fputs("\x1B[38;5;196mDEBUG \x1B[0mListing resource configuration:\n", stderr);
+	struct d_resource *res;
+	for_each_resource(res, &config) {
+		fprintf(stderr, "\x1B[38;5;196mDEBUG \x1B[0mResource \"%s\"\n", res->name);
+		const char *phase_str;
+		switch (res->phase) {
+		case INITIAL:
+			phase_str = "INITIAL";
+			break;
+		case SET_ON_HOSTS:
+			phase_str = "SET_ON_HOSTS";
+			break;
+		case SETUP_CONNECTIONS:
+			phase_str = "SETUP_CONNECTIONS";
+			break;
+		case GENERIC_POST_PARSE:
+			phase_str = "GENERIC_POST_PARSE";
+			break;
+		case EXPAND:
+			phase_str = "EXPAND";
+			break;
+		case VALIDATE:
+			phase_str = "VALIDATE";
+			break;
+		case FINISHED:
+			phase_str = "\x1B[38;5;40mFINISHED\x1B[0m";
+			break;
+		default:
+			phase_str = "\x1B[38;6;196m<INVALID>\x1B[0m";
+			break;
+		}
+		fprintf(stderr, "        phase = %s\n", phase_str);
+	}
 }
