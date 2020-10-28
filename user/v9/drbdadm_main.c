@@ -3544,9 +3544,13 @@ void run_post_parse()
 		struct connection *conn = NULL;
 		/* first we execute some sanity checks,
 		 * the checks use ignore_tmp */
-		for_each_resource(res, &config)
-			for_each_connection(conn, &res->connections)
-				conn->ignore_tmp = conn->ignore;
+		for_each_resource(res, &config) {
+			if (res->phase == FINISHED) {
+				for_each_connection(conn, &res->connections) {
+					conn->ignore_tmp = conn->ignore;
+				}
+			}
+		}
 
 		/* check if we would enable a connection that should be ignored */
 		for (size_t idx = 0; idx < current_cmd->resource_count; idx++) {
@@ -3561,9 +3565,13 @@ void run_post_parse()
 		/* check if we would enable a connection that was already enabled.
 		 * set all connections to ignore and then check if we would enable a
 		 * connection twice */
-		for_each_resource(res, &config)
-			for_each_connection(conn, &res->connections)
-				conn->ignore_tmp = true;
+		for_each_resource(res, &config) {
+			if (res->phase == FINISHED) {
+				for_each_connection(conn, &res->connections) {
+					conn->ignore_tmp = true;
+				}
+			}
+		}
 
 		for (size_t idx = 0; idx < current_cmd->resource_count; idx++) {
 			struct cfg_ctx ctx = {};
@@ -3580,7 +3588,9 @@ void run_post_parse()
 		struct d_resource *res = NULL;
 		/* verify ips first, for all of them */
 		for_each_resource(res, &config) {
-			verify_ips(res);
+			if (res->phase == FINISHED) {
+				verify_ips(res);
+			}
 		}
 	}
 }
