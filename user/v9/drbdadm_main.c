@@ -3562,6 +3562,9 @@ void run_post_parse()
 		!current_cmd->is_dump,
 		current_cmd->is_proxy_cmd ? MATCH_ON_PROXY : 0
 	);
+	if (need_post_parse) {
+		return;
+	}
 
 	if (current_cmd->is_all_resources_cmd) {
 		struct d_resource *res = NULL;
