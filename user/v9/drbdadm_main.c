@@ -3526,6 +3526,9 @@ int main(int argc, char **argv)
 void run_post_parse()
 {
 	post_parse(&config, current_cmd->is_proxy_cmd ? MATCH_ON_PROXY : 0);
+	if (need_post_parse) {
+		return;
+	}
 
 	if (!current_cmd->is_dump || dry_run != 0 || verbose != 0)
 		expand_common();
