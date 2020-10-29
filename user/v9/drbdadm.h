@@ -458,6 +458,7 @@ int parse_proxy_options_section(struct d_proxy_info **proxy);
 /* conn_name is optional and mostly for compatibility with dcmd */
 struct peer_device *find_peer_device(struct connection *conn, int vnr);
 bool peer_diskless(struct peer_device *peer_device);
+extern void convert_after_option(struct d_resource *res);
 
 extern char *config_file;
 extern char *config_save;

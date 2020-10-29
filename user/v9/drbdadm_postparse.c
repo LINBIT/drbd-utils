@@ -1756,7 +1756,7 @@ static void _convert_after_option(struct d_resource *res, struct d_volume *vol)
 }
 
 // Need to convert after from resourcename/volume to minor_number.
-static void convert_after_option(struct d_resource *res)
+void convert_after_option(struct d_resource *res)
 {
 	struct d_volume *vol;
 	struct d_host_info *h;
@@ -1798,7 +1798,6 @@ void global_validate_maybe_expand_die_if_invalid(const bool expand, enum pp_flag
 			if (expand) {
 				struct connection *conn;
 
-				convert_after_option(res);
 				convert_discard_opt(&res->net_options);
 
 				for_each_connection(conn, &res->connections)
