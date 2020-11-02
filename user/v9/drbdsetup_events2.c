@@ -34,6 +34,7 @@
 #include "drbd_nla.h"
 #include "drbdtool_common.h"
 #include <linux/genl_magic_func.h>
+#include "drbd_protocol.h"
 #include "drbd_strings.h"
 #include "drbdsetup_colors.h"
 
@@ -472,6 +473,30 @@ static int count_up_to_date_replicas(struct resources_list *resource, struct dev
 	return up_to_date_replicas;
 }
 
+static bool have_stable_up_to_date_replicas(struct resources_list *resource, struct devices_list *device)
+{
+	struct connections_list *connection;
+	struct peer_devices_list *peer_device;
+
+	if (device->info.dev_disk_state == D_UP_TO_DATE) {
+		/* Technically this device may be unstable due to a primary
+		 * peer, but that is handled separately, so we do not check it
+		 * here. */
+		return true;
+	}
+
+	for (connection = resource->connections; connection; connection = connection->next) {
+		for (peer_device = connection->peer_devices; peer_device; peer_device = peer_device->next) {
+			if (peer_device->ctx.ctx_volume == device->ctx.ctx_volume &&
+					peer_device->info.peer_disk_state == D_UP_TO_DATE &&
+					peer_device->statistics.peer_dev_uuid_flags & UUID_FLAG_STABLE)
+				return true;
+		}
+	}
+
+	return false;
+}
+
 static bool have_primary(struct resources_list *resource)
 {
 	struct connections_list *connection;
@@ -500,6 +525,7 @@ static struct promotion_info compute_promotion_info(struct resources_list *resou
 	int up_to_date_devices = 0;
 	bool all_devices_have_disk = true;
 	int min_up_to_date_replicas = -1;
+	bool all_devices_stable_up_to_date = true;
 	int all_local_devices_score;
 	int local_devices_score;
 	int replicas_score;
@@ -513,6 +539,7 @@ static struct promotion_info compute_promotion_info(struct resources_list *resou
 
 	for (device = resource->devices; device; device = device->next) {
 		int up_to_date_replicas = count_up_to_date_replicas(resource, device);
+		bool stable_up_to_date_replicas = have_stable_up_to_date_replicas(resource, device);
 		enum drbd_disk_state disk_state = device->info.dev_disk_state;
 
 		device_count++;
@@ -527,14 +554,15 @@ static struct promotion_info compute_promotion_info(struct resources_list *resou
 
 		if (min_up_to_date_replicas == -1 || up_to_date_replicas < min_up_to_date_replicas)
 			min_up_to_date_replicas = up_to_date_replicas;
+
+		if (!stable_up_to_date_replicas)
+			all_devices_stable_up_to_date = false;
 	}
 
 	if (min_up_to_date_replicas == -1 || min_up_to_date_replicas == 0)
 		return info;
 
-	/* Quorum and access to up-to-date data have already been handled, so
-	 * the only remaining condition to check is the role. */
-	info.may_promote = !have_primary(resource);
+	info.may_promote = !have_primary(resource) && all_devices_stable_up_to_date;
 
 	all_local_devices_score = all_devices_have_disk ? 1 : 0;
 	local_devices_score = min(up_to_date_devices, 99);
