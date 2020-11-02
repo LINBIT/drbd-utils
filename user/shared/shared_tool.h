@@ -82,6 +82,7 @@ struct bdev_info {
 	char *bd_name;
 };
 
+void ensure_sanity_of_res_name(const char *res_name);
 
 /* these return 0 on sucess, error code if something goes wrong. */
 /* create (update) the last-known-bdev-info file */
@@ -99,9 +100,6 @@ extern void get_random_bytes(void *buffer, size_t len);
 extern int m_asprintf(char **strp, const char *fmt, ...);
 
 extern void fprintf_hex(FILE *fp, off_t file_offset, const void *buf, unsigned len);
-
-
-extern void ensure_sanity_of_res_name(char *stg);
 
 extern bool addr_scope_local(const char *input);
 
