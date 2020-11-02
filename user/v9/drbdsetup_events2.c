@@ -532,7 +532,9 @@ static struct promotion_info compute_promotion_info(struct resources_list *resou
 	if (min_up_to_date_replicas == -1 || min_up_to_date_replicas == 0)
 		return info;
 
-	info.may_promote = !have_primary(resource) && (up_to_date_devices == device_count);
+	/* Quorum and access to up-to-date data have already been handled, so
+	 * the only remaining condition to check is the role. */
+	info.may_promote = !have_primary(resource);
 
 	all_local_devices_score = all_devices_have_disk ? 1 : 0;
 	local_devices_score = min(up_to_date_devices, 99);
