@@ -138,6 +138,7 @@ struct parser_file_state *add_cfgfile_by_path(const char *const path)
 					exit(E_THINKO);
 				}
 			}
+			res_map_changed = true;
 		} else {
 			const ENTRY *const path_entry = *((ENTRY **) path_entry_node);
 			struct parser_res_state *const res_state = path_entry->data;
@@ -240,6 +241,7 @@ static ENTRY *get_or_create_res_map_entry(const char *const path) {
 			err("Tree insertion into the resource map failed: Out of memory");
 			exit(E_THINKO);
 		}
+		res_map_changed = true;
 	} else {
 		res_entry = *((ENTRY **) res_entry_node);
 		free((void *) res_name);
