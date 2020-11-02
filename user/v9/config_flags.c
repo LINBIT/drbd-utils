@@ -209,6 +209,23 @@ static bool numeric_is_equal(struct field_def *field, const char *a, const char 
 	return la == lb;
 }
 
+// Compare resync-after field, but only if they are already converted to minor numbers.
+// If not, pretend they are the same to make the parser not fall apart and crash and burn
+static bool guess_is_equal(struct field_def *field, const char *value, const char *other)
+{
+	char *endptr;
+	unsigned long long num_value = strtoull(value, &endptr, 10);
+	const bool valid_value = (value[0] != '\0' && endptr[0] == '\0');
+	unsigned long long num_other = strtoull(other, &endptr, 10);
+	const bool valid_other = (other[0] != '\0' && endptr[0] == '\0');
+
+	bool result = true;
+	if (valid_value && valid_other) {
+		result = num_value == num_other;
+	}
+	return result;
+}
+
 static const char *get_numeric(struct context_def *ctx, struct field_def *field, struct nlattr *nla)
 {
 	static char buffer[1 + 20 + 2];
@@ -338,6 +355,16 @@ static enum check_codes numeric_check(struct field_def *field, const char *value
 struct field_class fc_numeric = {
 	.is_default = numeric_is_default,
 	.is_equal = numeric_is_equal,
+	.get = get_numeric,
+	.put = put_numeric,
+	.usage = numeric_usage,
+	.describe_xml = numeric_describe_xml,
+	.check = numeric_check,
+};
+
+struct field_class fc_untyped = {
+	.is_default = numeric_is_default,
+	.is_equal = guess_is_equal,
 	.get = get_numeric,
 	.put = put_numeric,
 	.usage = numeric_usage,
@@ -718,6 +745,16 @@ struct field_class fc_string = {
 		.is_signed = F_ ## f ## _IS_SIGNED,					\
 		.scale = DRBD_ ## d ## _SCALE } }
 
+#define UNTYPED(f, d)									\
+	.nla_type = T_ ## f,								\
+	.ops = &fc_untyped,								\
+	.u = { .n = {									\
+		.min = DRBD_ ## d ## _MIN,						\
+		.max = DRBD_ ## d ## _MAX,						\
+		.def = DRBD_ ## d ## _DEF,						\
+		.is_signed = F_ ## f ## _IS_SIGNED,					\
+		.scale = DRBD_ ## d ## _SCALE } }
+
 #define BOOLEAN(f, d)									\
 	.nla_type = T_ ## f,								\
 	.ops = &fc_boolean,								\
@@ -845,7 +882,7 @@ const struct en_map quorum_map[] = {
 	{ "disk-flushes", BOOLEAN(disk_flushes, DISK_FLUSHES) },			\
 	{ "disk-drain", BOOLEAN(disk_drain, DISK_DRAIN) },				\
 	{ "md-flushes", BOOLEAN(md_flushes, MD_FLUSHES) },				\
-	{ "resync-after", NUMERIC(resync_after, MINOR_NUMBER), .checked_in_postparse = true}, \
+	{ "resync-after", UNTYPED(resync_after, MINOR_NUMBER), .checked_in_postparse = true}, \
 	{ "al-extents", NUMERIC(al_extents, AL_EXTENTS), .implicit_clamp = true, },	\
 	{ "al-updates", BOOLEAN(al_updates, AL_UPDATES) },				\
 	{ "discard-zeroes-if-aligned",							\
