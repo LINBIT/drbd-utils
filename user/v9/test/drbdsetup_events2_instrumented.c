@@ -34,6 +34,8 @@
 #include "../drbdsetup.h"
 #include "../drbdsetup_colors.h"
 
+#include "drbd_protocol.h"
+
 int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
 
 extern struct genl_family drbd_genl_family;
@@ -196,6 +198,7 @@ void test_peer_device_statistics(struct msg_buff *smsg, bool resync)
 	nla_put_u64(smsg, T_peer_dev_rs_dt1_ms, resync ? 100 : 0);
 	nla_put_u64(smsg, T_peer_dev_rs_db1_sectors, resync ? 50 : 0);
 	nla_put_u32(smsg, T_peer_dev_rs_c_sync_rate, 0);
+	nla_put_u64(smsg, T_peer_dev_uuid_flags, UUID_FLAG_STABLE);
 	nla_nest_end(smsg, nla);
 }
 
