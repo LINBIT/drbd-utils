@@ -719,7 +719,7 @@ void DrbdMon::parse_event_props(StringTokenizer& tokens, PropsMap& event_props, 
 
                 std::string debug_info("Duplicate key ");
                 debug_info += *(key.get());
-                debug_info += "on event line";
+                debug_info += " on event line";
 
                 throw EventMessageException(&error_msg, &debug_info, &event_line);
             }
