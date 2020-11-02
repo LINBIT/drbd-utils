@@ -453,29 +453,48 @@ void fprintf_hex(FILE *fp, off_t file_offset, const void *buf, unsigned len)
 	fprintf(fp, "%08llx\n", (unsigned long long)len + file_offset);
 }
 
-
-void ensure_sanity_of_res_name(char *stg)
+/**
+ * Applies some sanity checks to resource names
+ *
+ * Works only on ASCII or character sets with comparable properties
+ */
+void ensure_sanity_of_res_name(const char *const res_name)
 {
-    unsigned code;
-    if (!*stg) {
-	fprintf(stderr, "Resource name is empty.\n");
-	exit(1);
-    }
+	// Indicates the presence of non-numeric characters
+	// FIXME: This could still parse as a number and be misinterpreted as a
+	// minor number instead of a resource name by the resync-after code,
+	// because the strtoull function is stupid
+	bool have_alpha = false;
 
-    while (*stg) {
-	/* No, we won't verify valid UTF-8, and neither check for unicode
-	 * control sequences. */
-	/* Only works for ASCII derived code sets. */
-	code = * (unsigned char*) stg;
-	if (code < ' ' || code == '\x7f')
-	{
-	    fprintf(stderr, "Resource name is invalid - please don't use control characters.\n");
-	    exit(1);
+	size_t idx = 0;
+	// FIXME: There are a lot of unreadable/non-printing characters in
+	// the 0x80-0xFF range that should probably not be allowed
+	// FIXME: What is the actual length limit of resource names?
+	// FIXME: Why is a space allowed in a resource name?
+	//        This will certainly screw up parsing of e.g. DRBD event lines,
+	//        because those use space as a separator.
+	while (idx < 0xFFFF && res_name[idx] != '\0' &&
+	       res_name[idx] >= ' ' && res_name[idx] != '\x7F') {
+		if (res_name[idx] <= '0' || res_name[idx] >= '9') {
+			have_alpha = true;
+		}
+		++idx;
 	}
 
-	stg++;
-    }
-    return;
+	if (idx == 0) {
+		fputs("Invalid resource name: Empty string\n", stderr);
+		exit(1);
+	}
+
+	if (res_name[idx] != '\0') {
+		fputs("Invalid resource name: Resource name contains invalid characters\n", stderr);
+		exit(1);
+	}
+
+	if (!have_alpha) {
+		fputs("Invalid resource name: Resource name cannot be a number\n", stderr);
+		exit(1);
+	}
 }
 
 bool addr_scope_local(const char *input)
