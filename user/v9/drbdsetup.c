@@ -4321,7 +4321,10 @@ int drbdsetup_main(int argc, char **argv)
 			print_command_usage(cmd, FULL);
 			exit(20);
 		} else if (next_arg & (CTX_RESOURCE | CTX_MINOR | CTX_ALL)) {
-			ensure_sanity_of_res_name(argv[optind]);
+			// This used to call ensure_sanity_of_res_name, but it does not actually
+			// check resource names, apparently, it checks all kinds of things,
+			// e.g. minor numbers
+			ensure_sanity_generic(argv[optind]);
 			if (!objname)
 				objname = argv[optind];
 			if (!strcmp(argv[optind], "all")) {

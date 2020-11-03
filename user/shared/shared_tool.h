@@ -83,6 +83,7 @@ struct bdev_info {
 };
 
 void ensure_sanity_of_res_name(const char *res_name);
+void ensure_sanity_generic(const char *something);
 
 /* these return 0 on sucess, error code if something goes wrong. */
 /* create (update) the last-known-bdev-info file */
