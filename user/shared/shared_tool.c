@@ -497,6 +497,22 @@ void ensure_sanity_of_res_name(const char *const res_name)
 	}
 }
 
+/**
+ * Called by drbdsetup for checking an unknown selection of parameters.
+ * It used to call ensure_sanity_of_res_name, but not just on resource names.
+ */
+void ensure_sanity_generic(const char *const something)
+{
+	size_t idx = 0;
+	while (idx < 0xFFFF && something[idx] != '\0' &&
+	       something[idx] >= ' ' && something[idx] != '\x7F') {
+		++idx;
+	}
+	if (something[idx] != '\0') {
+		fprintf(stderr, "Invalid input parameter: \"%s\"\n", something);
+	}
+}
+
 bool addr_scope_local(const char *input)
 {
 	struct in_addr addr4;
