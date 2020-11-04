@@ -3,6 +3,14 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.15.1
+--------
+ * drbd-attr(Pacemaker RA): various smaller fixes that make
+   it less noisy
+ * drbdsetup,v9: silence an esoteric warning seen on recent gcc.
+ * drbdmon: whitespace fix
+ * may_promote: improve quality (i.e., if Primary is 2 steps away)
+
 9.15.0
 --------
  * New drbd-attr Pacemaker RA
