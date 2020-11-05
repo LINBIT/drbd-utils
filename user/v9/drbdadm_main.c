@@ -3530,6 +3530,9 @@ int main(int argc, char **argv)
 	free(current_cmd->resource_names);
 	free(current_cmd);
 	current_cmd = NULL;
+
+	deallocate_on_demand_parsing();
+
 	return rv;
 }
 
