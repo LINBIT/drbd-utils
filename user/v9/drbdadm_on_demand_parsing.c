@@ -19,6 +19,10 @@ static struct parser_res_state *create_parser_res_state(const char *const res_na
 static ENTRY *create_entry(const char* const key, const void *const value);
 static void mark_res_state_loaded(const void *const node, const VISIT phase, const int depth);
 static void file_state_check(const void *const node, const VISIT phase, const int depth);
+static void deallocate_res_map_entries(void *const node);
+static void deallocate_file_state_entries(void *const node);
+static void deallocate_path_map_entries(void *const node);
+
 static void debug_list_global_res_map(void);
 static void debug_list_global_path_map(void);
 static void debug_list_res_state_node(const void *const node, const VISIT phase, const int depth);
@@ -339,6 +343,41 @@ static void file_state_check(const void *const node, const VISIT phase, const in
 			all_files_loaded = false;
 		}
 	}
+}
+
+void deallocate_on_demand_parsing(void)
+{
+	tdestroy(global_res_map, &deallocate_res_map_entries);
+	tdestroy(global_path_map, &deallocate_path_map_entries);
+}
+
+static void deallocate_res_map_entries(void *const node)
+{
+	ENTRY *const map_entry = (ENTRY *) node;
+	struct parser_res_state *const res_state = map_entry->data;
+	tdestroy(res_state->parser_file_state_map, &deallocate_file_state_entries);
+	// res_name is also the map_entry key
+	free((void *) res_state->res_name);
+	free(res_state);
+	free(map_entry);
+}
+
+static void deallocate_file_state_entries(void *const node)
+{
+	ENTRY *const map_entry = (ENTRY *) node;
+	struct parser_file_state *const file_state = map_entry->data;
+	// canon_path is also the map_entry key
+	free((void *) file_state->canon_path);
+	free(file_state);
+	free(map_entry);
+}
+
+static void deallocate_path_map_entries(void *const node)
+{
+	ENTRY *const map_entry = (ENTRY *) node;
+	// The map_entry key and data are deallocated by the deallocate_res_map_entries
+	// and deallocate_file_state_entries functions
+	free(map_entry);
 }
 
 void debug_on_demand_parsing(void)

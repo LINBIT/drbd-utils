@@ -44,6 +44,7 @@ struct parser_file_state *add_cfgfile_by_path(const char *const path);
 bool load_resource(const char *const res_name);
 bool load_all_resources(void);
 void mark_resources_loaded(void);
+void deallocate_on_demand_parsing(void);
 
 bool is_defer_exempt(const char *const path);
 
