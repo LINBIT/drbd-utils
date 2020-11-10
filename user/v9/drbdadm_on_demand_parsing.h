@@ -39,14 +39,14 @@ extern char *canonicalize_path(const char *path);
 void debug_on_demand_parsing(void);
 void debug_loaded_resources(void);
 
-const char *create_res_name_from_path(const char *const path);
-struct parser_file_state *add_cfgfile_by_path(const char *const path);
-bool load_resource(const char *const res_name);
+const char *create_res_name_from_path(const char *path);
+struct parser_file_state *add_cfgfile_by_path(const char *path);
+bool load_resource(const char *res_name);
 bool load_all_resources(void);
 void mark_resources_loaded(void);
 void deallocate_on_demand_parsing(void);
 
-bool is_defer_exempt(const char *const path);
+bool is_defer_exempt(const char *path);
 
 typedef bool (*config_file_loader_fn)(const char *file_name);
 

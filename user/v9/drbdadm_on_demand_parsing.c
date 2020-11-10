@@ -8,26 +8,26 @@
 #include <search.h>
 #include <string.h>
 
-static void load_resource_file_state(const void *const node, const VISIT phase, const int depth);
-static void load_all_resources_res_state(const void *const node, const VISIT phase, const int depth);
-static ENTRY *get_or_create_res_map_entry(const char *const path);
-static ENTRY *get_or_create_res_map_entry(const char *const path);
-static struct parser_file_state *create_parser_file_state(const char *const canon_path,
-                                                          const bool is_loaded,
-                                                          const bool prevent_load);
-static struct parser_res_state *create_parser_res_state(const char *const res_name, const bool is_loaded);
-static ENTRY *create_entry(const char* const key, const void *const value);
-static void mark_res_state_loaded(const void *const node, const VISIT phase, const int depth);
-static void file_state_check(const void *const node, const VISIT phase, const int depth);
-static void deallocate_res_map_entries(void *const node);
-static void deallocate_file_state_entries(void *const node);
-static void deallocate_path_map_entries(void *const node);
+static void load_resource_file_state(const void *node, const VISIT phase, int depth);
+static void load_all_resources_res_state(const void *node, const VISIT phase, int depth);
+static ENTRY *get_or_create_res_map_entry(const char *path);
+static ENTRY *get_or_create_res_map_entry(const char *path);
+static struct parser_file_state *create_parser_file_state(const char *canon_path,
+                                                          bool is_loaded,
+                                                          bool prevent_load);
+static struct parser_res_state *create_parser_res_state(const char *res_name, bool is_loaded);
+static ENTRY *create_entry(const char *key, const void *value);
+static void mark_res_state_loaded(const void *node, const VISIT phase, int depth);
+static void file_state_check(const void *node, const VISIT phase, int depth);
+static void deallocate_res_map_entries(void *node);
+static void deallocate_file_state_entries(void *node);
+static void deallocate_path_map_entries(void *node);
 
 static void debug_list_global_res_map(void);
 static void debug_list_global_path_map(void);
-static void debug_list_res_state_node(const void *const node, const VISIT phase, const int depth);
-static void debug_list_file_state_node(const void *const node, const VISIT phase, const int depth);
-static void debug_short_list_res_state_node(const void *const node, const VISIT phase, const int depth);
+static void debug_list_res_state_node(const void *node, const VISIT phase, int depth);
+static void debug_list_file_state_node(const void *node, const VISIT phase, int depth);
+static void debug_short_list_res_state_node(const void *node, const VISIT phase, int depth);
 
 bool defer_load = true;
 
@@ -271,8 +271,8 @@ static ENTRY *get_or_create_res_map_entry(const char *const path) {
 }
 
 static struct parser_file_state *create_parser_file_state(const char *const canon_path,
-                                                   const bool is_loaded,
-                                                   const bool prevent_load) {
+                                                          const bool is_loaded,
+                                                          const bool prevent_load) {
 	struct parser_file_state *const new_state = malloc(sizeof (*new_state));
 	if (new_state == NULL) {
 		err("Cannot allocate a new configuration file state entry: %m");
@@ -353,7 +353,7 @@ void deallocate_on_demand_parsing(void)
 
 static void deallocate_res_map_entries(void *const node)
 {
-	ENTRY *const map_entry = (ENTRY *) node;
+	ENTRY *const map_entry = node;
 	struct parser_res_state *const res_state = map_entry->data;
 	tdestroy(res_state->parser_file_state_map, &deallocate_file_state_entries);
 	// res_name is also the map_entry key
@@ -364,7 +364,7 @@ static void deallocate_res_map_entries(void *const node)
 
 static void deallocate_file_state_entries(void *const node)
 {
-	ENTRY *const map_entry = (ENTRY *) node;
+	ENTRY *const map_entry = node;
 	struct parser_file_state *const file_state = map_entry->data;
 	// canon_path is also the map_entry key
 	free((void *) file_state->canon_path);
@@ -374,7 +374,7 @@ static void deallocate_file_state_entries(void *const node)
 
 static void deallocate_path_map_entries(void *const node)
 {
-	ENTRY *const map_entry = (ENTRY *) node;
+	ENTRY *const map_entry = node;
 	// The map_entry key and data are deallocated by the deallocate_res_map_entries
 	// and deallocate_file_state_entries functions
 	free(map_entry);
