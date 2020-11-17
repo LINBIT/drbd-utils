@@ -163,13 +163,13 @@ global
 [require-drbd-module-version-{eq,ne,gt,ge,lt,le}]
 resource
    connection
-      path
-      net
-        volume
-           peer-device-options
+      multiple path | 2 host
+      [net]
+      [volume]
+         [peer-device-options]
       [peer-device-options]
    connection-mesh
-      net
+      [net]
    [disk]
    floating
    handlers
