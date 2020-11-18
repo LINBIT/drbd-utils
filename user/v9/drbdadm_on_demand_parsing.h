@@ -26,6 +26,9 @@ struct parser_res_state {
 
 extern bool defer_load;
 
+// Enables debug output on stderr during loading of resource files
+extern int debug_loading_level;
+
 // Indicates that the mapping of resources to configuration files changed
 // (e.g., new resources and/or new files were inserted)
 extern bool res_map_changed;

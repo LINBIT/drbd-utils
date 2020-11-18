@@ -86,6 +86,7 @@ struct option general_admopt[] = {
 	{"version", no_argument, 0, 'V'},
 	{"setup-option", required_argument, 0, 'W'},
 	{"help", no_argument, 0, 'h'},
+	{"debug-loading", required_argument, 0, 'L'},
 	{0, 0, 0, 0}
 };
 struct option *admopt = general_admopt;
@@ -3042,6 +3043,17 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, struct drbdadm_cm
 		case 'h':
 			help = true;
 			break;
+		case 'L':
+			{
+				char *endptr = NULL;
+				unsigned long value = strtoul(optarg, &endptr, 10);
+				if (endptr[0] == '\0' && optarg[0] != '\0') {
+					debug_loading_level = (int) (value >= 0 ? (value <= 2 ? value : 2) : 0);
+				} else {
+					fputs("WARNING: Invalid debug level specification for debug-loading ignored\n", stderr);
+				}
+			}
+			break;
 		case '?':
 			goto help;
 		}
@@ -3411,6 +3423,14 @@ int main(int argc, char **argv)
 				run_post_parse();
 			} while (need_post_parse);
 
+			if (debug_loading_level >= 2) {
+				debug_resource_config();
+			}
+
+			if (debug_loading_level >= 1) {
+				debug_loaded_resources();
+			}
+
 			/* either no resource arguments at all,
 			 * but command is dump / dump-xml, so implicit "all",
 			 * or an explicit "all" argument is given */
@@ -3452,6 +3472,14 @@ int main(int argc, char **argv)
 			do {
 				run_post_parse();
 			} while (need_post_parse);
+
+			if (debug_loading_level >= 2) {
+				debug_resource_config();
+			}
+
+			if (debug_loading_level >= 1) {
+				debug_loaded_resources();
+			}
 
 			for (i = 0; current_cmd->resource_names[i]; i++) {
 				r = ctx_by_name(&ctx, current_cmd->resource_names[i], SETUP_MULTI);

@@ -1420,6 +1420,10 @@ struct d_resource *res_by_name(const char *const res_name)
 			}
 			res = res_by_name_lookup(res_name);
 		}
+
+		if (debug_loading_level >= 2) {
+			debug_loaded_resources();
+		}
 	}
 
 	return res;
