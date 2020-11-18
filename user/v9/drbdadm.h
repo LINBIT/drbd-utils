@@ -25,6 +25,17 @@
  */
 #define API_VERSION 2
 
+enum post_parse_phase
+{
+	INITIAL,
+	SET_ON_HOSTS,
+	SETUP_CONNECTIONS,
+	GENERIC_POST_PARSE,
+	EXPAND,
+	VALIDATE,
+	FINISHED
+};
+
 struct d_name
 {
 	char *name;
@@ -242,8 +253,8 @@ struct d_resource
 	unsigned int stacked_on_one:1; /* Stacked either on me or on peer */
 	unsigned int peers_addrs_set:1; /* all peer addresses set */
 	unsigned int no_bitmap_done:1;
-	// Indicates whether the resource has been post-parsed (1) or not (0)
-	unsigned int is_post_parsed:1;
+	// Indicates the post-parse phase
+	enum post_parse_phase phase;
 
 	/* if a prerequisite command failed, don't try any further commands.
 	 * see run_deferred_cmds() */
@@ -468,6 +479,12 @@ extern char* drbdadm_84;
 extern char ss_buffer[1024];
 extern const char *hostname;
 extern struct names backend_options;
+
+// Used to detect recursive post_parse calls
+extern bool post_parse_active;
+
+// Used during an active post_parse to indicate that post_parse needs to run again
+extern bool need_post_parse;
 
 /* ssprintf() places the result of the printf in the current stack
    frame and sets ptr to the resulting string. If the current stack

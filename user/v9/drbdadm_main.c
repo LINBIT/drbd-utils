@@ -3430,7 +3430,9 @@ int main(int argc, char **argv)
 		    strcmp(current_cmd->resource_names[0], "all") == 0) {
 			current_cmd->is_all_resources_cmd = true;
 
-			run_post_parse();
+			do {
+				run_post_parse();
+			} while (need_post_parse);
 
 			/* either no resource arguments at all,
 			 * but command is dump / dump-xml, so implicit "all",
@@ -3465,7 +3467,9 @@ int main(int argc, char **argv)
 			/* explicit list of resources to work on */
 			current_cmd->is_all_resources_cmd = false;
 
-			run_post_parse();
+			do {
+				run_post_parse();
+			} while (need_post_parse);
 
 			for (i = 0; current_cmd->resource_names[i]; i++) {
 				r = ctx_by_name(&ctx, current_cmd->resource_names[i], SETUP_MULTI);
