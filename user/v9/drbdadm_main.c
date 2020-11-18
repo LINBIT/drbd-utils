@@ -3371,6 +3371,19 @@ int main(int argc, char **argv)
 	// Turn off deferred loading of configuration files included by name pattern match
 	defer_load = false;
 
+	if ((resource_names[0] != NULL && strcmp(resource_names[0], "all") == 0) ||
+	    (resource_names[0] == NULL && is_dump != 0)) {
+		// This is for two situations:
+		//   1. First resource argument is "all"
+		//   2. No resources arguments, but the command is a dump command
+		load_all_resources();
+
+		if (cmd->res_name_required != 0 && STAILQ_EMPTY(&config) && !is_dump) {
+			err("no resources defined!\n");
+			exit(E_USAGE);
+		}
+	}
+
 	if (!config_valid)
 		exit(E_CONFIG_INVALID);
 
@@ -3388,11 +3401,6 @@ int main(int argc, char **argv)
 
 	ctx.cmd = cmd;
 	if (cmd->res_name_required || resource_names[0]) {
-		if (STAILQ_EMPTY(&config) && !is_dump) {
-			err("no resources defined!\n");
-			exit(E_USAGE);
-		}
-
 		global_validate_maybe_expand_die_if_invalid(!is_dump,
 							    cmd->is_proxy_cmd ? MATCH_ON_PROXY : 0);
 
@@ -3435,6 +3443,11 @@ int main(int argc, char **argv)
 		} else {
 			/* explicit list of resources to work on */
 			struct connection *conn;
+
+			// Load the specified resources
+			for (int idx = 0; resource_names[idx] != NULL; ++idx) {
+				load_resource(resource_names[idx]);
+			}
 
 			/* first we execute some sanity checks,
 			 * the checks use ignore_tmp */
