@@ -3365,8 +3365,9 @@ int main(int argc, char **argv)
 		}
 	}
 
-	if (!config_valid)
-		exit(E_CONFIG_INVALID);
+	// Whatever nonsense is in the config is now valid
+	// until something in the post_parse step thinks it isn't
+	config_valid = 1;
 
 	post_parse(&config, cmd->is_proxy_cmd ? MATCH_ON_PROXY : 0);
 
