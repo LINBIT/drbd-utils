@@ -31,6 +31,8 @@ static void debug_short_list_res_state_node(const void *node, const VISIT phase,
 
 bool defer_load = true;
 
+int debug_loading_level = 0;
+
 // Indicates that the map of resources to configuration files changed
 // (e.g., resource entries or configuration file entries were added)
 bool res_map_changed = false;
@@ -175,11 +177,17 @@ bool load_resource(const char *const res_name)
 
 	res_map_changed = false;
 	do {
+		if (debug_loading_level >= 2) {
+			fprintf(stderr, "DEBUG load_resource res_name=\"%s\"\n", res_name);
+		}
 		const ENTRY res_search_key = {(char *) res_name, NULL};
 		void *const res_entry_node = tfind(&res_search_key, &global_res_map, &btree_key_cmp);
 		if (res_entry_node != NULL) {
 			const ENTRY *const res_entry = *((ENTRY **) res_entry_node);
 			struct parser_res_state *const res_state = res_entry->data;
+			if (debug_loading_level >= 2) {
+				fprintf(stderr, "DEBUG Assuming associated resource=\"%s\"\n", res_state->res_name);
+			}
 			if (!res_state->is_loaded) {
 				twalk(res_state->parser_file_state_map, &load_resource_file_state);
 			}
@@ -235,6 +243,9 @@ static void load_resource_file_state(const void *const node, const VISIT phase, 
 	if (phase == postorder || phase == leaf) {
 		const ENTRY *const file_entry = *((ENTRY **) node);
 		struct parser_file_state *const file_state = file_entry->data;
+		if (debug_loading_level >= 2) {
+			fprintf(stderr, "DEBUG load_resource_file_state canon_path=\"%s\"\n", file_state->canon_path);
+		}
 		if (!file_state->is_loaded && !file_state->prevent_load) {
 			if (load_config_file(file_state->canon_path)) {
 				file_state->is_loaded = true;
