@@ -17,6 +17,8 @@ static struct parser_file_state *create_parser_file_state(const char *const cano
                                                           const bool prevent_load);
 static struct parser_res_state *create_parser_res_state(const char *const res_name, const bool is_loaded);
 static ENTRY *create_entry(const char* const key, const void *const value);
+static void mark_res_state_loaded(const void *const node, const VISIT phase, const int depth);
+static void file_state_check(const void *const node, const VISIT phase, const int depth);
 static void debug_list_global_res_map(void);
 static void debug_list_global_path_map(void);
 static void debug_list_res_state_node(const void *const node, const VISIT phase, const int depth);
@@ -24,6 +26,7 @@ static void debug_list_file_state_node(const void *const node, const VISIT phase
 static void debug_short_list_res_state_node(const void *const node, const VISIT phase, const int depth);
 
 bool defer_load = true;
+bool res_map_changed = false;
 
 /*
  * Map of canonical configuration file path to parser_res_state
@@ -36,6 +39,14 @@ void *global_path_map = NULL;
  * Set of ENTRY with key = resource name, value = struct parser_res_state
  */
 void *global_res_map = NULL;
+
+/**
+ * Flag used for determining, during a tree walk, whether all configuration files
+ * that are associated with a resource are loaded. This should normally be a local
+ * variable, but the tree walks require a callback method that does not support
+ * any additional context (like a pointer to a local variable).
+ */
+bool all_files_loaded = false;
 
 /**
  * Guesses the name of the DRBD resource based on the path of
@@ -151,16 +162,19 @@ struct parser_file_state *add_cfgfile_by_path(const char *const path)
  */
 void load_resource(const char *const res_name)
 {
-	const ENTRY res_search_key = {(char *) res_name, NULL};
-	void *const res_entry_node = tfind(&res_search_key, &global_res_map, &btree_key_cmp);
-	if (res_entry_node != NULL) {
-		const ENTRY *const res_entry = *((ENTRY **) res_entry_node);
-		struct parser_res_state *const res_state = res_entry->data;
-		if (!res_state->is_loaded) {
-			twalk(res_state->parser_file_state_map, &load_resource_file_state);
-			res_state->is_loaded = true;
+	res_map_changed = false;
+	do {
+		const ENTRY res_search_key = {(char *) res_name, NULL};
+		void *const res_entry_node = tfind(&res_search_key, &global_res_map, &btree_key_cmp);
+		if (res_entry_node != NULL) {
+			const ENTRY *const res_entry = *((ENTRY **) res_entry_node);
+			struct parser_res_state *const res_state = res_entry->data;
+			if (!res_state->is_loaded) {
+				twalk(res_state->parser_file_state_map, &load_resource_file_state);
+			}
 		}
-	}
+	} while (res_map_changed);
+	mark_resources_loaded();
 }
 
 /**
@@ -168,7 +182,11 @@ void load_resource(const char *const res_name)
  */
 void load_all_resources(void)
 {
-	twalk(global_res_map, &load_all_resources_res_state);
+	res_map_changed = false;
+	do {
+		twalk(global_res_map, &load_all_resources_res_state);
+	} while (res_map_changed);
+	mark_resources_loaded();
 }
 
 /**
@@ -181,7 +199,6 @@ static void load_all_resources_res_state(const void *const node, const VISIT pha
 	if (!res_state->is_loaded) {
 		twalk(res_state->parser_file_state_map, &load_resource_file_state);
 	}
-	res_state->is_loaded = true;
 }
 
 /**
@@ -276,6 +293,33 @@ bool is_defer_exempt(const char *const path)
 		file_name = path;
 	}
 	return strcmp(file_name, "linstor-resources.res") == 0;
+}
+
+void mark_resources_loaded(void)
+{
+	twalk(global_res_map, &mark_res_state_loaded);
+}
+
+static void mark_res_state_loaded(const void *const node, const VISIT phase, const int depth)
+{
+	if (phase == postorder || phase == leaf) {
+		const ENTRY *const map_entry = *((ENTRY **) node);
+		struct parser_res_state *const res_state = map_entry->data;
+		all_files_loaded = true;
+		twalk(res_state->parser_file_state_map, &file_state_check);
+		res_state->is_loaded = all_files_loaded;
+	}
+}
+
+static void file_state_check(const void *const node, const VISIT phase, const int depth)
+{
+	if (phase == postorder || phase == leaf) {
+		const ENTRY *const map_entry = *((ENTRY **) node);
+		const struct parser_file_state *const file_state = map_entry->data;
+		if (!file_state->is_loaded) {
+			all_files_loaded = false;
+		}
+	}
 }
 
 void debug_on_demand_parsing(void)
