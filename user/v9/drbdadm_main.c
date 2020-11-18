@@ -3295,7 +3295,6 @@ int main(int argc, char **argv)
 	size_t i;
 	int rv = 0, r;
 	struct adm_cmd *cmd = NULL;
-	struct d_resource *res;
 	char *env_drbd_nodename = NULL;
 	struct cfg_ctx ctx = { };
 
@@ -3449,6 +3448,11 @@ int main(int argc, char **argv)
 			if (current_cmd->is_adjust)
 				adjust_more_than_one_resource = 1;
 
+			struct d_resource *res;
+			for_each_resource(res, &config) {
+				convert_after_option(res);
+			}
+
 			for_each_resource(res, &config) {
 				if (!current_cmd->is_dump && res->ignore)
 					continue;
@@ -3515,6 +3519,12 @@ int main(int argc, char **argv)
 				verify_ips(ctx.res);
 				if (!current_cmd->is_dump && config_valid == 0)
 					exit(E_CONFIG_INVALID);
+
+				struct d_resource *res;
+				for_each_resource(res, &config) {
+					convert_after_option(res);
+				}
+
 				r = call_cmd(cmd, &ctx, EXIT_ON_FAIL);	/* does exit for r >= 20! */
 				if (r > rv)
 					rv = r;
