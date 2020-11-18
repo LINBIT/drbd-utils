@@ -26,6 +26,10 @@ struct parser_res_state {
 
 extern bool defer_load;
 
+// Indicates that the mapping of resources to configuration files changed
+// (e.g., new resources and/or new files were inserted)
+extern bool res_map_changed;
+
 extern char *canonicalize_path(const char *path);
 
 void debug_on_demand_parsing(void);
@@ -35,6 +39,7 @@ const char *create_res_name_from_path(const char *const path);
 struct parser_file_state *add_cfgfile_by_path(const char *const path);
 void load_resource(const char *const res_name);
 void load_all_resources(void);
+void mark_resources_loaded(void);
 
 bool is_defer_exempt(const char *const path);
 
