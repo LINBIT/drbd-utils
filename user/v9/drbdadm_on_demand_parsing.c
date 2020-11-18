@@ -21,6 +21,7 @@ static void debug_list_global_res_map(void);
 static void debug_list_global_path_map(void);
 static void debug_list_res_state_node(const void *const node, const VISIT phase, const int depth);
 static void debug_list_file_state_node(const void *const node, const VISIT phase, const int depth);
+static void debug_short_list_res_state_node(const void *const node, const VISIT phase, const int depth);
 
 bool defer_load = true;
 
@@ -283,6 +284,13 @@ void debug_on_demand_parsing(void)
 	debug_list_global_path_map();
 }
 
+void debug_loaded_resources(void)
+{
+	fputs("\x1b[38;5;196mDEBUG\x1B[0m \x1b[38;5;226mMappings of resource name to parser state:\x1b[0m\n", stderr);
+	twalk(global_res_map, &debug_short_list_res_state_node);
+	fputc('\n', stderr);
+}
+
 static void debug_list_global_res_map(void)
 {
 	fputs("\x1b[38;5;196mDEBUG\x1B[0m \x1b[38;5;226mMappings of resource name to parser state:\x1b[0m\n", stderr);
@@ -323,5 +331,16 @@ static void debug_list_file_state_node(const void *const node, const VISIT phase
 		fprintf(stderr, "                Path:           \"\x1B[38;5;40m%s\x1B[0m\"\n", file_state->canon_path);
 		fprintf(stderr, "                is_loaded:      \x1B[38;5;40m%s\x1B[0m\n", (file_state->is_loaded ? "true" : "false"));
 		fprintf(stderr, "                prevent_load:   \x1B[38;5;40m%s\x1B[0m\n", (file_state->prevent_load ? "true" : "false"));
+	}
+}
+
+static void debug_short_list_res_state_node(const void *const node, const VISIT phase, const int depth)
+{
+	if (phase == postorder || phase == leaf) {
+		const ENTRY *const map_entry = *((ENTRY **) node);
+		const struct parser_res_state *const res_state = map_entry->data;
+
+		fprintf(stderr, "Resource:   \x1B[38;5;40m%-48s\x1B[0m %s\n",
+		        res_state->res_name, (res_state->is_loaded ? "\x1B[38;5;40mLOADED\x1B[0m" : "\x1B[38;5;20mnot loaded\x1B[0m"));
 	}
 }
