@@ -1406,18 +1406,20 @@ struct d_resource *res_by_name(const char *const res_name)
 	if (res == NULL) {
 		// Attempt to load only the configuration files associated with
 		// the requested resource
-		load_resource(res_name);
+		if (load_resource(res_name)) {
+			need_post_parse = true;
+		}
 
 		res = res_by_name_lookup(res_name);
 		if (res == NULL) {
 			// Fall back to loading all configuration files in an attempt to
 			// find the resource's configuration in a file with a file name
 			// that does not reflect the resource name
-			load_all_resources();
+			if (load_all_resources()) {
+				need_post_parse = true;
+			}
 			res = res_by_name_lookup(res_name);
 		}
-
-		need_post_parse = true;
 	}
 
 	return res;

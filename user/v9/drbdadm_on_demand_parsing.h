@@ -30,6 +30,10 @@ extern bool defer_load;
 // (e.g., new resources and/or new files were inserted)
 extern bool res_map_changed;
 
+// Indicates that one or multiple configuration files were loaded
+// while processing a request to load a resource.
+extern bool config_files_loaded;
+
 extern char *canonicalize_path(const char *path);
 
 void debug_on_demand_parsing(void);
@@ -37,8 +41,8 @@ void debug_loaded_resources(void);
 
 const char *create_res_name_from_path(const char *const path);
 struct parser_file_state *add_cfgfile_by_path(const char *const path);
-void load_resource(const char *const res_name);
-void load_all_resources(void);
+bool load_resource(const char *const res_name);
+bool load_all_resources(void);
 void mark_resources_loaded(void);
 
 bool is_defer_exempt(const char *const path);

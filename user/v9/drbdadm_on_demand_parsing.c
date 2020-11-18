@@ -26,26 +26,27 @@ static void debug_list_file_state_node(const void *const node, const VISIT phase
 static void debug_short_list_res_state_node(const void *const node, const VISIT phase, const int depth);
 
 bool defer_load = true;
+
+// Indicates that the map of resources to configuration files changed
+// (e.g., resource entries or configuration file entries were added)
 bool res_map_changed = false;
 
-/*
- * Map of canonical configuration file path to parser_res_state
- * Set of ENTRY with key = canonical config file path, value = struct parser_res_state
- */
+// Indicates that one or multiple configuration files were loaded
+// while processing a request to load a resource.
+bool config_files_loaded = false;
+
+// Map of canonical configuration file path to parser_res_state
+// Set of ENTRY with key = canonical config file path, value = struct parser_res_state
 void *global_path_map = NULL;
 
-/*
- * Map of (presumed) resource name to parser_res_state
- * Set of ENTRY with key = resource name, value = struct parser_res_state
- */
+// Map of (presumed) resource name to parser_res_state
+// Set of ENTRY with key = resource name, value = struct parser_res_state
 void *global_res_map = NULL;
 
-/**
- * Flag used for determining, during a tree walk, whether all configuration files
- * that are associated with a resource are loaded. This should normally be a local
- * variable, but the tree walks require a callback method that does not support
- * any additional context (like a pointer to a local variable).
- */
+// Flag used for determining, during a tree walk, whether all configuration files
+// that are associated with a resource are loaded. This should normally be a local
+// variable, but the tree walks require a callback method that does not support
+// any additional context (like a pointer to a local variable).
 bool all_files_loaded = false;
 
 /**
@@ -160,9 +161,14 @@ struct parser_file_state *add_cfgfile_by_path(const char *const path)
 
 /**
  * Loads all configuration files that are associated with the specified resource name
+ *
+ * @returns true if any new configuration files were loaded, false otherwise
  */
-void load_resource(const char *const res_name)
+bool load_resource(const char *const res_name)
 {
+	// This flag is changed in the callback load_resource_file_state
+	config_files_loaded = false;
+
 	res_map_changed = false;
 	do {
 		const ENTRY res_search_key = {(char *) res_name, NULL};
@@ -176,18 +182,28 @@ void load_resource(const char *const res_name)
 		}
 	} while (res_map_changed);
 	mark_resources_loaded();
+
+	return config_files_loaded;
 }
 
 /**
  * Loads all configuration files that are not loaded yet
+ *
+ * @returns true if any new configuration files were loaded, false otherwise
  */
-void load_all_resources(void)
+bool load_all_resources(void)
 {
+	// This flag is changed in the callback load_resource_file_state, which
+	// is called by the load_all_resources_res_state callback
+	config_files_loaded = false;
+
 	res_map_changed = false;
 	do {
 		twalk(global_res_map, &load_all_resources_res_state);
 	} while (res_map_changed);
 	mark_resources_loaded();
+
+	return config_files_loaded;
 }
 
 /**
@@ -218,6 +234,7 @@ static void load_resource_file_state(const void *const node, const VISIT phase, 
 		if (!file_state->is_loaded && !file_state->prevent_load) {
 			if (load_config_file(file_state->canon_path)) {
 				file_state->is_loaded = true;
+				config_files_loaded = true;
 			}
 		}
 	}
