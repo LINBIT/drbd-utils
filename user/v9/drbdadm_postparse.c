@@ -42,10 +42,14 @@
 static void inherit_volumes(struct volumes *from, struct d_host_info *host);
 static void check_volume_sets_equal(struct d_resource *, struct d_host_info *, struct d_host_info *);
 static void expand_opts(struct d_resource *, struct context_def *, struct options *, struct options *);
+static void expand_common_impl(struct d_resource *res);
 static struct d_resource *res_by_name_lookup(const char *res_name);
 
 extern struct resources config;
 extern struct drbdadm_cmd *current_cmd;
+
+// Used during an active post_parse to indicate that post_parse needs to run again
+bool need_post_parse = false;
 
 static void append_names(struct names *head, struct names *to_copy)
 {
@@ -67,6 +71,11 @@ void set_on_hosts_in_res(struct d_resource *res)
 	for_each_host(host, &res->all_hosts) {
 		if (host->lower_name) {
 			l_res = res_by_name(host->lower_name);
+			if (need_post_parse) {
+				// res_by_name loaded a resource due to a dependency, and post-parsing
+				// must be restarted
+				return;
+			}
 			if (l_res == NULL) {
 				err("%s:%d: in resource %s, "
 				    "referenced resource '%s' not defined.\n",
@@ -1124,9 +1133,11 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 	struct d_resource *res;
 	struct connection *con;
 
+	need_post_parse = false;
+
 	/* inherit volumes from resource level into the d_host_info objects */
 	for_each_resource(res, resources) {
-		if (res->is_post_parsed == 0) {
+		if (res->phase == INITIAL) {
 			struct d_host_info *host;
 			bool any_implicit = false;
 			bool any_non_zero_vnr = false;
@@ -1147,24 +1158,32 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 			}
 
 			check_volumes_hosts(res);
-
 			if (any_implicit && any_non_zero_vnr) {
 				err("%s:%d: in resource %s: you must not mix implicit and explicit volumes\n",
 				    config_file, line, res->name);
 				config_valid = 0;
 			}
+
+			res->phase = SET_ON_HOSTS;
 		}
 	}
 
 	for_each_resource(res, resources) {
-		if (res->is_post_parsed == 0) {
-			if (res->stacked_on_one)
+		if (res->phase == SET_ON_HOSTS) {
+			if (res->stacked_on_one) {
+				// set_on_hosts_in_res can call res_by_name, which can call post_parse again
 				set_on_hosts_in_res(res); /* sets on_hosts and host->lower */
+				if (need_post_parse) {
+					// A new resource was loaded, so post-parsing needs to be restarted
+					return;
+				}
+			}
+			res->phase = GENERIC_POST_PARSE;
 		}
 	}
 
 	for_each_resource(res, resources) {
-		if (res->is_post_parsed == 0) {
+		if (res->phase == GENERIC_POST_PARSE) {
 			struct d_host_info *host;
 			struct mesh *mesh;
 
@@ -1195,15 +1214,16 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 
 	/* Needs "on_hosts" and host->lower already set */
 	for_each_resource(res, resources) {
-		if (res->is_post_parsed == 0) {
-			if (!res->stacked_on_one)
+		if (res->phase == GENERIC_POST_PARSE) {
+			if (!res->stacked_on_one) {
 				set_me_in_resource(res, flags & MATCH_ON_PROXY);
+			}
 		}
 	}
 
 	/* Needs host->lower->me already set */
 	for_each_resource(res, resources) {
-		if (res->is_post_parsed == 0) {
+		if (res->phase == GENERIC_POST_PARSE) {
 			if (res->stacked_on_one)
 				set_me_in_resource(res, flags & MATCH_ON_PROXY);
 		}
@@ -1211,20 +1231,20 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 
 	// Needs "me" set already
 	for_each_resource(res, resources) {
-		if (res->is_post_parsed == 0) {
+		if (res->phase == GENERIC_POST_PARSE) {
 			if (res->stacked_on_one)
 				set_stacked_disk_in_res(res);
 		}
 	}
 
 	for_each_resource(res, resources) {
-		if (res->is_post_parsed == 0) {
+		if (res->phase == GENERIC_POST_PARSE) {
 			fixup_peer_devices(res);
 		}
 	}
 
 	for_each_resource(res, resources) {
-		res->is_post_parsed = 1;
+		res->phase = EXPAND;
 	}
 }
 
@@ -1261,6 +1281,17 @@ static void expand_opts(struct d_resource *res, struct context_def *oc, struct o
 }
 
 void expand_common(void)
+{
+	struct d_resource *res;
+	for_each_resource(res, &config) {
+		if (res->phase == EXPAND) {
+			expand_common_impl(res);
+			res->phase = VALIDATE;
+		}
+	}
+}
+
+static void expand_common_impl(struct d_resource *const res)
 {
 	// Expand options
 	struct d_volume *vol, *host_vol;
@@ -1386,13 +1417,7 @@ struct d_resource *res_by_name(const char *const res_name)
 			res = res_by_name_lookup(res_name);
 		}
 
-		post_parse(&config, current_cmd->is_proxy_cmd ? MATCH_ON_PROXY : 0);
-
-		if (!current_cmd->is_dump) {
-			expand_common();
-		}
-
-		count_resources();
+		need_post_parse = true;
 	}
 
 	return res;
@@ -1588,6 +1613,11 @@ static void validate_resource(struct d_resource *res, enum pp_flags flags)
 		if (strcmp(opt->name, "resync-after"))
 			continue;
 		rs_after_res = res_by_name_ign_vol(opt->value);
+		if (need_post_parse) {
+			// res_by_name loaded a new resource due to a dependency, and
+			// post-parsing must be restarted
+			return;
+		}
 		if (rs_after_res == NULL ||
 		    (rs_after_res->ignore && !(flags & MATCH_ON_PROXY))) {
 			err("%s:%d: in resource %s:\n\tresource '%s' mentioned in "
@@ -1758,19 +1788,25 @@ void global_validate_maybe_expand_die_if_invalid(const bool expand, enum pp_flag
 {
 	struct d_resource *res;
 	for_each_resource(res, &config) {
-		validate_resource(res, flags);
-		if (!config_valid)
-			exit(E_CONFIG_INVALID);
-		if (expand) {
-			struct connection *conn;
+		if (res->phase == VALIDATE) {
+			validate_resource(res, flags);
+			if (need_post_parse) {
+				return;
+			}
+			if (!config_valid)
+				exit(E_CONFIG_INVALID);
+			if (expand) {
+				struct connection *conn;
 
-			convert_after_option(res);
-			convert_discard_opt(&res->net_options);
+				convert_after_option(res);
+				convert_discard_opt(&res->net_options);
 
-			for_each_connection(conn, &res->connections)
-				convert_discard_opt(&conn->net_options);
+				for_each_connection(conn, &res->connections)
+					convert_discard_opt(&conn->net_options);
+			}
+			if (!config_valid)
+				exit(E_CONFIG_INVALID);
+			res->phase = FINISHED;
 		}
-		if (!config_valid)
-			exit(E_CONFIG_INVALID);
 	}
 }
