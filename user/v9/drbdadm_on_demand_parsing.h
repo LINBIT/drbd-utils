@@ -29,6 +29,7 @@ extern bool defer_load;
 extern char *canonicalize_path(const char *path);
 
 void debug_on_demand_parsing(void);
+void debug_loaded_resources(void);
 
 const char *create_res_name_from_path(const char *const path);
 struct parser_file_state *add_cfgfile_by_path(const char *const path);
