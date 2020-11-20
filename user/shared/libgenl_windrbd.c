@@ -82,7 +82,8 @@ int genl_join_mc_group(struct genl_sock *s, const char *name)
 	unsigned int unused;
 	struct windrbd_ioctl_genl_portid_and_multicast_group m;
 
-	strncpy(m.name, name, sizeof(m.name));
+	strncpy(m.name, name, sizeof(m.name)-1);
+	m.name[sizeof(m.name)-1] = '\0';
 	m.portid = getpid();
 
         if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_JOIN_MC_GROUP, (void*) &m, sizeof(m), NULL, 0, &unused, NULL) == 0) {
