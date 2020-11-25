@@ -445,10 +445,27 @@ This package contains Japanese man pages for DRBD.
 %endif
 
 %post man-ja
-for f in drbd drbdadm drbdmeta drbdsetup; do
-    ln -sf $f-8.4.8.gz %{_mandir}/ja/man8/$f.8.gz
+MAN8=%{_mandir}/ja/man8
+MAN5=%{_mandir}/ja/man5
+pri=30
+for man_ver in 9.0 8.4 8.3; do
+	test -e $MAN8/drbd-${man_ver}.8.gz || continue
+	alternatives --install \
+			$MAN8/drbd.8.gz		drbd-manja	$MAN8/drbd-${man_ver}.8.gz $pri	\
+		--slave $MAN8/drbdadm.8.gz	drbdadm-manja	$MAN8/drbdadm-${man_ver}.8.gz	\
+		--slave $MAN8/drbdmeta.8.gz	drbdmeta-manja	$MAN8/drbdmeta-${man_ver}.8.gz	\
+		--slave $MAN8/drbdsetup.8.gz	drbdsetup-manja	$MAN8/drbdsetup-${man_ver}.8.gz	\
+		--slave $MAN5/drbd.conf.5.gz	drbd.conf-manja	$MAN5/drbd.conf-${man_ver}.5.gz
+	pri=$(( pri - 10 ))
 done
-ln -sf drbd.conf-8.4.5.gz %{_mandir}/ja/man5/drbd.conf.5.gz
+for man_ver in 9.0 8.4 8.3; do
+	alt=%{_sysconfdir}/alternatives/drbd-man
+	if readlink "$alt" | grep drbd-$man_ver &> /dev/null; then
+		ver=$MAN8/drbd-${man_ver}.8.gz
+		alternatives --set drbd-manja "$ver"
+		break
+	fi
+done
 %if %{with drbdmon}
 ln -sf drbdmon-9.0.8.gz %{_mandir}/ja/man8/drbdmon.8.gz
 %endif
@@ -496,6 +513,15 @@ make install DESTDIR=%{buildroot} CREATE_MAN_LINK=no
 install -d %{buildroot}%{_datadir}/selinux/packages
 install -m 0644 selinux/drbd.pp.bz2 %{buildroot}%{_datadir}/selinux/packages
 %endif
+%if %{with manual}
+# they say we MUST touch the "original locations" when using alternatives links
+for lang in / /ja/ ; do
+    MAN8=%{buildroot}/%{_mandir}${lang}man8
+    MAN5=%{buildroot}/%{_mandir}${lang}man5
+    for f in drbd drbdadm drbdmeta drbdsetup; do touch $MAN8/$f.8.gz; done
+    touch $MAN5/drbd.conf.5.gz
+done
+%endif
 
 %if %{with sbinsymlinks}
 # Don't do this if you are already on a /sbin -=> /usr/sbin distro
@@ -524,10 +550,19 @@ rm -rf %{buildroot}
 chkconfig --add drbd
 %endif
 %if %{with manual}
-for f in drbd drbdadm drbdmeta drbdsetup; do
-    ln -sf $f-8.4.8.gz %{_mandir}/man8/$f.8.gz
+MAN8=%{_mandir}/man8
+MAN5=%{_mandir}/man5
+pri=30
+for man_ver in 9.0 8.4 8.3; do
+	test -e $MAN8/drbd-${man_ver}.8.gz || continue
+	alternatives --install \
+			$MAN8/drbd.8.gz		drbd-man	$MAN8/drbd-${man_ver}.8.gz $pri	\
+		--slave $MAN8/drbdadm.8.gz	drbdadm-man	$MAN8/drbdadm-${man_ver}.8.gz	\
+		--slave $MAN8/drbdmeta.8.gz	drbdmeta-man	$MAN8/drbdmeta-${man_ver}.8.gz	\
+		--slave $MAN8/drbdsetup.8.gz	drbdsetup-man	$MAN8/drbdsetup-${man_ver}.8.gz	\
+		--slave $MAN5/drbd.conf.5.gz	drbd.conf-man	$MAN5/drbd.conf-${man_ver}.5.gz
+	pri=$(( pri - 10 ))
 done
-ln -sf drbd.conf-8.4.5.gz %{_mandir}/man5/drbd.conf.5.gz
 %if %{with drbdmon}
 ln -sf drbdmon-9.0.8.gz %{_mandir}/man8/drbdmon.8.gz
 %endif
@@ -553,12 +588,30 @@ if [ $1 -eq 0 ]; then
         /sbin/chkconfig --del drbd
 fi
 %endif
+if [ $1 = 0 ]; then
+	for man_ver in 9.0 8.4 8.3 ; do
+		master_link=%{_mandir}/man8/drbd-${man_ver}.8.gz
+		test -e "$master_link" || continue
+		alternatives --remove drbd-man %{_mandir}/man8/drbd-${man_ver}.8.gz || true
+	done
+fi
 
-%if "%{initscripttype}" == "systemd"
 %postun utils
+%if "%{initscripttype}" == "systemd"
 %systemd_postun drbd.service
 %endif
-
+if [ $1 -ge 1 ]; then
+	for man_ver in 9.0 8.4 8.3 ; do
+		alt=%{_sysconfdir}/alternatives/drbd-man
+		test -L "$alt" || continue
+		master_link=$(readlink "$alt")
+		ver_link=%{_mandir}/man8/drbd-${man_ver}.8.gz
+		if [ "$master_link" = "$ver_link" ]; then
+			alternatives --set drbd-man "$ver_link"
+			break
+		fi
+	done
+fi
 
 %changelog
 * Mon Oct 28 2024 Roland Kammerer <roland.kammerer@linbit.com> - 9.29.0-1
