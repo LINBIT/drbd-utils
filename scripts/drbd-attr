@@ -120,7 +120,7 @@ re_init_daemon()
 	resources_known_to_drbdadm=$( drbadm sh-resources )
 	resources_seen_in_initial_dump=''
 	status_delay=''
-	exec 0< <(exec drbdsetup events2 --timestamps)
+	exec 0< <(exec drbdsetup events2 --timestamps 9>&- )
 }
 
 delete_event_details()
