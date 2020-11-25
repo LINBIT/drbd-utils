@@ -279,6 +279,10 @@ Pacemaker High Availability cluster manager.
 %{_prefix}/lib/ocf/resource.d/linbit/drbd
 %{_prefix}/lib/ocf/resource.d/linbit/drbd-attr
 %{_prefix}/lib/ocf/resource.d/linbit/drbd.shellfuncs.sh
+%if %{with manual}
+%{_mandir}/man7/ocf_linbit_drbd.*
+%{_mandir}/man7/ocf_linbit_drbd-attr.*
+%endif
 %endif # with pacemaker
 
 # Dependencies for drbd-rgmanager are particularly awful. On RHEL 5
