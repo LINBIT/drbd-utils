@@ -220,6 +220,7 @@ struct option events_cmd_options[] = {
 	{ "now", no_argument, 0, 'n' },
 	{ "poll", no_argument, 0, 'p' },
 	{ "color", optional_argument, 0, 'c' },
+	{ "diff", optional_argument, 0, 'i' },
 	{ }
 };
 
@@ -1516,6 +1517,7 @@ bool opt_poll;
 int opt_verbose;
 bool opt_statistics;
 bool opt_timestamps;
+bool opt_diff;
 
 static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 {
@@ -1868,6 +1870,9 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 			opt_timestamps = true;
 			break;
 
+		case 'i':
+			opt_diff = true;
+			break;
 		case 'c':
 			if (!parse_color_argument())
 				print_usage_and_exit("unknown --color argument");
