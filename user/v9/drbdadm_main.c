@@ -133,6 +133,7 @@ static int do_proxy_conn_plugins(const struct cfg_ctx *ctx);
 
 int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check);
 int was_file_already_seen(char *fn);
+bool is_set_gi_single_node(const struct cfg_ctx *ctx);
 
 static char *get_opt_val(struct options *, const char *, char *);
 
@@ -683,13 +684,18 @@ int call_cmd(const struct adm_cmd *cmd, const struct cfg_ctx *ctx,
 				break;
 		}
 	} else if (iterate_conns) {
-		for_each_connection(conn, &res->connections) {
-			if (conn->ignore)
-				continue;
-			tmp_ctx.conn = conn;
+		if (is_set_gi_single_node(&tmp_ctx))
 			ret = __call_cmd_fn(&tmp_ctx, on_error);
-			if (ret)
-				break;
+		else {
+			for_each_connection(conn, &res->connections) {
+				if (conn->ignore) {
+					continue;
+				}
+				tmp_ctx.conn = conn;
+				ret = __call_cmd_fn(&tmp_ctx, on_error);
+				if (ret)
+					break;
+			}
 		}
 	} else {
 		ret = __call_cmd_fn(&tmp_ctx, on_error);
@@ -1353,6 +1359,20 @@ int adm_resize(const struct cfg_ctx *ctx)
 	return 0;
 }
 
+bool is_set_gi_single_node(const struct cfg_ctx *ctx)
+{
+	if (ctx->cmd == &set_gi_cmd) {
+		int nr_hosts = 0;
+		struct d_host_info *host;
+		for_each_host(host, &ctx->res->all_hosts)
+			nr_hosts++;
+		if (nr_hosts == 1)
+			return true;
+	}
+
+	return false;
+}
+
 int _adm_drbdmeta(const struct cfg_ctx *ctx, int flags, char *argument)
 {
 	struct d_volume *vol = ctx->vol;
@@ -1378,8 +1398,12 @@ int _adm_drbdmeta(const struct cfg_ctx *ctx, int flags, char *argument)
 	} else {
 		argv[NA(argc)] = vol->meta_index;
 	}
-	if (ctx->cmd->need_peer)
-		argv[NA(argc)] = ssprintf("--node-id=%s", ctx->conn->peer->node_id);
+	if (ctx->cmd->need_peer) {
+		if (is_set_gi_single_node(ctx))
+			argv[NA(argc)] = ssprintf("--node-id=%s", ctx->res->me->node_id);
+		else
+			argv[NA(argc)] = ssprintf("--node-id=%s", ctx->conn->peer->node_id);
+	}
 	argv[NA(argc)] = (char *)ctx->cmd->name;
 	if (argument)
 		argv[NA(argc)] = argument;
