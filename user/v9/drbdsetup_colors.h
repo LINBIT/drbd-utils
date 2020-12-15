@@ -30,4 +30,14 @@ extern const char *quorum_color_stop(bool);
 #define CONN_COLOR_STRING(__c) \
 	cstate_color_start(__c), drbd_conn_str(__c), cstate_color_stop(__c)
 
+#define UNKNOWN_STRING "UNKNOWN"
+#define UNKNOWN_COLOR_STRING "",UNKNOWN_STRING,""
+
+#define DIFF_COLOR(check, prefix, om, nm) do { \
+	if (check) \
+		printf(" " prefix ":%s%s%s->%s%s%s", om, nm); \
+	else \
+		printf(" " prefix ":%s%s%s->%s%s%s", UNKNOWN_COLOR_STRING, nm); \
+} while(0)
+
 #endif  /* DRBDSETUP_COLORS_H */
