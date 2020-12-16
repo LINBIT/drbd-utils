@@ -30,6 +30,7 @@
 #include "drbdadm.h"
 #include "drbd_endian.h"
 #include "linux/drbd.h"
+#include <linux/drbd_limits.h>
 
 #include "drbdtool_common.h"
 #include "shared_tool.h"
@@ -466,15 +467,12 @@ void ensure_sanity_of_res_name(const char *const res_name)
 	// because the strtoull function is stupid
 	bool have_alpha = false;
 
+	const size_t max_length = ((size_t) DRBD_RESOURCE_NAME_LENGTH_MAX);
 	size_t idx = 0;
 	// FIXME: There are a lot of unreadable/non-printing characters in
 	// the 0x80-0xFF range that should probably not be allowed
-	// FIXME: What is the actual length limit of resource names?
-	// FIXME: Why is a space allowed in a resource name?
-	//        This will certainly screw up parsing of e.g. DRBD event lines,
-	//        because those use space as a separator.
-	while (idx < 0xFFFF && res_name[idx] != '\0' &&
-	       res_name[idx] >= ' ' && res_name[idx] != '\x7F') {
+	while (idx < max_length && res_name[idx] != '\0' &&
+	       res_name[idx] > ' ' && res_name[idx] != '\x7F') {
 		if (res_name[idx] <= '0' || res_name[idx] >= '9') {
 			have_alpha = true;
 		}
