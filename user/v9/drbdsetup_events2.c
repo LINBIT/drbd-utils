@@ -54,6 +54,7 @@ static const char *action_change = "change";
 static const char *action_destroy = "destroy";
 static const char *action_call = "call";
 static const char *action_response = "response";
+static const char *action_rename = "rename";
 
 static const char *object_resource = "resource";
 static const char *object_device = "device";
@@ -384,6 +385,7 @@ static struct resources_list *deep_copy_resource(struct resources_list *old_reso
 	new_resource->res_opts = nla_copy(old_resource->res_opts);
 	new_resource->info = old_resource->info;
 	new_resource->statistics = old_resource->statistics;
+	new_resource->rename_info = old_resource->rename_info;
 
 	for (old_device = old_resource->devices; old_device; old_device = old_device->next) {
 		struct devices_list *new_device;
@@ -583,6 +585,7 @@ static void print_resource_changes(const char *prefix, const char *action_new, s
 	bool info_changed;
 	bool statistics_changed;
 	bool promotion_info_changed;
+	bool renamed;
 
 	new_promotion_info = compute_promotion_info(new_resource);
 
@@ -602,6 +605,16 @@ static void print_resource_changes(const char *prefix, const char *action_new, s
 			new_promotion_info.promotion_score != old_promotion_info.promotion_score;
 	} else {
 		promotion_info_changed = true;
+	}
+
+	renamed = new_resource->rename_info.res_new_name_len > 0;
+
+	if (renamed) {
+		printf("%s%s %s name:%s new_name:%s\n", prefix, action_rename, object_resource,
+				new_resource->name, new_resource->rename_info.res_new_name);
+		free(new_resource->name);
+		new_resource->name = strdup(new_resource->rename_info.res_new_name);
+		return;
 	}
 
 	if (!role_changed && !info_changed && !statistics_changed && !promotion_info_changed)
@@ -1162,6 +1175,9 @@ static int apply_event(const char *prefix, struct genl_info *info, bool initial_
 		store_update_resource(new_resource);
 	}
 
+	new_resource->rename_info.res_new_name[0] = '\0';
+	new_resource->rename_info.res_new_name_len = 0;
+
 	switch (action) {
 	case NOTIFY_EXISTS:
 	case NOTIFY_CREATE:
@@ -1289,6 +1305,13 @@ static int apply_event(const char *prefix, struct genl_info *info, bool initial_
 				action == NOTIFY_RESPONSE, &helper_info);
 		break;
 	}
+        case NOTIFY_RENAME:
+		switch(info->genlhdr->cmd) {
+			case DRBD_RESOURCE_STATE:
+				rename_resource_info_from_attrs(&new_resource->rename_info, info);
+				break;
+                }
+                break;
 	default:
 		dbg(1, "unknown notification type %d\n", action);
 		goto out;

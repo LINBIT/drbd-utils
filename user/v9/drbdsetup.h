@@ -75,6 +75,7 @@ struct resources_list {
 	struct nlattr *res_opts;
 	struct resource_info info;
 	struct resource_statistics statistics;
+	struct rename_resource_info rename_info;
 	bool destroyed; /* only used by events2 */
 	struct devices_list *devices; /* only used by events2 */
 	struct connections_list *connections; /* only used by events2 */

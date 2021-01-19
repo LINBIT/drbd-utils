@@ -198,6 +198,7 @@ static int remember_peer_device(struct drbd_cmd *, struct genl_info *, void *);
 static int conv_md_idx(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 static int conv_u32(struct drbd_argument *, struct msg_buff *, struct drbd_genlmsghdr *, char *);
 static int conv_addr(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
+static int conv_str(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 
 static struct resources_list *list_resources(void);
 static struct resources_list *sort_resources(struct resources_list *);
@@ -450,6 +451,11 @@ struct drbd_cmd commands[] = {
 		 { "peer_node_id",	T_forget_peer_node_id,	conv_u32 },
 		 { } },
 	 .summary = "Completely remove any reference to a unconnected peer from meta-data." },
+	{"rename-resource", CTX_RESOURCE, DRBD_ADM_RENAME_RESOURCE, DRBD_NLA_RENAME_RESOURCE_PARMS, F_CONFIG_CMD,
+	.drbd_args = (struct drbd_argument[]) {
+		{ "new_name", T_new_resource_name, conv_str },
+		{ } },
+	.summary = "Rename a resource." },
 };
 
 bool show_defaults;
@@ -604,6 +610,14 @@ static int conv_u32(struct drbd_argument *ad, struct msg_buff *msg,
 	unsigned int i = m_strtoll(arg, 1);
 
 	nla_put_u32(msg, ad->nla_type, i);
+
+	return NO_ERROR;
+}
+
+static int conv_str(struct drbd_argument *ad, struct msg_buff *msg,
+		    struct drbd_genlmsghdr *dhdr, char* arg)
+{
+	nla_put_string(msg, ad->nla_type, arg);
 
 	return NO_ERROR;
 }
