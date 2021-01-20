@@ -440,8 +440,9 @@
 	    <option>exists</option> for an existing object;
 	    <option>create</option>, <option>destroy</option>, and
 	    <option>change</option> if an object is created, destroyed, or
-	    changed; or <option>call</option> or <option>response</option> if
-	    an event handler is called or it returns.  The second word indicates
+	    changed; <option>call</option> or <option>response</option> if
+	    an event handler is called or it returns; or <option>rename</option>
+	    when the name of an object is changed.  The second word indicates
 	    the object the event applies to: <option>resource</option>,
 	    <option>device</option>, <option>connection</option>,
 	    <option>peer-device</option>, <option>path</option>,
@@ -1233,6 +1234,29 @@ drbd0 node-id:1 role:Primary suspended:no
 	</listitem>
       </varlistentry>
 
+      <varlistentry>
+	<xi:include href="drbdsetup_rename-resource.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<!-- Rename a resource. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>rename-resource</secondary>
+	  </indexterm>
+
+	  <para>Change the name of <option>resource</option> to
+	  <option>new_name</option> on the local node. Note that, since there
+	  is no concept of resource names in DRBD's network protocol, it is
+	  technically possible to have different names for a resource on
+	  different nodes. However, it is strongly recommended to issue the
+	  same <option>rename-resource</option> command on all nodes to have
+	  consistent naming across the cluster.</para>
+	  <para>A <option>rename</option> event will be issued on the
+	  <option>events2</option> stream to notify users of the new name.</para>
+	</listitem>
+
+      </varlistentry>
     </variablelist>
   </refsect1>
 
