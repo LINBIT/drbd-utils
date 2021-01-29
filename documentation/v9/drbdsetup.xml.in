@@ -512,6 +512,16 @@
 		  <para>Include statistics in the output.</para>
 		</listitem>
 	      </varlistentry>
+
+	      <varlistentry>
+		<term><option>--diff</option></term>
+
+		<listitem>
+		  <para>Write information in form of a diff between old and new state.
+		   This helps simple tools to avoid (old) state tracking on their own.</para>
+		</listitem>
+	      </varlistentry>
+
 	    </variablelist>
 	  </para>
 	</listitem>
