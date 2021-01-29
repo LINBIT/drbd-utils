@@ -2,6 +2,7 @@
 #include <comparators.h>
 
 const std::string DrbdResource::PROP_KEY_RES_NAME = "name";
+const std::string DrbdResource::PROP_KEY_NEW_NAME = "new_name";
 
 // @throws std::bad_alloc
 DrbdResource::DrbdResource(std::string& resource_name):
@@ -34,6 +35,24 @@ void DrbdResource::update(PropsMap& event_props)
     if (prop_role != nullptr)
     {
         role = parse_role(*prop_role);
+    }
+}
+
+// @throws std::bad_alloc, EventMessageException
+void DrbdResource::rename(PropsMap& event_props)
+{
+    const std::string* new_name = event_props.get(&PROP_KEY_NEW_NAME);
+    if (new_name != nullptr)
+    {
+        name = *new_name;
+    }
+    else
+    {
+        std::string error_msg("Invalid DRBD rename event: New resource name not present in event line");
+        std::string debug_msg("Missing resource ");
+        debug_msg += PROP_KEY_NEW_NAME;
+        debug_msg += " field:";
+        throw EventMessageException(&error_msg, &debug_msg, nullptr);
     }
 }
 

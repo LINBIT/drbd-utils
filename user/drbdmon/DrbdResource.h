@@ -21,6 +21,7 @@ class DrbdResource : public VolumesContainer, public DrbdRole, private StateFlag
 {
   public:
     static const std::string PROP_KEY_RES_NAME;
+    static const std::string PROP_KEY_NEW_NAME;
 
     class ConnectionsIterator : public ConnectionsMap::ValuesIterator
     {
@@ -56,6 +57,8 @@ class DrbdResource : public VolumesContainer, public DrbdRole, private StateFlag
 
     // @throws std::bad_alloc, EventMessageException
     virtual void update(PropsMap& event_props);
+    // @throws std::bad_alloc, EventMessageException
+    virtual void rename(PropsMap& event_props);
     virtual ConnectionsIterator connections_iterator();
 
     using StateFlags::has_mark_state;
@@ -79,7 +82,7 @@ class DrbdResource : public VolumesContainer, public DrbdRole, private StateFlag
     static DrbdResource* new_from_props(PropsMap& event_props);
 
   private:
-    const std::string name;
+    std::string name;
     const std::unique_ptr<ConnectionsMap> conn_list;
     bool role_alert {false};
     bool quorum_alert {false};

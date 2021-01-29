@@ -51,6 +51,7 @@ const char DrbdMon::DEBUG_SEQ_PFX = '~';
 const std::string DrbdMon::MODE_EXISTS  = "exists";
 const std::string DrbdMon::MODE_CREATE  = "create";
 const std::string DrbdMon::MODE_CHANGE  = "change";
+const std::string DrbdMon::MODE_RENAME  = "rename";
 const std::string DrbdMon::MODE_DESTROY = "destroy";
 
 const std::string DrbdMon::TYPE_RESOURCE    = "resource";
@@ -642,6 +643,29 @@ void DrbdMon::process_event_message(
         // unknown object types are skipped
     }
     else
+    if (event_mode == MODE_RENAME)
+    {
+        if (!have_initial_state)
+        {
+            // Received a 'rename' event before all 'exists' events have been received
+            std::string error_msg("The events source generated an out-of-sync 'rename' event");
+            std::string debug_info("'rename' event was received out-of-sync (before 'exists -')");
+            throw EventMessageException(&error_msg, &debug_info, &event_line);
+        }
+
+        if (event_type == TYPE_RESOURCE)
+        {
+            rename_resource(event_props, event_line);
+        }
+        else
+        {
+            // Received a 'rename' event for something else than a resource
+            std::string error_msg("The events source generated a rename event for a non-resource object");
+            std::string debug_info("'rename' event for an illegal object type:");
+            throw EventMessageException(&error_msg, &debug_info, &event_line);
+        }
+    }
+    else
     if (event_mode == MODE_DESTROY)
     {
         if (!have_initial_state)
@@ -918,6 +942,50 @@ void DrbdMon::update_resource(PropsMap& event_props, const std::string& event_li
 }
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
+void DrbdMon::rename_resource(PropsMap& event_props, const std::string& event_line)
+{
+    std::unique_ptr<DrbdResource> res_obj;
+    {
+        const std::string& evt_res_name = lookup_resource_name(event_props, event_line);
+        ResourcesMap::Node* const node = resources_map->get_node(&evt_res_name);
+        if (node == nullptr)
+        {
+            std::string error_msg("Non-existent resource referenced by the DRBD events source");
+            std::string debug_info("Received a DRBD event '");
+            debug_info += MODE_RENAME;
+            debug_info += "' for a non-existent resource";
+            throw EventObjectException(&error_msg, &debug_info, &event_line);
+        }
+
+        // Extract the resource object and deallocate its lookup key (the resource's name)
+        delete node->get_key();
+        res_obj = std::unique_ptr<DrbdResource>(node->get_value());
+        // Remove the entry for that resource
+        resources_map->remove_node(node);
+    }
+
+    try
+    {
+        // Change the resource's name
+        res_obj->rename(event_props);
+
+        // Allocate a new lookup key with resource's new name
+        std::unique_ptr<std::string> new_res_name(new std::string(res_obj->get_name()));
+        // Reinsert an entry for that resource
+        resources_map->insert(new_res_name.get(), res_obj.get());
+
+        new_res_name.release();
+        res_obj.release();
+    }
+    catch (dsaext::DuplicateInsertException& dup_exc)
+    {
+        std::string error_msg("Invalid DRBD 'rename' event: Duplicate resource entry");
+        std::string debug_info("'rename' event: Duplicate resource entry:");
+        throw EventMessageException(&error_msg, &debug_info, &event_line);
+    }
+}
+
+// @throws std::bad_alloc, EventMessageException, EventObjectException
 void DrbdMon::destroy_connection(PropsMap& event_props, const std::string& event_line)
 {
     DrbdResource& res = get_resource(event_props, event_line);
@@ -1091,18 +1159,8 @@ DrbdVolume& DrbdMon::get_device(VolumesContainer& vol_con, PropsMap& event_props
 // @throws std::bad_alloc, EventMessageException, EventObjectException
 DrbdResource& DrbdMon::get_resource(PropsMap& event_props, const std::string& event_line)
 {
-    DrbdResource* res {nullptr};
-    std::string* res_name = event_props.get(&DrbdResource::PROP_KEY_RES_NAME);
-    if (res_name != nullptr)
-    {
-        res = resources_map->get(res_name);
-    }
-    else
-    {
-        std::string error_msg("Received DRBD event line does not contain a resource name");
-        std::string debug_info("DRBD event line contains no resource name");
-        throw EventMessageException(&error_msg, &debug_info, &event_line);
-    }
+    const std::string& res_name = lookup_resource_name(event_props, event_line);
+    DrbdResource* const res = resources_map->get(&res_name);
     if (res == nullptr)
     {
         std::string error_msg("Non-existent resource referenced by the DRBD events source");
@@ -1110,6 +1168,19 @@ DrbdResource& DrbdMon::get_resource(PropsMap& event_props, const std::string& ev
         throw EventObjectException(&error_msg, &debug_info, &event_line);
     }
     return *res;
+}
+
+// @throws EventMessageException
+const std::string& DrbdMon::lookup_resource_name(PropsMap& event_props, const std::string& event_line)
+{
+    const std::string* const res_name = event_props.get(&DrbdResource::PROP_KEY_RES_NAME);
+    if (res_name == nullptr)
+    {
+        std::string error_msg("Received DRBD event line does not contain a resource name");
+        std::string debug_info("DRBD event line contains no resource name");
+        throw EventMessageException(&error_msg, &debug_info, &event_line);
+    }
+    return *res_name;
 }
 
 // @throws std::bad_alloc

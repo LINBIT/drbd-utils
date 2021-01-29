@@ -64,6 +64,7 @@ class DrbdMon : public Configurable, public Configurator
     static const std::string MODE_EXISTS;
     static const std::string MODE_CREATE;
     static const std::string MODE_CHANGE;
+    static const std::string MODE_RENAME;
     static const std::string MODE_DESTROY;
 
     static const char HOTKEY_QUIT;
@@ -210,6 +211,9 @@ class DrbdMon : public Configurable, public Configurator
     // @throws EventMessageException, EventObjectException
     void update_resource(PropsMap& event_props, const std::string& event_line);
 
+    // @throws std::bad_alloc, EventMessageException, EventObjectException
+    void rename_resource(PropsMap& event_props, const std::string& event_line);
+
     // @throws EventMessageException
     void destroy_connection(PropsMap& event_props, const std::string& event_line);
     // @throws EventMessageException
@@ -225,6 +229,8 @@ class DrbdMon : public Configurable, public Configurator
     DrbdVolume& get_device(VolumesContainer& vol_con, PropsMap& event_props, const std::string& event_line);
     // @throws EventMessageException, EventObjectException
     DrbdResource& get_resource(PropsMap& event_props, const std::string& event_line);
+    // @throws EventMessageException
+    const std::string& lookup_resource_name(PropsMap& event_props, const std::string& event_line);
 
     // Loads the event_props map with the properties contained in tokens
     //
