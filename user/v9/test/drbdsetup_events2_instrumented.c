@@ -577,6 +577,8 @@ int main(int argc, char **argv)
 		{ "timestamps", no_argument, 0, 'T' },
 		{ "statistics", no_argument, 0, 's' },
 		{ "now", no_argument, 0, 'n' },
+		{ "diff", optional_argument, 0, 'i' },
+		{ "full", no_argument, 0, 'f' },
 		{ "color", no_argument, 0, 'c' },
 		{ }
 	};
@@ -584,7 +586,7 @@ int main(int argc, char **argv)
 	opt_color = NEVER_COLOR;
 	for(;;) {
 		int c;
-		c = getopt_long(argc, argv, "hTsnc::", options, NULL);
+		c = getopt_long(argc, argv, "hTifsnc::", options, NULL);
 		if (c == -1)
 			break;
 		switch(c) {
@@ -593,7 +595,7 @@ int main(int argc, char **argv)
 		case '?':
 			fprintf(stderr, "drbdsetup_events2_instrumented - Fake drbdsetup events2 from messages on stdin\n\n");
 			fprintf(stderr, "USAGE: %s [options]\n", argv[0]);
-			fprintf(stderr, "    [--timestamps] [--statistics] [--now] [--color]\n");
+			fprintf(stderr, "    [--timestamps] [--statistics] [--now] [--diff] [--full] [--color]\n");
 			return 1;
 
 		case 'n':
@@ -607,6 +609,16 @@ int main(int argc, char **argv)
 
 		case 'T':
 			opt_timestamps = true;
+			break;
+
+		case 'i':
+			opt_diff = true;
+			break;
+
+		case 'f':
+			++opt_verbose;
+			opt_statistics = true;
+			opt_fullch = true;
 			break;
 
 		case 'c':

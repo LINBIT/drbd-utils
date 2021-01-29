@@ -125,6 +125,7 @@ extern int opt_verbose;
 extern bool opt_statistics;
 extern bool opt_timestamps;
 extern bool opt_diff;
+extern bool opt_fullch;
 extern struct nlattr *global_attrs[128];
 
 bool kernel_older_than(int version, int patchlevel, int sublevel);

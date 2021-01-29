@@ -522,6 +522,15 @@
 		</listitem>
 	      </varlistentry>
 
+	      <varlistentry>
+		<term><option>--full</option></term>
+
+		<listitem>
+		  <para>Write complete state information, especially on change events.
+		   This enables <option>--statistics</option> and <option>--verbose</option>.</para>
+		</listitem>
+	      </varlistentry>
+
 	    </variablelist>
 	  </para>
 	</listitem>

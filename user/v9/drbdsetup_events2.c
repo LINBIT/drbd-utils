@@ -622,7 +622,7 @@ static void print_resource_changes(const char *prefix, const char *action_new, s
 
 	printf("%s%s ", prefix, old_resource ? action_change : action_new);
 	printf("%s name:%s", object_resource, new_resource->name);
-	if (role_changed) {
+	if (role_changed || opt_fullch) {
 		if (opt_diff)
 			DIFF_COLOR(old_resource, "role",
 					ROLE_COLOR_STRING(old_resource->info.res_role, 1),
@@ -630,7 +630,7 @@ static void print_resource_changes(const char *prefix, const char *action_new, s
 		else
 			printf(" role:%s%s%s", ROLE_COLOR_STRING(new_resource->info.res_role, 1));
 	}
-	if (info_changed) {
+	if (info_changed || opt_fullch) {
 		if (opt_diff)
 			printf(" suspended:%s->%s",
 					old_resource ? susp_str(&old_resource->info) : UNKNOWN_STRING,
@@ -638,10 +638,10 @@ static void print_resource_changes(const char *prefix, const char *action_new, s
 		else
 			printf(" suspended:%s", susp_str(&new_resource->info));
 	}
-	if (statistics_changed)
+	if (statistics_changed || opt_fullch)
 		print_resource_statistics(0, old_resource ? &old_resource->statistics : NULL,
 				&new_resource->statistics, nowrap_printf);
-	if (promotion_info_changed) {
+	if (promotion_info_changed || opt_fullch) {
 		if (opt_diff) {
 			char *old_maypromote = UNKNOWN_STRING;
 			if (old_resource)
@@ -677,7 +677,7 @@ static void print_device_changes(const char *prefix, const char *action_new, con
 
 	printf("%s%s ", prefix, old_device ? action_change : action_new);
 	printf("%s name:%s volume:%u minor:%u", object_device, resource_name, new_device->ctx.ctx_volume, new_device->minor);
-	if (info_changed) {
+	if (info_changed || opt_fullch) {
 		bool intentional = new_device->info.is_intentional_diskless == 1;
 		if (opt_diff) {
 			bool old_intentional = 0; /* only used if we have an old_device */
@@ -712,7 +712,7 @@ static void print_device_changes(const char *prefix, const char *action_new, con
 			printf(" quorum:%s", new_device->info.dev_has_quorum ? "yes" : "no");
 		}
 	}
-	if (statistics_changed) {
+	if (statistics_changed || opt_fullch) {
 		print_device_statistics(0, old_device ? &old_device->statistics : NULL,
 				&new_device->statistics, nowrap_printf);
 	}
@@ -740,7 +740,7 @@ static void print_peer_device_changes(const char *prefix, const char *action_new
 
 	printf("%s%s ", prefix, old_peer_device ? action_change : action_new);
 	printf("%s name:%s peer-node-id:%u conn-name:%s volume:%u", object_peer_device, resource_name, new_peer_device->ctx.ctx_peer_node_id, new_peer_device->ctx.ctx_conn_name, new_peer_device->ctx.ctx_volume);
-	if (repl_state_changed) {
+	if (repl_state_changed || opt_fullch) {
 		if (opt_diff)
 			DIFF_COLOR(old_peer_device, "replication",
 					REPL_COLOR_STRING(old_peer_device->info.peer_repl_state),
@@ -749,7 +749,7 @@ static void print_peer_device_changes(const char *prefix, const char *action_new
 			printf(" replication:%s%s%s",
 			       REPL_COLOR_STRING(new_peer_device->info.peer_repl_state));
 	}
-	if (disk_changed) {
+	if (disk_changed || opt_fullch) {
 		bool intentional = new_peer_device->info.peer_is_intentional_diskless == 1;
 		if (opt_diff) {
 			bool old_intentional = 0; /* only used if we have an old_peer_device */
@@ -772,7 +772,7 @@ static void print_peer_device_changes(const char *prefix, const char *action_new
 			printf(" peer-client:%s", peer_intentional_diskless_str(&new_peer_device->info));
 		}
 	}
-	if (resync_suspended_changed) {
+	if (resync_suspended_changed || opt_fullch) {
 		if (opt_diff)
 			printf(" resync-suspended:%s->%s",
 			       old_peer_device ? resync_susp_str(&old_peer_device->info) : UNKNOWN_STRING,
@@ -782,7 +782,7 @@ static void print_peer_device_changes(const char *prefix, const char *action_new
 			       resync_susp_str(&new_peer_device->info));
 	}
 
-	if (statistics_changed) {
+	if (statistics_changed || opt_fullch) {
 		print_peer_device_statistics(0, old_peer_device ? &old_peer_device->statistics : NULL,
 				&new_peer_device->statistics, nowrap_printf);
 	}
@@ -808,7 +808,7 @@ static void print_path_changes(const char *prefix, const char *action_new, const
 			object_path, resource_name,
 			new_path->ctx.ctx_peer_node_id, new_path->ctx.ctx_conn_name,
 			my_addr, peer_addr);
-	if (established_changed) {
+	if (established_changed || opt_fullch) {
 		if (opt_diff) {
 			char *old_established = UNKNOWN_STRING;
 			if (old_path)
@@ -841,7 +841,7 @@ static void print_connection_changes(const char *prefix, const char *action_new,
 
 	printf("%s%s ", prefix, old_connection ? action_change : action_new);
 	printf("%s name:%s peer-node-id:%u conn-name:%s", object_connection, resource_name, new_connection->ctx.ctx_peer_node_id, new_connection->ctx.ctx_conn_name);
-	if (connection_state_changed) {
+	if (connection_state_changed || opt_fullch) {
 		if (opt_diff)
 			DIFF_COLOR(old_connection, "connection",
 					CONN_COLOR_STRING(old_connection->info.conn_connection_state),
@@ -850,7 +850,7 @@ static void print_connection_changes(const char *prefix, const char *action_new,
 			printf(" connection:%s%s%s",
 			       CONN_COLOR_STRING(new_connection->info.conn_connection_state));
 	}
-	if (role_changed) {
+	if (role_changed || opt_fullch) {
 		if (opt_diff)
 			DIFF_COLOR(old_connection, "role",
 					ROLE_COLOR_STRING(old_connection->info.conn_role, 0),
@@ -859,7 +859,7 @@ static void print_connection_changes(const char *prefix, const char *action_new,
 			printf(" role:%s%s%s",
 			       ROLE_COLOR_STRING(new_connection->info.conn_role, 0));
 	}
-	if (statistics_changed) {
+	if (statistics_changed || opt_fullch) {
 		print_connection_statistics(0, old_connection ? &old_connection->statistics : NULL,
 				&new_connection->statistics, nowrap_printf);
 	}

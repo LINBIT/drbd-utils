@@ -220,6 +220,7 @@ struct option events_cmd_options[] = {
 	{ "statistics", no_argument, 0, 's' },
 	{ "now", no_argument, 0, 'n' },
 	{ "poll", no_argument, 0, 'p' },
+	{ "full", no_argument, 0, 'f' },
 	{ "color", optional_argument, 0, 'c' },
 	{ "diff", optional_argument, 0, 'i' },
 	{ }
@@ -1533,6 +1534,7 @@ int opt_verbose;
 bool opt_statistics;
 bool opt_timestamps;
 bool opt_diff;
+bool opt_fullch;
 
 static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 {
@@ -1888,6 +1890,13 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		case 'i':
 			opt_diff = true;
 			break;
+
+		case 'f':
+			++opt_verbose;
+			opt_statistics = true;
+			opt_fullch = true;
+			break;
+
 		case 'c':
 			if (!parse_color_argument())
 				print_usage_and_exit("unknown --color argument");
@@ -2430,7 +2439,7 @@ void print_resource_statistics(int indent,
 	uint32_t wo = new->res_stat_write_ordering;
 
 	if ((!old ||
-	     old->res_stat_write_ordering != wo) &&
+	     old->res_stat_write_ordering != wo || opt_fullch) &&
 	    wo < ARRAY_SIZE(write_ordering_str) &&
 	    write_ordering_str[wo]) {
 		wrap_printf_f(indent, " write-ordering:%s", write_ordering_str[wo]);
@@ -2460,7 +2469,7 @@ void print_device_statistics(int indent,
 			wrap_printf(indent, " lower-pending:" U32,
 				    new->dev_lower_pending);
 			if (!old ||
-			    old->dev_al_suspended != new->dev_al_suspended)
+			    old->dev_al_suspended != new->dev_al_suspended || opt_fullch)
 				wrap_printf(indent, " al-suspended:%s",
 					    new->dev_al_suspended ? "yes" : "no");
 		}
@@ -2496,7 +2505,7 @@ void print_connection_statistics(int indent,
 				 wrap_printf_fn_t wrap_printf)
 {
 	if (!old ||
-	    old->conn_congested != new->conn_congested)
+	    old->conn_congested != new->conn_congested || opt_fullch)
 		wrap_printf(indent, " congested:%s", new->conn_congested ? "yes" : "no");
 	if (new->ap_in_flight != -1ULL) {
 		wrap_printf(indent, " ap-in-flight:"U64, (uint64_t)new->ap_in_flight);
