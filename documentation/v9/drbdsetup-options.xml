@@ -69,32 +69,66 @@
     <term xml:id="c-plan-ahead"><option>c-plan-ahead <replaceable>plan_time</replaceable></option></term>
 
     <definition>
-      <para>Dynamically control the resync speed.  This mechanism is enabled by
-      setting the <option>c-plan-ahead</option> parameter to a positive value.
-      The goal is to either fill the buffers along the data path with a defined
-      amount of data if <option>c-fill-target</option> is defined, or to have a
-      defined delay along the path if <option>c-delay-target</option> is
-      defined. The maximum bandwidth is limited by the
-      <option>c-max-rate</option> parameter.</para>
+      <para>Dynamically control the resync speed. The following modes are available:</para>
+      <itemizedlist>
+        <listitem>
+          <para>Dynamic control with fill target (default).
+          Enabled when
+          <option>c-plan-ahead</option> is non-zero and
+          <option>c-fill-target</option> is non-zero.
+          The goal is to fill the buffers along the data path with a defined amount of data.
+          This mode is recommended when DRBD-proxy is used.
+          Configured with
+          <option>c-plan-ahead</option>,
+          <option>c-fill-target</option> and
+          <option>c-max-rate</option>.</para>
+        </listitem>
+        <listitem>
+          <para>Dynamic control with delay target.
+          Enabled when
+          <option>c-plan-ahead</option> is non-zero (default) and
+          <option>c-fill-target</option> is zero.
+          The goal is to have a defined delay along the path.
+          Configured with
+          <option>c-plan-ahead</option>,
+          <option>c-delay-target</option> and
+          <option>c-max-rate</option>.</para>
+        </listitem>
+        <listitem>
+          <para>Fixed resync rate.
+          Enabled when
+          <option>c-plan-ahead</option> is zero.
+          DRBD will try to perform resync I/O at a fixed rate.
+          Configured with
+          <option>resync-rate</option>.</para>
+        </listitem>
+      </itemizedlist>
 
-      <para>The <option>c-plan-ahead</option> parameter defines how fast drbd
+      <para>The <option>c-plan-ahead</option> parameter defines how fast DRBD
       adapts to changes in the resync speed.  It should be set to five times
-      the network round-trip time or more.  Common values for
-      <option>c-fill-target</option> for "normal" data paths range from 4K to
-      100K. If drbd-proxy is used, it is advised to use
-      <option>c-delay-target</option> instead of <option>c-fill-target</option>. The
-      <option>c-delay-target</option> parameter is used if the
-      <option>c-fill-target</option> parameter is undefined or set to 0.  The
-      <option>c-delay-target</option> parameter should be set to five times the
-      network round-trip time or more. The <option>c-max-rate</option> option
-      should be set to either the bandwidth available between the DRBD-hosts and the
-      machines hosting DRBD-proxy, or to the available disk bandwidth.</para>
+      the network round-trip time or more.
+      The default value of <option>c-plan-ahead</option> is 20, in units of 0.1
+      seconds.</para>
 
-      <para>The default values of these parameters are:
-      <option>c-plan-ahead</option> = 20 (in units of 0.1 seconds),
-      <option>c-fill-target</option> = 0 (in units of sectors),
-      <option>c-delay-target</option> = 1 (in units of 0.1 seconds),
-      and <option>c-max-rate</option> = 102400 (in units of KiB/s).</para>
+      <para>The <option>c-fill-target</option> parameter defines the how much
+      resync data DRBD should aim to have in-flight at all times. Common values
+      for "normal" data paths range from 4K to 100K.
+      The default value of <option>c-fill-target</option> is 100, in units of
+      sectors</para>
+
+      <para>The <option>c-delay-target</option> parameter defines the delay in
+      the resync path that DRBD should aim for. This should be set to five times
+      the network round-trip time or more.
+      The default value of <option>c-delay-target</option> is 10, in units of
+      0.1 seconds.</para>
+
+      <para>The <option>c-max-rate</option> parameter limits the maximum
+      bandwidth used by dynamically controlled resyncs. Setting this to zero
+      removes the limitation (since DRBD 9.0.28).
+      It should be set to either the bandwidth available between the DRBD hosts
+      and the machines hosting DRBD-proxy, or to the available disk bandwidth.
+      The default value of <option>c-max-rate</option> is 102400, in units of
+      KiB/s.</para>
 
       <para>Dynamic resync speed control is available since DRBD 8.3.9.</para>
     </definition>
