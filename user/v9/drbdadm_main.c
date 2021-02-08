@@ -3515,11 +3515,10 @@ int main(int argc, char **argv)
 				if (!ctx.res) {
 					ctx_by_minor(&ctx, current_cmd->resource_names[i]);
 					r = 0;
+					do {
+						run_post_parse();
+					} while (need_post_parse);
 				}
-
-				do {
-					run_post_parse();
-				} while (need_post_parse);
 
 				if (!ctx.res) {
 					err("'%s' not defined in your config (for this host).\n", current_cmd->resource_names[i]);
