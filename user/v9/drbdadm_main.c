@@ -3507,10 +3507,20 @@ int main(int argc, char **argv)
 
 			for (i = 0; current_cmd->resource_names[i]; i++) {
 				r = ctx_by_name(&ctx, current_cmd->resource_names[i], SETUP_MULTI);
+
+				do {
+					run_post_parse();
+				} while (need_post_parse);
+
 				if (!ctx.res) {
 					ctx_by_minor(&ctx, current_cmd->resource_names[i]);
 					r = 0;
 				}
+
+				do {
+					run_post_parse();
+				} while (need_post_parse);
+
 				if (!ctx.res) {
 					err("'%s' not defined in your config (for this host).\n", current_cmd->resource_names[i]);
 					exit(E_USAGE);
