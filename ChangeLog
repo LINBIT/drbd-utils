@@ -3,6 +3,15 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.16.0
+--------
+ * drbd-attr/may_promote: fixes from 9.15.1
+ * drbdadm,v9: allow set-gi in single node clusters
+ * drbsetup,events2,v9: diff(erential) output
+ * drbsetup,events2,v9: add --full output
+ * v9: allow resource rename, also in drbdmon
+ * drbdadm,v9: allow c-max-rate to be disabled
+
 9.15.0
 --------
  * New drbd-attr Pacemaker RA
