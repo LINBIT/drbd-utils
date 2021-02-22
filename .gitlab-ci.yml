@@ -26,7 +26,7 @@ variables:
         dummy-release.sh drbd-utils "$version" "$release" drbd.spec.in
         ./autogen.sh
         ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --without-83support --without-manual
-        make debrelease FORCE=1 REL_VERSION="$version"
+        make debrelease VERSION="$version" FORCE=1
         curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD --upload-file drbd-utils-*.tar.gz $LINBIT_REGISTRY_URL/repository/lbbuild-upstream/
 
         META_JSON=$(rq -t < drbd-test-bundle/virter/vms.toml | jq '.vms[].metadata')

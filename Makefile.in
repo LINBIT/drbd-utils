@@ -81,24 +81,6 @@ else
 SUBDIRS     = $(TOOLS_DIRS)
 endif
 
-REL_VERSION := $(shell $(SED) -ne '/^AC_INIT/{s/^[^,]*, *\([^,]*\) *,.*/\1/;p;q}' configure.ac)
-ifdef FORCE
-#
-# NOTE to generate a tgz even if too lazy to update the changelogs,
-# or to forcefully include the FIXME to be done: latest change date;
-# for now, include the git hash of the latest commit
-# in the tgz name:
-#   make distclean doc .filelist && make tgz FORCE=1
-#
-REL_VERSION := $(REL_VERSION)-$(shell $(GIT) rev-parse HEAD)
-endif
-
-DIST_VERSION := $(REL_VERSION)
-FDIST_VERSION := $(shell test -e .filelist && sed -ne 's,^drbd-utils-\([^/]*\)/.*,\1,p;q' < .filelist)
-ifeq ($(FDIST_VERSION),)
-FDIST_VERSION := $(DIST_VERSION)
-endif
-
 all-yes := check-submods configure tools
 all-$(WITH_MANUAL) += doc
 all: $(all-yes)
@@ -198,52 +180,60 @@ extra-clean: distclean
 uninstall:
 	@ set -e; for i in $(SUBDIRS); do $(MAKE) -C $$i uninstall; done
 
+.PHONY: check_VERSION
+ifndef VERSION
+check_VERSION:
+	$(error environment variable VERSION is not set)
+else
+check_VERSION:
+	true
+endif
+
+
 .PHONY: check_changelogs_up2date
-check_changelogs_up2date:
-	@ up2date=true; dver_re=$(DIST_VERSION); dver_re=$${dver_re//./\\.}; \
-	echo "checking for presence of $$dver_re in various changelog files"; \
-	in_changelog=$$(sed -n -e '0,/^%changelog/d' \
-	                     -e '/- '"$$dver_re"'-/p' < drbd.spec.in) ; \
-	if test -z "$$in_changelog" ; \
-	then \
-	   echo -e "\n\t%changelog in drbd.spec.in needs update"; \
-	   up2date=false; fi; \
-	if ! grep "^$$dver_re\>" >/dev/null 2>&1 ChangeLog; \
-	then \
-	   echo -e "\n\tChangeLog needs update"; \
-	   up2date=false; fi ; \
-	if ! grep "^AC_INIT(DRBD, $$dver_re" >/dev/null 2>&1 configure.ac; \
-	then \
-	   echo -e "\n\tconfigure.ac needs update"; \
-	   up2date=false; fi ; \
-	if ! grep "ENV DRBD_UTILS_VERSION $$dver_re" >/dev/null 2>&1 Dockerfile; \
-	then \
+check_changelogs_up2date: check_VERSION
+	lbvers.py check \
+		--base='$(BASE)' --build='$(BUILD)' --build-nr='$(BUILD_NR)' --pkg-nr='$(PKG_NR)' \
+		--changelog=ChangeLog \
+		--rpm-spec=drbd.spec.in --rpm-spec-changelog-only \
+		--debian-changelog=debian/changelog \
+		--configureac=configure.ac
+	if ! grep "ENV DRBD_UTILS_VERSION $$VERSION" >/dev/null 2>&1 Dockerfile; then \
 	   echo -e "\n\tDockerfile needs update"; \
-	   up2date=false; fi ; \
-	if ! grep "^drbd-utils ($$dver_re" >/dev/null 2>&1 debian/changelog; \
-	then \
-	   echo -e "\n\tdebian/changelog needs update [ignored]\n"; \
-	   : do not fail the build because of outdated debian/changelog ; fi ; \
-	$$up2date
+	   false; fi;
+
+.PHONY: .version
+.version: check_VERSION
+	echo '$(VERSION)' > $@
+	echo "./.version updated."
+
+.PHONY: check_.version
+check_.version:
+	test -e .version
 
 .PHONY: .filelist
-.filelist:
+.filelist: check_VERSION .version
 	@set -e ; submodules=`$(GIT) submodule foreach --quiet 'echo $$path'`; \
 	$(GIT) ls-files | \
 		grep -vxF -e "$$submodules" | \
 		grep -v "^\.gitlab" | \
-		sed '$(if $(PRESERVE_DEBIAN),,/^debian/d);s#^#$(PNAME)-$(DIST_VERSION)/#' | \
+		sed '$(if $(PRESERVE_DEBIAN),,/^debian/d);s#^#$(PNAME)-$(VERSION)/#' | \
 		grep -v "gitignore\|gitmodules" > .filelist
-	@$(GIT) submodule foreach --quiet 'git ls-files | sed -e "s,^,$(PNAME)-$(DIST_VERSION)/$$path/,"' | \
+	@$(GIT) submodule foreach --quiet 'git ls-files | sed -e "s,^,$(PNAME)-$(VERSION)/$$path/,"' | \
 		grep -v "gitignore\|gitmodules" >> .filelist
 	@[ -s .filelist ] # assert there is something in .filelist now
 	@find documentation -name "[^.]*.[578]" -o -name "*.html" | \
-	sed "s/^/$(PNAME)-$(DIST_VERSION)\//"              >> .filelist ; \
-	echo $(PNAME)-$(DIST_VERSION)/user/shared/drbd_buildtag.h >> .filelist ; \
-	echo $(PNAME)-$(DIST_VERSION)/user/shared/config.h.in  >> .filelist ; \
-	echo $(PNAME)-$(DIST_VERSION)/.filelist            >> .filelist ; \
-	echo $(PNAME)-$(DIST_VERSION)/configure            >> .filelist ; \
+	sed "s/^/$(PNAME)-$(VERSION)\//"              >> .filelist ; \
+	echo $(PNAME)-$(VERSION)/user/shared/drbd_buildtag.h >> .filelist ; \
+	echo $(PNAME)-$(VERSION)/user/shared/config.h.in  >> .filelist ; \
+	echo $(PNAME)-$(VERSION)/.filelist            >> .filelist ; \
+	echo $(PNAME)-$(VERSION)/configure            >> .filelist ; \
+	echo $(PNAME)-$(VERSION)/.version             >> .filelist ; \
 	echo "./.filelist updated."
+
+.PHONY: check_.filelist
+check_.filelist:
+	test -e .filelist
 
 # tgz will no longer automatically update .filelist,
 # so the tgz and therefore rpm target will work within
@@ -251,13 +241,13 @@ check_changelogs_up2date:
 # to generate a distribution tarball, use make tarball,
 # which will regenerate .filelist
 .PHONY: tgz
-tgz:
-	test -e .filelist
-	rm -f drbd-utils-$(FDIST_VERSION)
-	$(LN_S) . drbd-utils-$(FDIST_VERSION)
-	for f in $$(<.filelist) ; do [ -e $$f ] && continue ; echo missing: $$f ; exit 1; done
-	tar --owner=0 --group=0 -czf - -T .filelist > drbd-utils-$(FDIST_VERSION).tar.gz
-	rm drbd-utils-$(FDIST_VERSION)
+tgz: check_.version check_.filelist
+	version=$$(cat .version) && \
+	rm -f drbd-utils-$${version} && \
+	$(LN_S) . drbd-utils-$${version} && \
+	for f in $$(<.filelist) ; do [ -e $$f ] && continue ; echo missing: $$f ; exit 1; done && \
+	tar --owner=0 --group=0 -czf - -T .filelist > drbd-utils-$${version}.tar.gz && \
+	rm drbd-utils-$${version}
 
 ifeq ($(FORCE),)
 tgz: check_changelogs_up2date doc
@@ -300,7 +290,7 @@ drbd.spec: drbd.spec.in configure
 
 .PHONY: rpmprep
 rpmprep: tgz drbd.spec
-	cp drbd-utils-$(FDIST_VERSION).tar.gz `rpm -E "%_sourcedir"`
+	version=$$(cat .version) && cp drbd-utils-$${version}.tar.gz `rpm -E "%_sourcedir"`
 
 .PHONY: rpm
 rpm: rpmprep
