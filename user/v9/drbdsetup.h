@@ -126,7 +126,6 @@ extern bool opt_statistics;
 extern bool opt_timestamps;
 extern bool opt_diff;
 extern bool opt_fullch;
-extern struct nlattr *global_attrs[128];
 
 bool kernel_older_than(int version, int patchlevel, int sublevel);
 int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
@@ -169,7 +168,7 @@ void free_connections(struct connections_list *);
 void free_peer_device(struct peer_devices_list *);
 void free_peer_devices(struct peer_devices_list *);
 void free_paths(struct paths_list *);
-int drbd_tla_parse(struct nlmsghdr *nlh);
+int drbd_tla_parse(struct nlattr *tla[], struct nlmsghdr *nlh);
 
 int drbdsetup_main(int argc, char **argv);
 

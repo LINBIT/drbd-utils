@@ -1076,15 +1076,16 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 
 		/* now apply stored messages */
 		for (entry = stored_messages; entry; entry = next_entry) {
+			struct nlattr *tla[ARRAY_SIZE(drbd_tla_nl_policy)];
 			struct genl_info stored_info = {
 				.seq = entry->nlh->nlmsg_seq,
 				.nlhdr = entry->nlh,
 				.genlhdr = nlmsg_data(entry->nlh),
 				.userhdr = genlmsg_data(nlmsg_data(entry->nlh)),
-				.attrs = global_attrs,
+				.attrs = tla,
 			};
 
-			err = drbd_tla_parse(entry->nlh);
+			err = drbd_tla_parse(stored_info.attrs, entry->nlh);
 			if (err) {
 				fprintf(stderr, "drbd_tla_parse() failed");
 				return 1;

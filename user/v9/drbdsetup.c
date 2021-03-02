@@ -86,13 +86,6 @@
 
 char *progname;
 
-/* for parsing of messages */
-struct nlattr *global_attrs[128];
-/* there is an other table, nested_attr_tb, defined in genl_magic_func.h,
- * which can be used after <struct>_from_attrs,
- * to check for presence of struct fields. */
-#define ntb(t)	nested_attr_tb[__nla_type(t)]
-
 #ifndef AF_INET_SDP
 #define AF_INET_SDP 27
 #define PF_INET_SDP AF_INET_SDP
@@ -917,19 +910,19 @@ static struct option *make_longoptions(struct drbd_cmd *cm)
 }
 
 /* prepends global objname to output (if any) */
-static int check_error(int err_no, char *desc)
+static int check_error(int err_no, char *desc, struct nlattr **tla)
 {
 	int rv = 0;
 
 	if (err_no == NO_ERROR || err_no == SS_SUCCESS) {
 			/* drbdsetup primary may produce warnings,
 			 * which are no errors (on WinDRBD). */
-		if (global_attrs[DRBD_NLA_CFG_REPLY] &&
-	            global_attrs[DRBD_NLA_CFG_REPLY]->nla_len) {
+		if (tla[DRBD_NLA_CFG_REPLY] &&
+	            tla[DRBD_NLA_CFG_REPLY]->nla_len) {
 			struct nlattr *nla;
 			int rem;
 			fprintf(stderr, "warnings from kernel:\n");
-			nla_for_each_nested(nla, global_attrs[DRBD_NLA_CFG_REPLY], rem) {
+			nla_for_each_nested(nla, tla[DRBD_NLA_CFG_REPLY], rem) {
 				if (nla_type(nla) == __nla_type(T_info_text))
 					fprintf(stderr, "%s\n", (char*)nla_data(nla));
 			}
@@ -978,12 +971,12 @@ static int check_error(int err_no, char *desc)
 			}
 		}
 	}
-	if (global_attrs[DRBD_NLA_CFG_REPLY] &&
-	    global_attrs[DRBD_NLA_CFG_REPLY]->nla_len) {
+	if (tla[DRBD_NLA_CFG_REPLY] &&
+	    tla[DRBD_NLA_CFG_REPLY]->nla_len) {
 		struct nlattr *nla;
 		int rem;
 		fprintf(stderr, "additional info from kernel:\n");
-		nla_for_each_nested(nla, global_attrs[DRBD_NLA_CFG_REPLY], rem) {
+		nla_for_each_nested(nla, tla[DRBD_NLA_CFG_REPLY], rem) {
 			if (nla_type(nla) == __nla_type(T_info_text))
 				fprintf(stderr, "%s\n", (char*)nla_data(nla));
 		}
@@ -999,9 +992,9 @@ static void warn_print_excess_args(int argc, char **argv, int i)
 	printf("\n");
 }
 
-int drbd_tla_parse(struct nlmsghdr *nlh)
+int drbd_tla_parse(struct nlattr *tla[], struct nlmsghdr *nlh)
 {
-	return nla_parse(global_attrs, ARRAY_SIZE(drbd_tla_nl_policy)-1,
+	return nla_parse(tla, ARRAY_SIZE(drbd_tla_nl_policy)-1,
 		nlmsg_attrdata(nlh, GENL_HDRLEN + drbd_genl_family.hdrsize),
 		nlmsg_attrlen(nlh, GENL_HDRLEN + drbd_genl_family.hdrsize),
 		drbd_tla_nl_policy);
@@ -1019,6 +1012,7 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	int rv;
 	char *desc = NULL; /* error description from kernel reply message */
 
+	struct nlattr *tla[ARRAY_SIZE(drbd_tla_nl_policy)] = { 0, };
 	struct drbd_genlmsghdr *dhdr;
 	struct msg_buff *smsg;
 	struct iovec iov;
@@ -1037,6 +1031,7 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		rv = OTHER_ERROR;
 		goto error;
 	}
+	/* reply buffer */
 	nlh = (struct nlmsghdr*)iov.iov_base;
 	dh = genlmsg_data(nlmsg_data(nlh));
 
@@ -1193,12 +1188,12 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		if (cm->missing_ok)
 			rv = NO_ERROR;
 	}
-	drbd_tla_parse(nlh);
+	drbd_tla_parse(tla, nlh);
 
 error:
 	msg_free(smsg);
 
-	rv = check_error(rv, desc);
+	rv = check_error(rv, desc, tla);
 	free(iov.iov_base);
 	return rv;
 }
@@ -1242,6 +1237,7 @@ static struct drbd_cmd *find_cmd_by_name(const char *name)
 
 static void print_options(struct nlattr *attr, struct context_def *ctx, const char *sect_name)
 {
+	struct nlattr *nested_attr_tb[128];
 	struct field_def *field;
 	int opened = 0;
 
@@ -1259,7 +1255,7 @@ static void print_options(struct nlattr *attr, struct context_def *ctx, const ch
 		const char *str;
 		bool is_default;
 
-		nlattr = ntb(field->nla_type);
+		nlattr = nested_attr_tb[__nla_type(field->nla_type)];
 		if (!nlattr)
 			continue;
 		str = field->ops->get(ctx, field, nlattr);
@@ -1291,7 +1287,8 @@ static void print_options(struct nlattr *attr, struct context_def *ctx, const ch
 	}
 }
 
-static int nr_printed_opts(struct context_def *ctx, struct field_def *start)
+static int nr_printed_opts(struct context_def *ctx, struct field_def *start,
+		struct nlattr **nested_attr_tb)
 {
 	struct field_def *field;
 	const char *str;
@@ -1302,7 +1299,7 @@ static int nr_printed_opts(struct context_def *ctx, struct field_def *start)
 		return nr;
 
 	for (field = start; field->name; field++) {
-		struct nlattr *nlattr = ntb(field->nla_type);
+		struct nlattr *nlattr = nested_attr_tb[__nla_type(field->nla_type)];
 		if (!nlattr)
 			continue;
 		str = field->ops->get(ctx, field, nlattr);
@@ -1324,6 +1321,7 @@ static bool print_options_json(
 	bool comma_after
 )
 {
+	struct nlattr *nested_attr_tb[128];
 	struct field_def *field;
 	int opened = 0;
 	int will_print, printed;
@@ -1337,14 +1335,14 @@ static bool print_options_json(
 		/* still, print those that validated ok */
 	}
 
-	will_print = nr_printed_opts(ctx, ctx->fields);
+	will_print = nr_printed_opts(ctx, ctx->fields, nested_attr_tb);
 	printed = 0;
 	for (field = ctx->fields; field->name; field++) {
 		struct nlattr *nlattr;
 		const char *str;
 		bool is_default;
 
-		nlattr = ntb(field->nla_type);
+		nlattr = nested_attr_tb[__nla_type(field->nla_type)];
 		if (!nlattr)
 			continue;
 		str = field->ops->get(ctx, field, nlattr);
@@ -1398,6 +1396,7 @@ struct choose_timeout_ctx {
 
 int choose_timeout(struct choose_timeout_ctx *ctx)
 {
+	struct nlattr *tla[ARRAY_SIZE(drbd_tla_nl_policy)] = { 0, };
 	char *desc = NULL;
 	struct drbd_genlmsghdr *dhdr;
 	struct nlattr *nla;
@@ -1441,7 +1440,7 @@ int choose_timeout(struct choose_timeout_ctx *ctx)
 			.nlhdr = nlh,
 			.genlhdr = nlmsg_data(nlh),
 			.userhdr = genlmsg_data(nlmsg_data(nlh)),
-			.attrs = global_attrs,
+			.attrs = tla,
 		};
 		struct drbd_genlmsghdr *dh = info.userhdr;
 		struct timeout_parms parms;
@@ -1452,7 +1451,7 @@ int choose_timeout(struct choose_timeout_ctx *ctx)
 		}
 		if (rr != NO_ERROR)
 			goto error;
-		err = drbd_tla_parse(nlh);
+		err = drbd_tla_parse(info.attrs, nlh);
 		if (err) {
 			desc = "drbd_tla_parse() failed - "
 				"do you need to upgrade your userland tools?";
@@ -1538,6 +1537,7 @@ bool opt_fullch;
 
 static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 {
+	struct nlattr *tla[ARRAY_SIZE(drbd_tla_nl_policy)] = { 0, };
 	char *desc = NULL;
 	struct drbd_genlmsghdr *dhdr;
 	struct msg_buff *smsg;
@@ -1685,7 +1685,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				.nlhdr = nlh,
 				.genlhdr = nlmsg_data(nlh),
 				.userhdr = genlmsg_data(nlmsg_data(nlh)),
-				.attrs = global_attrs,
+				.attrs = tla,
 			};
 
 			dbg(3, "received type:%x\n", nlh->nlmsg_type);
@@ -1716,7 +1716,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 
 			/* parse early, otherwise drbd_cfg_context_from_attrs
 			 * can not work */
-			if (drbd_tla_parse(nlh)) {
+			if (drbd_tla_parse(info.attrs, nlh)) {
 				/* FIXME
 				 * should continuous_poll continue?
 				 */
@@ -1797,7 +1797,7 @@ out2:
 
 out:
 	if (!err)
-		err = check_error(rv, desc);
+		err = check_error(rv, desc, tla);
 	free(iov.iov_base);
 	return err;
 }
@@ -1985,6 +1985,7 @@ out_polling:;
 
 static bool options_empty(struct nlattr *attr, struct context_def *ctx)
 {
+	struct nlattr *nested_attr_tb[ctx->nla_policy_size];
 	struct field_def *field;
 
 	if (!attr)
@@ -2000,7 +2001,7 @@ static bool options_empty(struct nlattr *attr, struct context_def *ctx)
 		const char *str;
 		bool is_default;
 
-		nlattr = ntb(field->nla_type);
+		nlattr = nested_attr_tb[__nla_type(field->nla_type)];
 		if (!nlattr)
 			continue;
 		str = field->ops->get(ctx, field, nlattr);
@@ -3307,7 +3308,7 @@ char *address_str(char *buffer, void* address, int addr_len)
 struct resources_list *new_resource_from_info(struct genl_info *info)
 {
 	struct drbd_cfg_context cfg = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
-	struct nlattr *res_opts = global_attrs[DRBD_NLA_RESOURCE_OPTS];
+	struct nlattr *res_opts = info->attrs[DRBD_NLA_RESOURCE_OPTS];
 	struct resources_list *r;
 
 	drbd_cfg_context_from_attrs(&cfg, info);
@@ -3420,7 +3421,7 @@ static struct resources_list *list_resources(void)
 struct devices_list *new_device_from_info(struct genl_info *info)
 {
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
-	struct nlattr *disk_conf_nl = global_attrs[DRBD_NLA_DISK_CONF];
+	struct nlattr *disk_conf_nl = info->attrs[DRBD_NLA_DISK_CONF];
 	struct devices_list *d = NULL;
 
 	drbd_cfg_context_from_attrs(&ctx, info);
@@ -3512,8 +3513,8 @@ void free_devices(struct devices_list *devices)
 struct connections_list *new_connection_from_info(struct genl_info *info)
 {
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
-	struct nlattr *net_conf = global_attrs[DRBD_NLA_NET_CONF];
-	struct nlattr *path_list = global_attrs[DRBD_NLA_PATH_PARMS];
+	struct nlattr *net_conf = info->attrs[DRBD_NLA_NET_CONF];
+	struct nlattr *path_list = info->attrs[DRBD_NLA_PATH_PARMS];
 	struct connections_list *c;
 
 	drbd_cfg_context_from_attrs(&ctx, info);
@@ -3639,7 +3640,7 @@ void free_connections(struct connections_list *connections)
 struct peer_devices_list *new_peer_device_from_info(struct genl_info *info)
 {
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
-	struct nlattr *peer_device_conf = global_attrs[DRBD_NLA_PEER_DEVICE_OPTS];
+	struct nlattr *peer_device_conf = info->attrs[DRBD_NLA_PEER_DEVICE_OPTS];
 	struct peer_devices_list *p;
 
 	drbd_cfg_context_from_attrs(&ctx, info);

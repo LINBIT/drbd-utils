@@ -464,6 +464,7 @@ void test_helper_response(struct msg_buff *smsg)
 
 int test_print_event(struct nlmsghdr *nlh)
 {
+	struct nlattr *tla[128];
 	struct drbd_cmd cm;
 	int err;
 	/* read message as if receiving */
@@ -472,9 +473,9 @@ int test_print_event(struct nlmsghdr *nlh)
 		.nlhdr = nlh,
 		.genlhdr = nlmsg_data(nlh),
 		.userhdr = genlmsg_data(nlmsg_data(nlh)),
-		.attrs = global_attrs,
+		.attrs = tla,
 	};
-	err = drbd_tla_parse(nlh);
+	err = drbd_tla_parse(tla, nlh);
 	if (err) {
 		fprintf(stderr, "drbd_tla_parse() failed");
 		return 1;
