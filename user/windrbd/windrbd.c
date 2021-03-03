@@ -174,7 +174,7 @@ static int is_windrbd_device(HANDLE h)
 		return 1;
 
         err = GetLastError();
-	if (err != ERROR_INVALID_FUNCTION)
+	if (err != ERROR_INVALID_FUNCTION && err != ERROR_NOT_SUPPORTED)
 		printf("Warning: device returned strange error code %d\n", err);
 
 	return 0;
