@@ -72,7 +72,13 @@ static int call_windrbd(char *res_name, int flags, char *path, ...)
 
 int before_attach(const struct cfg_ctx *ctx)
 {
-	return call_windrbd(ctx->res->name, SLEEPS_SHORT, windrbd, "-q", "hide-filesystem", ctx->vol->disk, NULL);
+	int ret;
+	ret = call_windrbd(ctx->res->name, SLEEPS_SHORT, windrbd, "-q", "hide-filesystem", ctx->vol->disk, NULL);
+	if (ret) {
+		printf("windrbd -q hide-filesystem returned exit status %d\n", ret);
+		printf("(you normally can ignore this)\n");
+	}
+	return 0;
 }
 
 int after_new_minor(const struct cfg_ctx *ctx)
