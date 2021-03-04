@@ -202,10 +202,16 @@ check_changelogs_up2date: check_VERSION
 	   echo -e "\n\tDockerfile needs update"; \
 	   false; fi;
 
-.PHONY: .version
-.version: check_VERSION
-	echo '$(VERSION)' > $@
-	echo "./.version updated."
+.version: check_VERSION FORCE
+	if test -e $@ && [ "$$(<$@)" = "$(VERSION)" ]; then \
+		echo "$@ already set to $(VERSION)"; \
+	else \
+		echo '$(VERSION)' > $@; \
+		echo "./.version updated."; \
+	fi
+
+.PHONY: FORCE
+FORCE:
 
 .PHONY: check_.version
 check_.version:
