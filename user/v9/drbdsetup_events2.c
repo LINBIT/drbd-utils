@@ -681,6 +681,19 @@ static void print_device_changes(const char *prefix, const char *action_new, con
 		bool intentional = new_device->info.is_intentional_diskless == 1;
 		if (opt_diff) {
 			bool old_intentional = 0; /* only used if we have an old_device */
+
+			if (!old_device || strcmp(backing_dev_str(&old_device->info), backing_dev_str(&new_device->info)) != 0) {
+				const char *old_dev_backing_dev = UNKNOWN_STRING;
+				if (old_device)
+					old_dev_backing_dev = backing_dev_str(&old_device->info);
+
+				printf(" backing_dev:%s->%s",
+						old_dev_backing_dev,
+						backing_dev_str(&new_device->info));
+			} else {
+				printf(" backing_dev:%s", backing_dev_str(&new_device->info));
+			}
+
 			if (old_device)
 				old_intentional = (old_device->info.is_intentional_diskless == 1);
 
@@ -706,6 +719,7 @@ static void print_device_changes(const char *prefix, const char *action_new, con
 			} else
 				printf(" quorum:%s", new_device->info.dev_has_quorum ? "yes" : "no");
 		} else {
+			printf(" backing_dev:%s", backing_dev_str(&new_device->info));
 			printf(" disk:%s%s%s",
 					DISK_COLOR_STRING(new_device->info.dev_disk_state, intentional, true));
 			printf(" client:%s", intentional_diskless_str(&new_device->info));
@@ -740,6 +754,7 @@ static void print_peer_device_changes(const char *prefix, const char *action_new
 
 	printf("%s%s ", prefix, old_peer_device ? action_change : action_new);
 	printf("%s name:%s peer-node-id:%u conn-name:%s volume:%u", object_peer_device, resource_name, new_peer_device->ctx.ctx_peer_node_id, new_peer_device->ctx.ctx_conn_name, new_peer_device->ctx.ctx_volume);
+
 	if (repl_state_changed || opt_fullch) {
 		if (opt_diff)
 			DIFF_COLOR(old_peer_device, "replication",

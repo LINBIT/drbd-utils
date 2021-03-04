@@ -137,6 +137,7 @@ const char *susp_str(struct resource_info *info);
 const char *resync_susp_str(struct peer_device_info *info);
 const char *intentional_diskless_str(struct device_info *info);
 const char *peer_intentional_diskless_str(struct peer_device_info *info);
+const char *backing_dev_str(struct device_info *info);
 void print_resource_statistics(int indent,
 			       struct resource_statistics *old,
 			       struct resource_statistics *new,

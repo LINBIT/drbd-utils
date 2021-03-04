@@ -47,8 +47,16 @@ static __u32 test_volume_number = 0;
 static __u32 test_volume_number_b = 1;
 static __u32 test_peer_node_id = 1;
 static char *test_peer_name = "some-peer";
+static char *test_backing_dev_path = "/dev/sda";
 
 typedef void (*test_msg)(struct msg_buff *smsg);
+
+static char *backing_dev(__u32 disk_state)
+{
+	if (disk_state == D_UP_TO_DATE || disk_state == D_INCONSISTENT)
+		return test_backing_dev_path;
+	return "none";
+}
 
 void test_msg_put(struct msg_buff *smsg, __u8 cmd, __u32 minor)
 {
@@ -106,6 +114,7 @@ void test_device_info(struct msg_buff *smsg, __u32 dev_disk_state, __u8 dev_has_
 	nla_put_u32(smsg, T_dev_disk_state, dev_disk_state);
 	nla_put_u8(smsg, T_is_intentional_diskless, false);
 	nla_put_u8(smsg, T_dev_has_quorum, dev_has_quorum);
+	nla_put_string(smsg, T_backing_dev_path, backing_dev(dev_disk_state));
 	nla_nest_end(smsg, nla);
 }
 

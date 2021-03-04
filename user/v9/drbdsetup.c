@@ -2860,6 +2860,15 @@ void resource_status(struct resources_list *resource)
 	wrap_printf(0, "\n");
 }
 
+/* returns either the backing dev path or "none" if it is empty */
+const char *backing_dev_str(struct device_info *info) {
+	if (info->backing_dev_path[0] == '\0') {
+		return "none";
+	}
+
+	return info->backing_dev_path;
+}
+
 static void device_status(struct devices_list *device, bool single_device, bool is_a_tty)
 {
 	enum drbd_disk_state disk_state = device->info.dev_disk_state;
@@ -2875,6 +2884,8 @@ static void device_status(struct devices_list *device, bool single_device, bool 
 	wrap_printf(indent, " disk:%s%s%s", DISK_COLOR_STRING(disk_state, intentional_diskless, true));
 	if (disk_state == D_DISKLESS && (opt_verbose || !is_a_tty))
 		wrap_printf(indent, " client:%s", intentional_diskless_str(&device->info));
+	if (opt_verbose)
+		wrap_printf(indent, " backing_dev:%s", backing_dev_str(&device->info));
 	if (opt_verbose || !device->info.dev_has_quorum)
 		wrap_printf(indent, " quorum:%s%s%s",
 			    quorum_color_start(device->info.dev_has_quorum),
