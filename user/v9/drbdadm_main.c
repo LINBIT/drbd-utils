@@ -3310,6 +3310,19 @@ int main(int argc, char **argv)
 	char *env_drbd_nodename = NULL;
 	struct cfg_ctx ctx = { };
 
+	// With on-demand parsing, Post parsing can execute while no configuration file
+	// is being processed.
+	// Instead of random content or a NULL pointer, keep an informational
+	// string in config_file and config_save whenever no configuration file path
+	// is set to avoid garbled output and crashes due to NULL pointer dereference
+	char *const config_file_unident = strdup("<Unidentified configuration file>");
+	if (config_file_unident == NULL) {
+		err("Failed to allocate memory during initialization: %m");
+		exit(E_THINKO);
+	}
+	config_file = config_file_unident;
+	config_save = config_file_unident;
+
 	current_cmd = init_current_cmd();
 
 	initialize_err();
@@ -3593,6 +3606,7 @@ int main(int argc, char **argv)
 	current_cmd = NULL;
 
 	deallocate_on_demand_parsing();
+	free(config_file_unident);
 
 	return rv;
 }
