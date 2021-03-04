@@ -1643,7 +1643,7 @@ void include_stmt(char *str)
 		exit(E_USAGE);
 	}
 
-	tmp = strdupa(config_save);
+	tmp = strdupa(config_safe);
 	last_slash = strrchr(tmp, '/');
 	if (last_slash)
 		*last_slash = 0;

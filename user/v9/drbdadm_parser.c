@@ -1677,7 +1677,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 	STAILQ_INIT(&res->proxy_plugins);
 	STAILQ_INIT(&res->meshes);
 	res->name = res_name;
-	res->config_file = config_save;
+	res->config_file = config_safe;
 	res->start_line = line;
 
 	while(1) {
@@ -1857,15 +1857,15 @@ int was_file_already_seen(char *fn)
 /* In order to allow relative paths in include statements we change
  * directory to the location of the current configuration file.
  * Before we start parsing, we canonicalize the full path name stored in
- * config_save, which means config_save always contains at least one slash.
+ * config_safe, which means config_safe always contains at least one slash.
  * Unless we are currently parsing STDIN (then it is the fixed string STDIN).
  */
 static int pushd_to_current_config_file_unless_stdin(void)
 {
 	char *last_slash, *tmp;
 
-	/* config_save was canonicalized before, unless it is STDIN */
-	tmp = strdupa(config_save);
+	/* config_safe was canonicalized before, unless it is STDIN */
+	tmp = strdupa(config_safe);
 	last_slash = strrchr(tmp, '/');
 	if (!last_slash)
 		/* Currently parsing stdin, stay where we are.
@@ -1875,7 +1875,7 @@ static int pushd_to_current_config_file_unless_stdin(void)
 		 */
 		return -1;
 
-	/* If last_slash == tmp, config_save is in the top level directory. */
+	/* If last_slash == tmp, config_safe is in the top level directory. */
 	if (last_slash == tmp)
 		tmp = "/";
 	else
@@ -1912,7 +1912,7 @@ static struct d_resource *template_file(const char *res_name)
 		fclose(f);
 	} else {
 		err("%s:%d: Failed to open template file '%s'.\n",
-		    config_save, line, file_name);
+		    config_safe, line, file_name);
 		config_valid = 0;
 	}
 
@@ -1942,7 +1942,7 @@ void include_stmt(char *str)
 						file_state->is_loaded = true;
 					} else {
 						err("%s:%d: Failed to open include file '%s'.\n",
-						    config_save, line, rel_path);
+						    config_safe, line, rel_path);
 						config_valid = 0;
 					}
 				}
@@ -1964,7 +1964,7 @@ void include_stmt(char *str)
 				file_state->is_loaded = true;
 			} else {
 				err("%s:%d: Failed to open include file '%s'.\n",
-				    config_save, line, str);
+				    config_safe, line, str);
 				config_valid = 0;
 			}
 		}
@@ -2015,11 +2015,11 @@ static void validate_kmod(int token)
 bool load_config_file(const char *const file_name)
 {
 	char *const saved_config_file = config_file;
-	char *const saved_config_save = config_save;
+	char *const saved_config_safe = config_safe;
 
 	const int cur_dir = pushd_to_current_config_file_unless_stdin();
 
-	config_save = canonicalize_path(file_name);
+	config_safe = canonicalize_path(file_name);
 	config_file = strdup(file_name);
 	if (config_file != NULL) {
 		yyin = fopen(file_name, "r");
@@ -2031,13 +2031,13 @@ bool load_config_file(const char *const file_name)
 			exit(E_CONFIG_INVALID);
 		}
 		free(config_file);
-		free(config_save);
+		free(config_safe);
 	} else {
 		err("Failed to load configuration file: Out of memory");
 		exit(E_THINKO);
 	}
 	config_file = saved_config_file;
-	config_save = saved_config_save;
+	config_safe = saved_config_safe;
 
 	popd(cur_dir);
 

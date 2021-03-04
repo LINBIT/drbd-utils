@@ -169,7 +169,7 @@ int line = 1;
 int fline;
 
 char *config_file = NULL;
-char *config_save = NULL;
+char *config_safe = NULL;
 char *config_test = NULL;
 struct d_resource *config = NULL;
 struct d_resource *common = NULL;
@@ -440,12 +440,12 @@ enum do_register if_conf_differs_confirm_or_abort(struct d_resource *res)
 		return DO_REGISTER;
 
 	/* no need to register the same thing again */
-	if (strcmp(f, config_save) == 0)
+	if (strcmp(f, config_safe) == 0)
 		return SAME_ANYWAYS;
 
 	fprintf(stderr, "Warning: resource %s\n"
 		"last used config file: %s\n"
-		"  current config file: %s\n", res->name, f, config_save);
+		"  current config file: %s\n", res->name, f, config_safe);
 
 	/* implicitly force if we don't have a tty */
 	if (no_tty)
@@ -488,7 +488,7 @@ int call_cmd_fn(int (*function) (struct d_resource *, const char *),
 			exit(rv);
 	}
 	if (rv == 0 && really_register)
-		register_config_file(res, config_save);
+		register_config_file(res, config_safe);
 
 	return rv;
 }
@@ -1336,7 +1336,7 @@ int adm_status_xml(struct d_resource *res, const char *cmd)
 	if (!dry_run) {
 		printf("<drbd-status version=\"%s\" api=\"%u\">\n",
 		       PACKAGE_VERSION, API_VERSION);
-		printf("<resources config_file=\"%s\">\n", config_save);
+		printf("<resources config_file=\"%s\">\n", config_safe);
 	}
 
 	for_each_resource(r, t, res) {
@@ -1360,7 +1360,7 @@ int sh_status(struct d_resource *res, const char *cmd)
 	if (!dry_run) {
 		printf("_drbd_version=%s\n_drbd_api=%u\n",
 		       shell_escape(PACKAGE_VERSION), API_VERSION);
-		printf("_config_file=%s\n\n", shell_escape(config_save));
+		printf("_config_file=%s\n\n", shell_escape(config_safe));
 	}
 
 	for_each_resource(r, t, res) {
@@ -1517,7 +1517,7 @@ static int adm_khelper(struct d_resource *res, const char *cmd)
 	snprintf(minor_string, sizeof(minor_string), "%u", res->me->device_minor);
 	setenv("DRBD_RESOURCE", res->name, 1);
 	setenv("DRBD_MINOR", minor_string, 1);
-	setenv("DRBD_CONF", config_save, 1);
+	setenv("DRBD_CONF", config_safe, 1);
 
 	if ((sh_cmd = get_opt_val(res->handlers, cmd, NULL))) {
 		argv[2] = sh_cmd;
@@ -2876,7 +2876,7 @@ void die_if_no_resources(void)
 
 void print_dump_xml_header(void)
 {
-	printf("<config file=\"%s\">\n", config_save);
+	printf("<config file=\"%s\">\n", config_safe);
 	++indent;
 	dump_global_info_xml();
 	dump_common_info_xml();
@@ -2884,7 +2884,7 @@ void print_dump_xml_header(void)
 
 void print_dump_header(void)
 {
-	printf("# %s\n", config_save);
+	printf("# %s\n", config_safe);
 	dump_global_info();
 	dump_common_info();
 }
@@ -2989,18 +2989,18 @@ int main(int argc, char **argv)
 	 * we need the current value for register_minor, though.
 	 * save that. */
 	if (config_from_stdin)
-		config_save = config_file;
+		config_safe = config_file;
 	else
-		config_save = canonicalize_path(config_file);
+		config_safe = canonicalize_path(config_file);
 
 	my_parse();
 
 	if (config_test) {
 		char *saved_config_file = config_file;
-		char *saved_config_save = config_save;
+		char *saved_config_safe = config_safe;
 
 		config_file = config_test;
-		config_save = canonicalize_path(config_test);
+		config_safe = canonicalize_path(config_test);
 
 		fclose(yyin);
 		yyin = fopen(config_test, "r");
@@ -3011,7 +3011,7 @@ int main(int argc, char **argv)
 		my_parse();
 
 		config_file = saved_config_file;
-		config_save = saved_config_save;
+		config_safe = saved_config_safe;
 	}
 
 	if (!config_valid)

@@ -1863,7 +1863,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 
 	res=calloc(1,sizeof(struct d_resource));
 	res->name = res_name;
-	res->config_file = config_save;
+	res->config_file = config_safe;
 	res->start_line = line;
 
 	while(1) {
@@ -2113,7 +2113,7 @@ void include_stmt(char *str)
 		exit(E_USAGE);
 	}
 
-	tmp = strdupa(config_save);
+	tmp = strdupa(config_safe);
 	last_slash = strrchr(tmp, '/');
 	if (last_slash)
 		*last_slash = 0;

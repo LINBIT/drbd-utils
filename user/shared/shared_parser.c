@@ -44,11 +44,11 @@ void save_parse_context(struct include_file_buffer *buffer, FILE *f, char *name)
 {
 	buffer->line = line;
 	buffer->config_file = config_file;
-	buffer->config_save = config_save;
+	buffer->config_safe = config_safe;
 
 	line = 1;
 	config_file = name;
-	config_save = canonicalize_path(name);
+	config_safe = canonicalize_path(name);
 
 	my_yypush_buffer_state(f);
 
@@ -60,7 +60,7 @@ void restore_parse_context(struct include_file_buffer *buffer)
 
 	line = buffer->line;
 	config_file = buffer->config_file;
-	config_save = buffer->config_save;
+	config_safe = buffer->config_safe;
 }
 
 void include_file(FILE *f, char *name)

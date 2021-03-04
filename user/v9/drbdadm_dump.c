@@ -650,7 +650,7 @@ int adm_dump_xml(const struct cfg_ctx *ctx)
 
 void print_dump_xml_header(void)
 {
-	printf("<config file=\"%s\">\n", config_save);
+	printf("<config file=\"%s\">\n", config_safe);
 	++indent;
 	dump_global_info_xml();
 	dump_common_info_xml();
@@ -658,7 +658,7 @@ void print_dump_xml_header(void)
 
 void print_dump_header(void)
 {
-	printf("# %s\n", config_save);
+	printf("# %s\n", config_safe);
 	dump_global_info();
 	dump_common_info();
 }

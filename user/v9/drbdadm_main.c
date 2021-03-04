@@ -148,7 +148,7 @@ int line = 1;
 int fline;
 
 char *config_file = NULL;
-char *config_save = NULL;
+char *config_safe = NULL;
 char *config_test = NULL;
 struct resources config = STAILQ_HEAD_INITIALIZER(config);
 struct d_resource *common = NULL;
@@ -1224,7 +1224,7 @@ int adm_new_minor(const struct cfg_ctx *ctx)
 
 	ex = m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
 	if (!ex && do_register)
-		register_minor(ctx->vol->device_minor, config_save);
+		register_minor(ctx->vol->device_minor, config_safe);
 
 	if (!ex)
 		ex = after_new_minor(ctx);
@@ -1254,7 +1254,7 @@ static int adm_resource(const struct cfg_ctx *ctx)
 
 	ex = m_system_ex(argv, SLEEPS_SHORT, res->name);
 	if (!ex && do_new_resource && do_register)
-		register_resource(res->name, config_save);
+		register_resource(res->name, config_safe);
 	return ex;
 }
 
@@ -1659,7 +1659,7 @@ static int adm_khelper(const struct cfg_ctx *ctx)
 	char volume_string[8];
 	char *argv[4] = { NULL, };
 
-	setenv("DRBD_CONF", config_save, 1);
+	setenv("DRBD_CONF", config_safe, 1);
 	setenv("DRBD_RESOURCE", res->name, 1);
 	setenv_node_id_and_uname(res);
 
@@ -3313,7 +3313,7 @@ int main(int argc, char **argv)
 	// With on-demand parsing, Post parsing can execute while no configuration file
 	// is being processed.
 	// Instead of random content or a NULL pointer, keep an informational
-	// string in config_file and config_save whenever no configuration file path
+	// string in config_file and config_safe whenever no configuration file path
 	// is set to avoid garbled output and crashes due to NULL pointer dereference
 	char *const config_file_unident = strdup("<Unidentified configuration file>");
 	if (config_file_unident == NULL) {
@@ -3321,7 +3321,7 @@ int main(int argc, char **argv)
 		exit(E_THINKO);
 	}
 	config_file = config_file_unident;
-	config_save = config_file_unident;
+	config_safe = config_file_unident;
 
 	current_cmd = init_current_cmd();
 
@@ -3393,9 +3393,9 @@ int main(int argc, char **argv)
 	 * we need the current value for register_minor, though.
 	 * save that. */
 	if (config_from_stdin)
-		config_save = config_file;
+		config_safe = config_file;
 	else
-		config_save = canonicalize_path(config_file);
+		config_safe = canonicalize_path(config_file);
 
 	// Loading configuration files included by name pattern match
 	// is deferred initially, so this should only load explicitly included files
@@ -3403,10 +3403,10 @@ int main(int argc, char **argv)
 
 	if (config_test) {
 		char *saved_config_file = config_file;
-		char *saved_config_save = config_save;
+		char *saved_config_safe = config_safe;
 
 		config_file = config_test;
-		config_save = canonicalize_path(config_test);
+		config_safe = canonicalize_path(config_test);
 
 		fclose(yyin);
 		yyin = fopen(config_test, "r");
@@ -3417,7 +3417,7 @@ int main(int argc, char **argv)
 		my_parse();
 
 		config_file = saved_config_file;
-		config_save = saved_config_save;
+		config_safe = saved_config_safe;
 	}
 
 	// Turn off deferred loading of configuration files included by name pattern match

@@ -230,7 +230,7 @@ int do_proxy_conn_down(struct cfg_ctx *ctx);
 int do_proxy_conn_plugins(struct cfg_ctx *ctx);
 
 extern char *config_file;
-extern char *config_save;
+extern char *config_safe;
 extern int config_valid;
 extern struct d_resource* config;
 extern struct d_resource* common;

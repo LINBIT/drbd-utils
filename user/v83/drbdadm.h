@@ -151,7 +151,7 @@ int do_proxy_conn_down(struct d_resource *res, const char *conn_name);
 int do_proxy_conn_plugins(struct d_resource *res, const char *conn_name);
 
 extern char *config_file;
-extern char *config_save;
+extern char *config_safe;
 extern int config_valid;
 extern struct d_resource* config;
 extern struct d_resource* common;

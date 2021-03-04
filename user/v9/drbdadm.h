@@ -461,7 +461,7 @@ bool peer_diskless(struct peer_device *peer_device);
 extern void convert_after_option(struct d_resource *res);
 
 extern char *config_file;
-extern char *config_save;
+extern char *config_safe;
 extern int config_valid;
 extern struct resources config;
 extern struct d_resource* common;

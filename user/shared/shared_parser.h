@@ -27,7 +27,7 @@
 struct include_file_buffer {
 	int line;
 	char *config_file;
-	char *config_save;
+	char *config_safe;
 };
 
 void include_file(FILE *f, char *name);
