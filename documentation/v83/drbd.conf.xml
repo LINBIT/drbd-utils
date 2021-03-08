@@ -791,7 +791,8 @@ resource r0 {
 	      it will reissue local pending IO requests to the peer, and ship all new
 	      IO requests to the peer only. The disk state advances to diskless, as soon
 	      as the backing block device has finished all IO requests.</para>
-	      <para> The default value of is 0, which means that no timeout is enforced.
+              <para> The default value of <option>disk-timeout</option> is 0,
+              which means that no timeout is enforced.
 	      The default unit is 100ms. This option is available since 8.3.12.
 	      </para>
           </listitem>

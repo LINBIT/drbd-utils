@@ -602,7 +602,8 @@
 	      <option>64K-striping</option>, <option>128K-striping</option>,
 	      <option>256K-striping</option>, <option>512K-striping</option>
 	      and <option>1M-striping</option>.</para>
-	      <para> The default value of is <option>prefer-local</option>.
+              <para> The default value of <option>read-balancing</option> is
+              <option>prefer-local</option>.
 	      This option is available since 8.4.1.
 	      </para>
           </listitem>
@@ -624,7 +625,8 @@
 	      multiplier of the discard granularity of the backing block device DRBD
 	      rounds it up. The feature only gets active if the backing block device
 	      reads back zeroes after a discard command.</para>
-	      <para> The default value of is 0. This option is available since 8.4.7.
+              <para> The default value of <option>rs-discard-granularity</option>
+              is 0. This option is available since 8.4.7.
 	      </para>
           </listitem>
         </varlistentry>
