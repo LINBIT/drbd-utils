@@ -565,6 +565,31 @@
         </varlistentry>
 
         <varlistentry>
+          <term><option>--disable-write-same <group choice="req" rep="norepeat">
+          <arg choice="plain" rep="norepeat">yes</arg>
+          <arg choice="plain" rep="norepeat">no</arg>
+          </group></option></term>
+          <listitem>
+            <para>
+              <indexterm significance="normal">
+                <primary>drbd.conf</primary>
+                <secondary>disable-write-same</secondary>
+              </indexterm>
+              Some disks announce WRITE_SAME support to the kernel but fail with
+              an I/O error upon actually receiving such a request. This mostly
+              happens when using virtualized disks -- notably, this behavior has
+              been observed with VMware's virtual disks.
+              </para><para>
+              When <option>disable-write-same</option> is set to <option>yes</option>,
+              WRITE_SAME detection is manually overriden and support is disabled.
+              </para><para>
+              The default value of <option>disable-write-same</option> is
+              <option>no</option>. This option is available since 8.4.7.
+            </para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
           <term>
             <option>--read-balancing <replaceable>method</replaceable></option>
           </term>
