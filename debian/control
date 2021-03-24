@@ -6,7 +6,6 @@ Uploaders: Philipp Reisner <philipp.reisner@linbit.com>,
            Lars Ellenberg <lars.ellenberg@linbit.com>
 Build-Depends: bash-completion,
                debhelper (>= 7),
-               dh-systemd,
                docbook-xsl,
                flex,
                udev,
