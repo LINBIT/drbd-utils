@@ -219,15 +219,7 @@ static int get_windows_device_geometry(HANDLE hdisk, int *md_hard_sect_size, uin
 	DISK_GEOMETRY_EX geometry;
 	DWORD ret_bytes;
 	PARTITION_INFORMATION_EX partition_info;
-	struct _STORAGE_READ_CAPACITY storage_read_capacity;
 
-	storage_read_capacity.Version = sizeof(storage_read_capacity);
-
-	if (DeviceIoControl(hdisk, IOCTL_STORAGE_READ_CAPACITY, NULL, 0, &storage_read_capacity, sizeof(storage_read_capacity), &ret_bytes, NULL) == 0) {
-		fprintf(stderr, "Failed to get storage read capacity: error is %d\n", GetLastError());
-		return -1;
-	}
-	fprintf(stderr, "BlockLength is %d NumberOfBlocks %lld DiskLength %lld\n", storage_read_capacity.BlockLength, storage_read_capacity.NumberOfBlocks.QuadPart, storage_read_capacity.DiskLength.QuadPart);
 	if (DeviceIoControl(hdisk, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, 0, &geometry, sizeof(geometry), &ret_bytes, NULL) == 0) {
 		fprintf(stderr, "Failed to get disk geometry: error is %d\n", GetLastError());
 		return -1;
