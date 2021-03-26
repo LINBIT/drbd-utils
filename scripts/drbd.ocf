@@ -108,7 +108,7 @@ fi
 OCF_RESKEY_drbdconf_default="/etc/drbd.conf"
 OCF_RESKEY_unfence_extra_args_default="--quiet --flock-required --flock-timeout 0 --unfence-only-if-owner-match"
 OCF_RESKEY_require_drbd_module_version_ge_default=8.0.0
-OCF_RESKEY_require_drbd_module_version_lt_default=9.1.0
+OCF_RESKEY_require_drbd_module_version_lt_default=10.0.0
 
 init_optional_params()
 {
@@ -426,9 +426,11 @@ after accidentally downgrading the DRBD version
 by installing/upgrading a new kernel.
 
 Note: "ge", "greater-or-equal", inclusive.  Required format: x.y.z
+
+Set empty to skip this check.
 </longdesc>
 <shortdesc lang="en"></shortdesc>
-<content type="string" default="$OCF_RESKEY_drbd_module_version_ge_default"/>
+<content type="string" default="$OCF_RESKEY_require_drbd_module_version_ge_default"/>
 </parameter>
 
 <parameter name="require_drbd_module_version_lt">
@@ -439,8 +441,10 @@ Example: use require_drbd_module_version_lt=9.0.0 to fail unless DRBD
 module version &lt; 9.0 is available (effectively requires DRBD 8.4).
 
 Note: "lt", "less-than", exclusive.  Required format: x.y.z
+
+Set empty to skip this check.
 </longdesc>
-<content type="string" default="$OCF_RESKEY_drbd_module_version_lt_default"/>
+<content type="string" default="$OCF_RESKEY_require_drbd_module_version_lt_default"/>
 </parameter>
 
 <parameter name="connect_only_after_promote">
@@ -1429,6 +1433,7 @@ require_drbd_module_version()
 	for op in ge lt; do
 		k=OCF_RESKEY_require_drbd_module_version_$op
 		v=${!k}
+		[[ $v ]] || continue
 		if ! [[ $v =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
 			drbd_ocf_exit_reason "require_drbd_module_version_$op: invalid version format '$v'"
 			: "$OCF_ERR_CONFIGURED = OCF_ERR_CONFIGURED"
