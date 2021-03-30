@@ -63,6 +63,7 @@ static const char *object_peer_device = "peer-device";
 static const char *object_helper = "helper";
 static const char *object_path = "path";
 
+bool initial_state = true;
 void *all_resources;
 struct resources_list *update_resources;
 
@@ -1051,7 +1052,6 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 {
 	static uint32_t last_seq;
 	static bool last_seq_known;
-	static bool initial_state = true;
 	static struct nlmsg_entry *stored_messages = NULL;
 
 	struct drbd_notification_header nh = { .nh_type = -1U };
@@ -1360,4 +1360,11 @@ static int apply_event(const char *prefix, struct genl_info *info, bool initial_
 out:
 	fflush(stdout);
 	return 0;
+}
+
+void reset_events2()
+{
+	tdestroy(all_resources, (__free_fn_t) free_resource);
+	all_resources = NULL;
+	initial_state = true;
 }

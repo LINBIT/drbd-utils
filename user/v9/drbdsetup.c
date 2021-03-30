@@ -180,6 +180,7 @@ static int show_or_get_gi_cmd(struct drbd_cmd *cm, int argc, char **argv);
 
 // sub commands for generic_get_cmd
        int print_event(struct drbd_cmd *, struct genl_info *, void *); /* is in drbdsetup_events2.c */
+       void reset_events2(); /* is in drbdsetup_events2.c */
 static int wait_for_family(struct drbd_cmd *, struct genl_info *, void *);
 static int remember_resource(struct drbd_cmd *, struct genl_info *, void *);
 static int remember_device(struct drbd_cmd *, struct genl_info *, void *);
@@ -1967,6 +1968,7 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		while ( (c = fgetc(stdin)) != EOF) {
 			switch (c) {
 			case 'n': /* now */
+				reset_events2();
 				err = generic_get(cm, timeout_ms, peer_devices);
 				break;
 			case '\n':
