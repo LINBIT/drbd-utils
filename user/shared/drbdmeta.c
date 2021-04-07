@@ -1977,7 +1977,7 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 		 */
 
 		if (i == 0 ||
-		    bm_pos + this_extent_size >= bm_on_disk_pos + chunk) {
+		    bm_pos + this_extent_size > bm_on_disk_pos + chunk) {
 			if (i != 0)
 				pwrite_or_die(cfg, on_disk_buffer, chunk,
 						bm_on_disk_off + bm_on_disk_pos,
