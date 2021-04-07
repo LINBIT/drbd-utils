@@ -1949,6 +1949,7 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 	 */
 	for (i = 0; i < AL_EXTENTS_MAX; i++) {
 		size_t bm_pos;
+		unsigned int this_extent_size; /* bitmap bytes for this extent */
 		unsigned bits_set = 0;
 		if (hot_extent[i] == ~0U)
 			break;
@@ -1964,6 +1965,11 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 			continue;
 		}
 
+		this_extent_size = extents_size;
+		/* The final extent may be smaller than the standard extent size. */
+		if (this_extent_size > bm_bytes - bm_pos)
+			this_extent_size = bm_bytes - bm_pos;
+
 		/* On first iteration, or when the current position in the bitmap
 		 * exceeds the current buffer, write out the current buffer, if any,
 		 * and read in the next (at most buffer_size) chunk of bitmap,
@@ -1971,7 +1977,7 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 		 */
 
 		if (i == 0 ||
-		    bm_pos + extents_size >= bm_on_disk_pos + chunk) {
+		    bm_pos + this_extent_size >= bm_on_disk_pos + chunk) {
 			if (i != 0)
 				pwrite_or_die(cfg, on_disk_buffer, chunk,
 						bm_on_disk_off + bm_on_disk_pos,
@@ -1987,16 +1993,16 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 					bm_on_disk_off + bm_on_disk_pos,
 					"apply_al");
 		}
-		ASSERT(bm_pos - bm_on_disk_pos <= chunk - extents_size);
+		ASSERT(bm_pos - bm_on_disk_pos <= chunk - this_extent_size);
 		ASSERT((bm_pos - bm_on_disk_pos) % sizeof(uint64_t) == 0);
 		w = (uint64_t *)on_disk_buffer
 			+ (bm_pos - bm_on_disk_pos)/sizeof(uint64_t);
-		for (j = 0; j < extents_size/sizeof(uint64_t); j++)
+		for (j = 0; j < this_extent_size/sizeof(uint64_t); j++)
 			bits_set += generic_hweight64(w[j]);
 
-		additional_bits_set += extents_size * 8 - bits_set;
+		additional_bits_set += this_extent_size * 8 - bits_set;
 		memset((char*)on_disk_buffer + (bm_pos - bm_on_disk_pos),
-			0xff, extents_size);
+			0xff, this_extent_size);
 	}
 	/* we still need to write out the buffer of the last iteration */
 	if (i != 0) {
