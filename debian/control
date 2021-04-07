@@ -24,7 +24,6 @@ Depends: debconf (>= 0.5),
 Breaks: drbd8-utils (<< 2:8.9.0)
 Replaces: drbd8-utils (<< 2:8.9.0)
 Suggests: heartbeat
-Recommends: heirloom-mailx | mailx
 Description: RAID 1 over TCP/IP for Linux (user utilities)
  DRBD is a block device which is designed to build high availability
  clusters by providing a virtual shared device which keeps disks in
