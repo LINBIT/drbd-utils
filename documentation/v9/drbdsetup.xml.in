@@ -499,10 +499,20 @@
 		<term><option>--poll</option></term>
 
 		<listitem>
-			<para>This is completely ignored if <option>--now</option> is not given.
-		    In combination with <option>--now</option> it prints the current state once
-		    and then reads on stdin. If a <option>n</option> is read, this triggers another run.
-		    Newlines are ignored. Every other input terminates the command.</para>
+		  <para>Read from stdin and update when <option>n</option> is
+		    read. Newlines are ignored. Every other input terminates
+		    the command.</para>
+
+		  <para>Without <option>--now</option>, changes are printed as
+		    usual. On each <option>n</option> the current state is
+		    fetched, but only changed objects are printed. This is
+		    useful with <option>--statistics</option> or
+		    <option>--full</option> because DRBD does not otherwise
+		    send updates when only the statistics change.</para>
+
+		  <para>In combination with <option>--now</option> the full
+		    state is printed on each <option>n</option>. No other
+		    changes are printed.</para>
 		</listitem>
 	      </varlistentry>
 

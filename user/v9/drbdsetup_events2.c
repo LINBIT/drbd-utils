@@ -63,11 +63,12 @@ static const char *object_peer_device = "peer-device";
 static const char *object_helper = "helper";
 static const char *object_path = "path";
 
-bool initial_state = true;
+bool initial_state = true; /* receiving new data in "exists" messages */
+bool receive_update = false; /* receiving updates in "exists" messages */
 void *all_resources;
 struct resources_list *update_resources;
 
-static int apply_event(const char *prefix, struct genl_info *info, bool initial_state);
+static int apply_event(const char *prefix, struct genl_info *info);
 
 static int resource_obj_cmp(const void *a, const void *b)
 {
@@ -1074,20 +1075,19 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 		return 0;
 	action = nh.nh_type & ~NOTIFY_FLAGS;
 
-	if (opt_now && action != NOTIFY_EXISTS)
-		return 0;
-
 	err = format_timestamp(timestamp_prefix);
 	if (err)
 		exit(20);
 
 	if (info->genlhdr->cmd == DRBD_INITIAL_STATE_DONE) {
 		struct nlmsg_entry *entry, *next_entry;
-		initial_state = false;
-		printf("%s%s -\n", timestamp_prefix, action_exists);
+
+		if (initial_state)
+			printf("%s%s -\n", timestamp_prefix, action_exists);
 		fflush(stdout);
-		if (opt_now)
-			return -1;
+
+		initial_state = false;
+		receive_update = false;
 
 		/* now apply stored messages */
 		for (entry = stored_messages; entry; entry = next_entry) {
@@ -1106,7 +1106,7 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 				return 1;
 			}
 
-			err = apply_event(timestamp_prefix, &stored_info, false);
+			err = apply_event(timestamp_prefix, &stored_info);
 			if (err)
 				return err;
 
@@ -1114,6 +1114,7 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 			free(entry->nlh);
 			free(entry);
 		}
+		stored_messages = NULL;
 
 		return 0;
 	}
@@ -1130,7 +1131,7 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 		last_seq = info->nlhdr->nlmsg_seq;
 		last_seq_known = true;
 
-		if (initial_state) {
+		if (initial_state || receive_update) {
 			/* store message until initial state is finished */
 			struct nlmsg_entry *entry, **previous_next = &stored_messages;
 			for (entry = stored_messages; entry; entry = entry->next)
@@ -1140,10 +1141,10 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 		}
 	}
 
-	return apply_event(timestamp_prefix, info, initial_state);
+	return apply_event(timestamp_prefix, info);
 }
 
-static int apply_event(const char *prefix, struct genl_info *info, bool initial_state)
+static int apply_event(const char *prefix, struct genl_info *info)
 {
 	int err;
 	struct drbd_notification_header nh = { .nh_type = -1U };
@@ -1161,6 +1162,9 @@ static int apply_event(const char *prefix, struct genl_info *info, bool initial_
 	if (err)
 		return 0;
 	action = nh.nh_type & ~NOTIFY_FLAGS;
+
+	if (action == NOTIFY_EXISTS && receive_update)
+		action = NOTIFY_CHANGE; /* exists messages are actually updates */
 
 	err = drbd_cfg_context_from_attrs(&ctx, info);
 	if (err)
@@ -1362,7 +1366,14 @@ out:
 	return 0;
 }
 
-void reset_events2()
+/* New "initial state" is incoming - treat "exists" messages as updates. */
+void events2_prepare_update()
+{
+	receive_update = true;
+}
+
+/* Drop all data and start again with new initial state. */
+void events2_reset()
 {
 	tdestroy(all_resources, (__free_fn_t) free_resource);
 	all_resources = NULL;

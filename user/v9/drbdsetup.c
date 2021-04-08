@@ -167,7 +167,7 @@ static void print_usage_and_exit(const char *addinfo)
 // command functions
 static int generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv);
 static int down_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv);
+static int generic_events_cmd(struct drbd_cmd *cm, int argc, char **argv);
 static int del_minor_cmd(struct drbd_cmd *cm, int argc, char **argv);
 static int del_resource_cmd(struct drbd_cmd *cm, int argc, char **argv);
 static int show_cmd(struct drbd_cmd *cm, int argc, char **argv);
@@ -180,7 +180,8 @@ static int show_or_get_gi_cmd(struct drbd_cmd *cm, int argc, char **argv);
 
 // sub commands for generic_get_cmd
        int print_event(struct drbd_cmd *, struct genl_info *, void *); /* is in drbdsetup_events2.c */
-       void reset_events2(); /* is in drbdsetup_events2.c */
+       void events2_prepare_update(); /* is in drbdsetup_events2.c */
+       void events2_reset(); /* is in drbdsetup_events2.c */
 static int wait_for_family(struct drbd_cmd *, struct genl_info *, void *);
 static int remember_resource(struct drbd_cmd *, struct genl_info *, void *);
 static int remember_device(struct drbd_cmd *, struct genl_info *, void *);
@@ -236,7 +237,7 @@ static struct option status_cmd_options[] = {
 
 #define F_CONFIG_CMD	generic_config_cmd
 #define NO_PAYLOAD	0
-#define F_NEW_EVENTS_CMD(scmd)	DRBD_ADM_GET_INITIAL_STATE, NO_PAYLOAD, generic_get_cmd, \
+#define F_NEW_EVENTS_CMD(scmd)	DRBD_ADM_GET_INITIAL_STATE, NO_PAYLOAD, generic_events_cmd, \
 			.handle_reply = scmd
 
 struct drbd_cmd commands[] = {
@@ -1536,33 +1537,18 @@ bool opt_timestamps;
 bool opt_diff;
 bool opt_fullch;
 
-static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
+static int generic_send(struct drbd_cmd *cm)
 {
-	struct nlattr *tla[ARRAY_SIZE(drbd_tla_nl_policy)] = { 0, };
-	char *desc = NULL;
 	struct drbd_genlmsghdr *dhdr;
 	struct msg_buff *smsg;
-	struct iovec iov;
-	int timeout_ms, flags;
-	int rv = NO_ERROR;
+	int flags;
 	int err = 0;
 
-	/* pre allocate request message and reply buffer */
-	iov.iov_len = DEFAULT_MSG_SIZE;
-	iov.iov_base = malloc(iov.iov_len);
+	/* preallocate request message */
 	smsg = msg_new(DEFAULT_MSG_SIZE);
-	if (!smsg || !iov.iov_base) {
-		desc = "could not allocate netlink messages";
-		rv = OTHER_ERROR;
-		goto out;
-	}
-
-	if (cm->continuous_poll) {
-		if (genl_join_mc_group_and_ctrl(drbd_sock, "events")) {
-			desc = "unable to join drbd events multicast group";
-			rv = OTHER_ERROR;
-			goto out2;
-		}
+	if (!smsg) {
+		fprintf(stderr, "%s: could not allocate netlink message\n", objname);
+		return 20;
 	}
 
 	flags = 0;
@@ -1580,9 +1566,30 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 	}
 
 	if (genl_send(drbd_sock, smsg)) {
-		desc = "error sending config command";
+		fprintf(stderr, "%s: error sending config command\n", objname);
+		err = 20;
+	}
+
+	msg_free(smsg);
+	return err;
+}
+
+static int generic_recv(struct drbd_cmd *cm, int timeout_arg, void *u_ptr, int extra_poll_fd, bool expect_reply)
+{
+	struct nlattr *tla[ARRAY_SIZE(drbd_tla_nl_policy)] = { 0, };
+	char *desc = NULL;
+	struct iovec iov;
+	int timeout_ms;
+	int rv = NO_ERROR;
+	int err = 0;
+
+	/* preallocate reply buffer */
+	iov.iov_len = DEFAULT_MSG_SIZE;
+	iov.iov_base = malloc(iov.iov_len);
+	if (!iov.iov_base) {
+		desc = "could not allocate netlink reply buffer";
 		rv = OTHER_ERROR;
-		goto out2;
+		goto out;
 	}
 
 	/* disable sequence number check in genl_recv_msgs */
@@ -1598,38 +1605,50 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 		timeout_ms =
 			timeout_arg == MULTIPLE_TIMEOUTS ? shortest_timeout(u_ptr) : timeout_arg;
 
-		ret = poll_hup(drbd_sock, timeout_ms);
-		if (ret > 0) { /* failed */
+		/* Wait for new data or error/HUP. We want to receive the full
+		 * reply before returning, so only check for data on
+		 * extra_poll_fd if we are not still expecting to receive a
+		 * reply. */
+		ret = poll_hup(drbd_sock, timeout_ms, expect_reply ? -1 : extra_poll_fd);
+		if (ret == E_POLL_EXTRA_FD) {
+			goto out;
+		} else if (ret > 0) { /* failed */
 			if (ret == E_POLL_TIMEOUT)
 				err = 5;
-			goto out2;
+			goto out;
 		}
 
+		/* Linux: At this point we know that there is data available on
+		 * drbd_sock. So this will not block. So we do not need to
+		 * additionally poll on extra_poll_fd.
+		 *
+		 * Windows: extra_poll_fd is not supported; this may block. */
 		received = genl_recv_msgs(drbd_sock, &iov, &desc, timeout_ms);
 		if (received <= 0) {
 			switch(received) {
 			case E_RCV_TIMEDOUT:
 				err = 5;
-				goto out2;
+				goto out;
 			case -E_RCV_FAILED:
 				err = 20;
-				goto out2;
+				goto out;
 			case -E_RCV_NO_SOURCE_ADDR:
 				continue; /* ignore invalid message */
 			case -E_RCV_SEQ_MISMATCH:
 				/* we disabled it, so it should not happen */
 				err = 20;
-				goto out2;
+				goto out;
 			case -E_RCV_MSG_TRUNC:
 				continue;
 			case -E_RCV_UNEXPECTED_TYPE:
 				continue;
 			case -E_RCV_NLMSG_DONE:
+				expect_reply = false;
 				if (cm->continuous_poll)
 					continue;
 				err = cm->handle_reply(cm, NULL, u_ptr);
 				if (err)
-					goto out2;
+					goto out;
 				err = -*(int*)nlmsg_data(nlh);
 				if (err &&
 				    (err != ENODEV || !cm->missing_ok)) {
@@ -1637,7 +1656,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 						strerror(err));
 					err = 20;
 				}
-				goto out2;
+				goto out;
 			case -E_RCV_ERROR_REPLY:
 				if (!errno) /* positive ACK message */
 					continue;
@@ -1646,12 +1665,12 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				fprintf(stderr, "received netlink error reply: %s\n",
 					       desc);
 				err = 20;
-				goto out2;
+				goto out;
 			default:
 				if (!desc)
 					desc = "error receiving config reply";
 				err = 20;
-				goto out2;
+				goto out;
 			}
 		}
 
@@ -1674,7 +1693,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 
 			if (exit) {
 				err = 5;
-				goto out2;
+				goto out;
 			}
 		}
 
@@ -1703,7 +1722,7 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 					if (nla && nla_get_u16(nla) == drbd_genl_family.id) {
 						/* FIXME: We could wait for the
 						   multicast group to be recreated ... */
-						goto out2;
+						goto out;
 					}
 				}
 #endif
@@ -1724,17 +1743,14 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				desc = "reply did not validate - "
 					"do you need to upgrade your userland tools?";
 				rv = OTHER_ERROR;
-				goto out2;
+				goto out;
 			}
-			if (cm->continuous_poll) {
+			if (cm->continuous_poll || cm->cmd_id == DRBD_ADM_GET_INITIAL_STATE) {
 				struct drbd_cfg_context ctx;
 				/*
 				 * We will receive all events and have to
 				 * filter for what we want ourself.
 				 */
-				/* FIXME
-				 * Do we want to ignore broadcasts until the
-				 * initial get/dump requests is done? */
 
 				err = drbd_cfg_context_from_attrs(&ctx, &info);
 				if (!err) {
@@ -1778,23 +1794,20 @@ static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 			if (rv == ERR_MINOR_INVALID && cm->missing_ok)
 				rv = NO_ERROR;
 			if (rv != NO_ERROR)
-				goto out2;
+				goto out;
 			err = cm->handle_reply(cm, &info, u_ptr);
 			if (err) {
 				if (err < 0)
 					err = 0;
-				goto out2;
+				goto out;
 			}
 		}
-		if (!cm->continuous_poll && !(flags & NLM_F_DUMP)) {
+		if (!cm->continuous_poll && minor != -1U) {
 			/* There will be no more reply packets.  */
 			err = cm->handle_reply(cm, NULL, u_ptr);
-			goto out2;
+			goto out;
 		}
 	}
-
-out2:
-	msg_free(smsg);
 
 out:
 	if (!err)
@@ -1803,7 +1816,77 @@ out:
 	return err;
 }
 
-static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
+{
+	int err;
+
+	err = generic_send(cm);
+	if (err != 0)
+		return err;
+
+	return generic_recv(cm, timeout_arg, u_ptr, -1, true);
+}
+
+static int events2_poll(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
+{
+	int err;
+	bool send_request = true;
+
+	while (true) {
+		char c;
+		ssize_t bytes_read;
+
+		if (send_request) {
+			err = generic_send(cm);
+			if (err != 0)
+				return err;
+		}
+
+		if (opt_now) {
+			if (send_request) {
+				/* When --now is given, we do not need to poll
+				 * on stdin because we only receive until the
+				 * reply is done. This is important on Windows
+				 * because the extra_poll_fd parameter is not
+				 * supported on that platform. */
+				err = generic_recv(cm, timeout_arg, u_ptr, -1, send_request);
+				if (err != 0)
+					return err;
+			}
+		} else {
+			err = generic_recv(cm, timeout_arg, u_ptr, STDIN_FILENO, send_request);
+			if (err != 0)
+				return err;
+		}
+		send_request = false;
+
+		bytes_read = read(STDIN_FILENO, &c, 1);
+		if (bytes_read < 0) {
+			return 20;
+		} else if (bytes_read == 0) {
+			return 0;
+		}
+
+		switch (c) {
+			case 'n': /* next */
+				if (opt_now)
+					events2_reset();
+				else
+					events2_prepare_update();
+
+				send_request = true;
+				continue;
+			case '\n':
+				continue;
+			default:
+				return 0;
+		}
+	}
+
+	return 0;
+}
+
+static int generic_events_cmd(struct drbd_cmd *cm, int argc, char **argv)
 {
 	static struct option no_options[] = { { } };
 	struct choose_timeout_ctx timeo_ctx = {
@@ -1959,27 +2042,28 @@ static int generic_get_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		timeout_ms = MULTIPLE_TIMEOUTS;
 	}
 
-	if (!cm->continuous_poll)
-		timeout_ms = 120000; /* normal "get" request, or "show" */
-
-	err = generic_get(cm, timeout_ms, peer_devices);
-	if (cm->handle_reply == &print_event &&
-			opt_now && opt_poll) { /* events2 --now --poll */
-		while ( (c = fgetc(stdin)) != EOF) {
-			switch (c) {
-			case 'n': /* now */
-				reset_events2();
-				err = generic_get(cm, timeout_ms, peer_devices);
-				break;
-			case '\n':
-				break;
-			default:
-				goto out_polling;
-			}
+	if (cm->handle_reply == &print_event && opt_now) {
+		/* When --now is given, we just need the replies from the
+		 * initial state request. So we do not need to subscribe to the
+		 * multicast events or try to receive them.
+		 *
+		 * When --poll is also set, we block at the point where we
+		 * attempt to read from stdin. */
+		cm->continuous_poll = false;
+	} else {
+		if (genl_join_mc_group_and_ctrl(drbd_sock, "events")) {
+			fprintf(stderr,"%s: unable to join drbd events multicast group\n", objname);
+			err = 20;
+			goto out;
 		}
-out_polling:;
 	}
 
+	if (cm->handle_reply == &print_event && opt_poll)
+		err = events2_poll(cm, timeout_ms, peer_devices);
+	else
+		err = generic_get(cm, timeout_ms, peer_devices);
+
+out:
 	free_peer_devices(peer_devices);
 
 	return err;

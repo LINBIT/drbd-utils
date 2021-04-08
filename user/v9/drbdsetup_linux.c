@@ -82,10 +82,10 @@ int genl_join_mc_group_and_ctrl(struct genl_sock *s, const char *name)
 	return ret;
 }
 
-int poll_hup(struct genl_sock *s, int timeout_ms)
+int poll_hup(struct genl_sock *s, int timeout_ms, int extra_poll_fd)
 {
 	int ret;
-	struct pollfd pollfds[2] = {
+	struct pollfd pollfds[] = {
 		[0] = {
 			.fd = 1,
 			.events = POLLHUP,
@@ -94,12 +94,20 @@ int poll_hup(struct genl_sock *s, int timeout_ms)
 			.fd = s->s_fd,
 			.events = POLLIN,
 		},
+		[2] = {
+			.fd = extra_poll_fd,
+			.events = POLLIN,
+		},
 	};
 
-	ret = poll(pollfds, 2, timeout_ms);
+	ret = poll(pollfds, ARRAY_SIZE(pollfds), timeout_ms);
 	if (ret == 0)
 		return E_POLL_TIMEOUT;
 	if (pollfds[0].revents == POLLERR || pollfds[0].revents == POLLHUP)
+		return E_POLL_ERR;
+	if (pollfds[2].revents & POLLIN)
+		return E_POLL_EXTRA_FD;
+	if (pollfds[2].revents & (POLLERR | POLLHUP))
 		return E_POLL_ERR;
 
 	return 0;

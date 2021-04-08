@@ -44,8 +44,13 @@ int genl_join_mc_group_and_ctrl(struct genl_sock *s, const char *name)
 	return genl_join_mc_group(s, name);
 }
 
-int poll_hup(struct genl_sock *s, int timeout_ms)
+int poll_hup(struct genl_sock *s, int timeout_ms, int extra_poll_fd)
 {
+	if (extra_poll_fd >= 0) {
+		fprintf(stderr, "Waiting for extra file descriptor not supported on Windows\n");
+		return E_POLL_ERR;
+	}
+
 	return 0;
 }
 

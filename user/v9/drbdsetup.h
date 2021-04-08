@@ -67,6 +67,7 @@ struct drbd_cmd {
 enum {
 	E_POLL_TIMEOUT = 1,
 	E_POLL_ERR,
+	E_POLL_EXTRA_FD,
 };
 
 struct resources_list {
@@ -130,7 +131,7 @@ extern bool opt_fullch;
 bool kernel_older_than(int version, int patchlevel, int sublevel);
 int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 int genl_join_mc_group_and_ctrl(struct genl_sock *s, const char *name);
-int poll_hup(struct genl_sock *s, int timeout_ms);
+int poll_hup(struct genl_sock *s, int timeout_ms, int extra_poll_fd);
 int modprobe_drbd(void);
 char *address_str(char *buffer, void* address, int addr_len);
 const char *susp_str(struct resource_info *info);
