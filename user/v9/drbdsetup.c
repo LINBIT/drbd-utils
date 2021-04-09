@@ -1541,7 +1541,6 @@ static int generic_send(struct drbd_cmd *cm)
 {
 	struct drbd_genlmsghdr *dhdr;
 	struct msg_buff *smsg;
-	int flags;
 	int err = 0;
 
 	/* preallocate request message */
@@ -1551,13 +1550,10 @@ static int generic_send(struct drbd_cmd *cm)
 		return 20;
 	}
 
-	flags = 0;
-	if (minor == -1U)
-		flags |= NLM_F_DUMP;
-	dhdr = genlmsg_put(smsg, &drbd_genl_family, flags, cm->cmd_id);
-	dhdr->minor = minor;
+	dhdr = genlmsg_put(smsg, &drbd_genl_family, NLM_F_DUMP, cm->cmd_id);
+	dhdr->minor = -1;
 	dhdr->flags = 0;
-	if (minor == -1U && strcmp(objname, "all")) {
+	if (strcmp(objname, "all")) {
 		/* Restrict the dump to a single resource. */
 		struct nlattr *nla;
 		nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
@@ -1755,18 +1751,6 @@ static int generic_recv(struct drbd_cmd *cm, int timeout_arg, void *u_ptr, int e
 				err = drbd_cfg_context_from_attrs(&ctx, &info);
 				if (!err) {
 					switch ((int)cm->ctx_key) {
-					case CTX_MINOR:
-						/* Assert that, for an unicast reply,
-						 * reply minor matches request minor.
-						 * "unsolicited" kernel broadcasts are "pid=0" (netlink "port id")
-						 * (and expected to be genlmsghdr.cmd == DRBD_EVENT) */
-						if (minor != dh->minor) {
-							if (info.nlhdr->nlmsg_pid != 0)
-								dbg(1, "received netlink packet for minor %u, while expecting %u\n",
-									dh->minor, minor);
-							continue;
-						}
-						break;
 					case CTX_PEER_DEVICE:
 						if (ctx.ctx_volume != global_ctx.ctx_volume)
 							continue;
@@ -1801,11 +1785,6 @@ static int generic_recv(struct drbd_cmd *cm, int timeout_arg, void *u_ptr, int e
 					err = 0;
 				goto out;
 			}
-		}
-		if (!cm->continuous_poll && minor != -1U) {
-			/* There will be no more reply packets.  */
-			err = cm->handle_reply(cm, NULL, u_ptr);
-			goto out;
 		}
 	}
 
@@ -3493,18 +3472,15 @@ static struct resources_list *list_resources(void)
 	};
 	struct resources_list *list = NULL, **tail = &list;
 	char *old_objname = objname;
-	unsigned old_minor = minor;
 	int old_my_addr_len = global_ctx.ctx_my_addr_len;
 	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
 	int err;
 
 	objname = "all";
-	minor = -1;
 	global_ctx.ctx_my_addr_len = 0;
 	global_ctx.ctx_peer_addr_len = 0;
 	err = generic_get(&cmd, 120000, &tail);
 	objname = old_objname;
-	minor = old_minor;
 	global_ctx.ctx_my_addr_len = old_my_addr_len;
 	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
 	if (err) {
@@ -3571,18 +3547,15 @@ static struct devices_list *list_devices(char *resource_name)
 	};
 	struct devices_list *list = NULL, **tail = &list;
 	char *old_objname = objname;
-	unsigned old_minor = minor;
 	int old_my_addr_len = global_ctx.ctx_my_addr_len;
 	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
 	int err;
 
 	objname = resource_name ? resource_name : "all";
-	minor = -1;
 	global_ctx.ctx_my_addr_len = 0;
 	global_ctx.ctx_peer_addr_len = 0;
 	err = generic_get(&cmd, 120000, &tail);
 	objname = old_objname;
-	minor = old_minor;
 	global_ctx.ctx_my_addr_len = old_my_addr_len;
 	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
 	if (err) {
@@ -3695,18 +3668,15 @@ static struct connections_list *list_connections(char *resource_name)
 	};
 	struct connections_list *list = NULL, **tail = &list;
 	char *old_objname = objname;
-	unsigned old_minor = minor;
 	int old_my_addr_len = global_ctx.ctx_my_addr_len;
 	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
 	int err;
 
 	objname = resource_name ? resource_name : "all";
-	minor = -1;
 	global_ctx.ctx_my_addr_len = 0;
 	global_ctx.ctx_peer_addr_len = 0;
 	err = generic_get(&cmd, 120000, &tail);
 	objname = old_objname;
-	minor = old_minor;
 	global_ctx.ctx_my_addr_len = old_my_addr_len;
 	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
 	if (err) {
@@ -3787,18 +3757,15 @@ static struct peer_devices_list *list_peer_devices(char *resource_name)
 	};
 	struct peer_devices_list *list = NULL, **tail = &list;
 	char *old_objname = objname;
-	unsigned old_minor = minor;
 	int old_my_addr_len = global_ctx.ctx_my_addr_len;
 	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
 	int err;
 
 	objname = resource_name ? resource_name : "all";
-	minor = -1;
 	global_ctx.ctx_my_addr_len = 0;
 	global_ctx.ctx_peer_addr_len = 0;
 	err = generic_get(&cmd, 120000, &tail);
 	objname = old_objname;
-	minor = old_minor;
 	global_ctx.ctx_my_addr_len = old_my_addr_len;
 	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
 	if (err) {
