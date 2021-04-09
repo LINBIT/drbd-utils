@@ -1060,6 +1060,15 @@ struct context_def invalidate_ctx = {
 	.nla_type = DRBD_NLA_INVALIDATE_PARMS,
 	.fields = {
 		{ "sync-from-peer-node-id", NUMERIC(sync_from_peer_node_id, SYNC_FROM_NID) },
+		{ "reset-bitmap", BOOLEAN(reset_bitmap, INVALIDATE_RESET_BITMAP) },
+		{ } },
+};
+
+struct context_def invalidate_peer_ctx = {
+	NLA_POLICY(invalidate_peer_parms),
+	.nla_type = DRBD_NLA_INVAL_PEER_PARAMS,
+	.fields = {
+		{ "reset-bitmap", BOOLEAN(p_reset_bitmap, INVALIDATE_RESET_BITMAP) },
 		{ } },
 };
 

@@ -586,6 +586,30 @@
 	  <para>Replace the local data of a device with that of a peer.  All
 	    the local data will be marked out-of-sync, and a resync with the
 	    specified peer device will be initialted.</para>
+	  <para>Available options:
+	    <variablelist>
+	      <varlistentry>
+		<term><option>--reset-bitmap=no</option></term>
+
+		<listitem>
+                  <para>Usually an invalidate operation sets all bits in the bitmap
+                  to out-of-sync before beginning the resync from the peer. By giving
+                  <option>--reset-bitmap=no</option> DRBD will use the bitmap as it is.
+                  Usually this is used after an online verify operation found differences
+                  in the backing devices.</para>
+		  <para>The <option>--reset-bitmap</option> option is available since DRBD
+		  kernel driver 9.0.29 and drbd-utils 9.17.</para>
+                </listitem>
+               </varlistentry>
+	       <varlistentry>
+		<term><option>--sync-from-peer-node-id</option></term>
+		<listitem>
+		  <para>This option allows the caller to select the node to resync from.
+		    if it is not gives, DRBD selects a suitable source node itself.</para>
+		</listitem>
+               </varlistentry>
+             </variablelist>
+           </para>
 	  <!-- "This command will fail if the device is not part of a connected device pair." -->
 	  <!-- FIXME: What if the peer is not connected? -->
 	</listitem>
@@ -605,6 +629,24 @@
 	  <para>Replace a peer device's data of a resource with the local data.
 	    The peer device's data will be marked out-of-sync, and a resync
 	    from the local node to the specified peer will be initiated.</para>
+
+	  <para>Available options:
+	    <variablelist>
+	      <varlistentry>
+		<term><option>--reset-bitmap=no</option></term>
+
+		<listitem>
+                  <para>Usually an invalidate remote operation sets all bits in the bitmap
+                  to out-of-sync before beginning the resync to the peer. By giving
+                  <option>--reset-bitmap=false</option> DRBD will use the bitmap as it is.
+                  Usually this is used after an online verify operation found differences
+                  in the backing devices.</para>
+		  <para>The <option>--reset-bitmap</option> option is available since DRBD
+		  kernel driver 9.0.29 and drbd-utils 9.17.</para>
+                </listitem>
+               </varlistentry>
+	    </variablelist>
+	  </para>
 	</listitem>
       </varlistentry>
 
@@ -1152,9 +1194,10 @@ drbd0 node-id:1 role:Primary suspended:no
 	  <para>Online verification compares each disk block on the local and
 	  peer node.  Blocks which differ between the nodes are marked
 	  as out-of-sync, but they are <emphasis>not</emphasis> automatically
-	  brought back into sync.  To bring them into sync, the resource must
-	  be disconnected and reconnected.  Progress can be monitored in the
-	  output of <command moreinfo="none">drbdsetup status
+	  brought back into sync.  To bring them into sync, the
+	  <command>drbdsetup invalidate</command> or <command>drbdsetup invalidate-remote</command>
+	  with the <option>--reset-bitmap=no</option> option can be used.
+	  Progress can be monitored in the output of <command moreinfo="none">drbdsetup status
 	    --statistics</command>.  Available options:</para>
 
 	  <variablelist>

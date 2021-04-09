@@ -343,7 +343,8 @@ struct drbd_cmd commands[] = {
 	{"invalidate", CTX_MINOR, DRBD_ADM_INVALIDATE, DRBD_NLA_INVALIDATE_PARMS, F_CONFIG_CMD,
 	 .ctx = &invalidate_ctx,
 	 .summary = "Replace the local data of a volume with that of a peer." },
-	{"invalidate-remote", CTX_PEER_DEVICE, DRBD_ADM_INVAL_PEER, NO_PAYLOAD, F_CONFIG_CMD,
+	{"invalidate-remote", CTX_PEER_DEVICE, DRBD_ADM_INVAL_PEER, DRBD_NLA_INVAL_PEER_PARAMS, F_CONFIG_CMD,
+	 .ctx = &invalidate_peer_ctx,
 	 .summary = "Replace a peer's data of a volume with the local data." },
 	{"pause-sync", CTX_PEER_DEVICE, DRBD_ADM_PAUSE_SYNC, NO_PAYLOAD, F_CONFIG_CMD,
 	 .summary = "Stop resynchronizing between a local and a peer device." },
@@ -545,6 +546,7 @@ static const char *error_messages[] = {
 	EM(ERR_CREATE_TRANSPORT) = "Failed to create transport (drbd_transport_xxx module missing?)\n",
 	EM(ERR_LOCAL_AND_PEER_ADDR) = "Combination of local address(port) and remote address(port) already in use\n",
 	EM(ERR_ALREADY_EXISTS) = "Already exists\n",
+	EM(ERR_APV_TOO_LOW) = "A higher DRBD protocol level is required for this operation\n",
 };
 #define MAX_ERROR (sizeof(error_messages)/sizeof(*error_messages))
 const char * error_to_string(int err_no)

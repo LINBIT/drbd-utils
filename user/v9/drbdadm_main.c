@@ -343,8 +343,8 @@ static struct adm_cmd up_cmd = {"up", adm_up, ACF1_RESNAME_VERIFY_IPS };
 static struct adm_cmd down_cmd = {"down", adm_drbdsetup, ACF1_RESNAME .takes_long = 1};
 static struct adm_cmd primary_cmd = {"primary", adm_drbdsetup, &primary_cmd_ctx, ACF1_RESNAME .takes_long = 1};
 static struct adm_cmd secondary_cmd = {"secondary", adm_drbdsetup, ACF1_RESNAME .takes_long = 1};
-static struct adm_cmd invalidate_cmd = {"invalidate", adm_invalidate, ACF1_MINOR_ONLY };
-static struct adm_cmd invalidate_remote_cmd = {"invalidate-remote", adm_drbdsetup, ACF1_PEER_DEVICE .takes_long = 1};
+static struct adm_cmd invalidate_cmd = {"invalidate", adm_invalidate, &invalidate_ctx, ACF1_MINOR_ONLY };
+static struct adm_cmd invalidate_remote_cmd = {"invalidate-remote", adm_drbdsetup, &invalidate_peer_ctx, ACF1_PEER_DEVICE .takes_long = 1};
 static struct adm_cmd outdate_cmd = {"outdate", adm_outdate, ACF1_DEFAULT};
 /*  */ struct adm_cmd resize_cmd = {"resize", adm_resize, &resize_cmd_ctx, ACF1_DEFAULT .disk_required = 1};
 static struct adm_cmd verify_cmd = {"verify", adm_drbdsetup, &verify_cmd_ctx, ACF1_PEER_DEVICE};
@@ -544,6 +544,7 @@ struct adm_cmd *cmds[] = {
 static const struct adm_cmd invalidate_setup_cmd = {
 	"invalidate",
 	__adm_drbdsetup_silent,
+	&invalidate_ctx,
 	ACF1_MINOR_ONLY
 };
 
