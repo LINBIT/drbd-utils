@@ -45,11 +45,80 @@ fi
 
 echo "invoked for $DRBD_RESOURCE/$DRBD_VOLUME (drbd$DRBD_MINOR)"
 
-TEMP=$(getopt -o p:a:l:nv --long percent:,additional:,logfacility:,disconnect-on-error,verbose -- "$@")
+# skip defaultfile and cli options when called recursively
+# and assume the current environment is correct
+if [ -z $DEFAULTFILE ]; then
+	TEMP=$(getopt -o p:a:l:nv --long percent:,additional:,logfacility:,disconnect-on-error,verbose -- "$@")
 
-if [ $? != 0 ]; then
-	echo "getopt failed"
-	exit 0
+	if [ $? != 0 ]; then
+		echo "getopt failed"
+		exit 0
+	fi
+
+	set -o allexport
+
+	SNAP_PERC=10
+	SNAP_ADDITIONAL=10240
+	DISCONNECT_ON_ERROR=0
+	LVC_OPTIONS=""
+	BE_VERBOSE=0
+	DEFAULTFILE="/etc/default/drbd-snapshot"
+
+	if [ -f $DEFAULTFILE ]; then
+		. $DEFAULTFILE
+	fi
+
+	## command line parameters override default file
+
+	eval set -- "$TEMP"
+	while true; do
+		case $1 in
+		-p|--percent)
+		SNAP_PERC="$2"
+		shift
+		;;
+		-a|--additional)
+		SNAP_ADDITIONAL="$2"
+		shift
+		;;
+		-n|--disconnect-on-error)
+		DISCONNECT_ON_ERROR=1
+		;;
+		-v|--verbose)
+		BE_VERBOSE=1
+		;;
+		-l|--logfacility)
+		redirect_to_logger $2
+		shift
+		;;
+		--)
+		break
+		;;
+		esac
+		shift
+	done
+	shift # the --
+
+	LVC_OPTIONS="$@"
+
+	set +o allexport
+fi
+
+IFS=' ' read -ra VOLUMES <<< "$DRBD_VOLUME"
+IFS=' ' read -ra MINORS <<< "$DRBD_MINOR"
+
+# if DRBD_VOLUME is a list, then process recursively
+if [ ${#VOLUMES[@]} -gt 1 ]; then
+	FINAL_RV=0
+		for n in "${!VOLUMES[@]}"; do
+		DRBD_VOLUME="${VOLUMES[$n]}"
+		DRBD_MINOR="${MINORS[$n]}"
+		./$0
+		RV=$?
+		[ $RV -ne 0 ] && FINAL_RV=$RV
+	done
+	[ $DISCONNECT_ON_ERROR = 0 ] && exit 0
+	exit $FINAL_RV
 fi
 
 if BACKING_BDEV=$(drbdadm sh-ll-dev "$DRBD_RESOURCE/$DRBD_VOLUME"); then
@@ -76,52 +145,9 @@ set_vg_lv_size()
 }
 set_vg_lv_size || exit 0 # clean exit if not an lvm lv
 
-
-SNAP_PERC=10
-SNAP_ADDITIONAL=10240
-DISCONNECT_ON_ERROR=0
-LVC_OPTIONS=""
-BE_VERBOSE=0
+# set snapshot LV name
 SNAP_NAME=$LV_NAME-before-resync
 $is_stacked && SNAP_NAME=$SNAP_NAME-stacked
-DEFAULTFILE="/etc/default/drbd-snapshot"
-
-if [ -f $DEFAULTFILE ]; then
-	. $DEFAULTFILE
-fi
-
-## command line parameters override default file
-
-eval set -- "$TEMP"
-while true; do
-	case $1 in
-	-p|--percent)
-		SNAP_PERC="$2"
-		shift
-		;;
-	-a|--additional)
-		SNAP_ADDITIONAL="$2"
-		shift
-		;;
-	-n|--disconnect-on-error)
-		DISCONNECT_ON_ERROR=1
-		;;
-	-v|--verbose)
-		BE_VERBOSE=1
-		;;
-	-l|--logfacility)
-		redirect_to_logger $2
-		shift
-		;;
-	--)
-		break
-		;;
-	esac
-	shift
-done
-shift # the --
-
-LVC_OPTIONS="$@"
 
 if [[ $0 == *unsnapshot* ]]; then
 	[ $BE_VERBOSE = 1 ] && set -x
