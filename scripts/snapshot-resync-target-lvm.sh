@@ -157,6 +157,12 @@ else
 	(
 		set -e
 		[ $BE_VERBOSE = 1 ] && set -x
+
+		if lvs $VG_NAME/$SNAP_NAME > /dev/null 2>&1; then
+			echo "snapshot already exists for $DRBD_RESOURCE/$DRBD_VOLUME, skipping"
+			exit 0
+		fi
+
 		case $DRBD_MINOR in
 			*[!0-9]*|"")
 			if $is_stacked; then
