@@ -2162,6 +2162,18 @@ static bool set_ignore_flag(struct connection * const conn, checks check, bool i
 	return true;
 }
 
+static struct connection *find_conn_on_cmdline(struct connections *connections)
+{
+	struct connection *conn;
+
+	for_each_connection(conn, connections) {
+		if (conn->on_cmdline == 1)
+			return conn;
+	}
+
+	return NULL;
+}
+
 int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check)
 {
 	struct d_resource *res;
@@ -2171,6 +2183,7 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check)
 	char *vol_id;
 	char *res_name, *conn_or_hostname;
 	unsigned vol_nr = ~0U;
+	int connections_found = 0;
 
 	res_name = input;
 	vol_id = strrchr(input, '/');
@@ -2218,6 +2231,7 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check)
 				}
 
 				if (conn->peer == hi) {
+					connections_found++;
 					conn->on_cmdline = 1;
 					if (check == CTX_FIRST)
 						goto found;
@@ -2234,6 +2248,7 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check)
 				struct d_option *opt;
 				opt = find_opt(&conn->net_options, "_name");
 				if (opt && !strcmp(opt->value, conn_or_hostname)) {
+					connections_found++;
 					if (check == CTX_FIRST)
 						goto found;
 
@@ -2259,7 +2274,8 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check)
 	if (check != SETUP_MULTI)
 		return 0;
 
-	if (0) {
+	if (connections_found == 1) {
+		conn = find_conn_on_cmdline(&res->connections);
 found:
 		if (conn->ignore) {
 			err("Connection '%s' has the ignore flag set\n",

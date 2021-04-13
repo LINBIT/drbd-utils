@@ -638,7 +638,7 @@
 		<listitem>
                   <para>Usually an invalidate remote operation sets all bits in the bitmap
                   to out-of-sync before beginning the resync to the peer. By giving
-                  <option>--reset-bitmap=false</option> DRBD will use the bitmap as it is.
+                  <option>--reset-bitmap=no</option> DRBD will use the bitmap as it is.
                   Usually this is used after an online verify operation found differences
                   in the backing devices.</para>
 		  <para>The <option>--reset-bitmap</option> option is available since DRBD
