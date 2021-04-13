@@ -45,90 +45,69 @@ fi
 
 echo "invoked for $DRBD_RESOURCE/$DRBD_VOLUME (drbd$DRBD_MINOR)"
 
-# skip defaultfile and cli options when called recursively
-# and assume the current environment is correct
-if [ -z $DEFAULTFILE ]; then
-	TEMP=$(getopt -o p:a:l:nv --long percent:,additional:,logfacility:,disconnect-on-error,verbose -- "$@")
+TEMP=$(getopt -o p:a:l:nv --long percent:,additional:,logfacility:,disconnect-on-error,verbose -- "$@")
 
-	if [ $? != 0 ]; then
-		echo "getopt failed"
-		exit 0
-	fi
+if [ $? != 0 ]; then
+	echo "getopt failed"
+	exit 0
+fi
 
-	set -o allexport
+SNAP_PERC=10
+SNAP_ADDITIONAL=10240
+DISCONNECT_ON_ERROR=0
+LVC_OPTIONS=""
+BE_VERBOSE=0
+DEFAULTFILE="/etc/default/drbd-snapshot"
 
-	SNAP_PERC=10
-	SNAP_ADDITIONAL=10240
-	DISCONNECT_ON_ERROR=0
-	LVC_OPTIONS=""
-	BE_VERBOSE=0
-	DEFAULTFILE="/etc/default/drbd-snapshot"
+if [ -f $DEFAULTFILE ]; then
+	. $DEFAULTFILE
+fi
 
-	if [ -f $DEFAULTFILE ]; then
-		. $DEFAULTFILE
-	fi
+## command line parameters override default file
 
-	## command line parameters override default file
-
-	eval set -- "$TEMP"
-	while true; do
-		case $1 in
-		-p|--percent)
+eval set -- "$TEMP"
+while true; do
+	case $1 in
+	-p|--percent)
 		SNAP_PERC="$2"
 		shift
 		;;
-		-a|--additional)
+	-a|--additional)
 		SNAP_ADDITIONAL="$2"
 		shift
 		;;
-		-n|--disconnect-on-error)
+	-n|--disconnect-on-error)
 		DISCONNECT_ON_ERROR=1
 		;;
-		-v|--verbose)
+	-v|--verbose)
 		BE_VERBOSE=1
 		;;
-		-l|--logfacility)
+	-l|--logfacility)
 		redirect_to_logger $2
 		shift
 		;;
-		--)
+	--)
 		break
 		;;
-		esac
-		shift
-	done
-	shift # the --
+	esac
+	shift
+done
+shift # the --
 
-	LVC_OPTIONS="$@"
+LVC_OPTIONS="$@"
 
-	set +o allexport
-fi
-
-IFS=' ' read -ra VOLUMES <<< "$DRBD_VOLUME"
-IFS=' ' read -ra MINORS <<< "$DRBD_MINOR"
-
-# if DRBD_VOLUME is a list, then process recursively
-if [ ${#VOLUMES[@]} -gt 1 ]; then
-	FINAL_RV=0
-		for n in "${!VOLUMES[@]}"; do
-		DRBD_VOLUME="${VOLUMES[$n]}"
-		DRBD_MINOR="${MINORS[$n]}"
-		./$0
-		RV=$?
-		[ $RV -ne 0 ] && FINAL_RV=$RV
-	done
-	[ $DISCONNECT_ON_ERROR = 0 ] && exit 0
-	exit $FINAL_RV
-fi
-
-if BACKING_BDEV=$(drbdadm sh-ll-dev "$DRBD_RESOURCE/$DRBD_VOLUME"); then
-	is_stacked=false
-elif BACKING_BDEV=$(drbdadm sh-ll-dev "$(drbdadm -S sh-lr-of "$DRBD_RESOURCE")/$DRBD_VOLUME"); then
-	is_stacked=true
-else
-	echo "Cannot determine lower level device of resource $DRBD_RESOURCE/$DRBD_VOLUME, sorry."
-	exit 0
-fi
+set_backing_bdev()
+{
+	if BACKING_BDEV=$(drbdadm sh-ll-dev "$DRBD_RESOURCE/$DRBD_VOLUME"); then
+		is_stacked=false
+	elif BACKING_BDEV=$(drbdadm sh-ll-dev "$(drbdadm -S sh-lr-of "$DRBD_RESOURCE")/$DRBD_VOLUME"); then
+		is_stacked=true
+	else
+		echo "Cannot determine lower level device of resource $DRBD_RESOURCE/$DRBD_VOLUME, sorry."
+		return 1
+	fi
+	return 0
+}
 
 set_vg_lv_size()
 {
@@ -143,47 +122,71 @@ set_vg_lv_size()
 	VG_NAME=$1 LV_NAME=$2 LV_SIZE_K=$[$3 / 2]
 	return 0
 }
-set_vg_lv_size || exit 0 # clean exit if not an lvm lv
 
-# set snapshot LV name
-SNAP_NAME=$LV_NAME-before-resync
-$is_stacked && SNAP_NAME=$SNAP_NAME-stacked
-
-if [[ $0 == *unsnapshot* ]]; then
-	[ $BE_VERBOSE = 1 ] && set -x
+remove_snapshot()
+{
 	lvremove -f $VG_NAME/$SNAP_NAME
-	exit 0
-else
-	(
-		set -e
-		[ $BE_VERBOSE = 1 ] && set -x
+}
 
-		if lvs $VG_NAME/$SNAP_NAME > /dev/null 2>&1; then
-			echo "snapshot already exists for $DRBD_RESOURCE/$DRBD_VOLUME, skipping"
-			exit 0
+create_snapshot()
+{
+	if lvs $VG_NAME/$SNAP_NAME >/dev/null 2>&1; then
+		echo "snapshot already exists for $DRBD_RESOURCE/$DRBD_VOLUME, skipping"
+		return 0
+	fi
+
+	case $DRBD_MINOR in
+		*[!0-9]*|"")
+		if $is_stacked; then
+			DRBD_MINOR=$(drbdadm -S sh-minor "$DRBD_RESOURCE")
+		else
+			DRBD_MINOR=$(drbdadm sh-minor "$DRBD_RESOURCE")
 		fi
+		;;
+	*)
+		:;; # ok, already exported by drbdadm
+	esac
 
-		case $DRBD_MINOR in
-			*[!0-9]*|"")
-			if $is_stacked; then
-				DRBD_MINOR=$(drbdadm -S sh-minor "$DRBD_RESOURCE")
-			else
-				DRBD_MINOR=$(drbdadm sh-minor "$DRBD_RESOURCE")
-			fi
-			;;
-		*)
-			:;; # ok, already exported by drbdadm
-		esac
+	OUT_OF_SYNC=$(drbdsetup events2 --statistics --now $DRBD_RESOURCE | \
+		grep "^exists peer-device name:$DRBD_RESOURCE" | \
+		grep "volume:$DRBD_VOLUME" | \
+		grep -oP 'out-of-sync:\K[0-9]+')
 
-		OUT_OF_SYNC=$(drbdsetup events2 --statistics --now $DRBD_RESOURCE | \
-			grep "peer-device name:$DRBD_RESOURCE" | \
-			grep "volume:$DRBD_VOLUME" | \
-			grep -oP 'out-of-sync:\K[0-9]+')
+	SNAP_SIZE=$((OUT_OF_SYNC + SNAP_ADDITIONAL + LV_SIZE_K * SNAP_PERC / 100))
+	lvcreate -s -n $SNAP_NAME -L ${SNAP_SIZE}k $LVC_OPTIONS $VG_NAME/$LV_NAME
+}
 
-		SNAP_SIZE=$((OUT_OF_SYNC + SNAP_ADDITIONAL + LV_SIZE_K * SNAP_PERC / 100))
-		lvcreate -s -n $SNAP_NAME -L ${SNAP_SIZE}k $LVC_OPTIONS $VG_NAME/$LV_NAME
-	)
-	RV=$?
-	[ $DISCONNECT_ON_ERROR = 0 ] && exit 0
-	exit $RV
-fi
+VOLUMES=( $DRBD_VOLUME )
+MINORS=( $DRBD_MINOR )
+
+FINAL_RV=0
+
+for n in "${!VOLUMES[@]}"; do
+
+	DRBD_VOLUME="${VOLUMES[$n]}"
+	DRBD_MINOR="${MINORS[$n]}"
+
+	set_backing_bdev || exit 0 # clean exit if unable to determine lower level device
+	set_vg_lv_size || exit 0 # clean exit if not an lvm lv
+
+	# set snapshot LV name
+	SNAP_NAME=$LV_NAME-before-resync
+	$is_stacked && SNAP_NAME=$SNAP_NAME-stacked
+
+	[ $BE_VERBOSE = 1 ] && set -x
+
+	if [[ $0 == *unsnapshot* ]]; then
+		remove_snapshot
+	else
+		create_snapshot
+		RV=$?
+		[ $RV -eq 0 ] || FINAL_RV=$RV
+	fi
+
+	set +x
+
+done
+
+[ $DISCONNECT_ON_ERROR = 0 ] && exit 0
+
+exit $FINAL_RV
