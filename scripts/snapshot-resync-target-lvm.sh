@@ -169,12 +169,11 @@ else
 			:;; # ok, already exported by drbdadm
 		esac
 
-		OUT_OF_SYNC=$(sed -ne "/^ *$DRBD_MINOR:/ "'{
-				n;
-				s/^.* oos:\([0-9]*\).*$/\1/;
-				s/^$/0/; # default if not found
-				p;
-				q; }' < /proc/drbd) # unit KiB
+		OUT_OF_SYNC=$(drbdsetup events2 --statistics --now $DRBD_RESOURCE | \
+			grep "peer-device name:$DRBD_RESOURCE" | \
+			grep "volume:$DRBD_VOLUME" | \
+			grep -oP 'out-of-sync:\K[0-9]+')
+
 		SNAP_SIZE=$((OUT_OF_SYNC + SNAP_ADDITIONAL + LV_SIZE_K * SNAP_PERC / 100))
 		lvcreate -s -n $SNAP_NAME -L ${SNAP_SIZE}k $LVC_OPTIONS $VG_NAME/$LV_NAME
 	)
