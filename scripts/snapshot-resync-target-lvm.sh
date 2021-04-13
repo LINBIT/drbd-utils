@@ -174,9 +174,6 @@ else
 			grep "volume:$DRBD_VOLUME" | \
 			grep -oP 'out-of-sync:\K[0-9]+')
 
-		# skip snapshot if zero blocks are out of sync
-		[ $OUT_OF_SYNC = 0 ] && exit 0
-
 		SNAP_SIZE=$((OUT_OF_SYNC + SNAP_ADDITIONAL + LV_SIZE_K * SNAP_PERC / 100))
 		lvcreate -s -n $SNAP_NAME -L ${SNAP_SIZE}k $LVC_OPTIONS $VG_NAME/$LV_NAME
 	)
