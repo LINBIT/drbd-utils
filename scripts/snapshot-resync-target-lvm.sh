@@ -135,18 +135,6 @@ create_snapshot()
 		return 0
 	fi
 
-	case $DRBD_MINOR in
-		*[!0-9]*|"")
-		if $is_stacked; then
-			DRBD_MINOR=$(drbdadm -S sh-minor "$DRBD_RESOURCE")
-		else
-			DRBD_MINOR=$(drbdadm sh-minor "$DRBD_RESOURCE")
-		fi
-		;;
-	*)
-		:;; # ok, already exported by drbdadm
-	esac
-
 	OUT_OF_SYNC=$(drbdsetup events2 --statistics --now $DRBD_RESOURCE | \
 		grep "^exists peer-device name:$DRBD_RESOURCE" | \
 		grep "volume:$DRBD_VOLUME" | \
