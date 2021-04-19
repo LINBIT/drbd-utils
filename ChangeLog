@@ -3,6 +3,20 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.17.0-rc.1
+--------
+ * drbdadm,v9: fix dstate for diskless volumes
+ * build/release: use lbvers.py
+ * drbd-attr: don't leak fd to drbdsetup
+ * doc: various fixes and additions
+ * drbdsetup,events2,v9: add backing_device
+ * build,Debian: rm dh-systemd dependency
+ * drbdsetup,events2,v9: fix --poll regression
+ * drbdmeta: fix bug with ALs with small final extents
+ * build,Debian: rm mail recommends
+ * drbdsetup,events2,v9: allow --poll without --now
+ * drbdsetup,invalidate: allow bitmap based resync after verify
+
 9.16.0
 --------
  * drbd-attr/may_promote: fixes from 9.15.1
