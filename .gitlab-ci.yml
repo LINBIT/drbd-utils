@@ -24,6 +24,7 @@ variables:
         curl -sSL $LINBIT_REGISTRY_URL/repository/test-suite/drbd-test-bundle.tgz | tar -C drbd-test-bundle -xvzf -
 
         dummy-release.sh drbd-utils "$version" "$release" drbd.spec.in
+        sed -i "s/^AC_INIT.*/AC_INIT(DRBD, $version, [drbd-dev@lists.linbit.com])/" configure.ac
         ./autogen.sh
         ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --without-83support --without-manual
         make debrelease VERSION="$version" FORCE=1
