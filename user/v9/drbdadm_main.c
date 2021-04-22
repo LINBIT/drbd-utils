@@ -381,7 +381,7 @@ static struct adm_cmd sh_mod_parms_cmd = {"sh-mod-parms", sh_mod_parms, ACF2_GEN
 static struct adm_cmd sh_dev_cmd = {"sh-dev", sh_dev, ACF2_SHELL};
 static struct adm_cmd sh_udev_cmd = {"sh-udev", sh_udev, .vol_id_required = 1, ACF2_HOOK};
 static struct adm_cmd sh_minor_cmd = {"sh-minor", sh_minor, ACF2_SHELL};
-static struct adm_cmd sh_ll_dev_cmd = {"sh-ll-dev", sh_ll_dev, ACF2_SHELL .disk_required = 1};
+static struct adm_cmd sh_ll_dev_cmd = {"sh-ll-dev", sh_ll_dev, ACF2_SHELL .disk_required = 0};
 static struct adm_cmd sh_md_dev_cmd = {"sh-md-dev", sh_md_dev, ACF2_SHELL .disk_required = 1};
 static struct adm_cmd sh_md_idx_cmd = {"sh-md-idx", sh_md_idx, ACF2_SHELL .disk_required = 1};
 static struct adm_cmd sh_ip_cmd = {"sh-ip", sh_ip, ACF2_SHELL};
@@ -925,9 +925,16 @@ static int sh_lres(const struct cfg_ctx *ctx)
 	return 0;
 }
 
+/* returns either the backing dev path or "none" if it is empty */
+static const char * const backing_disk_str(struct d_volume *info) {
+	if (!info || !info->disk)
+		return "none";
+	return info->disk;
+}
+
 static int sh_ll_dev(const struct cfg_ctx *ctx)
 {
-	printf("%s\n", ctx->vol->disk);
+	printf("%s\n", backing_disk_str(ctx->vol));
 	return 0;
 }
 
