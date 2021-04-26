@@ -494,7 +494,7 @@ fi
 
 
 %changelog
-* Mon Apr 19 2021 Roland Kammerer <roland.kammerer@linbit.com> - 9.17.0~rc.1-1
+* Mon Apr 26 2021 Roland Kammerer <roland.kammerer@linbit.com> - 9.17.0-1
 -  New upstream release
 
 * Tue Feb 09 2021 Roland Kammerer <roland.kammerer@linbit.com> - 9.16.0-1

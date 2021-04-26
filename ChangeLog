@@ -3,7 +3,7 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
-9.17.0-rc.1
+9.17.0
 --------
  * drbdadm,v9: fix dstate for diskless volumes
  * build/release: use lbvers.py
@@ -16,6 +16,7 @@ Latest:
  * build,Debian: rm mail recommends
  * drbdsetup,events2,v9: allow --poll without --now
  * drbdsetup,invalidate: allow bitmap based resync after verify
+ * drbdadm,sh-ll-dev: change output to "none" if diskless
 
 9.16.0
 --------
