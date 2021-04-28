@@ -896,7 +896,7 @@ const struct en_map quorum_map[] = {
 	{ "use-rle", BOOLEAN(use_rle, USE_RLE) },					\
 	{ "socket-check-timeout", NUMERIC(sock_check_timeo, SOCKET_CHECK_TIMEO) },	\
 	{ "fencing", ENUM(fencing_policy, FENCING) },					\
-	{ "max-buffers", NUMERIC(max_buffers, MAX_BUFFERS) },				\
+	{ "max-buffers", NUMERIC(max_buffers, MAX_BUFFERS), .unit = "bytes" },		\
 	{ "allow-remote-read", BOOLEAN(allow_remote_read, ALLOW_REMOTE_READ) },					\
 	{ "_name", STRING(name) }
 
