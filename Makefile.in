@@ -293,24 +293,6 @@ tarball: check-submods check_all_committed distclean doc configure .filelist
 ifdef RPMBUILD
 drbd.spec: drbd.spec.in configure
 	./configure --enable-spec
-
-.PHONY: rpmprep
-rpmprep: tgz drbd.spec
-	version=$$(cat .version) && cp drbd-utils-$${version}.tar.gz `rpm -E "%_sourcedir"`
-
-.PHONY: rpm
-rpm: rpmprep
-	$(RPMBUILD) -bb \
-	    --with prebuiltman $(RPMOPT) \
-	    drbd.spec
-	@echo "You have now:" ; find `rpm -E "%_rpmdir"` -name *.rpm
-
-.PHONY: srpm
-srpm: rpmprep
-	$(RPMBUILD) -bs \
-		--with prebuiltman $(RPMOPT) \
-		drbd.spec
-	@echo "You have now:" ; find `rpm -E "%_srcrpmdir"` -name *.src.rpm
 endif
 
 ifneq ($(FORCE),1)
