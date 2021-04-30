@@ -197,10 +197,8 @@ check_changelogs_up2date: check_VERSION
 		--changelog=ChangeLog \
 		--rpm-spec=drbd.spec.in --rpm-spec-changelog-only \
 		--debian-changelog=debian/changelog \
-		--configureac=configure.ac
-	if ! grep "ENV DRBD_UTILS_VERSION $$VERSION" >/dev/null 2>&1 Dockerfile; then \
-	   echo -e "\n\tDockerfile needs update"; \
-	   false; fi;
+		--configureac=configure.ac \
+		--dockerfiles=Dockerfile --dockertoken=DRBD_UTILS_VERSION
 
 .PHONY: .filelist
 .filelist: check_VERSION

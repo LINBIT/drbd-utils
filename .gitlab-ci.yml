@@ -3,7 +3,7 @@ stages:
   - test
 
 variables:
-  BUILD_HELPERS_VERSION: c0d39c0e5a2235262f21d072c4bf3b2dd62b2040
+  BUILD_HELPERS_VERSION: 330d8122fb0049cae469d3061292a1880127f0bb
   # we have to change the way GitLab CI clones the repository.
   # by default, it is shallow, which gives us a wrong commit count when
   # we do `git rev-list --count origin/master` below.
@@ -25,13 +25,12 @@ variables:
 
         dummy-release.sh drbd-utils "$version" "$release" drbd.spec.in
         sed -i "s/^AC_INIT.*/AC_INIT(DRBD, $version, [drbd-dev@lists.linbit.com])/" configure.ac
-        echo "ENV DRBD_UTILS_VERSION $version" > Dockerfile
-        install /dev/null /usr/bin/lbvers.py
         git config --global user.email "invalid@linbit"
         git config --global user.name "Dummy"
         git commit -am "CI $version - $release"
         ./autogen.sh
         ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --without-83support --without-manual
+        install /dev/null $(which lbvers.py)
         make debrelease VERSION="$version" FORCE=1
         curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD --upload-file drbd-utils-*.tar.gz $LINBIT_REGISTRY_URL/repository/lbbuild-upstream/
 
