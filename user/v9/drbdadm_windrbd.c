@@ -210,7 +210,6 @@ static const char *windrbd_root(DWORD *length_ret)
 	int err = 0;
 
 	if (root == NULL) {
-			/* TODO: other registry location */
 	        err = windrbd_get_registry_string_value(HKEY_LOCAL_MACHINE, "System\\CurrentControlSet\\Services\\WinDRBD", "WinDRBDRoot", (unsigned char**) &root, &length, 0);
 	}
 	if (err == 0 && root != NULL) {
