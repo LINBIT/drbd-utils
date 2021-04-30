@@ -243,16 +243,13 @@ check_.filelist:
 
 tools doc: check-submods
 
-.PHONY: check_all_committed prepare_release release debrelease tarball
+.PHONY: check_all_committed release debrelease tarball
 check_all_committed:
 	@$(if $(FORCE),-,)modified=`$(GIT) ls-files -m -t`; 		\
 	if test -n "$$modified" ; then	\
 		echo "$$modified";	\
 	       	false;			\
 	fi
-
-prepare_release: testorfail
-	$(MAKE) tarball
 
 release: testorfail
 	$(MAKE) tarball
