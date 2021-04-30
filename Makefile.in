@@ -241,25 +241,7 @@ check_.version:
 check_.filelist:
 	test -e .filelist
 
-# tgz will no longer automatically update .filelist,
-# so the tgz and therefore rpm target will work within
-# an extracted tarball, too.
-# to generate a distribution tarball, use make tarball,
-# which will regenerate .filelist
-.PHONY: tgz
-tgz: check_.version check_.filelist
-	version=$$(cat .version) && \
-	rm -f drbd-utils-$${version} && \
-	$(LN_S) . drbd-utils-$${version} && \
-	for f in $$(<.filelist) ; do [ -e $$f ] && continue ; echo missing: $$f ; exit 1; done && \
-	tar --owner=0 --group=0 -czf - -T .filelist > drbd-utils-$${version}.tar.gz && \
-	rm drbd-utils-$${version}
-
-ifeq ($(FORCE),)
-tgz: check_changelogs_up2date doc
-endif
-
-tools doc tgz: check-submods
+tools doc: check-submods
 
 .PHONY: check_all_committed prepare_release release debrelease tarball
 check_all_committed:
@@ -287,8 +269,13 @@ configure: configure.ac
 config.status: configure
 	@printf "\nYou need to call ./configure with appropriate arguments (again).\n\n"; exit 1
 
-tarball: check-submods check_all_committed distclean doc configure .filelist
-	$(MAKE) tgz
+tarball: check-submods check_all_committed check_changelogs_up2date distclean doc configure .filelist .version
+	version=$$(cat .version) && \
+	rm -f drbd-utils-$${version} && \
+	$(LN_S) . drbd-utils-$${version} && \
+	for f in $$(<.filelist) ; do [ -e $$f ] && continue ; echo missing: $$f ; exit 1; done && \
+	tar --owner=0 --group=0 -czf - -T .filelist > drbd-utils-$${version}.tar.gz && \
+	rm drbd-utils-$${version}
 
 ifdef RPMBUILD
 drbd.spec: drbd.spec.in configure
