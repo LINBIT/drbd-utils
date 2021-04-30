@@ -10,4 +10,6 @@ int windrbd_driver_loaded(void);
 char *windrbd_get_drbd_version(void);
 char *windrbd_get_windrbd_version(void);
 
+int windrbd_get_registry_string_value(HKEY root_key, const char *key, const char *value_name, unsigned char ** buf_ret, DWORD *buflen_ret, int verbose);
+
 #endif

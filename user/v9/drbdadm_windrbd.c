@@ -83,9 +83,13 @@ int before_attach(const struct cfg_ctx *ctx)
 
 int after_new_minor(const struct cfg_ctx *ctx)
 {
-        if (is_driveletter(ctx->vol->device) || ctx->vol->device[0] == '\0') {
+        if (is_driveletter(ctx->vol->device)) {
                 char minor_str[10];
                 snprintf(minor_str, sizeof(minor_str)-1, "%d", ctx->vol->device_minor);
+
+		fprintf(stderr, "Warning: block device interface (via drive letter %s) is deprecated and will be removed in the next minor release. Please use SCSI disk device interface instead.\n", ctx->vol->device);
+		fprintf(stderr, "Please go to https://linbit.com/tech-guide/windrbd-users-guide/ for a guide of how to set up SCSI disk device interface.\n");
+
                 call_windrbd(ctx->res->name, SLEEPS_SHORT, windrbd, "-q", "set-mount-point-for-minor", minor_str, ctx->vol->device, NULL);
         }
 
@@ -170,7 +174,7 @@ out:
 
 void maybe_add_bin_dir_to_path(void)
 {
-        add_component_to_path(DRBD_BIN_DIR);
+        add_component_to_path(drbd_bin_dir());
 }
 
 void print_platform_specific_versions(void)

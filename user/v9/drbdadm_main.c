@@ -2790,15 +2790,7 @@ void verify_ips(struct d_resource *res)
 	}
 }
 
-static char *conf_file[] = {
-	DRBD_CONFIG_DIR "/drbd-90.conf",
-	DRBD_CONFIG_DIR "/drbd-84.conf",
-	DRBD_CONFIG_DIR "/drbd-83.conf",
-	DRBD_CONFIG_DIR "/drbd-82.conf",
-	DRBD_CONFIG_DIR "/drbd-08.conf",
-	DRBD_CONFIG_DIR "/drbd.conf",
-	0
-};
+extern char *conf_file[];
 
 int pushd(const char *path)
 {
@@ -3232,6 +3224,10 @@ char *config_file_from_arg(char *arg)
 void assign_default_config_file(void)
 {
 	int i;
+
+	generate_conf_file_locations();
+		/* On Windows this is dynamic, NOOP on Linux */
+
 	for (i = 0; conf_file[i]; i++) {
 		yyin = fopen(conf_file[i], "r");
 		if (yyin) {

@@ -1373,6 +1373,11 @@ void events2_prepare_update()
 	receive_update = true;
 }
 
+#ifndef HAVE___FREE_FN_T
+	/* Windows cygwin hasn't defined this, for example */
+typedef void (*__free_fn_t) (void *__nodep);
+#endif
+
 /* Drop all data and start again with new initial state. */
 void events2_reset()
 {

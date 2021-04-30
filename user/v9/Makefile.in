@@ -85,13 +85,13 @@ drbdmeta-obj = drbdmeta.o drbdmeta_scanner.o drbdtool_common.o drbd_buildtag.o \
 	       drbd_strings.o shared_tool.o
 
 ifeq ($(WITH_WINDRBD),yes)
-drbdadm-obj += drbdadm_windrbd.o shared_windrbd.o libgenl_windrbd.o drbdtool_common_windrbd.o
-drbdsetup-core-obj += shared_windrbd.o libgenl_windrbd.o drbdtool_common_windrbd.o drbdsetup_windrbd.o
-drbdmeta-obj += shared_windrbd.o drbdmeta_windrbd.o drbdtool_common_windrbd.o
+drbdadm-obj += drbdadm_windrbd.o shared_windrbd.o libgenl_windrbd.o drbdtool_common_windrbd.o path_windrbd.o
+drbdsetup-core-obj += shared_windrbd.o libgenl_windrbd.o drbdtool_common_windrbd.o drbdsetup_windrbd.o path_windrbd.o
+drbdmeta-obj += shared_windrbd.o drbdmeta_windrbd.o drbdtool_common_windrbd.o path_windrbd.o
 else
-drbdadm-obj += libgenl.o drbdadm_linux.o drbdtool_common_linux.o
-drbdsetup-core-obj += libgenl.o drbdtool_common_linux.o drbdsetup_linux.o
-drbdmeta-obj += drbdmeta_linux.o drbdtool_common_linux.o
+drbdadm-obj += libgenl.o drbdadm_linux.o drbdtool_common_linux.o path_linux.o
+drbdsetup-core-obj += libgenl.o drbdtool_common_linux.o drbdsetup_linux.o path_linux.o
+drbdmeta-obj += drbdmeta_linux.o drbdtool_common_linux.o path_linux.o
 endif
 
 drbdsetup-obj = $(drbdsetup-core-obj) drbdsetup_main.o

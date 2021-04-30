@@ -21,6 +21,26 @@ struct cmd_helper helpers[] = {
 	{NULL, NULL}
 };
 
+/* Config file locations */
+
+char *conf_file[] = {
+        DRBD_CONFIG_DIR "/drbd-90.conf",
+        DRBD_CONFIG_DIR "/drbd-84.conf",
+        DRBD_CONFIG_DIR "/drbd-83.conf",
+        DRBD_CONFIG_DIR "/drbd-82.conf",
+        DRBD_CONFIG_DIR "/drbd-08.conf",
+        DRBD_CONFIG_DIR "/drbd.conf",
+        0
+};
+
+void generate_conf_file_locations(void)
+{
+}
+
+void free_conf_file_locations(void)
+{
+}
+
 /* Which shell we are using for khelpers. */
 
 char *khelper_argv[] = { "/bin/sh", "-c", NULL, NULL };

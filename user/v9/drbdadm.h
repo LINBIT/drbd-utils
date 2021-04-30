@@ -19,6 +19,7 @@
 
 #include "config.h"
 #include "shared_main.h"
+#include "path.h"
 
 /* FIXME keep in sync with GENL_MAGIC_VERSION,
  * without including all the genl magic...
@@ -588,6 +589,16 @@ extern char *khelper_argv[];
 
 void print_platform_specific_versions(void);
 void assign_default_device(struct d_volume *vol);
+
+void generate_conf_file_locations(void);
+void free_conf_file_locations(void);
+
+char *drbd_lib_dir(void);
+char *node_id_file(void);
+char *drbd_run_dir(void);
+char *drbd_run_dir_with_slash(void);
+char *drbd_bin_dir(void);
+char *drbd_lock_dir(void);
 
 #endif
 
