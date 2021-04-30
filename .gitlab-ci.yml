@@ -34,16 +34,17 @@ variables:
         make debrelease VERSION="$version" FORCE=1
         curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD --upload-file drbd-utils-*.tar.gz $LINBIT_REGISTRY_URL/repository/lbbuild-upstream/
 
-        META_JSON=$(rq -t < drbd-test-bundle/virter/vms.toml | jq '.vms[].metadata')
-        echo "$META_JSON" | jq -r '"-d " + .BuildDistribution' \
-          | sed -re 's/rhel([[:digit:]])\.[[:digit:]]/rhel\1.0/g' \
-          | sort | uniq \
-          | parallel --colsep ' ' -k -j24 \
-          lbbuildctl build drbd-utils --arch amd64 --ci -v "$DRBD_UTILS_VERSION" -l \
-            -e LINBIT_REGISTRY_USER=$LINBIT_REGISTRY_USER \
-            -e LINBIT_REGISTRY_PASSWORD=$LINBIT_REGISTRY_PASSWORD \
-            -e LINBIT_REGISTRY_URL=$LINBIT_REGISTRY_URL \
-            {}
+        # distributions, with rhelX.y replaced by rhelX.0, comma separated
+        local dists=$(rq -t < drbd-test-bundle/virter/vms.toml | jq -r '[
+          .vms[].metadata.BuildDistribution
+          | sub("rhel(?<major>\\d)\\.\\d"; "rhel\(.major).0")
+        ] | unique | join(",")')
+
+        lbbuildctl build drbd-utils --arch amd64 --ci -v "$DRBD_UTILS_VERSION" -l \
+          -e LINBIT_REGISTRY_USER=$LINBIT_REGISTRY_USER \
+          -e LINBIT_REGISTRY_PASSWORD=$LINBIT_REGISTRY_PASSWORD \
+          -e LINBIT_REGISTRY_URL=$LINBIT_REGISTRY_URL \
+          -d $dists
       }
 
 # rules clause determining whether to build
