@@ -149,6 +149,11 @@ dnl Check for functions
 AC_CHECK_FUNCS([getentropy])
 AC_CHECK_FUNCS([gethostbyname_r])
 
+dnl Check for types
+dnl AC_CHECK_TYPES([void (*) (void *), __free_fn_t])
+AC_CHECK_TYPE(__free_fn_t, AC_DEFINE([HAVE___FREE_FN_T], 1, __free_fn_t is defined (when _GNU_SOURCE is defined)), [],[[#define _GNU_SOURCE
+#include <search.h>]])
+
 dnl Do we know where systemd unit files go?
 PKG_PROG_PKG_CONFIG
 AC_ARG_WITH([systemdunitdir],

@@ -108,3 +108,59 @@ char *windrbd_get_windrbd_version(void)
 	get_driver_versions();
 	return windrbd_version;
 }
+
+int windrbd_get_registry_string_value(HKEY root_key, const char *key, const char *value_name, unsigned char ** buf_ret, DWORD *buflen_ret, int verbose)
+{
+	HKEY h;
+	unsigned char *buf;
+	DWORD buflen;
+
+	DWORD ret = RegOpenKeyEx(root_key, key, 0, KEY_READ, &h);
+	DWORD the_type;
+
+	if (ret != ERROR_SUCCESS) {
+		if (verbose)
+			fprintf(stderr, "Couldn't open registry key error is %d\n", ret);
+		return 1;
+	}
+        ret = RegQueryValueEx(h, value_name, NULL, &the_type, NULL, &buflen);
+	if (ret != ERROR_SUCCESS) {
+		RegCloseKey(h);
+		if (verbose)
+			fprintf(stderr, "Couldn't get size of %s value error is %d\n", value_name, ret);
+		return 1;
+	}
+	if (the_type != REG_SZ && the_type != REG_EXPAND_SZ) {
+		RegCloseKey(h);
+		if (verbose)
+			fprintf(stderr, "Type mismatch: %s is not a REG_SZ (simple C string)\n", value_name);
+		return 1;
+	}
+	buf = malloc(buflen);
+	if (buf == NULL) {
+		RegCloseKey(h);
+		if (verbose)
+			fprintf(stderr, "Out of memory allocating %d bytes\n", buflen);
+		return 1;
+	}
+
+        ret = RegQueryValueEx(h, value_name, NULL, NULL, buf, &buflen);
+	if (ret != ERROR_SUCCESS) {
+		RegCloseKey(h);
+		free(buf);
+		if (verbose)
+			fprintf(stderr, "Couldn't get value %s error is %d\n", value_name, ret);
+		return 1;
+	}
+
+	RegCloseKey(h);
+	if (buf_ret != NULL)
+		*buf_ret = buf;
+	else
+		free(buf);	/* avoid memory leak */
+
+	if (buflen_ret != NULL)
+		*buflen_ret = buflen;
+
+	return 0;
+}

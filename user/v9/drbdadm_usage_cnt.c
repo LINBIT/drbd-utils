@@ -49,8 +49,6 @@
 #define HTTP_PORT 80
 #define HTTP_HOST "usage.drbd.org"
 #define HTTP_ADDR "159.69.154.96"
-#define NODE_ID_FILE DRBD_LIB_DIR"/node_id"
-
 
 struct node_info {
 	uint64_t node_uuid;
@@ -119,14 +117,14 @@ static void write_node_id(struct node_info *ni)
 	struct node_info_od on_disk;
 	int size;
 
-	fd = open(NODE_ID_FILE,O_WRONLY|O_CREAT,S_IRUSR|S_IWUSR);
+	fd = open(node_id_file(),O_WRONLY|O_CREAT,S_IRUSR|S_IWUSR);
 	if( fd == -1 && errno == ENOENT) {
-		mkdir(DRBD_LIB_DIR,S_IRWXU);
-		fd = open(NODE_ID_FILE,O_WRONLY|O_CREAT,S_IRUSR|S_IWUSR);
+		mkdir(drbd_lib_dir(),S_IRWXU);
+		fd = open(node_id_file(),O_WRONLY|O_CREAT,S_IRUSR|S_IWUSR);
 	}
 
 	if( fd == -1) {
-		err("Creation of "NODE_ID_FILE" failed: %m\n");
+		err("Creation of %s failed: %m\n", node_id_file());
 		exit(20);
 	}
 
@@ -145,7 +143,7 @@ static void write_node_id(struct node_info *ni)
 	}
 
 	if( write(fd,&on_disk, size) != size) {
-		err("Write to "NODE_ID_FILE" failed: %m\n");
+		err("Write to %s failed: %m\n", node_id_file());
 		exit(20);
 	}
 
@@ -159,7 +157,7 @@ static int read_node_id(struct node_info *ni)
 	int fd;
 	struct node_info_od on_disk;
 
-	fd = open(NODE_ID_FILE, O_RDONLY);
+	fd = open(node_id_file(), O_RDONLY);
 	if (fd == -1) {
 		return 0;
 	}

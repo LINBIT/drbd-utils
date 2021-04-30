@@ -43,10 +43,11 @@
 
 #include "config.h"
 #include "registry.h"
+#include "drbdadm.h"
 
 static void linkname_from_minor(char *linkname, int minor)
 {
-	sprintf(linkname, "%s/drbd-minor-%d.conf", DRBD_RUN_DIR, minor);
+	sprintf(linkname, "%s/drbd-minor-%d.conf", drbd_run_dir(), minor);
 }
 
 int unregister_minor(int minor)
@@ -89,7 +90,7 @@ static int register_path(const char *linkname, const char *path)
 		return -1;
 	}
 	/* safeguard against symlink loops in DRBD_RUN_DIR */
-	if (!strncmp(path, DRBD_RUN_DIR "/", strlen(DRBD_RUN_DIR "/")))
+	if (!strncmp(path, drbd_run_dir_with_slash(), strlen(drbd_run_dir_with_slash())))
 		return -1;
 	if (__readlink(linkname, target, sizeof(target)) >= 0 &&
 	    !strcmp(target, path))
@@ -98,8 +99,8 @@ static int register_path(const char *linkname, const char *path)
 		perror(linkname);
 		return -1;
 	}
-	if (mkdir(DRBD_RUN_DIR, S_IRWXU) != 0 && errno != EEXIST) {
-		perror(DRBD_RUN_DIR);
+	if (mkdir(drbd_run_dir(), S_IRWXU) != 0 && errno != EEXIST) {
+		perror(drbd_run_dir());
 		return -1;
 	}
 	if (symlink(path, linkname) != 0) {
@@ -142,7 +143,7 @@ char *lookup_minor(int minor)
 
 static void linkname_from_resource_name(char *linkname, const char *name)
 {
-	sprintf(linkname, "%s/drbd-resource-%s.conf", DRBD_RUN_DIR, name);
+	sprintf(linkname, "%s/drbd-resource-%s.conf", drbd_run_dir(), name);
 }
 
 int unregister_resource(const char *name)

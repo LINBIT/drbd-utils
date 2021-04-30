@@ -29,6 +29,7 @@
 #include "config.h"
 #include "drbdadm.h"
 #include "drbd_endian.h"
+#include "path.h"
 #include "linux/drbd.h"
 
 #include "drbdtool_common.h"
@@ -721,8 +722,8 @@ int dt_lock_drbd(int minor)
 	 * and make sure that /var/lock/drbd is drwx.-..-. root:root  ...
 	 */
 
-	sz = asprintf(&lfname, DRBD_LOCK_DIR "/drbd-%d-%d",
-		      LANANA_DRBD_MAJOR, minor);
+	sz = asprintf(&lfname, "%s/drbd-%d-%d",
+		      drbd_lock_dir(), LANANA_DRBD_MAJOR, minor);
 	if (sz < 0) {
 		perror("");
 		exit(20);
