@@ -213,10 +213,6 @@ check_changelogs_up2date: check_VERSION
 .PHONY: FORCE
 FORCE:
 
-.PHONY: check_.version
-check_.version:
-	test -e .version
-
 .PHONY: .filelist
 .filelist: check_VERSION .version
 	@set -e ; submodules=`$(GIT) submodule foreach --quiet 'echo $$path'`; \
@@ -236,10 +232,6 @@ check_.version:
 	echo $(PNAME)-$(VERSION)/configure            >> .filelist ; \
 	echo $(PNAME)-$(VERSION)/.version             >> .filelist ; \
 	echo "./.filelist updated."
-
-.PHONY: check_.filelist
-check_.filelist:
-	test -e .filelist
 
 tools doc: check-submods
 
