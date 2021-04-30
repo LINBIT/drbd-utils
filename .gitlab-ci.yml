@@ -25,6 +25,11 @@ variables:
 
         dummy-release.sh drbd-utils "$version" "$release" drbd.spec.in
         sed -i "s/^AC_INIT.*/AC_INIT(DRBD, $version, [drbd-dev@lists.linbit.com])/" configure.ac
+        echo "ENV DRBD_UTILS_VERSION $version" > Dockerfile
+        install /dev/null /usr/bin/lbvers.py
+        git config --global user.email "invalid@linbit"
+        git config --global user.name "Dummy"
+        git commit -am "CI $version - $release"
         ./autogen.sh
         ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --without-83support --without-manual
         make debrelease VERSION="$version" FORCE=1
