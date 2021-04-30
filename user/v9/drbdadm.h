@@ -588,5 +588,8 @@ extern char *khelper_argv[];
 void print_platform_specific_versions(void);
 void assign_default_device(struct d_volume *vol);
 
+void generate_conf_file_locations(void);
+void free_conf_file_locations(void);
+
 #endif
 

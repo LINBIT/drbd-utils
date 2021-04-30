@@ -26,6 +26,8 @@ struct cmd_helper helpers[] = {
 	{NULL, NULL}
 };
 
+char *conf_file[2];
+
 /* Which shell we are using for khelpers.
  *
  * We are not using PowerShell since it is way too slow... (and
@@ -192,3 +194,77 @@ void assign_default_device(struct d_volume *vol)
 	if (!vol->device)
 		m_asprintf(&vol->device, "");
 }
+
+	/* This reads the Registry key (once) and returns it together with the
+	 * length. If registry key is not found falls back to pre-1.0.0
+	 * location (never returns NULL).
+	 * If length_ret is non-NULL returns length including terminating \0.
+	 */
+
+#define DEFAULT_ROOT "/cygdrive/c/windrbd"
+
+static const char *windrbd_root(DWORD *length_ret)
+{
+	static char *root = NULL;
+	static DWORD length;
+	int err = 0;
+
+	if (root == NULL) {
+			/* TODO: other registry location */
+	        err = windrbd_get_registry_string_value(HKEY_LOCAL_MACHINE, "System\\CurrentControlSet\\Services\\WinDRBD", "WinDRBDRoot", (unsigned char**) &root, &length, 0);
+	}
+	if (err == 0 && root != NULL) {
+		if (length_ret != NULL)
+			*length_ret = length;
+		return root;
+	}
+	if (length_ret != NULL)
+		*length_ret = strlen(DEFAULT_ROOT)+1;
+	return DEFAULT_ROOT;
+}
+
+	/* Concatenates $WINDRBD_ROOT and path. Caller must free the
+	 * return value.
+	 * Returns allocated buffer $WINDRBD_ROOT/$path.
+	 */
+
+char *relative_to_root(const char *path)
+{
+	DWORD buflen, rootlen;
+	const char *root;
+	char *buf;
+
+	if (path == NULL)
+		return NULL;
+
+	root = windrbd_root(&buflen);
+	rootlen = buflen-1;
+	buflen += strlen(path);
+
+	buf = malloc(buflen);
+	if (buf == NULL) {
+		fprintf(stderr, "Out of memory allocating file name buffer\n");
+		return NULL;
+	}
+	strcpy(buf, root);
+	strcpy(buf+rootlen, path);
+
+	return buf;
+}
+
+void generate_conf_file_locations(void)
+{
+	conf_file[0] = relative_to_root("/etc/drbd.conf");
+	conf_file[1] = NULL;
+}
+
+/* Don't do that .. for now, since drbdadm assigns config_file global
+ * variable to the location.
+ */
+
+/*
+void free_conf_file_locations(void)
+{
+	free(conf_file[0]);
+}
+*/
