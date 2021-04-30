@@ -202,19 +202,8 @@ check_changelogs_up2date: check_VERSION
 	   echo -e "\n\tDockerfile needs update"; \
 	   false; fi;
 
-.version: check_VERSION FORCE
-	if test -e $@ && [ "$$(<$@)" = "$(VERSION)" ]; then \
-		echo "$@ already set to $(VERSION)"; \
-	else \
-		echo '$(VERSION)' > $@; \
-		echo "./.version updated."; \
-	fi
-
-.PHONY: FORCE
-FORCE:
-
 .PHONY: .filelist
-.filelist: check_VERSION .version
+.filelist: check_VERSION
 	@set -e ; submodules=`$(GIT) submodule foreach --quiet 'echo $$path'`; \
 	$(GIT) ls-files | \
 		grep -vxF -e "$$submodules" | \
@@ -230,7 +219,6 @@ FORCE:
 	echo $(PNAME)-$(VERSION)/user/shared/config.h.in  >> .filelist ; \
 	echo $(PNAME)-$(VERSION)/.filelist            >> .filelist ; \
 	echo $(PNAME)-$(VERSION)/configure            >> .filelist ; \
-	echo $(PNAME)-$(VERSION)/.version             >> .filelist ; \
 	echo "./.filelist updated."
 
 tools doc: check-submods
@@ -258,13 +246,12 @@ configure: configure.ac
 config.status: configure
 	@printf "\nYou need to call ./configure with appropriate arguments (again).\n\n"; exit 1
 
-tarball: check-submods check_all_committed check_changelogs_up2date distclean doc configure .filelist .version
-	version=$$(cat .version) && \
-	rm -f drbd-utils-$${version} && \
-	$(LN_S) . drbd-utils-$${version} && \
-	for f in $$(<.filelist) ; do [ -e $$f ] && continue ; echo missing: $$f ; exit 1; done && \
-	tar --owner=0 --group=0 -czf - -T .filelist > drbd-utils-$${version}.tar.gz && \
-	rm drbd-utils-$${version}
+tarball: check_VERSION check-submods check_all_committed check_changelogs_up2date distclean doc configure .filelist
+	rm -f drbd-utils-$(VERSION)
+	$(LN_S) . drbd-utils-$(VERSION)
+	for f in $$(<.filelist) ; do [ -e $$f ] && continue ; echo missing: $$f ; exit 1; done
+	tar --owner=0 --group=0 -czf - -T .filelist > drbd-utils-$(VERSION).tar.gz
+	rm drbd-utils-$(VERSION)
 
 ifdef RPMBUILD
 drbd.spec: drbd.spec.in configure
