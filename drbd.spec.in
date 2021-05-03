@@ -213,7 +213,7 @@ This packages includes the DRBD administration tools.
 %{_mandir}/man5/drbd.conf-*
 %{_mandir}/man8/drbdmeta-*
 %if %{with drbdmon}
-%{_mandir}/man8/drbdmon-*
+%{_mandir}/man8/drbdmon.*
 %endif
 %endif
 %doc scripts/drbd.conf.example
@@ -441,7 +441,7 @@ This package contains Japanese man pages for DRBD.
 %endif
 %endif # with heartbeat
 %if %{with drbdmon}
-%{_mandir}/ja/man8/drbdmon-*
+%{_mandir}/ja/man8/drbdmon.*
 %endif
 
 %post man-ja
@@ -466,16 +466,15 @@ for man_ver in 9.0 8.4 8.3; do
 		break
 	fi
 done
-%if %{with drbdmon}
-ln -sf drbdmon-9.0.8.gz %{_mandir}/ja/man8/drbdmon.8.gz
-%endif
 
 %preun man-ja
-for f in drbd drbdadm drbdmeta drbdsetup; do
-    rm -f %{_mandir}/ja/man8/$f.8.gz
-done
-rm -f %{_mandir}/ja/man5/drbd.conf.5.gz
-rm -f %{_mandir}/ja/man8/drbdmon.8.gz
+if [ $1 = 0 ]; then
+	for man_ver in 9.0 8.4 8.3 ; do
+		master_link=%{_mandir}/ja/man8/drbd-${man_ver}.8.gz 
+		test -e "$master_link" || continue
+		alternatives --remove drbd-man %{_mandir}/ja/man8/drbd-${man_ver}.8.gz || true
+	done
+fi
 %endif # with manual
 
 %prep
@@ -563,9 +562,6 @@ for man_ver in 9.0 8.4 8.3; do
 		--slave $MAN5/drbd.conf.5.gz	drbd.conf-man	$MAN5/drbd.conf-${man_ver}.5.gz
 	pri=$(( pri - 10 ))
 done
-%if %{with drbdmon}
-ln -sf drbdmon-9.0.8.gz %{_mandir}/man8/drbdmon.8.gz
-%endif
 %endif
 %if %{without udev}
 for i in `seq 0 15` ; do

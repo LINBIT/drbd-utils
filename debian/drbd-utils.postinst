@@ -3,23 +3,33 @@
 # dh_installinit automatically adds update-rc.d calls
 # all supported systems use udev nowadays
 
-. /usr/share/debconf/confmodule
-
-db_get drbd-utils/manpages
-MANVERSION=$RET
-db_stop
-
-# man pages
-for f in drbd drbdadm drbdmeta drbdsetup; do
-	ln -sf $f-$MANVERSION.8.gz /usr/share/man/man8/$f.8.gz
+_mandir=/usr/share/man
+for lang in / /ja/ ; do
+    MAN8=$_mandir${lang}man8
+    MAN5=$_mandir${lang}man5
+    pri=30
+    for man_ver in 9.0 8.4 8.3; do
+	test -e $MAN8/drbd-${man_ver}.8.gz || continue
+	manlang=man${lang#/}
+	manlang=${manlang%/}
+	update-alternatives --install \
+		    $MAN8/drbd.8.gz	  drbd-$manlang		$MAN8/drbd-${man_ver}.8.gz $pri	\
+	    --slave $MAN8/drbdadm.8.gz	  drbdadm-$manlang	$MAN8/drbdadm-${man_ver}.8.gz	\
+	    --slave $MAN8/drbdmeta.8.gz	  drbdmeta-$manlang	$MAN8/drbdmeta-${man_ver}.8.gz	\
+	    --slave $MAN8/drbdsetup.8.gz  drbdsetup-$manlang	$MAN8/drbdsetup-${man_ver}.8.gz	\
+	    --slave $MAN5/drbd.conf.5.gz  drbd.conf-$manlang	$MAN5/drbd.conf-${man_ver}.5.gz
+	pri=$(( pri - 10 ))
+    done
 done
-ln -sf drbd.conf-$MANVERSION.5.gz /usr/share/man/man5/drbd.conf.5.gz
-
-# ja man pages
-for f in drbd drbdadm drbdmeta drbdsetup; do
-	ln -sf $f-$MANVERSION.8.gz /usr/share/man/ja/man8/$f.8.gz
+# lang still /ja/
+for man_ver in 9.0 8.4 8.3; do
+    alt=%{_sysconfdir}/alternatives/drbd-man
+    if readlink "$alt" | grep drbd-$man_ver &> /dev/null; then
+	ver=$MAN8/drbd-${man_ver}.8.gz
+	update-alternatives --set drbd-manja "$ver"
+	break
+    fi
 done
-ln -sf drbd.conf-$MANVERSION.5.gz /usr/share/man/ja/man5/drbd.conf.5.gz
 
 # compat: we used to live in /sbin/
 # there may be many hardcoded /sbin/drbd* out there,

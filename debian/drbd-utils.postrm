@@ -1,19 +1,20 @@
 #!/bin/sh
 
-. /usr/share/debconf/confmodule
-
+_mandir=/usr/share/man
 case $1 in purge|remove|deconfigure)
-	update-rc.d drbd remove >/dev/null
-	# remove compat symlinks installed by .postinst
-	rm -f /sbin/drbdsetup /sbin/drbdmeta /sbin/drbdadm
+    update-rc.d drbd remove >/dev/null
+    # remove compat symlinks installed by .postinst
+    rm -f /sbin/drbdsetup /sbin/drbdmeta /sbin/drbdadm
 
-	# remove man page links
-	for f in drbd drbdadm drbdmeta drbdsetup; do
-		rm -f /usr/share/man/man8/$f.8.gz
+    for lang in / /ja/; do
+	for man_ver in 9.0 8.4 8.3 ; do
+	    master_link=${_mandir}${lang}man8/drbd-${man_ver}.8.gz 
+	    link_group_name=drbd-man${lang#/}
+	    link_group_name=${link_group_name%/}
+	    update-alternatives --remove $link_group_name $master_link || true
 	done
-	rm -f /usr/share/man/man5/drbd.conf.5.gz
-	db_purge
-	;;
+    done
+    ;;
 esac
 
 #DEBHELPER#
