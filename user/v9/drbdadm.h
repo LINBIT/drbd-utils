@@ -596,6 +596,7 @@ char *node_id_file(void);
 char *drbd_run_dir(void);
 char *drbd_run_dir_with_slash(void);
 char *drbd_bin_dir(void);
+char *drbd_lock_dir(void);
 
 #endif
 

@@ -158,6 +158,22 @@ char *drbd_bin_dir(void)
 	return ret;
 }
 
+char *drbd_lock_dir(void)
+{
+	static char buf[MAX_PATH];
+	static bool initialized;
+	char *ret;
+
+	if (initialized)
+		return buf;
+
+	ret = relative_to_root("/var/lock", buf, sizeof(buf));
+	if (ret)
+		initialized = true;
+
+	return ret;
+}
+
 /* Don't do that .. for now, since drbdadm assigns config_file global
  * variable to the location.
  */

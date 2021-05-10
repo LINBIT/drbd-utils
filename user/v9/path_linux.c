@@ -25,3 +25,8 @@ char *drbd_bin_dir(void)
 	return DRBD_BIN_DIR;
 }
 
+char *drbd_lock_dir(void)
+{
+	return DRBD_LOCK_DIR;
+}
+
