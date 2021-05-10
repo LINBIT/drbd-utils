@@ -19,6 +19,7 @@
 
 #include "config.h"
 #include "shared_main.h"
+#include "path.h"
 
 /* FIXME keep in sync with GENL_MAGIC_VERSION,
  * without including all the genl magic...

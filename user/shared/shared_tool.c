@@ -29,6 +29,7 @@
 #include "config.h"
 #include "drbdadm.h"
 #include "drbd_endian.h"
+#include "path.h"
 #include "linux/drbd.h"
 
 #include "drbdtool_common.h"
