@@ -1094,6 +1094,11 @@ static void fixup_peer_devices(struct d_resource *res)
 			}
 		}
 
+		if (STAILQ_EMPTY(&some_path->hname_address_pairs)) {
+			/* oops? not even one single hostname/address pair?? */
+			assert(config_valid == 0);
+			continue;
+		}
 		some_host = STAILQ_FIRST(&some_path->hname_address_pairs)->host_info;
 		if (!some_host) {
 			/* oops? not even one single host?? */

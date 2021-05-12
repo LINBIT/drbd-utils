@@ -3510,7 +3510,9 @@ int main(int argc, char **argv)
 						exit(E_USAGE);
 					}
 				}
-				if (cmd->vol_id_required && !ctx.vol && STAILQ_FIRST(&ctx.res->me->volumes)->implicit)
+				if (cmd->vol_id_required && !ctx.vol
+				&& !STAILQ_EMPTY(&ctx.res->me->volumes)
+				&& STAILQ_FIRST(&ctx.res->me->volumes)->implicit)
 					ctx.vol = STAILQ_FIRST(&ctx.res->me->volumes);
 				if (cmd->vol_id_required && !ctx.vol) {
 					err("%s requires a specific volume id, but none is specified.\n"
