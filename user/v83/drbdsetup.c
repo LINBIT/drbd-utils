@@ -45,7 +45,9 @@
 #include <sys/time.h>
 #include <time.h>
 
+#ifndef __bitwise
 #define __bitwise /* Build-workaround for broken RHEL4 kernels (2.6.9_78.0.1) */
+#endif
 #include <linux/types.h>
 #include <linux/netlink.h>
 #include <linux/connector.h>
