@@ -105,7 +105,7 @@ drbd-tests:
       ci_fetch_binary vmshed vmshed-$VMSHED_VERSION https://github.com/LINBIT/vmshed/releases/download/$VMSHED_VERSION/vmshed-linux-amd64
     - docker image pull $LINBIT_DOCKER_REGISTRY/drbd9-tests:latest
     - |
-      export DRBD_VERSION=9.0.0.latest
+      export DRBD_VERSION=9.1.0.latest
       export DRBD_UTILS_VERSION=9.0.0.$CI_COMMIT_SHA-1
       export DRBD9_TESTS_VERSION=latest
       ./drbd-test-bundle/virter/run-test.sh
