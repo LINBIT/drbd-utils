@@ -45,8 +45,10 @@ char *relative_to_root(const char *path, char *buf, size_t buffer_size)
 	DWORD buflen, rootlen;
 	const char *root;
 
-	if (path == NULL || buf == NULL)
-		return NULL;
+	if (path == NULL || buf == NULL) {
+		fprintf(stderr, "Invalid argument to relative_to_root function.\n");
+		exit(42);
+	}
 
 	root = windrbd_root(&buflen);
 	rootlen = buflen-1;
@@ -56,14 +58,6 @@ char *relative_to_root(const char *path, char *buf, size_t buffer_size)
 		fprintf(stderr, "Path length exceeds buffer size (%zd bytes, WinDRBD root is %s)\n", buffer_size, root);
 		exit(42);
 	}
-
-#if 0
-	buf = malloc(buflen);
-	if (buf == NULL) {
-		fprintf(stderr, "Out of memory allocating file name buffer\n");
-		return NULL;
-	}
-#endif
 	strcpy(buf, root);
 	strcpy(buf+rootlen, path);
 
@@ -174,13 +168,3 @@ char *drbd_lock_dir(void)
 	return ret;
 }
 
-/* Don't do that .. for now, since drbdadm assigns config_file global
- * variable to the location.
- */
-
-/*
-void free_conf_file_locations(void)
-{
-	free(conf_file[0]);
-}
-*/
