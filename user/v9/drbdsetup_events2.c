@@ -1372,6 +1372,11 @@ void events2_prepare_update()
 	receive_update = true;
 }
 
+#ifdef WINDRBD
+	/* WinDRBD cygwin hasn't defined this */
+typedef void (*__free_fn_t) (void *__nodep);
+#endif
+
 /* Drop all data and start again with new initial state. */
 void events2_reset()
 {
