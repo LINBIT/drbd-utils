@@ -1538,7 +1538,9 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
     <definition>
       <para>Determine how to deal with I/O requests when the requested data is
 	not available locally or remotely (for example, when all disks have
-	failed).  The defined policies are:
+	failed). When quorum is enabled, <option>on-no-data-accessible</option>
+	should be set to the same value as <option>on-no-quorum</option>.
+	The defined policies are:
 
 	<variablelist>
 	  <varlistentry>
@@ -1799,6 +1801,8 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	  </indexterm> By default DRBD freezes IO on a device, that lost quorum.
 	  By setting the <option>on-no-quorum</option> to <option>io-error</option> it
 	  completes all IO operations with an error if quorum ist lost.</para>
+	  <para>Usually, the <option>on-no-data-accessible</option> should be set to the
+	  same value as <option>on-no-quorum</option>, as it has precedence.</para>
 
 	  <para>The <option>on-no-quorum</option> options is available starting with the DRBD kernel
 	  driver version 9.0.8.</para>
