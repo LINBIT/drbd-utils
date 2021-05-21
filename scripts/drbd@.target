@@ -1,0 +1,7 @@
+[Unit]
+Description=DBRD %I configured
+After=network-online.target nss-lookup.target
+Requires=drbd@%i.service
+
+[Install]
+WantedBy=multi-user.target

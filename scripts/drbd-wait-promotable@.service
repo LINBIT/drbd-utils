@@ -1,0 +1,17 @@
+[Unit]
+Description=DRBD %i Wait Promotable
+Requires=drbd@%i.service
+After=drbd@%i.service
+Before=drbd@%i.target
+
+[Service]
+SyslogIdentifier=drbd-%I
+Type=notify
+
+# on first start, wait for access to "good data"
+# let systemd handle timeouts
+ExecStart=/bin/bash -c 'while read line ; do [[ $line = *may_promote:yes* ]] || continue; systemd-notify READY=1; break; done < <( exec drbdsetup events2 %I )'
+RemainAfterExit=yes
+
+[Install]
+RequiredBy=drbd@%i.target

@@ -1,0 +1,14 @@
+[Unit]
+Description= Backing LVM LVs for DRBD %I
+PartOf=drbd@%i.target
+Before=drbd@%i.service
+
+[Service]
+SyslogIdentifier=drbd-%I
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'r="$1"; for d in $(drbdadm sh-ll-dev "$r") ; do test -b $d || [[ $d != /dev/*/* ]] && continue; lvchange -ay $d ; done' -- %I
+ExecStopPost=-/bin/sh -c 'r="$1"; for d in $(drbdadm sh-ll-dev "$r") ; do test ! -b $d || [[ $d != /dev/*/* ]] && continue; lvchange -an $d ; done' -- %I
+
+[Install]
+RequiredBy=drbd@%i.service

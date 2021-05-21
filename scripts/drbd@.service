@@ -1,0 +1,29 @@
+[Unit]
+Description= (Re)configure DRBD resource %I
+
+PartOf=drbd@%i.target
+
+#
+# in an instantiation of this service,
+# you may want to add "BindsTo=/dev/vg/lv" and "After=" for all backing devices
+#
+# if this is on top of LVM,
+# you may want to: systemctl enable drbd-lvchange@%i.service
+#
+# if you mean to immediately use this device (auto-promote, or
+# mount via fstab x-systemd.requires=drbd@$resname.target),
+# you may want to: systemctl enable drbd-wait-promotable@%i.service
+# 
+
+[Service]
+SyslogIdentifier=drbd-%I
+Type=oneshot
+RemainAfterExit=yes
+
+# depends... do we want this as ExecCondition or as ExecStart
+# failed start is "failed", failed condition is just "not startable yet"
+ExecStart=/usr/sbin/drbdadm adjust %I
+ExecReload=/usr/sbin/drbdadm adjust %I
+
+# can only succeed, if you first stop all depending services
+ExecStopPost=/usr/sbin/drbdsetup down %I
