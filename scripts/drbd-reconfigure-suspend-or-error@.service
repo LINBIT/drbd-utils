@@ -1,0 +1,14 @@
+[Unit]
+Description=Reconfigure DRBD %I on-no-(quorum|data) to suspend-io/io-error during start/stop
+
+PartOf=drbd-services@%i.target
+
+RefuseManualStart=yes
+RefuseManualStop=yes
+
+[Service]
+SyslogIdentifier=drbd-%I
+Type=oneshot
+RemainAfterExit=yes
+ExecStop=-/usr/sbin/drbdsetup resource-options --on-no-quorum io-error --on-no-data io-error %I
+ExecStart=-/usr/sbin/drbdsetup resource-options --on-no-quorum suspend-io --on-no-data suspend-io %I
