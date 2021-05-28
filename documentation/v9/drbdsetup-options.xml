@@ -1161,7 +1161,7 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	</indexterm> Define the timeout for replies to keep-alive packets.  If
 	the peer does not reply within <option>ping-timeout</option>, DRBD will
 	close and try to reestablish the connection.  The default value is 0.5
-	seconds, with a minimum of 0.1 seconds and a maximum of 3 seconds.  The
+	seconds, with a minimum of 0.1 seconds and a maximum of 30 seconds.  The
 	unit is tenths of a second.</para>
     </definition>
   </drbdsetup_option>
