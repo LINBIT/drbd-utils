@@ -1,0 +1,25 @@
+drbd@.service(7)
+================
+
+Name
+----
+drbd@.service - System unit to configure a specific DRBD resource
+
+Synopsis
+--------
+**drbd@**__RESNAME__**.service**
+
+Description
+-----------
+Do not confuse this with the global, unspecific **drbd.service**.
+
+This service unit is part of **drbd@**__RESNAME__**.target**,
+and used to configure/reconfigure/unconfigure the DRBD __RESNAME__
+on start/reload/stop.
+
+See Also
+--------
+linkgit:drbd@.target[7],
+linkgit:drbd-wait-promotable@.service[7],
+linkgit:drbd-lvchange@.service[7]
+

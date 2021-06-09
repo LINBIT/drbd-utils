@@ -1,0 +1,22 @@
+drbd-services@.target(7)
+========================
+
+Name
+----
+drbd-services@.target - System target unit to group services depending on a specific DRBD resource
+
+Synopsis
+--------
+**drbd-services@**__RESNAME__**.target**
+
+Description
+-----------
+
+This target is intended to be used by *drbd-reactor* as a "handle" for the services depending on the specific DRBD resource __RESNAME__.
+See *drbd-reactor* for how the dependency chain of services is meant to be defined and parameterized.
+
+See Also
+--------
+linkgit:drbd-reactor[1],
+linkgit:drbd-reactor.promoter[5]
+

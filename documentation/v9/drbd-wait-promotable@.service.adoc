@@ -1,0 +1,42 @@
+drbd-wait-promotable@.service(7)
+================================
+
+Name
+----
+drbd-wait-promotable@.service - Wait for DRBD to become promotable
+
+Synopsis
+--------
+**drbd-wait-promotable@**__RESNAME__**.service** - Wait for DRBD to become promotable
+
+Description
+-----------
+Usually you do not want to "hardcode" an unconditional promotion attempt of
+DRBD resources, because you usually cannot know a-priory whether this instance
+of DRBD will have access to good data (yet).
+
+If you try to promote (mount, use) DRBD before it can be certain to have access
+to good data, the attempt will fail in various ways, typically claiming "wrong
+medium type", "need access to good data".
+
+This unit will wait for the DRBD internal state to indicate that it has access
+to good data.  It does *not* monitor the state further, so this is good enough
+only to avoid trying to mount "too early" if you hard-code the mount attempt
+into your boot sequence, for example using an 'fstab' entry or similar.
+
+To monitor and react to DRBD state changes, use *drbd-reactor* or a cluster
+manager like *pacemaker*.
+
+If you `systemctl enable` this unit, it will be required by *drbd@.target*,
+so anything depending on that target, for example an fstab entry, will
+implicitly wait until this DRBD indicated it was "healthy enough" to be used.
+
+It can still timeout, in which case systemd sees this as a start failure, and
+starting of any dependencies (e.g. the mount) won't be attempted at this point.
+
+See Also
+--------
+linkgit:drbd@.service[7],
+linkgit:drbd@.target[7],
+linkgit:drbd-lvchange@.service[7]
+

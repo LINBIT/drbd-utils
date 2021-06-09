@@ -210,6 +210,10 @@ This packages includes the DRBD administration tools.
 %{_mandir}/man8/drbdadm-*
 %{_mandir}/man7/ocf_linbit_drbd.*
 %{_mandir}/man7/ocf_linbit_drbd-attr.*
+%{_mandir}/man7/drbd*@.service.*
+%{_mandir}/man7/drbd*@.target.*
+%{_mandir}/man7/drbd.service.*
+%{_mandir}/man7/ocf.ra@.service.*
 %{_mandir}/man5/drbd.conf-*
 %{_mandir}/man8/drbdmeta-*
 %if %{with drbdmon}

@@ -1,0 +1,29 @@
+drbd-lvchange@.service(7)
+=========================
+
+Name
+----
+drbd-lvchange@.service - System unit to (de)activate backing LVM2 LVs for a specific DRBD resource
+
+Synopsis
+--------
+**drbd-lvchange@**__RESNAME__**.service**
+
+Description
+-----------
+If you try to start (configure) a DRBD using the
+**drbd@**__RESNAME__**.service**, chances are that this fails because at the
+time its backing block devices are not (yet) available.
+
+If you know those backing devices are LVM2 LVs, enable this optional service,
+to add an explicit dependency on those LVs and try to activate them first.
+It will also de-activate them on stop.
+
+`systemctl enable drbd-lvchange@RESNAME.service`
+
+See Also
+--------
+linkgit:drbd@.service[7],
+linkgit:drbd@.target[7],
+linkgit:lvm[8], linkgit:lvchange[8]
+

@@ -1,0 +1,49 @@
+drbd@.target(7)
+===============
+
+Name
+----
+drbd@.target - System target unit indicating a configured (optionally: promotable) DRBD resource
+
+Synopsis
+--------
+drbd@.target
+
+Description
+-----------
+Usually you do not want to "hardcode" an unconditional promotion attempt of
+DRBD resources, because you usually cannot know a-priory whether this instance
+of DRBD will have access to good data (yet).
+
+Typical setups are using a cluster manager like *pacemaker* or the less feature rich
+but also less complex *drbd-reactor* to coordinate promotion attempts and service starts.
+
+But in situation where you "know" that you always want this node to promote and use DRBD
+and the peer(s) are never going to take over, but only used for "DR" purposes, then
+this target unit may be useful.
+
+It is intended to be used as dependency of any mount or other use of the specific DRBD
+resource. The implicit dependency on **drbd@**__RESNAME__**.service** will configure DRBD,
+an optional **drbd-lvchange@**__RESNAME__**.service** can be used to attempt to activate
+the backend logical volumes first. The optional (but in this scenario necessary)
+**drbd-wait-promotable@**__RESNAME__**.service** is then used to wait for DRBD to
+connect to its peers and establish access to good data.
+
+Example
+-------
+Assuming you have a DRBD resource named 'webdata', its backing devices being
+LVM logical volumes, with an +xfs+ on one volume showing up as '/dev/drbd0',
+this should make your boot sequence successfully mount that drbd to
+'/mnt/point' (unless DRBD really finds no access to good data in time, or some
+peer is already primary):
+
+-------------
+systemctl enable drbd-lvchange@webdata.service
+systemctl enable drbd-wait-promotable@webdata.service
+echo "/dev/drbdX /mnt/point xfs defaults,nofail,x-systemd.requires=drbd@webdata.target 0 0" >> /etc/fstab
+-------------
+
+See Also
+--------
+linkgit:drbd-reactor[1],
+linkgit:drbd-reactor.promoter[5]

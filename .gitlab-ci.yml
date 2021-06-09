@@ -3,7 +3,7 @@ stages:
   - test
 
 variables:
-  BUILD_HELPERS_VERSION: 330d8122fb0049cae469d3061292a1880127f0bb
+  BUILD_HELPERS_VERSION: dfbf85c26dd39ad1a88807b01fda1dc1d536abbb
   # we have to change the way GitLab CI clones the repository.
   # by default, it is shallow, which gives us a wrong commit count when
   # we do `git rev-list --count origin/master` below.

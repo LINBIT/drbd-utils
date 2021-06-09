@@ -52,6 +52,14 @@ else
 	$(XSLTPROC) \
 	$(XSLTPROC_MANPAGES_OPTIONS) \
 	$(MANPAGES_STYLESHEET) $<
+
+ASCIIDOCTOR  = asciidoctor -I. -rasciidoctor-extensions.rb
+ASCIIDOCTOR += -amansource=drbd-utils -amanmanual='DRBD Manual' -amanversion=$(VERSION)
+ASCIIDOCTOR += -aorgname='LINBIT HA Solutions GmbH https://linbit.com'
+
+%.xml: %.adoc
+	$(ASCIIDOCTOR) -d manpage -b docbook5 $<
+.PRECIOUS: $(patsubst %.adoc,%.xml,$(ADOC_MANPAGES))
 endif
 
 %.html: %.xml
@@ -132,6 +140,7 @@ ocf_linbit_drbd-attr.xml: ../../scripts/drbd-attr ../ra2refentry.xsl
 distclean:
 ifeq ($(make_doc),doc)
 	rm -f *.[578] manpage.links manpage.refs *~ manpage.log
+	rm -f $(patsubst %.adoc,%.xml,$(ADOC_MANPAGES))
 endif
 	rm -f *.ps.gz *.pdf *.ps *.html pod2htm*
 	rm -f $(FILES_REMOVE_ADD)
@@ -150,7 +159,7 @@ install:
 	set -e; for f in $(MANPAGES) ; do \
 		s=$${f##*.}; \
 		b=$${f%.[0-9]}; \
-		case $$f in ocf_linbit_drbd*.7) \
+		case $$f in *.7) \
 			install -v -D -m 644 $$f $(DESTDIR)$(mandir)/$(MANLANG)/man$$s/$$f ; \
 			continue ;; \
 		esac ; \

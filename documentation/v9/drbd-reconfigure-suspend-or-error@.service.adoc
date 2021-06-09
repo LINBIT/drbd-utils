@@ -1,0 +1,47 @@
+drbd-reconfigure-suspend-or-error@.service(7)
+=============================================
+
+Name
+----
+drbd-reconfigure-suspend-or-error@.service - System unit to re-configure specific DRBD aspects
+
+Synopsis
+--------
+**drbd-reconfigure-suspend-or-error@**__RESNAME__**.service**
+
+Description
+-----------
+If a disk fails or a replication link goes down and as a consequence DRBD loses
+"quorum" or access to good data, DRBD can be configured to either _suspend-io_
+or return _io-errors_.
+
+_io-errors_ allow file systems and applications to notice and stop themselves
+or be unmounted. The assumption is that some other node(s) will still have good
+data and some cluster manager or other monitoring entity will notice the
+situation and try to bring up services there.
+
+_suspend-io_ allows the problematic incident to be hidden from file systems and
+applications, they would just block until access to good data is restored. This
+can be useful to cope with supposedly short "network hickup" like incidents
+without causing service restarts.
+
+But if IO is "suspended" (blocked, frozen, also known as "un-interruptible
+sleep" or "D state"), applications cannot be killed, file systems cannot be
+unmounted.
+
+If some other node was told to take over services meanwhile,
+we need to demote DRBD on the "frozen" node before we can re-integrate it.
+
+In these scenarios it may be useful to configure DRBD for _suspend-io_ during
+normal operation, so it would mask intermittent problems, but if services had
+been taken over by some other partition of nodes in the storage cluster,
+reconfigure for _io-error_, to be able to bring down services and unmount file
+systems before trying to re-integrate this node.
+
+This service reconfigures __RESNAME__ for _suspend-io_ when started and for
+_io-error_ when stopped.
+
+You should test a lot and maybe talk to LINBIT support before using this.
+
+See also the
+link:https://linbit.com/drbd-user-guide/drbd-guide-9_0-en/[DRBD User's Guide]

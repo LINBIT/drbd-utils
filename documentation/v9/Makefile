@@ -32,6 +32,19 @@ ifeq ($(WITH_DRBDMON), yes)
 MANPAGES	+= drbdmon.8
 endif
 
+ADOC_MANPAGES :=
+ADOC_MANPAGES += drbd-lvchange@.service.adoc
+ADOC_MANPAGES += drbd-promote@.service.adoc
+ADOC_MANPAGES += drbd-reconfigure-suspend-or-error@.service.adoc
+ADOC_MANPAGES += drbd-services@.target.adoc
+ADOC_MANPAGES += drbd-wait-promotable@.service.adoc
+ADOC_MANPAGES += drbd.service.adoc
+ADOC_MANPAGES += drbd@.service.adoc
+ADOC_MANPAGES += drbd@.target.adoc
+ADOC_MANPAGES += ocf.ra@.service.adoc
+
+MANPAGES += $(patsubst %.adoc,%.7,$(ADOC_MANPAGES))
+
 FILES_IN_GIT_ADD = drbd.conf.xml.in drbd.xml \
 	drbdadm.xml drbdmeta.xml drbdsetup-options.xml \
 	drbdsetup.xml.in drbdmon.xml

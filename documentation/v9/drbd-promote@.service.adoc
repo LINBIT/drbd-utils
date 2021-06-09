@@ -1,0 +1,29 @@
+drbd-promote@.service(7)
+========================
+
+Name
+----
+drbd-promote@.service - System unit to promote a specific DRBD resource
+
+Synopsis
+--------
+**drbd-promote@**__RESNAME__**.service**
+
+Description
+-----------
+Usually you do not want to "hardcode" an unconditional promotion attempt of
+DRBD resources, because you usually cannot know a-priory whether this instance
+of DRBD will have access to good data (yet).
+
+So this is intended to be used for conditional promotion, for example using *drbd-reactor*
+to monitor DRBD internal states and react on specific state changes to try and bring up
+the **drbd-services@**__RESNAME__**.target**, starting with this unit and following
+the dependency chain of services as specified in the corresponding
+**drbd-reactor** **promoter** plugin configuration.
+
+You typically should not use this unit directly.
+
+See Also
+--------
+linkgit:drbd-reactor[1]
+linkgit:drbd-reactor.promoter[5]
