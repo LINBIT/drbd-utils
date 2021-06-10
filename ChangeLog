@@ -3,12 +3,14 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
-9.18.0-rc.1
+9.18.0
 -----------
  * build: remove rpm related targets
  * drbdsetup,v84: fix minor compile warnings
  * systemd: resource specific activation
  * systemd: drbd-reactor promoter templates
+ * doc: fix maximum ping timeout
+ * doc: add man pages for the systemd templates
 
 9.17.0
 --------
