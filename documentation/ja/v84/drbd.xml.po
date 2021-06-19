@@ -6,7 +6,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2018-11-02 13:05+0900\n"
+"POT-Creation-Date: 2021-06-20 04:37+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -25,11 +25,11 @@ msgstr "DRBD の起動と停止スクリプト"
 
 #. type: Content of: <refentry><refentryinfo>
 msgid ""
-"<productname>DRBD</productname> <productnumber>8.3.2</productnumber> "
-"<date>15 Oct 2008</date>"
+"<productname>DRBD</productname> <productnumber>8.4.11</productnumber> "
+"<date>20 Mar 2020</date>"
 msgstr ""
-"<productname>DRBD</productname> <productnumber>8.3.2</productnumber> "
-"<date>15 Oct 2008</date>"
+"<productname>DRBD</productname> <productnumber>8.4.11</productnumber> "
+"<date>20 Mar 2020</date>"
 
 #. type: Content of: <refentry><refmeta><manvolnum>
 msgid "8"
@@ -105,8 +105,8 @@ msgid "Version"
 msgstr "Version"
 
 #. type: Content of: <refentry><refsect1><simpara>
-msgid "This document was revised for version 8.3.2 of the DRBD distribution."
-msgstr "このドキュメントは DRBD バージョン 8.3.2 向けに改訂されている。"
+msgid "This document was revised for version 8.4.11 of the DRBD distribution."
+msgstr "このドキュメントは DRBD バージョン 8.4.11 向けに改訂されている。"
 
 #. type: Content of: <refentry><refsect1><title>
 msgid "Author"

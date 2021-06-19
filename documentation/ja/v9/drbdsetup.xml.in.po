@@ -6,7 +6,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2019-03-28 11:43+0900\n"
+"POT-Creation-Date: 2021-06-20 04:37+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -356,22 +356,72 @@ msgid ""
 "starts with a word that indicates the kind of event: <option>exists</option> "
 "for an existing object; <option>create</option>, <option>destroy</option>, "
 "and <option>change</option> if an object is created, destroyed, or changed; "
-"or <option>call</option> or <option>response</option> if an event handler is "
-"called or it returns.  The second word indicates the object the event "
-"applies to: <option>resource</option>, <option>device</option>, "
-"<option>connection</option>, <option>peer-device</option>, <option>helper</"
-"option>, or a dash (<option>-</option>) to indicate that the current state "
-"has been dumped completely."
+"<option>call</option> or <option>response</option> if an event handler is "
+"called or it returns; or <option>rename</option> when the name of an object "
+"is changed.  The second word indicates the object the event applies to: "
+"<option>resource</option>, <option>device</option>, <option>connection</"
+"option>, <option>peer-device</option>, <option>path</option>, "
+"<option>helper</option>, or a dash (<option>-</option>) to indicate that the "
+"current state has been dumped completely."
 msgstr ""
 "出力形式は、機械だけでなく人も読める形式である。各行は、イベントの種類を示す"
 "単語で始まる: <option>exists</option> は既存オブジェクトの場合; "
 "<option>create</option>, <option>destroy</option>, <option>change</option> は"
 "オブジェクトが作成、破棄、変更された場合; <option>call</option>, "
-"<option>response</option> はイベントハンドラが呼び出された、戻った場合。2 番"
-"目の単語は、イベントが適用されるオブジェクトを示す: <option>resource</"
-"option>, <option>device</option>, <option>connection</option>, <option>peer-"
-"device</option>, <option>helper</option>, 現在の状態が完全にダンプされたこと"
-"を示すための dash (<option>-</option>) 。"
+"<option>response</option> はイベントハンドラが呼び出された、戻った場合、"
+"<option>rename</option> はオブジェクトの名前が変更された場合。2 番目の単語"
+"は、イベントが適用されるオブジェクトを示す: <option>resource</option>, "
+"<option>device</option>, <option>connection</option>, <option>peer-device</"
+"option>, <option>helper</option>, 現在の状態が完全にダンプされたことを示すた"
+"めの dash (<option>-</option>) 。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><term>
+msgid "resource <option>may_promote:{yes|no}</option>"
+msgstr "resource <option>may_promote:{yes|no}</option>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"Whether promoting to primary is expected to succeed.  When <option>quorum</"
+"option> is enabled, this can be used to trigger failover. When "
+"<option>may_promote:yes</option> is reported on this node, then no writes "
+"are possible on any other node, which generally means that the application "
+"can be started on this node, even when it has been running on another."
+msgstr ""
+"プライマリへの昇格が成功すると予想されるかどうか。 <option>quorum</option> が"
+"有効になっている場合、これを使用してフェイルオーバーをトリガーできる。この"
+"ノードで <option>may_promote:yes</option> が報告されると、他のノードでは書き"
+"込みができなくなる。つまり、通常、アプリケーションが別のノードで実行されてい"
+"る場合でも、このノードでアプリケーションを起動できるようになる。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><term>
+msgid ""
+"resource <option>promotion_score:<replaceable>score</replaceable></option>"
+msgstr ""
+"resource <option>promotion_score:<replaceable>score</replaceable></option>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"An integer heuristic indicating the relative preference for promoting this "
+"resource. A higher score is better in terms of having local disks and having "
+"access to up-to-date data. The score may be positive even when some node is "
+"primary. It will be zero when promotion is impossible due to quorum or lack "
+"of any access to up-to-date data."
+msgstr ""
+"このリソースをプロモートするための相対的なヒューリスティック整数。ローカル"
+"ディスクがあり、最新のデータにアクセスできるという点では、スコアが高いほど優"
+"れている。一部のノードがプライマリである場合でも、スコアは正の場合がある。"
+"クォーラムまたは最新データへのアクセスがないためにプロモーションが不可能な場"
+"合は、0 になる。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"The remaining words identify the object and describe the state that the "
+"object is in. Some special keys are worth mentioning: <placeholder type="
+"\"variablelist\" id=\"0\"/>"
+msgstr ""
+"残りの単語はオブジェクトを識別し、オブジェクトが入っている状態を記述する。い"
+"くつかの特別なキーは言及する価値がある: <placeholder type=\"variablelist\" "
+"id=\"0\"/>"
 
 #. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><term>
 msgid "<option>--now</option>"
@@ -391,15 +441,33 @@ msgstr "<option>--poll</option>"
 
 #. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><listitem><para>
 msgid ""
-"This is completely ignored if <option>--now</option> is not given.  In "
-"combination with <option>--now</option> it prints the current state once and "
-"then reads on stdin. If a <option>n</option> is read, this triggers another "
-"run.  Newlines are ignored. Every other input terminates the command."
+"Read from stdin and update when <option>n</option> is read. Newlines are "
+"ignored. Every other input terminates the command."
 msgstr ""
-"<option>--now</option> が与えられていない場合は無視される。 <option>--now</"
-"option> と組み合わせて、現在の状態を一度出力した後、標準入力から読み込む。 "
-"<option>n</option> を読み込むと、別の実行を引き起こす。改行は無視される。他の"
-"すべての入力はコマンドを終了させる。"
+"stdin を読み込み、<option>n</option> キーが入力されたときに更新する。改行は無"
+"視され、他のすべての入力はコマンドを終了する。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"Without <option>--now</option>, changes are printed as usual. On each "
+"<option>n</option> the current state is fetched, but only changed objects "
+"are printed. This is useful with <option>--statistics</option> or <option>--"
+"full</option> because DRBD does not otherwise send updates when only the "
+"statistics change."
+msgstr ""
+"--now オプションがない場合は、出力を継続する。<option>n</option> キーごとに現"
+"在の状態がフェッチされるが、変更されたオブジェクトのみが出力される。これは、"
+"統計が変更された場合にのみしか DRBD が更新を送信しないため、<option>--"
+"statistics</option> または <option>--full</option> とともに使用すると便利であ"
+"る。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"In combination with <option>--now</option> the full state is printed on each "
+"<option>n</option>. No other changes are printed."
+msgstr ""
+"<option>--now</option> オプションとともに使用されると、完全な状態が "
+"<option>n</option> キーごとに出力される。その他の変更は出力されない。"
 
 #. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><term>
 msgid "<option>--statistics</option>"
@@ -409,14 +477,33 @@ msgstr "<option>--statistics</option>"
 msgid "Include statistics in the output."
 msgstr "統計情報を出力に含める。"
 
-#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><term>
+msgid "<option>--diff</option>"
+msgstr "<option>--diff</option>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><listitem><para>
 msgid ""
-"The remaining words identify the object and describe the state that he "
-"object is in.  Available options: <placeholder type=\"variablelist\" id="
-"\"0\"/>"
+"Write information in form of a diff between old and new state.  This helps "
+"simple tools to avoid (old) state tracking on their own."
 msgstr ""
-"残りの単語はオブジェクトを識別し、オブジェクトが入っている状態を記述する。利"
-"用可能なオプション: <placeholder type=\"variablelist\" id=\"0\"/>"
+"古い状態と新しい状態を diff 形式で情報を書き出す。状態追跡を必要とするツール"
+"に便利である。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><term>
+msgid "<option>--full</option>"
+msgstr "<option>--full</option>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"Write complete state information, especially on change events.  This enables "
+"<option>--statistics</option> and <option>--verbose</option>."
+msgstr ""
+"特に変更イベント関して完全な状態情報を書き出す。これは <option>--statistics</"
+"option> と <option>--verbose</option> を有効にする。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid "Available options: <placeholder type=\"variablelist\" id=\"0\"/>"
+msgstr "利用可能なオプション: <placeholder type=\"variablelist\" id=\"0\"/>"
 
 #. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><indexterm><secondary>
 msgid "get-gi"
@@ -461,6 +548,42 @@ msgstr ""
 "ローカルデータが非同期とマークされ、指定された対向ノードデバイスとの再同期が"
 "始まる。"
 
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><term>
+msgid "<option>--reset-bitmap=no</option>"
+msgstr "<option>--reset-bitmap=no</option>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"Usually an invalidate operation sets all bits in the bitmap to out-of-sync "
+"before beginning the resync from the peer. By giving <option>--reset-"
+"bitmap=no</option> DRBD will use the bitmap as it is.  Usually this is used "
+"after an online verify operation found differences in the backing devices."
+msgstr ""
+"通常、invalidate は対向ノードからの再同期を開始する前に、ビットマップのすべて"
+"のビットを out-of-sync に設定する。<option>--reset-bitmap=no</option> を指定"
+"すると、DRBD はビットマップをそのまま使用する。通常、これはオンライン検証で下"
+"位デバイスの違いが見つかった後に使用される。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"The <option>--reset-bitmap</option> option is available since DRBD kernel "
+"driver 9.0.29 and drbd-utils 9.17."
+msgstr ""
+"<option>--reset-bitmap</option> オプションは、DRBD カーネルドライバー 9.0.29 "
+"および drbd-utils9.17 以降で使用できる。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><term>
+msgid "<option>--sync-from-peer-node-id</option>"
+msgstr "<option>--sync-from-peer-node-id</option>"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"This option allows the caller to select the node to resync from.  if it is "
+"not gives, DRBD selects a suitable source node itself."
+msgstr ""
+"このオプションを指定すると、呼び出し元は再同期するノードを選択できる。指定し"
+"ない場合、DRBD は適切なソースノードを選択する。"
+
 #. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><indexterm><secondary>
 msgid "invalidate-remote"
 msgstr "invalidate-remote"
@@ -474,6 +597,18 @@ msgstr ""
 "対向ノードのリソースデータをローカルデータで置き換える。対向ノードデバイスの"
 "データは非同期にマークされ、ローカルノードから指定された対向ノードへの再同期"
 "が始まる。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para><variablelist><varlistentry><listitem><para>
+msgid ""
+"Usually an invalidate remote operation sets all bits in the bitmap to out-of-"
+"sync before beginning the resync to the peer. By giving <option>--reset-"
+"bitmap=no</option> DRBD will use the bitmap as it is.  Usually this is used "
+"after an online verify operation found differences in the backing devices."
+msgstr ""
+"通常、invalidate remote は対向ノードへの再同期を開始する前に、ビットマップの"
+"すべてのビットを out-of-sync に設定する。<option>--reset-bitmap=no</option> "
+"を指定すると、DRBD はビットマップをそのまま使用する。通常、これはオンライン検"
+"証で下位デバイスに違いが見つかった後に使用される。"
 
 #. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><indexterm><secondary>
 msgid "new-current-uuid"
@@ -1089,15 +1224,19 @@ msgid ""
 "Online verification compares each disk block on the local and peer node.  "
 "Blocks which differ between the nodes are marked as out-of-sync, but they "
 "are <emphasis>not</emphasis> automatically brought back into sync.  To bring "
-"them into sync, the resource must be disconnected and reconnected.  Progress "
-"can be monitored in the output of <command moreinfo=\"none\">drbdsetup "
-"status --statistics</command>.  Available options:"
+"them into sync, the <command>drbdsetup invalidate</command> or "
+"<command>drbdsetup invalidate-remote</command> with the <option>--reset-"
+"bitmap=no</option> option can be used.  Progress can be monitored in the "
+"output of <command moreinfo=\"none\">drbdsetup status --statistics</"
+"command>.  Available options:"
 msgstr ""
 "オンライン照合では、ローカルと対向ノードの各ディスクブロックを比較する。ノー"
 "ド間で異なるブロックは非同期としてマークされるが、 自動的に同期化<emphasis>さ"
-"れない</emphasis>。それらを同期させるには、リソースを切断して再接続する必要が"
-"ある。進行状況は、 <command moreinfo=\"none\">drbdsetup status --statistics</"
-"command> の出力で監視できる。利用可能なオプション:"
+"れない</emphasis>。それらを同期させるには、<command>drbdsetup invalidate</"
+"command> または <command>drbdsetup invalidate-remote</command> を <option>--"
+"reset-bitmap=no</option> とともに使用する。進行状況は、 <command moreinfo="
+"\"none\">drbdsetup status --statistics</command> の出力で監視できる。利用可能"
+"なオプション:"
 
 #. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><variablelist><varlistentry><term>
 msgid "<option>--start <replaceable>position</replaceable></option>"
@@ -1210,6 +1349,33 @@ msgid ""
 msgstr ""
 "このコマンドを使用するには、接続を解除する必要がある。対向ノードが後で再接続"
 "する場合、ビットマップベースの再同期は完全同期に変わる。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><indexterm><secondary>
+msgid "rename-resource"
+msgstr "rename-resource"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"Change the name of <option>resource</option> to <option>new_name</option> on "
+"the local node. Note that, since there is no concept of resource names in "
+"DRBD's network protocol, it is technically possible to have different names "
+"for a resource on different nodes. However, it is strongly recommended to "
+"issue the same <option>rename-resource</option> command on all nodes to have "
+"consistent naming across the cluster."
+msgstr ""
+"ローカルノードで <option>resource</option> の名前を <option>new_name</"
+"option> に変更する。DRBD のネットワークプロトコルにはリソース名の概念がないた"
+"め、技術的には異なるノードのリソースに異なる名前を付けることは可能である。た"
+"だし、クラスタ全体で一貫した名前を付けて、すべてのノードで同じ "
+"<option>rename-resource</option> コマンドを発行することを推奨する。"
+
+#. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
+msgid ""
+"A <option>rename</option> event will be issued on the <option>events2</"
+"option> stream to notify users of the new name."
+msgstr ""
+"新しい名前をユーザーに通知するために、<option>events2</option> ストリームで "
+"<option>rename</option> イベントが発行される。"
 
 #. type: Content of: <refentry><refsect1><title>
 msgid "Examples"

@@ -6,7 +6,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2018-11-02 13:05+0900\n"
+"POT-Creation-Date: 2021-06-20 04:37+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -25,11 +25,11 @@ msgstr "デバイスをプライマリに設定し、ファイルシステムを
 
 #. type: Content of: <refentry><refentryinfo>
 msgid ""
-"<date>15 Oct 2008</date> <productname>DRBD</productname> "
-"<productnumber>8.3.2</productnumber>"
+"<date>20 Mar 2020</date> <productname>DRBD</productname> "
+"<productnumber>8.4.11</productnumber>"
 msgstr ""
-"<date>15 Oct 2008</date> <productname>DRBD</productname> "
-"<productnumber>8.3.2</productnumber>"
+"<date>20 Mar 2020</date> <productname>DRBD</productname> "
+"<productnumber>8.4.11</productnumber>"
 
 #. type: Content of: <refentry><refmeta><manvolnum>
 msgid "8"

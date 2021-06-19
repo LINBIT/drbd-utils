@@ -6,7 +6,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2018-11-02 13:05+0900\n"
+"POT-Creation-Date: 2021-06-20 04:37+0900\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1612,6 +1612,48 @@ msgid "This option is available since 8.4.7."
 msgstr "このオプションは 8.4.7 から有効である。"
 
 #. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
+msgid ""
+"<option>--disable-write-same <group choice=\"req\" rep=\"norepeat\"> <arg "
+"choice=\"plain\" rep=\"norepeat\">yes</arg> <arg choice=\"plain\" rep="
+"\"norepeat\">no</arg> </group></option>"
+msgstr ""
+"<option>--disable-write-same <group choice=\"req\" rep=\"norepeat\"> <arg "
+"choice=\"plain\" rep=\"norepeat\">yes</arg> <arg choice=\"plain\" rep="
+"\"norepeat\">no</arg> </group></option>"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para><indexterm><secondary>
+msgid "disable-write-same"
+msgstr "disable-write-same"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"<placeholder type=\"indexterm\" id=\"0\"/> Some disks announce WRITE_SAME "
+"support to the kernel but fail with an I/O error upon actually receiving "
+"such a request. This mostly happens when using virtualized disks -- notably, "
+"this behavior has been observed with VMware's virtual disks."
+msgstr ""
+"<placeholder type=\"indexterm\" id=\"0\"/>一部のディスクは、WRITE_SAME サポー"
+"トをカーネルに通知するが、実際にそのようなリクエストを受信すると、I/O エラー"
+"で失敗する。これは主に、仮想化されたディスクを使用しているときに発生する。特"
+"に、この動作は VMware の仮想ディスクで観察されている。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"When <option>disable-write-same</option> is set to <option>yes</option>, "
+"WRITE_SAME detection is manually overriden and support is disabled."
+msgstr ""
+"<option>disable-write-same</option> を <option>yes</option> に設定すると、"
+"WRITE_SAME サポートが手動で無効にできる。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
+msgid ""
+"The default value of <option>disable-write-same</option> is <option>no</"
+"option>. This option is available since 8.4.7."
+msgstr ""
+"<option>disable-write-same</option> のデフォルト値は <option>no</option> であ"
+"る。このオプションは 8.4.7 から有効である。"
+
+#. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
 msgid "<option>read-balancing <replaceable>method</replaceable></option>"
 msgstr "<option>read-balancing <replaceable>method</replaceable></option>"
 
@@ -1638,11 +1680,11 @@ msgstr ""
 
 #. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
 msgid ""
-"The default value of is <option>prefer-local</option>.  This option is "
-"available since 8.4.1."
+"The default value of <option>read-balancing</option> is <option>prefer-"
+"local</option>.  This option is available since 8.4.1."
 msgstr ""
-"デフォルトは <option>prefer-local</option> である。このオプションは 8.4.1 か"
-"ら有効である。"
+"<option>read-balancing</option> のデフォルト値は <option>prefer-local</"
+"option> である。このオプションは 8.4.1 から有効である。"
 
 #. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
 msgid "<option>rs-discard-granularity <replaceable>byte</replaceable></option>"
@@ -1679,8 +1721,12 @@ msgstr ""
 "コマンドの後に、ゼロを読み戻す場合にのみアクティブになる。"
 
 #. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
-msgid "The default value of is 0. This option is available since 8.4.7."
-msgstr "デフォルト値は 0 である。このオプションは 8.4.7 から有効である。"
+msgid ""
+"The default value of <option>rs-discard-granularity</option> is 0. This "
+"option is available since 8.4.7."
+msgstr ""
+"<option>rs-discard-granularity</option> のデフォルト値は 0 である。このオプ"
+"ションは 8.4.7 から有効である。"
 
 #. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
 msgid "<option>sndbuf-size <replaceable>size</replaceable></option>"
@@ -2850,11 +2896,11 @@ msgstr ""
 
 #. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><listitem><para>
 msgid ""
-"<replaceable>Min_rate</replaceable> has 4096 (4MiB/s) and KiB/s as default "
-"unit."
+"The default value of <replaceable>min_rate</replaceable> is 250, in units of "
+"KiB/s"
 msgstr ""
-"<replaceable>Min_rate</replaceable> のデフォルト値は 4096(4MiB/s) であり、 "
-"KiB/s 単位で指定する。"
+"<replaceable>min_rate</replaceable> のデフォルト値は 250 であり、KiB/s 単位で"
+"指定する。"
 
 #. type: Content of: <refentry><refsect1><refsect2><variablelist><varlistentry><term>
 msgid ""
