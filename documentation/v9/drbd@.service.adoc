@@ -17,6 +17,12 @@ This service unit is part of **drbd@**__RESNAME__**.target**,
 and used to configure/reconfigure/unconfigure the DRBD __RESNAME__
 on start/reload/stop.
 
+Since we want the network to be online before configuring DRBD,
+you may need to enable one of these:
+
+`systemctl enable systemd-networkd-wait-online.service` or
+`systemctl enable NetworkManager-wait-online.service`.
+
 See Also
 --------
 linkgit:drbd@.target[7],

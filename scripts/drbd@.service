@@ -3,6 +3,19 @@ Description= (Re)configure DRBD resource %I
 
 PartOf=drbd@%i.target
 
+# We really want the network to be online.
+# You may need to do one of
+# systemctl enable NetworkManager-wait-online.service
+# systemctl enable systemd-networkd-wait-online.service
+Wants=network-online.target sshd.service
+After=network-online.target nss-lookup.target sshd.service
+# If drbd-proxy is used, we want it to be running already.
+After=drbdproxy.service
+
+# This is not intended to be combined with pacemaker,
+# but if combined, it should be ordered before pacemaker.
+Before=pacemaker.service
+
 #
 # in an instantiation of this service,
 # you may want to add "BindsTo=/dev/vg/lv" and "After=" for all backing devices
