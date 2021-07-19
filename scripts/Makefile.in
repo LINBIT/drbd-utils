@@ -87,9 +87,11 @@ ifeq ($(subst both,systemd,$(initscripttype)),systemd)
 	install -d $(DESTDIR)$(systemdunitdir)
 	install -m 644 drbd.service $(DESTDIR)$(systemdunitdir)/
 	install -m 644 $(SYSTEMD_TEMPLATES) $(DESTDIR)$(systemdunitdir)/
-	install -d $(DESTDIR)/lib/drbd/
-	install -m 755 drbd $(DESTDIR)/lib/drbd/
-	install -m 755 ocf.ra.wrapper.sh $(DESTDIR)/lib/drbd/
+	install -d $(DESTDIR)/lib/drbd/scripts
+	install -m 755 drbd $(DESTDIR)/lib/drbd/scripts
+	install -m 755 drbd-service-shim.sh $(DESTDIR)/lib/drbd/scripts
+	install -m 755 drbd-wait-promotable.sh $(DESTDIR)/lib/drbd/scripts
+	install -m 755 ocf.ra.wrapper.sh $(DESTDIR)/lib/drbd/scripts
 	install -d $(DESTDIR)$(tmpfilesdir)/
 	install -m 444 drbd.tmpfiles.conf $(DESTDIR)$(tmpfilesdir)/drbd.conf
 endif

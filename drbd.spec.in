@@ -197,8 +197,10 @@ This packages includes the DRBD administration tools.
 %{_unitdir}/drbd@.target
 %{_unitdir}/ocf.ra@.service
 %{_tmpfilesdir}/drbd.conf
-/lib/drbd/drbd
-/lib/drbd/ocf.ra.wrapper.sh
+/lib/drbd/scripts/drbd
+/lib/drbd/scripts/drbd-service-shim.sh
+/lib/drbd/scripts/drbd-wait-promotable.sh
+/lib/drbd/scripts/ocf.ra.wrapper.sh
 %endif
 %config(noreplace) %{_sysconfdir}/drbd.conf
 %dir %{_sysconfdir}/drbd.d

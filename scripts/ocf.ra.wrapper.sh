@@ -69,12 +69,12 @@ trap "should_stop=true" TERM
 
 sleep=${monitor_interval:=30}
 if [[ $sleep != [1-9]* ]] || [[ $sleep = *[!0-9]* ]] ; then
-	echo >&2 "<3>invalid monitor_inverval '$monitor_inverval', set to default"
+	echo >&2 "<3>invalid monitor_interval '$monitor_interval', set to default"
 	sleep=30
 fi
 
 "${AGENT}" start || exit $?
-sd_notify READY=1 STATUS="calling monitor every $monitor_inverval seconds"
+sd_notify READY=1 STATUS="calling monitor every $monitor_interval seconds"
 
 agent_monitor() {
 	local out_and_err ex

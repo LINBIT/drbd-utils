@@ -12,11 +12,11 @@ RemainAfterExit=yes
 # A check for INIT_VERSION already exists, just set it to something.
 Environment=INIT_VERSION=systemd
 
-ExecStart=/lib/drbd/drbd start
-ExecStop=/lib/drbd/drbd stop
+ExecStart=/lib/drbd/scripts/drbd start
+ExecStop=/lib/drbd/scripts/drbd stop
 
 # Re-adjust everything on reload
-ExecReload=/lib/drbd/drbd reload
+ExecReload=/lib/drbd/scripts/drbd reload
 
 [Install]
 WantedBy=multi-user.target

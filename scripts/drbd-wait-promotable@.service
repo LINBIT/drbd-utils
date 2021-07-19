@@ -6,11 +6,11 @@ Before=drbd@%i.target
 
 [Service]
 SyslogIdentifier=drbd-%I
-Type=notify
+Type=oneshot
 
 # on first start, wait for access to "good data"
 # let systemd handle timeouts
-ExecStart=/bin/bash -c 'while read line ; do [[ $line = *may_promote:yes* ]] || continue; systemd-notify READY=1; break; done < <( exec drbdsetup events2 %I )'
+ExecStart=/lib/drbd/scripts/drbd-wait-promotable.sh %I
 RemainAfterExit=yes
 
 [Install]
