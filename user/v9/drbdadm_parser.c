@@ -539,8 +539,8 @@ static void pe_options(struct context_def *options_def)
 	pe_expected(buffer);
 }
 
-static struct field_def *find_field(bool *no_prefix, struct context_def *options_def,
-				    const char *name)
+struct field_def *find_field(bool *no_prefix, const struct context_def *options_def,
+			     const char *name)
 {
 	struct field_def *field;
 	bool ignored_no_prefix;

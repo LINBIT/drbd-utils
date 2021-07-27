@@ -444,6 +444,8 @@ int parse_proxy_options_section(struct d_proxy_info **proxy);
 struct peer_device *find_peer_device(struct connection *conn, int vnr);
 bool peer_diskless(struct peer_device *peer_device);
 
+struct field_def *find_field(bool *no_prefix, const struct context_def *options_def, const char *name);
+
 extern char *config_file;
 extern char *config_save;
 extern int config_valid;
