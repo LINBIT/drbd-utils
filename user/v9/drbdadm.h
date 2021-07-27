@@ -419,11 +419,10 @@ extern void expand_common(void);
 extern void global_validate_maybe_expand_die_if_invalid(int expand, enum pp_flags flags);
 extern struct d_option *new_opt(char *name, char *value);
 extern int hostname_in_list(const char *name, struct names *names);
-extern char *_names_to_str(char* buffer, int buffer_size, struct names *names);
 extern char *_names_to_str_c(char* buffer, int buffer_size, struct names *names, char c);
-#define NAMES_STR_SIZE 255
-#define names_to_str(N) _names_to_str(alloca(NAMES_STR_SIZE+1), NAMES_STR_SIZE, N)
-#define names_to_str_c(N, C) _names_to_str_c(alloca(NAMES_STR_SIZE+1), NAMES_STR_SIZE, N, C)
+#define names_to_str_c_max(NAMES, C, MAX_SIZE) _names_to_str_c(alloca(MAX_SIZE), MAX_SIZE, NAMES, C)
+#define names_to_str(NAMES) names_to_str_c_max(NAMES, ' ', 4096)
+#define names_to_str_c(NAMES, C) names_to_str_c_max(NAMES, C, 4096)
 extern struct d_name *names_from_str(char* str);
 extern struct d_volume *volume_by_vnr(struct volumes *volumes, int vnr);
 extern void free_names(struct names *names);

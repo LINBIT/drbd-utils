@@ -95,11 +95,6 @@ char *_names_to_str_c(char* buffer, int buffer_size, struct names *names, char c
 	return buffer;
 }
 
-char *_names_to_str(char* buffer, int buffer_size, struct names *names)
-{
-	return _names_to_str_c(buffer, buffer_size, names, ' ');
-}
-
 /*
  * Determine if two hostnames are either fully qualified and equal,
  * or one or both do not contain a domain name and the host names
