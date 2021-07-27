@@ -64,29 +64,40 @@ struct d_name *names_from_str(char* str)
 	return names;
 }
 
-char *_names_to_str_c(char* buffer, struct names *names, char c)
+char *_names_to_str_c(char* buffer, int buffer_size, struct names *names, char c)
 {
-	int n = 0;
 	struct d_name *name;
+	char *b = buffer;
 
 	if (STAILQ_EMPTY(names)) {
-		snprintf(buffer, NAMES_STR_SIZE, "UNKNOWN");
+		snprintf(b, buffer_size, "UNKNOWN");
 		return buffer;
 	}
 
 	name = STAILQ_FIRST(names);
-	while (1) {
-		n += snprintf(buffer + n, NAMES_STR_SIZE - n, "%s", name->name);
+	while (buffer_size > 0) {
+		int n;
+
+		n = snprintf(b, buffer_size, "%s", name->name);
+		if (n < 0 || n >= buffer_size)
+			break;
+		b += n;
+		buffer_size -= n;
 		name = STAILQ_NEXT(name, link);
 		if (!name)
-			return buffer;
-		n += snprintf(buffer + n, NAMES_STR_SIZE - n, "%c", c);
+			break;
+		n = snprintf(b, buffer_size, "%c", c);
+		if (n < 0)
+			break;
+		b += n;
+		buffer_size -= n;
 	}
+	return buffer;
 }
 
-char *_names_to_str(char* buffer, struct names *names)
+char *_names_to_str(char* buffer, int buffer_size, struct names *names)
 {
-	return _names_to_str_c(buffer, names, ' ');
+	return _names_to_str_c(buffer, buffer_size, names, ' ');
 }
 
 /*
