@@ -739,7 +739,7 @@ struct field_class fc_string = {
 
 #define STRING_MAX_LEN(f, l)								\
 	STRING(f),									\
-	.u = { .s = { .max_len = l } } }
+	.u = { .s = { .max_len = l } }
 
 #define ENUM_NUM(f, d, num_min, num_max)			\
 	.nla_type = T_ ## f,					\
@@ -874,8 +874,8 @@ const struct en_map quorum_map[] = {
           .unit = "bytes" },								\
 	{ "ko-count", NUMERIC(ko_count, KO_COUNT) },					\
 	{ "allow-two-primaries", BOOLEAN(two_primaries, ALLOW_TWO_PRIMARIES) },		\
-	{ "cram-hmac-alg", STRING(cram_hmac_alg) },					\
-	{ "shared-secret", STRING_MAX_LEN(shared_secret, SHARED_SECRET_MAX), 		\
+	{ "cram-hmac-alg", STRING_MAX_LEN(cram_hmac_alg, SHARED_SECRET_MAX) },		\
+	{ "shared-secret", STRING_MAX_LEN(shared_secret, SHARED_SECRET_MAX) },		\
 	{ "after-sb-0pri", ENUM(after_sb_0p, AFTER_SB_0P) },				\
 	{ "after-sb-1pri", ENUM(after_sb_1p, AFTER_SB_1P) },				\
 	{ "after-sb-2pri", ENUM(after_sb_2p, AFTER_SB_2P) },				\
@@ -883,22 +883,22 @@ const struct en_map quorum_map[] = {
 	{ "rr-conflict", ENUM(rr_conflict, RR_CONFLICT) },				\
 	{ "ping-timeout", NUMERIC(ping_timeo, PING_TIMEO),				\
           .unit = "1/10 seconds" },							\
-	{ "data-integrity-alg", STRING(integrity_alg) },				\
+	{ "data-integrity-alg", STRING_MAX_LEN(integrity_alg, SHARED_SECRET_MAX) },	\
 	{ "tcp-cork", BOOLEAN(tcp_cork, TCP_CORK) },					\
 	{ "on-congestion", ENUM(on_congestion, ON_CONGESTION) },			\
 	{ "congestion-fill", NUMERIC(cong_fill, CONG_FILL),				\
           .unit = "bytes" },								\
 	{ "congestion-extents", NUMERIC(cong_extents, CONG_EXTENTS) },			\
-	{ "csums-alg", STRING(csums_alg) },						\
+	{ "csums-alg", STRING_MAX_LEN(csums_alg, SHARED_SECRET_MAX) },			\
 	{ "csums-after-crash-only", BOOLEAN(csums_after_crash_only,			\
 						CSUMS_AFTER_CRASH_ONLY) },		\
-	{ "verify-alg", STRING(verify_alg) },						\
+	{ "verify-alg", STRING_MAX_LEN(verify_alg, SHARED_SECRET_MAX) },		\
 	{ "use-rle", BOOLEAN(use_rle, USE_RLE) },					\
 	{ "socket-check-timeout", NUMERIC(sock_check_timeo, SOCKET_CHECK_TIMEO) },	\
 	{ "fencing", ENUM(fencing_policy, FENCING) },					\
 	{ "max-buffers", NUMERIC(max_buffers, MAX_BUFFERS) },				\
 	{ "allow-remote-read", BOOLEAN(allow_remote_read, ALLOW_REMOTE_READ) },					\
-	{ "_name", STRING(name) }
+	{ "_name", STRING_MAX_LEN(name, SHARED_SECRET_MAX) }
 
 struct context_def disk_options_ctx = {
 	NLA_POLICY(disk_conf),
@@ -951,7 +951,7 @@ struct context_def new_peer_cmd_ctx = {
 	NLA_POLICY(net_conf),
 	.nla_type = DRBD_NLA_NET_CONF,
 	.fields = {
-		{ "transport", STRING(transport_name) },
+		{ "transport", STRING_MAX_LEN(transport_name, SHARED_SECRET_MAX) },
 		CHANGEABLE_NET_OPTIONS,
 		{ } },
 };
@@ -1008,7 +1008,7 @@ struct context_def resource_options_ctx = {
 	NLA_POLICY(res_opts),
 	.nla_type = DRBD_NLA_RESOURCE_OPTS,
 	.fields = {
-		{ "cpu-mask", STRING(cpu_mask) },
+		{ "cpu-mask", STRING_MAX_LEN(cpu_mask, DRBD_CPU_MASK_SIZE) },
 		{ "on-no-data-accessible", ENUM(on_no_data, ON_NO_DATA) },
 		{ "auto-promote", BOOLEAN(auto_promote, AUTO_PROMOTE) },
 		{ "peer-ack-window", NUMERIC(peer_ack_window, PEER_ACK_WINDOW), .unit = "bytes" },

@@ -1111,7 +1111,7 @@ static void add_setup_options(char **argv, int *argcp, const struct context_def 
 	*argcp = argc;
 }
 
-#define make_option(ARG, OPT) do {						\
+#define make_option(ARG, OPT, OPTIONS_DEF) do {					\
 	struct d_name *b_opt; 							\
 	bool found = false; 							\
 	STAILQ_FOREACH(b_opt, &backend_options, link) {				\
@@ -1121,17 +1121,23 @@ static void add_setup_options(char **argv, int *argcp, const struct context_def 
 		} 								\
 	} 									\
 	if (!found) {								\
-		if(OPT->value)							\
-			ARG = ssprintf("--%s=%s", OPT->name, OPT->value);	\
-		else  								\
+		if(OPT->value) {						\
+			int w = 512;						\
+			struct field_def *field =				\
+				find_field(NULL, OPTIONS_DEF, OPT->name);	\
+			if (field && field->ops == &fc_string)			\
+				w = field->u.s.max_len;				\
+			ARG = ssprintf("--%s=%.*s", OPT->name, w, OPT->value);	\
+		} else {							\
 			ARG = ssprintf("--%s", OPT->name);			\
+		}								\
 	}									\
 } while (0)
 
-#define make_options(ARG, OPTIONS) do {					\
+#define make_options(ARG, OPTIONS, OPTIONS_DEF) do {			\
 	struct d_option *option;					\
 	STAILQ_FOREACH(option, OPTIONS, link) 				\
-		make_option(ARG, option);				\
+		make_option(ARG, option, OPTIONS_DEF);			\
 } while (0)
 
 #define ssprintf_addr(A)					\
@@ -1176,9 +1182,9 @@ static int adm_attach(const struct cfg_ctx *ctx)
 		argv[NA(argc)] = "--set-defaults";
 		STAILQ_FOREACH(option, &ctx->vol->disk_options, link)
 			if (!option->adj_skip)
-				make_option(argv[NA(argc)], option);
+				make_option(argv[NA(argc)], option, ctx->cmd->drbdsetup_ctx);
 	} else
-		make_options(argv[NA(argc)], &ctx->vol->disk_options);
+		make_options(argv[NA(argc)], &ctx->vol->disk_options, ctx->cmd->drbdsetup_ctx);
 	add_setup_options(argv, &argc, ctx->cmd->drbdsetup_ctx);
 	argv[NA(argc)] = 0;
 
@@ -1249,7 +1255,7 @@ static int adm_resource(const struct cfg_ctx *ctx)
 	if (reset)
 		argv[NA(argc)] = "--set-defaults";
 	if (reset || do_new_resource)
-		make_options(argv[NA(argc)], &res->res_options);
+		make_options(argv[NA(argc)], &res->res_options, ctx->cmd->drbdsetup_ctx);
 	add_setup_options(argv, &argc, ctx->cmd->drbdsetup_ctx);
 	argv[NA(argc)] = NULL;
 
@@ -1769,7 +1775,7 @@ int adm_peer_device(const struct cfg_ctx *ctx)
 	if (reset)
 		argv[NA(argc)] = "--set-defaults";
 
-	make_options(argv[NA(argc)], &peer_device->pd_options);
+	make_options(argv[NA(argc)], &peer_device->pd_options, ctx->cmd->drbdsetup_ctx);
 	add_setup_options(argv, &argc, ctx->cmd->drbdsetup_ctx);
 	argv[NA(argc)] = 0;
 
@@ -1815,7 +1821,7 @@ static int adm_new_peer(const struct cfg_ctx *ctx)
 	if (!strncmp(ctx->cmd->name, "net-options", 11))
 		del_opt(&conn->net_options, "transport");
 
-	make_options(argv[NA(argc)], &conn->net_options);
+	make_options(argv[NA(argc)], &conn->net_options, ctx->cmd->drbdsetup_ctx);
 
 	add_setup_options(argv, &argc, ctx->cmd->drbdsetup_ctx);
 	argv[NA(argc)] = 0;
@@ -2106,7 +2112,7 @@ static int adm_wait_c(const struct cfg_ctx *ctx)
 		argv[argc] = ssprintf("%lu", timeout);
 		argc++;
 	} else
-		make_options(argv[NA(argc)], &res->startup_options);
+		make_options(argv[NA(argc)], &res->startup_options, ctx->cmd->drbdsetup_ctx);
 	argv[NA(argc)] = 0;
 
 	rv = m_system_ex(argv, SLEEPS_FOREVER, res->name);
@@ -2505,7 +2511,7 @@ static int adm_wait_ci(const struct cfg_ctx *ctx)
 		argv[NA(argc)] = drbdsetup;
 		argv[NA(argc)] = "wait-connect-resource";
 		argv[NA(argc)] = res->name;
-		make_options(argv[NA(argc)], &res->startup_options);
+		make_options(argv[NA(argc)], &res->startup_options, ctx->cmd->drbdsetup_ctx);
 		argv[NA(argc)] = 0;
 
 		m__system(argv, RETURN_PID, res->name, &pids[i++], NULL, NULL);
