@@ -17,6 +17,6 @@ RemainAfterExit=yes
 
 # (ab)using systemd features
 # if we cannot configure and promote, that's a condition, not a failure
-ExecCondition=/usr/sbin/drbdsetup primary %I
+ExecCondition=/lib/drbd/scripts/drbd-service-shim.sh primary %I
 
-ExecStop=/usr/sbin/drbdsetup secondary %I
+ExecStop=/lib/drbd/scripts/drbd-service-shim.sh secondary %I

@@ -14,6 +14,12 @@ adjust)
 down)
   exec /usr/sbin/drbdsetup down "$2"
   ;;
+primary)
+  exec /usr/sbin/drbdsetup primary "$2"
+  ;;
+secondary)
+  exec /usr/sbin/drbdsetup secondary "$2"
+  ;;
 *)
   echo "Unknown verb $1" >&2
   exit 1
