@@ -741,6 +741,11 @@ static void print_peer_device_changes(const char *prefix, const char *action_new
 	bool disk_changed;
 	bool resync_suspended_changed;
 	bool statistics_changed;
+	bool intentional = new_peer_device->info.peer_is_intentional_diskless == 1;
+	bool old_intentional = 0;
+
+	if (old_peer_device)
+		old_intentional = old_peer_device->info.peer_is_intentional_diskless == 1;
 
 	repl_state_changed = !old_peer_device || new_peer_device->info.peer_repl_state != old_peer_device->info.peer_repl_state;
 	disk_changed = !old_peer_device || new_peer_device->info.peer_disk_state != old_peer_device->info.peer_disk_state;
@@ -766,12 +771,8 @@ static void print_peer_device_changes(const char *prefix, const char *action_new
 			printf(" replication:%s%s%s",
 			       REPL_COLOR_STRING(new_peer_device->info.peer_repl_state));
 	}
-	if (disk_changed || opt_fullch) {
-		bool intentional = new_peer_device->info.peer_is_intentional_diskless == 1;
+	if (disk_changed || opt_fullch || intentional != old_intentional) {
 		if (opt_diff) {
-			bool old_intentional = 0; /* only used if we have an old_peer_device */
-			if (old_peer_device)
-				old_intentional = old_peer_device->info.peer_is_intentional_diskless == 1;
 
 			DIFF_COLOR(old_peer_device, "peer-disk",
 					DISK_COLOR_STRING(old_peer_device->info.peer_disk_state, old_intentional, false),
