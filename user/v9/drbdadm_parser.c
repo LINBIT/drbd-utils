@@ -493,7 +493,7 @@ static void pe_valid_enums(const char **map, int nr_enums)
 	err("Allowed values are: %s\n", buffer);
 }
 
-static void pe_field(struct field_def *field, enum check_codes e, char *value)
+static void pe_field(const struct field_def *field, enum check_codes e, char *value)
 {
 	static const char *err_strings[] = {
 		[CC_NOT_AN_ENUM] = "not valid",
@@ -522,7 +522,7 @@ static void pe_field(struct field_def *field, enum check_codes e, char *value)
 
 static void pe_options(struct context_def *options_def)
 {
-	struct field_def *field;
+	const struct field_def *field;
 	char *buffer, *p;
 	int size = 0;
 
@@ -539,10 +539,10 @@ static void pe_options(struct context_def *options_def)
 	pe_expected(buffer);
 }
 
-struct field_def *find_field(bool *no_prefix, const struct context_def *options_def,
+const struct field_def *find_field(bool *no_prefix, const struct context_def *options_def,
 			     const char *name)
 {
-	struct field_def *field;
+	const struct field_def *field;
 	bool ignored_no_prefix;
 
 	if (no_prefix == NULL)
@@ -563,7 +563,7 @@ struct field_def *find_field(bool *no_prefix, const struct context_def *options_
 	return NULL;
 }
 
-static char *parse_option_value(struct field_def *field_def, bool no_prefix)
+static char *parse_option_value(const struct field_def *field_def, bool no_prefix)
 {
 	char *value;
 	int token;
@@ -589,7 +589,7 @@ static char *parse_option_value(struct field_def *field_def, bool no_prefix)
 /* The syncer section is deprecated. Distribute the options to the disk or net options. */
 void parse_options_syncer(struct d_resource *res)
 {
-	struct field_def *field_def;
+	const struct field_def *field_def;
 	bool no_prefix;
 	char *text, *value;
 	int token;
@@ -633,7 +633,7 @@ static struct options __parse_options(struct context_def *options_def,
 				      void *delegate_context)
 {
 	struct options options = STAILQ_HEAD_INITIALIZER(options);
-	struct field_def *field_def;
+	const struct field_def *field_def;
 	char *value;
 	bool no_prefix;
 	int token;
@@ -669,7 +669,7 @@ static struct options parse_options(struct context_def *options_def)
 static void insert_pd_options_delegate(void *ctx)
 {
 	struct options *options = ctx;
-	struct field_def *field_def;
+	const struct field_def *field_def;
 	bool no_prefix;
 	char *value;
 
@@ -1666,7 +1666,7 @@ void parse_connection_mesh(struct d_resource *res, enum pr_flags flags)
 
 struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 {
-	struct field_def *proto_f;
+	const struct field_def *proto_f;
 	char *proto_v;
 	struct d_resource* res;
 	struct names host_names;

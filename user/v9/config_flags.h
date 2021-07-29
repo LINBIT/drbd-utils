@@ -20,13 +20,13 @@ enum check_codes {
 };
 
 struct field_class {
-	bool (*is_default)(struct field_def *, const char *);
-	bool (*is_equal)(struct field_def *, const char *, const char *);
-	const char *(*get)(struct context_def *, struct field_def *, struct nlattr *);
-	bool (*put)(struct context_def *, struct field_def *, struct msg_buff *, const char *);
-	int (*usage)(struct field_def *, char *, int);
-	void (*describe_xml)(struct field_def *);
-	enum check_codes (*check)(struct field_def *, const char*);
+	bool (*is_default)(const struct field_def *, const char *);
+	bool (*is_equal)(const struct field_def *, const char *, const char *);
+	const char *(*get)(struct context_def *, const struct field_def *, struct nlattr *);
+	bool (*put)(struct context_def *, const struct field_def *, struct msg_buff *, const char *);
+	int (*usage)(const struct field_def *, char *, int);
+	void (*describe_xml)(const struct field_def *);
+	enum check_codes (*check)(const struct field_def *, const char*);
 };
 
 struct field_def {
