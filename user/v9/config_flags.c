@@ -46,7 +46,7 @@ static int enum_string_to_int(const char **map, int size, const char *value,
 	return -1;
 }
 
-static bool enum_is_default(struct field_def *field, const char *value)
+static bool enum_is_default(const struct field_def *field, const char *value)
 {
 	int n;
 
@@ -54,22 +54,22 @@ static bool enum_is_default(struct field_def *field, const char *value)
 	return n == field->u.e.def;
 }
 
-static bool enum_is_equal(struct field_def *field, const char *a, const char *b)
+static bool enum_is_equal(const struct field_def *field, const char *a, const char *b)
 {
 	return !strcmp(a, b);
 }
 
-static int type_of_field(struct context_def *ctx, struct field_def *field)
+static int type_of_field(struct context_def *ctx, const struct field_def *field)
 {
 	return ctx->nla_policy[__nla_type(field->nla_type)].type;
 }
 
-static int len_of_field(struct context_def *ctx, struct field_def *field)
+static int len_of_field(struct context_def *ctx, const struct field_def *field)
 {
 	return ctx->nla_policy[__nla_type(field->nla_type)].len;
 }
 
-static const char *get_enum(struct context_def *ctx, struct field_def *field, struct nlattr *nla)
+static const char *get_enum(struct context_def *ctx, const struct field_def *field, struct nlattr *nla)
 {
 	int i;
 
@@ -80,7 +80,7 @@ static const char *get_enum(struct context_def *ctx, struct field_def *field, st
 	return field->u.e.map[i];
 }
 
-static bool put_enum(struct context_def *ctx, struct field_def *field,
+static bool put_enum(struct context_def *ctx, const struct field_def *field,
 		     struct msg_buff *msg, const char *value)
 {
 	int n;
@@ -93,7 +93,7 @@ static bool put_enum(struct context_def *ctx, struct field_def *field,
 	return true;
 }
 
-static int enum_usage(struct field_def *field, char *str, int size)
+static int enum_usage(const struct field_def *field, char *str, int size)
 {
 	const char** map = field->u.e.map;
 	char sep = '{';
@@ -115,7 +115,7 @@ static int enum_usage(struct field_def *field, char *str, int size)
 	return len;
 }
 
-static bool enum_is_default_nocase(struct field_def *field, const char *value)
+static bool enum_is_default_nocase(const struct field_def *field, const char *value)
 {
 	int n;
 
@@ -123,12 +123,12 @@ static bool enum_is_default_nocase(struct field_def *field, const char *value)
 	return n == field->u.e.def;
 }
 
-static bool enum_is_equal_nocase(struct field_def *field, const char *a, const char *b)
+static bool enum_is_equal_nocase(const struct field_def *field, const char *a, const char *b)
 {
 	return !strcasecmp(a, b);
 }
 
-static bool put_enum_nocase(struct context_def *ctx, struct field_def *field,
+static bool put_enum_nocase(struct context_def *ctx, const struct field_def *field,
 			    struct msg_buff *msg, const char *value)
 {
 	int n;
@@ -141,7 +141,7 @@ static bool put_enum_nocase(struct context_def *ctx, struct field_def *field,
 	return true;
 }
 
-static void enum_describe_xml(struct field_def *field)
+static void enum_describe_xml(const struct field_def *field)
 {
 	const char **map = field->u.e.map;
 	int n;
@@ -156,13 +156,13 @@ static void enum_describe_xml(struct field_def *field)
 	printf("\t</option>\n");
 }
 
-static enum check_codes enum_check(struct field_def *field, const char *value)
+static enum check_codes enum_check(const struct field_def *field, const char *value)
 {
 	int n = enum_string_to_int(field->u.e.map, field->u.e.size, value, strcmp);
 	return n == -1 ? CC_NOT_AN_ENUM : CC_OK;
 }
 
-static enum check_codes enum_check_nocase(struct field_def *field, const char *value)
+static enum check_codes enum_check_nocase(const struct field_def *field, const char *value)
 {
 	int n = enum_string_to_int(field->u.e.map, field->u.e.size, value, strcasecmp);
 	return n == -1 ? CC_NOT_AN_ENUM : CC_OK;
@@ -190,7 +190,7 @@ struct field_class fc_enum_nocase = {
 
 /* ---------------------------------------------------------------------------------------------- */
 
-static bool numeric_is_default(struct field_def *field, const char *value)
+static bool numeric_is_default(const struct field_def *field, const char *value)
 {
 	long long l;
 
@@ -199,7 +199,7 @@ static bool numeric_is_default(struct field_def *field, const char *value)
 	return l == field->u.n.def;
 }
 
-static bool numeric_is_equal(struct field_def *field, const char *a, const char *b)
+static bool numeric_is_equal(const struct field_def *field, const char *a, const char *b)
 {
 	long long la, lb;
 
@@ -209,7 +209,7 @@ static bool numeric_is_equal(struct field_def *field, const char *a, const char 
 	return la == lb;
 }
 
-static const char *get_numeric(struct context_def *ctx, struct field_def *field, struct nlattr *nla)
+static const char *get_numeric(struct context_def *ctx, const struct field_def *field, struct nlattr *nla)
 {
 	static char buffer[1 + 20 + 2];
 	char scale = field->u.n.scale;
@@ -259,7 +259,7 @@ static const char *get_numeric(struct context_def *ctx, struct field_def *field,
 	return buffer;
 }
 
-static bool put_numeric(struct context_def *ctx, struct field_def *field,
+static bool put_numeric(struct context_def *ctx, const struct field_def *field,
 			struct msg_buff *msg, const char *value)
 {
 	long long l;
@@ -285,7 +285,7 @@ static bool put_numeric(struct context_def *ctx, struct field_def *field,
 	return true;
 }
 
-static int numeric_usage(struct field_def *field, char *str, int size)
+static int numeric_usage(const struct field_def *field, char *str, int size)
 {
         return snprintf(str, size,"[--%s=(%lld ... %lld)]",
 			field->name,
@@ -293,7 +293,7 @@ static int numeric_usage(struct field_def *field, char *str, int size)
 			field->u.n.max);
 }
 
-static void numeric_describe_xml(struct field_def *field)
+static void numeric_describe_xml(const struct field_def *field)
 {
 	printf("\t<option name=\"%s\" type=\"numeric\">\n"
 	       "\t\t<min>%lld</min>\n"
@@ -312,7 +312,7 @@ static void numeric_describe_xml(struct field_def *field)
 	printf("\t</option>\n");
 }
 
-static enum check_codes numeric_check(struct field_def *field, const char *value)
+static enum check_codes numeric_check(const struct field_def *field, const char *value)
 {
 	enum new_strtoll_errs e;
 	unsigned long long l;
@@ -371,7 +371,7 @@ static int enum_num_to_int(const struct en_map *map, int map_size, const char *v
 	return e == MSE_OK ? l : -1;
 }
 
-static bool enum_num_is_default(struct field_def *field, const char *value)
+static bool enum_num_is_default(const struct field_def *field, const char *value)
 {
 	int n;
 
@@ -379,12 +379,12 @@ static bool enum_num_is_default(struct field_def *field, const char *value)
 	return n == field->u.en.def;
 }
 
-static bool enum_num_is_equal(struct field_def *field, const char *a, const char *b)
+static bool enum_num_is_equal(const struct field_def *field, const char *a, const char *b)
 {
 	return !strcmp(a, b);
 }
 
-static const char *enum_num_to_string(struct field_def *field, int value)
+static const char *enum_num_to_string(const struct field_def *field, int value)
 {
 	static char buffer[1 + 10 + 2];
 	int i;
@@ -400,7 +400,7 @@ static const char *enum_num_to_string(struct field_def *field, int value)
 	return buffer;
 }
 
-static const char *get_enum_num(struct context_def *ctx, struct field_def *field, struct nlattr *nla)
+static const char *get_enum_num(struct context_def *ctx, const struct field_def *field, struct nlattr *nla)
 {
 	int n;
 
@@ -410,7 +410,7 @@ static const char *get_enum_num(struct context_def *ctx, struct field_def *field
 	return enum_num_to_string(field, n);
 }
 
-static bool put_enum_num(struct context_def *ctx, struct field_def *field,
+static bool put_enum_num(struct context_def *ctx, const struct field_def *field,
 			struct msg_buff *msg, const char *value)
 {
 	int n;
@@ -423,7 +423,7 @@ static bool put_enum_num(struct context_def *ctx, struct field_def *field,
 	return true;
 }
 
-static int enum_num_usage(struct field_def *field, char *str, int size)
+static int enum_num_usage(const struct field_def *field, char *str, int size)
 {
 	const struct en_map *map = field->u.en.map;
 	char sep = '{';
@@ -444,7 +444,7 @@ static int enum_num_usage(struct field_def *field, char *str, int size)
 	return len;
 }
 
-static void enum_num_describe_xml(struct field_def *field)
+static void enum_num_describe_xml(const struct field_def *field)
 {
 	const struct en_map *map = field->u.en.map;
 	int i;
@@ -464,7 +464,7 @@ static void enum_num_describe_xml(struct field_def *field)
 	printf("\t</option>\n");
 }
 
-static enum check_codes enum_num_check(struct field_def *field, const char *value)
+static enum check_codes enum_num_check(const struct field_def *field, const char *value)
 {
 	enum new_strtoll_errs e = 777;
 	int n;
@@ -509,7 +509,7 @@ static int boolean_string_to_int(const char *value)
 		return -1;
 }
 
-static bool boolean_is_default(struct field_def *field, const char *value)
+static bool boolean_is_default(const struct field_def *field, const char *value)
 {
 	int yesno;
 
@@ -517,12 +517,12 @@ static bool boolean_is_default(struct field_def *field, const char *value)
 	return yesno == field->u.b.def;
 }
 
-static bool boolean_is_equal(struct field_def *field, const char *a, const char *b)
+static bool boolean_is_equal(const struct field_def *field, const char *a, const char *b)
 {
 	return boolean_string_to_int(a) == boolean_string_to_int(b);
 }
 
-static const char *get_boolean(struct context_def *ctx, struct field_def *field, struct nlattr *nla)
+static const char *get_boolean(struct context_def *ctx, const struct field_def *field, struct nlattr *nla)
 {
 	int i;
 
@@ -531,7 +531,7 @@ static const char *get_boolean(struct context_def *ctx, struct field_def *field,
 	return i ? "yes" : "no";
 }
 
-static bool put_boolean(struct context_def *ctx, struct field_def *field,
+static bool put_boolean(struct context_def *ctx, const struct field_def *field,
 			struct msg_buff *msg, const char *value)
 {
 	int yesno;
@@ -544,7 +544,7 @@ static bool put_boolean(struct context_def *ctx, struct field_def *field,
 	return true;
 }
 
-static bool put_flag(struct context_def *ctx, struct field_def *field,
+static bool put_flag(struct context_def *ctx, const struct field_def *field,
 		     struct msg_buff *msg, const char *value)
 {
 	int yesno;
@@ -558,13 +558,13 @@ static bool put_flag(struct context_def *ctx, struct field_def *field,
 	return true;
 }
 
-static int boolean_usage(struct field_def *field, char *str, int size)
+static int boolean_usage(const struct field_def *field, char *str, int size)
 {
         return snprintf(str, size,"[--%s={yes|no}]",
 			field->name);
 }
 
-static void boolean_describe_xml(struct field_def *field)
+static void boolean_describe_xml(const struct field_def *field)
 {
 	printf("\t<option name=\"%s\" type=\"boolean\">\n"
 	       "\t\t<default>%s</default>\n"
@@ -573,7 +573,7 @@ static void boolean_describe_xml(struct field_def *field)
 	       field->u.b.def ? "yes" : "no");
 }
 
-static enum check_codes boolean_check(struct field_def *field, const char *value)
+static enum check_codes boolean_check(const struct field_def *field, const char *value)
 {
 	int yesno = boolean_string_to_int(value);
 	return yesno == -1 ? CC_NOT_A_BOOL : CC_OK;
@@ -601,17 +601,17 @@ struct field_class fc_flag = {
 
 /* ---------------------------------------------------------------------------------------------- */
 
-static bool string_is_default(struct field_def *field, const char *value)
+static bool string_is_default(const struct field_def *field, const char *value)
 {
 	return value && !strcmp(value, "");
 }
 
-static bool string_is_equal(struct field_def *field, const char *a, const char *b)
+static bool string_is_equal(const struct field_def *field, const char *a, const char *b)
 {
 	return !strcmp(a, b);
 }
 
-static const char *get_string(struct context_def *ctx, struct field_def *field, struct nlattr *nla)
+static const char *get_string(struct context_def *ctx, const struct field_def *field, struct nlattr *nla)
 {
 	char *str;
 	int len;
@@ -623,7 +623,7 @@ static const char *get_string(struct context_def *ctx, struct field_def *field, 
 	return str;
 }
 
-static bool put_string(struct context_def *ctx, struct field_def *field,
+static bool put_string(struct context_def *ctx, const struct field_def *field,
 		       struct msg_buff *msg, const char *value)
 {
 	assert(type_of_field(ctx, field) == NLA_NUL_STRING);
@@ -631,20 +631,20 @@ static bool put_string(struct context_def *ctx, struct field_def *field,
 	return true;
 }
 
-static int string_usage(struct field_def *field, char *str, int size)
+static int string_usage(const struct field_def *field, char *str, int size)
 {
         return snprintf(str, size,"[--%s=<str>]",
 			field->name);
 }
 
-static void string_describe_xml(struct field_def *field)
+static void string_describe_xml(const struct field_def *field)
 {
 	printf("\t<option name=\"%s\" type=\"string\">\n"
 	       "\t</option>\n",
 	       field->name);
 }
 
-static enum check_codes string_check(struct field_def *field, const char *value)
+static enum check_codes string_check(const struct field_def *field, const char *value)
 {
 	if (field->u.s.max_len) {
 		if (strlen(value) >= field->u.s.max_len)

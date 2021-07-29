@@ -1123,7 +1123,7 @@ static void add_setup_options(char **argv, int *argcp, const struct context_def 
 	if (!found) {								\
 		if(OPT->value) {						\
 			int w = 512;						\
-			struct field_def *field =				\
+			const struct field_def *field =				\
 				find_field(NULL, OPTIONS_DEF, OPT->name);	\
 			if (field && field->ops == &fc_string)			\
 				w = field->u.s.max_len;				\
