@@ -3,6 +3,13 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.18.2
+-----------
+ * systemd: fix SELinux for drbd-promote@.service
+ * drbdadm: allow 4096 chars for concatenated host names
+ * drbdadm: enforce max length of fields for drbdsetup
+ * build: fix redefinition of __swab{16,32,64}
+
 9.18.1
 -----------
  * systemd: drbd@.service: pull in network-online.target

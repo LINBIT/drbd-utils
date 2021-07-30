@@ -35,7 +35,7 @@ RUN cd ${HOME} && . "$NV" && \
 FROM registry.access.redhat.com/ubi7/ubi
 MAINTAINER Roland Kammerer <roland.kammerer@linbit.com>
 
-ENV DRBD_UTILS_VERSION 9.18.1
+ENV DRBD_UTILS_VERSION 9.18.2
 
 ARG release=1
 LABEL name="drbd-utils" \
