@@ -35,6 +35,8 @@
  * oh, well...
  */
 
+
+#ifndef __swab16
 #define __swab16(x) \
 ({ \
 	__u16 __x = (x); \
@@ -42,7 +44,9 @@
 		(((__u16)(__x) & (__u16)0x00ffUL) << 8) | \
 		(((__u16)(__x) & (__u16)0xff00UL) >> 8) )); \
 })
+#endif
 
+#ifndef __swab32
 #define __swab32(x) \
 ({ \
 	uint32_t __x = (x); \
@@ -52,7 +56,9 @@
 		(((uint32_t)(__x) & (uint32_t)0x00ff0000UL) >>  8) | \
 		(((uint32_t)(__x) & (uint32_t)0xff000000UL) >> 24) )); \
 })
+#endif
 
+#ifndef __swab64
 #define __swab64(x) \
 ({ \
 	uint64_t __x = (x); \
@@ -66,6 +72,7 @@
 		(uint64_t)(((uint64_t)(__x) & (uint64_t)0x00ff000000000000ULL) >> 40) | \
 		(uint64_t)(((uint64_t)(__x) & (uint64_t)0xff00000000000000ULL) >> 56) )); \
 })
+#endif
 
 /*
  * linux/byteorder/little_endian.h
