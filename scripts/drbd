@@ -146,7 +146,13 @@ _udev_settle()
 # and not in the DRBD init file; possibly we need proper support in drbdadm.
 handle_linstor_loopback()
 {
-	local line dev file
+	local line dev file loop_mapping
+
+	# new location
+	loop_mapping=/var/lib/linstor.d/loop_device_mapping
+	# fallback to old location
+	[ -f "$loop_mapping" ] || loop_mapping=/var/lib/linstor/loop_device_mapping
+
 	# || [[ -n $line ]]: in case there is no newline at EOF
 	while read -r line || [[ -n $line ]] ; do
 		dev=${line%%:*}
@@ -159,7 +165,7 @@ handle_linstor_loopback()
 			start) losetup "$dev" 2>/dev/null || losetup "$dev" "$file";;
 			stop)  losetup "$dev" 2>/dev/null && losetup -d "$dev";;
 		esac
-	done < /var/lib/linstor/loop_device_mapping
+	done < "$loop_mapping"
 
 	# at least we tried.
 	return 0
