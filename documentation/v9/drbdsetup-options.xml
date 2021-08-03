@@ -1294,6 +1294,27 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	      expected to reboot the machine, which puts it into secondary role.</para>
 	  </listitem>
 	</varlistentry>
+
+	<varlistentry>
+	  <term xml:id="auto-discard"><option>auto-discard</option></term>
+
+	  <listitem>
+	    <para><option>Auto-discard</option> reverses the resync direction,
+	    so that DRBD resyncs the current primary to the current secondary.
+	    <option>Auto-discard</option> only applies when protocol A is in
+	    use and the resync decision is based on the principle that a
+	    crashed primary should be the source of a resync.
+	    When a primary node crashes, it might have written some last
+	    updates to its disk, which were not received by a protocol A
+	    secondary. By promoting the secondary in the meantime the user
+	    accepted that those last updates have been lost. By using
+	    <option>auto-discard</option> you consent that the last updates
+	    (before the crash of the primary) should be rolled back
+	    automatically.
+	    </para>
+	  </listitem>
+	</varlistentry>
+
       </variablelist>
       <!-- FIXME: It is completely unclear how this option interacts with
 	   after-sb-0pri, after-sb-1pri, and after-sb-2pri. -->

@@ -800,6 +800,7 @@ const char *rr_conflict_map[] = {
 	[ASB_VIOLENTLY] = "violently",
 	[ASB_CALL_HELPER] = "call-pri-lost",
 	[ASB_RETRY_CONNECT] = "retry-connect",
+	[ASB_AUTO_DISCARD] = "auto-discard",
 };
 
 const char *on_no_data_map[] = {
