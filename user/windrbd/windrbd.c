@@ -86,6 +86,8 @@ void usage_and_exit(void)
 	fprintf(stderr, "		Create a DRBD resource described by URL.\n");
 	fprintf(stderr, "	windrbd [opt] run-test <test-spec>\n");
 	fprintf(stderr, "		Cause kernel to run a self test DRBD test defined by test-spec.\n");
+	fprintf(stderr, "	windrbd [opt] set-config-key <config-key>\n");
+	fprintf(stderr, "		Set config key for locking kernel driver\n");
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
 	fprintf(stderr, "	-f (force): do it even if it is dangerous.\n");
@@ -1536,6 +1538,12 @@ int main(int argc, char ** argv)
 			usage_and_exit();
 		}
 		return send_string_ioctl(IOCTL_WINDRBD_ROOT_CREATE_RESOURCE_FROM_URL, argv[optind+1]);
+	}
+	if (strcmp(op, "set-config-key") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		return send_string_ioctl(IOCTL_WINDRBD_ROOT_SET_CONFIG_KEY, argv[optind+1]);
 	}
 
 	usage_and_exit();
