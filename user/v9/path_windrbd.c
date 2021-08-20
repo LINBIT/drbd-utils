@@ -72,7 +72,7 @@ void generate_conf_file_locations(void)
 	conf_file[1] = NULL;
 }
 
-char *drbd_lib_dir(void)
+const char *drbd_lib_dir(void)
 {
 	static char buf[MAX_PATH];
 	char *ret;
@@ -87,7 +87,7 @@ char *drbd_lib_dir(void)
 	return ret;
 }
 
-char *drbd_run_dir(void)
+const char *drbd_run_dir(void)
 {
 	static char buf[MAX_PATH];
 	static bool initialized;
@@ -103,7 +103,7 @@ char *drbd_run_dir(void)
 	return ret;
 }
 
-char *drbd_run_dir_with_slash(void)
+const char *drbd_run_dir_with_slash(void)
 {
 	static char buf[MAX_PATH];
 	static bool initialized;
@@ -119,7 +119,7 @@ char *drbd_run_dir_with_slash(void)
 	return ret;
 }
 
-char *node_id_file(void)
+const char *node_id_file(void)
 {
 	static char buf[MAX_PATH];
 	static bool initialized;
@@ -135,7 +135,7 @@ char *node_id_file(void)
 	return ret;
 }
 
-char *drbd_bin_dir(void)
+const char *drbd_bin_dir(void)
 {
 	static char buf[MAX_PATH];
 	static bool initialized;
@@ -151,7 +151,7 @@ char *drbd_bin_dir(void)
 	return ret;
 }
 
-char *drbd_lock_dir(void)
+const char *drbd_lock_dir(void)
 {
 	static char buf[MAX_PATH];
 	static bool initialized;

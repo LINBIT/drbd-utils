@@ -593,12 +593,12 @@ void assign_default_device(struct d_volume *vol);
 void generate_conf_file_locations(void);
 void free_conf_file_locations(void);
 
-char *drbd_lib_dir(void);
-char *node_id_file(void);
-char *drbd_run_dir(void);
-char *drbd_run_dir_with_slash(void);
-char *drbd_bin_dir(void);
-char *drbd_lock_dir(void);
+const char *drbd_lib_dir(void);
+const char *node_id_file(void);
+const char *drbd_run_dir(void);
+const char *drbd_run_dir_with_slash(void);
+const char *drbd_bin_dir(void);
+const char *drbd_lock_dir(void);
 
 #endif
 
