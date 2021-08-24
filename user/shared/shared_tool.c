@@ -226,7 +226,7 @@ uint64_t bdev_size(int fd)
 char *lk_bdev_path(unsigned minor)
 {
 	char *path;
-	m_asprintf(&path, "%s/drbd-minor-%d.lkbd", DRBD_LIB_DIR, minor);
+	m_asprintf(&path, "%s/drbd-minor-%d.lkbd", drbd_lib_dir(), minor);
 	return path;
 }
 
