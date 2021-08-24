@@ -88,6 +88,10 @@ void usage_and_exit(void)
 	fprintf(stderr, "		Cause kernel to run a self test DRBD test defined by test-spec.\n");
 	fprintf(stderr, "	windrbd [opt] set-config-key <config-key>\n");
 	fprintf(stderr, "		Set config key for locking kernel driver\n");
+	fprintf(stderr, "	windrbd [opt] set-event-log-level <level>\n");
+	fprintf(stderr, "		Set threshold for printk's log level for event log\n");
+	fprintf(stderr, "	3..error, 4..warning, 5..notice, 6..info, 7..debug\n");
+
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
 	fprintf(stderr, "	-f (force): do it even if it is dangerous.\n");
@@ -1165,6 +1169,26 @@ int send_string_ioctl(int ioctl, const char *parameter)
 	return 0;
 }
 
+int send_int_ioctl(int ioctl, int parameter)
+{
+	HANDLE root_dev;
+	DWORD unused;
+	BOOL ret;
+	int err;
+
+	root_dev = do_open_root_device(quiet);
+	if (root_dev == INVALID_HANDLE_VALUE)
+		return 1;
+
+	ret = DeviceIoControl(root_dev, ioctl, (void*)&parameter, sizeof(parameter), NULL, 0, &unused, NULL);
+	if (!ret) {
+		err = GetLastError();
+		fprintf(stderr, "Error in sending ioctl to kernel, err is %d\n", err);
+		return -1;
+	}
+	return 0;
+}
+
 void print_windows_error_code(const char *func)
 {
 	int err = GetLastError();
@@ -1544,6 +1568,14 @@ int main(int argc, char ** argv)
 			usage_and_exit();
 		}
 		return send_string_ioctl(IOCTL_WINDRBD_ROOT_SET_CONFIG_KEY, argv[optind+1]);
+	}
+	if (strcmp(op, "set-event-log-level") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		int level = atoi(argv[optind+1]);
+
+		return send_int_ioctl(IOCTL_WINDRBD_ROOT_SET_EVENT_LOG_LEVEL, level);
 	}
 
 	usage_and_exit();
