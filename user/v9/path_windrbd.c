@@ -75,9 +75,10 @@ void generate_conf_file_locations(void)
 const char *drbd_lib_dir(void)
 {
 	static char buf[MAX_PATH];
+	static bool initialized;
 	char *ret;
 
-	if (buf[0])
+	if (initialized)
 		return buf;
 
 	ret = relative_to_root("/var/lib/drbd", buf, sizeof(buf));
