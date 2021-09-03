@@ -88,6 +88,8 @@ void usage_and_exit(void)
 	fprintf(stderr, "		Cause kernel to run a self test DRBD test defined by test-spec.\n");
 	fprintf(stderr, "	windrbd [opt] set-config-key <config-key>\n");
 	fprintf(stderr, "		Set config key for locking kernel driver\n");
+	fprintf(stderr, "	windrbd [opt] get-lock-down-state\n");
+	fprintf(stderr, "		Prints if there is a config key set\n");
 	fprintf(stderr, "	windrbd [opt] set-event-log-level <level>\n");
 	fprintf(stderr, "		Set threshold for printk's log level for event log\n");
 	fprintf(stderr, "	3..error, 4..warning, 5..notice, 6..info, 7..debug\n");
@@ -1189,6 +1191,50 @@ int send_int_ioctl(int ioctl, int parameter)
 	return 0;
 }
 
+int get_int_ioctl(int ioctl, int *value)
+{
+	HANDLE root_dev;
+	DWORD size_returned;
+	BOOL ret;
+	int err;
+	int val;
+
+	root_dev = do_open_root_device(quiet);
+	if (root_dev == INVALID_HANDLE_VALUE)
+		return 1;
+
+	ret = DeviceIoControl(root_dev, ioctl, NULL, 0, &val, sizeof(val), &size_returned, NULL);
+	if (!ret) {
+		err = GetLastError();
+		fprintf(stderr, "Error in sending ioctl to kernel, err is %d\n", err);
+		return -1;
+	}
+	if (size_returned != sizeof(int)) {
+		fprintf(stderr, "Size returned is %d should be %d\n", size_returned, sizeof(int));
+		return -1;
+	}
+	if (value != NULL)
+		*value = val;
+	return 0;
+}
+
+int print_lock_down_state(void)
+{
+	int value, ret;
+
+	ret = get_int_ioctl(IOCTL_WINDRBD_ROOT_GET_LOCK_DOWN_STATE, &value);
+	if (ret == 0) {
+		if (!quiet) {
+			if (value)
+				printf("Config key is set, WinDRBD is locked.\n");
+			else
+				printf("Config key is not set, WinDRBD is not locked\n");
+		}
+		return value;
+	}
+	return ret;
+}
+
 void print_windows_error_code(const char *func)
 {
 	int err = GetLastError();
@@ -1576,6 +1622,12 @@ int main(int argc, char ** argv)
 		int level = atoi(argv[optind+1]);
 
 		return send_int_ioctl(IOCTL_WINDRBD_ROOT_SET_EVENT_LOG_LEVEL, level);
+	}
+	if (strcmp(op, "get-lock-down-state") == 0) {
+		if (argc != optind+1) {
+			usage_and_exit();
+		}
+		return print_lock_down_state();
 	}
 
 	usage_and_exit();
