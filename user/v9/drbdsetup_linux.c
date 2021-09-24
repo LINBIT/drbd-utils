@@ -64,6 +64,11 @@ int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 	return NO_ERROR;
 }
 
+char *kernel_device_to_userland_device(char *kernel_dev)
+{
+	return kernel_dev;
+}
+
 int genl_join_mc_group_and_ctrl(struct genl_sock *s, const char *name)
 {
 	int ret;

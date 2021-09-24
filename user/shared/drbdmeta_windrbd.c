@@ -56,6 +56,7 @@
 #include <windows.h>
 #include <winternl.h>
 #include <wchar.h>
+#include <ntddstor.h>
 #include "shared_windrbd.h"
 
 /*
@@ -218,26 +219,26 @@ static int get_windows_device_geometry(HANDLE hdisk, int *md_hard_sect_size, uin
 {
 	DISK_GEOMETRY_EX geometry;
 	DWORD ret_bytes;
-	PARTITION_INFORMATION_EX partition_info;
+	GET_LENGTH_INFORMATION length_info;
 
 	if (DeviceIoControl(hdisk, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, 0, &geometry, sizeof(geometry), &ret_bytes, NULL) == 0) {
-		fprintf(stderr, "Failed to get disk geometry: error is %d\n", GetLastError());
+		fprintf(stderr, "Failed to get disk geometry: error is %d falling back to 512 bytes sector size.\n", GetLastError());
+		geometry.Geometry.BytesPerSector = 512;
+	} else {
+		if (verbose >= 1) {
+			printf("%d bytes per sector, total disk size %lld\n", geometry.Geometry.BytesPerSector, geometry.DiskSize.QuadPart);
+		}
+	}
+	if (DeviceIoControl(hdisk, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0, &length_info, sizeof(length_info), &ret_bytes, NULL) == 0) {
+		fprintf(stderr, "Failed to get length info: error is %d\n", GetLastError());
 		return -1;
 	}
 	if (verbose >= 1) {
-		printf("%d bytes per sector, total disk size %lld\n", geometry.Geometry.BytesPerSector, geometry.DiskSize.QuadPart);
+		printf("volume size %lld\n", length_info.Length.QuadPart);
+		printf("pysical sector size %u\n", geometry.Geometry.BytesPerSector);
 	}
-
-	if (DeviceIoControl(hdisk, IOCTL_DISK_GET_PARTITION_INFO_EX, NULL, 0, &partition_info, sizeof(partition_info), &ret_bytes, NULL) == 0) {
-		fprintf(stderr, "Failed to get partition info: error is %d\n", GetLastError());
-		return -1;
-	}
-	if (verbose >= 1) {
-		printf("partition size %lld\n", partition_info.PartitionLength.QuadPart);
-	}
-
 	*md_hard_sect_size = geometry.Geometry.BytesPerSector;
-	*bd_size = partition_info.PartitionLength.QuadPart;
+	*bd_size = length_info.Length.QuadPart;
 
 	return 0;
 }

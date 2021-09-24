@@ -3825,6 +3825,7 @@ static int check_resize_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	struct devices_list *devices, *device;
 	bool found = false;
 	bool ret = 0;
+	char *bdev_userland_name;
 
 	devices = list_devices(NULL);
 	for (device = devices; device; device = device->next) {
@@ -3848,7 +3849,8 @@ static int check_resize_cmd(struct drbd_cmd *cm, int argc, char **argv)
 			break;
 		}
 
-		fd = open(device->disk_conf.backing_dev, O_RDONLY);
+		bdev_userland_name = kernel_device_to_userland_device(device->disk_conf.backing_dev);
+		fd = open(bdev_userland_name, O_RDONLY);
 		if (fd == -1) {
 			fprintf(stderr, "Could not open %s: %m.\n", device->disk_conf.backing_dev);
 			ret = 1;

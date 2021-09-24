@@ -53,10 +53,10 @@ CFLAGS += -Wall -I. -I../shared
 drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_main.o \
 	      drbdadm_adjust.o drbdtool_common.o drbdadm_usage_cnt.o \
 	      drbd_buildtag.o drbdadm_minor_table.o shared_tool.o \
-		  shared_main.o shared_parser.o path_linux.o
+		  shared_main.o shared_parser.o path_linux.o shared_linux.o
 
 drbdsetup-obj = drbdsetup.o drbdtool_common.o drbd_buildtag.o \
-	        drbd_strings.o shared_tool.o path_linux.o
+	        drbd_strings.o shared_tool.o path_linux.o shared_linux.o
 
 all-obj := $(drbdadm-obj) $(drbdsetup-obj)
 

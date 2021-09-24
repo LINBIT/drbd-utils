@@ -89,9 +89,9 @@ drbdadm-obj += drbdadm_windrbd.o shared_windrbd.o libgenl_windrbd.o drbdtool_com
 drbdsetup-core-obj += shared_windrbd.o libgenl_windrbd.o drbdtool_common_windrbd.o drbdsetup_windrbd.o path_windrbd.o
 drbdmeta-obj += shared_windrbd.o drbdmeta_windrbd.o drbdtool_common_windrbd.o path_windrbd.o
 else
-drbdadm-obj += libgenl.o drbdadm_linux.o drbdtool_common_linux.o path_linux.o
-drbdsetup-core-obj += libgenl.o drbdtool_common_linux.o drbdsetup_linux.o path_linux.o
-drbdmeta-obj += drbdmeta_linux.o drbdtool_common_linux.o path_linux.o
+drbdadm-obj += libgenl.o drbdadm_linux.o drbdtool_common_linux.o path_linux.o shared_linux.o
+drbdsetup-core-obj += libgenl.o drbdtool_common_linux.o drbdsetup_linux.o path_linux.o shared_linux.o
+drbdmeta-obj += drbdmeta_linux.o drbdtool_common_linux.o path_linux.o shared_linux.o
 endif
 
 drbdsetup-obj = $(drbdsetup-core-obj) drbdsetup_main.o

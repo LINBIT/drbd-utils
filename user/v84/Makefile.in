@@ -56,12 +56,12 @@ drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_main.o \
 	      drbdadm_adjust.o drbdtool_common.o drbdadm_usage_cnt.o \
 	      drbd_buildtag.o registry.o config_flags.o libgenl.o \
 	      drbd_nla.o shared_tool.o shared_main.o shared_parser.o \
-	      libnla.o path_linux.o
+	      libnla.o path_linux.o shared_linux.o
 
 drbdsetup-obj = libgenl.o registry.o drbdsetup.o drbdtool_common.o \
 		drbd_buildtag.o drbd_strings.o config_flags.o drbd_nla.o \
 		wrap_printf.o drbdsetup_colors.o shared_tool.o libnla.o \
-		path_linux.o
+		path_linux.o shared_linux.o
 
 all-obj := $(drbdadm-obj) $(drbdsetup-obj)
 

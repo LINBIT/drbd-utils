@@ -93,6 +93,8 @@ void usage_and_exit(void)
 	fprintf(stderr, "	windrbd [opt] set-event-log-level <level>\n");
 	fprintf(stderr, "		Set threshold for printk's log level for event log\n");
 	fprintf(stderr, "	3..error, 4..warning, 5..notice, 6..info, 7..debug\n");
+	fprintf(stderr, "	windrbd [opt] di-install-driver <inf-file>\n");
+	fprintf(stderr, "		Installs the driver to the driver store (use -f)\n");
 
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
@@ -1374,7 +1376,8 @@ static int install_windrbd_bus_device(int remove, const char *inf_file)
 			print_windows_error_code("SetupDiCallClassInstaller");
 			goto cleanup_deviceinfo;
 		}
-		if (!UpdateDriverForPlugAndPlayDevices(0, L"WinDRBD\0\0\0", FullFilePath, INSTALLFLAG_FORCE, &RebootRequired)) {
+		printf("UpdateDriverForPlugAndPlayDevices (.., INSTALLFLAG_FORCE, ..)\n");
+		if (!UpdateDriverForPlugAndPlayDevices(0, L"WinDRBD\0\0\0", FullFilePath, INSTALLFLAG_FORCE , &RebootRequired)) {
 			print_windows_error_code("UpdateDriverForPlugAndPlayDevices");
 			goto remove_class;
 		}
@@ -1427,6 +1430,18 @@ int scan_partitions_for_minor(int minor)
 		return -1;
 	}
 	CloseHandle(h);
+	return 0;
+}
+
+int do_di_install_driver(const char *inf_file)
+{
+	BOOL ret;
+
+	ret = DiInstallDriverA(NULL, inf_file, force ? DIIRFLAG_FORCE_INF : 0, NULL);
+	if (!ret) {
+		print_windows_error_code("DiInstallDriverA");
+		return 1;
+	}
 	return 0;
 }
 
@@ -1628,6 +1643,12 @@ int main(int argc, char ** argv)
 			usage_and_exit();
 		}
 		return print_lock_down_state();
+	}
+	if (strcmp(op, "di-install-driver") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		return do_di_install_driver(argv[optind+1]);
 	}
 
 	usage_and_exit();
