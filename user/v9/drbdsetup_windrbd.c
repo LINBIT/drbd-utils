@@ -39,6 +39,25 @@ int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 	return NO_ERROR;
 }
 
+char *kernel_device_to_userland_device(const char *kernel_dev)
+{
+		/* TODO: PATH_MAX */
+	static char device[1024];
+	size_t n;
+
+	if (strncmp(kernel_dev, "\\DosDevices\\", strlen("\\DosDevices\\")) == 0) {
+		n = snprintf(device, sizeof(device)-1, "\\\\.\\%s", &kernel_dev[strlen("\\DosDevices\\")]);
+	} else {
+			/* just a strcpy ... */
+		n = snprintf(device, sizeof(device)-1, "%s", kernel_dev);
+	}
+	if (n >= sizeof(device)-1) {
+		fprintf(stderr, "Device name too long: %s (%zd), please report this.\n", kernel_dev, n);
+		device[sizeof(device)-1] = '\0';
+	}
+	return device;
+}
+
 int genl_join_mc_group_and_ctrl(struct genl_sock *s, const char *name)
 {
 	return genl_join_mc_group(s, name);
