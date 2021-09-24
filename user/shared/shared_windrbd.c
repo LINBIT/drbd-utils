@@ -1,6 +1,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <windows.h>
+#include <io.h>
 
 #include "shared_windrbd.h"
 #include <windrbd/windrbd_ioctl.h>
@@ -163,4 +164,26 @@ int windrbd_get_registry_string_value(HKEY root_key, const char *key, const char
 		*buflen_ret = buflen;
 
 	return 0;
+}
+
+uint64_t bdev_size(int fd)
+{
+	HANDLE h;
+	BOOL ret;
+	struct _DISK_GEOMETRY_EX g;
+	DWORD size;
+
+	h = (void*) _get_osfhandle(fd);
+	if (h == INVALID_HANDLE_VALUE) {
+		fprintf(stderr, "Could not convert fd %d to Windows handle\n", fd);
+		return 0;
+	}
+	ret = DeviceIoControl(h, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, 0, &g, sizeof(g), &size, NULL);
+	if (!ret) {
+		fprintf(stderr, "Could not get drive size\n");
+			/* TODO: close windows handle? */
+		return 0;
+	}
+			/* TODO: close windows handle? */
+	return g.DiskSize.QuadPart;
 }
