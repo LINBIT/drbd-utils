@@ -1,6 +1,11 @@
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/ioctl.h>  
 #include <stdio.h>
+#include <stdint.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <linux/fs.h>
 
 uint64_t bdev_size(int fd)
 {
