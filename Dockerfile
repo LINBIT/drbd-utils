@@ -1,6 +1,7 @@
-FROM centos:centos7 as builder
+ARG BUILDER=almalinux:8
+FROM $BUILDER as builder
 
-ENV DL_URL https://www.linbit.com/downloads/drbd/utils
+ENV DL_URL https://pkg.linbit.com//downloads/drbd/utils
 # setup env, unfortunately ENV is too inflexible
 ENV NV /tmp/env
 COPY /configure.ac /tmp
@@ -11,11 +12,11 @@ RUN vers=$(grep "^AC_INIT" /tmp/configure.ac | cut -d'(' -f2 | cut -f2 -d ',' | 
   echo "DRBD_UTILS_DL_TGZ=${DL_URL}"'/${DRBD_UTILS_TGZ}' >> $NV
 
 USER root
-RUN yum -y update-minimal --security --sec-severity=Important --sec-severity=Critical
+RUN yum -y update-minimal --security --sec-severity=Important --sec-severity=Critical # !lbbuild
 RUN groupadd makepkg # !lbbuild
 RUN useradd -m -g makepkg makepkg # !lbbuild
 
-RUN yum install -y rpm-build wget gcc flex glibc-devel make automake && yum clean all -y # !lbbuild
+RUN yum install -y rpm-build wget gcc flex glibc-devel make automake systemd-udev && yum clean all -y # !lbbuild
 
 RUN cd /tmp && . "$NV" && wget "$DRBD_UTILS_DL_TGZ" # !lbbuild
 # =lbbuild COPY /${DRBD_UTILS_TGZ} /tmp/
@@ -29,10 +30,11 @@ RUN cd ${HOME} && . "$NV" && \
   tar xvf ${DRBD_UTILS_TGZ} && \
   cd ${DRBD_UTILS_PKGNAME}-${DRBD_UTILS_VERSION} && \
   ./configure --with-prebuiltman && make drbd.spec && \
-  rpmbuild -bb --without drbdmon --with prebuiltman --without sbinsymlinks --without manual --without heartbeat --without xen --without 83support --without 84support drbd.spec
+  rpmbuild -bb --define "debug_package %{nil}" \
+		--without drbdmon --with prebuiltman --without sbinsymlinks --without manual --without heartbeat --without xen --without 83support --without 84support drbd.spec
 
 
-FROM registry.access.redhat.com/ubi7/ubi
+FROM registry.access.redhat.com/ubi8/ubi
 MAINTAINER Roland Kammerer <roland.kammerer@linbit.com>
 
 ENV DRBD_UTILS_VERSION 9.18.0
