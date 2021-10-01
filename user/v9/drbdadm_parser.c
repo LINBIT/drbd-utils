@@ -555,6 +555,9 @@ const struct field_def *find_field(bool *no_prefix, const struct context_def *op
 		*no_prefix = false;
 	}
 
+	if (!options_def)
+		return NULL;
+
 	for (field = options_def->fields; field->name; field++) {
 		if (!strcmp(field->name, name))
 			return field;
