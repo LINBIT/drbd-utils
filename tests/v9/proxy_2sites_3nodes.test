@@ -1,0 +1,64 @@
+$ for node in alpha bravo charlie ; do __DRBD_NODE__=$node drbdadm -c proxy_2sites_3nodes.res -d up proxy_2sites_3nodes ; echo $? ; done
+
+   found __DRBD_NODE__ in environment
+   PRETENDING that I am >>alpha<<
+
+drbdsetup new-resource proxy_2sites_3nodes 0
+drbdsetup new-minor proxy_2sites_3nodes 19 0
+drbdsetup new-peer proxy_2sites_3nodes 1 --_name=bravo --protocol=C
+drbdsetup new-peer proxy_2sites_3nodes 2 --_name=charlie --protocol=A
+drbdsetup new-path proxy_2sites_3nodes 1 ipv4:192.168.31.1:7800 ipv4:192.168.31.2:7800
+drbdsetup new-path proxy_2sites_3nodes 2 ipv4:192.168.31.1:7800 ipv4:192.168.31.4:7800
+drbdsetup peer-device-options proxy_2sites_3nodes 2 0 --resync-rate=10M --c-plan-ahead=20 --c-delay-target=10 --c-fill-target=100 --c-min-rate=10 --c-max-rate=100M
+drbdmeta 19 v09 /dev/foo/bar internal apply-al
+drbdsetup attach 19 /dev/foo/bar /dev/foo/bar internal
+drbdsetup connect proxy_2sites_3nodes 1
+drbdsetup connect proxy_2sites_3nodes 2
+0
+
+   found __DRBD_NODE__ in environment
+   PRETENDING that I am >>bravo<<
+
+drbdsetup new-resource proxy_2sites_3nodes 1
+drbdsetup new-minor proxy_2sites_3nodes 19 0
+drbdsetup new-peer proxy_2sites_3nodes 0 --_name=alpha --protocol=C
+drbdsetup new-peer proxy_2sites_3nodes 2 --_name=charlie --protocol=A
+drbdsetup new-path proxy_2sites_3nodes 0 ipv4:192.168.31.2:7800 ipv4:192.168.31.1:7800
+drbdsetup new-path proxy_2sites_3nodes 2 ipv4:192.168.31.2:7800 ipv4:192.168.31.4:7802
+drbdmeta 19 v09 /dev/foo/bar internal apply-al
+drbdsetup attach 19 /dev/foo/bar /dev/foo/bar internal
+drbdsetup connect proxy_2sites_3nodes 0
+drbdsetup connect proxy_2sites_3nodes 2
+0
+
+   found __DRBD_NODE__ in environment
+   PRETENDING that I am >>charlie<<
+
+drbdsetup new-resource proxy_2sites_3nodes 2
+drbdsetup new-minor proxy_2sites_3nodes 19 0
+drbdsetup new-peer proxy_2sites_3nodes 0 --_name=alpha --protocol=A
+drbdsetup new-peer proxy_2sites_3nodes 1 --_name=bravo --protocol=A
+drbdsetup new-path proxy_2sites_3nodes 0 ipv4:192.168.31.3:7800 ipv4:192.168.31.5:7800
+drbdsetup new-path proxy_2sites_3nodes 1 ipv4:192.168.31.3:7800 ipv4:192.168.31.5:7802
+drbdsetup peer-device-options proxy_2sites_3nodes 0 0 --resync-rate=10M --c-plan-ahead=20 --c-delay-target=10 --c-fill-target=100 --c-min-rate=10 --c-max-rate=100M
+drbdmeta 19 v09 /dev/foo/bar internal apply-al
+drbdsetup attach 19 /dev/foo/bar /dev/foo/bar internal
+drbdsetup connect proxy_2sites_3nodes 0
+drbdsetup connect proxy_2sites_3nodes 1
+0
+$ __DRBD_NODE__=site1-pxy drbdadm -c proxy_2sites_3nodes.res -d proxy-up proxy_2sites_3nodes ; echo $?
+
+   found __DRBD_NODE__ in environment
+   PRETENDING that I am >>site1-pxy<<
+
+drbd-proxy-ctl -c add\ connection\ proxy_2sites_3nodes-charlie-pxy-site1-pxy\ 192.168.31.4:7800\ 192.168.31.5:7801\ 192.168.31.4:7801\ 192.168.31.1:7800
+drbd-proxy-ctl -c add\ connection\ proxy_2sites_3nodes-charlie-pxy-site1-pxy\ 192.168.31.4:7802\ 192.168.31.5:7803\ 192.168.31.4:7803\ 192.168.31.2:7800
+0
+$ __DRBD_NODE__=charlie-pxy drbdadm -c proxy_2sites_3nodes.res -d proxy-up proxy_2sites_3nodes ; echo $?
+
+   found __DRBD_NODE__ in environment
+   PRETENDING that I am >>charlie-pxy<<
+
+drbd-proxy-ctl -c add\ connection\ proxy_2sites_3nodes-site1-pxy-charlie-pxy\ 192.168.31.5:7800\ 192.168.31.4:7801\ 192.168.31.5:7801\ 192.168.31.3:7800
+drbd-proxy-ctl -c add\ connection\ proxy_2sites_3nodes-site1-pxy-charlie-pxy\ 192.168.31.5:7802\ 192.168.31.4:7803\ 192.168.31.5:7803\ 192.168.31.3:7800
+0

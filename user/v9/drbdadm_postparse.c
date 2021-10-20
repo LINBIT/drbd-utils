@@ -331,7 +331,7 @@ void set_me_in_resource(struct d_resource* res, int match_on_proxy)
 			    host->lower ? "stacked-on-top-of" : "on",
 			    host->lower ? host->lower->name : names_to_str(&host->on_hosts));
 		}
-		if (res->me && res->me != host) {
+		if (res->me && res->me != host && !match_on_proxy) {
 			config_valid = 0;
 			err("%s:%d: in resource %s, %s %s { ... } ... %s %s { ... }:\n"
 			    "\tThere are multiple host sections for this node.\n",
@@ -360,7 +360,7 @@ void set_me_in_resource(struct d_resource* res, int match_on_proxy)
 
 		for_each_path(path, &conn->paths) {
 			STAILQ_FOREACH(h, &path->hname_address_pairs, link) {
-				if (h->host_info == res->me)
+				if (h->host_info && h->host_info->used_as_me)
 					break;
 			}
 
