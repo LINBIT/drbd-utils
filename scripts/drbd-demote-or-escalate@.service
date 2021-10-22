@@ -1,0 +1,30 @@
+[Unit]
+# to be used as OnFailure unit in drbd-promote@.service
+Description=Demotion of DRBD resource %I
+
+RefuseManualStart=yes
+RefuseManualStop=yes
+
+# See also systemd-system.conf(5) about WatchdogDevice, RuntimeWatchdogSec,
+# RebootWatchdogSec and possibly JobTimeoutSec, JobTimeoutAction for
+# shutdown.target and/or reboot.target
+# reboot-force, reboot-immediate
+FailureAction=reboot
+# RebootArgument=
+
+# in case the job is not even executed
+# JobTimeoutSec=60
+# JobTimeoutAction=reboot-immediate
+# JobTimeoutRebootArgument=
+
+[Service]
+SyslogIdentifier=drbd-%I
+TimeoutSec=60
+# Note: oneshot cannot "Restart"
+# If we would need to have systemd retry failed demotion,
+# this needs to get more involved.
+# "Type=forking" would be an option to have it retry a number of times,
+# and then only escalate to FailureAction if that did not help.
+Type=oneshot
+ExecStart=/lib/drbd/scripts/drbd-service-shim.sh secondary-or-escalate %I
+ExecStopPost=/usr/bin/journalctl --sync

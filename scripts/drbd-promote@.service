@@ -5,18 +5,23 @@ PartOf=drbd-services@%i.target
 Requires=drbd@%i.target
 After=drbd@%i.target
 
+## If you want to "escalate" to self-fence
+## after a failed demote:
+# FailureAction=reboot
+## If your systemd does not know "ExecCondition",
+## and you have to change that to "ExecStart",
+## you will need to NOT use FailureAction here,
+## because that would also trigger for failed promote.
+## In that case, use OnFailure below (which has the FailureAction set)
+# OnFailure=drbd-demote-or-escalate@%i.service
+
 [Service]
 SyslogIdentifier=drbd-%I
-# Note: oneshot cannot "Restart"
-# If we would need to have systemd retry failed stops,
-# this needs to get more involved.
-# Maybe we rather want "something else" (a timer?)
-# periodically try to "garbage collect" failed stops?
 Type=oneshot
 RemainAfterExit=yes
 
 # (ab)using systemd features
 # if we cannot configure and promote, that's a condition, not a failure
+# See the comment above wrt. FailureAction vs OnFailure
 ExecCondition=/lib/drbd/scripts/drbd-service-shim.sh primary %I
-
 ExecStop=/lib/drbd/scripts/drbd-service-shim.sh secondary %I
