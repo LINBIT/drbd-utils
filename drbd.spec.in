@@ -132,7 +132,7 @@ Provides: drbd-utils = 8.3.16
 Conflicts: drbd < 8.3.6
 # These exist in centos extras:
 Conflicts: drbd82 drbd83
-%if %{initscripttype} == "sysv"
+%if "%{initscripttype}" == "sysv"
 @RPM_REQ_CHKCONFIG_POST@
 @RPM_REQ_CHKCONFIG_PREUN@
 %endif
@@ -166,7 +166,7 @@ This packages includes the DRBD administration tools.
 %if %{with drbdmon}
 %{_sbindir}/drbdmon
 %endif
-%if %{initscripttype} == "sysv"
+%if "%{initscripttype}" == "sysv"
 %{_initddir}/drbd
 %endif
 %dir %{_prefix}/lib/drbd
@@ -186,7 +186,7 @@ This packages includes the DRBD administration tools.
 %ghost %dir %{_var}/run/drbd
 
 %defattr(-,root,root,-)
-%if %{initscripttype} == "systemd"
+%if "%{initscripttype}" == "systemd"
 %{_unitdir}/drbd.service
 %{_unitdir}/drbd-lvchange@.service
 %{_unitdir}/drbd-promote@.service
@@ -465,10 +465,10 @@ ln -sv ..%{_sbindir}/drbdsetup .
 rm -rf %{buildroot}
 
 %post utils
-%if %{initscripttype} == "systemd"
+%if "%{initscripttype}" == "systemd"
 %systemd_post drbd.service
 %endif
-%if %{initscripttype} == "sysv"
+%if "%{initscripttype}" == "sysv"
 chkconfig --add drbd
 %endif
 %if %{with manual}
@@ -492,19 +492,19 @@ for f in drbd drbdadm drbdmeta drbdsetup; do
 done
 rm -f %{_mandir}/man5/drbd.conf.5.gz
 rm -f %{_mandir}/man8/drbdmon.8.gz
-%if %{initscripttype} == "systemd"
+%if "%{initscripttype}" == "systemd"
 %systemd_preun drbd.service
 %endif
-%if %{initscripttype} == "sysv"
+%if "%{initscripttype}" == "sysv"
 if [ $1 -eq 0 ]; then
         %{_initrddir}/drbd stop >/dev/null 2>&1
         /sbin/chkconfig --del drbd
 fi
 %endif
 
-%if %{initscripttype} == "systemd"
+%if "%{initscripttype}" == "systemd"
 %postun utils
-%systemd_postun
+%systemd_postun drbd.service
 %endif
 
 

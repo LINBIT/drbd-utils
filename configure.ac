@@ -253,10 +253,7 @@ fi
 if [[ $WITH_DRBDMON == "yes" ]] ; then
    AC_PROG_CXX
    AX_CXX_COMPILE_STDCXX_11(, optional)
-   dnl RCK: c++ testing is "special", CXX might be guessed to g++ even if not installed
-   dnl we have to check the undocumented "$ac_ct_CXX"
-   dnl https://lists.gnu.org/archive/html/bug-autoconf/2010-05/msg00001.html
-   if test -z "$ac_ct_CXX" -o "$HAVE_CXX11" = "0"; then
+   if test "$HAVE_CXX11" = "0"; then
       AC_MSG_WARN([No C++11 compiler found, disabling drbdmon build.])
       WITH_DRBDMON=no
    fi
