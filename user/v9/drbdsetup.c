@@ -2300,7 +2300,7 @@ static void show_resource_list(struct resources_list *resources_list, char* old_
 
 		objname = resource->name;
 
-		printI("resource %s {\n", resource->name);
+		printI("resource \"%s\" {\n", resource->name);
 		++indent;
 
 		print_options(resource->res_opts, &resource_options_ctx, "options");
