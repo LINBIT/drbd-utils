@@ -4,7 +4,7 @@ dnl
 dnl License: GNU General Public License Version 2 (GPLv2)
 
 dnl Minimum autoconf version we require
-AC_PREREQ(2.53)
+AC_PREREQ([2.63])
 
 dnl Include cpp feature testing macro
 dnl AC_CONFIG_MACRO_DIR([m4])
@@ -158,8 +158,7 @@ AC_CHECK_TYPES([__free_fn_t],[],[],
 dnl Do we know where systemd unit files go?
 PKG_PROG_PKG_CONFIG
 AC_ARG_WITH([systemdunitdir],
-	[AC_HELP_STRING([--with-systemdunitdir=DIR],
-        	        [Directory for systemd service files [Auto]])],
+	[AS_HELP_STRING([--with-systemdunitdir=DIR],[Directory for systemd service files [Auto]])],
 	[WITH_SYSTEMD_UNIT_DIR=$withval])
 if test x"$with_systemdunitdir" = x || \
    test x"$with_systemdunitdir" = xyes ; then
@@ -176,8 +175,7 @@ AC_SUBST(systemdunitdir)
 AC_MSG_RESULT([Using systemd unit directory: $systemdunitdir])
 
 AC_ARG_WITH(tmpfilesdir,
-	AC_HELP_STRING([--with-tmpfilesdir=DIR],
-		[install configuration files for management of volatile files and directories in DIR [[PREFIX/lib/tmpfiles.d]]]),
+	AS_HELP_STRING([--with-tmpfilesdir=DIR],[install configuration files for management of volatile files and directories in DIR [[PREFIX/lib/tmpfiles.d]]]),
 		tmpfilesdir=$withval, tmpfilesdir='${prefix}/lib/tmpfiles.d')
 AC_SUBST(tmpfilesdir)
 
