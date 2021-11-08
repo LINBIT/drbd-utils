@@ -27,4 +27,4 @@ TimeoutSec=60
 # and then only escalate to FailureAction if that did not help.
 Type=oneshot
 ExecStart=/lib/drbd/scripts/drbd-service-shim.sh secondary-or-escalate %I
-ExecStopPost=/usr/bin/journalctl --sync
+ExecStopPost=-/bin/journalctl --sync
