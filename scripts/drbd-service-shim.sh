@@ -7,18 +7,21 @@
 # By using this script, we first transition to a general unconfined context,
 # which allows us calling drbdadm and drbdsetup without these restrictions.
 
-case "$1" in
+cmd=$1
+res=$2
+
+case "$cmd" in
 adjust)
-  exec /usr/sbin/drbdadm adjust "$2"
+  exec /usr/sbin/drbdadm adjust "$res"
   ;;
 down)
-  exec /usr/sbin/drbdsetup down "$2"
+  exec /usr/sbin/drbdsetup down "$res"
   ;;
 primary)
-  exec /usr/sbin/drbdsetup primary "$2"
+  exec /usr/sbin/drbdsetup primary "$res"
   ;;
 secondary)
-  exec /usr/sbin/drbdsetup secondary "$2"
+  exec /usr/sbin/drbdsetup secondary "$res"
   ;;
 secondary-or-escalate)
 	# Log something and try to get journald to flush its logs
@@ -26,18 +29,19 @@ secondary-or-escalate)
 	# indication of why we rebooted -- if that turns out to be necessary.
 	echo >&2 "<6>about to demote (or escalate to the FailureAction)"
 	journalctl --flush --sync
-	/usr/sbin/drbdsetup secondary "$2"
+	/usr/sbin/drbdsetup secondary "$res"
 	ex_secondary=$?
 	case $ex_secondary in
 	 0)
 		# successfully demoted, already secondary anyways,
 		# or module is not even loaded
+		systemctl reset-failed "drbd-promote@$res.service"
 		exit 0 ;;
 
 	# any other special treatment for special exit codes?
 	*)
 		# double check for "resource does not exist"
-		current_state=$(/usr/sbin/drbdsetup events2 --now "$2")
+		current_state=$(/usr/sbin/drbdsetup events2 --now "$res")
 		if [[ $current_state = "exists -" ]]; then
 			echo >&2 "<7>not even configured"
 			exit 0
@@ -56,7 +60,7 @@ secondary-or-escalate)
 	;;
 
 *)
-  echo "Unknown verb $1" >&2
+  echo "Unknown verb $cmd" >&2
   exit 1
   ;;
 esac
