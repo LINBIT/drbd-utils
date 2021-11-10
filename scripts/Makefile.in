@@ -55,6 +55,7 @@ WITH_WINDRBD = @WITH_WINDRBD@
 
 SYSTEMD_TEMPLATES  = drbd-services@.target
 SYSTEMD_TEMPLATES += drbd-promote@.service
+SYSTEMD_TEMPLATES += drbd-demote-or-escalate@.service
 SYSTEMD_TEMPLATES += ocf.ra@.service
 SYSTEMD_TEMPLATES += drbd-reconfigure-suspend-or-error@.service
 
