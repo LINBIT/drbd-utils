@@ -1,9 +1,11 @@
 [Unit]
 # to be used as OnFailure unit in drbd-promote@.service
+Conflicts=drbd-promote@%i.service
 Description=Demotion of DRBD resource %I
 
 RefuseManualStart=yes
 RefuseManualStop=yes
+
 
 # See also systemd-system.conf(5) about WatchdogDevice, RuntimeWatchdogSec,
 # RebootWatchdogSec and possibly JobTimeoutSec, JobTimeoutAction for

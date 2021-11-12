@@ -14,6 +14,7 @@ After=drbd@%i.target
 ## because that would also trigger for failed promote.
 ## In that case, use OnFailure below (which has the FailureAction set)
 # OnFailure=drbd-demote-or-escalate@%i.service
+OnFailureJobMode=replace-irreversibly
 
 [Service]
 SyslogIdentifier=drbd-%I
