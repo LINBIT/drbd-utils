@@ -510,7 +510,7 @@ fi
 
 
 %changelog
-* Wed Nov 10 2021 Roland Kammerer <roland.kammerer@linbit.com> - 9.19.1~rc.1-1
+* Fri Nov 19 2021 Roland Kammerer <roland.kammerer@linbit.com> - 9.19.1-1
 -  New upstream release
 
 * Fri Oct 01 2021 Roland Kammerer <roland.kammerer@linbit.com> - 9.19.0-1

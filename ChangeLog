@@ -3,7 +3,7 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
-9.19.1-rc.1
+9.19.1
 -----------
  * v9,proxy: allow multiple sharing a proxy node
  * v9,drbdsetup: quote resource name in "show"
