@@ -36,7 +36,6 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/ioctl.h>
 #include <sys/utsname.h>
 #include <sys/time.h>
 
@@ -63,17 +62,6 @@
 #include "drbdmeta_parser.h"
 
 #include "config.h"
-
-/* BLKZEROOUT, available on linux-3.6 and later,
- * and maybe backported to distribution kernels,
- * even if they pretend to be older.
- * Yes, we encountered a number of systems that already had it in their
- * kernels, but not yet in the headers used to build userland stuff like this.
- */
-
-#ifndef BLKZEROOUT
-# define BLKZEROOUT	_IO(0x12,127)
-#endif
 
 extern FILE* yyin;
 YYSTYPE yylval;

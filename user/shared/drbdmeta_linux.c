@@ -189,21 +189,43 @@ int zeroout_bitmap_fast(struct format *cfg)
 	const size_t bitmap_bytes =
 		ALIGN(bm_bytes(&cfg->md, cfg->bd_size >> 9), cfg->md_hard_sect_size);
 
+	off_t bm_on_disk_off = cfg->bm_offset;
+	unsigned int percent_done = 0;
+	unsigned int percent_last_report = 0;
+	size_t i = bitmap_bytes;
+	size_t chunk;
+
 	uint64_t range[2];
 	int err;
 
-	range[0] = cfg->bm_offset; /* start offset */
-	range[1] = bitmap_bytes; /* len */
+	/* For huge devices with high peer bitmap slot counts
+	 * and small storage block size per bit,
+	 * this may be large, and take some time.
+	 * Do it in "chunks" per call so this can show progress
+	 * and can be interrupted, if necessary. */
+	const size_t bytes_per_iteration = 1024*1024*1024;
+	while (i) {
+		chunk = bytes_per_iteration < i ? bytes_per_iteration : i;
+		range[0] = bm_on_disk_off;
+		range[1] = chunk; /* len */
 
-	err = ioctl(cfg->md_fd, BLKZEROOUT, &range);
-	if (!err)
-		return 0;
-
-	PERROR("ioctl(%s, BLKZEROOUT, [%llu, %llu]) failed", cfg->md_device_name,
-			(unsigned long long)range[0], (unsigned long long)range[1]);
-	fprintf(stderr, "Using slow(er) fallback.\n");
-
-	return -1;
+		err = ioctl(cfg->md_fd, BLKZEROOUT, &range);
+		if (err) {
+			PERROR("ioctl(%s, BLKZEROOUT, [%llu, %llu]) failed", cfg->md_device_name,
+					(unsigned long long)range[0], (unsigned long long)range[1]);
+			fprintf(stderr, "Retrying with slow(er) fallback.\n");
+			return -1;
+		}
+		bm_on_disk_off += chunk;
+		i -= chunk;
+		percent_done = 100*(bitmap_bytes-i)/bitmap_bytes;
+		if (percent_done != percent_last_report) {
+			fprintf(stderr,"\r%u%%", percent_done);
+			percent_last_report = percent_done;
+		}
+	}
+	fprintf(stderr,"\r100%%\n");
+	return 0;
 }
 
 int v07_style_md_open_device(struct format *cfg)
