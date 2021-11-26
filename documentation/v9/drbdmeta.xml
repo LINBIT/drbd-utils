@@ -106,6 +106,7 @@
 	<term><option>create-md</option>
           <arg choice="req" rep="norepeat">number-of-bitmap-slots</arg>
 	  <arg choice="opt" rep="norepeat"><option>--peer-max-bio-size=</option><replaceable>val</replaceable></arg>
+	  <arg choice="opt" rep="norepeat"><option>--initialize-bitmap-mode=</option><replaceable>{automatic|zeroout|pwrite|skip}</replaceable></arg>
 	  <arg choice="opt" rep="norepeat"><option>--al-stripes=</option><replaceable>val</replaceable></arg>
 	  <arg choice="opt" rep="norepeat"><option>--al-stripe-size-kB=</option><replaceable>val</replaceable></arg> (metadata version v09)</term>
         <listitem>
@@ -130,6 +131,17 @@
 	    that this device will connect to are known.  DRBD supports a
 	    maximum bio size of 32 KiB since version 8.3.8, of 128 KiB since
 	    version 8.3.9, and of 1 MiB since version 8.4.0.</para>
+	  <para>By default, we explicitly initialize the bitmap area to all zero.
+	    With <option>--initialize-bitmap-mode</option> you can chose to
+	    only try the fast method (<option>zeroout</option>, try ioctl
+	    BLKZEROOUT only), only use explicit <option>pwrite</option> calls,
+	    or <option>skip</option> this bitmap initialization phase
+	    completely.  If you intend to do an initial full sync anyways, you
+	    can use <option>skip</option> to leave the bitmap initialization to
+	    the kernel. This can make a noticable difference when initializing
+	    huge volumes. Default is <option>automatic</option>, which is
+	    zeroout with an implicit fallback to pwrite.
+	    </para>
 	  <para>
 	    If you want to use more than 6433 activity log extents, or live on
 	    top of a spriped RAID, you may specify the number of stripes

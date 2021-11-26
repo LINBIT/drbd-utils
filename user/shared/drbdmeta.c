@@ -76,6 +76,20 @@ unsigned option_al_stripes = 1;
 unsigned option_al_stripe_size_4k = 8;
 unsigned option_al_stripes_used = 0;
 
+enum initialize_bitmap_mode {
+	/* Yes, I'm going to prefix these with IBM ;-) */
+
+	IBM_ZEROOUT, /* ioctl, with fallback to pwrite */
+	IBM_ZEROOUT_IOCTL_ONLY, /* ioctl or fail */
+	IBM_ZEROOUT_PWRITE, /* do not even attempt the ioctl */
+
+	/* MAYBE: allow to select BLKDISCARD, BLKDISCARDZEROES */
+
+	IBM_SKIP, /* do not initialize bitmap area, leave as is */
+};
+
+enum initialize_bitmap_mode option_initialize_bitmap_mode = IBM_ZEROOUT;
+
 struct option metaopt[] = {
     { "ignore-sanity-checks",  no_argument, &ignore_sanity_checks, 1000 },
     { "dry-run",  no_argument, &dry_run, 1000 },
@@ -85,6 +99,7 @@ struct option metaopt[] = {
     { "node-id",  required_argument, NULL, 'i' },
     { "al-stripes",  required_argument, NULL, 's' },
     { "al-stripe-size-kB",  required_argument, NULL, 'z' },
+    { "initialize-bitmap",  required_argument, NULL, 'b' },
     { NULL,     0,              0, 0 },
 };
 
@@ -1377,44 +1392,68 @@ void initialize_al(struct format *cfg)
 
 void check_for_existing_data(struct format *cfg);
 
-static void zeroout_bitmap(struct format *cfg)
+static void zeroout_bitmap_pwrite(struct format *cfg)
 {
 	const size_t bitmap_bytes =
 		ALIGN(bm_bytes(&cfg->md, cfg->bd_size >> 9), cfg->md_hard_sect_size);
-	fprintf(stderr,"initializing bitmap (%u KB) to all zero\n",
-		(unsigned int)(bitmap_bytes>>10));
 
-	if (zeroout_bitmap_fast(cfg) == 0)
-		return;
+	/* need to sector-align this for O_DIRECT.
+	 * "sector" here means hard-sect size, which may be != 512.
+	 * Note that even though ALIGN does round up, for sector sizes
+	 * of 512, 1024, 2048, 4096 Bytes, this will be fully within
+	 * the claimed meta data area, since we already align all
+	 * "interesting" parts of that to 4kB */
+	size_t bytes_left = bitmap_bytes;
+	off_t bm_on_disk_off = cfg->bm_offset;
+	unsigned int percent_done = 0;
+	unsigned int percent_last_report = 0;
+	size_t chunk;
 
-	{
-		/* need to sector-align this for O_DIRECT.
-		 * "sector" here means hard-sect size, which may be != 512.
-		 * Note that even though ALIGN does round up, for sector sizes
-		 * of 512, 1024, 2048, 4096 Bytes, this will be fully within
-		 * the claimed meta data area, since we already align all
-		 * "interesting" parts of that to 4kB */
-		size_t i = bitmap_bytes;
-		off_t bm_on_disk_off = cfg->bm_offset;
-		unsigned int percent_done = 0;
-		unsigned int percent_last_report = 0;
-		size_t chunk;
-
-		memset(on_disk_buffer, 0x00, buffer_size);
-		while (i) {
-			chunk = buffer_size < i ? buffer_size : i;
-			pwrite_or_die(cfg, on_disk_buffer,
-				      chunk, bm_on_disk_off,
-				      "md_initialize_common:BM");
-			bm_on_disk_off += chunk;
-			i -= chunk;
-			percent_done = 100*(bitmap_bytes-i)/bitmap_bytes;
-			if (percent_done != percent_last_report) {
-				fprintf(stderr,"\r%u%%", percent_done);
-				percent_last_report = percent_done;
-			}
+	memset(on_disk_buffer, 0x00, buffer_size);
+	for (;;) {
+		chunk = buffer_size < bytes_left ? buffer_size : bytes_left;
+		pwrite_or_die(cfg, on_disk_buffer,
+			      chunk, bm_on_disk_off,
+			      "md_initialize_common:BM");
+		bm_on_disk_off += chunk;
+		bytes_left -= chunk;
+		if (bytes_left == 0)
+			break;
+		percent_done = 100*(bitmap_bytes-bytes_left)/bitmap_bytes;
+		if (percent_done != percent_last_report) {
+			fprintf(stderr,"\r%u%%", percent_done);
+			percent_last_report = percent_done;
 		}
+	}
+	if (percent_last_report)
 		fprintf(stderr,"\r100%%\n");
+}
+
+static void initialize_bitmap(struct format *cfg)
+{
+	const size_t bitmap_kbytes =
+		ALIGN(bm_bytes(&cfg->md, cfg->bd_size >> 9), cfg->md_hard_sect_size) >> 10;
+	char ppb[10];
+
+	ppsize(ppb, bitmap_kbytes);
+	switch (option_initialize_bitmap_mode) {
+	case IBM_SKIP:
+		fprintf(stderr, "SKIPPED initializing bitmap area\n");
+		break;
+	case IBM_ZEROOUT_IOCTL_ONLY:
+	case IBM_ZEROOUT:
+		fprintf(stderr, "initializing bitmap (%s) to all zero\n", ppb);
+		if (zeroout_bitmap_fast(cfg) == 0)
+			return;
+		if (IBM_ZEROOUT_IOCTL_ONLY == option_initialize_bitmap_mode) {
+			fprintf(stderr, "fast zero-out failed, fallback disabled\n");
+			exit(10);
+		}
+		/* fall through */
+	case IBM_ZEROOUT_PWRITE:
+		fprintf(stderr, "initializing bitmap (%s) to all zero using pwrite\n", ppb);
+		zeroout_bitmap_pwrite(cfg);
+		break;
 	}
 }
 
@@ -1439,14 +1478,14 @@ int md_initialize_common(struct format *cfg, int do_disk_writes)
 	}
 	initialize_al(cfg);
 
-	/* We initialize the bitmap to all 0 for the use case that someone
+	/* By default we initialize the bitmap to all 0 for the use case that someone
 	 * might use set-gi to pretend that the backend devices are completely
 	 * in sync. (I.e. thinly provisioned storage, all zeroes)
 	 *
-	 * In case it current UUID is left at UUID_JUST_CREATED the kernel
+	 * In case the current UUID is left at UUID_JUST_CREATED, the kernel
 	 * driver will set all bits to 1 when using it in a handshake...
 	 */
-	zeroout_bitmap(cfg);
+	initialize_bitmap(cfg);
 
 	return 0;
 }
@@ -4749,6 +4788,28 @@ struct format *new_cfg()
 	return cfg;
 }
 
+static enum initialize_bitmap_mode check_ibm_arg(const char *arg)
+{
+	const char * const initialize_bitmap_mode_names[] = {
+		[IBM_ZEROOUT] = "automatic",
+		[IBM_ZEROOUT_IOCTL_ONLY] = "zeroout",
+		[IBM_ZEROOUT_PWRITE] = "pwrite",
+		[IBM_SKIP] = "skip",
+	};
+	enum initialize_bitmap_mode i;
+	char *sep = " |";
+
+	for (i = IBM_ZEROOUT; i <= IBM_SKIP; i++) {
+		if (0==strcmp(arg, initialize_bitmap_mode_names[i]))
+			return i;
+	}
+	fprintf(stderr, "invalid initialize-bitmap-mode \"%s\", should be one of", arg);
+	for (i = IBM_ZEROOUT; i <= IBM_SKIP; i++)
+		fprintf(stderr, "%c%s", sep[i != IBM_ZEROOUT], initialize_bitmap_mode_names[i]);
+	fprintf(stderr, "\n");
+	exit(10);
+}
+
 int main(int argc, char **argv)
 {
 	struct format *cfg;
@@ -4836,6 +4897,9 @@ int main(int argc, char **argv)
 		    option_al_stripe_size_4k = m_strtoll(optarg, 'k')/4;
 		    option_al_stripes_used = 1;
 		    break;
+	    case 'b':
+		option_initialize_bitmap_mode = check_ibm_arg(optarg);
+	    	break;
 	    default:
 		print_usage_and_exit();
 		break;

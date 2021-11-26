@@ -192,7 +192,7 @@ int zeroout_bitmap_fast(struct format *cfg)
 	off_t bm_on_disk_off = cfg->bm_offset;
 	unsigned int percent_done = 0;
 	unsigned int percent_last_report = 0;
-	size_t i = bitmap_bytes;
+	size_t bytes_left = bitmap_bytes;
 	size_t chunk;
 
 	uint64_t range[2];
@@ -204,8 +204,8 @@ int zeroout_bitmap_fast(struct format *cfg)
 	 * Do it in "chunks" per call so this can show progress
 	 * and can be interrupted, if necessary. */
 	const size_t bytes_per_iteration = 1024*1024*1024;
-	while (i) {
-		chunk = bytes_per_iteration < i ? bytes_per_iteration : i;
+	for (;;) {
+		chunk = bytes_per_iteration < bytes_left ? bytes_per_iteration : bytes_left;
 		range[0] = bm_on_disk_off;
 		range[1] = chunk; /* len */
 
@@ -213,18 +213,20 @@ int zeroout_bitmap_fast(struct format *cfg)
 		if (err) {
 			PERROR("ioctl(%s, BLKZEROOUT, [%llu, %llu]) failed", cfg->md_device_name,
 					(unsigned long long)range[0], (unsigned long long)range[1]);
-			fprintf(stderr, "Retrying with slow(er) fallback.\n");
 			return -1;
 		}
 		bm_on_disk_off += chunk;
-		i -= chunk;
-		percent_done = 100*(bitmap_bytes-i)/bitmap_bytes;
+		bytes_left -= chunk;
+		if (bytes_left == 0)
+			break;
+		percent_done = 100*(bitmap_bytes-bytes_left)/bitmap_bytes;
 		if (percent_done != percent_last_report) {
 			fprintf(stderr,"\r%u%%", percent_done);
 			percent_last_report = percent_done;
 		}
 	}
-	fprintf(stderr,"\r100%%\n");
+	if (percent_last_report)
+		fprintf(stderr,"\r100%%\n");
 	return 0;
 }
 
