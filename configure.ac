@@ -248,7 +248,7 @@ if test -z $FLEX; then
    AC_MSG_ERROR([Cannot build utils without flex.])
 fi
 
-if [[ $WITH_DRBDMON == "yes" ]] ; then
+if test x"$WITH_DRBDMON" = x"yes" ; then
    AC_PROG_CXX
    AX_CXX_COMPILE_STDCXX_11(, optional)
    if test "$HAVE_CXX11" = "0"; then
