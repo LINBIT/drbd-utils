@@ -334,7 +334,7 @@ this many seconds for the connection(s) to be established
 after bringing them up during "start".
 </longdesc>
 <shortdesc lang="en">wait for connections with timeout</shortdesc>
-<content type="numeric" default="$OCF_RESKEY_wfc_timeout_default"/>
+<content type="integer" default="$OCF_RESKEY_wfc_timeout_default"/>
 </parameter>
 
 <parameter name="remove_master_score_if_peer_primary">
