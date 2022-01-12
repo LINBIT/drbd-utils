@@ -117,7 +117,7 @@ list_existing_attributes()
 re_init_daemon()
 {
 	resources_with_existing_attributes=$( list_existing_attributes )
-	resources_known_to_drbdadm=$( drbadm sh-resources )
+	resources_known_to_drbdadm=$( drbdadm sh-resources )
 	resources_seen_in_initial_dump=''
 	status_delay=''
 	exec 0< <(exec drbdsetup events2 --timestamps 9>&- )
