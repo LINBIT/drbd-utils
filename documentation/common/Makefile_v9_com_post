@@ -54,11 +54,16 @@ else
 	$(MANPAGES_STYLESHEET) $<
 
 ASCIIDOCTOR  = asciidoctor -I. -rasciidoctor-extensions.rb
-ASCIIDOCTOR += -amansource=drbd-utils -amanmanual='DRBD Manual' -amanversion=$(VERSION)
-ASCIIDOCTOR += -aorgname='LINBIT HA Solutions GmbH https://linbit.com'
+ASCIIDOC_ARGS = -d manpage -b docbook
+ASCIIDOC_ARGS += -amansource=drbd-utils -amanmanual='DRBD Manual' -amanversion=$(VERSION)
+ASCIIDOC_ARGS += -aorgname='LINBIT HA Solutions GmbH https://linbit.com'
 
 %.xml: %.adoc
-	$(ASCIIDOCTOR) -d manpage -b docbook5 $<
+	$(ASCIIDOCTOR) $(ASCIIDOC_ARGS) $<
+	if grep -q linkgit: $@ ; then \
+		sed -i -e 's#linkgit:\([^][:space:]]*\)\[\([^]]*\)\]#<citerefentry>\n<refentrytitle>\1</refentrytitle><manvolnum>\2</manvolnum>\n</citerefentry>#g' $@ ; \
+	fi
+
 .PRECIOUS: $(patsubst %.adoc,%.xml,$(ADOC_MANPAGES))
 endif
 
