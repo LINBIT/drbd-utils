@@ -400,10 +400,18 @@ setup_crm_timeout_unit_ms()
 	# garbage", so we could get away with always appending "ms", but with
 	# 2.0.5, it became g_option_context_parse G_OPTION_ARG_INT, which
 	# "Cannot parse integer value “200ms” for --timeout" :-|
-	if crmadmin --help 2>&1 | grep -q -e "--timeout=.*in milliseconds"; then
-		crm_timeout_unit_ms=""
-	else
+	# Can not parse the help text reliably, because they changed content
+	# and organisation of the help text between 2.0.4 and 2.0.5.
+	# Just try using ms unit, and see if it fails.
+	if crmadmin -t 100ms --version &> /dev/null; then
+		# this is either a recent version that actually understands ms
+		# as part of the TIMESPEC, or a version that still uses atoi().
 		crm_timeout_unit_ms="ms"
+	else
+		# this one likely failed with
+		# crmadmin: Cannot parse integer value “100ms” for -t
+		# (>= 2.0.5, < 2.1)
+		crm_timeout_unit_ms=""
 	fi
 }
 
