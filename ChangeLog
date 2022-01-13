@@ -3,6 +3,23 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.20.0
+-----------
+ * drbdmeta: do init in chunks; allow different methods
+ * build: various minor fixes (udev detection, POSIX,
+   compiler flags, allow doc building with asciidoctor,...)
+ * drbd.ocf: fix type (relevant for certain pcs versions)
+ * drbd-attr: fix typo "drbadm" -> "drbdadm"
+ * crm-fence-peer: fix timeout with Pacemaker 2.1
+
+9.19.1
+-----------
+ * v9,proxy: allow multiple sharing a proxy node
+ * v9,drbdsetup: quote resource name in "show"
+ * build: allow building for RHEL9.0, minor cleanups
+ * reactor/systemd: allow proper actions (e.g., reboot) if
+   demotion fails.
+
 9.19.0
 -----------
  * v9,events2: show changes of peer-client
