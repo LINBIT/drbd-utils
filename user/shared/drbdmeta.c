@@ -115,27 +115,32 @@ struct option metaopt[] = {
  * AND, the exit codes should follow some defined scheme.
  */
 
-int confirmed(const char *text)
+bool confirmed(const char *text)
 {
 	const char yes[] = "yes";
 	const ssize_t N = sizeof(yes);
 	char *answer = NULL;
 	size_t n = 0;
-	int ok;
+	bool ok;
 
 	fprintf(stderr, "\n%s\n", text);
 
 	if (force) {
-	    fprintf(stderr, "*** confirmation forced via --force option ***\n");
-	    ok = 1;
+		fprintf(stderr, "*** confirmation forced via --force option ***\n");
+		return true;
 	}
-	else {
-	    fprintf(stderr, "[need to type '%s' to confirm] ", yes);
-	    ok = getline(&answer,&n,stdin) == N &&
+
+	if (!isatty(fileno(stdin))) {
+		fprintf(stderr, "stdin not a TTY, not waiting for confirmation\n");
+		return false;
+	}
+
+	fprintf(stderr, "[need to type '%s' to confirm] ", yes);
+	ok = getline(&answer,&n,stdin) == N &&
 		strncmp(answer,yes,N-1) == 0;
-	    free(answer);
-	    fprintf(stderr, "\n");
-	}
+	free(answer);
+	fprintf(stderr, "\n");
+
 	return ok;
 }
 
