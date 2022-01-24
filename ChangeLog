@@ -3,6 +3,11 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.20.1
+-----------
+ * drbdmeta: don't wait for confirmation if not a TTY
+ * drbdadm,v9: Pass '--force' to certain drbdmeta commands
+
 9.20.0
 -----------
  * drbdmeta: do init in chunks; allow different methods
