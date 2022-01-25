@@ -1,0 +1,29 @@
+$ drbdadm -d -c ./drbdmeta_force_flag.res dstate r0 2>/dev/null; echo $?
+drbdsetup dstate 1
+drbdmeta 1 v09 /dev/foo/fun/0 internal dstate
+0
+$ drbdadm --force -d -c ./drbdmeta_force_flag.res dstate r0 2>/dev/null; echo $?
+drbdsetup dstate 1
+drbdmeta 1 v09 /dev/foo/fun/0 internal dstate --force
+0
+$ drbdadm --force -d -c ./drbdmeta_force_flag.res invalidate r0 2>/dev/null; echo $?
+drbdsetup invalidate 1
+drbdmeta 1 v09 /dev/foo/fun/0 internal invalidate --force
+0
+$ drbdadm --force -d -c ./drbdmeta_force_flag.res get-gi r0/0 2>/dev/null; echo $?
+drbdsetup get-gi r0 2 0
+drbdmeta 1 v09 /dev/foo/fun/0 internal --node-id=2 get-gi --force
+0
+$ drbdadm --force -d -c ./drbdmeta_force_flag.res set-gi r0/0 2>/dev/null; echo $?
+drbdmeta 1 v09 /dev/foo/fun/0 internal --node-id=2 set-gi --force
+0
+$ drbdadm --force -d -c ./drbdmeta_force_flag.res wipe-md r0/0 2>/dev/null; echo $?
+drbdmeta 1 v09 /dev/foo/fun/0 internal wipe-md --force
+0
+$ drbdadm --force -d -c ./drbdmeta_force_flag.res apply-al r0/0 2>/dev/null; echo $?
+drbdmeta 1 v09 /dev/foo/fun/0 internal apply-al --force
+0
+$ drbdadm --force -d -c ./drbdmeta_force_flag.res forget-peer r0 2>/dev/null; echo $?
+drbdsetup forget-peer r0 2
+drbdmeta 1 v09 /dev/foo/fun/0 internal --node-id=2 forget-peer --force
+0
