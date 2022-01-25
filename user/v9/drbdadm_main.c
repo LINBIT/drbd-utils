@@ -357,7 +357,7 @@ static struct adm_cmd wait_sync_cmd = {"wait-sync", adm_wait_c, ACF1_WAIT};
 static struct adm_cmd wait_ci_cmd = {"wait-con-int", adm_wait_ci, .show_in_usage = 1,.verify_ips = 1,};
 static struct adm_cmd role_cmd = {"role", adm_drbdsetup, ACF1_RESNAME};
 static struct adm_cmd cstate_cmd = {"cstate", adm_drbdsetup, ACF1_DISCONNECT};
-static struct adm_cmd dstate_cmd = {"dstate", adm_setup_and_meta, ACF1_MINOR_ONLY .disk_required = 0 };
+static struct adm_cmd dstate_cmd = {"dstate", adm_setup_and_meta, &forceable_ctx, ACF1_MINOR_ONLY .disk_required = 0 };
 static struct adm_cmd status_cmd = {"status", adm_drbdsetup, .show_in_usage = 1, .uc_dialog = 1, .backend_res_name=1};
 static struct adm_cmd peer_device_options_cmd = {"peer-device-options", adm_peer_device,
 						 &peer_device_options_ctx, ACF1_PEER_DEVICE};
@@ -365,8 +365,8 @@ static struct adm_cmd dump_cmd = {"dump", adm_dump, ACF1_DUMP};
 static struct adm_cmd dump_xml_cmd = {"dump-xml", adm_dump_xml, ACF1_DUMP};
 
 static struct adm_cmd create_md_cmd = {"create-md", adm_create_md, &create_md_ctx, ACF1_MINOR_ONLY };
-static struct adm_cmd show_gi_cmd = {"show-gi", adm_setup_and_meta, ACF1_PEER_DEVICE .disk_required = 1};
-static struct adm_cmd get_gi_cmd = {"get-gi", adm_setup_and_meta, ACF1_PEER_DEVICE .disk_required = 1};
+static struct adm_cmd show_gi_cmd = {"show-gi", adm_setup_and_meta, &forceable_ctx, ACF1_PEER_DEVICE .disk_required = 1};
+static struct adm_cmd get_gi_cmd = {"get-gi", adm_setup_and_meta, &forceable_ctx, ACF1_PEER_DEVICE .disk_required = 1};
 static struct adm_cmd dump_md_cmd = {"dump-md", adm_drbdmeta, &forceable_ctx, ACF1_MINOR_ONLY };
 static struct adm_cmd wipe_md_cmd = {"wipe-md", adm_drbdmeta, &forceable_ctx, ACF1_MINOR_ONLY };
 static struct adm_cmd apply_al_cmd = {"apply-al", adm_drbdmeta, &forceable_ctx, ACF1_MINOR_ONLY };
@@ -1578,9 +1578,16 @@ bool backing_device_configured(const struct cfg_ctx *ctx)
  * if it fails, try drbdmeta */
 static int adm_setup_and_meta(const struct cfg_ctx *ctx)
 {
+	struct cfg_ctx tmp_ctx = *ctx;
+	struct adm_cmd tmp_cmd = *tmp_ctx.cmd;
 	int rv;
 
-	rv = __adm_drbdsetup_silent(ctx);
+	/* forceable_ctx is only for drbdmeta... */
+	if (tmp_cmd.drbdsetup_ctx == &forceable_ctx)
+		tmp_cmd.drbdsetup_ctx = NULL;
+	tmp_ctx.cmd = &tmp_cmd;
+
+	rv = __adm_drbdsetup_silent(&tmp_ctx);
 
 	if (rv == 11 || rv == 17 || !backing_device_configured(ctx)) {
 		/* see drbdsetup.c, print_config_error():
