@@ -343,7 +343,7 @@ static struct adm_cmd up_cmd = {"up", adm_up, ACF1_RESNAME_VERIFY_IPS };
 static struct adm_cmd down_cmd = {"down", adm_drbdsetup, ACF1_RESNAME .takes_long = 1};
 static struct adm_cmd primary_cmd = {"primary", adm_drbdsetup, &primary_cmd_ctx, ACF1_RESNAME .takes_long = 1};
 static struct adm_cmd secondary_cmd = {"secondary", adm_drbdsetup, ACF1_RESNAME .takes_long = 1};
-static struct adm_cmd invalidate_cmd = {"invalidate", adm_invalidate, &invalidate_ctx, ACF1_MINOR_ONLY };
+static struct adm_cmd invalidate_cmd = {"invalidate", adm_invalidate, &invalidate_adm_ctx, ACF1_MINOR_ONLY };
 static struct adm_cmd invalidate_remote_cmd = {"invalidate-remote", adm_drbdsetup, &invalidate_peer_ctx, ACF1_PEER_DEVICE .takes_long = 1};
 static struct adm_cmd outdate_cmd = {"outdate", adm_outdate, ACF1_DEFAULT};
 /*  */ struct adm_cmd resize_cmd = {"resize", adm_resize, &resize_cmd_ctx, ACF1_DEFAULT .disk_required = 1};
@@ -367,10 +367,10 @@ static struct adm_cmd dump_xml_cmd = {"dump-xml", adm_dump_xml, ACF1_DUMP};
 static struct adm_cmd create_md_cmd = {"create-md", adm_create_md, &create_md_ctx, ACF1_MINOR_ONLY };
 static struct adm_cmd show_gi_cmd = {"show-gi", adm_setup_and_meta, ACF1_PEER_DEVICE .disk_required = 1};
 static struct adm_cmd get_gi_cmd = {"get-gi", adm_setup_and_meta, ACF1_PEER_DEVICE .disk_required = 1};
-static struct adm_cmd dump_md_cmd = {"dump-md", adm_drbdmeta, &dump_md_ctx, ACF1_MINOR_ONLY };
-static struct adm_cmd wipe_md_cmd = {"wipe-md", adm_drbdmeta, ACF1_MINOR_ONLY };
-static struct adm_cmd apply_al_cmd = {"apply-al", adm_drbdmeta, ACF1_MINOR_ONLY };
-static struct adm_cmd forget_peer_cmd = {"forget-peer", adm_forget_peer, ACF1_DISCONNECT };
+static struct adm_cmd dump_md_cmd = {"dump-md", adm_drbdmeta, &forceable_ctx, ACF1_MINOR_ONLY };
+static struct adm_cmd wipe_md_cmd = {"wipe-md", adm_drbdmeta, &forceable_ctx, ACF1_MINOR_ONLY };
+static struct adm_cmd apply_al_cmd = {"apply-al", adm_drbdmeta, &forceable_ctx, ACF1_MINOR_ONLY };
+static struct adm_cmd forget_peer_cmd = {"forget-peer", adm_forget_peer, &forceable_ctx, ACF1_DISCONNECT };
 
 static struct adm_cmd hidden_cmd = {"hidden-commands", hidden_cmds,.show_in_usage = 1,};
 
@@ -1600,6 +1600,7 @@ static int adm_invalidate(const struct cfg_ctx *ctx)
 	static const struct adm_cmd invalidate_meta_cmd = {
 		"invalidate",
 		adm_drbdmeta,
+		&forceable_ctx,
 		ACF1_MINOR_ONLY
 	};
 
@@ -1625,6 +1626,7 @@ static int adm_forget_peer(const struct cfg_ctx *ctx)
 	static const struct adm_cmd forget_peer_meta_cmd = {
 		"forget-peer",
 		adm_drbdmeta,
+		&forceable_ctx,
 		ACF1_PEER_DEVICE .disk_required = 1
 	};
 

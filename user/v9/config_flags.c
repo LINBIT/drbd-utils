@@ -1056,12 +1056,24 @@ struct context_def device_options_ctx = {
 		{ } },
 };
 
+#define INVALIDATE_OPTIONS									\
+		{ "sync-from-peer-node-id", NUMERIC(sync_from_peer_node_id, SYNC_FROM_NID) },	\
+		{ "reset-bitmap", BOOLEAN(reset_bitmap, INVALIDATE_RESET_BITMAP) },
+
 struct context_def invalidate_ctx = {
 	NLA_POLICY(invalidate_parms),
 	.nla_type = DRBD_NLA_INVALIDATE_PARMS,
 	.fields = {
-		{ "sync-from-peer-node-id", NUMERIC(sync_from_peer_node_id, SYNC_FROM_NID) },
-		{ "reset-bitmap", BOOLEAN(reset_bitmap, INVALIDATE_RESET_BITMAP) },
+		INVALIDATE_OPTIONS
+		{ } },
+};
+
+struct context_def invalidate_adm_ctx = {
+	NLA_POLICY(invalidate_parms),
+	.nla_type = DRBD_NLA_INVALIDATE_PARMS,
+	.fields = {
+		{ "force", .argument_is_optional = true },
+		INVALIDATE_OPTIONS
 		{ } },
 };
 
@@ -1098,7 +1110,7 @@ struct context_def create_md_ctx = {
 		{ } },
 };
 
-struct context_def dump_md_ctx = {
+struct context_def forceable_ctx = {
        .fields = {
 		{ .name = "force", .argument_is_optional = true },
 		{ } },
