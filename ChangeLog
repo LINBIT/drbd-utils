@@ -3,6 +3,10 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.20.2
+-----------
+ * crm-fence-peer: fix timeout with Pacemaker 2.0.5
+
 9.20.1
 -----------
  * drbdmeta: don't wait for confirmation if not a TTY
