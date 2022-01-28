@@ -4303,6 +4303,11 @@ int drbdsetup_main(int argc, char **argv)
 	int c, rv = 0;
 	int longindex, first_optind;
 
+	if (argv == NULL || argc < 1) {
+		fputs("drbdsetup: Nonexistent or empty arguments array, aborting.\n", stderr);
+		abort();
+	}
+
 	progname = basename(argv[0]);
 
 	if (chdir("/")) {

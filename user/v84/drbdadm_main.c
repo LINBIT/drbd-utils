@@ -3609,6 +3609,11 @@ int main(int argc, char **argv)
 	bool is_status;
 	struct cfg_ctx ctx = { .arg = NULL };
 
+	if (argv == NULL || argc < 1) {
+		fputs("drbdadm: Nonexistent or empty arguments array, aborting.\n", stderr);
+		abort();
+	}
+
 	initialize_err();
 	yyin = NULL;
 	uname(&nodeinfo);	/* FIXME maybe fold to lower case ? */

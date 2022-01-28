@@ -4822,6 +4822,11 @@ int main(int argc, char **argv)
 	int ai, rv;
 	bool minor_attached = false;
 
+	if (argv == NULL || argc < 1) {
+		fputs("drbdmeta: Nonexistent or empty arguments array, aborting.\n", stderr);
+		abort();
+	}
+
 #if 1
 	if (sizeof(struct md_on_disk_07) != 4096) {
 		fprintf(stderr, "Where did you get this broken build!?\n"

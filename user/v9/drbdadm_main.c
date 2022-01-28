@@ -3311,6 +3311,11 @@ int main(int argc, char **argv)
 	int is_adjust;
 	struct cfg_ctx ctx = { };
 
+	if (argv == NULL || argc < 1) {
+		fputs("drbdadm: Nonexistent or empty arguments array, aborting.\n", stderr);
+		abort();
+	}
+
 	initialize_err();
 	initialize_deferred_cmds();
 	yyin = NULL;

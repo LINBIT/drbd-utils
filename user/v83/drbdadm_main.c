@@ -2899,6 +2899,11 @@ int main(int argc, char **argv)
 	int is_dump_xml;
 	int is_dump;
 
+	if (argv == NULL || argc < 1) {
+		fputs("drbdadm: Nonexistent or empty arguments array, aborting.\n", stderr);
+		abort();
+	}
+
 	initialize_err();
 	yyin = NULL;
 	uname(&nodeinfo);	/* FIXME maybe fold to lower case ? */

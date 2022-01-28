@@ -1450,6 +1450,11 @@ int main(int argc, char ** argv)
 	const char *op;
 	char c;
 
+	if (argv == NULL || argc < 1) {
+		fputs("drbdadm: Nonexistent or empty arguments array, aborting.\n", stderr);
+		abort();
+	}
+
 		/* When running as service, we are redirected to
 		 * files, always flush printf's.
 		 */
