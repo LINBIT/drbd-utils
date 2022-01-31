@@ -1451,7 +1451,7 @@ int main(int argc, char ** argv)
 	char c;
 
 	if (argv == NULL || argc < 1) {
-		fputs("drbdadm: Nonexistent or empty arguments array, aborting.\n", stderr);
+		fputs("windrbd: Nonexistent or empty arguments array, aborting.\n", stderr);
 		abort();
 	}
 
