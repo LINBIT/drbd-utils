@@ -519,6 +519,10 @@
 	multiplier of the discard granularity of the backing block device DRBD
 	rounds it up. The feature only gets active if the backing block device
 	reads back zeroes after a discard command.</para>
+        <para>The usage of <option>rs-discard-granularity</option> may cause
+        <option>c-max-rate</option> to be exceeded. In particular, the resync
+        rate may reach 10x the value of <option>rs-discard-granularity</option>
+        per second.</para>
         <para> The default value of <option>rs-discard-granularity</option> is 0.
         This option is available since 8.4.7.
         </para>
