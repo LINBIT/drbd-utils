@@ -2806,12 +2806,20 @@ static void resource_status_json(struct resources_list *resource)
 	       "  \"node-id\": %d,\n"
 	       "  \"role\": \"%s\",\n"
 	       "  \"suspended\": %s,\n"
+	       "  \"suspended-user\": %s,\n"
+	       "  \"suspended-no-data\": %s,\n"
+	       "  \"suspended-fencing\": %s,\n"
+	       "  \"suspended-quorum\": %s,\n"
 	       "  \"write-ordering\": \"%s\",\n"
 	       "  \"devices\": [\n",
 	       resource->name,
 	       node_id,
 	       drbd_role_str(resource->info.res_role),
 	       bool2json(suspended),
+	       bool2json(resource->info.res_susp),
+	       bool2json(resource->info.res_susp_nod),
+	       bool2json(resource->info.res_susp_fen),
+	       bool2json(resource->info.res_susp_quorum),
 	       write_ordering_str[resource->statistics.res_stat_write_ordering]);
 }
 
