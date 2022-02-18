@@ -3,7 +3,8 @@ stages:
   - test
 
 variables:
-  BUILD_HELPERS_VERSION: dfbf85c26dd39ad1a88807b01fda1dc1d536abbb
+  BUILD_HELPERS_VERSION: 6959b310000055d1e941f948aeba00b30a4e3b73
+  DRBD9_TESTS_REF: master
   # we have to change the way GitLab CI clones the repository.
   # by default, it is shallow, which gives us a wrong commit count when
   # we do `git rev-list --count origin/master` below.
@@ -16,12 +17,11 @@ variables:
     - . .gitlab/gitlab-utils.sh
     - drbd_prepare_tools
     - drbd_fetch_lbbuildctl
+    - git clone --branch ${DRBD9_TESTS_REF} https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/drbd/drbd9-tests.git
     - |
       drbd_utils_build () {
         local version="$1"
         local release="$2"
-        mkdir -p drbd-test-bundle
-        curl -sSL $LINBIT_REGISTRY_URL/repository/test-suite/drbd-test-bundle.tgz | tar -C drbd-test-bundle -xvzf -
 
         dummy-release.sh drbd-utils "$version" "$release" drbd.spec.in
         sed -i "s/^AC_INIT.*/AC_INIT(DRBD, $version, [drbd-dev@lists.linbit.com])/" configure.ac
@@ -35,7 +35,7 @@ variables:
         curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD --upload-file drbd-utils-*.tar.gz $LINBIT_REGISTRY_URL/repository/lbbuild-upstream/
 
         # distributions, with rhelX.y replaced by rhelX.0, comma separated
-        local dists=$(rq -t < drbd-test-bundle/virter/vms.toml | jq -r '[
+        local dists=$(rq -t < drbd9-tests/virter/vms.toml | jq -r '[
           .vms[].metadata.BuildDistribution
           | sub("rhel(?<major>\\d)\\.\\d"; "rhel\(.major).0")
         ] | unique | join(",")')
@@ -63,10 +63,6 @@ build:
   script:
     - DRBD_UTILS_VERSION=9.0.0.$CI_COMMIT_SHA
     - drbd_utils_build $DRBD_UTILS_VERSION 1
-  artifacts:
-    paths:
-      - drbd-test-bundle
-    expire_in: 1 week
 
 
 build-latest:
@@ -93,8 +89,10 @@ drbd-tests:
   cache:
     paths:
       - download
+  before_script:
+    - git clone --branch ${DRBD9_TESTS_REF} https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/drbd/drbd9-tests.git
   script:
-    - . drbd-test-bundle/virter/version.env
+    - . drbd9-tests/virter/version.env
     - curl -sSfL -u gitlab-ci-token:$CI_JOB_TOKEN $CI_SERVER_URL/linbit/build-helpers/-/archive/$BUILD_HELPERS_VERSION/ignored.tar.gz | tar -xvzf -
     - mv build-helpers-* build-helpers
     - . build-helpers/gitlab-utils.sh
@@ -108,7 +106,8 @@ drbd-tests:
       export DRBD_VERSION=9.1.0.latest
       export DRBD_UTILS_VERSION=9.0.0.$CI_COMMIT_SHA-1
       export DRBD9_TESTS_VERSION=latest
-      ./drbd-test-bundle/virter/run-test.sh
+      cd drbd9-tests
+      ./virter/run-test.sh
   dependencies:
     - build
   artifacts:
