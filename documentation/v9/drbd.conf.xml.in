@@ -87,21 +87,21 @@ resource r0 {
 	      shared-secret "FooFunFactory";
       }
       volume 0 {
-	      device    /dev/drbd1;
-	      disk      /dev/sda7;
+	      device    "/dev/drbd1";
+	      disk      "/dev/sda7";
 	      meta-disk internal;
       }
-      on alice {
+      on "alice" {
 	      node-id   0;
 	      address   10.1.1.31:7000;
       }
-      on bob {
+      on "bob" {
 	      node-id   1;
 	      address   10.1.1.32:7000;
       }
       connection {
-	      host      alice  port 7000;
-	      host      bob    port 7000;
+	      host      "alice"  port 7000;
+	      host      "bob"    port 7000;
 	      net {
 			protocol C;
 	      }
@@ -115,7 +115,7 @@ resource r0 {
     the lower-level device <option>/dev/sda7</option>.  The connection between the hosts uses
     protocol C.</para>
 
-    <para>Please refer to the <ulink
+    <para>Enclose strings within double-quotation marks (") to differentiate them from resource keywords. Please refer to the <ulink
 	url="http://www.drbd.org/users-guide/"><citetitle>DRBD User's Guide</citetitle></ulink>
       for more examples.</para>
 
