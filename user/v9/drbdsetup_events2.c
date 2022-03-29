@@ -587,6 +587,7 @@ static void print_resource_changes(const char *prefix, const char *action_new, s
 	bool info_changed;
 	bool statistics_changed;
 	bool promotion_info_changed;
+	bool fail_io_changed;
 	bool renamed;
 
 	new_promotion_info = compute_promotion_info(new_resource);
@@ -597,6 +598,8 @@ static void print_resource_changes(const char *prefix, const char *action_new, s
 			new_resource->info.res_susp_nod != old_resource->info.res_susp_nod ||
 			new_resource->info.res_susp_fen != old_resource->info.res_susp_fen ||
 			new_resource->info.res_susp_quorum != old_resource->info.res_susp_quorum;
+	fail_io_changed = !old_resource ||
+		new_resource->info.res_fail_io != old_resource->info.res_fail_io;
 	statistics_changed = opt_statistics &&
 		(!old_resource ||
 		 memcmp(&new_resource->statistics, &old_resource->statistics, sizeof(struct resource_statistics)));
@@ -619,7 +622,7 @@ static void print_resource_changes(const char *prefix, const char *action_new, s
 		return;
 	}
 
-	if (!role_changed && !info_changed && !statistics_changed && !promotion_info_changed)
+	if (!role_changed && !info_changed && !statistics_changed && !promotion_info_changed && !fail_io_changed)
 		return;
 
 	printf("%s%s ", prefix, old_resource ? action_change : action_new);
@@ -640,6 +643,15 @@ static void print_resource_changes(const char *prefix, const char *action_new, s
 		else
 			printf(" suspended:%s", susp_str(&new_resource->info));
 	}
+	if (fail_io_changed || opt_fullch) {
+		if (opt_diff)
+			printf(" force-io-failures:%s->%s",
+			       old_resource ? (old_resource->info.res_fail_io ? "yes" : "no") : UNKNOWN_STRING,
+			       new_resource->info.res_fail_io ? "yes" : "no");
+		else
+			printf(" force-io-failures:%s", new_resource->info.res_fail_io ? "yes" : "no");
+	}
+
 	if (statistics_changed || opt_fullch)
 		print_resource_statistics(0, old_resource ? &old_resource->statistics : NULL,
 				&new_resource->statistics, nowrap_printf);

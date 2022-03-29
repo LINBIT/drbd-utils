@@ -17,6 +17,8 @@ extern const char *disk_state_color_start(enum drbd_disk_state, bool intentional
 extern const char *disk_state_color_stop(enum drbd_disk_state, bool);
 extern const char *quorum_color_start(bool);
 extern const char *quorum_color_stop(bool);
+extern const char *fail_io_color_start(bool);
+extern const char *fail_io_color_stop(bool);
 
 #define REPL_COLOR_STRING(__r)  \
 	repl_state_color_start(__r), drbd_repl_str(__r), repl_state_color_stop(__r)

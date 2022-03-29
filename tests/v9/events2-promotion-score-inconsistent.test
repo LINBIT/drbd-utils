@@ -1,6 +1,6 @@
 $ cat events2-promotion-score-inconsistent.msgs | drbdsetup_events2_instrumented; echo $?
 exists -
-create resource name:some-resource role:Secondary suspended:no may_promote:no promotion_score:0
+create resource name:some-resource role:Secondary suspended:no force-io-failures:no may_promote:no promotion_score:0
 create device name:some-resource volume:0 minor:1000 backing_dev:none disk:Diskless client:no quorum:yes
 change device name:some-resource volume:0 minor:1000 backing_dev:/dev/sda disk:Inconsistent client:no quorum:yes
 create connection name:some-resource peer-node-id:1 conn-name:some-peer connection:StandAlone role:Unknown

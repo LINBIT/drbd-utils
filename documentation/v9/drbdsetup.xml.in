@@ -789,6 +789,7 @@
 	    <pick_drbdsetup_option name="quorum"/>
 	    <pick_drbdsetup_option name="quorum-minimum-redundancy"/>
 	    <pick_drbdsetup_option name="on-no-quorum"/>
+	    <pick_drbdsetup_option name="on-suspended-primary-outdated"/>
 	  </variablelist>
 	  </para>
 	</listitem>
@@ -1010,6 +1011,24 @@
 
 	  <para>Change the role of a node in a resource to secondary.  This
 	  command fails if the replicated device is in use.</para>
+
+	  <variablelist>
+	    <varlistentry>
+	      <term><option>--force</option></term>
+
+	      <listitem>
+		<para>A forced demotion to secondary causes all pending and new IO requests
+		to terminate with IO errors.</para>
+		<para>Please note that a forced demotion returns immediately.
+		The user should unmount any filesystem that might
+		be mounted on the DRBD device. The device can be used again when
+		<option>force-io-failures</option> has a value of <option>no</option>.
+		(See <command moreinfo="none">drbdsetup status</command> and
+		<command moreinfo="none">drbdsetup events2</command>).</para>
+	      </listitem>
+	    </varlistentry>
+	  </variablelist>
+
 	</listitem>
       </varlistentry>
 

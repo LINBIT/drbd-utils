@@ -811,6 +811,11 @@ const char *on_no_data_map[] = {
 #define on_no_quorum_map on_no_data_map
 /* ONQ_XX == OND_XX */
 
+const char *on_susp_primary_outdated_map[] = {
+	[SPO_DISCONNECT] = "disconnect",
+	[SPO_FORCE_SECONDARY] = "force-secondary",
+};
+
 const char *on_congestion_map[] = {
 	[OC_BLOCK] = "block",
 	[OC_PULL_AHEAD] = "pull-ahead",
@@ -921,7 +926,15 @@ struct context_def primary_cmd_ctx = {
 	NLA_POLICY(set_role_parms),
 	.nla_type = DRBD_NLA_SET_ROLE_PARMS,
 	.fields = {
-		{ "force", FLAG(assume_uptodate) },
+		{ "force", FLAG(force) },
+		{ } },
+};
+
+struct context_def secondary_cmd_ctx = {
+	NLA_POLICY(set_role_parms),
+	.nla_type = DRBD_NLA_SET_ROLE_PARMS,
+	.fields = {
+		{ "force", FLAG(force) },
 		{ } },
 };
 
@@ -1024,6 +1037,7 @@ struct context_def resource_options_ctx = {
 		{ "quorum", ENUM_NUM(quorum, QUORUM, 1, DRBD_PEERS_MAX) },
 		{ "on-no-quorum", ENUM(on_no_quorum, ON_NO_QUORUM) },
 		{ "quorum-minimum-redundancy", ENUM_NUM(quorum_min_redundancy, QUORUM, 1, DRBD_PEERS_MAX) },
+		{ "on-suspended-primary-outdated", ENUM(on_susp_primary_outdated, ON_SUSP_PRI_OUTD) },
 		{ } },
 };
 

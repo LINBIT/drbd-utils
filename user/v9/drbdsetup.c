@@ -246,7 +246,9 @@ struct drbd_cmd commands[] = {
 	 .ctx = &primary_cmd_ctx,
 	 .summary = "Change the role of a node in a resource to primary." },
 
-	{"secondary", CTX_RESOURCE, DRBD_ADM_SECONDARY, NO_PAYLOAD, F_CONFIG_CMD,
+	{"secondary", CTX_RESOURCE, DRBD_ADM_SECONDARY, DRBD_NLA_SET_ROLE_PARMS,
+		F_CONFIG_CMD,
+	 .ctx = &secondary_cmd_ctx,
 	 .summary = "Change the role of a node in a resource to secondary." },
 
 	{"attach", CTX_MINOR, DRBD_ADM_ATTACH, DRBD_NLA_DISK_CONF,
@@ -2810,6 +2812,7 @@ static void resource_status_json(struct resources_list *resource)
 	       "  \"suspended-no-data\": %s,\n"
 	       "  \"suspended-fencing\": %s,\n"
 	       "  \"suspended-quorum\": %s,\n"
+	       "  \"force-io-failures\": %s,\n"
 	       "  \"write-ordering\": \"%s\",\n"
 	       "  \"devices\": [\n",
 	       resource->name,
@@ -2820,6 +2823,7 @@ static void resource_status_json(struct resources_list *resource)
 	       bool2json(resource->info.res_susp_nod),
 	       bool2json(resource->info.res_susp_fen),
 	       bool2json(resource->info.res_susp_quorum),
+	       bool2json(resource->info.res_fail_io),
 	       write_ordering_str[resource->statistics.res_stat_write_ordering]);
 }
 
@@ -2928,6 +2932,11 @@ void resource_status(struct resources_list *resource)
 	    resource->info.res_susp_fen ||
 	    resource->info.res_susp_quorum)
 		wrap_printf(4, " suspended:%s", susp_str(&resource->info));
+	if (opt_verbose || resource->info.res_fail_io)
+		wrap_printf(4, " force-io-failures:%s%s%s",
+			    fail_io_color_start(resource->info.res_fail_io),
+			    resource->info.res_fail_io ? "yes" : "no",
+			    fail_io_color_stop(resource->info.res_fail_io));
 	if (opt_statistics && opt_verbose) {
 		wrap_printf(4, "\n");
 		print_resource_statistics(4, NULL, &resource->statistics, wrap_printf);

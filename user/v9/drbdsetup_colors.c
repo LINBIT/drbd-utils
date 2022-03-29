@@ -64,7 +64,7 @@ int disk_state_colors[] = {
 	[D_UP_TO_DATE] = COLOR_GOOD,
 };
 
-int quorum_colors[] = {
+int bool_colors[] = {
 	[false] = COLOR_BAD,
 	[true] = COLOR_GOOD,
 };
@@ -163,10 +163,20 @@ const char *disk_state_color_stop(enum drbd_disk_state disk_state, bool local)
 
 const char *quorum_color_start(bool have_quorum)
 {
-	return color_code(have_quorum, quorum_colors, ARRAY_SIZE(quorum_colors), true, true);
+	return color_code(have_quorum, bool_colors, ARRAY_SIZE(bool_colors), true, true);
 }
 
 const char *quorum_color_stop(bool have_quorum)
 {
-	return color_code(have_quorum, quorum_colors, ARRAY_SIZE(quorum_colors), false, true);
+	return color_code(have_quorum, bool_colors, ARRAY_SIZE(bool_colors), false, true);
+}
+
+const char *fail_io_color_start(bool fail_io)
+{
+	return color_code(!fail_io, bool_colors, ARRAY_SIZE(bool_colors), true, true);
+}
+
+const char *fail_io_color_stop(bool fail_io)
+{
+	return color_code(!fail_io, bool_colors, ARRAY_SIZE(bool_colors), false, true);
 }

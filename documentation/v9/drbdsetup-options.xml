@@ -1825,13 +1825,47 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	  <secondary>quorum</secondary>
 	  </indexterm> By default DRBD freezes IO on a device, that lost quorum.
 	  By setting the <option>on-no-quorum</option> to <option>io-error</option> it
-	  completes all IO operations with an error if quorum ist lost.</para>
+	  completes all IO operations with an error if quorum is lost.</para>
 	  <para>Usually, the <option>on-no-data-accessible</option> should be set to the
 	  same value as <option>on-no-quorum</option>, as it has precedence.</para>
 
 	  <para>The <option>on-no-quorum</option> options is available starting with the DRBD kernel
 	  driver version 9.0.8.</para>
     </definition>
+  </drbdsetup_option>
 
+  <drbdsetup_option name="on-suspended-primary-outdated">
+    <term xml:id="on-suspended-primary-outdated"><option>on-suspended-primary-outdated <group choice="req" rep="norepeat">
+    <arg choice="plain" rep="norepeat">disconnect</arg>
+    <arg choice="plain" rep="norepeat">force-secondary</arg>
+    </group>
+    </option></term>
+
+    <definition>
+      <para><indexterm significance="normal">
+	  <primary>drbd.conf</primary>
+
+	  <secondary>quorum</secondary>
+	  </indexterm> This setting is only relevant when <option>on-no-quorum</option>
+	  is set to <option>suspend-io</option>. It is relevant in the following scenario.
+	  A primary node loses quorum hence has all IO requests frozen.
+	  This primary node then connects to another, quorate partition.
+	  It detects that a node in this quorate partition was promoted to primary,
+	  and started a newer data-generation there.
+	  As a result, the first primary learns that it has to consider itself outdated.</para>
+	  <para>When it is set to <option>force-secondary</option> then it will demote
+	  to secondary immediately, and fail all pending (and new) IO requests with
+	  IO errors. It will refuse to allow any process to open the DRBD devices until all
+	  openers closed the device. This state is visible in <option>status</option>
+	  and <option>events2</option> under the name <option>force-io-failures</option>.
+	  </para>
+
+	  <para>The <option>disconnect</option> setting simply causes that node to reject
+	  connect attempts and stay isolated.</para>
+
+	  <para>The <option>on-suspended-primary-outdated</option> option is available
+	  starting with the DRBD kernel driver version 9.1.7. It has a default value of
+	  <option>disconnect</option>.</para>
+    </definition>
   </drbdsetup_option>
 </drbdsetup_options>
