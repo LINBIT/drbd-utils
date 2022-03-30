@@ -1070,8 +1070,13 @@ wait_connect_90()
 	# work around our own tools
 	# FIXME
 	if [[ -n "$peer" ]]; then
-		local cmd=$(drbdadm -d connect $res:$peer | sed -e 's/ connect / wait-connect-connection /')
-		do_cmd $cmd $wfc_timeouts
+		local cmd
+		cmd=$(drbdadm -d connect $res:$peer | sed -e 's/ connect / wait-connect-connection /')
+		if [[ -n "$cmd" ]] ; then
+			do_cmd $cmd $wfc_timeouts
+		else
+			ocf_log warn "Please use matching node names for hostname, uname, corosync, pacemaker and DRBD! Not a valid DRBD peer: $peer"
+		fi
 	else
 		do_cmd drbdsetup wait-connect-resource $res $wfc_timeouts
 	fi
