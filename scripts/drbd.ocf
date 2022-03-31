@@ -1075,7 +1075,7 @@ wait_connect_90()
 		if [[ -n "$cmd" ]] ; then
 			do_cmd $cmd $wfc_timeouts
 		else
-			ocf_log warn "Please use matching node names for hostname, uname, corosync, pacemaker and DRBD! Not a valid DRBD peer: $peer"
+			ocf_log warn "Please use matching node names for hostname, uname, corosync, pacemaker and DRBD! Not a valid DRBD peer: '$peer'"
 		fi
 	else
 		do_cmd drbdsetup wait-connect-resource $res $wfc_timeouts
