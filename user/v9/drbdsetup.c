@@ -2464,22 +2464,31 @@ static int show_cmd(struct drbd_cmd *cm, int argc, char **argv)
 
 const char *susp_str(struct resource_info *info)
 {
-	static char buffer[32];
+	static const char * const strs[] = {
+		"no",
+		"user",
+		"no-data",
+		"user,no-data",
+		"fencing",
+		"user,fencing",
+		"no-data,fencing",
+		"user,no-data,fencing",
+		"quorum",
+		"user,quorum",
+		"no-data,quorum",
+		"user,no-data,quorum",
+		"fencing,quorum",
+		"user,fencing,quorum",
+		"no-data,fencing,quorum",
+		"user,no-data,fencing,quorum",
+	};
+	int index =
+		(info->res_susp ? 1 : 0) |
+		(info->res_susp_nod ? 2 : 0) |
+		(info->res_susp_fen ? 4 : 0) |
+		(info->res_susp_quorum ? 8 : 0);
 
-	*buffer = 0;
-	if (info->res_susp)
-		strcat(buffer, ",user" + (*buffer == 0));
-	if (info->res_susp_nod)
-		strcat(buffer, ",no-data" + (*buffer == 0));
-	if (info->res_susp_fen)
-		strcat(buffer, ",fencing" + (*buffer == 0));
-	if (info->res_susp_quorum)
-		strcat(buffer, ",quorum" + (*buffer == 0));
-
-	if (*buffer == 0)
-		strcat(buffer, "no");
-
-	return buffer;
+	return strs[index];
 }
 
 __attribute__((format(printf, 2, 3)))
