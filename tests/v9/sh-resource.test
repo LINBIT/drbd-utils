@@ -1,0 +1,9 @@
+$ drbdadm -c ./man.res sh-resource r0 2>/dev/null; echo $?
+r0
+0
+$ drbdadm -c ./man.res sh-resource r0/0 2>/dev/null; echo $?
+r0
+0
+$ drbdadm -c ./man.res sh-resource minor-1 2>/dev/null; echo $?
+r0
+0
