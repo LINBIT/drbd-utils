@@ -3015,19 +3015,22 @@ const char *peer_intentional_diskless_str(struct peer_device_info *info) {
 
 const char *resync_susp_str(struct peer_device_info *info)
 {
-	static char buffer[64];
+	static const char * const strs[] = {
+		"no",
+		"user",
+		"peer",
+		"user,peer",
+		"dependency",
+		"user,dependency",
+		"peer,dependency",
+		"user,peer,dependency",
+	};
+	int index =
+		(info->peer_resync_susp_user ? 1 : 0) |
+		(info->peer_resync_susp_peer ? 2 : 0) |
+		(info->peer_resync_susp_dependency ? 4 : 0);
 
-	*buffer = 0;
-	if (info->peer_resync_susp_user)
-		strcat(buffer, ",user" + (*buffer == 0));
-	if (info->peer_resync_susp_peer)
-		strcat(buffer, ",peer" + (*buffer == 0));
-	if (info->peer_resync_susp_dependency)
-		strcat(buffer, ",dependency" + (*buffer == 0));
-	if (*buffer == 0)
-		strcat(buffer, "no");
-
-	return buffer;
+	return strs[index];
 }
 
 static void peer_device_status(struct peer_devices_list *peer_device, bool single_device, bool is_a_tty)
