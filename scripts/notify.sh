@@ -70,8 +70,24 @@ if [ -z "$RECIPIENT" ]; then
 	exit 1
 fi
 
+# Used to be exported by drbdadm.
+# But no longer with DRBD 9, as it could be ambiguous.
+if [[ -z "$DRBD_PEER" ]] \
+&& [[ $DRBD_PEER_NODE_ID = *[0-9]* ]] \
+&& [[ $DRBD_PEER_NODE_ID != *[!0-9]* ]] ; then
+	# DRBD_PEER_NODE_ID is supposedly exported by the kernel module
+	# DRBD_NODE_ID_XX contains a space separated list of names for this
+	# peer node id (typically that list contains only one element).
+	k=DRBD_NODE_ID_$DRBD_PEER_NODE_ID; v=${!k}
+	DRBD_PEER="peer node ID $DRBD_PEER_NODE_ID ($v)"
+fi
+
+# in case we do not know "the" peer name,
+# because the event was not peer specific
+: ${DRBD_PEER:=" (N/A) "}
+
 # check envars normally passed in by drbdadm
-for var in DRBD_RESOURCE DRBD_PEER; do
+for var in DRBD_RESOURCE ; do
 	if [ -z "${!var}" ]; then
 		echo "Environment variable \$$var not found (this is normally passed in by drbdadm)." >&2
 		exit 1
@@ -89,7 +105,8 @@ case "$0" in
 DRBD has detected split brain on resource $pretty_print
 between $DRBD_LOCAL_HOST and $DRBD_PEER.
 Please rectify this immediately.
-Please see http://www.drbd.org/users-guide/s-resolve-split-brain.html for details on doing so."
+Please see \"Manual Split-Brain Recovery\" in the DRBD User's Guide
+for details on doing so."
 		;;
 	*out-of-sync.sh)
 		SUBJECT="DRBD resource $pretty_print has out-of-sync blocks"
