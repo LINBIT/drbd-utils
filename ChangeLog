@@ -3,6 +3,27 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+ 9.21.0-rc.1
+-----------
+ * drbdsetup,v9: show susupend reason in json output
+ * drbdsetup,v9: add secondary --force
+ * drbdsetup,v9: fix *susp_str() for events2 diff mode
+ * drdbdadm,v9: fix sh-resource
+ * doc: various improvements
+ * windrbd: ask user if for admin if access denied
+ * ocf: deal with situation where PM node name and actual node name do not
+   match
+ * notify.sh: deal with unset DRBD_PEER env variable
+
+ 9.20.2
+-----------
+ * crm-fence-peer: fix timeout with Pacemaker 2.0.5
+
+9.20.1
+-----------
+ * drbdmeta: don't wait for confirmation if not a TTY
+ * drbdadm,v9: Pass '--force' to certain drbdmeta commands
+
 9.20.0
 -----------
  * drbdmeta: do init in chunks; allow different methods
