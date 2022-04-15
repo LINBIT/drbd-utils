@@ -80,7 +80,6 @@ struct option general_admopt[] = {
 	{"drbdmeta", required_argument, 0, 'm'},
 	{"drbd-proxy-ctl", required_argument, 0, 'p'},
 	{"sh-varname", required_argument, 0, 'n'},
-	{"peer", required_argument, 0, 'P'},
 	{"version", no_argument, 0, 'V'},
 	{"setup-option", required_argument, 0, 'W'},
 	{"help", no_argument, 0, 'h'},
@@ -173,8 +172,6 @@ char *drbdadm_84 = NULL;
 char *drbd_proxy_ctl;
 char *sh_varname = NULL;
 struct names backend_options = STAILQ_HEAD_INITIALIZER(backend_options);
-
-char *connect_to_host = NULL;
 
 STAILQ_HEAD(deferred_cmds, deferred_cmd) deferred_cmds[__CFG_LAST];
 
@@ -2246,9 +2243,9 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check)
 		for_each_connection(conn, &res->connections) {
 			if (hi) { /* it was host name */
 				if (res->me == hi) {
-					err("Host name '%s' (given with --peer option) is not a "
+					err("Host name '%s' (from '%s') is not a "
 					    "peer, but the local node\n",
-					    conn_or_hostname);
+					    conn_or_hostname, id);
 					return -ENOENT;
 				}
 
@@ -3085,9 +3082,6 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 			printf("DRBDADM_VERSION=%s\n", shell_escape(PACKAGE_VERSION));
 			print_platform_specific_versions();
 			exit(0);
-			break;
-		case 'P':
-			connect_to_host = optarg;
 			break;
 		case 'W':
 			insert_tail(&backend_options, names_from_str(optarg));
