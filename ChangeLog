@@ -3,12 +3,13 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
- 9.21.0-rc.1
+ 9.21.0
 -----------
  * drbdsetup,v9: show susupend reason in json output
  * drbdsetup,v9: add secondary --force
  * drbdsetup,v9: fix *susp_str() for events2 diff mode
  * drdbdadm,v9: fix sh-resource
+ * drdbdadm,v9: rm --peer=connect_to_host
  * doc: various improvements
  * windrbd: ask user if for admin if access denied
  * ocf: deal with situation where PM node name and actual node name do not
