@@ -1005,7 +1005,11 @@ figure_out_drbd_peer_uname()
 		$OCF_RESKEY_CRM_meta_notify_slave_uname \
 		$OCF_RESKEY_CRM_meta_notify_demote_uname |
 		grep -vix -m1 -e "$HOSTNAME" )
-	DRBD_TO_PEER=${x:+ --peer $x}
+	# up to utils 9.20, the --peer option was ignored with drbd 9
+	# starting with 9.21, it is unknown,
+	# and would lead to "drbdadm: unrecognized option ..." error.
+	# Only set this for DRBD <= 8.4
+	$DRBD_IS_v9 || DRBD_TO_PEER=${x:+ --peer $x}
 	crm_resource_locate_master
 }
 
