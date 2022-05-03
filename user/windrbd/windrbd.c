@@ -20,6 +20,7 @@
 #include <assert.h>
 #include <setupapi.h>
 #include <newdev.h>
+#include <stdbool.h>
 
 #include <winioctl.h>
 #include <shellapi.h>
@@ -28,8 +29,6 @@
 
 #include "shared_windrbd.h"
 #include <windrbd/windrbd_ioctl.h>
-
-
 
 static int quiet = 0;
 static int force = 0;
@@ -95,6 +94,12 @@ void usage_and_exit(void)
 	fprintf(stderr, "	3..error, 4..warning, 5..notice, 6..info, 7..debug\n");
 	fprintf(stderr, "	windrbd [opt] di-install-driver <inf-file>\n");
 	fprintf(stderr, "		Installs the driver to the driver store (use -f)\n");
+	fprintf(stderr, "	windrbd [opt] get-blockdevice-size <drive-or-guid>\n");
+	fprintf(stderr, "		Prints size of blockdevice in bytes\n");
+	fprintf(stderr, "	windrbd [opt] check-for-metadata <drive-or-guid> <external|internal>\n");
+	fprintf(stderr, "		Checks if DRBD metadata exists on block device\n");
+	fprintf(stderr, "	windrbd [opt] wipe-metadata <drive-or-guid> <external|internal>\n");
+	fprintf(stderr, "		Erases DRBD meta data from drive if it exists\n");
 
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
@@ -476,6 +481,105 @@ static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 
 	CloseHandle(h);
 	return 0;
+}
+
+#define SUPERBLK_SIZE 4096
+#define ALIGN_4K_MASK 0xFFFFFFFFFFFFF000L
+#define DRBD_MAGIC_ID 0x8374026D
+#define DRBD_MAGIC_OFFSET 60 /* 0x3c */
+
+enum drbd_meta_ops {
+	PRINT_SIZE_OF_BLOCK_DEVICE,
+	CHECK_FOR_META_DATA,
+	WIPE_META_DATA
+};
+
+	/* LINSTOR helper. Java cannot get size of a block device (Volume)
+	 * or write to it. If you happen to know how this is done in Java
+	 * please write me an eMail ...
+	 */
+
+static int drbd_meta_op(const char *drive, enum drbd_meta_ops op, bool external_meta_data)
+{
+	HANDLE h = do_open_device(drive);
+	if (h == INVALID_HANDLE_VALUE)
+		return 1;
+
+	char buf[SUPERBLK_SIZE];
+	BOOL ret;
+	int err;
+	DWORD bytes_read, bytes_written;
+	uint64_t the_bdev_size;
+	LARGE_INTEGER meta_data_position;
+	uint32_t magic_value;
+	bool has_meta_data;
+
+	the_bdev_size = bdev_size_by_handle(h);
+
+	switch (op) {
+	case PRINT_SIZE_OF_BLOCK_DEVICE:
+		printf("%llu\n", the_bdev_size);
+		return 0;
+
+	case CHECK_FOR_META_DATA:
+	case WIPE_META_DATA:
+		if (!external_meta_data) {
+			meta_data_position.QuadPart = (the_bdev_size - SUPERBLK_SIZE) & ALIGN_4K_MASK;
+			ret = SetFilePointerEx(h, meta_data_position, NULL, FILE_BEGIN);
+			if (!ret) {
+				err = GetLastError();
+				fprintf(stderr, "Couldn't seek to position %llu on block device %s (error is %d).\n", meta_data_position.QuadPart, drive, err);
+				CloseHandle(h);
+				return 1;
+			}
+		} else
+			meta_data_position.QuadPart = 0;
+
+		ret = ReadFile(h, buf, sizeof(buf), &bytes_read,  NULL);
+		if (!ret) {
+			err = GetLastError();
+			fprintf(stderr, "Couldn't read meta data (disk is %s, error is %d).\n", drive, err);
+			CloseHandle(h);
+			return 1;
+		}
+		magic_value = ntohl(*(uint32_t*)(((char*)buf)+DRBD_MAGIC_OFFSET));
+		has_meta_data = (magic_value == DRBD_MAGIC_ID);
+		if (!quiet)
+			fprintf(stderr, "%seta data found on block device %s.\n", has_meta_data ? "M" : "No m", drive);
+
+		if (op == WIPE_META_DATA && (has_meta_data || force)) {
+			ret = SetFilePointerEx(h, meta_data_position, NULL, FILE_BEGIN);
+			if (!ret) {
+				err = GetLastError();
+				fprintf(stderr, "Couldn't seek to position %llu on block device %s (error is %d).\n", meta_data_position.QuadPart, drive, err);
+				CloseHandle(h);
+				return 1;
+			}
+			memset(buf, 0, sizeof(buf));
+			ret = WriteFile(h, buf, sizeof(buf), &bytes_written,  NULL);
+			if (!ret) {
+				err = GetLastError();
+				fprintf(stderr, "Couldn't zero out (write) meta data (disk is %s, error is %d).\n", drive, err);
+				CloseHandle(h);
+				return 1;
+			}
+			if (!quiet) {
+				fprintf(stderr, "Meta data erased from block device %s.\n", drive);
+				fprintf(stderr, "Note that if the DRBD resource is up meta data will be written again by the driver, so make sure that the resource is down.\n");
+			}
+		}
+		CloseHandle(h);
+
+/* 0 means yes we have 1 means there was an error, 2 there is no meta data.
+ * Always 0 if op is WIPE_META_DATA (unless error)
+ */
+		if (op == WIPE_META_DATA || has_meta_data)
+			return 0;
+		else
+			return 2;
+	}
+	fprintf(stderr, "Unknown meta data op.\n");
+	return 1;
 }
 
 /* Converts UNIX-style line breaks (\n) to DOS-style line breaks (\r\n)
@@ -1654,6 +1758,38 @@ int main(int argc, char ** argv)
 			usage_and_exit();
 		}
 		return do_di_install_driver(argv[optind+1]);
+	}
+	if (strcmp(op, "get-blockdevice-size") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		return drbd_meta_op(argv[optind+1], PRINT_SIZE_OF_BLOCK_DEVICE, false);
+	}
+	if (strcmp(op, "check-for-metadata") == 0) {
+		bool external, internal;
+
+		if (argc != optind+3) {
+			usage_and_exit();
+		}
+		external = strcmp(argv[optind+2], "external") == 0;
+		internal = strcmp(argv[optind+2], "internal") == 0;
+		if (!external && !internal) {
+			usage_and_exit();
+		}
+		return drbd_meta_op(argv[optind+1], CHECK_FOR_META_DATA, external);
+	}
+	if (strcmp(op, "wipe-metadata") == 0) {
+		bool external, internal;
+
+		if (argc != optind+3) {
+			usage_and_exit();
+		}
+		external = strcmp(argv[optind+2], "external") == 0;
+		internal = strcmp(argv[optind+2], "internal") == 0;
+		if (!external && !internal) {
+			usage_and_exit();
+		}
+		return drbd_meta_op(argv[optind+1], WIPE_META_DATA, external);
 	}
 
 	usage_and_exit();

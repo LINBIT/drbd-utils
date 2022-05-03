@@ -2,6 +2,7 @@
 #include <ctype.h>
 #include <windows.h>
 #include <io.h>
+#include <stdint.h>
 
 #include "shared_windrbd.h"
 #include <windrbd/windrbd_ioctl.h>
@@ -166,21 +167,31 @@ int windrbd_get_registry_string_value(HKEY root_key, const char *key, const char
 	return 0;
 }
 
-uint64_t bdev_size(int fd)
+uint64_t bdev_size_by_handle(HANDLE h)
 {
-	HANDLE h;
 	GET_LENGTH_INFORMATION length_info;
 	DWORD size;
 
-	h = (void*) _get_osfhandle(fd);
 	if (h == INVALID_HANDLE_VALUE) {
-		fprintf(stderr, "Could not convert fd %d to Windows handle\n", fd);
+		fprintf(stderr, "Invalid windows handle in bdev_size_by_handle()\n");
 		return 0;
 	}
         if (DeviceIoControl(h, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0, &length_info, sizeof(length_info), &size, NULL) == 0) {
                 fprintf(stderr, "Failed to get length info: error is %d\n", GetLastError());
                 return 0;
         }
-			/* TODO: close windows handle? */
+		/* Do not close windows handle. Caller might still need it */
 	return length_info.Length.QuadPart;
+}
+
+uint64_t bdev_size(int fd)
+{
+	HANDLE h;
+
+	h = (void*) _get_osfhandle(fd);
+	if (h == INVALID_HANDLE_VALUE) {
+		fprintf(stderr, "Could not convert fd %d to Windows handle\n", fd);
+		return 0;
+	}
+	return bdev_size_by_handle(h);
 }
