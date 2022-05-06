@@ -61,24 +61,14 @@ build:
     paths:
       - download
   script:
-    - DRBD_UTILS_VERSION=9.0.0.$CI_COMMIT_SHA
-    - drbd_utils_build $DRBD_UTILS_VERSION 1
-
-
-build-latest:
-  stage: build
-  rules:
-    - if: $CI_COMMIT_BRANCH == 'master'
-  extends: .setup-lbbuild
-  image: $LINBIT_DOCKER_REGISTRY/build-helpers:$BUILD_HELPERS_VERSION
-  cache:
-    paths:
-      - download
-  script:
-    - DRBD_UTILS_VERSION=9.0.0.latest
-    - DRBD_UTILS_RELEASE=$(git rev-list --count origin/master)
+    - if [ "$CI_COMMIT_BRANCH" = master ]; then
+    -   DRBD_UTILS_VERSION=9.0.0.latest
+    -   DRBD_UTILS_RELEASE=$(git rev-list --count origin/master)
+    - else
+    -   DRBD_UTILS_VERSION=9.0.0.$CI_COMMIT_SHA
+    -   DRBD_UTILS_RELEASE=1
+    - fi
     - drbd_utils_build $DRBD_UTILS_VERSION $DRBD_UTILS_RELEASE
-
 
 drbd-tests:
   stage: test
