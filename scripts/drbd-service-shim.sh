@@ -10,6 +10,34 @@
 cmd=$1
 res=$2
 
+secondary_check() {
+	local ex_secondary current_state opts
+	opts="$1"
+
+	/usr/sbin/drbdsetup secondary $opts "$res"
+	ex_secondary=$?
+	case $ex_secondary in
+	 0)
+		# successfully demoted, already secondary anyways,
+		# or module is not even loaded
+		systemctl reset-failed "drbd-promote@$res.service"
+		return 0;;
+
+	# any other special treatment for special exit codes?
+	*)
+		# double check for "resource does not exist"
+		current_state=$(/usr/sbin/drbdsetup events2 --now "$res")
+		if [[ $current_state = "exists -" ]]; then
+			echo >&2 "<7>not even configured"
+			return 0
+		fi
+		echo >&2 "<7>current state: ${current_state//$'\n'/ // }"
+		;;
+	esac
+
+	return $ex_secondary
+}
+
 case "$cmd" in
 adjust)
   exec /usr/sbin/drbdadm adjust "$res"
@@ -23,40 +51,29 @@ primary)
 secondary)
   exec /usr/sbin/drbdsetup secondary "$res"
   ;;
-secondary-or-escalate)
+secondary-force)
+  exec /usr/sbin/drbdsetup secondary --force=yes "$res"
+  ;;
+secondary-secondary-force)
+  /usr/sbin/drbdsetup secondary "$res" && exit 0
+  exec /usr/sbin/drbdsetup secondary --force=yes "$res"
+  ;;
+secondary*-or-escalate)
 	# Log something and try to get journald to flush its logs
 	# to (hopefully) persistent storage, so we at least have some
 	# indication of why we rebooted -- if that turns out to be necessary.
 	echo >&2 "<6>about to demote (or escalate to the FailureAction)"
 	journalctl --flush --sync
-	/usr/sbin/drbdsetup secondary "$res"
+	secondary_check && exit 0
 	ex_secondary=$?
-	case $ex_secondary in
-	 0)
-		# successfully demoted, already secondary anyways,
-		# or module is not even loaded
-		systemctl reset-failed "drbd-promote@$res.service"
-		exit 0 ;;
-
-	# any other special treatment for special exit codes?
-	*)
-		# double check for "resource does not exist"
-		current_state=$(/usr/sbin/drbdsetup events2 --now "$res")
-		if [[ $current_state = "exists -" ]]; then
-			echo >&2 "<7>not even configured"
-			exit 0
-		fi
-		echo >&2 "<7>current state: ${current_state//$'\n'/ // }"
-
-		# TODO: optionally call some hook script,
-		# which can go crazy trying to make this resource "demotable".
-		# Then try again.
-		;;
-	esac
-
 	# if we fail due to timeout, this won't even be reached :-(
+	if [[ $cmd == secondary-secondary-force-or-escalate ]]; then
+		echo >&2 "<6>drbdsetup secondary failed, trying drbdsetup secondary --force"
+		secondary_check "--force=yes" && exit 0
+		ex_secondary=$?
+	fi
 	echo >&2 "<0>failed to demote, exit code=$ex_secondary; about to escalate to FailureAction"
-	exit $ex_secondary
+	exit "$ex_secondary"
 	;;
 
 *)
