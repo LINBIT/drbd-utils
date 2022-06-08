@@ -3,6 +3,10 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+ 9.21.2
+-----------
+ * drbd-service-shim.sh: add secondary --force
+
  9.21.1
 -----------
  * ocf: fix for dropped --peer option
