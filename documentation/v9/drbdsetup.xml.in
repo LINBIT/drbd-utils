@@ -666,22 +666,33 @@
 	  should have separate commands for creating a new current uuid and for
 	  clearing unused bitmap slots. -->
 
-	  <para>Generate a new current UUID and rotates all other UUID values. This has at least two
-	  use cases, namely to skip the initial sync, and to reduce network bandwidth when starting in
-	  a single node configuration and then later (re-)integrating a remote site.</para>
+	  <para>Generate a new current UUID and rotates all other UUID values. This has three
+	  use cases: start the initial resync; skip the initial resync; bootstrap a single node cluster.</para>
 
-	  <para>Available option: <variablelist>
+	  <para>Available options: <variablelist>
+	      <varlistentry>
+		<term><option>--force-resync</option></term>
+
+		<listitem>
+		  <para>Start an initial resync. A precondition is that the volume is in disk state
+		  <option>Inconsistent</option> on all nodes. This command updates the disk state
+		  on the current node to <option>UpToDate</option> and makes it source of the
+		  resync operations to the peers.</para>
+		</listitem>
+	      </varlistentry>
 	      <varlistentry>
 		<term><option>--clear-bitmap</option></term>
 
 		<listitem>
-		  <para>Clears the sync bitmap in addition to generating a new current UUID.</para>
+		  <para>Clears the sync bitmap in addition to generating a new current UUID. This
+		  skips the initial resync. As a consqeuence this volume's disk state changes to
+		  <option>UpToDate</option> on all nodes in this resource.</para>
 		</listitem>
 	      </varlistentry>
 	    </variablelist></para>
 
-	  <para>This can be used to skip the initial sync, if you want to start from scratch. This
-	  use-case does only work on "Just Created" meta data. Necessary steps: <orderedlist
+	    <para>Both operations require a "Just Created" meta data. Here is the complete
+	    sequence step by step how to skip the initial resync: <orderedlist
 	      continuation="restarts" inheritnum="ignore" numeration="arabic">
 	      <listitem>
 		<simpara>On <emphasis>both</emphasis> nodes, initialize meta data and configure the
@@ -714,8 +725,7 @@
 		<replaceable>res</replaceable></command></simpara>
 
 		<simpara><command moreinfo="none">mkfs -t <replaceable>fs-type</replaceable> $(drbdadm
-		sh-dev <replaceable>res</replaceable>)</command></simpara>
-		<!-- FIXME: sh-dev can probably return more than one device; we can no longer use it like this. -->
+		sh-dev <replaceable>res/vol</replaceable>)</command></simpara>
 	      </listitem>
 	    </orderedlist></para>
 
@@ -728,6 +738,9 @@
 	  never got replicated. So <emphasis>do not leave out the mkfs</emphasis> (or
 	  equivalent).</para>
 
+	  <variablelist>
+	    <varlistentry>
+	      <term><emphasis role="strong">Bootstraping a single node cluster</emphasis></term><listitem>
 	  <para>This can also be used to shorten the initial resync of a cluster where the second node
 	  is added after the first node is gone into production, by means of disk shipping. This
 	  use-case works on disconnected devices only, the device may be in primary or secondary
@@ -752,7 +765,7 @@
 	      </listitem>
 	    </orderedlist> Now add the disk to the new secondary node, and join it to the cluster. You
 	  will get a resync of that parts that were changed since the first call to <command
-	  moreinfo="none">drbdsetup</command> in step 1.</para>
+	  moreinfo="none">drbdsetup</command> in step 1.</para></listitem></varlistentry></variablelist>
 	</listitem>
       </varlistentry>
 
