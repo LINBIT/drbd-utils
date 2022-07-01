@@ -1949,7 +1949,7 @@ int cmp_u32(const void *p1, const void *p2)
 
 void apply_al(struct format *cfg, uint32_t *hot_extent)
 {
-	const unsigned int extents_size = BM_BYTES_PER_AL_EXT * cfg->md.max_peers;
+	const size_t extents_size = BM_BYTES_PER_AL_EXT * cfg->md.max_peers;
 	const size_t bm_bytes = ALIGN(cfg->bm_bytes, cfg->md_hard_sect_size);
 	off_t bm_on_disk_off = cfg->bm_offset;
 	size_t bm_on_disk_pos = 0;
@@ -1981,7 +1981,7 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 	 */
 	for (i = 0; i < AL_EXTENTS_MAX; i++) {
 		size_t bm_pos;
-		unsigned int this_extent_size; /* bitmap bytes for this extent */
+		size_t this_extent_size; /* bitmap bytes for this extent */
 		unsigned bits_set = 0;
 		if (hot_extent[i] == ~0U)
 			break;
@@ -1991,7 +1991,7 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 
 		bm_pos = hot_extent[i] * extents_size;
 		if (bm_pos >= bm_bytes) {
-			fprintf(stderr, "extent %u beyond end of bitmap!\n", hot_extent[i]);
+			fprintf(stderr, "extent %u beyond end of bitmap! (%zd >= %zd)\n", hot_extent[i], bm_pos, bm_bytes);
 			/* could break or return error here,
 			 * but I'll just print a warning, and skip, each of them. */
 			continue;
@@ -3036,9 +3036,9 @@ int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc
 			printf("al-stripe-size-4k "U32";\n",
 				cfg->md.al_stripe_size_4k);
 		}
-		printf("# bm-bytes %u;\n", cfg->bm_bytes);
+		printf("# bm-bytes "U64";\n", cfg->bm_bytes);
 		printf_bm(cfg); /* pretty prints the whole bitmap */
-		printf("# bits-set %u;\n", cfg->bits_set);
+		printf("# bits-set "U64";\n", cfg->bits_set);
 
 		/* This is half assed, still. Hide it. */
 		if (verbose >= 10)
