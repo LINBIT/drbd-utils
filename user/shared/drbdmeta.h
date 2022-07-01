@@ -98,8 +98,9 @@ struct format {
 
 	/* unused in 06 */
 	int md_index;
-	unsigned int bm_bytes;
-	unsigned int bits_set;	/* 32 bit should be enough. @4k ==> 16TB */
+
+	uint64_t bm_bytes;
+	uint64_t bits_set;
 	int bits_counted:1;
 	int update_lk_bdev:1;	/* need to update the last known bdev info? */
 
