@@ -368,7 +368,9 @@ void set_me_in_resource(struct d_resource* res, int match_on_proxy)
 				/* In case this is a path of a stacked resource ignore it if
 				   the path belongs to the "non local" node of the lower resource.
 				   Never ignore an implicit path, since they have faked hostnames */
-				if (!h->faked_hostname && h->host_info->lower &&
+				if (!h->faked_hostname &&
+				    h->host_info->lower &&
+				    h->host_info->lower->me &&
 				    !hostname_in_list(h->name, &h->host_info->lower->me->on_hosts))
 					path->ignore = 1;
 
