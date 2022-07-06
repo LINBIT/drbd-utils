@@ -36,6 +36,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <assert.h>
+#include <errno.h>
 
 #include "drbdadm.h"
 #include "linux/drbd.h"
@@ -1940,7 +1941,7 @@ static struct d_resource *template_file(const char *res_name)
 
 void include_stmt(char *str)
 {
-	glob_t glob_buf;
+	glob_t glob_buf = { 0, };
 	int cwd;
 	FILE *f;
 	size_t i;
@@ -1948,6 +1949,12 @@ void include_stmt(char *str)
 
 	cwd = pushd_to_current_config_file_unless_stdin();
 
+	/* """
+	 * As a GNU extension, pglob->gl_flags is set to the
+	 * flags specified, ored with GLOB_MAGCHAR if any
+	 * metacharacters were found.
+	 * """
+	 */
 	r = glob(str, 0, NULL, &glob_buf);
 	if (r == 0) {
 		for (i=0; i<glob_buf.gl_pathc; i++) {
@@ -1958,6 +1965,12 @@ void include_stmt(char *str)
 			if (f) {
 				include_file(f, strdup(glob_buf.gl_pathv[i]));
 				fclose(f);
+			} else if (errno == ENOENT && glob_buf.gl_flags & GLOB_MAGCHAR) {
+				/* Noisily ignore race between glob expansion
+				 * and actual open. */
+				err("%s:%d: include file vanished after glob expansion '%s'.\n",
+				    config_save, line, glob_buf.gl_pathv[i]);
+				continue;
 			} else {
 				err("%s:%d: Failed to open include file '%s'.\n",
 				    config_save, line, glob_buf.gl_pathv[i]);
@@ -1966,11 +1979,25 @@ void include_stmt(char *str)
 		}
 		globfree(&glob_buf);
 	} else if (r == GLOB_NOMATCH) {
+		/*
+		 * If the glob did not match any file,
+		 * there is nothing to do, silently ignore.
+		 * Unless it was no glob, but a literal,
+		 * which we would expect to exist.
+		 * Apparently |GLOB_MAGCHAR does not happen for GLOB_NOMATCH returns,
+		 * at least not consistently :-(
+		 * So we have this strchr heuristic anyways.
+		 */
+		/* if (!(glob_buf.gl_flags & GLOB_MAGCHAR)) { */
 		if (!strchr(str, '?') && !strchr(str, '*') && !strchr(str, '[')) {
 			err("%s:%d: Failed to open include file '%s'.\n",
 			    config_save, line, str);
 			config_valid = 0;
+		} else if (verbose) {
+			err("%s:%d: no match for include pattern '%s'.\n",
+			    config_save, line, str);
 		}
+		globfree(&glob_buf);
 	} else {
 		err("glob() failed: %d\n", r);
 		exit(E_USAGE);
