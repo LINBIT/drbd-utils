@@ -381,7 +381,7 @@ static struct adm_cmd sh_minor_cmd = {"sh-minor", sh_minor, ACF2_SHELL};
 static struct adm_cmd sh_ll_dev_cmd = {"sh-ll-dev", sh_ll_dev, ACF2_SHELL .disk_required = 0};
 static struct adm_cmd sh_md_dev_cmd = {"sh-md-dev", sh_md_dev, ACF2_SHELL .disk_required = 1};
 static struct adm_cmd sh_md_idx_cmd = {"sh-md-idx", sh_md_idx, ACF2_SHELL .disk_required = 1};
-static struct adm_cmd sh_ip_cmd = {"sh-ip", sh_ip, ACF2_SHELL};
+static struct adm_cmd sh_ip_cmd = {"sh-ip", sh_ip, ACF2_SHELL .need_peer = 1, .iterate_paths = 1};
 static struct adm_cmd sh_lr_of_cmd = {"sh-lr-of", sh_lres, ACF2_SHELL};
 
 static struct adm_cmd proxy_up_cmd = {"proxy-up", adm_proxy_up, ACF2_PROXY};
@@ -902,7 +902,9 @@ static int sh_minor(const struct cfg_ctx *ctx)
 
 static int sh_ip(const struct cfg_ctx *ctx)
 {
-	printf("%s\n", ctx->res->me->address.addr);
+	struct path *path = ctx->path;
+
+	printf("%s\n", path->my_address->addr);
 	return 0;
 }
 
