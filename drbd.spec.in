@@ -510,6 +510,9 @@ fi
 
 
 %changelog
+* Fri Jul 15 2022 Roland Kammerer <roland.kammerer@linbit.com> - 9.21.4-1
+-  New upstream release
+
 * Fri Jul 01 2022 Roland Kammerer <roland.kammerer@linbit.com> - 9.21.3-1
 -  New upstream release
 
