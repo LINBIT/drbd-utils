@@ -1,0 +1,5 @@
+$ __DRBD_NODE__=alfa drbdadm -c stacked_multi_path_2sites_3nodes.res sh-ip stacked_multi_path 2>/dev/null; echo $?
+192.168.1.17
+192.168.1.17
+192.168.1.17
+0
