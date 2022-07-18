@@ -1563,11 +1563,12 @@ static struct connection *parse_connection(enum pr_flags flags)
 	case '{':
 		break;
 	case TK_STRING:
-		conn->name = yylval.txt;
+		err("%s:%d: explicitly named connections are deprecated!\n"
+		    "\tits name ('%s') will be ignored\n", config_file, fline, yylval.txt);
 		EXP('{');
 		break;
 	default:
-		pe_expected_got( "<connection name> | {", token);
+		pe_expected_got("{", token);
 	}
 	while (1) {
 		token = yylex();

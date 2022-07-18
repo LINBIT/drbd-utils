@@ -221,7 +221,7 @@ resource
         </varlistentry>
 
         <varlistentry>
-          <term><option>connection <replaceable><optional>name</optional></replaceable></option></term>
+          <term><option>connection</option></term>
 
           <listitem>
             <para><indexterm significance="normal">
@@ -231,10 +231,7 @@ resource
               </indexterm> Define a connection between two hosts. This section
               must contain two <option>host</option> parameters or multiple
 	      <option>path sections</option>.
-              The optional <replaceable>name</replaceable> is
-              used to refer to the connection in the system log and in other
-              messages. If no name is specified, the peer's host name
-              is used instead.</para>
+            </para>
           </listitem>
         </varlistentry>
 
