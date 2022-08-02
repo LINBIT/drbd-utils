@@ -17,6 +17,10 @@
 %endif
 %endif
 
+%if %{?rhel}%{!?rhel:0} >= 8
+%global _with_selinux --with-selinux
+%endif
+
 %if %(test /sbin -ef /usr/sbin && echo 1 || echo 0)
 %global _without_sbinsymlinks --without-sbinsymlinks
 %endif
@@ -38,6 +42,7 @@
 %bcond_without 84support
 %bcond_without drbdmon
 %bcond_with prebuiltman
+%bcond_with selinux
 %ifnarch %{ix86} x86_64
 %global _without_xen --without-xen
 %endif
@@ -122,6 +127,9 @@ Conflicts: drbd82 drbd83
 %if "%{initscripttype}" == "sysv"
 @RPM_REQ_CHKCONFIG_POST@
 @RPM_REQ_CHKCONFIG_PREUN@
+%endif
+%if %{with selinux}
+Requires: (drbd-selinux if selinux-policy-targeted)
 %endif
 
 %description utils
@@ -362,6 +370,50 @@ management utility.
 %config %{_sysconfdir}/bash_completion.d/drbdadm*
 %endif # with bashcompletion
 
+%if %{with selinux}
+%global selinuxtype		targeted
+%global selinuxmodulename	drbd
+
+%package selinux
+Summary: SElinux policy for DRBD
+BuildRequires: checkpolicy
+BuildRequires: selinux-policy-devel
+Requires: selinux-policy >= %{_selinux_policy_version}
+# do we need to require drbd-pacemaker, to have it installed before our
+# posttrans tries to relabel?
+%{?selinux_requires}
+
+%description selinux
+drbd-selinux contains the SELinux policy meant to be used with this version of DRBD and related tools.
+
+%files selinux
+%attr(0644,root,root) %{_datadir}/selinux/packages/%{selinuxmodulename}.pp.bz2
+%ghost %{_sharedstatedir}/selinux/%{selinuxtype}/active/modules/200/%{selinuxmodulename}
+
+%pre selinux
+%selinux_relabel_pre -s %{selinuxtype}
+
+%post selinux
+# install selinux policy module with priority 200 to override the default policy
+# maybe we want/need the next line to &> /dev/null
+%selinux_modules_install -s %{selinuxtype} -p 200 %{_datadir}/selinux/packages/%{selinuxmodulename}.pp.bz2
+
+%postun selinux
+if [ $1 -eq 0 ]; then
+    %selinux_modules_uninstall -s %{selinuxtype} -p 200 %{selinuxmodulename}
+fi
+
+# We we want a "rich forward dependency" of drbd-utils to drbd-selinux,
+# we above use
+#  Requires: (drbd-selinux if selinux-policy-targeted)
+# We need to relabel in posttrans, because in post the files to
+# relabel may not be installed yet.
+%posttrans selinux
+# maybe &> /dev/null
+%selinux_relabel_post -s %{selinuxtype}
+
+%endif
+
 %if %{with manual}
 %package man-ja
 Summary: Japanese man pages for DRBD
@@ -431,10 +483,18 @@ autoconf
     --with-initscripttype=%{initscripttype} \
     %{?_without_drbdmon}
 make %{?_smp_mflags}
+%if %{with selinux}
+make selinux
+%endif
 
 %install
 rm -rf %{buildroot}
 make install DESTDIR=%{buildroot} CREATE_MAN_LINK=no
+
+%if %{with selinux}
+install -d %{buildroot}%{_datadir}/selinux/packages
+install -m 0644 selinux/drbd.pp.bz2 %{buildroot}%{_datadir}/selinux/packages
+%endif
 
 %if %{with sbinsymlinks}
 # Don't do this if you are already on a /sbin -=> /usr/sbin distro

@@ -1,0 +1,136 @@
+policy_module(drbd, 2.0.0)
+
+# adapted from "upstream" selinux-policy-targeted-34.1.29-1.el9_0.noarch
+# with some help from audit2allow and some manual edits
+
+########################################
+#
+# Declarations
+#
+
+type drbd_t;
+type drbd_exec_t;
+init_daemon_domain(drbd_t, drbd_exec_t)
+
+type drbd_initrc_exec_t;
+init_script_file(drbd_initrc_exec_t)
+
+type drbd_var_lib_t;
+files_type(drbd_var_lib_t)
+
+type drbd_lock_t;
+files_lock_file(drbd_lock_t)
+
+type drbd_var_run_t;
+files_pid_file(drbd_var_run_t)
+
+type drbd_tmp_t;
+files_tmp_file(drbd_tmp_t)
+
+########################################
+#
+# Local policy
+#
+
+require {
+	type debugfs_t;
+	type kernel_t;
+	type modules_dep_t;
+	type modules_object_t;
+	type user_tmp_t;
+	type var_lock_t;
+	class capability { dac_override dac_read_search fsetid fowner };
+	class dir { getattr search };
+	class file { map lock open read getattr setattr write };
+	class netlink_generic_socket create_socket_perms;
+	class unix_stream_socket all_unix_stream_socket_perms;
+	class system module_request;
+}
+
+#============= drbd_t ==============
+allow drbd_t self:capability { dac_read_search  kill net_admin sys_admin };
+dontaudit drbd_t self:capability sys_tty_config;
+allow drbd_t self:fifo_file rw_fifo_file_perms;
+allow drbd_t self:unix_stream_socket create_stream_socket_perms;
+allow drbd_t self:netlink_socket create_socket_perms;
+allow drbd_t self:netlink_route_socket rw_netlink_socket_perms;
+
+manage_dirs_pattern(drbd_t, drbd_var_lib_t, drbd_var_lib_t)
+manage_files_pattern(drbd_t, drbd_var_lib_t, drbd_var_lib_t)
+manage_lnk_files_pattern(drbd_t, drbd_var_lib_t, drbd_var_lib_t)
+files_var_lib_filetrans(drbd_t, drbd_var_lib_t, dir)
+
+manage_dirs_pattern(drbd_t, drbd_var_run_t, drbd_var_run_t)
+manage_files_pattern(drbd_t, drbd_var_run_t, drbd_var_run_t)
+manage_lnk_files_pattern(drbd_t, drbd_var_run_t, drbd_var_run_t)
+files_pid_filetrans(drbd_t, drbd_var_run_t, { file dir })
+
+manage_files_pattern(drbd_t, drbd_lock_t, drbd_lock_t)
+files_lock_filetrans(drbd_t, drbd_lock_t, file)
+
+manage_dirs_pattern(drbd_t, drbd_tmp_t, drbd_tmp_t)
+manage_files_pattern(drbd_t, drbd_tmp_t, drbd_tmp_t)
+files_tmp_filetrans(drbd_t, drbd_tmp_t, {file dir})
+
+kernel_read_system_state(drbd_t)
+kernel_load_module(drbd_t)
+
+auth_use_nsswitch(drbd_t)
+
+can_exec(drbd_t, drbd_exec_t)
+
+corecmd_exec_bin(drbd_t)
+
+corenet_tcp_connect_http_port(drbd_t)
+
+dev_read_rand(drbd_t)
+dev_read_sysfs(drbd_t)
+dev_read_urand(drbd_t)
+
+files_read_kernel_modules(drbd_t)
+
+logging_send_syslog_msg(drbd_t)
+
+fs_getattr_xattr_fs(drbd_t)
+
+modutils_read_module_config(drbd_t)
+modutils_exec_kmod(drbd_t)
+
+storage_raw_read_fixed_disk(drbd_t)
+storage_raw_write_fixed_disk(drbd_t)
+
+sysnet_dns_name_resolve(drbd_t)
+
+optional_policy(`
+    rhcs_read_log_cluster(drbd_t)
+    rhcs_rw_cluster_tmpfs(drbd_t)
+    rhcs_manage_cluster_lib_files(drbd_t)
+
+    gen_require(`
+	    type cluster_t;
+	    type cluster_var_log_t;
+    ')
+    # crm_attribute (and possibly other things) want to append to pacemaker.log,
+    # which is hacluster:haclient 0660, while running as root.
+    # so we need them to either be setgid, or communicate via some log daemon socket,
+    # or use dac_override :shrug:
+    allow drbd_t self:capability { dac_override };
+    allow drbd_t cluster_var_log_t:file { setattr };
+    allow drbd_t cluster_t:unix_stream_socket connectto;
+')
+
+allow drbd_t debugfs_t:dir search;
+allow drbd_t self:netlink_generic_socket create_socket_perms;
+allow drbd_t user_tmp_t:dir getattr;
+allow drbd_t var_lock_t:file { lock open read write };
+
+# if you do not want drbd_t to be able to insmod,
+# dont allow this, but have the system load the modules instead:
+# # printf "%s\n" drbd drbd-transport-tcp > /etc/modules-load.d/drbd.conf
+allow drbd_t modules_dep_t:file { map open read getattr };
+allow drbd_t modules_object_t:file map;
+allow drbd_t kernel_t:system module_request;
+
+# there are some systemwide dontaudit rules
+# or we'd get more noise about crm_attribute and fowner,fsetid
+# which we neither want not need. I think.

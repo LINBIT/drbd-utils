@@ -256,6 +256,10 @@ drbd.spec: drbd.spec.in configure
 	./configure --enable-spec
 endif
 
+.PHONY: selinux
+selinux:
+	$(MAKE) -C selinux
+
 ifneq ($(FORCE),1)
 dockerimage: debrelease
 else
