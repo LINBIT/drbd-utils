@@ -17,6 +17,10 @@
 %endif
 %endif
 
+%if %(test /sbin -ef /usr/sbin && echo 1 || echo 0)
+%global _without_sbinsymlinks --without-sbinsymlinks
+%endif
+
 # Conditionals
 # Invoke "rpmbuild --without <feature>" or "rpmbuild --with <feature>"
 # to disable or enable specific features
