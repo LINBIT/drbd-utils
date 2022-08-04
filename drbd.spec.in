@@ -1,6 +1,3 @@
-# Define init script directory. %{_initddir} is available from Fedora
-# 9 forward; CentOS knows 5 only %{_initrddir}. Neither are known to
-# autoconf...
 %{!?_initddir: %{expand: %%global _initddir %{_initrddir}}}
 
 # Compatibility macro wrappers for legacy RPM versions that do not
@@ -70,20 +67,6 @@ Requires: drbd-pacemaker = %{version}-%{release}
 %if %{with drbdmon}
 BuildRequires: gcc-c++
 %endif
-## %if %{with rgmanager}
-## ## No.
-## ## We don't want to annoy the majority of our userbase on pacemaker
-## ## by pulling in the full rgmanager stack via drbd-rgmanager as well.
-## Requires: drbd-rgmanager = %{version}
-## %endif
-##
-## ## Neither do we want to force anyone to install heartbeat
-## ## Usually they use corosync meanwhile.
-## ## No need to pull in heartbeat via the drbd-heartbeat scripts
-## ## meant for haresources mode
-## %if %{with heartbeat}
-## Requires: %{name}-heartbeat = %{version}
-## %endif
 %if %{with bashcompletion}
 Requires: drbd-bash-completion = %{version}-%{release}
 %endif
@@ -289,7 +272,7 @@ Pacemaker High Availability cluster manager.
 %endif # with pacemaker
 
 # Dependencies for drbd-rgmanager are particularly awful. On RHEL 5
-# and prior (and corresponding Fedora releases), %{_datadir}/cluster
+# and prior (and corresponding Fedora releases), {_datadir}/cluster
 # was owned by rgmanager version 2, so we have to depend on that.
 #
 # With Red Hat Cluster 3.0.1 (around Fedora 12), the DRBD resource
