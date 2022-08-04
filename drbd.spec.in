@@ -54,18 +54,18 @@ Group: System Environment/Kernel
 URL: http://www.drbd.org/
 BuildRoot: %(mktemp -ud %{_tmppath}/drbd-utils-%{version}-%{release}-XXXXXX)
 BuildRequires: @RPM_BUILDREQ_DEFAULT@
-Requires: drbd-utils = %{version}
+Requires: drbd-utils = %{version}-%{release}
 %ifarch %{ix86} x86_64
 %if %{with xen}
-Requires: drbd-xen = %{version}
+Requires: drbd-xen = %{version}-%{release}
 %endif
 %endif
 %if %{with udev}
-Requires: drbd-udev = %{version}
+Requires: drbd-udev = %{version}-%{release}
 BuildRequires: udev
 %endif
 %if %{with pacemaker}
-Requires: drbd-pacemaker = %{version}
+Requires: drbd-pacemaker = %{version}-%{release}
 %endif
 %if %{with drbdmon}
 BuildRequires: gcc-c++
@@ -85,7 +85,7 @@ BuildRequires: gcc-c++
 ## Requires: %{name}-heartbeat = %{version}
 ## %endif
 %if %{with bashcompletion}
-Requires: drbd-bash-completion = %{version}
+Requires: drbd-bash-completion = %{version}-%{release}
 %endif
 
 %description
