@@ -3,6 +3,29 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+ 9.22.0-rc.1
+-----------
+ * parser,v9: deprecate named connections
+ * drbd-selinux: add sub package, minor packaging/spec changes
+ * drbdadm: allow files from expanded glob to vanish
+
+ 9.21.4
+-----------
+ * drbdadm,v9: fix potential segfault in postparse
+ * drbdadm,v9: fix sh-ip when set on connection/path
+
+ 9.21.3
+-----------
+ * drbdmeta: fix apply-al for bitmap sizes > 4GiB
+
+ 9.21.2
+-----------
+ * drbd-service-shim.sh: add secondary --force
+
+ 9.21.1
+-----------
+ * ocf: fix for dropped --peer option
+
  9.21.0
 -----------
  * drbdsetup,v9: show susupend reason in json output
