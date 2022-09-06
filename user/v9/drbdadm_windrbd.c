@@ -81,17 +81,19 @@ int before_attach(const struct cfg_ctx *ctx)
 	return 0;
 }
 
+	/* Starting from WinDRBD 1.1.4 this just prints a warning.
+           It now can present a partition as a disk with a virtual
+           GPT partition table. Windows thinks it is a disk with
+           one big partition, so we don't need the extra drive letter
+           any more, since the drive letter can be assigned with the
+           standard Windows tools.
+	 */
+
 int after_new_minor(const struct cfg_ctx *ctx)
 {
-        if (is_driveletter(ctx->vol->device)) {
-                char minor_str[10];
-                snprintf(minor_str, sizeof(minor_str)-1, "%d", ctx->vol->device_minor);
-
-		fprintf(stderr, "Warning: block device interface (via drive letter %s) is deprecated and will be removed in the next minor release. Please use SCSI disk device interface instead.\n", ctx->vol->device);
-		fprintf(stderr, "Please go to https://linbit.com/tech-guide/windrbd-users-guide/ for a guide of how to set up SCSI disk device interface.\n");
-
-                call_windrbd(ctx->res->name, SLEEPS_SHORT, windrbd, "-q", "set-mount-point-for-minor", minor_str, ctx->vol->device, NULL);
-        }
+	if (is_driveletter(ctx->vol->device)) {
+		fprintf(stderr, "Warning: Starting from WinDRBD 1.1.4 the drive letter (%s) has to be assigned\nwith Windows tools (partition manager, diskpart). The drive letter setting in\nthe WinDRBD config file is ignored.\nTo get rid of this warning remove the drive letter setting in the WinDRBD\nconfig file.\n", ctx->vol->device);
+	}
 
 	return 0;
 }
