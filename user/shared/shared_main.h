@@ -27,7 +27,16 @@
 #include <netinet/in.h>		/* for IFNAMSIZ */
 #include <stdio.h>		/* for NULL */
 
+#ifdef WINDRBD
+
+	/* (at least my) Windows boxes run slower, be more tolerant
+         * with timeouts.
+	 */
+#define CMD_TIMEOUT_SHORT_DEF 30
+#else
 #define CMD_TIMEOUT_SHORT_DEF 5
+#endif
+
 #define CMD_TIMEOUT_MEDIUM_DEF 121
 #define CMD_TIMEOUT_LONG_DEF 600
 extern struct d_globals global_options;

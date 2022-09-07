@@ -63,7 +63,7 @@ endif
 
 CFLAGS += -Wall -I../../drbd-headers -I.. -I.
 ifeq ($(WITH_WINDRBD),yes)
-CFLAGS += -I../windrbd-compat-headers
+CFLAGS += -I../windrbd-compat-headers -DWINDRBD
 endif
 CFLAGS += $(EXTRA_CFLAGS)
 
