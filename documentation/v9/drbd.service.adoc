@@ -24,7 +24,7 @@ You should usually disable this unit.
 If you use a cluster manager like *pacemaker*, that should bring up the DRBD resources instead,
 and via the DRBD ocf resource agent integration also notices when DRBD is "ready" to be used.
 
-If you use *linstor* and/or *drbd-reactor*, linstor will bring up the resources,
+If you use *LINSTOR* and/or *drbd-reactor*, LINSTOR will bring up the resources,
 and *drbd-reactor* will attempt to bring up the services once DRBD becomes ready.
 
 If you want to "hardcode" a promotion/mount attempt of specific DRBD resources
