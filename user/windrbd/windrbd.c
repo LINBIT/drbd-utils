@@ -100,6 +100,8 @@ void usage_and_exit(void)
 	fprintf(stderr, "		Checks if DRBD metadata exists on block device\n");
 	fprintf(stderr, "	windrbd [opt] wipe-metadata <drive-or-guid> <external|internal>\n");
 	fprintf(stderr, "		Erases DRBD meta data from drive if it exists\n");
+	fprintf(stderr, "	windrbd [opt] set-shutdown-flag <0 or 1>\n");
+	fprintf(stderr, "		Tells WinDRBD driver to stop all drbdsetup processes (when flag=1)\n");
 
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
@@ -1549,6 +1551,20 @@ int do_di_install_driver(const char *inf_file)
 	return 0;
 }
 
+int atoi_or_die(const char *buf)
+{
+	char *end;
+	long result;
+
+	errno = 0;
+	result = strtol(buf, &end, 10);
+	if (errno == ERANGE || end == buf || (*end != '\0' && !isspace(*end)) ||	   ((int)result != result)) {
+		fprintf(stderr, "Argument should be numeric (might be just out of (32-bit signed int) range)\n");
+		exit(1);
+	}
+	return result;
+}
+
 int main(int argc, char ** argv)
 {
 	const char *op;
@@ -1580,7 +1596,7 @@ int main(int argc, char ** argv)
 		if (argc != optind+3) {
 			usage_and_exit();
 		}
-		int minor = atoi(argv[optind+1]);
+		int minor = atoi_or_die(argv[optind+1]);
 		const char *drive = argv[optind+2];
 
 		return drive_letter_op(minor, drive, ASSIGN_DRIVE_LETTER);
@@ -1589,7 +1605,7 @@ int main(int argc, char ** argv)
 		if (argc != optind+3) {
 			usage_and_exit();
 		}
-		int minor = atoi(argv[optind+1]);
+		int minor = atoi_or_die(argv[optind+1]);
 		const char *drive = argv[optind+2];
 
 		return drive_letter_op(minor, drive, DELETE_DRIVE_LETTER);
@@ -1663,7 +1679,7 @@ int main(int argc, char ** argv)
 		if (argc != optind+3 && argc != optind+4) {
 			usage_and_exit();
 		}
-		int after = atoi(argv[optind+1]);
+		int after = atoi_or_die(argv[optind+1]);
 		const char *where_str = argv[optind+2];
 		enum fault_injection_location where = str_to_fault_location(where_str);
 		const char *drive = argv[optind+3];
@@ -1680,7 +1696,7 @@ int main(int argc, char ** argv)
 		if (argc != optind+2 && argc != optind+3) {
 			usage_and_exit();
 		}
-		int minor = atoi(argv[optind+1]);
+		int minor = atoi_or_die(argv[optind+1]);
 		const char *mount_point = argv[optind+2];
 
 		return set_mount_point_for_minor(minor, mount_point);
@@ -1707,7 +1723,7 @@ int main(int argc, char ** argv)
 		if (argc != optind+2) {
 			usage_and_exit();
 		}
-		int minor = atoi(argv[optind+1]);
+		int minor = atoi_or_die(argv[optind+1]);
 
 		return scan_partitions_for_minor(minor);
 	}
@@ -1743,7 +1759,7 @@ int main(int argc, char ** argv)
 		if (argc != optind+2) {
 			usage_and_exit();
 		}
-		int level = atoi(argv[optind+1]);
+		int level = atoi_or_die(argv[optind+1]);
 
 		return send_int_ioctl(IOCTL_WINDRBD_ROOT_SET_EVENT_LOG_LEVEL, level);
 	}
@@ -1790,6 +1806,14 @@ int main(int argc, char ** argv)
 			usage_and_exit();
 		}
 		return drbd_meta_op(argv[optind+1], WIPE_META_DATA, external);
+	}
+	if (strcmp(op, "set-shutdown-flag") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		int the_flag = atoi_or_die(argv[optind+1]);
+
+		return send_int_ioctl(IOCTL_WINDRBD_ROOT_SET_SHUTDOWN_FLAG, the_flag);
 	}
 
 	usage_and_exit();

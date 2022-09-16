@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <time.h>
+#include <stdio.h>
 
 #include <windrbd/windrbd_ioctl.h>
 #include <windows.h>
@@ -88,9 +89,11 @@ int genl_join_mc_group(struct genl_sock *s, const char *name)
 
         if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_JOIN_MC_GROUP, (void*) &m, sizeof(m), NULL, 0, &unused, NULL) == 0) {
 	        err = GetLastError();
-		printf("DeviceIoControl() failed, error is %d\n", err);
+		fprintf(stderr, "DeviceIoControl() failed, error is %d\n", err);
 		if (err == ERROR_ACCESS_DENIED) /* 5 */
-			printf("(are you running with Administrator privileges?)\n");
+			fprintf(stderr, "(are you running with Administrator privileges?)\n");
+		if (err == ERROR_NO_MORE_ITEMS) /* 259, the driver is about to shut down */
+			fprintf(stderr, "(WinDRBD driver is about to shut down)\n");
 		return -1;
 	}
 	return 0;
@@ -124,9 +127,12 @@ static int do_send(struct genl_sock *s, const void *buf, int len)
 
         if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_SEND_NL_PACKET, (void*) buf, len, NULL, 0, &unused, NULL) == 0) {
 	        err = GetLastError();
-		printf("DeviceIoControl() failed, error is %d\n", err);
+		fprintf(stderr, "DeviceIoControl() failed, error is %d\n", err);
 		if (err == ERROR_ACCESS_DENIED) /* 5 */
-			printf("(are you running with Administrator privileges?)\n");
+			fprintf(stderr, "(are you running with Administrator privileges?)\n");
+		if (err == ERROR_NO_MORE_ITEMS) /* 259, the driver is about to shut down */
+			fprintf(stderr, "(WinDRBD driver is about to shut down)\n");
+
 		return -1;
 	}
 	return 0;
@@ -172,9 +178,12 @@ int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int 
 	while (forever || timeout_ms > 0) {
 	        if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_RECEIVE_NL_PACKET, &p, sizeof(p), iov->iov_base, iov->iov_len, &size, NULL) == 0) {
 		        err = GetLastError();
-			printf("DeviceIoControl() failed, error is %d\n", err);
+			fprintf(stderr, "DeviceIoControl() failed, error is %d\n", err);
 			if (err == ERROR_ACCESS_DENIED) /* 5 */
-				printf("(are you running with Administrator privileges?)\n");
+				fprintf(stderr, "(are you running with Administrator privileges?)\n");
+			if (err == ERROR_NO_MORE_ITEMS) /* 259, the driver is about to shut down */
+				fprintf(stderr, "(WinDRBD driver is about to shut down)\n");
+
 			if (err_desc)
 				*err_desc = "ioctl error";
 			return -1;
