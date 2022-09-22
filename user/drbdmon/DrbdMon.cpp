@@ -25,7 +25,7 @@ extern "C"
 #include <Args.h>
 #include <comparators.h>
 
-const std::string DrbdMon::PROGRAM_NAME = "DRBD DrbdMon";
+const std::string DrbdMon::PROGRAM_NAME = "DRBDMon";
 const std::string DrbdMon::VERSION = PACKAGE_VERSION;
 
 const std::string DrbdMon::OPT_HELP_KEY = "help";
