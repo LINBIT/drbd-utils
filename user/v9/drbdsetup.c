@@ -2253,7 +2253,7 @@ static void show_volume(struct devices_list *device)
 	++indent;
 	printI("device\t\t\tminor %d;\n", device->minor);
 	if (device->disk_conf.backing_dev[0]) {
-		printI("disk\t\t\t\"%s\";\n", device->disk_conf.backing_dev);
+		printI("disk\t\t\t%s;\n", double_quote_string(device->disk_conf.backing_dev));
 		printI("meta-disk\t\t\t");
 		switch(device->disk_conf.meta_dev_idx) {
 		case DRBD_MD_INDEX_INTERNAL:
