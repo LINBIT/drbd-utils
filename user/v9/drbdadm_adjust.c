@@ -284,13 +284,13 @@ static int disk_equal(struct d_volume *conf, struct d_volume *running)
 		return 0;
 	}
 
-	eq = !strcmp(conf->disk, running->disk);
+	eq = is_same_disk(conf->disk, running->disk);
 	report_compare(!eq, "minor %u (vol:%u) disk: r=%s c=%s\n",
 		running->device_minor, running->vnr, running->disk, conf->disk);
 	if (eq) {
 		eq = int_eq(conf->meta_disk, running->meta_disk);
 		if (eq && strcmp(conf->meta_disk, "internal") != 0)
-			eq = !strcmp(conf->meta_disk, running->meta_disk);
+			eq = is_same_disk(conf->meta_disk, running->meta_disk);
 	}
 	report_compare(!eq, "minor %u (vol:%u) meta-disk: r=%s c=%s\n",
 		running->device_minor, running->vnr, running->meta_disk, conf->meta_disk);

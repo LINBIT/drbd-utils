@@ -147,3 +147,9 @@ void assign_default_device(struct d_volume *vol)
 		m_asprintf(&vol->device, "/dev/drbd%u",
 			   vol->device_minor);
 }
+
+int is_same_disk(const char *a, const char *b)
+{
+	return !strcmp(a, b);
+}
+

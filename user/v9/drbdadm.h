@@ -591,6 +591,7 @@ extern char *khelper_argv[];
 
 void print_platform_specific_versions(void);
 void assign_default_device(struct d_volume *vol);
+int is_same_disk(const char *a, const char *b);
 
 void generate_conf_file_locations(void);
 void free_conf_file_locations(void);

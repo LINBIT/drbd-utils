@@ -192,3 +192,36 @@ void assign_default_device(struct d_volume *vol)
 	if (!vol->device)
 		m_asprintf(&vol->device, "");
 }
+
+void disk_to_kernel_path(const char *disk, char *buf, size_t buflen)
+{
+	size_t n;
+
+        if (isalpha(disk[0]) && disk[1] == ':' && disk[2] == '\0') {
+                n = snprintf(buf, buflen, "\\DosDevices\\%s", disk);
+        } else if (is_guid(disk)) {
+                n = snprintf(buf, buflen, "\\DosDevices\\Volume{%s}", disk);
+        } else {
+                n = snprintf(buf, buflen, "%s", disk);
+        }
+	if (n >= buflen) {
+		fprintf(stderr, "Warning: Device name too long: %s (%zd), please report this.\n", disk, n);
+		exit(E_THINKO);
+	}
+}
+
+int is_same_disk(const char *a, const char *b)
+{
+		/* Typically these hold values like \\DosDevices\\X: or
+		 * \\DosDevices\\Volume{fae34719-85ac-11eb-a4c7-080027305288}\\
+		 * so 1K buffer size should be enough. We exit gracefully if
+		 * it isn't.
+		 */
+	char buf_a[1024], buf_b[1024];
+
+	disk_to_kernel_path(a, buf_a, sizeof(buf_a));
+	disk_to_kernel_path(b, buf_b, sizeof(buf_b));
+
+	return !strcmp(buf_a, buf_b);
+}
+
