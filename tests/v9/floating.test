@@ -1,0 +1,6 @@
+$ env -u __DRBD_NODE__ drbdadm -c ./floating-ipv4.res -d new-peer r0 ; echo $?
+drbdsetup new-peer r0 2 --_name=127.1.2.3_7706
+0
+$ env -u __DRBD_NODE__ drbdadm -c ./floating-ipv6.res -d new-peer r0 ; echo $?
+drbdsetup new-peer r0 2 --_name=fe80__1022_53ff_feb7_614f_vethX_7706
+0

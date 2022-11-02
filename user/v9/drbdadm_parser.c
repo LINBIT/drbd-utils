@@ -1021,6 +1021,23 @@ enum parse_host_section_flags {
 	BY_ADDRESS  = 2,
 };
 
+static void fixup_name_inplace_for_strict_names(char *name)
+{
+	/* compare with DRBD module, drbd_nl.c:drbd_check_name_str() */
+	char *c;
+	for (c = name; *c; ++c) {
+		switch (*c) {
+		case '0' ... '9':
+		case 'A' ... 'Z':
+		case 'a' ... 'z':
+		case '+': case '-': case '.': case '_':
+			break;
+		default:
+			*c = '_';
+		}
+	}
+}
+
 static void parse_host_section(struct d_resource *res,
 			       struct names *on_hosts,
 			       enum parse_host_section_flags flags)
@@ -1048,9 +1065,11 @@ static void parse_host_section(struct d_resource *res,
 		host->by_address = 1;
 		__parse_address(&host->address);
 		if (!strcmp(host->address.af, "ipv6"))
-			m_asprintf(&fake_uname, "ipv6 [%s]:%s", host->address.addr, host->address.port);
+			m_asprintf(&fake_uname, "%s:%s", host->address.addr, host->address.port);
 		else
 			m_asprintf(&fake_uname, "%s:%s", host->address.addr, host->address.port);
+
+		fixup_name_inplace_for_strict_names(fake_uname);
 		insert_head(&host->on_hosts, names_from_str(fake_uname));
 
 		token = yylex();
