@@ -1966,14 +1966,29 @@ void include_stmt(char *str)
 	size_t i;
 	int r;
 
-	cwd = pushd_to_current_config_file_unless_stdin();
-
-	/* """
+	/*
+	 * If the glob did not match any file,
+	 * there is nothing to do, silently ignore.
+	 * Unless it was no glob, but a literal,
+	 * which we would expect to exist.
+	 *
+	 * """
 	 * As a GNU extension, pglob->gl_flags is set to the
 	 * flags specified, ored with GLOB_MAGCHAR if any
 	 * metacharacters were found.
 	 * """
+	 *
+	 * But apparently |GLOB_MAGCHAR does not happen for GLOB_NOMATCH returns,
+	 * at least not consistently :-(
+	 * Also, there exist non-GNU libc
+	 * So we have this incomplete strchr heuristic anyways.
 	 */
+	bool contains_glob_magic_char =
+			strchr(str, '*') ||
+			strchr(str, '?') ||
+			strchr(str, '[');
+
+	cwd = pushd_to_current_config_file_unless_stdin();
 	r = glob(str, 0, NULL, &glob_buf);
 	if (r == 0) {
 		for (i=0; i<glob_buf.gl_pathc; i++) {
@@ -1984,7 +1999,7 @@ void include_stmt(char *str)
 			if (f) {
 				include_file(f, strdup(glob_buf.gl_pathv[i]));
 				fclose(f);
-			} else if (errno == ENOENT && glob_buf.gl_flags & GLOB_MAGCHAR) {
+			} else if (errno == ENOENT && contains_glob_magic_char) {
 				/* Noisily ignore race between glob expansion
 				 * and actual open. */
 				err("%s:%d: include file vanished after glob expansion '%s'.\n",
@@ -1998,17 +2013,7 @@ void include_stmt(char *str)
 		}
 		globfree(&glob_buf);
 	} else if (r == GLOB_NOMATCH) {
-		/*
-		 * If the glob did not match any file,
-		 * there is nothing to do, silently ignore.
-		 * Unless it was no glob, but a literal,
-		 * which we would expect to exist.
-		 * Apparently |GLOB_MAGCHAR does not happen for GLOB_NOMATCH returns,
-		 * at least not consistently :-(
-		 * So we have this strchr heuristic anyways.
-		 */
-		/* if (!(glob_buf.gl_flags & GLOB_MAGCHAR)) { */
-		if (!strchr(str, '?') && !strchr(str, '*') && !strchr(str, '[')) {
+		if (!contains_glob_magic_char) {
 			err("%s:%d: Failed to open include file '%s'.\n",
 			    config_save, line, str);
 			config_valid = 0;
