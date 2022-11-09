@@ -132,7 +132,7 @@ void parse_device(struct names* on_hosts, struct d_volume *vol)
 			&& !is_driveletter(vol->device)
 			&& vol->device[0] != '\0'
 		) {
-			err("%s:%d: device name must be either empty or a drive letter\n",
+			log_err("%s:%d: device name must be either empty or a drive letter\n",
 			    config_file, fline);
 			config_valid = 0;
 			/* no goto out yet,
@@ -145,7 +145,7 @@ void parse_device(struct names* on_hosts, struct d_volume *vol)
 		case ';':
 			m = dt_minor_of_dev(vol->device);
 			if (m < 0) {
-				err("%s:%d: no minor given nor device name contains a minor number\n",
+				log_err("%s:%d: no minor given nor device name contains a minor number\n",
 				    config_file, fline);
 				config_valid = 0;
 			}

@@ -55,19 +55,19 @@ static FILE *m_popen(int *pid,char** argv)
 	int dev_null;
 
 	if(pipe(pipes)) {
-		err("Creation of pipes failed: %m\n");
+		log_err("Creation of pipes failed: %m\n");
 		exit(E_EXEC_ERROR);
 	}
 
 	dev_null = open("/dev/null", O_WRONLY);
 	if (dev_null == -1) {
-		err("Opening /dev/null failed: %m\n");
+		log_err("Opening /dev/null failed: %m\n");
 		exit(E_EXEC_ERROR);
 	}
 
 	mpid = fork();
 	if(mpid == -1) {
-		err("Can not fork");
+		log_err("Can not fork");
 		exit(E_EXEC_ERROR);
 	}
 	if(mpid == 0) {
@@ -77,7 +77,7 @@ static FILE *m_popen(int *pid,char** argv)
 		dup2(dev_null, fileno(stderr));
 		close(dev_null);
 		execvp(argv[0],argv);
-		err("Can not exec");
+		log_err("Can not exec");
 		exit(E_EXEC_ERROR);
 	}
 
@@ -96,7 +96,7 @@ static int is_equal(struct context_def *ctx, struct d_option *a, struct d_option
 			return field->is_equal(field, a->value, b->value);
 	}
 
-	err("Internal error: option '%s' not known in this context\n", a->name);
+	log_err("Internal error: option '%s' not known in this context\n", a->name);
 	abort();
 }
 
@@ -120,23 +120,23 @@ static int opts_equal(struct context_def *ctx, struct d_option* conf, struct d_o
 		if((opt=find_opt(conf,running->name))) {
 			if(!is_equal(ctx, running, opt)) {
 				if (verbose > 2)
-					err("Value of '%s' differs: r=%s c=%s\n",
+					log_err("Value of '%s' differs: r=%s c=%s\n",
 						opt->name,running->value,opt->value);
 				return 0;
 			}
 			if (verbose > 3)
-				err("Value of '%s' equal: r=%s c=%s\n",
+				log_err("Value of '%s' equal: r=%s c=%s\n",
 					opt->name,running->value,opt->value);
 			opt->mentioned=1;
 		} else {
 			if(!is_default(ctx, running)) {
 				if (verbose > 2)
-					err("Only in running config %s: %s\n",
+					log_err("Only in running config %s: %s\n",
 						running->name,running->value);
 				return 0;
 			}
 			if (verbose > 3)
-				err("Is default: '%s' equal: r=%s\n",
+				log_err("Is default: '%s' equal: r=%s\n",
 					running->name,running->value);
 		}
 		running=running->next;
@@ -145,7 +145,7 @@ static int opts_equal(struct context_def *ctx, struct d_option* conf, struct d_o
 	while(conf) {
 		if(conf->mentioned==0 && !is_default(ctx, conf)) {
 			if (verbose > 2)
-				err("Only in config file %s: %s\n", conf->name,conf->value);
+				log_err("Only in config file %s: %s\n", conf->name,conf->value);
 			return 0;
 		}
 		conf=conf->next;
@@ -183,7 +183,7 @@ static bool addr_equal(struct d_resource *conf, struct d_resource *running)
 		// Prints NULL values
 		// in case conf->peer == NULL && conf->me->proxy == NULL
 		if (!match && verbose > 2) {
-			err("Network addresses differ:\n"
+			log_err("Network addresses differ:\n"
 			    "\trunning: %s:%s:%s -- %s:%s:%s\n"
 			    "\t config: %s:%s:%s -- %s:%s:%s\n",
 			    running->me->address_family, running->me->address, running->me->port,
@@ -273,7 +273,7 @@ int _is_plugin_in_list(char *string,
 			break;
 
 	if (word_len+1 >= MAX_PLUGIN_NAME) {
-		err("Wrong proxy plugin name %*.*s", word_len, word_len, string);
+		log_err("Wrong proxy plugin name %*.*s", word_len, word_len, string);
 		exit(E_CONFIG_INVALID);
 	}
 
@@ -289,7 +289,7 @@ int _is_plugin_in_list(char *string,
 
 	/* Not found, insert into list. */
 	if (list_len >= MAX_PLUGINS) {
-		err("Too many proxy plugins.");
+		log_err("Too many proxy plugins.");
 		exit(E_CONFIG_INVALID);
 	}
 
@@ -348,7 +348,7 @@ redo_whole_conn:
 	for(i=0; i<MAX_PLUGINS; i++)
 	{
 		if (used >= sizeof(plugin_changes)-1) {
-			err("Too many proxy plugin changes");
+			log_err("Too many proxy plugin changes");
 			exit(E_CONFIG_INVALID);
 		}
 		/* Now we can be sure that we can store another pointer. */
@@ -575,7 +575,7 @@ struct d_volume *new_to_be_deleted_minor_from_template(struct d_volume *kern)
 }
 
 #define ASSERT(x) do { if (!(x)) {				\
-	err("%s:%u:%s: ASSERT(%s) failed.\n", __FILE__,		\
+	log_err("%s:%u:%s: ASSERT(%s) failed.\n", __FILE__,		\
 	     __LINE__, __func__, #x);				\
 	abort(); }						\
 	} while (0)

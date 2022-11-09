@@ -62,7 +62,7 @@ void set_on_hosts_in_res(struct d_resource *res)
 		if (host->lower_name) {
 			l_res = res_by_name(host->lower_name);
 			if (l_res == NULL) {
-				err("%s:%d: in resource %s, "
+				log_err("%s:%d: in resource %s, "
 				    "referenced resource '%s' not defined.\n",
 				    res->config_file, res->start_line,
 				    res->name, host->lower_name);
@@ -166,11 +166,11 @@ static void _set_host_info_in_host_address_pairs(struct d_resource *res,
 		if (ha->host_info) { /* Implicit connection have that already set. */
 			host_info = ha->host_info;
 			if (i == 2) {
-				err("LOGIC BUG in set_host_info_in_host_address_pairs()\n");
+				log_err("LOGIC BUG in set_host_info_in_host_address_pairs()\n");
 				exit(20);
 			}
 			if (!host_info->address.addr) {
-				err("\"connection-mesh\" (for \"%s\") with a host (\"%s\") "
+				log_err("\"connection-mesh\" (for \"%s\") with a host (\"%s\") "
 						"that has no \"address\" defined\n",
 						res->name, ha->name);
 				config_valid = 0;
@@ -195,7 +195,7 @@ static void _set_host_info_in_host_address_pairs(struct d_resource *res,
 		}
 
 		if (!host_info) {
-			err("%s:%d: in resource %s a hostname (\"%s\") is given\n"
+			log_err("%s:%d: in resource %s a hostname (\"%s\") is given\n"
 			    "with a \"host\" keyword, has no \"address\" keyword, and no matching\n"
 			    "host section (\"on\" keyword)\n",
 			    config_file, ha->config_line, res->name, ha->name);
@@ -223,7 +223,7 @@ static void _set_host_info_in_host_address_pairs(struct d_resource *res,
 					have_port = false;
 			}
 			if (!(have_address && have_port)) {
-				err("%s:%d: Resource %s, host %s: "
+				log_err("%s:%d: Resource %s, host %s: "
 				    "cannot determine which %s%s%s to use\n",
 				    config_file, ha->config_line, res->name,
 				    ha->name, have_address ? "" : "address",
@@ -261,7 +261,7 @@ static void _set_host_info_in_host_address_pairs(struct d_resource *res,
 			have_node_ids = generate_implicit_node_id(addr_hash, host_info_array);
 		}
 		if (!have_node_ids) {
-			err("BAD LUCK, equal hashes\n");
+			log_err("BAD LUCK, equal hashes\n");
 			exit(20);
 		}
 	}
@@ -325,7 +325,7 @@ void set_me_in_resource(struct d_resource* res, int match_on_proxy)
 		/* we matched. */
 		if (res->ignore) {
 			config_valid = 0;
-			err("%s:%d: in resource %s, %s %s { ... }:\n"
+			log_err("%s:%d: in resource %s, %s %s { ... }:\n"
 			    "\tYou cannot ignore and define at the same time.\n",
 			    res->config_file, host->config_line, res->name,
 			    host->lower ? "stacked-on-top-of" : "on",
@@ -333,7 +333,7 @@ void set_me_in_resource(struct d_resource* res, int match_on_proxy)
 		}
 		if (res->me && res->me != host && !match_on_proxy) {
 			config_valid = 0;
-			err("%s:%d: in resource %s, %s %s { ... } ... %s %s { ... }:\n"
+			log_err("%s:%d: in resource %s, %s %s { ... } ... %s %s { ... }:\n"
 			    "\tThere are multiple host sections for this node.\n",
 			    res->config_file, host->config_line, res->name,
 			    res->me->lower ? "stacked-on-top-of" : "on",
@@ -399,7 +399,7 @@ static void set_peer_in_connection(struct d_resource* res, struct connection *co
 	/* me must be already set */
 	if (!res->me) {
 		/* should have been implicitly ignored. */
-		err("%s:%d: in resource %s:\n"
+		log_err("%s:%d: in resource %s:\n"
 		    "\tcannot determine the peer, don't even know myself!\n",
 		    res->config_file, res->start_line, res->name);
 		exit(E_THINKO);
@@ -418,7 +418,7 @@ static void set_peer_in_connection(struct d_resource* res, struct connection *co
 
 		if (nr_hosts < 2) {
 			if (peer_required) {
-				err("%s:%d: in connection in resource %s:\n"
+				log_err("%s:%d: in connection in resource %s:\n"
 				    "\tMissing statement 'host <PEER> '.\n",
 				    res->config_file, conn->config_line, res->name);
 				config_valid = 0;
@@ -432,7 +432,7 @@ static void set_peer_in_connection(struct d_resource* res, struct connection *co
 			} else {
 				host_info = find_host_info_by_ha(res, candidate);
 				if (!host_info) {
-					err("%s:%d: in connection in resource %s:\n"
+					log_err("%s:%d: in connection in resource %s:\n"
 					    "\tCan not find host_info for %s\n",
 					    res->config_file, conn->config_line, res->name, candidate->name);
 					config_valid = 0;
@@ -446,7 +446,7 @@ static void set_peer_in_connection(struct d_resource* res, struct connection *co
 			continue;
 		}
 
-		err("%s:%d: in connection in resource %s:\n"
+		log_err("%s:%d: in connection in resource %s:\n"
 		    "\tBug in set_peer_in_connection()\n",
 		    res->config_file, conn->config_line, res->name);
 		config_valid = 0;
@@ -587,7 +587,7 @@ static struct d_volume *find_volume(struct volumes *volumes, int vnr)
 static void derror(struct d_host_info *host, struct d_resource *res, char *text)
 {
 	config_valid = 0;
-	err("%s:%d: in resource %s, on %s { ... }: '%s' keyword missing.\n",
+	log_err("%s:%d: in resource %s, on %s { ... }: '%s' keyword missing.\n",
 	    res->config_file, host->config_line, res->name,
 	    names_to_str(&host->on_hosts), text);
 }
@@ -666,7 +666,7 @@ static void check_volumes_complete(struct d_resource *res, struct d_host_info *h
 		if (vnr == -1U || vnr < vol->vnr)
 			vnr = vol->vnr;
 		else
-			err("internal error: in %s: unsorted volumes list\n",
+			log_err("internal error: in %s: unsorted volumes list\n",
 			    res->name);
 		check_volume_complete(res, host, vol);
 	}
@@ -705,7 +705,7 @@ static void check_volume_sets_equal(struct d_resource *res, struct d_host_info *
 	/* volume lists are supposed to be sorted on vnr */
 	while (a || b) {
 		while (a && (!b || a->vnr < b->vnr)) {
-			err("%s:%d: in resource %s, on %s { ... }: volume %d not defined on %s\n",
+			log_err("%s:%d: in resource %s, on %s { ... }: volume %d not defined on %s\n",
 			    config_file, line, res->name,
 			    names_to_str(&host1->on_hosts), a->vnr,
 			    compare_stacked ? host1->lower->name : names_to_str(&host2->on_hosts));
@@ -718,7 +718,7 @@ static void check_volume_sets_equal(struct d_resource *res, struct d_host_info *
 			 * top of it.  Warn (if we have a terminal),
 			 * but consider it as valid. */
 			if (!(compare_stacked && no_tty))
-				err("%s:%d: in resource %s, on %s { ... }: "
+				log_err("%s:%d: in resource %s, on %s { ... }: "
 				    "volume %d missing (present on %s)\n",
 				    config_file, line, res->name,
 				    names_to_str(&host1->on_hosts), b->vnr,
@@ -729,7 +729,7 @@ static void check_volume_sets_equal(struct d_resource *res, struct d_host_info *
 		}
 		if (a && b && a->vnr == b->vnr) {
 			if (a->implicit != b->implicit) {
-				err("%s:%d: in resource %s, on %s resp. %s: volume %d must not be implicit on one but not the other\n",
+				log_err("%s:%d: in resource %s, on %s resp. %s: volume %d must not be implicit on one but not the other\n",
 				    config_file, line, res->name,
 				    names_to_str(&host1->on_hosts),
 				    compare_stacked ? host1->lower->name : names_to_str(&host2->on_hosts),
@@ -763,7 +763,7 @@ static struct hname_address *alloc_hname_address()
 
 	ha = calloc(1, sizeof(struct hname_address));
 	if (ha == NULL) {
-		err("calloc", ": %m\n");
+		log_err("calloc", ": %m\n");
 		exit(E_EXEC_ERROR);
 	}
 	return ha;
@@ -788,7 +788,7 @@ static void create_implicit_connections(struct d_resource *res)
 
 	for_each_host(host_info, &res->all_hosts) {
 		if (++hosts == 3) {
-			err("Resource %s:\n\t"
+			log_err("Resource %s:\n\t"
 			    "Use explicit 'connection' sections (or a 'connection-mesh' section) with more than two 'on' sections.\n",
 		            res->name);
 			break;
@@ -820,12 +820,12 @@ static struct d_host_info *find_host_info_or_invalid(struct d_resource *res, cha
 	struct d_host_info *host_info = find_host_info_by_name(res, name);
 
 	if (!host_info) {
-		err("%s:%d: in resource %s:\n\t"
+		log_err("%s:%d: in resource %s:\n\t"
 		    "There is no 'on' section for hostname '%s' named in the connection-mesh\n",
 		    res->config_file, res->start_line, res->name, name);
 		config_valid = 0;
 	} else if (host_info->proxy_compat_only && config_valid) {
-		err("%s:%d: in resource %s:\n\t"
+		log_err("%s:%d: in resource %s:\n\t"
 		    "There is a drbd-8.x proxy config syntax within an 'on' section and you are using\n\t"
 		    "the 'mesh' keyword from drbd-9.x syntax. That does not work together.\n\n\t"
 		    "Use an explicit connection to configure a proxy and omit that pair of hosts\n\t"
@@ -981,7 +981,7 @@ static void check_addr_conflict(void *addrtree_root, struct resources *resources
 
 					e = malloc(sizeof *e);
 					if (!e) {
-						err("malloc: %m\n");
+						log_err("malloc: %m\n");
 						exit(E_EXEC_ERROR);
 					}
 
@@ -1015,7 +1015,7 @@ static void check_addr_conflict(void *addrtree_root, struct resources *resources
 				}
 				if (i == 2 && addresses_equal(addr[0], addr[1]) &&
 				    !addr[0]->is_local_address) {
-					err("%s:%d: in resource %s %s:%s:%s is used for both endpoints\n",
+					log_err("%s:%d: in resource %s %s:%s:%s is used for both endpoints\n",
 					    res->config_file, conn->config_line,
 					    res->name, addr[0]->af, addr[0]->addr,
 					    addr[0]->port);
@@ -1038,7 +1038,7 @@ static void _must_have_two_hosts(struct d_resource *res, struct path *path)
 	STAILQ_FOREACH(ha, &path->hname_address_pairs, link)
 		i++;
 	if (i != 2) {
-		err("%s:%d: Resource %s: %s needs to have two endpoints\n",
+		log_err("%s:%d: Resource %s: %s needs to have two endpoints\n",
 		    res->config_file, path->config_line, res->name,
 		    path->implicit ? "connection" : "path");
 		config_valid = 0;
@@ -1087,7 +1087,7 @@ static void fixup_peer_devices(struct d_resource *res)
 					continue; /* no on section for _remote_host in show output! */
 				vol = volume_by_vnr(&host->volumes, peer_device->vnr);
 				if (!vol) {
-					err("%s:%d: Resource %s: There is a reference to a volume %d that "
+					log_err("%s:%d: Resource %s: There is a reference to a volume %d that "
 					    "is not known in this resource on host %s\n",
 					    res->config_file, peer_device->config_line, res->name,
 					    peer_device->vnr, ha->name);
@@ -1149,7 +1149,7 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 		check_volumes_hosts(res);
 
 		if (any_implicit && any_non_zero_vnr) {
-			err("%s:%d: in resource %s: you must not mix implicit and explicit volumes\n",
+			log_err("%s:%d: in resource %s: you must not mix implicit and explicit volumes\n",
 			    config_file, line, res->name);
 			config_valid = 0;
 		}
@@ -1219,7 +1219,7 @@ static void expand_opts(struct d_resource *res, struct context_def *oc, struct o
 			insert_head(options, new_option);
 		} else if (existing_option->inherited && oc != &wildcard_ctx) {
 			if (!is_equal(oc, existing_option, option)) {
-				err("%s:%d: in resource %s, "
+				log_err("%s:%d: in resource %s, "
 				    "ambiguous inheritance for option \"%s\".\n"
 				    "should be \"%s\" and \"%s\" at the same time\n.",
 				    res->config_file, res->start_line, res->name,
@@ -1227,7 +1227,7 @@ static void expand_opts(struct d_resource *res, struct context_def *oc, struct o
 				config_valid = 0;
 			}
 			/* else {
-				err("%s:%d: WARNING: in resource %s, "
+				log_err("%s:%d: WARNING: in resource %s, "
 				    "multiple inheritance for option \"%s\".\n"
 				    "with same value\n.",
 				    res->config_file, res->start_line, res->name,
@@ -1383,13 +1383,13 @@ static int sanity_check_abs_cmd(char *cmd_name)
 	if (!(sb.st_mode & S_ISUID) || sb.st_mode & S_IXOTH || sb.st_gid == 0) {
 		static int did_header = 0;
 		if (!did_header)
-			err("WARN:\n"
+			log_err("WARN:\n"
 			    "  You are using the 'drbd-peer-outdater' as fence-peer program.\n"
 			    "  If you use that mechanism the dopd heartbeat plugin program needs\n"
 			    "  to be able to call drbdsetup and drbdmeta with root privileges.\n\n"
 			    "  You need to fix this with these commands:\n");
 		did_header = 1;
-		err("  chgrp haclient %s\n"
+		log_err("  chgrp haclient %s\n"
 		    "  chmod o-x %s\n"
 		    "  chmod u+s %s\n\n",
 		    cmd_name, cmd_name, cmd_name);
@@ -1452,7 +1452,7 @@ static void sanity_check_conf(char *c)
 	if (sb.st_mode & S_IRGRP && sb.st_gid != 0)
 		return;
 
-	err("WARN:\n"
+	log_err("WARN:\n"
 	    "  You are using the 'drbd-peer-outdater' as fence-peer program.\n"
 	    "  If you use that mechanism the dopd heartbeat plugin program needs\n"
 	    "  to be able to read the drbd.config file.\n\n"
@@ -1497,7 +1497,7 @@ static void ensure_proxy_sections(struct d_resource *res)
 		if (prev_proxy_sect == INIT)
 			continue;
 		if (prev_proxy_sect != proxy_sect) {
-			err("%s:%d: in resource %s:\n\t"
+			log_err("%s:%d: in resource %s:\n\t"
 			    "Either all 'on' sections must contain a proxy subsection, or none.\n",
 			    res->config_file, res->start_line, res->name);
 			config_valid = 0;
@@ -1517,7 +1517,7 @@ static void ensure_proxy_sections(struct d_resource *res)
 				if (prev_proxy_sect == INIT)
 					continue;
 				if (prev_proxy_sect != proxy_sect) {
-					err("%s:%d: in connection in resource %s:\n"
+					log_err("%s:%d: in connection in resource %s:\n"
 					    "Either all 'host' statements must have a proxy subsection, or none.\n",
 					    res->config_file, conn->config_line,
 					    res->name);
@@ -1542,7 +1542,7 @@ static void validate_resource(struct d_resource *res, enum pp_flags flags)
 		rs_after_res = res_by_name_ign_vol(opt->value);
 		if (rs_after_res == NULL ||
 		    (rs_after_res->ignore && !(flags & MATCH_ON_PROXY))) {
-			err("%s:%d: in resource %s:\n\tresource '%s' mentioned in "
+			log_err("%s:%d: in resource %s:\n\tresource '%s' mentioned in "
 			    "'resync-after' option is not known%s.\n",
 			    res->config_file, res->start_line, res->name,
 			    opt->value, rs_after_res ? " on this host" : "");
@@ -1566,14 +1566,14 @@ static void validate_resource(struct d_resource *res, enum pp_flags flags)
 		}
 	}
 	if (STAILQ_EMPTY(&res->all_hosts)) {
-		err("%s:%d: in resource %s:\n\ta host sections ('on %s { ... }') is missing.\n",
+		log_err("%s:%d: in resource %s:\n\ta host sections ('on %s { ... }') is missing.\n",
 		    res->config_file, res->start_line, res->name, hostname);
 		config_valid = 0;
 	}
 	if (res->ignore)
 		return;
 	if (!res->me) {
-		err("%s:%d: in resource %s:\n\tmissing section 'on %s { ... }'.\n",
+		log_err("%s:%d: in resource %s:\n\tmissing section 'on %s { ... }'.\n",
 		    res->config_file, res->start_line, res->name, hostname);
 		config_valid = 0;
 	}
@@ -1582,7 +1582,7 @@ static void validate_resource(struct d_resource *res, enum pp_flags flags)
 	if ((opt = find_opt(&res->net_options, "after-sb-0pri"))) {
 		if (!strncmp(opt->value, "discard-node-", 13)) {
 			if (!host_name_known(res, opt->value + 13)) {
-				err("%s:%d: in resource %s:\n\t"
+				log_err("%s:%d: in resource %s:\n\t"
 				    "the nodename in the '%s' option is "
 				    "not known.\n",
 				    res->config_file, res->start_line,
@@ -1640,7 +1640,7 @@ static void _convert_after_option(struct d_resource *res, struct d_volume *vol)
 		ctx_by_name(&depends_on_ctx, opt->value, SETUP_MULTI);
 		volumes = ctx_set_implicit_volume(&depends_on_ctx);
 		if (volumes > 1) {
-			err("%s:%d: in resource %s:\n\t"
+			log_err("%s:%d: in resource %s:\n\t"
 			    "resync-after contains '%s', which is ambiguous, since it contains %d volumes\n",
 			    res->config_file, res->start_line, res->name,
 			    opt->value, volumes);
@@ -1649,7 +1649,7 @@ static void _convert_after_option(struct d_resource *res, struct d_volume *vol)
 		}
 
 		if (!depends_on_ctx.res || depends_on_ctx.res->ignore || !depends_on_ctx.vol) {
-			err("%s:%d: in resource %s:\n\tresource '%s' mentioned in "
+			log_err("%s:%d: in resource %s:\n\tresource '%s' mentioned in "
 			    "'resync-after' option is not known%s.\n",
 			    res->config_file, res->start_line, res->name,
 			    opt->value, depends_on_ctx.res ? " on this host" : "");

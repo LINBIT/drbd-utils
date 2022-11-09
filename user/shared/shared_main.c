@@ -240,7 +240,7 @@ pid_t my_fork(void)
 		pid = fork();
 		if (pid != -1 || errno != EAGAIN)
 			return pid;
-		err("fork: retry: Resource temporarily unavailable\n");
+		log_err("fork: retry: Resource temporarily unavailable\n");
 		usleep(100 * 1000);
 	}
 	return pid;

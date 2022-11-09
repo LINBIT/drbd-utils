@@ -73,7 +73,7 @@ void maybe_exec_legacy_drbdadm(char **argv)
 		setenv("DRBD_DONT_WARN_ON_VERSION_MISMATCH", "1", 0);
 		add_lib_drbd_to_path();
 		execvp(drbdadm_83, argv);
-		err("execvp() failed to exec %s: %m\n", drbdadm_83);
+		log_err("execvp() failed to exec %s: %m\n", drbdadm_83);
 #else
 		config_help_legacy("drbdadm", driver_version);
 #endif
@@ -86,7 +86,7 @@ void maybe_exec_legacy_drbdadm(char **argv)
 		setenv("DRBD_DONT_WARN_ON_VERSION_MISMATCH", "1", 0);
 		add_lib_drbd_to_path();
 		execvp(drbdadm_84, argv);
-		err("execvp() failed to exec %s: %m\n", drbdadm_84);
+		log_err("execvp() failed to exec %s: %m\n", drbdadm_84);
 #else
 		config_help_legacy("drbdadm", driver_version);
 #endif
@@ -124,7 +124,7 @@ static void write_node_id(struct node_info *ni)
 	}
 
 	if( fd == -1) {
-		err("Creation of %s failed: %m\n", node_id_file());
+		log_err("Creation of %s failed: %m\n", node_id_file());
 		exit(20);
 	}
 
@@ -143,7 +143,7 @@ static void write_node_id(struct node_info *ni)
 	}
 
 	if( write(fd,&on_disk, size) != size) {
-		err("Write to %s failed: %m\n", node_id_file());
+		log_err("Write to %s failed: %m\n", node_id_file());
 		exit(20);
 	}
 
@@ -341,7 +341,7 @@ static int make_get_request(char *uri) {
 			if (buffer[0] == '\r' || buffer[0] == '\n')
 				writeit = 1;
 		} else {
-			err("%s", buffer);
+			log_err("%s", buffer);
 		}
 	}
 	fclose(sockfd);
@@ -432,7 +432,7 @@ void uc_node(enum usage_count_type type)
 
 	n_comment[0]=0;
 	if (type == UC_ASK ) {
-		err("\n"
+		log_err("\n"
 		    "\t\t--== This is %s of DRBD ==--\n"
 		    "Please take part in the global DRBD usage count at http://"HTTP_HOST".\n\n"
 		    "The counter works anonymously. It creates a random number to identify\n"
@@ -464,18 +464,18 @@ void uc_node(enum usage_count_type type)
 
 	write_node_id(&ni);
 
-	err("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
+	log_err("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
 			"  --==  Thank you for participating in the global usage survey  ==--\n"
 			"The server's response is:\n\n");
 	make_get_request(uri);
 	if (type == UC_ASK) {
-		err("\n"
+		log_err("\n"
 				"From now on, drbdadm will contact "HTTP_HOST" only when you update\n"
 				"DRBD or when you use 'drbdadm create-md'. Of course it will continue\n"
 				"to ask you for confirmation as long as 'usage-count' is set to 'ask'\n\n"
 				"Just press [RETURN] to continue: ");
 		if (fgets(answer, 9, stdin) == NULL)
-			err("Could not read answer\n");
+			log_err("Could not read answer\n");
 	}
 }
 
@@ -495,7 +495,7 @@ static char* run_adm_drbdmeta(const struct cfg_ctx *ctx, const char *arg_overrid
 
 	pid = fork();
 	if(pid == -1) {
-		err("Can not fork\n");
+		log_err("Can not fork\n");
 		exit(E_EXEC_ERROR);
 	}
 	if(pid == 0) {
@@ -623,7 +623,7 @@ int adm_create_md(const struct cfg_ctx *ctx)
 
 		if( global_options.usage_count == UC_YES ) send = 1;
 		if( global_options.usage_count == UC_ASK ) {
-			err("\n"
+			log_err("\n"
 			    "\t\t--== Creating metadata ==--\n"
 			    "As with nodes, we count the total number of devices mirrored by DRBD\n"
 			    "at http://"HTTP_HOST".\n\n"

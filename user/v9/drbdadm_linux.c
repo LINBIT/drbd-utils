@@ -87,7 +87,7 @@ void parse_device(struct names* on_hosts, struct d_volume *vol)
 		if ((on_hosts == NULL || hostname_in_list(hostname, on_hosts))
 			&& strncmp("/dev/drbd", vol->device, 9)
 		) {
-			err("%s:%d: device name must start with /dev/drbd\n"
+			log_err("%s:%d: device name must start with /dev/drbd\n"
 			    "\t(/dev/ is optional, but drbd is required)\n",
 			    config_file, fline);
 			config_valid = 0;
@@ -101,7 +101,7 @@ void parse_device(struct names* on_hosts, struct d_volume *vol)
 		case ';':
 			m = dt_minor_of_dev(vol->device);
 			if (m < 0) {
-				err("%s:%d: no minor given nor device name contains a minor number\n",
+				log_err("%s:%d: no minor given nor device name contains a minor number\n",
 				    config_file, fline);
 				config_valid = 0;
 			}

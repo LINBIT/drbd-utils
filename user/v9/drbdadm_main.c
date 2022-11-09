@@ -600,7 +600,7 @@ static int __call_cmd_fn(const struct cfg_ctx *ctx, enum on_error on_error)
 	if (ctx->cmd->disk_required &&
 	    (!vol->disk || !vol->meta_disk || !vol->meta_index)) {
 		rv = 10;
-		err("The %s command requires a local disk, but the configuration gives none.\n",
+		log_err("The %s command requires a local disk, but the configuration gives none.\n",
 		    ctx->cmd->name);
 		if (on_error == EXIT_ON_FAIL)
 			exit(rv);
@@ -736,7 +736,7 @@ int _run_deferred_cmds(enum drbd_cfg_stage stage)
 				if (d->ctx.res != last_res)
 					printf(" [skipped:%s]", d->ctx.res->name);
 			} else
-				err("%s: %s %s: skipped due to earlier error\n",
+				log_err("%s: %s %s: skipped due to earlier error\n",
 				    progname, d->ctx.cmd->name, d->ctx.res->name);
 			r = 0;
 		} else {
@@ -856,7 +856,7 @@ static int sh_udev(const struct cfg_ctx *ctx)
 
 	/* No shell escape necessary. Udev does not handle it anyways... */
 	if (!vol) {
-		err("volume not specified\n");
+		log_err("volume not specified\n");
 		return 1;
 	}
 
@@ -912,11 +912,11 @@ static int sh_lres(const struct cfg_ctx *ctx)
 {
 	struct d_resource *res = ctx->res;
 	if (!is_drbd_top) {
-		err("sh-lower-resource only available in stacked mode\n");
+		log_err("sh-lower-resource only available in stacked mode\n");
 		exit(E_USAGE);
 	}
 	if (!res->stacked) {
-		err("'%s' is not stacked on this host (%s)\n", res->name, hostname);
+		log_err("'%s' is not stacked on this host (%s)\n", res->name, hostname);
 		exit(E_USAGE);
 	}
 	printf("%s\n", res->me->lower->name);
@@ -1064,12 +1064,12 @@ static void find_drbdcmd(char **cmd, char **pathes)
 		path++;
 	}
 
-	err("Can not find command (drbdsetup/drbdmeta)\n");
+	log_err("Can not find command (drbdsetup/drbdmeta)\n");
 	exit(E_EXEC_ERROR);
 }
 
 #define NA(ARGC) \
-  ({ if((ARGC) >= MAX_ARGS) { err("MAX_ARGS too small\n"); \
+  ({ if((ARGC) >= MAX_ARGS) { log_err("MAX_ARGS too small\n"); \
        exit(E_THINKO); \
      } \
      (ARGC)++; \
@@ -1359,7 +1359,7 @@ int adm_resize(const struct cfg_ctx *ctx)
 			if (new_size != old_size) {
 				if (target_size == 0)
 					return 0;
-				err("Size changed from %"PRId64" to %"PRId64", waiting for %"PRId64".\n",
+				log_err("Size changed from %"PRId64" to %"PRId64", waiting for %"PRId64".\n",
 				    old_size, new_size, target_size);
 				old_size = new_size; /* I want to see it only once.*/
 			}
@@ -1499,7 +1499,7 @@ static int __adm_drbdsetup_silent(const struct cfg_ctx *ctx)
 
 	if (!dry_run) {
 		if (fd < 0) {
-			err("Strange: got negative fd.\n");
+			log_err("Strange: got negative fd.\n");
 			exit(E_THINKO);
 		}
 
@@ -1725,7 +1725,7 @@ static int adm_khelper(const struct cfg_ctx *ctx)
 					separator, v);				\
 			if (n >= name ## _len) {				\
 				/* "can not happen" */				\
-				err("buffer too small when generating the "	\
+				log_err("buffer too small when generating the "	\
 					#name " list\n");			\
 				abort();					\
 				break;						\
@@ -1769,7 +1769,7 @@ int adm_peer_device(const struct cfg_ctx *ctx)
 
 	peer_device = find_peer_device(conn, vol->vnr);
 	if (!peer_device) {
-		err("Could not find peer_device object!\n");
+		log_err("Could not find peer_device object!\n");
 		exit(E_THINKO);
 	}
 
@@ -1975,13 +1975,13 @@ static int check_proxy(const struct cfg_ctx *ctx, int do_up)
 	int rv;
 
 	if (STAILQ_NEXT(path, link)) {
-		err("Multiple paths in connection within proxy setup not allowed\n");
+		log_err("Multiple paths in connection within proxy setup not allowed\n");
 		exit(E_CONFIG_INVALID);
 	}
 
 	if (!path->my_proxy) {
 		if (conn->on_cmdline) {
-			err("%s:%d: In resource '%s', no proxy config for connection %sfrom '%s' to '%s'%s.\n",
+			log_err("%s:%d: In resource '%s', no proxy config for connection %sfrom '%s' to '%s'%s.\n",
 			    ctx->res->config_file, conn->config_line, ctx->res->name,
 			    conn->name ? ssprintf("'%s' (", conn->name) : "",
 			    hostname,
@@ -1994,7 +1994,7 @@ static int check_proxy(const struct cfg_ctx *ctx, int do_up)
 
 	if (!hostname_in_list(hostname, &path->my_proxy->on_hosts)) {
 		if (conn->on_cmdline) {
-			err("The proxy config in resource %s is not for %s.\n",
+			log_err("The proxy config in resource %s is not for %s.\n",
 			    ctx->res->name, hostname);
 			exit(E_CONFIG_INVALID);
 		}
@@ -2003,7 +2003,7 @@ static int check_proxy(const struct cfg_ctx *ctx, int do_up)
 
 	if (!path->peer_proxy) {
 		if (conn->on_cmdline) {
-			err("There is no proxy config for the peer in resource %s.\n",
+			log_err("There is no proxy config for the peer in resource %s.\n",
 			    ctx->res->name);
 			exit(E_CONFIG_INVALID);
 		}
@@ -2245,7 +2245,7 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check)
 		for_each_connection(conn, &res->connections) {
 			if (hi) { /* it was host name */
 				if (res->me == hi) {
-					err("Host name '%s' (from '%s') is not a "
+					log_err("Host name '%s' (from '%s') is not a "
 					    "peer, but the local node\n",
 					    conn_or_hostname, id);
 					return -ENOENT;
@@ -2287,7 +2287,7 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check)
 		}
 
 		if (check == SETUP_MULTI && !valid_conns) {
-			err("Not a valid connection (%s) for this host\n", id);
+			log_err("Not a valid connection (%s) for this host\n", id);
 			return -ENOENT;
 		}
 	}
@@ -2299,7 +2299,7 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check)
 		conn = find_conn_on_cmdline(&res->connections);
 found:
 		if (conn->ignore) {
-			err("Connection '%s' has the ignore flag set\n",
+			log_err("Connection '%s' has the ignore flag set\n",
 			    conn_or_hostname);
 			return -ENOENT;
 		}
@@ -2321,7 +2321,7 @@ found:
 			ctx->vol = vol;
 			return 0;
 		} else {
-			err("Resource '%s' has no volume %d\n", res_name,
+			log_err("Resource '%s' has no volume %d\n", res_name,
 			    vol_nr);
 			return -ENOENT;
 		}
@@ -2475,7 +2475,7 @@ static int adm_wait_ci(const struct cfg_ctx *ctx)
 	saved_stdin = -1;
 	saved_stdout = -1;
 	if (no_tty) {
-		err("WARN: stdin/stdout is not a TTY; using /dev/console");
+		log_err("WARN: stdin/stdout is not a TTY; using /dev/console");
 		fprintf(stdout,
 			"WARN: stdin/stdout is not a TTY; using /dev/console");
 		saved_stdin = dup(fileno(stdin));
@@ -2782,7 +2782,7 @@ void verify_ips(struct d_resource *res)
 		ENTRY *e, *ep, *f;
 		e = calloc(1, sizeof *e);
 		if (!e) {
-			err("calloc: %m\n");
+			log_err("calloc: %m\n");
 			exit(E_EXEC_ERROR);
 		}
 		m_asprintf(&e->key, "%s:%s", res->me->address.addr, res->me->address.port);
@@ -2790,7 +2790,7 @@ void verify_ips(struct d_resource *res)
 		free(e);
 		if (f)
 			ep = *(ENTRY **)f;
-		err("%s: in resource %s, on %s:\n\t""IP %s not found on this host.\n",
+		log_err("%s: in resource %s, on %s:\n\t""IP %s not found on this host.\n",
 		    f ? (char *)ep->data : res->config_file, res->name,
 		    names_to_str(&res->me->on_hosts), res->me->address.addr);
 		if (INVALID_IP_IS_INVALID_CONF)
@@ -2805,11 +2805,11 @@ int pushd(const char *path)
 	int cwd_fd = -1;
 	cwd_fd = open(".", O_RDONLY | O_CLOEXEC);
 	if (cwd_fd < 0) {
-		err("open(\".\") failed: %m\n");
+		log_err("open(\".\") failed: %m\n");
 		exit(E_USAGE);
 	}
 	if (path && path[0] && chdir(path)) {
-		err("chdir(\"%s\") failed: %m\n", path);
+		log_err("chdir(\"%s\") failed: %m\n", path);
 		exit(E_USAGE);
 	}
 	return cwd_fd;
@@ -2819,7 +2819,7 @@ void popd(int fd)
 {
 	if (fd >= 0) {
 		if (fchdir(fd) < 0) {
-			err("fchdir() failed: %m\n");
+			log_err("fchdir() failed: %m\n");
 			exit(E_USAGE);
 		}
 		close(fd);
@@ -2842,7 +2842,7 @@ char *canonify_path(char *path)
 	char *abs_path;
 
 	if (!path || !path[0]) {
-		err("cannot canonify an empty path\n");
+		log_err("cannot canonify an empty path\n");
 		exit(E_USAGE);
 	}
 
@@ -2862,7 +2862,7 @@ char *canonify_path(char *path)
 
 	that_wd = getcwd(NULL, 0);
 	if (!that_wd) {
-		err("getcwd() failed: %m\n");
+		log_err("getcwd() failed: %m\n");
 		exit(E_USAGE);
 	}
 
@@ -2936,7 +2936,7 @@ static void recognize_all_drbdsetup_options(void)
 					if (admopt[n].val == 257)
 						assert (admopt[n].has_arg == opt.has_arg);
 					else {
-						err("Warning: drbdsetup %s option --%s "
+						log_err("Warning: drbdsetup %s option --%s "
 						    "can only be passed as -W--%s\n",
                                                     cmd->name, admopt[n].name, admopt[n].name);
 						goto skip;
@@ -3005,18 +3005,18 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 			if (!strcmp(optarg, "-")) {
 				yyin = stdin;
 				if (asprintf(&config_file, "STDIN") < 0) {
-					err("asprintf(config_file): %m\n");
+					log_err("asprintf(config_file): %m\n");
 					return 20;
 				}
 				config_from_stdin = 1;
 			} else {
 				yyin = fopen(optarg, "r");
 				if (!yyin) {
-					err("Can not open '%s'.\n.", optarg);
+					log_err("Can not open '%s'.\n.", optarg);
 					exit(E_EXEC_ERROR);
 				}
 				if (asprintf(&config_file, "%s", optarg) < 0) {
-					err("asprintf(config_file): %m\n");
+					log_err("asprintf(config_file): %m\n");
 					return 20;
 				}
 			}
@@ -3070,7 +3070,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 				if (shell_var_name_ok)
 					sh_varname = optarg;
 				else
-					err("ignored --sh-varname=%s: "
+					log_err("ignored --sh-varname=%s: "
 					    "contains suspect characters, allowed set is [a-zA-Z0-9_]\n",
 					    optarg);
 			}
@@ -3120,7 +3120,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 
 	if (*cmd == NULL) {
 		if (first_arg_index < argc) {
-			err("%s: Unknown command '%s'\n", progname, argv[first_arg_index]);
+			log_err("%s: Unknown command '%s'\n", progname, argv[first_arg_index]);
 			return E_USAGE;
 		}
 		print_usage_and_exit(*cmd, "No command specified", E_USAGE);
@@ -3152,7 +3152,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 				field = NULL;
 		}
 		if (!field && (*cmd)->drbdsetup_ctx != &wildcard_ctx) {
-			err("%s: unrecognized option '%.*s'\n", progname, len, option);
+			log_err("%s: unrecognized option '%.*s'\n", progname, len, option);
 			goto help;
 		}
 	}
@@ -3162,9 +3162,9 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 
 help:
 	if (*cmd)
-		err("try '%s help %s'\n", progname, (*cmd)->name);
+		log_err("try '%s help %s'\n", progname, (*cmd)->name);
 	else
-		err("try '%s help'\n", progname);
+		log_err("try '%s help'\n", progname);
 	return E_USAGE;
 }
 
@@ -3207,20 +3207,20 @@ char *config_file_from_arg(char *arg)
 	if (minor >= 0) {
 		f = lookup_minor(minor);
 		if (!f) {
-			err("Don't know which config file belongs to minor %d, trying default ones...\n", minor);
+			log_err("Don't know which config file belongs to minor %d, trying default ones...\n", minor);
 			return NULL;
 		}
 	} else {
 		f = lookup_resource(arg);
 		if (!f) {
-			err("Don't know which config file belongs to resource %s, trying default ones...\n", arg);
+			log_err("Don't know which config file belongs to resource %s, trying default ones...\n", arg);
 			return NULL;
 		}
 	}
 
 	yyin = fopen(f, "r");
 	if (yyin == NULL) {
-		err("Couldn't open file %s for reading, reason: %m\ntrying default config file...\n", config_file);
+		log_err("Couldn't open file %s for reading, reason: %m\ntrying default config file...\n", config_file);
 		return NULL;
 	}
 	return f;
@@ -3241,7 +3241,7 @@ void assign_default_config_file(void)
 		}
 	}
 	if (!config_file) {
-		err("Can not open '%s': %m\n", conf_file[i - 1]);
+		log_err("Can not open '%s': %m\n", conf_file[i - 1]);
 		exit(E_CONFIG_INVALID);
 	}
 }
@@ -3277,17 +3277,17 @@ void count_resources(void)
 void die_if_no_resources(void)
 {
 	if (!is_drbd_top && nr_resources[IGNORED] > 0 && nr_resources[NORMAL] == 0) {
-		err("WARN: no normal resources defined for this host (%s)!?\n"
+		log_err("WARN: no normal resources defined for this host (%s)!?\n"
 		    "Misspelled name of the local machine with the 'on' keyword ?\n",
 		    hostname);
 		exit(E_USAGE);
 	}
 	if (!is_drbd_top && nr_resources[NORMAL] == 0) {
-		err("WARN: no normal resources defined for this host (%s)!?\n", hostname);
+		log_err("WARN: no normal resources defined for this host (%s)!?\n", hostname);
 		exit(E_USAGE);
 	}
 	if (is_drbd_top && nr_resources[STACKED] == 0) {
-		err("WARN: nothing stacked for this host (%s), "
+		log_err("WARN: nothing stacked for this host (%s), "
 		    "nothing to do in stacked mode!\n",
 		    hostname);
 		exit(E_USAGE);
@@ -3312,7 +3312,7 @@ int main(int argc, char **argv)
 		abort();
 	}
 
-	initialize_err();
+	initialize_logging();
 	initialize_deferred_cmds();
 	yyin = NULL;
 	hostname = get_hostname();
@@ -3321,7 +3321,7 @@ int main(int argc, char **argv)
 	env_drbd_nodename = getenv("__DRBD_NODE__");
 	if (env_drbd_nodename && *env_drbd_nodename) {
 		hostname = strdup(env_drbd_nodename);
-		err("\n"
+		log_err("\n"
 		    "   found __DRBD_NODE__ in environment\n"
 		    "   PRETENDING that I am >>%s<<\n\n",
 		    hostname);
@@ -3331,7 +3331,7 @@ int main(int argc, char **argv)
 	maybe_add_bin_dir_to_path();
 
 	if (drbdsetup == NULL || drbdmeta == NULL || drbd_proxy_ctl == NULL) {
-		err("could not strdup argv[0].\n");
+		log_err("could not strdup argv[0].\n");
 		exit(E_EXEC_ERROR);
 	}
 
@@ -3343,7 +3343,7 @@ int main(int argc, char **argv)
 		return rv;
 
 	if (config_test && !cmd->test_config) {
-		err("The --config-to-test (-t) option is only allowed "
+		log_err("The --config-to-test (-t) option is only allowed "
 		    "with the dump and sh-nop commands\n");
 		exit(E_USAGE);
 	}
@@ -3364,9 +3364,9 @@ int main(int argc, char **argv)
 		if (cmd->backend_res_name)
 			/* Okay */  ;
 		else if (!cmd->res_name_required)
-			err("This command will ignore resource names!\n");
+			log_err("This command will ignore resource names!\n");
 		else if (resource_names[1] && cmd->use_cached_config_file)
-			err("You should not use this command with multiple resources!\n");
+			log_err("You should not use this command with multiple resources!\n");
 	}
 
 	if (!config_file && cmd->use_cached_config_file)
@@ -3396,7 +3396,7 @@ int main(int argc, char **argv)
 		fclose(yyin);
 		yyin = fopen(config_test, "r");
 		if (!yyin) {
-			err("Can not open '%s'.\n.", config_test);
+			log_err("Can not open '%s'.\n.", config_test);
 			exit(E_EXEC_ERROR);
 		}
 		my_parse();
@@ -3423,7 +3423,7 @@ int main(int argc, char **argv)
 	ctx.cmd = cmd;
 	if (cmd->res_name_required || resource_names[0]) {
 		if (STAILQ_EMPTY(&config) && !is_dump) {
-			err("no resources defined!\n");
+			log_err("no resources defined!\n");
 			exit(E_USAGE);
 		}
 
@@ -3479,7 +3479,7 @@ int main(int argc, char **argv)
 			/* check if we would enable a connection that should be ignored */
 			for (i = 0; resource_names[i]; i++)
 				if (ctx_by_name(&ctx, resource_names[i], WOULD_ENABLE_DISABLED) > 0) {
-					err("USAGE_BUG: Tried to enable disabled connections %s\n",
+					log_err("USAGE_BUG: Tried to enable disabled connections %s\n",
 					    resource_names[i]);
 					exit(E_USAGE);
 				}
@@ -3493,7 +3493,7 @@ int main(int argc, char **argv)
 
 			for (i = 0; resource_names[i]; i++)
 				if (ctx_by_name(&ctx, resource_names[i], WOULD_ENABLE_MULTI_TIMES) > 0) {
-					err("USAGE_BUG: %s would enable an already enabled connection\n",
+					log_err("USAGE_BUG: %s would enable an already enabled connection\n",
 					    resource_names[i]);
 					exit(E_USAGE);
 				}
@@ -3508,7 +3508,7 @@ int main(int argc, char **argv)
 					r = 0;
 				}
 				if (!ctx.res) {
-					err("'%s' not defined in your config (for this host).\n", resource_names[i]);
+					log_err("'%s' not defined in your config (for this host).\n", resource_names[i]);
 					exit(E_USAGE);
 				}
 				if (r)
@@ -3517,7 +3517,7 @@ int main(int argc, char **argv)
 					if (ctx.vol->implicit)
 						ctx.vol = NULL;
 					else {
-						err("%s operates on whole resources, but you specified a specific volume!\n",
+						log_err("%s operates on whole resources, but you specified a specific volume!\n",
 						    cmd->name);
 						exit(E_USAGE);
 					}
@@ -3527,13 +3527,13 @@ int main(int argc, char **argv)
 				&& STAILQ_FIRST(&ctx.res->me->volumes)->implicit)
 					ctx.vol = STAILQ_FIRST(&ctx.res->me->volumes);
 				if (cmd->vol_id_required && !ctx.vol) {
-					err("%s requires a specific volume id, but none is specified.\n"
+					log_err("%s requires a specific volume id, but none is specified.\n"
 					    "Try '%s minor-<minor_number>' or '%s %s/<vnr>'\n",
 					    cmd->name, cmd->name, cmd->name, resource_names[i]);
 					exit(E_USAGE);
 				}
 				if (ctx.res->ignore && !is_dump) {
-					err("'%s' ignored, since this host (%s) is not mentioned with an 'on' keyword.\n",
+					log_err("'%s' ignored, since this host (%s) is not mentioned with an 'on' keyword.\n",
 					    ctx.res->name, hostname);
 					if (rv < E_USAGE)
 					       rv = E_USAGE;
@@ -3557,7 +3557,7 @@ int main(int argc, char **argv)
 		ctx.cmd = cmd;
 		rv = __call_cmd_fn(&ctx, KEEP_RUNNING);
 		if (rv >= 10) {	/* why do we special case the "generic sh-*" commands? */
-			err("command %s exited with code %d\n", cmd->name, rv);
+			log_err("command %s exited with code %d\n", cmd->name, rv);
 			exit(rv);
 		}
 	}
@@ -3577,6 +3577,6 @@ int main(int argc, char **argv)
 
 void yyerror(char *text)
 {
-	err("%s:%d: %s\n", config_file, line, text);
+	log_err("%s:%d: %s\n", config_file, line, text);
 	exit(E_SYNTAX);
 }

@@ -2904,7 +2904,7 @@ int main(int argc, char **argv)
 		abort();
 	}
 
-	initialize_err();
+	initialize_logging();
 	yyin = NULL;
 	uname(&nodeinfo);	/* FIXME maybe fold to lower case ? */
 	no_tty = (!isatty(fileno(stdin)) || !isatty(fileno(stdout)));

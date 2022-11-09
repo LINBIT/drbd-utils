@@ -55,19 +55,19 @@ static FILE *m_popen(int *pid, char * const* argv)
 	int dev_null;
 
 	if(pipe(pipes)) {
-		err("Creation of pipes failed: %m\n");
+		log_err("Creation of pipes failed: %m\n");
 		exit(E_EXEC_ERROR);
 	}
 
 	dev_null = open("/dev/null", O_WRONLY);
 	if (dev_null == -1) {
-		err("Opening /dev/null failed: %m\n");
+		log_err("Opening /dev/null failed: %m\n");
 		exit(E_EXEC_ERROR);
 	}
 
 	mpid = fork();
 	if(mpid == -1) {
-		err("Can not fork");
+		log_err("Can not fork");
 		exit(E_EXEC_ERROR);
 	}
 	if(mpid == 0) {
@@ -77,7 +77,7 @@ static FILE *m_popen(int *pid, char * const* argv)
 		dup2(dev_null, fileno(stderr));
 		close(dev_null);
 		execvp(argv[0],argv);
-		err("Can not exec");
+		log_err("Can not exec");
 		exit(E_EXEC_ERROR);
 	}
 
@@ -111,7 +111,7 @@ static struct field_def *field_def_of(const char *opt_name, struct context_def *
 			return field;
 	}
 
-	err("Internal error: option '%s' not known in this context\n", opt_name);
+	log_err("Internal error: option '%s' not known in this context\n", opt_name);
 	abort();
 }
 
@@ -141,23 +141,23 @@ static int opts_equal(struct context_def *ctx, struct options *conf, struct opti
 		if (opt) {
 			if (!is_equal(ctx, run_opt, opt)) {
 				if (verbose > 2)
-					err("Value of '%s' differs: r=%s c=%s\n",
+					log_err("Value of '%s' differs: r=%s c=%s\n",
 					    opt->name, run_opt->value, opt->value);
 				return 0;
 			}
 			if (verbose > 3)
-				err("Value of '%s' equal: r=%s c=%s\n",
+				log_err("Value of '%s' equal: r=%s c=%s\n",
 				    opt->name, run_opt->value, opt->value);
 			opt->mentioned = 1;
 		} else {
 			if (!is_default(ctx, run_opt)) {
 				if (verbose > 2)
-					err("Only in running config %s: %s\n",
+					log_err("Only in running config %s: %s\n",
 					    run_opt->name, run_opt->value);
 				return 0;
 			}
 			if (verbose > 3)
-				err("Is default: '%s' equal: r=%s\n",
+				log_err("Is default: '%s' equal: r=%s\n",
 				    run_opt->name, run_opt->value);
 		}
 	}
@@ -168,7 +168,7 @@ static int opts_equal(struct context_def *ctx, struct options *conf, struct opti
 
 		if (opt->mentioned==0 && !is_default(ctx, opt)) {
 			if (verbose > 2)
-				err("Only in config file %s: %s\n", opt->name, opt->value);
+				log_err("Only in config file %s: %s\n", opt->name, opt->value);
 			return 0;
 		}
 	}
@@ -319,7 +319,7 @@ static void schedule_deferred_proxy_reconf(const struct cfg_ctx *ctx, char *text
 
 	cmd = calloc(1, sizeof(struct adm_cmd));
 	if (cmd == NULL) {
-		err("calloc: %m\n");
+		log_err("calloc: %m\n");
 		exit(E_EXEC_ERROR);
 	}
 
@@ -345,7 +345,7 @@ bool _is_plugin_in_list(char *string,
 			break;
 
 	if (word_len+1 >= MAX_PLUGIN_NAME) {
-		err("Wrong proxy plugin name %*.*s", word_len, word_len, string);
+		log_err("Wrong proxy plugin name %*.*s", word_len, word_len, string);
 		exit(E_CONFIG_INVALID);
 	}
 
@@ -361,7 +361,7 @@ bool _is_plugin_in_list(char *string,
 
 	/* Not found, insert into list. */
 	if (list_len >= MAX_PLUGINS) {
-		err("Too many proxy plugins.");
+		log_err("Too many proxy plugins.");
 		exit(E_CONFIG_INVALID);
 	}
 
@@ -428,7 +428,7 @@ static int proxy_reconf(const struct cfg_ctx *ctx, struct connection *running_co
 	for(i=0; i<MAX_PLUGINS; i++)
 	{
 		if (used >= sizeof(plugin_changes)-1) {
-			err("Too many proxy plugin changes");
+			log_err("Too many proxy plugin changes");
 			exit(E_CONFIG_INVALID);
 		}
 		/* Now we can be sure that we can store another pointer. */
@@ -601,7 +601,7 @@ struct d_volume *new_to_be_deleted_minor_from_template(struct d_volume *kern)
 }
 
 #define ASSERT(x) do { if (!(x)) {				\
-	err("%s:%u:%s: ASSERT(%s) failed.\n", __FILE__,		\
+	log_err("%s:%u:%s: ASSERT(%s) failed.\n", __FILE__,		\
 	     __LINE__, __func__, #x);				\
 	abort(); }						\
 	} while (0)
@@ -622,7 +622,7 @@ void compare_volumes(struct volumes *conf_head, struct volumes *kern_head)
 		if (kern && (conf == NULL || kern->vnr < conf->vnr)) {
 			insert_volume(&to_be_deleted, new_to_be_deleted_minor_from_template(kern));
 			if (verbose > 2)
-				err("Deleting minor %u (vol:%u) from kernel, not in config\n",
+				log_err("Deleting minor %u (vol:%u) from kernel, not in config\n",
 					kern->device_minor, kern->vnr);
 			kern = STAILQ_NEXT(kern, link);
 		} else if (conf && (kern == NULL || kern->vnr > conf->vnr)) {
@@ -630,7 +630,7 @@ void compare_volumes(struct volumes *conf_head, struct volumes *kern_head)
 			if (conf->disk)
 				conf->adj_attach = 1;
 			if (verbose > 2)
-				err("New minor %u (vol:%u)\n", conf->device_minor, conf->vnr);
+				log_err("New minor %u (vol:%u)\n", conf->device_minor, conf->vnr);
 			conf = STAILQ_NEXT(conf, link);
 		} else {
 			ASSERT(conf);
@@ -684,7 +684,7 @@ void schedule_peer_device_options(const struct cfg_ctx *ctx)
 	struct peer_device *peer_device;
 
 	if (!tmp_ctx.vol && !tmp_ctx.conn) {
-		err("Call schedule_peer_devices_options() with vol or conn set!");
+		log_err("Call schedule_peer_devices_options() with vol or conn set!");
 		exit(E_THINKO);
 	} else if (!tmp_ctx.vol) {
 		struct d_host_info *me = ctx->res->me;
@@ -708,7 +708,7 @@ void schedule_peer_device_options(const struct cfg_ctx *ctx)
 			schedule_deferred_cmd(cmd, &tmp_ctx, CFG_PEER_DEVICE | SCHEDULE_ONCE);
 		}
 	} else {
-		err("vol and conn set in schedule_peer_devices_options()!");
+		log_err("vol and conn set in schedule_peer_devices_options()!");
 		exit(E_THINKO);
 	}
 }
@@ -860,7 +860,7 @@ struct d_resource *parse_drbdsetup_show(const char *name)
 	if (fake_drbdsetup_show) {
 		yyin = fopen(fake_drbdsetup_show, "r");
 		if (!yyin) {
-			err("Failed to open FAKE_DRBDSETUP_SHOW %s\n", fake_drbdsetup_show);
+			log_err("Failed to open FAKE_DRBDSETUP_SHOW %s\n", fake_drbdsetup_show);
 			exit(E_USAGE);
 		}
 	} else {
@@ -986,7 +986,7 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 
 			w = waitpid(pid, &status, 0);
 			if (w == -1)
-				err("waitpid() errno = %d\n", errno);
+				log_err("waitpid() errno = %d\n", errno);
 
 			if (WIFEXITED(status) && WEXITSTATUS(status))
 				path->proxy_conn_is_down = 1;
@@ -994,7 +994,7 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 	}
 
 	if (!running && verbose > 2)
-		err("New resource %s\n", ctx->res->name);
+		log_err("New resource %s\n", ctx->res->name);
 
 	compare_volumes(&ctx->res->me->volumes, running ? &running->me->volumes : &empty);
 

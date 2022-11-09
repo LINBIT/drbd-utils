@@ -147,7 +147,7 @@ void m_strtoll_range(const char *s, char def_unit,
 	unsigned long long r = m_strtoll(s, def_unit);
 	char unit[] = { def_unit != '1' ? def_unit : 0, 0 };
 	if (min > r || r > max) {
-		err("%s:%d: %s %s => %llu%s out of range [%llu..%llu]%s.\n",
+		log_err("%s:%d: %s %s => %llu%s out of range [%llu..%llu]%s.\n",
 			config_file, fline, name, s, r, unit, min, max, unit);
 		if (config_valid <= 1) {
 			config_valid = 0;
@@ -155,7 +155,7 @@ void m_strtoll_range(const char *s, char def_unit,
 		}
 	}
 	if (DEBUG_RANGE_CHECK) {
-		err("%s:%d: %s %s => %llu%s in range [%llu..%llu]%s.\n",
+		log_err("%s:%d: %s %s => %llu%s in range [%llu..%llu]%s.\n",
 			config_file, fline, name, s, r, unit, min, max, unit);
 	}
 }
@@ -192,7 +192,7 @@ void range_check(const enum range_checks what, const char *name,
 		M_STRTOLL_RANGE(NODE_ID);
 		break;
 	default:
-		err("%s:%d: unknown range for %s => %s\n", config_file, fline, name, value);
+		log_err("%s:%d: unknown range for %s => %s\n", config_file, fline, name, value);
 		break;
 	}
 }
@@ -201,7 +201,7 @@ struct d_option *new_opt(char *name, char *value)
 {
 	struct d_option *cn = calloc(1, sizeof(struct d_option));
 
-	/* err("%s:%d: %s = %s\n",config_file,line,name,value); */
+	/* log_err("%s:%d: %s = %s\n",config_file,line,name,value); */
 	cn->name = name;
 	cn->value = value;
 
@@ -211,14 +211,14 @@ struct d_option *new_opt(char *name, char *value)
 void pdperror(char *text)
 {
 	config_valid = 0;
-	err("%s:%d: in proxy plugin section: %s.\n", config_file, line, text);
+	log_err("%s:%d: in proxy plugin section: %s.\n", config_file, line, text);
 	exit(E_CONFIG_INVALID);
 }
 
 static void pperror(struct d_proxy_info *proxy, char *text)
 {
 	config_valid = 0;
-	err("%s:%d: in section: proxy on %s { ... } }: '%s' keyword missing.\n",
+	log_err("%s:%d: in section: proxy on %s { ... } }: '%s' keyword missing.\n",
 	    config_file, c_section_start, names_to_str(&proxy->on_hosts), text);
 }
 
@@ -297,19 +297,19 @@ int vcheck_uniq_file_line(
 
 	e = calloc(1, sizeof *e);
 	if (!e) {
-		err("calloc: %m\n");
+		log_err("calloc: %m\n");
 		exit(E_THINKO);
 	}
 
 	rv = vasprintf(&e->key, fmt, ap);
 
 	if (rv < 0) {
-		err("vasprintf: %m\n");
+		log_err("vasprintf: %m\n");
 		exit(E_THINKO);
 	}
 
 	if (EXIT_ON_CONFLICT && !what) {
-		err("Oops, unset argument in %s:%d.\n", __FILE__, __LINE__);
+		log_err("Oops, unset argument in %s:%d.\n", __FILE__, __LINE__);
 		exit(E_THINKO);
 	}
 	m_asprintf((char **)&e->data, "%s:%u", file, line);
@@ -318,7 +318,7 @@ int vcheck_uniq_file_line(
 	if (f) {
 		if (what) {
 			ENTRY *ep = *(ENTRY **)f;
-			err("%s: conflicting use of %s '%s' ...\n%s: %s '%s' first used here.\n",
+			log_err("%s: conflicting use of %s '%s' ...\n%s: %s '%s' first used here.\n",
 			    (char *)e->data, what, ep->key, (char *)ep->data, what, ep->key);
 		}
 		free(e->key);
@@ -328,7 +328,7 @@ int vcheck_uniq_file_line(
 	} else {
 		f = tsearch(e, bt, btree_key_cmp);
 		if (!f) {
-			err("tree entry (%s => %s) failed\n", e->key, (char *)e->data);
+			log_err("tree entry (%s => %s) failed\n", e->key, (char *)e->data);
 			exit(E_THINKO);
 		}
 		f = NULL;
@@ -346,7 +346,7 @@ int vcheck_uniq(void **bt, const char *what, const char *fmt, va_list ap)
 void pe_expected(const char *exp)
 {
 	const char *s = yytext;
-	err("%s:%u: Parse error: '%s' expected,\n\tbut got '%.20s%s'\n",
+	log_err("%s:%u: Parse error: '%s' expected,\n\tbut got '%.20s%s'\n",
 	    config_file, line, exp, s, strlen(s) > 20 ? "..." : "");
 	exit(E_CONFIG_INVALID);
 }
@@ -367,7 +367,7 @@ void check_string_error(int got)
 	default:
 		return;
 	}
-	err("%s:%u: %s >>>%.20s...<<<\n", config_file, line, msg, yytext);
+	log_err("%s:%u: %s >>>%.20s...<<<\n", config_file, line, msg, yytext);
 	exit(E_CONFIG_INVALID);
 }
 
@@ -378,7 +378,7 @@ void pe_expected_got(const char *exp, int got)
 	if (exp[0] == '\'' && exp[1] && exp[2] == '\'' && exp[3] == 0) {
 		tmp[0] = exp[1];
 	}
-	err("%s:%u: Parse error: '%s' expected,\n\tbut got '%.20s%s' (TK %d)\n",
+	log_err("%s:%u: Parse error: '%s' expected,\n\tbut got '%.20s%s' (TK %d)\n",
 	    config_file, line, tmp[0] ? tmp : exp, s, strlen(s) > 20 ? "..." : "", got);
 	exit(E_CONFIG_INVALID);
 }
@@ -388,7 +388,7 @@ static void parse_global(void)
 	fline = line;
 	check_uniq("global section", "global");
 	if (!STAILQ_EMPTY(&config)) {
-		err("%s:%u: You should put the global {} section\n\tin front of any resource {} section\n",
+		log_err("%s:%u: You should put the global {} section\n\tin front of any resource {} section\n",
 		    config_file, line);
 	}
 	EXP('{');
@@ -491,7 +491,7 @@ static void pe_valid_enums(const char **map, int nr_enums)
 	}
 
 	buffer[size - 3] = 0; /* Eliminate last " | " */
-	err("Allowed values are: %s\n", buffer);
+	log_err("Allowed values are: %s\n", buffer);
 }
 
 static void pe_field(const struct field_def *field, enum check_codes e, char *value)
@@ -505,7 +505,7 @@ static void pe_field(const struct field_def *field, enum check_codes e, char *va
 		[CC_STR_TOO_LONG] = "too long",
 		[CC_NOT_AN_ENUM_NUM] = "not valid",
 	};
-	err("%s:%u: Parse error: while parsing value ('%.20s%s')\nfor %s. Value is %s.\n",
+	log_err("%s:%u: Parse error: while parsing value ('%.20s%s')\nfor %s. Value is %s.\n",
 	    config_file, line,
 		value, strlen(value) > 20 ? "..." : "",
 		field->name, err_strings[e]);
@@ -513,7 +513,7 @@ static void pe_field(const struct field_def *field, enum check_codes e, char *va
 	if (e == CC_NOT_AN_ENUM)
 		pe_valid_enums(field->u.e.map, field->u.e.size);
 	else if (e == CC_STR_TOO_LONG)
-		err("max len: %u\n", field->u.s.max_len - 1);
+		log_err("max len: %u\n", field->u.s.max_len - 1);
 	/* else if (e == CC_NOT_AN_ENUM_NUM)
 	   pe_valid_enum_num((field->u.en.map, field->u.en.map_size); */
 
@@ -844,7 +844,7 @@ void check_minor_nonsense(const char *devname, const int explicit_minor)
 		if (m == explicit_minor)
 			return;
 
-		err("%s:%d: explicit minor number must match with device name\n"
+		log_err("%s:%d: explicit minor number must match with device name\n"
 		    "\tTry \"device /dev/drbd%u minor %u;\",\n"
 		    "\tor leave off either device name or explicit minor.\n"
 		    "\tArbitrary device names must start with /dev/drbd_\n"
@@ -855,7 +855,7 @@ void check_minor_nonsense(const char *devname, const int explicit_minor)
 	} else if (devname[9] == '_')
 		return;
 
-	err("%s:%d: arbitrary device name must start with /dev/drbd_\n"
+	log_err("%s:%d: arbitrary device name must start with /dev/drbd_\n"
 	    "\tmind the '_'! (/dev/ is optional, but drbd_ is required)\n",
 	    config_file, fline);
 	config_valid = 0;
@@ -872,7 +872,7 @@ struct d_volume *alloc_volume(void)
 
 	vol = calloc(1, sizeof(struct d_volume));
 	if (vol == NULL) {
-		err("calloc: %m\n");
+		log_err("calloc: %m\n");
 		exit(E_EXEC_ERROR);
 	}
 
@@ -898,7 +898,7 @@ struct d_volume *volume0(struct volumes *volumes)
 			return vol;
 
 		config_valid = 0;
-		err("%s:%d: mixing explicit and implicit volumes is not allowed\n",
+		log_err("%s:%d: mixing explicit and implicit volumes is not allowed\n",
 		    config_file, line);
 		return vol;
 	}
@@ -1113,7 +1113,7 @@ static void parse_host_section(struct d_resource *res,
 			break;
 		case TK_ADDRESS:
 			if (host->by_address) {
-				err("%s:%d: address statement not allowed for floating {} host sections\n",
+				log_err("%s:%d: address statement not allowed for floating {} host sections\n",
 				    config_file, fline);
 				config_valid = 0;
 				exit(E_CONFIG_INVALID);
@@ -1178,7 +1178,7 @@ static void parse_skip()
 		}
 	}
 	if (!token) {
-		err("%s:%u: reached eof ""while parsing this skip block.\n",
+		log_err("%s:%u: reached eof ""while parsing this skip block.\n",
 		    config_file, fline);
 		exit(E_CONFIG_INVALID);
 	}
@@ -1249,7 +1249,7 @@ void startup_delegate(void *ctx)
 	struct d_resource *res = (struct d_resource *)ctx;
 
 	if (!strcmp(yytext, "become-primary-on")) {
-		/* err("Warn: Ignoring deprecated become-primary-on. Use automatic-promote\n"); */
+		/* log_err("Warn: Ignoring deprecated become-primary-on. Use automatic-promote\n"); */
 		int token;
 		do {
 			token = yylex();
@@ -1294,7 +1294,7 @@ void proxy_delegate(void *ctx)
 	opt = NULL;
 	token = yylex();
 	if (token != '{') {
-		err("%s:%d: expected \"{\" after \"proxy\" keyword\n",
+		log_err("%s:%d: expected \"{\" after \"proxy\" keyword\n",
 		    config_file, fline);
 		exit(E_CONFIG_INVALID);
 	}
@@ -1310,7 +1310,7 @@ void proxy_delegate(void *ctx)
 				if (STAILQ_EMPTY(&line))
 					goto out;
 
-				err("%s:%d: Missing \";\" before  \"}\"\n",
+				log_err("%s:%d: Missing \";\" before  \"}\"\n",
 				    config_file, fline);
 				exit(E_CONFIG_INVALID);
 			}
@@ -1435,7 +1435,7 @@ struct connection *alloc_connection()
 
 	conn = calloc(1, sizeof(struct connection));
 	if (conn == NULL) {
-		err("calloc: %m\n");
+		log_err("calloc: %m\n");
 		exit(E_EXEC_ERROR);
 	}
 	STAILQ_INIT(&conn->paths);
@@ -1457,7 +1457,7 @@ struct peer_device *alloc_peer_device()
 
 	peer_device = calloc(1, sizeof(*peer_device));
 	if (!peer_device)  {
-		err("calloc: %m\n");
+		log_err("calloc: %m\n");
 		exit(E_EXEC_ERROR);
 	}
 	STAILQ_INIT(&peer_device->pd_options);
@@ -1509,7 +1509,7 @@ struct path *alloc_path()
 
 	path = calloc(1, sizeof(struct path));
 	if (path == NULL) {
-		err("calloc: %m\n");
+		log_err("calloc: %m\n");
 		exit(E_EXEC_ERROR);
 	}
 	STAILQ_INIT(&path->hname_address_pairs);
@@ -1530,7 +1530,7 @@ static struct path *path0(struct connection *conn)
 	} else {
 		if (!path->implicit) {
 			config_valid = 0;
-			err("%s:%d: Explicit and implicit paths not allowed\n",
+			log_err("%s:%d: Explicit and implicit paths not allowed\n",
 			    config_file, line);
 		}
 	}
@@ -1555,7 +1555,7 @@ static struct path *parse_path()
 		case TK__REMOTE_HOST:
 			insert_tail(&path->hname_address_pairs, parse_hname_address_pair(path, token));
 			if (++hosts >= 3) {
-				err("%s:%d: only two 'host' keywords per path allowed\n",
+				log_err("%s:%d: only two 'host' keywords per path allowed\n",
 				    config_file, fline);
 				config_valid = 0;
 			}
@@ -1583,7 +1583,7 @@ static struct connection *parse_connection(enum pr_flags flags)
 	case '{':
 		break;
 	case TK_STRING:
-		err("%s:%d: explicitly named connections are deprecated!\n"
+		log_err("%s:%d: explicitly named connections are deprecated!\n"
 		    "\tits name ('%s') will be ignored\n", config_file, fline, yylval.txt);
 		EXP('{');
 		break;
@@ -1600,7 +1600,7 @@ static struct connection *parse_connection(enum pr_flags flags)
 			path = path0(conn);
 			insert_tail(&path->hname_address_pairs, parse_hname_address_pair(path, token));
 			if (++hosts >= 3) {
-				err("%s:%d: only two 'host' keywords per connection allowed\n",
+				log_err("%s:%d: only two 'host' keywords per connection allowed\n",
 				    config_file, fline);
 				config_valid = 0;
 			}
@@ -1610,7 +1610,7 @@ static struct connection *parse_connection(enum pr_flags flags)
 			break;
 		case TK_NET:
 			if (!STAILQ_EMPTY(&conn->net_options)) {
-				err("%s:%d: only one 'net' section per connection allowed\n",
+				log_err("%s:%d: only one 'net' section per connection allowed\n",
 				    config_file, fline);
 				config_valid = 0;
 			}
@@ -1640,7 +1640,7 @@ static struct connection *parse_connection(enum pr_flags flags)
 			break;
 		case '}':
 			if (STAILQ_EMPTY(&conn->paths) && !(flags & PARSE_FOR_ADJUST)) {
-				err("%s:%d: connection without a single path (maybe empty?) not allowed\n",
+				log_err("%s:%d: connection without a single path (maybe empty?) not allowed\n",
 						config_file, fline);
 				config_valid = 0;
 			}
@@ -1669,7 +1669,7 @@ void parse_connection_mesh(struct d_resource *res, enum pr_flags flags)
 			break;
 		case TK_NET:
 			if (!STAILQ_EMPTY(&mesh->net_options)) {
-				err("%s:%d: only one 'net' section allowed\n",
+				log_err("%s:%d: only one 'net' section allowed\n",
 				    config_file, fline);
 				config_valid = 0;
 			}
@@ -1840,7 +1840,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 	if (flags == NO_HOST_SECT_ALLOWED && !STAILQ_EMPTY(&res->all_hosts)) {
 		config_valid = 0;
 
-		err("%s:%d: in the %s section, there are no host sections allowed.\n",
+		log_err("%s:%d: in the %s section, there are no host sections allowed.\n",
 		    config_file, c_section_start, res->name);
 	}
 
@@ -1855,7 +1855,7 @@ int was_file_already_seen(char *fn)
 
 	e = calloc(1, sizeof *e);
 	if (!e) {
-		err("calloc %m\n");
+		log_err("calloc %m\n");
 		exit(E_THINKO);
 	}
 
@@ -1863,7 +1863,7 @@ int was_file_already_seen(char *fn)
 	if (!real_path) {
 		real_path = strdup(fn);
 		if (!real_path) {
-			err("strdup %m");
+			log_err("strdup %m");
 			free(e);
 			exit(E_THINKO);
 		}
@@ -1879,7 +1879,7 @@ int was_file_already_seen(char *fn)
 	}
 
 	if (!tsearch(e, &global_btree, btree_key_cmp)) {
-		err("tree entry (%s => %s) failed\n", e->key, (char *)e->data);
+		log_err("tree entry (%s => %s) failed\n", e->key, (char *)e->data);
 		free(real_path);
 		free(e);
 		exit(E_THINKO);
@@ -1948,7 +1948,7 @@ static struct d_resource *template_file(const char *res_name)
 		restore_parse_context(&buffer);
 		fclose(f);
 	} else {
-		err("%s:%d: Failed to open template file '%s'.\n",
+		log_err("%s:%d: Failed to open template file '%s'.\n",
 		    config_save, line, file_name);
 		config_valid = 0;
 	}
@@ -2002,11 +2002,11 @@ void include_stmt(char *str)
 			} else if (errno == ENOENT && contains_glob_magic_char) {
 				/* Noisily ignore race between glob expansion
 				 * and actual open. */
-				err("%s:%d: include file vanished after glob expansion '%s'.\n",
+				log_err("%s:%d: include file vanished after glob expansion '%s'.\n",
 				    config_save, line, glob_buf.gl_pathv[i]);
 				continue;
 			} else {
-				err("%s:%d: Failed to open include file '%s'.\n",
+				log_err("%s:%d: Failed to open include file '%s'.\n",
 				    config_save, line, glob_buf.gl_pathv[i]);
 				config_valid = 0;
 			}
@@ -2014,16 +2014,16 @@ void include_stmt(char *str)
 		globfree(&glob_buf);
 	} else if (r == GLOB_NOMATCH) {
 		if (!contains_glob_magic_char) {
-			err("%s:%d: Failed to open include file '%s'.\n",
+			log_err("%s:%d: Failed to open include file '%s'.\n",
 			    config_save, line, str);
 			config_valid = 0;
 		} else if (verbose) {
-			err("%s:%d: no match for include pattern '%s'.\n",
+			log_err("%s:%d: no match for include pattern '%s'.\n",
 			    config_save, line, str);
 		}
 		globfree(&glob_buf);
 	} else {
-		err("glob() failed: %d\n", r);
+		log_err("glob() failed: %d\n", r);
 		exit(E_USAGE);
 	}
 
@@ -2061,7 +2061,7 @@ static void validate_kmod(int token)
 #undef MOD_CMP
 
 	if (!kmod_valid) {
-		err("%s:%u: Validation error: drbd-module-version %d.%d.%d %s %s not true\n",
+		log_err("%s:%u: Validation error: drbd-module-version %d.%d.%d %s %s not true\n",
 				config_file, line,
 				have->version.major, have->version.minor, have->version.sublvl,
 				op, yylval.txt);
