@@ -90,6 +90,7 @@ startup			{ DP; return TK_STARTUP;		}
 include			{ DP; return TK_INCLUDE;		}
 handlers		{ DP; return TK_HANDLER;		}
 connection		{ DP; return TK_CONNECTION;		}
+outside-address		{ DP; return TK_OUTSIDE_ADDRESS;	}
 connection-mesh		{ DP; return TK_CONNECTION_MESH;	}
 minor-count		{ DP; return TK_MINOR_COUNT;		}
 disable-ip-verification { DP; return TK_DISABLE_IP_VERIFICATION;}

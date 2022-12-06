@@ -147,12 +147,14 @@ struct hname_address
 	char *name;			/* parsed */
 	int config_line;		/* parsed here */
 	struct d_address address;	/* parsed */
+	struct d_address outside_address;   /* parsed */
 	struct d_proxy_info *proxy;     /* parsed here */
 	struct d_host_info *host_info;	/* determined in post_parse */
 	unsigned int used_as_me:1;
 	unsigned int faked_hostname:1;
 	unsigned int by_address:1;
 	unsigned int parsed_address:1;
+	unsigned int parsed_outside_address:1;
 	unsigned int parsed_port:1;
 	unsigned int conflicts:1;
 	STAILQ_ENTRY(hname_address) link;

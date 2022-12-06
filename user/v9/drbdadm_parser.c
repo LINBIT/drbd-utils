@@ -1366,6 +1366,25 @@ int parse_proxy_options_section(struct d_proxy_info **pp)
 	return parse_proxy_options(&proxy->options, &proxy->plugins);
 }
 
+static void parse_via(struct hname_address *ha)
+{
+	int token;
+
+	token = yylex();
+	switch (token) {
+	case TK_PROXY:
+		ha->proxy = parse_proxy_section();
+		break;
+	case TK_OUTSIDE_ADDRESS:
+		__parse_address(&ha->outside_address);
+		ha->parsed_outside_address = 1;
+		EXP(';');
+		break;
+	default:
+		pe_expected_got( "proxy | outside-address", token);
+	}
+}
+
 static struct hname_address *parse_hname_address_pair(struct path *path, int prev_token)
 {
 	struct hname_address *ha;
@@ -1412,8 +1431,7 @@ static struct hname_address *parse_hname_address_pair(struct path *path, int pre
 		token = yylex();
 	case TK_VIA:
 		if (token == TK_VIA) {
-			EXP(TK_PROXY);
-			ha->proxy = parse_proxy_section();
+			parse_via(ha);
 		} else if (token != ';')
 			pe_expected_got( "via | ; ", token);
 		break;

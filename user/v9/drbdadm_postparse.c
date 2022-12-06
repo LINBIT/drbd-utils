@@ -440,7 +440,8 @@ static void set_peer_in_connection(struct d_resource* res, struct connection *co
 				}
 				conn->peer = host_info;
 			}
-			path->peer_address = candidate->address.addr ? &candidate->address : &host_info->address;
+			path->peer_address = candidate->outside_address.addr ? &candidate->outside_address :
+				candidate->address.addr ? &candidate->address : &host_info->address;
 			path->peer_proxy = candidate->proxy;
 			path->connect_to = path->my_proxy ? &path->my_proxy->inside : path->peer_address;
 			continue;

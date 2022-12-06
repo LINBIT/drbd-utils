@@ -1,0 +1,3 @@
+$ drbdadm -c nat-address.res -d new-path nat-address 2>/dev/null; echo $?
+drbdsetup new-path nat-address 1 ipv4:10.43.10.50:7000 ipv4:192.168.17.20:7000
+0

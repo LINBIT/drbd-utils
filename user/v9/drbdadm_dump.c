@@ -261,6 +261,8 @@ static void dump_hname_address_pairs(struct hname_address_pairs *hname_address_p
 
 		if (ha->proxy)
 			dump_proxy_info(" via ", ha->proxy);
+		else if (ha->parsed_outside_address)
+			dump_address(" via outside-address", &ha->outside_address, ";\n");
 		else
 			printf(";\n");
 	}
