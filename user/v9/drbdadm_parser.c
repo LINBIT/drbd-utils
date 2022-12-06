@@ -1410,15 +1410,12 @@ static struct hname_address *parse_hname_address_pair(struct path *path, int pre
 
 	parse_optional_via:
 		token = yylex();
+	case TK_VIA:
 		if (token == TK_VIA) {
 			EXP(TK_PROXY);
 			ha->proxy = parse_proxy_section();
 		} else if (token != ';')
 			pe_expected_got( "via | ; ", token);
-		break;
-	case TK_VIA:
-		EXP(TK_PROXY);
-		ha->proxy = parse_proxy_section();
 		break;
 	case ';':
 		break;
