@@ -1264,11 +1264,11 @@ static int adm_resource(const struct cfg_ctx *ctx)
 	return ex;
 }
 
-static off64_t read_drbd_dev_size(int minor)
+static off_t read_drbd_dev_size(int minor)
 {
 	char *path;
 	FILE *file;
-	off64_t val;
+	off_t val;
 	int r;
 
 	m_asprintf(&path, "/sys/block/drbd%d/size", minor);
@@ -1289,9 +1289,9 @@ int adm_resize(const struct cfg_ctx *ctx)
 	char *argv[MAX_ARGS];
 	struct d_option *opt;
 	bool is_resize = !strcmp(ctx->cmd->name, "resize");
-	off64_t old_size = -1;
-	off64_t target_size = 0;
-	off64_t new_size;
+	off_t old_size = -1;
+	off_t target_size = 0;
+	off_t new_size;
 	int argc = 0;
 	int silent;
 	int ex;
