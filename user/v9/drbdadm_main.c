@@ -1944,6 +1944,7 @@ static int do_proxy_conn_plugins(const struct cfg_ctx *ctx)
 						  conn_name, counter, opt->name);
 			counter++;
 		}
+		argv[NA(argc)] = "-c";
 		argv[NA(argc)] = ssprintf("set plugin %s %d END", conn_name, counter);
 	}
 
