@@ -3,6 +3,12 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+ 9.23.0-rc.1
+-----------
+ * drbdadm,v9,floating: fixup fake uname for 9.2.x strict_names=1
+ * drbdadm,v9,parser: fixup globs, also rm GNU libc specific extensions
+ * drbdadm,v9,parser: allow via outside-address for NATed peers
+
  9.22.0
 -----------
  * parser,v9: deprecate named connections
