@@ -59,7 +59,4 @@ typedef		__u8		uint8_t;
 typedef		__u16		uint16_t;
 typedef		__u32		uint32_t;
 
-/* Cygwin types.h doesn't have off64_t. */
-typedef int64_t off64_t;
-
 #endif
