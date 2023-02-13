@@ -1,0 +1,52 @@
+CXXFLAGS=-std=c++11 -I. -I../shared -Icppdsaext/src -Wall -Werror -pedantic-errors -fPIC -O2 \
+-Wsign-compare -Wpointer-arith -Wswitch-default -Wswitch-enum -Wtype-limits \
+-Wmissing-declarations -Wshadow
+CXX = @CXX@
+
+# variables set by configure
+sbindir = @sbindir@
+WITH_LINSTOR = @WITH_LINSTOR@
+WITH_WINDRBD = @WITH_WINDRBD@
+
+# variables meant to be overridden from the make command line
+ifeq ($(WITH_WINDRBD),yes)
+DESTDIR ?=
+else
+DESTDIR ?= /
+endif
+
+binaries := drbdsuperblock
+
+ifeq ($(WITH_LINSTOR),yes)
+all: $(binaries)
+else
+all:
+endif
+
+PHONY := all
+
+all-obj := DrbdSuperblock.o
+
+drbdsuperblock: $(all-obj)
+	$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) $^
+
+# do not try to rebuild Makefile itself
+Makefile: ;
+
+install:
+ifeq ($(WITH_LINSTOR),yes)
+	install -m 755 drbdsuperblock $(DESTDIR)$(sbindir)
+endif
+
+uninstall:
+ifeq ($(WITH_LINSTOR),yes)
+	rm -f $(DESTDIR)$(sbindir)/drbdsuperblock
+endif
+
+PHONY += clean distclean
+clean:
+	rm -f $(all-obj) $(binaries)
+distclean: clean
+	rm -f $(all-obj)
+
+.PHONY: $(PHONY)

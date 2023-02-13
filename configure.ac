@@ -57,6 +57,7 @@ WITH_BASHCOMPLETION=yes
 WITH_NOARCH_SUBPACKAGES=no
 WITH_MANUAL=yes
 WITH_DRBDMON=yes
+WITH_LINSTOR=yes
 WITH_WINDRBD=no
 WITH_PREBUILTMAN=no
 AC_ARG_WITH([83support],
@@ -223,6 +224,12 @@ AC_ARG_WITH([drbdmon],
 	[WITH_DRBDMON=$withval])
 AC_SUBST(WITH_DRBDMON)
 
+AC_ARG_WITH([linstor],
+	[AS_HELP_STRING([--without-linstor],
+			[Do not include the DRBD utilities for LINSTOR])],
+	[WITH_LINSTOR=$withval])
+AC_SUBST(WITH_LINSTOR)
+
 dnl Checks for programs
 AC_PROG_CC
 AC_PROG_LN_S
@@ -248,16 +255,18 @@ if test -z $FLEX; then
    AC_MSG_ERROR([Cannot build utils without flex.])
 fi
 
-if test x"$WITH_DRBDMON" = x"yes" ; then
+if test x"$WITH_DRBDMON" = x"yes" || test x"$WITH_LINSTOR" = x"yes"; then
    AC_PROG_CXX
    AX_CXX_COMPILE_STDCXX_11(, optional)
    if test "$HAVE_CXX11" = "0"; then
-      AC_MSG_WARN([No C++11 compiler found, disabling drbdmon build.])
+      AC_MSG_WARN([No C++11 compiler found, disabling drbdmon and LINSTOR utilities build.])
       WITH_DRBDMON=no
+      WITH_LINSTOR=no
    fi
    AC_CHECK_LIB([rt], [clock_gettime, timer_create, timer_settime, timer_delete], [],
                 [AC_MSG_WARN([Could not find required librt functions, disabling drbdmon build.])
-                 WITH_DRBDMON=no])
+                 WITH_DRBDMON=no
+                 WITH_LINSTOR=no])
 fi
 
 if test x"$WITH_WINDRBD" = x"yes" ; then
@@ -348,6 +357,7 @@ UDEV_RULE_SUFFIX=""
 RPM_DIST_TAG=""
 RPM_BUILDREQ_DEFAULT="gcc flex glibc-devel make"
 RPM_REQ_DRBDMON=""
+RPM_REQ_LINSTOR=""
 RPM_SUBPACKAGE_NOARCH=""
 RPM_REQ_PACEMAKER=""
 RPM_REQ_HEARTBEAT=""
@@ -486,7 +496,7 @@ fi
 
 dnl The configuration files we create (from their .in template)
 if test -z $SPECMODE; then
-   AC_CONFIG_FILES(Makefile user/shared/Makefile user/v9/Makefile user/v83/Makefile user/v84/Makefile scripts/Makefile documentation/v83/Makefile scripts/drbd.rules user/windrbd/Makefile user/drbdmon/Makefile documentation/common/Makefile_v84_com documentation/common/Makefile_v9_com)
+   AC_CONFIG_FILES(Makefile user/shared/Makefile user/v9/Makefile user/v83/Makefile user/v84/Makefile scripts/Makefile documentation/v83/Makefile scripts/drbd.rules user/windrbd/Makefile user/linstor/Makefile user/drbdmon/Makefile documentation/common/Makefile_v84_com documentation/common/Makefile_v9_com)
    AC_CONFIG_HEADERS(user/shared/config.h)
 else
    AC_CONFIG_FILES(drbd.spec)
