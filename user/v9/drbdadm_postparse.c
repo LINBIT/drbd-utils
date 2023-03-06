@@ -1361,16 +1361,6 @@ struct d_resource *res_by_name(const char *name)
 	return NULL;
 }
 
-static struct d_resource *res_by_name_ign_vol(const char *name)
-{
-	char *name_dup = strdupa(name);
-	char *slash = strchr(name_dup, '/');
-
-	if (slash) *slash = '\0';
-
-	return res_by_name(name_dup);
-}
-
 static int sanity_check_abs_cmd(char *cmd_name)
 {
 	struct stat sb;
@@ -1533,39 +1523,6 @@ static void validate_resource(struct d_resource *res, enum pp_flags flags)
 {
 	struct d_option *opt;
 
-	/* there may be more than one "resync-after" statement,
-	 * see commit 89cd0585 */
-	STAILQ_FOREACH(opt, &res->disk_options, link) {
-		struct d_resource *rs_after_res;
-	next:
-		if (strcmp(opt->name, "resync-after"))
-			continue;
-		rs_after_res = res_by_name_ign_vol(opt->value);
-		if (rs_after_res == NULL ||
-		    (rs_after_res->ignore && !(flags & MATCH_ON_PROXY))) {
-			log_err("%s:%d: in resource %s:\n\tresource '%s' mentioned in "
-			    "'resync-after' option is not known%s.\n",
-			    res->config_file, res->start_line, res->name,
-			    opt->value, rs_after_res ? " on this host" : "");
-			/* Non-fatal if run from some script.
-			 * When deleting resources, it is an easily made
-			 * oversight to leave references to the deleted
-			 * resources in resync-after statements.  Don't fail on
-			 * every pacemaker-induced action, as it would
-			 * ultimately lead to all nodes committing suicide. */
-			if (no_tty) {
-				struct d_option *next = STAILQ_NEXT(opt, link);
-				STAILQ_REMOVE(&res->disk_options, opt, d_option, link);
-				free_opt(opt);
-				opt = next;
-				if (opt)
-					goto next;
-				else
-					break;
-			} else
-				config_valid = 0;
-		}
-	}
 	if (STAILQ_EMPTY(&res->all_hosts)) {
 		log_err("%s:%d: in resource %s:\n\ta host sections ('on %s { ... }') is missing.\n",
 		    res->config_file, res->start_line, res->name, hostname);
@@ -1682,11 +1639,12 @@ static void _convert_after_option(struct d_resource *res, struct d_volume *vol)
 static void convert_after_option(struct d_resource *res)
 {
 	struct d_volume *vol;
-	struct d_host_info *h;
 
-	for_each_host(h, &res->all_hosts)
-		for_each_volume(vol, &h->volumes)
+	/* convert it only for my hosts. My view of the others might be incomplete */
+	if (res->me) {
+		for_each_volume(vol, &res->me->volumes)
 			_convert_after_option(res, vol);
+	}
 }
 
 // need to convert discard-node-nodename to discard-local or discard-remote.
