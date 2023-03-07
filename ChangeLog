@@ -3,6 +3,10 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+ 9.23.1-rc.1
+-----------
+ * drbdadm,v9,resync-after: fix too strict check
+
  9.23.0
 -----------
  * drbdadm,v9,floating: fixup fake uname for 9.2.x strict_names=1
