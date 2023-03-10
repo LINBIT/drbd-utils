@@ -5,6 +5,8 @@
 #include "libgenl.h"
 #include "shared_windrbd.h"
 #include <unistd.h>
+#include <poll.h>
+#include <windrbd/windrbd_ioctl.h>
 
 bool kernel_older_than(int version, int patchlevel, int sublevel)
 {
@@ -63,12 +65,53 @@ int genl_join_mc_group_and_ctrl(struct genl_sock *s, const char *name)
 	return genl_join_mc_group(s, name);
 }
 
+#define BUSY_POLLING_INTERVAL_MS 100
+
 int poll_hup(struct genl_sock *s, int timeout_ms, int extra_poll_fd)
 {
-	if (extra_poll_fd >= 0) {
-		fprintf(stderr, "Waiting for extra file descriptor not supported on Windows\n");
-		return E_POLL_ERR;
+	struct windrbd_ioctl_genl_portid p;
+	unsigned int size;
+	int err;
+	int forever;
+	int there_are_netlink_packets;
+
+	int ret;
+	struct pollfd pollfds[2];
+
+	p.portid = getpid();
+	forever = timeout_ms < 0;
+	while (forever || timeout_ms > 0) {
+	        if (DeviceIoControl(s->s_handle, IOCTL_WINDRBD_ROOT_ARE_THERE_NL_PACKETS, &p, sizeof(p), &there_are_netlink_packets, sizeof(there_are_netlink_packets), &size, NULL) == 0) {
+		        err = GetLastError();
+			fprintf(stderr, "DeviceIoControl() failed, error is %d\n", err);
+			if (err == ERROR_ACCESS_DENIED) /* 5 */
+				fprintf(stderr, "(are you running with Administrator privileges?)\n");
+			if (err == ERROR_NO_MORE_ITEMS) /* 259, the driver is about to shut down */
+				fprintf(stderr, "(WinDRBD driver is about to shut down)\n");
+
+			return E_POLL_ERR;
+		}
+		if (there_are_netlink_packets)
+			return 0;
+
+		pollfds[0].fd = 1;
+		pollfds[0].events = POLLHUP;
+		pollfds[1].fd = extra_poll_fd;
+		pollfds[1].events = POLLIN;
+
+		ret = poll(pollfds, ARRAY_SIZE(pollfds), BUSY_POLLING_INTERVAL_MS);
+		if (ret < 0)
+			return E_POLL_ERR;
+
+		if (pollfds[0].revents == POLLERR || pollfds[0].revents == POLLHUP)
+			return E_POLL_ERR;
+		if (pollfds[1].revents & POLLIN)
+			return E_POLL_EXTRA_FD;
+		if (pollfds[1].revents & (POLLERR | POLLHUP))
+			return E_POLL_ERR;
 	}
+	if (timeout_ms <= 0)
+		return E_POLL_TIMEOUT;
 
 	return 0;
 }
