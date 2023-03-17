@@ -50,6 +50,11 @@ YYSTYPE yylval;
 
 /////////////////////
 
+struct peer_delegate_data {
+	struct options *device_options;
+	struct options *peer_device_options;
+};
+
 static int c_section_start;
 static int parse_proxy_options(struct options *, struct options *);
 static void parse_skip(void);
@@ -672,23 +677,35 @@ static struct options parse_options(struct context_def *options_def)
 
 static void insert_pd_options_delegate(void *ctx)
 {
-	struct options *options = ctx;
+	struct peer_delegate_data *params = ctx;
 	const struct field_def *field_def;
 	bool no_prefix;
 	char *value;
 
 	field_def = find_field(&no_prefix, &peer_device_options_ctx, yytext);
-	if (!field_def)
-		pe_options(&peer_device_options_ctx);
-	value = parse_option_value(field_def, no_prefix);
-	insert_tail(options, new_opt((char *)field_def->name, value));
+	if (field_def) {
+		value = parse_option_value(field_def, no_prefix);
+		insert_tail(params->peer_device_options, new_opt((char *)field_def->name, value));
+		return;
+	}
+	field_def = find_field(&no_prefix, &device_options_ctx, yytext);
+	if (field_def) {
+		value = parse_option_value(field_def, no_prefix);
+		insert_tail(params->device_options, new_opt((char *)field_def->name, value));
+		return;
+	}
+	pe_options(&peer_device_options_ctx); /* also mention device_options? */
 }
 
-static void parse_disk_options(struct options *disk_options, struct options *peer_device_options)
+static void parse_disk_options(struct options *disk_options,
+			       struct options *device_options,
+			       struct options *peer_device_options)
 {
+	struct peer_delegate_data params = {device_options, peer_device_options};
+
 	*disk_options = __parse_options(&attach_cmd_ctx,
-					insert_pd_options_delegate,
-					peer_device_options);
+					&insert_pd_options_delegate,
+					&params);
 }
 
 static void __parse_address(struct d_address *a)
@@ -876,6 +893,7 @@ struct d_volume *alloc_volume(void)
 		exit(E_EXEC_ERROR);
 	}
 
+	STAILQ_INIT(&vol->device_options);
 	STAILQ_INIT(&vol->disk_options);
 	STAILQ_INIT(&vol->pd_options);
 	STAILQ_INIT(&vol->peer_devices);
@@ -918,7 +936,7 @@ int parse_volume_stmt(struct d_volume *vol, struct names* on_hosts, int token)
 			EXP(';');
 			break;
 		case '{':
-			parse_disk_options(&vol->disk_options, &vol->pd_options);
+			parse_disk_options(&vol->disk_options, &vol->device_options, &vol->pd_options);
 			break;
 		default:
 			check_string_error(token);
@@ -1000,7 +1018,7 @@ struct d_volume *parse_stacked_volume(int vnr)
 			break;
 		case TK_DISK:
 			EXP('{');
-			parse_disk_options(&vol->disk_options, &vol->pd_options);
+			parse_disk_options(&vol->disk_options, &vol->device_options, &vol->pd_options);
 			break;
 		case '}':
 			goto exit_loop;
@@ -1720,6 +1738,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 	STAILQ_INIT(&res->connections);
 	STAILQ_INIT(&res->all_hosts);
 	STAILQ_INIT(&res->net_options);
+	STAILQ_INIT(&res->device_options);
 	STAILQ_INIT(&res->disk_options);
 	STAILQ_INIT(&res->pd_options);
 	STAILQ_INIT(&res->res_options);
@@ -1774,7 +1793,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 				break;
 			case '{':
 				check_upr("disk section", "%s:disk", res->name);
-				parse_disk_options(&options, &res->pd_options);
+				parse_disk_options(&options, &res->device_options, &res->pd_options);
 				STAILQ_CONCAT(&res->disk_options, &options);
 				break;
 			default:

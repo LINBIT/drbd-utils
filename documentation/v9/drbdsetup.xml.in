@@ -778,7 +778,12 @@
 	    creates a block device inode for the replicated device (by default,
 	    /dev/drbd<replaceable>minor</replaceable>).  The
 	    <replaceable>volume</replaceable> number identifies the device
-	    within the <replaceable>resource</replaceable>.</para>
+	    within the <replaceable>resource</replaceable>.
+
+	    <variablelist>
+	      <pick_drbdsetup_option name="block-size"/>
+	    </variablelist>
+	  </para>
 	</listitem>
       </varlistentry>
 

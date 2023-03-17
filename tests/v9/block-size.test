@@ -1,0 +1,5 @@
+$ ./drbdadm -d -c ./block-size.res new-minor all 2>/dev/null; echo $?
+drbdsetup new-minor res 1 0 --diskless --block-size=4096
+0
+$ ./drbdadm -c ./block-size.res dump all 2>/dev/null | grep -q '^.*block-size.*4096;$' ; echo $?
+0

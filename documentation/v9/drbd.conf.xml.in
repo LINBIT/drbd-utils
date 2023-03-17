@@ -596,6 +596,7 @@ resource
 	<pick_drbdsetup_option name="rs-discard-granularity"/>
 	<pick_drbdsetup_option name="discard-zeroes-if-aligned"/>
 	<pick_drbdsetup_option name="disable-write-same"/>
+	<pick_drbdsetup_option name="block-size"/>
 	<!-- <pick_drbdsetup_option name="size"/> -->
       </variablelist>
     </refsect2>

@@ -142,7 +142,7 @@ static void dump_common_info()
 	fake_startup_options(common);
 	dump_options("options", NULL, 1, &common->res_options);
 	dump_options("net", NULL, 1, &common->net_options);
-	dump_options("disk", NULL, 2, &common->disk_options, &common->pd_options);
+	dump_options("disk", NULL, 3, &common->device_options, &common->disk_options, &common->pd_options);
 	dump_options("startup", NULL, 1, &common->startup_options);
 	dump_options("proxy", "plugin", 2, &common->proxy_options, &common->proxy_plugins);
 	dump_options("handlers", NULL, 1, &common->handlers);
@@ -181,7 +181,7 @@ static void dump_volume(int has_lower, struct d_volume *vol)
 	&& !vol->disk && !vol->meta_disk && !vol->meta_index)
 		goto out;
 
-	dump_options("disk", NULL, 2, &vol->disk_options, &vol->pd_options);
+	dump_options("disk", NULL, 3, &vol->device_options, &vol->disk_options, &vol->pd_options);
 
 	if (vol->parsed_device || verbose) {
 		printI("device%*s", -19 + INDENT_WIDTH * indent, "");
@@ -407,7 +407,7 @@ static void dump_common_info_xml()
 	fake_startup_options(common);
 	dump_options_xml("options", NULL, 1, &common->res_options);
 	dump_options_xml("net", NULL, 1, &common->net_options);
-	dump_options_xml("disk", NULL, 2, &common->disk_options, &common->pd_options);
+	dump_options_xml("disk", NULL, 3, &common->device_options, &common->disk_options, &common->pd_options);
 	dump_options_xml("startup", NULL, 1, &common->startup_options);
 	dump_options_xml("proxy", "plugin", 2, &common->proxy_options, &common->proxy_plugins);
 	dump_options_xml("handlers", NULL, 1, &common->handlers);
@@ -433,7 +433,7 @@ static void dump_volume_xml(struct d_volume *vol)
 	printI("<volume vnr=\"%d\">\n", vol->vnr);
 	++indent;
 
-	dump_options_xml("disk", NULL, 2, &vol->disk_options, &vol->pd_options);
+	dump_options_xml("disk", NULL, 3, &vol->device_options, &vol->disk_options, &vol->pd_options);
 	printI("<device minor=\"%d\">%s</device>\n", vol->device_minor,
 	       esc_xml(vol->device));
 	printI("<disk>%s</disk>\n", esc_xml(vol->disk));
@@ -618,7 +618,7 @@ int adm_dump(const struct cfg_ctx *ctx)
 	fake_startup_options(res);
 	dump_options("options", NULL, 1, &res->res_options);
 	dump_options("net", NULL, 1, &res->net_options);
-	dump_options("disk", NULL, 2, &res->disk_options, &res->pd_options);
+	dump_options("disk", NULL, 3, &res->device_options, &res->disk_options, &res->pd_options);
 	dump_options("startup", NULL, 1, &res->startup_options);
 	dump_options("proxy", "plugin", 2, &res->proxy_options, &res->proxy_plugins);
 	dump_options("handlers", NULL, 1, &res->handlers);
@@ -655,7 +655,7 @@ int adm_dump_xml(const struct cfg_ctx *ctx)
 	fake_startup_options(res);
 	dump_options_xml("options", NULL, 1, &res->res_options);
 	dump_options_xml("net", NULL, 1, &res->net_options);
-	dump_options_xml("disk", NULL, 2, &res->disk_options, &res->pd_options);
+	dump_options_xml("disk", NULL, 3, &res->device_options, &res->disk_options, &res->pd_options);
 	dump_options_xml("startup", NULL, 1, &res->startup_options);
 	dump_options_xml("proxy", "plugin", 2, &res->proxy_options, &res->proxy_plugins);
 	dump_options_xml("handlers", NULL, 1, &res->handlers);

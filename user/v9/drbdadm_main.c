@@ -1226,6 +1226,7 @@ int adm_new_minor(const struct cfg_ctx *ctx)
 	argv[NA(argc)] = ssprintf("%u", ctx->vol->vnr);
 	if (!ctx->vol->disk)
 		argv[NA(argc)] = ssprintf("--diskless");
+	make_options(argv[NA(argc)], &ctx->vol->device_options, ctx->cmd->drbdsetup_ctx);
 	argv[NA(argc)] = NULL;
 
 	ex = m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);

@@ -96,6 +96,7 @@ struct d_volume
 	int meta_major;
 	int meta_minor;
 	STAILQ_ENTRY(d_volume) link;
+	struct options device_options;
 	struct options disk_options; /* Additional per volume options */
 	struct options pd_options; /* peer device options */
 	struct peer_devices peer_devices;
@@ -229,6 +230,7 @@ struct d_resource
 	struct meshes meshes;
 
 	struct options net_options; /* parsed here, inherited to connections */
+	struct options device_options;
 	struct options disk_options;
 	struct options pd_options; /* peer device options */
 	struct options res_options;

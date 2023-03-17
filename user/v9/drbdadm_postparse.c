@@ -1270,8 +1270,9 @@ void expand_common(void)
 
 		if (template) {
 			expand_opts(res, &show_net_options_ctx, &template->net_options, &res->net_options);
+			expand_opts(res, &device_options_ctx, &template->device_options, &res->device_options);
 			expand_opts(res, &disk_options_ctx, &template->disk_options, &res->disk_options);
-			expand_opts(res, &device_options_ctx, &template->pd_options, &res->pd_options);
+			expand_opts(res, &peer_device_options_ctx, &template->pd_options, &res->pd_options);
 			expand_opts(res, &startup_options_ctx, &template->startup_options, &res->startup_options);
 			expand_opts(res, &proxy_options_ctx, &template->proxy_options, &res->proxy_options);
 			expand_opts(res, &handlers_ctx, &template->handlers, &res->handlers);
@@ -1287,6 +1288,7 @@ void expand_common(void)
 		 * resource level, further propagate them to the volume level. */
 		for_each_host(h, &res->all_hosts) {
 			for_each_volume(vol, &h->volumes) {
+				expand_opts(res, &device_options_ctx, &res->device_options, &vol->device_options);
 				expand_opts(res, &disk_options_ctx, &res->disk_options, &vol->disk_options);
 				expand_opts(res, &peer_device_options_ctx, &res->pd_options, &vol->pd_options);
 			}
@@ -1296,6 +1298,7 @@ void expand_common(void)
 		for_each_volume(vol, &res->volumes) {
 			for_each_host(h, &res->all_hosts) {
 				host_vol = volume_by_vnr(&h->volumes, vol->vnr);
+				expand_opts(res, &device_options_ctx, &vol->device_options, &host_vol->device_options);
 				expand_opts(res, &disk_options_ctx, &vol->disk_options, &host_vol->disk_options);
 				expand_opts(res, &peer_device_options_ctx, &vol->pd_options, &host_vol->pd_options);
 			}

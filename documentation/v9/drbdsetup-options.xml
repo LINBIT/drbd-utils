@@ -504,6 +504,39 @@
     </definition>
   </drbdsetup_option>
 
+  <drbdsetup_option name="block-size">
+    <term xml:id="block-size"><option>block-size <replaceable>size</replaceable></option></term>
+    <definition>
+      <para>
+        <indexterm significance="normal">
+          <primary>drbd.conf</primary>
+          <secondary>block-size</secondary>
+        </indexterm>
+        Block storage devices have a particular sector size or block
+        size. This block size has many different names. Examples are
+        'hw_sector_size', 'PHY-SEC', 'physical block (sector) size',
+        and 'logical block (sector) size'.</para>
+
+        <para>DRBD needs to combine these block sizes of the backing
+        disks. In clusters with storage devices with different block
+        sizes, it is necessary to configure the maximal block sizes on
+        the DRBD level. Here is an example highlighting the need.</para>
+
+	<para>Let's say node A is diskless. It connects to node B, which has
+	a physical block size of 512 bytes. Then the user mounts the
+	filesystem on node A; the filesystem recognizes that it can do
+	I/O in units of 512 bytes. Later, node C joins the cluster
+	with a physical block size of 4096 bytes. Now, suddenly DRBD
+	starts to deliver I/O errors to the filesystem if it chooses
+	to do I/O on, e.g., 512 or 1024 bytes.</para>
+
+        <para>The default value of <option>block-size</option> 512 bytes.
+        This option is available since drbd-utils 9.24 and
+	the drbd kernel driver 9.1.14 and 9.2.3.
+      </para>
+    </definition>
+  </drbdsetup_option>
+
   <drbdsetup_option name="rs-discard-granularity">
     <term>
       <option>rs-discard-granularity <replaceable>byte</replaceable></option>
