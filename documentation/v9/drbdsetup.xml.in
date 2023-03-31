@@ -841,6 +841,7 @@
 	    <pick_drbdsetup_option name="auto-promote"/>
 	    <pick_drbdsetup_option name="auto-promote-timeout"/>
 	    <pick_drbdsetup_option name="cpu-mask"/>
+	    <pick_drbdsetup_option name="max-io-depth"/>
 	    <pick_drbdsetup_option name="on-no-data-accessible"/>
 	    <pick_drbdsetup_option name="on-no-quorum"/>
 	    <pick_drbdsetup_option name="on-suspended-primary-outdated"/>

@@ -1924,4 +1924,20 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
     </definition>
   </drbdsetup_option>
 
+  <drbdsetup_option name="max-io-depth">
+    <term xml:id="max-io-depth"><option>max-io-depth <replaceable>value</replaceable></option></term>
+    <definition>
+      <para><indexterm significance="normal">
+	  <primary>drbd.conf</primary>
+	  <secondary>options</secondary>
+	  </indexterm> This limits the number of outstanding requests on a DRBD
+	  device. Any process that tries to issue more I/O requests will sleep in "D
+	  state" (uninterruptible by signals) until some  previously issued requests
+	  finish.</para>
+	  <para><option>max-io-depth</option> has a default value of 8000, its minimum value is 4,
+	  and its maximum value is 2^32.
+      </para>
+    </definition>
+  </drbdsetup_option>
+
 </drbdsetup_options>
