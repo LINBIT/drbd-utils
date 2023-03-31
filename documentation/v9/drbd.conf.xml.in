@@ -939,12 +939,12 @@ resource
         <pick_drbdsetup_option name="auto-promote"/>
         <pick_drbdsetup_option name="cpu-mask"/>
         <pick_drbdsetup_option name="on-no-data-accessible"/>
-        <pick_drbdsetup_option name="peer-ack-window"/>
-        <pick_drbdsetup_option name="peer-ack-delay"/>
-        <pick_drbdsetup_option name="quorum"/>
-	<pick_drbdsetup_option name="quorum-minimum-redundancy"/>
         <pick_drbdsetup_option name="on-no-quorum"/>
         <pick_drbdsetup_option name="on-suspended-primary-outdated"/>
+        <pick_drbdsetup_option name="peer-ack-delay"/>
+        <pick_drbdsetup_option name="peer-ack-window"/>
+        <pick_drbdsetup_option name="quorum"/>
+	<pick_drbdsetup_option name="quorum-minimum-redundancy"/>
       </variablelist>
     </refsect2>
 
