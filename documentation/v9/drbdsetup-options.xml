@@ -1906,4 +1906,22 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	  <option>disconnect</option>.</para>
     </definition>
   </drbdsetup_option>
+
+  <drbdsetup_option name="auto-promote-timeout">
+    <term xml:id="auto-promote-timeout"><option>auto-promote-timeout <replaceable>1/10-of-seconds</replaceable></option></term>
+    <definition>
+      <para><indexterm significance="normal">
+	  <primary>drbd.conf</primary>
+	  <secondary>options</secondary>
+	  </indexterm> When a user process promotes a drbd resource by opening one of its
+	  devices, DRBD waits up to <option>auto-promote-timeout</option> for the device to become
+          promotable if it is not in the first place. </para>
+
+          <para><option>auto-promote-timeout</option> is specified in units of 0.1 seconds.
+	  Its default value is 20 (2 seconds), its minimum value is 0, and its maximum value
+	  is 600 (=one minute).
+       </para>
+    </definition>
+  </drbdsetup_option>
+
 </drbdsetup_options>
