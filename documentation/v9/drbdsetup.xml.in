@@ -849,6 +849,8 @@
 	    <pick_drbdsetup_option name="peer-ack-window"/>
 	    <pick_drbdsetup_option name="quorum"/>
 	    <pick_drbdsetup_option name="quorum-minimum-redundancy"/>
+	    <pick_drbdsetup_option name="twopc-retry-timeout"/>
+	    <pick_drbdsetup_option name="twopc-timeout"/>
 	  </variablelist>
 	  </para>
 	</listitem>

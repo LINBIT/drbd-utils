@@ -1940,4 +1940,52 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
     </definition>
   </drbdsetup_option>
 
+  <drbdsetup_option name="twopc-timeout">
+    <term xml:id="twopc-timeout"><option>twopc-timeout <replaceable>1/10-of-seconds</replaceable></option></term>
+    <definition>
+      <para><indexterm significance="normal">
+	  <primary>drbd.conf</primary>
+	  <secondary>options</secondary>
+
+	  </indexterm> In some situations, a DRBD cluster requires a cluster-wide
+	  coordinated state transition. A perfect example of this is the
+	  'promote-to-primary' action. Even if two not directly connected nodes in a
+	  cluster try this action concurrently, it may only succeed for one of the two.
+	  </para>
+
+	  <para>For these cluster-wide coordinated state transitions, DRBD implements a
+	  two-phase commit protocol. If a connection breaks in phase one (prepare packet
+	  sent), the coordinator of the two-phase commit might never get the expected
+	  reply packet.</para>
+
+	  <para>A cluster in this state can not start any new cluster-wide coordinated
+	  state transition, as the already prepared one blocks all such attempts. After
+	  twopc-timeout all nodes abort the prepared transaction and unlock the cluster
+	  again.</para>
+
+	  <para><option>twopc-timeout</option> has a default value of 300 (30 seconds),
+	  its minimum value is 50 (5 seconds), and its maximum value is 600 (one minute).
+      </para>
+    </definition>
+  </drbdsetup_option>
+
+  <drbdsetup_option name="twopc-retry-timeout">
+    <term xml:id="twopc-retry-timeout"><option>twopc-retry-timeout <replaceable>1/10-of-seconds</replaceable></option></term>
+    <definition>
+      <para><indexterm significance="normal">
+	  <primary>drbd.conf</primary>
+	  <secondary>options</secondary>
+
+	  </indexterm> Due to conflicting two-phase-commit sometimes DRBD needs to retry
+	  them. But if two nodes retry their intended two-phase-commits after the same
+	  time, they would end up in an endless retry loop. To avoid that, DRBD selects a
+	  random wait time within an upper bound, an exponential backoff, and a function
+	  of the retry number. The twopc-retry-timeout is a base multiplier for that
+	  function.</para>
+	  <para><option>twopc-retry-timeout</option> has a default value of a (0.1 seconds),
+	  its minimum value is 1 (0.1 seconds), and its maximum value is 50 (5 seconds).
+      </para>
+    </definition>
+  </drbdsetup_option>
+
 </drbdsetup_options>
