@@ -545,7 +545,7 @@
 
 		<listitem>
 		  <para>Write complete state information, especially on change events.
-		   This enables <option>--statistics</option> and <option>--verbose</option>.</para>
+		   This enables <option>--statistics</option>.</para>
 		</listitem>
 	      </varlistentry>
 
