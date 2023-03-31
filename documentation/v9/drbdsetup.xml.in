@@ -367,6 +367,13 @@
 		submitted to the lower-level device (for example, because I/O
 		on the device was suspended) is assumed to have failed.</para>
 	      </listitem>
+	      <term><option>--diskless</option></term>
+	      <listitem>
+		<para>Mark the detached volume as "permanently diskless",
+		converting it to "intentionally diskless client",
+		in contrast to temporarily diskless, to be re-attached later.
+		</para>
+	      </listitem>
 	    </varlistentry>
 	  </variablelist>
 	  </para>
