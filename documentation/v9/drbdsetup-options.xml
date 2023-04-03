@@ -411,7 +411,7 @@
 	<option xml:id="_512K-striping">512K-striping</option> and <option xml:id="_1M-striping">1M-striping</option>.</para>
 	<para>This option is available since DRBD 8.4.1.</para>
 	<para>
-	  Note: the <option xml:id="when-congested-remote">when-congested-remote</option>
+	  Note: the <option>when-congested-remote</option>
 	  option has no effect on Linux kernel 5.18 or above. It is deprecated
 	  starting from DRBD 9.1.12.
 	</para>
