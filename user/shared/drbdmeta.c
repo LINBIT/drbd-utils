@@ -819,6 +819,7 @@ static struct meta_cmd *command;
 int meta_get_gi(struct format *cfg, char **argv, int argc);
 int meta_show_gi(struct format *cfg, char **argv, int argc);
 int meta_dump_md(struct format *cfg, char **argv, int argc);
+int meta_dump_superblock(struct format *cfg, char **argv, int argc);
 int meta_apply_al(struct format *cfg, char **argv, int argc);
 int meta_restore_md(struct format *cfg, char **argv, int argc);
 int meta_verify_dump_file(struct format *cfg, char **argv, int argc);
@@ -838,6 +839,7 @@ struct meta_cmd cmds[] = {
 	{"get-gi", 0, meta_get_gi, 1, 1, 0},
 	{"show-gi", 0, meta_show_gi, 1, 1, 0},
 	{"dump-md", 0, meta_dump_md, 1, 0, 0},
+	{"hexdump-superblock", 0, meta_dump_superblock, 1, 0, 0},
 	{"restore-md", "file", meta_restore_md, 1, 0, 1},
 	{"verify-dump", "file", meta_verify_dump_file, 1, 0, 0},
 	{"apply-al", 0, meta_apply_al, 1, 0, 1},
@@ -2562,12 +2564,13 @@ void v08_check_for_resize(struct format *cfg)
 	/* actually check that offset, if it is accessible. */
 	/* If someone shrunk that device, I won't be able to read it! */
 	if (flex_offset < cfg->bd_size) {
-		PREAD(cfg, on_disk_buffer, 4096, flex_offset);
+		void *on_disk_buf_old_location = on_disk_buffer + 4096;
+		PREAD(cfg, on_disk_buf_old_location, 4096, flex_offset);
 		if (is_v08(cfg)) {
-			md_disk_08_to_cpu(&md_test, (struct md_on_disk_08*)on_disk_buffer);
+			md_disk_08_to_cpu(&md_test, (struct md_on_disk_08*)on_disk_buf_old_location);
 			found = is_valid_md(DRBD_V08, &md_test, DRBD_MD_INDEX_FLEX_INT, cfg->lk_bd.bd_size);
 		} else if (is_v09(cfg)) {
-			md_disk_09_to_cpu(&md_test, (struct meta_data_on_disk_9*)on_disk_buffer);
+			md_disk_09_to_cpu(&md_test, (struct meta_data_on_disk_9*)on_disk_buf_old_location);
 			found = is_valid_md(DRBD_V09, &md_test, DRBD_MD_INDEX_FLEX_INT, cfg->lk_bd.bd_size);
 		}
 	}
@@ -3049,6 +3052,59 @@ int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc
 	}
 
 	return cfg->ops->close(cfg);
+}
+
+int meta_dump_superblock(struct format *cfg, char **argv __attribute((unused)), int argc)
+{
+	off_t flex_offset;
+	int i;
+
+	/* we could have some variants here, or with extra command line
+	 * switches in getopt .
+	 * only exit code, dump hex, dump binary */
+
+	if (argc > 0) {
+		fprintf(stderr, "Ignoring additional arguments\n");
+	}
+
+	/* What, if it is attached or otherwise claimed already?
+	 * Do you want to always "implicitly force" this, that is:
+	 * drop the O_EXCL in v07_style_md_open_device()?
+	 * force = true;
+	 */
+
+	i = cfg->ops->open(cfg);
+	if (i == VALID_MD_FOUND_AT_LAST_KNOWN_LOCATION) {
+		/* What follows is ugly global knowledge :-/
+		 * "I know^W hope that we read it into the other offset
+		 * of our global buffer, and it is still unclobbered"
+		 */
+		flex_offset = v07_style_md_get_byte_offset(
+			DRBD_MD_INDEX_FLEX_INT, cfg->lk_bd.bd_size);
+		fprintf_hex(stdout, flex_offset, on_disk_buffer + 4096, 4096);
+	}
+	/* else or no else? do you want both positions to be reported? */
+	/* found or not found, expected position */
+	fprintf_hex(stdout, cfg->md_offset, on_disk_buffer, 4096);
+
+	/* ignore problems during "close" */
+	cfg->ops->close(cfg);
+
+	/*
+	 * If we had any problems while accessing the device,
+	 * we would have exited already.
+	 *
+	 * Return value will be converted to exit code 0 or 1 by main().
+	 *
+	 * If you want to invent special exit codes for "valid at expected
+	 * position", "valid at last known position", "no valid md found",
+	 * you'd need to use explicit exit() here.
+	 */
+	exit(
+		i == VALID_MD_FOUND ? 0 :
+		i == VALID_MD_FOUND_AT_LAST_KNOWN_LOCATION ? 2 :
+		3);
+	/* return	(i == NO_VALID_MD_FOUND); */
 }
 
 void md_parse_error(int expected_token, int seen_token,const char *etext)
