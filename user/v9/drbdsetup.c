@@ -173,6 +173,7 @@ static int del_resource_cmd(struct drbd_cmd *cm, int argc, char **argv);
 static int show_cmd(struct drbd_cmd *cm, int argc, char **argv);
 static int status_cmd(struct drbd_cmd *cm, int argc, char **argv);
 static int role_cmd(struct drbd_cmd *cm, int argc, char **argv);
+static int peer_role_cmd(struct drbd_cmd *cm, int argc, char **argv);
 static int cstate_cmd(struct drbd_cmd *cm, int argc, char **argv);
 static int dstate_cmd(struct drbd_cmd *cm, int argc, char **argv);
 static int check_resize_cmd(struct drbd_cmd *cm, int argc, char **argv);
@@ -368,6 +369,9 @@ struct drbd_cmd commands[] = {
 	{"role", CTX_RESOURCE, 0, NO_PAYLOAD, role_cmd,
 	 .lockless = true,
 	 .summary = "Show the current role of a resource." },
+	{"peer-role", CTX_PEER_NODE, 0, NO_PAYLOAD, peer_role_cmd,
+	 .lockless = true,
+	 .summary = "Show the current role of a peer." },
 	{"cstate", CTX_PEER_NODE, 0, NO_PAYLOAD, cstate_cmd,
 	 .lockless = true,
 	 .summary = "Show the current state of a connection." },
@@ -3296,6 +3300,29 @@ static int role_cmd(struct drbd_cmd *cm, int argc, char **argv)
 
 	if (ret != NO_ERROR) {
 		fprintf(stderr, "%s: %s\n", objname, error_to_string(ret));
+		return 10;
+	}
+	return 0;
+}
+
+static int peer_role_cmd(struct drbd_cmd *cm, int argc, char **argv)
+{
+	struct connections_list *connections, *connection;
+	bool found = false;
+
+	connections = list_connections(objname);
+	for (connection = connections; connection; connection = connection->next) {
+		if (connection->ctx.ctx_peer_node_id != global_ctx.ctx_peer_node_id)
+			continue;
+
+		printf("%s\n", drbd_role_str(connection->info.conn_role));
+		found = true;
+		break;
+	}
+	free_connections(connections);
+
+	if (!found) {
+		fprintf(stderr, "%s: No such connection\n", objname);
 		return 10;
 	}
 	return 0;

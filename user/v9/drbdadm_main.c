@@ -129,6 +129,7 @@ static int adm_peer_device(const struct cfg_ctx *);
 static int do_proxy_conn_up(const struct cfg_ctx *ctx);
 static int do_proxy_conn_down(const struct cfg_ctx *ctx);
 static int do_proxy_conn_plugins(const struct cfg_ctx *ctx);
+static int adm_role(const struct cfg_ctx *);
 
 int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check);
 int was_file_already_seen(char *fn);
@@ -352,7 +353,8 @@ static struct adm_cmd adjust_wp_cmd = {"adjust-with-progress", adm_adjust_wp, AC
 static struct adm_cmd wait_c_cmd = {"wait-connect", adm_wait_c, ACF1_WAIT};
 static struct adm_cmd wait_sync_cmd = {"wait-sync", adm_wait_c, ACF1_WAIT};
 static struct adm_cmd wait_ci_cmd = {"wait-con-int", adm_wait_ci, .show_in_usage = 1,.verify_ips = 1,};
-static struct adm_cmd role_cmd = {"role", adm_drbdsetup, ACF1_RESNAME};
+static struct adm_cmd role_cmd = {"role", adm_role, ACF1_RESNAME};
+static struct adm_cmd peer_role_cmd = {"peer-role", adm_drbdsetup, ACF1_DISCONNECT .show_in_usage = 0 };
 static struct adm_cmd cstate_cmd = {"cstate", adm_drbdsetup, ACF1_DISCONNECT};
 static struct adm_cmd dstate_cmd = {"dstate", adm_setup_and_meta, &forceable_ctx, ACF1_MINOR_ONLY .disk_required = 0 };
 static struct adm_cmd status_cmd = {"status", adm_drbdsetup, .show_in_usage = 1, .uc_dialog = 1, .backend_res_name=1};
@@ -451,6 +453,7 @@ struct adm_cmd *cmds[] = {
 	&wait_sync_cmd,
 	&wait_ci_cmd,
 	&role_cmd,
+	&peer_role_cmd,
 	&cstate_cmd,
 	&dstate_cmd,
 	&status_cmd,
@@ -1485,6 +1488,16 @@ static int _adm_drbdsetup(const struct cfg_ctx *ctx, int flags)
 static int adm_drbdsetup(const struct cfg_ctx *ctx)
 {
 	return _adm_drbdsetup(ctx, ctx->cmd->takes_long ? SLEEPS_LONG : SLEEPS_SHORT);
+}
+
+static int adm_role(const struct cfg_ctx *ctx)
+{
+	struct cfg_ctx tmp_ctx = *ctx;
+
+	if (ctx->conn)
+		tmp_ctx.cmd = &peer_role_cmd;
+
+	return adm_drbdsetup(&tmp_ctx);
 }
 
 static int __adm_drbdsetup_silent(const struct cfg_ctx *ctx)

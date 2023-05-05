@@ -662,7 +662,10 @@
 
       <varlistentry>
         <term>role
-	  <arg choice="req" rep="norepeat"><replaceable>resource</replaceable></arg>
+	  <group choice="req">
+	    <arg><replaceable>resource</replaceable></arg>
+	    <arg><replaceable>connection</replaceable></arg>
+	  </group>
 	</term>
 
         <listitem>
@@ -670,7 +673,7 @@
               <primary>drbdadm</primary>
 
               <secondary>role</secondary>
-	    </indexterm> Show the current role of a resource.
+	    </indexterm> Show the current role of a resource or the role of a resource on a peer.
 	  </para>
         </listitem>
       </varlistentry>
