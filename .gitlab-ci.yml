@@ -40,7 +40,7 @@ variables:
           | sub("rhel(?<major>\\d)\\.\\d"; "rhel\(.major).0")
         ] | unique | join(",")')
 
-        lbbuildctl build drbd-utils --arch amd64 --ci -v "$DRBD_UTILS_VERSION" -l \
+        lbbuildctl build drbd-utils --arch amd64 --ci -v "$DRBD_UTILS_VERSION" \
           -e LINBIT_REGISTRY_USER=$LINBIT_REGISTRY_USER \
           -e LINBIT_REGISTRY_PASSWORD=$LINBIT_REGISTRY_PASSWORD \
           -e LINBIT_REGISTRY_URL=$LINBIT_REGISTRY_URL \
