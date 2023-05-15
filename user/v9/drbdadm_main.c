@@ -1459,6 +1459,14 @@ static void __adm_drbdsetup(const struct cfg_ctx *ctx, int flags, pid_t *pid, in
 			argv[NA(argc)] = ssprintf("%d", ctx->vol->device_minor);
 	}
 
+	/* Pass down our own --verbose to the status command. */
+	if (ctx->cmd == &status_cmd) {
+		int i;
+
+		for (i = 0; i < verbose; i++)
+			argv[NA(argc)] = ssprintf("--verbose");
+	}
+
 	add_setup_options(argv, &argc, ctx->cmd->drbdsetup_ctx);
 
 	if (ctx->cmd == &invalidate_setup_cmd && ctx->conn)
