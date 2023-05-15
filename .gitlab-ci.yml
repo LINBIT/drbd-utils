@@ -34,9 +34,12 @@ variables:
         make debrelease VERSION="$version" FORCE=1
         curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD --upload-file drbd-utils-*.tar.gz $LINBIT_REGISTRY_URL/repository/lbbuild-upstream/
 
-        # distributions, with rhelX.y replaced by rhelX.0, comma separated
+        # Distributions, comma separated.
+        # * "mainline" is excluded because the user space components are the same as the base distribution.
+        # * rhelX.y is replaced by rhelX.0
         local dists=$(rq -t < drbd9-tests/virter/vms.toml | jq -r '[
           .vms[].metadata.BuildDistribution
+          | select(. != "mainline")
           | sub("rhel(?<major>\\d)\\.\\d"; "rhel\(.major).0")
         ] | unique | join(",")')
 
