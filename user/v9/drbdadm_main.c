@@ -357,7 +357,7 @@ static struct adm_cmd role_cmd = {"role", adm_role, ACF1_RESNAME};
 static struct adm_cmd peer_role_cmd = {"peer-role", adm_drbdsetup, ACF1_DISCONNECT .show_in_usage = 0 };
 static struct adm_cmd cstate_cmd = {"cstate", adm_drbdsetup, ACF1_DISCONNECT};
 static struct adm_cmd dstate_cmd = {"dstate", adm_setup_and_meta, &forceable_ctx, ACF1_MINOR_ONLY .disk_required = 0 };
-static struct adm_cmd status_cmd = {"status", adm_drbdsetup, .show_in_usage = 1, .uc_dialog = 1, .backend_res_name=1};
+static struct adm_cmd status_cmd = {"status", adm_drbdsetup, &status_ctx, .show_in_usage = 1, .uc_dialog = 1, .backend_res_name=1};
 static struct adm_cmd peer_device_options_cmd = {"peer-device-options", adm_peer_device,
 						 &peer_device_options_ctx, ACF1_PEER_DEVICE};
 static struct adm_cmd dump_cmd = {"dump", adm_dump, ACF1_DUMP};

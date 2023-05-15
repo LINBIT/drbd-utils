@@ -1139,6 +1139,12 @@ struct context_def adjust_ctx = {
 		{ } },
 };
 
+struct context_def status_ctx = {
+	.fields = {
+		{ "statistics", .argument_is_optional = true },
+		{ } },
+};
+
 // only used by drbdadm's config file parser:
 struct context_def handlers_ctx = {
 	.fields = {
