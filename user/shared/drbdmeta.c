@@ -4725,7 +4725,8 @@ static int day0_peer_id(struct format *cfg)
 	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
 		if (p == cfg->md.node_id)
 			continue;
-		if (cfg->md.peers[p].bitmap_index == -1)
+		/* Only totally unused slots definitely contain the day0 UUID. */
+		if (cfg->md.peers[p].bitmap_index == -1 && !cfg->md.peers[p].flags)
 			return p;
 	}
 	return -1;
