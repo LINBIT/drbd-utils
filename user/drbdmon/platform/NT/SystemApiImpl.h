@@ -1,0 +1,21 @@
+#ifndef NT_SYSTEMAPIIMPL_H
+#define NT_SYSTEMAPIIMPL_H
+
+#include <platform/SystemApi.h>
+
+class NtApi : public SystemApi
+{
+  public:
+    NtApi();
+    virtual ~NtApi() noexcept override;
+
+    virtual std::unique_ptr<SubProcess> create_subprocess_handler() override;
+    virtual std::unique_ptr<TerminalControl> create_terminal_control() override;
+    virtual std::string get_config_file_path() override;
+    virtual bool is_file_accessible(const char* const file_path) override;
+
+  private:
+    static const char* const    CONFIG_FILE_NAME;
+};
+
+#endif /* NT_SYSTEMAPIIMPL_H */

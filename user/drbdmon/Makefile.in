@@ -2,7 +2,7 @@ CXXFLAGS=-std=c++11 -I. -I../shared -Icppdsaext/src -Wall -Werror -pedantic-erro
 -Wsign-compare -Wpointer-arith -Wswitch-default -Wswitch-enum -Wtype-limits \
 -Wmissing-declarations -Wshadow
 CXX = @CXX@
-LIBS = @LIBS@
+LIBS = @LIBS@ -lpthread
 
 # variables set by configure
 sbindir = @sbindir@
@@ -29,11 +29,32 @@ PHONY := all
 dsaext-obj := cppdsaext/src/dsaext.o
 integerparse-obj := cppdsaext/src/integerparse.o
 
-l-obj := DrbdMon.o MessageLog.o CompactDisplay.o IntervalTimer.o
-l-obj += DrbdResource.o DrbdRole.o DrbdVolume.o DrbdConnection.o
-l-obj += VolumesContainer.o StateFlags.o EventsIo.o EventsSourceSpawner.o
-l-obj += Args.o ConfigOption.o
-l-obj += StringTokenizer.o comparators.o utils.o exceptions.o
+l-obj := DrbdMon.o DrbdMonConsts.o MessageLog.o IntervalTimer.o SubProcessNotification.o
+l-obj += MessageLogNotification.o
+l-obj += objects/DrbdResource.o objects/DrbdRole.o objects/DrbdVolume.o objects/DrbdConnection.o
+l-obj += objects/VolumesContainer.o objects/StateFlags.o subprocess/EventsSourceSpawner.o
+l-obj += objects/ResourceDirectory.o
+l-obj += Args.o ConfigOption.o terminal/CharacterTable.o terminal/ColorTable.o terminal/MouseEvent.o
+l-obj += terminal/DisplayConsts.o terminal/GlobalCommandConsts.o terminal/ComponentsHub.o terminal/AnsiControl.o
+l-obj += terminal/DisplayController.o terminal/DisplayIo.o terminal/DisplayStyleCollection.o
+l-obj += terminal/DisplayCommonImpl.o terminal/PosixTermSize.o terminal/SharedData.o
+l-obj += terminal/ClickableCommand.o terminal/GlobalCommandsImpl.o terminal/DrbdCommandsImpl.o
+l-obj += terminal/EscSeqCodes.o terminal/KeyCodes.o terminal/InputCharCodes.o
+l-obj += terminal/MDspMainMenu.o terminal/MDspResources.o terminal/MDspVolumes.o terminal/MDspConnections.o
+l-obj += terminal/MDspPeerVolumes.o terminal/MDspLogViewer.o terminal/MDspTaskQueue.o terminal/MDspTaskDetail.o
+l-obj += terminal/MDspResourceActions.o terminal/MDspConnectionActions.o terminal/MDspVolumeActions.o
+l-obj += terminal/MDspResourceDetail.o terminal/MDspVolumeDetail.o terminal/MDspConnectionDetail.o
+l-obj += terminal/MDspBase.o terminal/MDspStdListBase.o terminal/MDspMenuBase.o terminal/MDspMessage.o
+l-obj += terminal/InputField.o terminal/DisplayId.o terminal/DisplayIdMap.o terminal/MDspHelp.o
+l-obj += terminal/MDspPgmInfo.o terminal/MDspHelpIndex.o terminal/MDspConfiguration.o terminal/MDspWaitMsg.o
+l-obj += terminal/TextColumn.o terminal/HelpText.o terminal/DisplayUpdateEvent.o terminal/TerminalControl.o
+l-obj += subprocess/SubProcessQueue.o subprocess/SubProcess.o subprocess/CmdLine.o subprocess/DrbdCmdConsts.o
+l-obj += subprocess/Linux/SubProcessLx.o terminal/Linux/TerminalControlImpl.o terminal/Linux/InputSequenceDecoder.o
+l-obj += platform/Linux/SystemApiImpl.o platform/Linux/EventsIo.o
+l-obj += configuration/CfgEntryStore.o configuration/CfgEntryBoolean.o configuration/CfgEntryIntegerTypes.o
+l-obj += configuration/CfgEntry.o configuration/Configuration.o configuration/IoException.o
+l-obj += persistent_configuration.o
+l-obj += StringTokenizer.o comparators.o utils.o exceptions.o integerfmt.o string_transformations.o
 
 ls-obj := drbdmon_main.o $(l-obj) $(dsaext-obj) $(integerparse-obj)
 

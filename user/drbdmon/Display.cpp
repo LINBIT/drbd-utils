@@ -397,6 +397,6 @@ void Display::set_terminal_size(uint16_t size_x, uint16_t size_y)
     }
 }
 
-void Display::key_pressed(const char key)
+void Display::input_char(const char key)
 {
 }

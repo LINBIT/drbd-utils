@@ -1,0 +1,118 @@
+#ifndef DRBDCONNECTION_H
+#define	DRBDCONNECTION_H
+
+#include <new>
+#include <string>
+#include <cstdint>
+
+#include <objects/VolumesContainer.h>
+#include <objects/DrbdRole.h>
+#include <objects/StateFlags.h>
+
+#include <map_types.h>
+// https://github.com/raltnoeder/cppdsaext
+#include <dsaext.h>
+#include <utils.h>
+#include <exceptions.h>
+
+class DrbdConnection : public VolumesContainer, public DrbdRole, private StateFlags
+{
+  public:
+    enum class state : uint16_t
+    {
+        STANDALONE,
+        DISCONNECTING,
+        UNCONNECTED,
+        TIMEOUT,
+        BROKEN_PIPE,
+        NETWORK_FAILURE,
+        PROTOCOL_ERROR,
+        TEAR_DOWN,
+        CONNECTING,
+        CONNECTED,
+        UNKNOWN
+    };
+
+    enum class sync_state_type : uint16_t
+    {
+        RESYNCABLE  = 0,
+        SPLIT,
+        UNRELATED
+    };
+
+    static const std::string PROP_KEY_CONNECTION;
+    static const std::string PROP_KEY_CONN_NAME;
+    static const std::string PROP_KEY_PEER_NODE_ID;
+    static const std::string PROP_KEY_SYNC_STATE;
+
+    static const char* CS_LABEL_STANDALONE;
+    static const char* CS_LABEL_DISCONNECTING;
+    static const char* CS_LABEL_UNCONNECTED;
+    static const char* CS_LABEL_TIMEOUT;
+    static const char* CS_LABEL_BROKEN_PIPE;
+    static const char* CS_LABEL_NETWORK_FAILURE;
+    static const char* CS_LABEL_PROTOCOL_ERROR;
+    static const char* CS_LABEL_TEAR_DOWN;
+    static const char* CS_LABEL_CONNECTING;
+    static const char* CS_LABEL_CONNECTED;
+    static const char* CS_LABEL_UNKNOWN;
+
+    static const char* SS_LABEL_SPLIT;
+    static const char* SS_LABEL_UNRELATED;
+
+    // @throws std::bad_alloc
+    DrbdConnection(std::string& connection_name, uint8_t node_id);
+    DrbdConnection(const DrbdConnection& orig) = delete;
+    DrbdConnection& operator=(const DrbdConnection& orig) = delete;
+    DrbdConnection(DrbdConnection&& orig) = delete;
+    DrbdConnection& operator=(DrbdConnection&& orig) = delete;
+    virtual ~DrbdConnection() noexcept override
+    {
+    }
+
+    virtual const std::string& get_name() const;
+    virtual const uint8_t get_node_id() const;
+
+    // @throws std::bad_alloc, EventMessageException
+    virtual void update(PropsMap& event_props);
+
+    virtual state get_connection_state() const;
+    virtual const char* get_connection_state_label() const;
+    virtual sync_state_type get_sync_state() const;
+
+    using StateFlags::has_mark_state;
+    using StateFlags::has_warn_state;
+    using StateFlags::has_alert_state;
+    using StateFlags::set_mark;
+    using StateFlags::set_warn;
+    using StateFlags::set_alert;
+    using StateFlags::get_state;
+    virtual void clear_state_flags() override;
+    virtual StateFlags::state update_state_flags() override;
+    virtual StateFlags::state child_state_flags_changed() override;
+    virtual bool has_connection_alert();
+    virtual bool has_role_alert();
+
+    // Creates (allocates and initializes) a new DrbdConnection object from a map of properties
+    //
+    // @param event_props Reference to the map of properties from a 'drbdsetup events2' line
+    // @return Pointer to a newly created DrbdConnection object
+    // @throws std::bad_alloc, EventMessageException
+    static DrbdConnection* new_from_props(PropsMap& event_props);
+
+    // @throws std::bad_alloc, EventMessageException
+    static state parse_state(std::string& state_name);
+
+    // @throws std::bad_alloc, EventMessageException
+    static sync_state_type parse_sync_state(std::string& sync_state_name);
+
+  private:
+    const std::string   name;
+    const uint8_t       node_id         {0xFF};
+    state               conn_state      {state::UNKNOWN};
+    sync_state_type     sync_state      {sync_state_type::RESYNCABLE};
+    bool                conn_alert      {false};
+    bool                role_alert      {false};
+};
+
+#endif	/* DRBDCONNECTION_H */

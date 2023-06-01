@@ -1,0 +1,29 @@
+#include <terminal/KeyCodes.h>
+
+const uint32_t KeyCodes::ARROW_UP       = 0x10000001;
+const uint32_t KeyCodes::ARROW_DOWN     = 0x10000002;
+const uint32_t KeyCodes::ARROW_LEFT     = 0x10000003;
+const uint32_t KeyCodes::ARROW_RIGHT    = 0x10000004;
+const uint32_t KeyCodes::INSERT         = 0x10000101;
+const uint32_t KeyCodes::DELETE         = 0x10000102;
+const uint32_t KeyCodes::HOME           = 0x10000103;
+const uint32_t KeyCodes::END            = 0x10000104;
+const uint32_t KeyCodes::PG_UP          = 0x10000105;
+const uint32_t KeyCodes::PG_DOWN        = 0x10000106;
+const uint32_t KeyCodes::BACKSPACE      = 0x10000201;
+const uint32_t KeyCodes::TAB            = 0x10000202;
+const uint32_t KeyCodes::ENTER          = 0x10000203;
+const uint32_t KeyCodes::FUNC_01        = 0x10000301;
+const uint32_t KeyCodes::FUNC_02        = 0x10000302;
+const uint32_t KeyCodes::FUNC_03        = 0x10000303;
+const uint32_t KeyCodes::FUNC_04        = 0x10000304;
+const uint32_t KeyCodes::FUNC_05        = 0x10000305;
+const uint32_t KeyCodes::FUNC_06        = 0x10000306;
+const uint32_t KeyCodes::FUNC_07        = 0x10000307;
+const uint32_t KeyCodes::FUNC_08        = 0x10000308;
+const uint32_t KeyCodes::FUNC_09        = 0x10000309;
+const uint32_t KeyCodes::FUNC_10        = 0x1000030A;
+const uint32_t KeyCodes::FUNC_11        = 0x1000030B;
+const uint32_t KeyCodes::FUNC_12        = 0x1000030C;
+const uint32_t KeyCodes::MOUSE_EVENT    = 0x11000000;
+const uint32_t KeyCodes::NONE           = 0xFFFFFFFF;

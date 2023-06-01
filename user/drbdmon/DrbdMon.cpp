@@ -9,24 +9,27 @@ extern "C"
 {
     #include <errno.h>
     #include <signal.h>
-    #include <config.h>
-    #include <drbd_buildtag.h>
 }
 
 #include <map_types.h>
 // https://github.com/raltnoeder/cppdsaext
 #include <dsaext.h>
 #include <integerparse.h>
-
-#include <DrbdMon.h>
 #include <utils.h>
-#include <CompactDisplay.h>
+#include <comparators.h>
+#include <DrbdMon.h>
+#include <DrbdMonConsts.h>
+#include <CoreIo.h>
 #include <ConfigOption.h>
 #include <Args.h>
-#include <comparators.h>
-
-const std::string DrbdMon::PROGRAM_NAME = "DRBD DrbdMon";
-const std::string DrbdMon::VERSION = PACKAGE_VERSION;
+#include <bounds.h>
+#include <terminal/DisplayController.h>
+#include <terminal/KeyCodes.h>
+#include <subprocess/SubProcessObserver.h>
+#include <MessageLogNotification.h>
+#include <SubProcessNotification.h>
+#include <EventsIoWakeup.h>
+#include <exceptions.h>
 
 const std::string DrbdMon::OPT_HELP_KEY = "help";
 const std::string DrbdMon::OPT_VERSION_KEY = "version";
@@ -60,299 +63,279 @@ const std::string DrbdMon::TYPE_DEVICE      = "device";
 const std::string DrbdMon::TYPE_PEER_DEVICE = "peer-device";
 const std::string DrbdMon::TYPE_SEPARATOR   = "-";
 
-const char DrbdMon::HOTKEY_QUIT       = 'q';
-const char DrbdMon::HOTKEY_REPAINT    = 'r';
-const char DrbdMon::HOTKEY_REINIT     = 'R';
-const char DrbdMon::HOTKEY_VERSION    = 'V';
-
-const std::string DrbdMon::DESC_QUIT      = "Quit";
-const std::string DrbdMon::DESC_REPAINT   = "Repaint";
-const std::string DrbdMon::DESC_CLEAR_MSG = "Clear messages";
-const std::string DrbdMon::DESC_REINIT    = "Reinitialize";
-
 static bool string_ends_with(const std::string& text, const std::string& suffix);
 
 // @throws std::bad_alloc
 DrbdMon::DrbdMon(
-    int         argc,
-    char*       argv[],
-    MessageLog& log_ref,
-    MessageLog& debug_log_ref,
-    fail_info&  fail_data_ref,
-    const std::string* const node_name_ref,
-    const color_mode colors
+    int                         argc,
+    char*                       argv[],
+    MonitorEnvironment&         mon_env_ref
 ):
-    drbdmon_colors(colors),
+    sys_api(*(mon_env_ref.sys_api)),
     arg_count(argc),
     arg_values(argv),
-    resources_map(new ResourcesMap(&comparators::compare_string)),
-    hotkeys_info(new HotkeysMap(&dsaext::generic_compare<char>)),
-    fail_data(fail_data_ref),
-    log(log_ref),
-    debug_log(debug_log_ref),
-    node_name(node_name_ref)
+    fail_data(mon_env_ref.fail_data),
+    log(*(mon_env_ref.log)),
+    debug_log(*(mon_env_ref.debug_log)),
+    node_name(mon_env_ref.node_name_mgr.get()),
+    config(*(mon_env_ref.config))
 {
+    rsc_dir_mgr = std::unique_ptr<ResourceDirectory>(
+        new ResourceDirectory(*(mon_env_ref.log), *(mon_env_ref.debug_log))
+    );
+    rsc_dir = rsc_dir_mgr.get();
 }
 
 DrbdMon::~DrbdMon() noexcept
 {
-    // Cleanup resources map
-    {
-        ResourcesMap::NodesIterator dtor_iter(*resources_map);
-        // Free all DrbdResource mappings
-        while (dtor_iter.has_next())
-        {
-            ResourcesMap::Node* node = dtor_iter.next();
-            delete node->get_key();
-            delete node->get_value();
-        }
-        resources_map->clear();
-    }
+}
 
-    // Cleanup hotkeys map
-    // Keys/values in this map are static members of the DrbdMon class
-    hotkeys_info->clear();
+SystemApi& DrbdMon::get_system_api() const noexcept
+{
+    return sys_api;
 }
 
 // @throws std::bad_alloc
 void DrbdMon::run()
 {
     std::unique_ptr<PropsMap>               event_props;
-    std::unique_ptr<TermSize>               term_size;
     std::unique_ptr<EventsSourceSpawner>    events_source;
     std::unique_ptr<EventsIo>               events_io;
+    std::unique_ptr<MessageLogNotification> msg_log_notifier;
+    std::unique_ptr<SubProcessNotification> sub_proc_notifier;
+    std::unique_ptr<GenericDisplay>         display;
 
     try
     {
-        setup_hotkeys_info();
         try
         {
             event_props   = std::unique_ptr<PropsMap>(new PropsMap(&comparators::compare_string));
-            term_size     = std::unique_ptr<TermSize>(new TermSize());
-
-            // Create the display and keep a pointer of the implementation's type for later use
-            // as a configurable object
-            // Do not add anything that might throw between display_impl allocation and
-            // display interface unique_ptr initialization to ensure deallocation of the display
-            // object if the current scope is left
-            CompactDisplay* display_impl = new CompactDisplay(
-                *this, *resources_map, log, *hotkeys_info, node_name, drbdmon_colors
-            );
-            display = std::unique_ptr<GenericDisplay>(dynamic_cast<GenericDisplay*> (display_impl));
-
-            configurables = std::unique_ptr<Configurable*[]>(new Configurable*[3]);
-            configurables[0] = dynamic_cast<Configurable*> (this);
-            configurables[1] = dynamic_cast<Configurable*> (display_impl);
-            configurables[2] = nullptr;
-            configure_options();
 
             events_source = std::unique_ptr<EventsSourceSpawner>(new EventsSourceSpawner(log));
-
-            if (term_size->probe_terminal_size())
-            {
-                display->set_terminal_size(term_size->get_size_x(), term_size->get_size_y());
-            }
 
             events_source->spawn_source();
             events_io = std::unique_ptr<EventsIo>(
                 new EventsIo(events_source->get_events_out_fd(), events_source->get_events_err_fd())
             );
 
+            msg_log_notifier = std::unique_ptr<MessageLogNotification>(
+                new MessageLogNotification(log, dynamic_cast<EventsIoWakeup*> (events_io.get()))
+            );
+
+            sub_proc_notifier = std::unique_ptr<SubProcessNotification>(
+                new SubProcessNotification(dynamic_cast<EventsIoWakeup*> (events_io.get()))
+            );
+
+            // Interval timer initialization
+            // Must be constructed before configuring the Configurable instances
+            interval_timer_mgr = std::unique_ptr<IntervalTimer>(
+                new IntervalTimer(log, bounds<uint16_t>(0, config.dsp_interval, MAX_INTERVAL))
+            );
+            timer_available = config.dsp_interval != 0;
+            timer_armed = false;
+
+            configurables = std::unique_ptr<Configurable*[]>(new Configurable*[3]);
+            configurables[0] = dynamic_cast<Configurable*> (this);
+            // configurables[1] = dynamic_cast<Configurable*> (display_impl);
+            configurables[1] = nullptr;
+            configurables[2] = nullptr;
+            configure_options();
+
             // Cleanup any zombies that might not have been collected,
             // because SIGCHLD is blocked during reinitialization
             events_source->cleanup_child_processes();
 
-            try
+            // Create the display and keep a pointer of the implementation's type for later use
+            // as a configurable object
+            // Do not add anything that might throw between display_impl allocation and
+            // display interface unique_ptr initialization to ensure deallocation of the display
+            // object if the current scope is left
+            DisplayController* display_impl = nullptr;
             {
-                events_io->adjust_terminal();
+                DrbdMonCore* const core_instance    = dynamic_cast<DrbdMonCore*> (this);
+                SubProcessObserver* const sub_proc_obs = dynamic_cast<SubProcessObserver*> (sub_proc_notifier.get());
+                ResourcesMap& rsc_map               = rsc_dir->get_resources_map();
+                ResourcesMap& prb_rsc_map           = rsc_dir->get_problem_resources_map();
+                display_impl = new DisplayController(
+                    *core_instance,
+                    sys_api,
+                    *sub_proc_obs,
+                    rsc_map,
+                    prb_rsc_map,
+                    log,
+                    config,
+                    node_name
+                );
             }
-            catch (EventsIoException&)
-            {
-                log.add_entry(MessageLog::log_level::WARN, "Adjusting the terminal mode failed");
-            }
+
+            display = std::unique_ptr<GenericDisplay>(dynamic_cast<GenericDisplay*> (display_impl));
+            display->initialize();
 
             // Show an initial display while reading the initial DRBD status
-            display->initial_display();
+            display->enter_initial_display();
 
-            if (use_dflt_freq_lmt && interval_timer_mgr.get() == nullptr)
-            {
-                interval_timer_mgr = std::unique_ptr<IntervalTimer>(new IntervalTimer(log, DFLT_INTERVAL));
-            }
-
-            bool debug_key {false};
-            bool timer_available = (interval_timer_mgr.get() != nullptr);
-            bool timer_armed {false};
-            while (!shutdown)
+            while (!shutdown_flag)
             {
                 EventsIo::event event_id = events_io->wait_event();
                 switch (event_id)
                 {
                     case EventsIo::event::EVENT_LINE:
+                    {
+                        std::string* event_line = events_io->get_event_line();
+                        if (event_line != nullptr)
                         {
-                            std::string* event_line = events_io->get_event_line();
-                            if (event_line != nullptr)
+                            uint32_t update_counter {0};
+                            while (event_line != nullptr)
                             {
-                                uint32_t update_counter {0};
-                                while (event_line != nullptr)
+                                tokenize_event_message(display.get(), *event_line, *event_props);
+                                events_io->free_event_line();
+                                clear_event_props(*event_props);
+                                event_line = events_io->get_event_line();
+                                if (have_initial_state)
                                 {
-                                    tokenize_event_message(*event_line, *event_props);
-                                    events_io->free_event_line();
-                                    clear_event_props(*event_props);
-                                    event_line = events_io->get_event_line();
-                                    if (have_initial_state)
+                                    if (update_counter >= MAX_EVENT_BUNDLE)
                                     {
-                                        if (update_counter >= MAX_EVENT_BUNDLE)
+                                        if (timer_available)
                                         {
-                                            if (timer_available)
-                                            {
-                                                cond_display_update(timer_available, timer_armed);
-                                            }
-                                            else
-                                            {
-                                                display->status_display();
-                                            }
-                                            update_counter = 0;
+                                            cond_display_update(display.get());
                                         }
                                         else
                                         {
-                                            ++update_counter;
+                                            display->notify_drbd_changed();
                                         }
+                                        update_counter = 0;
+                                    }
+                                    else
+                                    {
+                                        ++update_counter;
                                     }
                                 }
+                            }
+                        }
+                        else
+                        {
+                            std::string debug_info("EventsIo::get_event_line() returned nullptr");
+                            throw EventMessageException(nullptr, &debug_info, nullptr);
+                        }
+                        if (have_initial_state)
+                        {
+                            if (timer_available)
+                            {
+                                cond_display_update(display.get());
                             }
                             else
                             {
-                                std::string debug_info("EventsIo::get_event_line() returned nullptr");
-                                throw EventMessageException(nullptr, &debug_info, nullptr);
-                            }
-                            if (have_initial_state)
-                            {
-                                if (timer_available)
-                                {
-                                    cond_display_update(timer_available, timer_armed);
-                                }
-                                else
-                                {
-                                    display->status_display();
-                                }
+                                display->notify_drbd_changed();
                             }
                         }
                         break;
+                    }
                     case EventsIo::event::SIGNAL:
+                    {
+                        CoreIo::signal_type signal_id = events_io->get_signal();
+                        switch (signal_id)
                         {
-                            int signal_id = events_io->get_signal();
-                            switch (signal_id)
+                            case CoreIo::signal_type::SIGNAL_EXIT:
                             {
-                                case SIGHUP:
-                                    // fall-through
-                                case SIGINT:
-                                    // fall-through
-                                case SIGTERM:
-                                    // terminate main loop
-                                    fin_action = DrbdMon::finish_action::TERMINATE;
-                                    shutdown = true;
-                                    break;
-                                case SIGWINCH:
-                                    if (term_size->probe_terminal_size())
-                                    {
-                                        display->set_terminal_size(term_size->get_size_x(), term_size->get_size_y());
-                                        display->status_display();
-                                    }
-                                    break;
-                                case SIGCHLD:
-                                    {
-                                        // Throws an EventsSourceException if the currently tracked events source
-                                        // process exits, thereby triggering reinitialization
-                                        events_source->cleanup_child_processes();
-                                    }
-                                    break;
-                                case SIGUSR1:
-                                    {
-                                        fin_action = DrbdMon::finish_action::DEBUG_MODE;
-                                        shutdown = true;
-                                    }
-                                    break;
-                                case SIGALRM:
-                                    {
-                                        display->status_display();
-                                        update_timestamp(timer_available, timer_armed);
-                                        timer_armed = false;
-                                    }
-                                default:
-                                    // Unexpected signals ignored
-                                    break;
+                                // Terminate main loop
+                                fin_action = DrbdMonCore::finish_action::TERMINATE;
+                                shutdown_flag = true;
+                                break;
                             }
-                            break;
-                        }
-                    case EventsIo::event::STDIN:
-                        {
-                            // Consume input from stdin
-                            char c = 0;
-                            int read_count = 0;
-                            do
+                            case CoreIo::signal_type::SIGNAL_WINDOW_SIZE:
                             {
-                                errno = 0;
-                                read_count = read(STDIN_FILENO, &c, 1);
+                                display->terminal_size_changed();
+                                break;
                             }
-                            while (read_count == -1 && errno == EINTR);
-
-                            if (read_count == 1)
+                            case CoreIo::signal_type::SIGNAL_CHILD_PROC:
                             {
-                                if (debug_key)
-                                {
-                                    if (c == 'd' || c == 'D')
-                                    {
-                                        fin_action = DrbdMon::finish_action::DEBUG_MODE;
-                                        shutdown = true;
-                                    }
-                                    debug_key = false;
-                                }
-                                else
-                                if (c == HOTKEY_REPAINT)
-                                {
-                                    display->status_display();
-                                }
-                                else
-                                if (c == HOTKEY_REINIT)
-                                {
-                                    fin_action = DrbdMon::finish_action::RESTART_IMMED;
-                                    shutdown = true;
-                                }
-                                else
-                                if (c == HOTKEY_QUIT)
-                                {
-                                    fin_action = DrbdMon::finish_action::TERMINATE;
-                                    shutdown = true;
-                                }
-                                else
-                                if (c == HOTKEY_VERSION)
-                                {
-                                    std::string version_info = PROGRAM_NAME + " v" + VERSION +
-                                        " (" + GITHASH + ")";
-                                    log.add_entry(MessageLog::log_level::INFO, version_info);
-                                    display->status_display();
-                                }
-                                else
-                                if (c == DEBUG_SEQ_PFX)
-                                {
-                                    debug_key = true;
-                                }
-                                else
-                                {
-                                    display->key_pressed(c);
-                                }
+                                // Throws an EventsSourceException if the currently tracked events source
+                                // process exits, thereby triggering reinitialization
+                                events_source->cleanup_child_processes();
+                                break;
+                            }
+                            case CoreIo::signal_type::SIGNAL_DEBUG:
+                            {
+                                fin_action = DrbdMonCore::finish_action::DEBUG_MODE;
+                                shutdown_flag = true;
+                                break;
+                            }
+                            case CoreIo::signal_type::SIGNAL_TIMER:
+                            {
+                                display->notify_drbd_changed();
+                                update_timestamp();
+                                timer_armed = false;
+                                break;
+                            }
+                            case CoreIo::signal_type::SIGNAL_GENERIC:
+                                // fall-through
+                            default:
+                            {
+                                // No-op
+                                break;
                             }
                         }
                         break;
+                    }
+                    case EventsIo::event::STDIN:
+                    {
+                        const uint32_t key = events_io->get_key_pressed();
+                        if (key != KeyCodes::NONE)
+                        {
+                            if (!have_initial_state)
+                            {
+                                have_initial_state = true;
+                                display->exit_initial_display();
+                            }
+
+                            if (key != KeyCodes::MOUSE_EVENT)
+                            {
+                                display->key_pressed(key);
+                            }
+                            else
+                            {
+                                MouseEvent& mouse = events_io->get_mouse_action();
+                                display->mouse_action(mouse);
+                            }
+                        }
+                        break;
+                    }
+                    case EventsIo::event::WAKEUP:
+                    {
+                        // Wakeup signal
+                        // Check data shared between threads for changes
+                        // TODO: Adapt cond_display_update to handle different kinds of updates
+                        const uint64_t notification_mask = sub_proc_notifier->get_notification_mask();
+                        if ((notification_mask & SubProcessNotification::MASK_OUT_OF_MEMORY) != 0)
+                        {
+                            throw std::bad_alloc();
+                        }
+                        else
+                        if ((notification_mask & SubProcessNotification::MASK_SUBPROCESS_CHANGED) != 0)
+                        {
+                            display->notify_task_queue_changed();
+                        }
+
+                        if (msg_log_notifier->query_log_changed())
+                        {
+                            display->notify_message_log_changed();
+                        }
+
+                        break;
+                    }
                     case EventsIo::event::NONE:
+                    {
                         // Not supposed to happen
                         // fall-through
+                    }
                     default:
+                    {
                         log.add_entry(
                             MessageLog::log_level::ALERT,
                             "Internal error: Unexpected event type returned by EventsIo"
                         );
                         break;
+                    }
                 }
             }
         }
@@ -362,8 +345,8 @@ void DrbdMon::run()
                 MessageLog::log_level::ALERT,
                 "The connection to the DRBD events source failed due to an I/O error"
             );
-            fin_action = DrbdMon::finish_action::RESTART_DELAYED;
-            fail_data = DrbdMon::fail_info::EVENTS_IO;
+            fin_action = DrbdMonCore::finish_action::RESTART_DELAYED;
+            fail_data = DrbdMonCore::fail_info::EVENTS_IO;
         }
         catch (EventsSourceException& src_exc)
         {
@@ -387,8 +370,8 @@ void DrbdMon::run()
                     *debug_info
                 );
             }
-            fin_action = DrbdMon::finish_action::RESTART_DELAYED;
-            fail_data = DrbdMon::fail_info::EVENTS_SOURCE;
+            fin_action = DrbdMonCore::finish_action::RESTART_DELAYED;
+            fail_data = DrbdMonCore::fail_info::EVENTS_SOURCE;
         }
         catch (EventsIoException& io_exc)
         {
@@ -412,8 +395,8 @@ void DrbdMon::run()
                     *debug_info
                 );
             }
-            fin_action = DrbdMon::finish_action::RESTART_DELAYED;
-            fail_data = DrbdMon::fail_info::EVENTS_IO;
+            fin_action = DrbdMonCore::finish_action::RESTART_DELAYED;
+            fail_data = DrbdMonCore::fail_info::EVENTS_IO;
         }
         catch (EventException& event_exc)
         {
@@ -453,15 +436,15 @@ void DrbdMon::run()
                 );
             }
 
-            fin_action = DrbdMon::finish_action::RESTART_DELAYED;
-            fail_data = DrbdMon::fail_info::GENERIC;
+            fin_action = DrbdMonCore::finish_action::RESTART_DELAYED;
+            fail_data = DrbdMonCore::fail_info::GENERIC;
         }
         catch (ConfigurationException&)
         {
             // A ConfigurationException is thrown to abort and exit
             // while configuring options
             // (--help uses this too)
-            fin_action = DrbdMon::finish_action::TERMINATE_NO_CLEAR;
+            fin_action = DrbdMonCore::finish_action::TERMINATE_NO_CLEAR;
         }
     }
     catch (std::bad_alloc&)
@@ -473,8 +456,14 @@ void DrbdMon::run()
     cleanup(event_props.get(), events_io.get());
 }
 
+void DrbdMon::shutdown(const DrbdMonCore::finish_action action) noexcept
+{
+    fin_action = action;
+    shutdown_flag = true;
+}
+
 // @throws std::bad_alloc, EventsMessageException, EventObjectException
-void DrbdMon::tokenize_event_message(std::string& event_line, PropsMap& event_props)
+void DrbdMon::tokenize_event_message(GenericDisplay* const display_ptr, std::string& event_line, PropsMap& event_props)
 {
     try
     {
@@ -487,7 +476,7 @@ void DrbdMon::tokenize_event_message(std::string& event_line, PropsMap& event_pr
                 std::string event_type = tokens.next();
                 parse_event_props(tokens, event_props, event_line);
 
-                process_event_message(event_mode, event_type, event_props, event_line);
+                process_event_message(display_ptr, event_mode, event_type, event_props, event_line);
             }
         }
     }
@@ -509,6 +498,7 @@ void DrbdMon::tokenize_event_message(std::string& event_line, PropsMap& event_pr
 
 // @throws std::bad_alloc, EventMessageException, EventObjectException
 void DrbdMon::process_event_message(
+    GenericDisplay* const display,
     std::string& event_mode,
     std::string& event_type,
     PropsMap& event_props,
@@ -541,22 +531,22 @@ void DrbdMon::process_event_message(
 
         if (event_type == TYPE_CONNECTION)
         {
-            create_connection(event_props, event_line);
+            rsc_dir->create_connection(event_props, event_line);
         }
         else
         if (event_type == TYPE_DEVICE)
         {
-            create_device(event_props, event_line);
+            rsc_dir->create_device(event_props, event_line);
         }
         else
         if (event_type == TYPE_PEER_DEVICE)
         {
-            create_peer_device(event_props, event_line);
+            rsc_dir->create_peer_device(event_props, event_line);
         }
         else
         if (event_type == TYPE_RESOURCE)
         {
-            create_resource(event_props, event_line);
+            rsc_dir->create_resource(event_props, event_line);
         }
         else
         if (event_type == TYPE_SEPARATOR && event_mode == MODE_EXISTS)
@@ -567,28 +557,28 @@ void DrbdMon::process_event_message(
 
             switch (fail_data)
             {
-                case DrbdMon::fail_info::NONE:
+                case DrbdMonCore::fail_info::NONE:
                     // no-op
                     break;
-                case DrbdMon::fail_info::OUT_OF_MEMORY:
+                case DrbdMonCore::fail_info::OUT_OF_MEMORY:
                     log.add_entry(
                         MessageLog::log_level::INFO,
                         "Status tracking reestablished after out-of-memory condition"
                     );
                     break;
-                case DrbdMon::fail_info::EVENTS_IO:
+                case DrbdMonCore::fail_info::EVENTS_IO:
                     log.add_entry(
                         MessageLog::log_level::INFO,
                         "Events source I/O reestablished"
                     );
                     break;
-                case DrbdMon::fail_info::EVENTS_SOURCE:
+                case DrbdMonCore::fail_info::EVENTS_SOURCE:
                     log.add_entry(
                         MessageLog::log_level::INFO,
                         "Events source process respawned"
                     );
                     break;
-                case DrbdMon::fail_info::GENERIC:
+                case DrbdMonCore::fail_info::GENERIC:
                     // fall-through
                 default:
                     log.add_entry(
@@ -601,7 +591,7 @@ void DrbdMon::process_event_message(
             // Indicate that the initial state is available now
             // (This can be used to disable display updates until an initial state is available)
             have_initial_state = true;
-            display->status_display();
+            display->exit_initial_display();
 
             // In case that multiple "exists -" lines are received,
             // which is actually not supposed to happen, avoid spamming
@@ -623,22 +613,22 @@ void DrbdMon::process_event_message(
 
         if (event_type == TYPE_CONNECTION)
         {
-            update_connection(event_props, event_line);
+            rsc_dir->update_connection(event_props, event_line);
         }
         else
         if (event_type == TYPE_DEVICE)
         {
-            update_device(event_props, event_line);
+            rsc_dir->update_device(event_props, event_line);
         }
         else
         if (event_type == TYPE_PEER_DEVICE)
         {
-            update_peer_device(event_props, event_line);
+            rsc_dir->update_peer_device(event_props, event_line);
         }
         else
         if (event_type == TYPE_RESOURCE)
         {
-            update_resource(event_props, event_line);
+            rsc_dir->update_resource(event_props, event_line);
         }
         // unknown object types are skipped
     }
@@ -655,7 +645,7 @@ void DrbdMon::process_event_message(
 
         if (event_type == TYPE_RESOURCE)
         {
-            rename_resource(event_props, event_line);
+            rsc_dir->rename_resource(event_props, event_line);
         }
         else
         {
@@ -678,22 +668,22 @@ void DrbdMon::process_event_message(
 
         if (event_type == TYPE_CONNECTION)
         {
-            destroy_connection(event_props, event_line);
+            rsc_dir->destroy_connection(event_props, event_line);
         }
         else
         if (event_type == TYPE_DEVICE)
         {
-            destroy_device(event_props, event_line);
+            rsc_dir->destroy_device(event_props, event_line);
         }
         else
         if (event_type == TYPE_PEER_DEVICE)
         {
-            destroy_peer_device(event_props, event_line);
+            rsc_dir->destroy_peer_device(event_props, event_line);
         }
         else
         if (event_type == TYPE_RESOURCE)
         {
-            destroy_resource(event_props, event_line);
+            rsc_dir->destroy_resource(event_props, event_line);
         }
         // unknown object types are skipped
     }
@@ -704,7 +694,7 @@ void DrbdMon::process_event_message(
  * Returns the action requested to be taken upon return from this class' run() method.
  * This method should be called only after run() has returned.
  */
-DrbdMon::finish_action DrbdMon::get_fin_action() const
+DrbdMonCore::finish_action DrbdMon::get_fin_action() const
 {
     return fin_action;
 }
@@ -766,430 +756,6 @@ void DrbdMon::clear_event_props(PropsMap& event_props)
     event_props.clear();
 }
 
-// @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::create_connection(PropsMap& event_props, const std::string& event_line)
-{
-    try
-    {
-        DrbdResource& res = get_resource(event_props, event_line);
-
-        std::unique_ptr<DrbdConnection> conn(DrbdConnection::new_from_props(event_props));
-        conn->update(event_props);
-        static_cast<void> (conn->update_state_flags());
-        res.add_connection(conn.get());
-        StateFlags::state res_last_state = res.get_state();
-        StateFlags::state res_new_state = res.child_state_flags_changed();
-        problem_counter_update(res_last_state, res_new_state);
-        static_cast<void> (conn.release());
-    }
-    catch (dsaext::DuplicateInsertException& dup_exc)
-    {
-        std::string error_msg("Invalid DRBD event: Duplicate connection creation");
-        std::string debug_info("Duplicate connection creation");
-        throw EventMessageException(&error_msg, &debug_info, &event_line);
-    }
-}
-
-// @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::create_device(PropsMap& event_props, const std::string& event_line)
-{
-    try
-    {
-        DrbdResource& res = get_resource(event_props, event_line);
-
-        std::unique_ptr<DrbdVolume> vol(DrbdVolume::new_from_props(event_props));
-        vol->update(event_props);
-        static_cast<void> (vol->update_state_flags());
-        res.add_volume(vol.get());
-        StateFlags::state res_last_state = res.get_state();
-        StateFlags::state res_new_state = res.child_state_flags_changed();
-        problem_counter_update(res_last_state, res_new_state);
-        static_cast<void> (vol.release());
-    }
-    catch (dsaext::DuplicateInsertException& dup_exc)
-    {
-        std::string error_msg("Invalid DRBD event: Duplicate volume creation");
-        std::string debug_info("Duplicate device (volume) creation");
-        throw EventMessageException(&error_msg, &debug_info, &event_line);
-    }
-}
-
-// @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::create_peer_device(PropsMap& event_props, const std::string& event_line)
-{
-    try
-    {
-        DrbdResource& res = get_resource(event_props, event_line);
-        DrbdConnection& conn = get_connection(res, event_props, event_line);
-
-        std::unique_ptr<DrbdVolume> vol(DrbdVolume::new_from_props(event_props));
-        vol->update(event_props);
-        vol->set_connection(&conn);
-        static_cast<void> (vol->update_state_flags());
-        conn.add_volume(vol.get());
-        static_cast<void> (conn.child_state_flags_changed());
-        StateFlags::state res_last_state = res.get_state();
-        StateFlags::state res_new_state = res.child_state_flags_changed();
-        problem_counter_update(res_last_state, res_new_state);
-        static_cast<void> (vol.release());
-    }
-    catch (dsaext::DuplicateInsertException& dup_exc)
-    {
-        std::string error_msg("Invalid DRBD event: Duplicate peer volume creation");
-        std::string debug_info("Duplicate peer device (peer volume) creation");
-        throw EventMessageException(&error_msg, &debug_info, &event_line);
-    }
-}
-
-// @throws std::bad_alloc, EventMessageException
-void DrbdMon::create_resource(PropsMap& event_props, const std::string& event_line)
-{
-    try
-    {
-        std::unique_ptr<DrbdResource> res(DrbdResource::new_from_props(event_props));
-        res->update(event_props);
-        static_cast<void> (res->update_state_flags());
-        std::unique_ptr<std::string> res_name(new std::string(res->get_name()));
-        resources_map->insert(res_name.get(), res.get());
-        if (res->has_mark_state() && problem_count < ~static_cast<uint64_t> (0))
-        {
-            ++problem_count;
-        }
-        static_cast<void> (res.release());
-        static_cast<void> (res_name.release());
-    }
-    catch (dsaext::DuplicateInsertException& dup_exc)
-    {
-        std::string error_msg("Invalid DRBD event: Duplicate resource creation");
-        std::string debug_info("Duplicate resource creation");
-        throw EventMessageException(&error_msg, &debug_info, &event_line);
-    }
-}
-
-// @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::update_connection(PropsMap& event_props, const std::string& event_line)
-{
-    DrbdResource& res = get_resource(event_props, event_line);
-    DrbdConnection& conn = get_connection(res, event_props, event_line);
-    conn.update(event_props);
-
-    // Adjust connection state flags
-    StateFlags::state conn_last_state = conn.get_state();
-    StateFlags::state conn_new_state = conn.update_state_flags();
-    if (conn_last_state != conn_new_state &&
-        (conn_last_state == StateFlags::state::NORM || conn_new_state == StateFlags::state::NORM))
-    {
-        // Connection state flags changed, adjust resource state flags
-        StateFlags::state res_last_state = res.get_state();
-        StateFlags::state res_new_state = res.child_state_flags_changed();
-        problem_counter_update(res_last_state, res_new_state);
-    }
-}
-
-// @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::update_device(PropsMap& event_props, const std::string& event_line)
-{
-    DrbdResource& res = get_resource(event_props, event_line);
-    DrbdVolume& vol = get_device(dynamic_cast<VolumesContainer&> (res), event_props, event_line);
-    vol.update(event_props);
-
-    // Adjust volume state flags
-    static_cast<void> (vol.update_state_flags());
-
-    // Volume state flags changed, adjust resource state flags
-    StateFlags::state res_last_state = res.get_state();
-    StateFlags::state res_new_state = res.child_state_flags_changed();
-    problem_counter_update(res_last_state, res_new_state);
-}
-
-// @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::update_peer_device(PropsMap& event_props, const std::string& event_line)
-{
-    DrbdResource& res = get_resource(event_props, event_line);
-    DrbdConnection& conn = get_connection(res, event_props, event_line);
-    DrbdVolume& vol = get_device(dynamic_cast<VolumesContainer&> (conn), event_props, event_line);
-    vol.update(event_props);
-
-    // Adjust volume state flags
-    StateFlags::state vol_last_state = vol.get_state();
-    StateFlags::state vol_new_state = vol.update_state_flags();
-    if (vol_last_state != vol_new_state &&
-        (vol_last_state == StateFlags::state::NORM || vol_new_state == StateFlags::state::NORM))
-    {
-        // Volume state flags changed, adjust connection state flags
-        StateFlags::state conn_last_state = conn.get_state();
-        StateFlags::state conn_new_state = conn.child_state_flags_changed();
-        if (conn_last_state != conn_new_state &&
-            (conn_last_state == StateFlags::state::NORM || conn_new_state == StateFlags::state::NORM))
-        {
-            // Connection state flags changed, adjust resource state flags
-            StateFlags::state res_last_state = res.get_state();
-            StateFlags::state res_new_state = res.child_state_flags_changed();
-            problem_counter_update(res_last_state, res_new_state);
-        }
-    }
-}
-
-// @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::update_resource(PropsMap& event_props, const std::string& event_line)
-{
-    DrbdResource& res = get_resource(event_props, event_line);
-    res.update(event_props);
-
-    StateFlags::state res_last_state = res.get_state();
-    StateFlags::state res_new_state = res.update_state_flags();
-    problem_counter_update(res_last_state, res_new_state);
-}
-
-// @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::rename_resource(PropsMap& event_props, const std::string& event_line)
-{
-    std::unique_ptr<DrbdResource> res_obj;
-    {
-        const std::string& evt_res_name = lookup_resource_name(event_props, event_line);
-        ResourcesMap::Node* const node = resources_map->get_node(&evt_res_name);
-        if (node == nullptr)
-        {
-            std::string error_msg("Non-existent resource referenced by the DRBD events source");
-            std::string debug_info("Received a DRBD event '");
-            debug_info += MODE_RENAME;
-            debug_info += "' for a non-existent resource";
-            throw EventObjectException(&error_msg, &debug_info, &event_line);
-        }
-
-        // Extract the resource object and deallocate its lookup key (the resource's name)
-        delete node->get_key();
-        res_obj = std::unique_ptr<DrbdResource>(node->get_value());
-        // Remove the entry for that resource
-        resources_map->remove_node(node);
-    }
-
-    try
-    {
-        // Change the resource's name
-        res_obj->rename(event_props);
-
-        // Allocate a new lookup key with resource's new name
-        std::unique_ptr<std::string> new_res_name(new std::string(res_obj->get_name()));
-        // Reinsert an entry for that resource
-        resources_map->insert(new_res_name.get(), res_obj.get());
-
-        new_res_name.release();
-        res_obj.release();
-    }
-    catch (dsaext::DuplicateInsertException& dup_exc)
-    {
-        std::string error_msg("Invalid DRBD 'rename' event: Duplicate resource entry");
-        std::string debug_info("'rename' event: Duplicate resource entry:");
-        throw EventMessageException(&error_msg, &debug_info, &event_line);
-    }
-}
-
-// @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::destroy_connection(PropsMap& event_props, const std::string& event_line)
-{
-    DrbdResource& res = get_resource(event_props, event_line);
-    bool conn_marked = false;
-    {
-        DrbdConnection& conn = get_connection(res, event_props, event_line);
-        conn_marked = conn.has_mark_state();
-        res.remove_connection(conn.get_name());
-    }
-
-    if (conn_marked)
-    {
-        StateFlags::state res_last_state = res.get_state();
-        StateFlags::state res_new_state = res.child_state_flags_changed();
-        problem_counter_update(res_last_state, res_new_state);
-    }
-}
-
-// @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::destroy_device(PropsMap& event_props, const std::string& event_line)
-{
-    DrbdResource& res = get_resource(event_props, event_line);
-    bool vol_marked = false;
-    {
-        DrbdVolume& vol = get_device(dynamic_cast<VolumesContainer&> (res), event_props, event_line);
-        vol_marked = vol.has_mark_state();
-        res.remove_volume(vol.get_volume_nr());
-    }
-
-    if (vol_marked)
-    {
-        StateFlags::state res_last_state = res.get_state();
-        StateFlags::state res_new_state = res.child_state_flags_changed();
-        problem_counter_update(res_last_state, res_new_state);
-    }
-}
-
-// @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::destroy_peer_device(PropsMap& event_props, const std::string& event_line)
-{
-    DrbdResource& res = get_resource(event_props, event_line);
-    DrbdConnection& conn = get_connection(res, event_props, event_line);
-    bool peer_vol_marked = false;
-    {
-        // May report non-existing volume if required
-        DrbdVolume& peer_vol =  get_device(dynamic_cast<VolumesContainer&> (conn), event_props, event_line);
-        peer_vol_marked = peer_vol.has_mark_state();
-    }
-
-    std::string* vol_nr_str = event_props.get(&DrbdVolume::PROP_KEY_VOL_NR);
-    if (vol_nr_str != nullptr)
-    {
-        try
-        {
-            uint16_t vol_nr = DrbdVolume::parse_volume_nr(*vol_nr_str);
-            conn.remove_volume(vol_nr);
-            if (peer_vol_marked)
-            {
-                static_cast<void> (conn.child_state_flags_changed());
-                StateFlags::state res_last_state = res.get_state();
-                StateFlags::state res_new_state = res.child_state_flags_changed();
-                problem_counter_update(res_last_state, res_new_state);
-            }
-        }
-        catch (dsaext::NumberFormatException&)
-        {
-            std::string error_msg("Invalid DRBD event: Unparsable volume number");
-            std::string debug_info("Unparsable volume number");
-            throw EventMessageException(&error_msg, &debug_info, &event_line);
-        }
-    }
-    else
-    {
-        std::string error_msg("Invalid DRBD event: Missing volume number");
-        std::string debug_info("Missing volume number");
-        throw EventMessageException(&error_msg, &debug_info, &event_line);
-    }
-}
-
-// @throws std::bad_alloc, EventMessageException, EventObjectException
-void DrbdMon::destroy_resource(PropsMap& event_props, const std::string& event_line)
-{
-    std::string* res_name = event_props.get(&DrbdResource::PROP_KEY_RES_NAME);
-    if (res_name != nullptr)
-    {
-        ResourcesMap::Node* node = resources_map->get_node(res_name);
-        if (node != nullptr)
-        {
-            DrbdResource* res = node->get_value();
-            if (res->has_mark_state() && problem_count > 0)
-            {
-                --problem_count;
-            }
-            delete node->get_key();
-            delete node->get_value();
-            resources_map->remove_node(node);
-        }
-        else
-        {
-            std::string error_msg("DRBD event line references a non-existent resource");
-            std::string debug_info("DRBD event line references a non-existent resource");
-            throw EventObjectException(&error_msg, &debug_info, &event_line);
-        }
-    }
-    else
-    {
-        std::string error_msg("Received DRBD event line does not contain a resource name");
-        std::string debug_info("DRBD event line contains no resource name");
-        throw EventMessageException(&error_msg, &debug_info, &event_line);
-    }
-}
-
-// @throws std::bad_alloc, EventMessageException, EventObjectException
-DrbdConnection& DrbdMon::get_connection(DrbdResource& res, PropsMap& event_props, const std::string& event_line)
-{
-    DrbdConnection* conn {nullptr};
-    std::string* conn_name = event_props.get(&DrbdConnection::PROP_KEY_CONN_NAME);
-    if (conn_name != nullptr)
-    {
-        conn = res.get_connection(*conn_name);
-    }
-    else
-    {
-        std::string error_msg("Invalid DRBD event: Missing connection information");
-        std::string debug_info("Missing 'connection' field");
-        throw EventMessageException(&error_msg, &debug_info, &event_line);
-    }
-    if (conn == nullptr)
-    {
-        std::string error_msg("Non-existent connection referenced by the DRBD events source");
-        std::string debug_info("DRBD event line references a non-existent connection");
-        throw EventObjectException(&error_msg, &debug_info, &event_line);
-    }
-    return *conn;
-}
-
-// @throws std::bad_alloc, EventMessageException, EventObjectException
-DrbdVolume& DrbdMon::get_device(VolumesContainer& vol_con, PropsMap& event_props, const std::string& event_line)
-{
-    DrbdVolume* vol {nullptr};
-    std::string* vol_nr_str = event_props.get(&DrbdVolume::PROP_KEY_VOL_NR);
-    if (vol_nr_str != nullptr)
-    {
-        try
-        {
-            uint16_t vol_nr = DrbdVolume::parse_volume_nr(*vol_nr_str);
-            vol = vol_con.get_volume(vol_nr);
-        }
-        catch (dsaext::NumberFormatException&)
-        {
-            std::string error_msg("Invalid DRBD event: Invalid volume number");
-            std::string debug_info("Unparsable volume number");
-            throw EventMessageException(&error_msg, &debug_info, &event_line);
-        }
-    }
-    else
-    {
-        std::string error_msg("Invalid DRBD event: Missing volume number");
-        std::string debug_info("Missing volume number");
-        throw EventMessageException(&error_msg, &debug_info, &event_line);
-    }
-    if (vol == nullptr)
-    {
-        std::string error_msg("Non-existent volume id referenced by the DRBD events source");
-        std::string debug_info("DRBD event line references a non-existent volume id");
-        throw EventObjectException(&error_msg, &debug_info, &event_line);
-    }
-    return *vol;
-}
-
-// @throws std::bad_alloc, EventMessageException, EventObjectException
-DrbdResource& DrbdMon::get_resource(PropsMap& event_props, const std::string& event_line)
-{
-    const std::string& res_name = lookup_resource_name(event_props, event_line);
-    DrbdResource* const res = resources_map->get(&res_name);
-    if (res == nullptr)
-    {
-        std::string error_msg("Non-existent resource referenced by the DRBD events source");
-        std::string debug_info("DRBD event line references a non-existent resource");
-        throw EventObjectException(&error_msg, &debug_info, &event_line);
-    }
-    return *res;
-}
-
-// @throws EventMessageException
-const std::string& DrbdMon::lookup_resource_name(PropsMap& event_props, const std::string& event_line)
-{
-    const std::string* const res_name = event_props.get(&DrbdResource::PROP_KEY_RES_NAME);
-    if (res_name == nullptr)
-    {
-        std::string error_msg("Received DRBD event line does not contain a resource name");
-        std::string debug_info("DRBD event line contains no resource name");
-        throw EventMessageException(&error_msg, &debug_info, &event_line);
-    }
-    return *res_name;
-}
-
-// @throws std::bad_alloc
-void DrbdMon::setup_hotkeys_info()
-{
-    hotkeys_info->append(&HOTKEY_QUIT, &DESC_QUIT);
-    hotkeys_info->append(&HOTKEY_REPAINT, &DESC_REPAINT);
-}
-
 // Frees resources
 // @throws std::bad_alloc
 void DrbdMon::cleanup(
@@ -1200,21 +766,6 @@ void DrbdMon::cleanup(
     if (event_props != nullptr)
     {
         clear_event_props(*event_props);
-    }
-
-    if (events_io != nullptr)
-    {
-        try
-        {
-            events_io->restore_terminal();
-        }
-        catch (EventsIoException&)
-        {
-            log.add_entry(
-                MessageLog::log_level::WARN,
-                "Restoring the terminal mode failed"
-            );
-        }
     }
 }
 
@@ -1344,7 +895,7 @@ void DrbdMon::announce_options(Configurator& collector)
 void DrbdMon::options_help() noexcept
 {
     std::cerr.clear();
-    std::cerr << DrbdMon::PROGRAM_NAME << " configuration options:\n";
+    std::cerr << DrbdMonConsts::PROGRAM_NAME << " configuration options:\n";
     std::cerr << "  --version        Display version information\n";
     std::cerr << "  --help           Display help\n";
     std::cerr << "  --freqlmt <interval>     Set a frequency limit for display updates\n";
@@ -1375,7 +926,8 @@ void DrbdMon::set_flag(std::string& key)
     else
     if (key == OPT_VERSION.key)
     {
-        std::cout << PROGRAM_NAME << " v" << VERSION << " (" << GITHASH << ")" << std::endl;
+        std::cout << DrbdMonConsts::PROGRAM_NAME << " v" << DrbdMonConsts::UTILS_VERSION <<
+                     " (" << DrbdMonConsts::BUILD_HASH << ")" << std::endl;
         throw ConfigurationException();
     }
 }
@@ -1421,11 +973,9 @@ void DrbdMon::set_option(std::string& key, std::string& value)
             use_dflt_freq_lmt = false;
 
             interval *= factor;
-            if (interval > 0 && interval_timer_mgr == nullptr)
+            if (interval > 0)
             {
-                interval_timer_mgr = std::unique_ptr<IntervalTimer>(
-                    new IntervalTimer(log, interval)
-                );
+                interval_timer_mgr->set_interval(interval);
             }
         }
         catch (dsaext::NumberFormatException&)
@@ -1440,33 +990,31 @@ void DrbdMon::set_option(std::string& key, std::string& value)
     }
 }
 
-uint64_t DrbdMon::get_problem_count() const noexcept
+uint32_t DrbdMon::get_problem_count() const noexcept
 {
-    return problem_count;
+    return rsc_dir->get_problem_count();
 }
 
-void DrbdMon::problem_counter_update(StateFlags::state res_last_state, StateFlags::state res_new_state) noexcept
+void DrbdMon::notify_config_changed()
 {
-    if (res_last_state == StateFlags::state::NORM && res_new_state != StateFlags::state::NORM &&
-        problem_count < ~static_cast<uint64_t> (0))
+    // Apply interval timer change
+    if (interval_timer_mgr != nullptr)
     {
-        ++problem_count;
-    }
-    else
-    if (res_last_state != StateFlags::state::NORM && res_new_state == StateFlags::state::NORM &&
-        problem_count > 0)
-    {
-        --problem_count;
+        const uint16_t dsp_interval = config.dsp_interval;
+        timer_available = dsp_interval != 0;
+        if (timer_available)
+        {
+            interval_timer_mgr->set_interval(bounds<uint16_t>(0, dsp_interval, MAX_INTERVAL));
+        }
     }
 }
 
-void DrbdMon::disable_interval_timer(bool& timer_available, bool& timer_armed) noexcept
+void DrbdMon::disable_interval_timer() noexcept
 {
     // If the timer failed, disable limited frequency display updates
     // and update the display immediately
     timer_available = false;
     timer_armed = false;
-    interval_timer_mgr = nullptr;
     log.add_entry(
         MessageLog::log_level::ALERT,
         "System timer failed, display update frequency limiting has been disabled"
@@ -1491,7 +1039,7 @@ inline bool DrbdMon::is_interval_exceeded()
     return exceeded;
 }
 
-inline void DrbdMon::cond_display_update(bool& timer_available, bool& timer_armed) noexcept
+inline void DrbdMon::cond_display_update(GenericDisplay* const display_ptr)
 {
     try
     {
@@ -1499,7 +1047,7 @@ inline void DrbdMon::cond_display_update(bool& timer_available, bool& timer_arme
         {
             if (is_interval_exceeded())
             {
-                display->status_display();
+                display_ptr->notify_drbd_changed();
                 prev_timestamp = cur_timestamp;
             }
             else
@@ -1511,16 +1059,16 @@ inline void DrbdMon::cond_display_update(bool& timer_available, bool& timer_arme
     }
     catch (TimerException&)
     {
-        disable_interval_timer(timer_available, timer_armed);
-        display->status_display();
+        disable_interval_timer();
+        display_ptr->notify_drbd_changed();
     }
 }
 
-inline void DrbdMon::update_timestamp(bool& timer_available, bool& timer_armed) noexcept
+inline void DrbdMon::update_timestamp() noexcept
 {
     if (clock_gettime(CLOCK_MONOTONIC, &prev_timestamp) != 0)
     {
-        disable_interval_timer(timer_available, timer_armed);
+        disable_interval_timer();
     }
 }
 

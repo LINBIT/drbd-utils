@@ -2,7 +2,7 @@
 #include <cstring>
 
 // throws std::bad_alloc, ConfigurationException
-IntervalTimer::IntervalTimer(MessageLog& log, uint16_t interval_msecs)
+IntervalTimer::IntervalTimer(MessageLog& log, const uint16_t interval_msecs)
 {
     std::unique_ptr<struct sigevent> timer_evt_cfg_mgr(new struct sigevent);
 
@@ -20,15 +20,25 @@ IntervalTimer::IntervalTimer(MessageLog& log, uint16_t interval_msecs)
         throw ConfigurationException();
     }
 
-    interval_timer_cfg.it_interval.tv_nsec = 0;
-    interval_timer_cfg.it_interval.tv_sec = 0;
-    interval_timer_cfg.it_value.tv_sec = interval_msecs / 1000;
-    interval_timer_cfg.it_value.tv_nsec = (interval_msecs % 1000) * 1000000;
+    set_interval_impl(interval_msecs);
 }
 
 IntervalTimer::~IntervalTimer() noexcept
 {
     timer_delete(interval_timer_id);
+}
+
+void IntervalTimer::set_interval(const uint16_t interval_msecs) noexcept
+{
+    set_interval_impl(interval_msecs);
+}
+
+void IntervalTimer::set_interval_impl(const uint16_t interval_msecs) noexcept
+{
+    interval_timer_cfg.it_interval.tv_nsec = 0;
+    interval_timer_cfg.it_interval.tv_sec = 0;
+    interval_timer_cfg.it_value.tv_sec = interval_msecs / 1000;
+    interval_timer_cfg.it_value.tv_nsec = (interval_msecs % 1000) * 1000000;
 }
 
 // @throws TimerException

@@ -110,13 +110,15 @@ class ConfigurationException : public std::exception
 {
   public:
     ConfigurationException() = default;
+    ConfigurationException(const std::string error_message);
     ConfigurationException(const ConfigurationException& orig) = default;
     ConfigurationException& operator=(const ConfigurationException& orig) = default;
     ConfigurationException(ConfigurationException&& orig) = default;
     ConfigurationException& operator=(ConfigurationException&& orig) = default;
-    virtual ~ConfigurationException() noexcept
-    {
-    }
+    virtual ~ConfigurationException() noexcept = default;
+    virtual const char* what() const noexcept;
+  private:
+    std::string message;
 };
 
 // Thrown to indicate a problem with the operating system's timer functions

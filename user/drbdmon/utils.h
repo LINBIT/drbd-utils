@@ -10,30 +10,7 @@
 extern "C"
 {
     #include <spawn.h>
-    #include <sys/ioctl.h>
 }
-
-class TermSize
-{
-  public:
-    TermSize();
-    TermSize(const TermSize& orig) = default;
-    TermSize& operator=(const TermSize& orig) = default;
-    TermSize(TermSize&& orig) = default;
-    TermSize& operator=(TermSize&& orig) = default;
-    virtual ~TermSize() noexcept
-    {
-    }
-
-    virtual bool probe_terminal_size();
-    virtual bool is_valid() const;
-    virtual uint16_t get_size_x() const;
-    virtual uint16_t get_size_y() const;
-
-  private:
-    struct winsize term_size;
-    bool valid {false};
-};
 
 namespace posix
 {

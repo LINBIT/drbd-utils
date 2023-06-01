@@ -121,3 +121,13 @@ EventsIoException::EventsIoException(
 EventsIoException::~EventsIoException() noexcept
 {
 }
+
+ConfigurationException::ConfigurationException(const std::string error_message):
+    message(error_message)
+{
+}
+
+const char* ConfigurationException::what() const noexcept
+{
+    return message.c_str();
+}

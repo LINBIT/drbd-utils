@@ -5,35 +5,36 @@
 #include <memory>
 #include <cstdint>
 
+#include <DrbdMonCore.h>
+#include <MonitorEnvironment.h>
 #include <map_types.h>
 // https://github.com/raltnoeder/cppdsaext
 #include <dsaext.h>
-#include <DrbdResource.h>
-#include <DrbdConnection.h>
-#include <DrbdVolume.h>
-#include <VolumesContainer.h>
+#include <objects/ResourceDirectory.h>
+#include <objects/DrbdResource.h>
+#include <objects/DrbdConnection.h>
+#include <objects/DrbdVolume.h>
+#include <objects/VolumesContainer.h>
 #include <StringTokenizer.h>
-#include <GenericDisplay.h>
-#include <EventsSourceSpawner.h>
-#include <EventsIo.h>
+#include <terminal/GenericDisplay.h>
+#include <subprocess/EventsSourceSpawner.h>
 #include <MessageLog.h>
 #include <Configurable.h>
 #include <Configurator.h>
 #include <comparators.h>
 #include <IntervalTimer.h>
-#include <colormodes.h>
+
+// FIXME: Move to system_api
+#include <platform/Linux/EventsIo.h>
 
 extern "C"
 {
     #include <time.h>
 }
 
-class DrbdMon : public Configurable, public Configurator
+class DrbdMon : public DrbdMonCore, public Configurable, public Configurator
 {
   public:
-    static const std::string PROGRAM_NAME;
-    static const std::string VERSION;
-
     static const std::string TOKEN_DELIMITER;
 
     static const char DEBUG_SEQ_PFX;
@@ -67,17 +68,6 @@ class DrbdMon : public Configurable, public Configurator
     static const std::string MODE_RENAME;
     static const std::string MODE_DESTROY;
 
-    static const char HOTKEY_QUIT;
-    static const char HOTKEY_REPAINT;
-    static const char HOTKEY_REINIT;
-    static const char HOTKEY_VERSION;
-
-    static const std::string DESC_QUIT;
-    static const std::string DESC_REPAINT;
-    static const std::string DESC_CLEAR_MSG;
-    static const std::string DESC_REINIT;
-
-
     static const size_t MAX_LINE_LENGTH {1024};
 
     // DrbdMon' normal behavior is to update the display only after
@@ -87,35 +77,11 @@ class DrbdMon : public Configurable, public Configurator
     // display every MAX_EVENT_BUNDLE events
     static const uint32_t MAX_EVENT_BUNDLE {911};
 
-    enum class fail_info : uint16_t
-    {
-        NONE,
-        GENERIC,
-        OUT_OF_MEMORY,
-        EVENTS_SOURCE,
-        EVENTS_IO
-    };
-
-    enum class finish_action : uint16_t
-    {
-        RESTART_IMMED,
-        RESTART_DELAYED,
-        TERMINATE,
-        TERMINATE_NO_CLEAR,
-        DEBUG_MODE
-    };
-
-    const color_mode drbdmon_colors;
-
     // @throws std::bad_alloc
     DrbdMon(
-        int argc,
-        char* argv[],
-        MessageLog& log_ref,
-        MessageLog& debug_log_ref,
-        fail_info& fail_data_ref,
-        const std::string* const node_name_ref,
-        const color_mode colors
+        int                         argc,
+        char*                       argv[],
+        MonitorEnvironment&         mon_env_ref
     );
     DrbdMon(const DrbdMon& orig) = delete;
     DrbdMon& operator=(const DrbdMon& orig) = delete;
@@ -123,14 +89,19 @@ class DrbdMon : public Configurable, public Configurator
     DrbdMon& operator=(DrbdMon&& orig) = delete;
     virtual ~DrbdMon() noexcept;
 
+    virtual SystemApi& get_system_api() const noexcept override;
+
     // @throws std::bad_alloc
     virtual void run();
 
+    virtual void shutdown(const DrbdMonCore::finish_action action) noexcept override;
+
     // @throws EventMessageException, EventObjectException
-    virtual void tokenize_event_message(std::string& event_line, PropsMap& event_props);
+    virtual void tokenize_event_message(GenericDisplay* const display, std::string& event_line, PropsMap& event_props);
 
     // @throws EventMessageException, EventObjectException
     virtual void process_event_message(
+        GenericDisplay* const display,
         std::string& mode,
         std::string& type,
         PropsMap& event_props,
@@ -154,7 +125,9 @@ class DrbdMon : public Configurable, public Configurator
     // @throws std::bad_alloc
     virtual void set_option(std::string& key, std::string& value) override;
 
-    virtual uint64_t get_problem_count() const noexcept;
+    virtual uint32_t get_problem_count() const noexcept override;
+
+    virtual void notify_config_changed() override;
 
   private:
     typedef struct option_entry_s
@@ -164,73 +137,36 @@ class DrbdMon : public Configurable, public Configurator
     }
     option_entry;
 
+    SystemApi& sys_api;
+
     using OptionsMap = QTree<const std::string, DrbdMon::option_entry>;
 
     const int    arg_count;
     char** const arg_values;
 
-    const std::unique_ptr<ResourcesMap> resources_map;
-    const std::unique_ptr<HotkeysMap>   hotkeys_info;
+    std::unique_ptr<ResourceDirectory>  rsc_dir_mgr;
+    ResourceDirectory*                  rsc_dir;
 
     std::unique_ptr<OptionsMap>   options;
 
-    fail_info&    fail_data;
-    finish_action fin_action {DrbdMon::finish_action::RESTART_IMMED};
-    MessageLog&   log;
-    MessageLog&   debug_log;
-    const std::string* const node_name;
+    DrbdMonCore::fail_info&     fail_data;
+    DrbdMonCore::finish_action  fin_action      {DrbdMonCore::finish_action::RESTART_IMMED};
+    MessageLog&                 log;
+    MessageLog&                 debug_log;
+    const std::string* const    node_name;
+    Configuration&              config;
 
-    bool          shutdown      {false};
-    bool          have_initial_state {false};
+    bool    shutdown_flag       {false};
+    bool    have_initial_state  {false};
+    bool    timer_available     {false};
+    bool    timer_armed         {false};
 
-    uint64_t problem_count {0};
-
-    std::unique_ptr<GenericDisplay>  display {nullptr};
     std::unique_ptr<Configurable*[]> configurables {nullptr};
 
     std::unique_ptr<IntervalTimer> interval_timer_mgr {nullptr};
     struct timespec prev_timestamp {0, 0};
     struct timespec cur_timestamp {0, 0};
     bool use_dflt_freq_lmt {true};
-
-    // @throws std::bad_alloc, EventMessageException
-    void create_connection(PropsMap& event_props, const std::string& event_line);
-    // @throws std::bad_alloc, EventMessageException
-    void create_device(PropsMap& event_props, const std::string& event_line);
-    // @throws std::bad_alloc, EventMessageException
-    void create_peer_device(PropsMap& event_props, const std::string& event_line);
-    // @throws std::bad_alloc, EventMessageException
-    void create_resource(PropsMap& event_props, const std::string& event_line);
-
-    // @throws EventMessageException, EventObjectException
-    void update_connection(PropsMap& event_props, const std::string& event_line);
-    // @throws EventMessageException, EventObjectException
-    void update_device(PropsMap& event_props, const std::string& event_line);
-    // @throws EventMessageException, EventObjectException
-    void update_peer_device(PropsMap& event_props, const std::string& event_line);
-    // @throws EventMessageException, EventObjectException
-    void update_resource(PropsMap& event_props, const std::string& event_line);
-
-    // @throws std::bad_alloc, EventMessageException, EventObjectException
-    void rename_resource(PropsMap& event_props, const std::string& event_line);
-
-    // @throws EventMessageException
-    void destroy_connection(PropsMap& event_props, const std::string& event_line);
-    // @throws EventMessageException
-    void destroy_device(PropsMap& event_props, const std::string& event_line);
-    // @throws EventMessageException
-    void destroy_peer_device(PropsMap& event_props, const std::string& event_line);
-    // @throws EventMessageException
-    void destroy_resource(PropsMap& event_props, const std::string& event_line);
-
-    // @throws EventMessageException, EventObjectException
-    DrbdConnection& get_connection(DrbdResource& res, PropsMap& event_props, const std::string& event_line);
-    // @throws EventMessageException, EventObjectException
-    DrbdVolume& get_device(VolumesContainer& vol_con, PropsMap& event_props, const std::string& event_line);
-    // @throws EventMessageException, EventObjectException
-    DrbdResource& get_resource(PropsMap& event_props, const std::string& event_line);
-    // @throws EventMessageException
-    const std::string& lookup_resource_name(PropsMap& event_props, const std::string& event_line);
 
     // Loads the event_props map with the properties contained in tokens
     //
@@ -241,10 +177,6 @@ class DrbdMon : public Configurable, public Configurator
     // Clears the event_props map and frees all its entries
     void clear_event_props(PropsMap& event_props);
 
-    // Sets up the hotkeys information map
-    // @throws std::bad_alloc
-    void setup_hotkeys_info();
-
     // Configures options (command line arguments)
     // configurables is a nullptr-terminated array of pointers to Configurable instances
     // @throws std::bad_alloc
@@ -253,15 +185,13 @@ class DrbdMon : public Configurable, public Configurator
     // Frees the options map
     void options_cleanup() noexcept;
 
-    void problem_counter_update(StateFlags::state res_last_state, StateFlags::state res_new_state) noexcept;
-
-    void disable_interval_timer(bool& timer_available, bool& timer_armed) noexcept;
+    void disable_interval_timer() noexcept;
 
     // @throws TimerException
     inline bool is_interval_exceeded();
 
-    inline void cond_display_update(bool& timer_available, bool& timer_armed) noexcept;
-    inline void update_timestamp(bool& timer_available, bool& timer_armed) noexcept;
+    inline void cond_display_update(GenericDisplay* const display);
+    inline void update_timestamp() noexcept;
 
     // Frees resources
     // @throws std::bad_alloc
