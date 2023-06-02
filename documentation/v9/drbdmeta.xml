@@ -241,6 +241,21 @@
         </listitem>
       </varlistentry>
 
+      <varlistentry>
+        <term>
+          <option>repair-md</option>
+          <arg rep="norepeat"><option>--tentative</option></arg>
+        </term>
+        <listitem>
+          <para><indexterm significance="normal"><primary>drbdmeta</primary><secondary>repair-md</secondary></indexterm>
+            Repair known problems in metadata.  Only problems that can be
+            automatically fixed in a safe manner will be repaired.  When
+            <option>--tentative</option> is set, the metadata will only be
+            checked, it will not be changed.
+          </para>
+        </listitem>
+      </varlistentry>
+
     </variablelist>
   </refsect1>
   <refsect1>

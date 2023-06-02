@@ -106,6 +106,7 @@ extern struct context_def create_md_ctx;
 extern struct context_def forceable_ctx;
 extern struct context_def adjust_ctx;
 extern struct context_def status_ctx;
+extern struct context_def repair_md_ctx;
 extern struct context_def peer_device_options_ctx;
 extern struct context_def handlers_ctx;
 extern struct context_def proxy_options_ctx;

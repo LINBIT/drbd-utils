@@ -80,7 +80,7 @@ __drbdadm_subcmd_options() {
 
 _drbdadm() {
 	local DRBDADM="env DRBD_DONT_WARN_ON_VERSION_MISMATCH=1 ${COMP_WORDS[0]}"
-	local drbdadm_command_list=' attach disk-options detach connect net-options disconnect up resource-options down primary secondary invalidate invalidate-remote outdate verify pause-sync resume-sync resize adjust wait-connect role cstate dstate dump wait-connect wait-con-int create-md dump-md wipe-md get-gi show-gi help apply-al hidden-commands '
+	local drbdadm_command_list=' attach disk-options detach connect net-options disconnect up resource-options down primary secondary invalidate invalidate-remote outdate verify pause-sync resume-sync resize adjust wait-connect role cstate dstate dump wait-connect wait-con-int create-md dump-md wipe-md get-gi show-gi help apply-al repair-md hidden-commands '
 
 	# Redefine the drbdadm we use in __drbdadm_all_resources and
 	# __drbdadm_resources_by_status, if running in stacked mode
@@ -119,7 +119,7 @@ _drbdadm() {
 		outdate)
 			__drbdadm_resources_by_status "dstate" "UpToDate"
 			;;
-		attach|apply-al)
+		attach|apply-al|repair-md)
 			__drbdadm_resources_by_status "dstate" "Diskless" "Unconfigured"
 			;;
 		connect)

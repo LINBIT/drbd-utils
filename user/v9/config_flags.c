@@ -1145,6 +1145,13 @@ struct context_def status_ctx = {
 		{ } },
 };
 
+struct context_def repair_md_ctx = {
+       .fields = {
+		{ .name = "tentative", .argument_is_optional = true },
+		{ .name = "force", .argument_is_optional = true },
+		{ } },
+};
+
 // only used by drbdadm's config file parser:
 struct context_def handlers_ctx = {
 	.fields = {

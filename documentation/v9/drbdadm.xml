@@ -260,6 +260,23 @@
       </varlistentry>
 
       <varlistentry>
+        <term>repair-md
+          <arg choice="req" rep="norepeat"><replaceable>device</replaceable></arg>
+        </term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>repair-md</secondary>
+              </indexterm> Check and repair metadata of the specified device.
+              See <citerefentry> <refentrytitle>drbdmeta</refentrytitle>
+                <manvolnum>8</manvolnum> </citerefentry> for details.
+          </para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term>attach
 	  <arg choice="req" rep="norepeat"><replaceable>device</replaceable></arg>
 	</term>

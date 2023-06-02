@@ -93,6 +93,7 @@ enum initialize_bitmap_mode option_initialize_bitmap_mode = IBM_ZEROOUT;
 struct option metaopt[] = {
     { "ignore-sanity-checks",  no_argument, &ignore_sanity_checks, 1000 },
     { "dry-run",  no_argument, &dry_run, 1000 },
+    { "tentative", no_argument, &dry_run, 1000 },
     { "force",  no_argument,    0, 'f' },
     { "verbose",  no_argument,    0, 'v' },
     { "peer-max-bio-size",  required_argument, NULL, 'p' },
@@ -831,6 +832,7 @@ int meta_write_dev_uuid(struct format *cfg, char **argv, int argc);
 int meta_dstate(struct format *cfg, char **argv, int argc);
 int meta_chk_offline_resize(struct format *cfg, char **argv, int argc);
 int meta_forget_peer(struct format *cfg, char **argv, int argc);
+int meta_repair_md(struct format *cfg, char **argv, int argc);
 
 struct meta_cmd cmds[] = {
 	{"get-gi", 0, meta_get_gi, 1, 1, 0},
@@ -855,6 +857,7 @@ struct meta_cmd cmds[] = {
 		"{max_peers}",
 		meta_create_md, 1, 0, 1},
 	{"forget-peer", 0, meta_forget_peer, 1, 1, 1},
+	{"repair-md", "[--tentative]", meta_repair_md, 1, 0, 1},
 };
 
 /*
@@ -4718,15 +4721,24 @@ int meta_chk_offline_resize(struct format *cfg, char **argv, int argc)
 	return v08_move_internal_md_after_resize(cfg);
 }
 
+static bool is_day0_peer(struct format *cfg, int peer_index)
+{
+	if (peer_index == cfg->md.node_id)
+		return false;
+
+	/* Only totally unused slots definitely contain the day0 UUID. */
+	return cfg->md.peers[peer_index].bitmap_index == -1 &&
+		!cfg->md.peers[peer_index].flags;
+}
+
 static int day0_peer_id(struct format *cfg)
 {
 	int p;
 
-	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
-		if (p == cfg->md.node_id)
-			continue;
-		/* Only totally unused slots definitely contain the day0 UUID. */
-		if (cfg->md.peers[p].bitmap_index == -1 && !cfg->md.peers[p].flags)
+	/* Iterate backwards because a bug in DRBD prior to 9.1.15 may have
+	 * corrupted the first day0 UUIDs. */
+	for (p = DRBD_NODE_ID_MAX - 1; p >= 0; p--) {
+		if (is_day0_peer(cfg, p))
 			return p;
 	}
 	return -1;
@@ -4767,6 +4779,53 @@ int meta_forget_peer(struct format *cfg, char **argv, int argc)
 		fprintf(stderr, "update failed\n");
 
 	return err;
+}
+
+int meta_repair_md(struct format *cfg, char **argv, int argc)
+{
+	int day0_p;
+	uint64_t day0_uuid;
+	int p;
+	int err;
+	bool dirty = false;
+
+	err = cfg->ops->open(cfg);
+	if (err)
+		return -1;
+
+	day0_p = day0_peer_id(cfg);
+
+	if (day0_p < 0)
+		return 0;
+
+	day0_uuid = cfg->md.peers[day0_p].bitmap_uuid;
+
+	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
+		uint64_t bitmap_uuid = cfg->md.peers[p].bitmap_uuid;
+
+		if (is_day0_peer(cfg, p) && bitmap_uuid != day0_uuid) {
+			fprintf(stderr, "Peer slot %d has \"day0\" UUID 0x"X64(016)", "
+					"expected 0x"X64(016)"\n",
+					p, bitmap_uuid, day0_uuid);
+			cfg->md.peers[p].bitmap_uuid = day0_uuid;
+			dirty = true;
+		}
+	}
+
+	if (!dry_run && dirty) {
+		fprintf(stderr, "Repairing metadata\n");
+		cfg->ops->md_cpu_to_disk(cfg);
+	}
+	err = cfg->ops->close(cfg);
+	if (err) {
+		fprintf(stderr, "update failed\n");
+		return err;
+	}
+
+	if (dry_run && dirty)
+		return -1;
+
+	return 0;
 }
 
 /* CALL ONLY ONCE as long as on_disk_buffer is global! */
@@ -4958,6 +5017,13 @@ int main(int argc, char **argv)
 			exit(20);
 		}
 		cfg->lock_fd = dt_lock_drbd(cfg->minor);
+
+		/*
+		 * Command "repair-md" does not modify the metadata if
+		 * --tentative/--dry-run is given.
+		 */
+		if (command->function == &meta_repair_md && dry_run)
+			command->modifies_md = 0;
 
 		/* check whether this is in use */
 		minor_attached = is_attached(cfg->minor);

@@ -370,6 +370,7 @@ static struct adm_cmd dump_md_cmd = {"dump-md", adm_drbdmeta, &forceable_ctx, AC
 static struct adm_cmd wipe_md_cmd = {"wipe-md", adm_drbdmeta, &forceable_ctx, ACF1_MINOR_ONLY };
 static struct adm_cmd apply_al_cmd = {"apply-al", adm_drbdmeta, &forceable_ctx, ACF1_MINOR_ONLY };
 static struct adm_cmd forget_peer_cmd = {"forget-peer", adm_forget_peer, &forceable_ctx, ACF1_DISCONNECT };
+static struct adm_cmd repair_md_cmd = {"repair-md", adm_drbdmeta, &repair_md_ctx, ACF1_MINOR_ONLY };
 
 static struct adm_cmd hidden_cmd = {"hidden-commands", hidden_cmds,.show_in_usage = 1,};
 
@@ -467,6 +468,7 @@ struct adm_cmd *cmds[] = {
 	&wipe_md_cmd,
 	&apply_al_cmd,
 	&forget_peer_cmd,
+	&repair_md_cmd,
 
 	&hidden_cmd,
 
