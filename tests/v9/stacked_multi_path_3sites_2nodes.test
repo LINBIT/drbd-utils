@@ -9,6 +9,7 @@ drbdsetup new-path stacked_multi_path 2 ipv4:192.168.23.21:7100 ipv4:192.168.25.
 drbdsetup new-path stacked_multi_path 2 ipv4:192.168.23.21:7100 ipv4:192.168.25.22:7100
 drbdsetup peer-device-options stacked_multi_path 1 0 --c-fill-target=10M
 drbdsetup peer-device-options stacked_multi_path 2 0 --c-fill-target=10M
+drbdmeta 10 v09 /dev/drbd0 internal repair-md
 drbdmeta 10 v09 /dev/drbd0 internal apply-al
 drbdsetup attach 10 /dev/drbd0 /dev/drbd0 internal
 drbdsetup connect stacked_multi_path 1

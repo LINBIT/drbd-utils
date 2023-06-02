@@ -1162,6 +1162,10 @@ static int adm_attach(const struct cfg_ctx *ctx)
 		if (rv)
 			return rv;
 
+		rv = call_cmd_fn(&repair_md_cmd, ctx, KEEP_RUNNING);
+		if (rv)
+			return rv;
+
 		rv = call_cmd_fn(&apply_al_cmd, ctx, KEEP_RUNNING);
 		if (rv)
 			return rv;

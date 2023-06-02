@@ -6,6 +6,7 @@ drbdsetup new-peer proxy_2sites_3nodes 2 --_name=charlie --protocol=A
 drbdsetup new-path proxy_2sites_3nodes 1 ipv4:192.168.31.1:7800 ipv4:192.168.31.2:7800
 drbdsetup new-path proxy_2sites_3nodes 2 ipv4:192.168.31.1:7800 ipv4:192.168.31.4:7800
 drbdsetup peer-device-options proxy_2sites_3nodes 2 0 --resync-rate=10M --c-plan-ahead=20 --c-delay-target=10 --c-fill-target=100 --c-min-rate=10 --c-max-rate=100M
+drbdmeta 19 v09 /dev/foo/bar internal repair-md
 drbdmeta 19 v09 /dev/foo/bar internal apply-al
 drbdsetup attach 19 /dev/foo/bar /dev/foo/bar internal
 drbdsetup connect proxy_2sites_3nodes 1
@@ -18,6 +19,7 @@ drbdsetup new-peer proxy_2sites_3nodes 0 --_name=alpha --protocol=C
 drbdsetup new-peer proxy_2sites_3nodes 2 --_name=charlie --protocol=A
 drbdsetup new-path proxy_2sites_3nodes 0 ipv4:192.168.31.2:7800 ipv4:192.168.31.1:7800
 drbdsetup new-path proxy_2sites_3nodes 2 ipv4:192.168.31.2:7800 ipv4:192.168.31.4:7802
+drbdmeta 19 v09 /dev/foo/bar internal repair-md
 drbdmeta 19 v09 /dev/foo/bar internal apply-al
 drbdsetup attach 19 /dev/foo/bar /dev/foo/bar internal
 drbdsetup connect proxy_2sites_3nodes 0
@@ -31,6 +33,7 @@ drbdsetup new-peer proxy_2sites_3nodes 1 --_name=bravo --protocol=A
 drbdsetup new-path proxy_2sites_3nodes 0 ipv4:192.168.31.3:7800 ipv4:192.168.31.5:7800
 drbdsetup new-path proxy_2sites_3nodes 1 ipv4:192.168.31.3:7800 ipv4:192.168.31.5:7802
 drbdsetup peer-device-options proxy_2sites_3nodes 0 0 --resync-rate=10M --c-plan-ahead=20 --c-delay-target=10 --c-fill-target=100 --c-min-rate=10 --c-max-rate=100M
+drbdmeta 19 v09 /dev/foo/bar internal repair-md
 drbdmeta 19 v09 /dev/foo/bar internal apply-al
 drbdsetup attach 19 /dev/foo/bar /dev/foo/bar internal
 drbdsetup connect proxy_2sites_3nodes 0
