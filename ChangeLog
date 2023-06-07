@@ -9,30 +9,30 @@ Latest:
  * drbdadm,v9,parser: fixup globs, also rm GNU libc specific extensions
  * drbdadm,v9,parser: allow via outside-address for NATed peers
 
- 9.22.0
+9.22.0
 -----------
  * parser,v9: deprecate named connections
  * drbd-selinux: add sub package, minor packaging/spec changes
  * drbdadm: allow files from expanded glob to vanish
 
- 9.21.4
+9.21.4
 -----------
  * drbdadm,v9: fix potential segfault in postparse
  * drbdadm,v9: fix sh-ip when set on connection/path
 
- 9.21.3
+9.21.3
 -----------
  * drbdmeta: fix apply-al for bitmap sizes > 4GiB
 
- 9.21.2
+9.21.2
 -----------
  * drbd-service-shim.sh: add secondary --force
 
- 9.21.1
+9.21.1
 -----------
  * ocf: fix for dropped --peer option
 
- 9.21.0
+9.21.0
 -----------
  * drbdsetup,v9: show susupend reason in json output
  * drbdsetup,v9: add secondary --force
@@ -45,7 +45,7 @@ Latest:
    match
  * notify.sh: deal with unset DRBD_PEER env variable
 
- 9.20.2
+9.20.2
 -----------
  * crm-fence-peer: fix timeout with Pacemaker 2.0.5
 
