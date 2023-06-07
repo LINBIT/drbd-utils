@@ -3,7 +3,20 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
- 9.23.0
+9.24.0-rc.1
+-----------
+ * windrbd: various fixes
+ * v9: Support user-defined block-size
+ * doc,v9: improvements all over the place
+ * drbdadm,v9: implement drbdadm role <res:peer>
+ * drbdadm,v9: pass --verbose/--statistics to drbdsetup status
+ * drbd{adm,meta}: add repair-md subcommand
+
+9.23.1
+-----------
+ * drbdadm,v9,resync-after: fix too strict check
+
+9.23.0
 -----------
  * drbdadm,v9,floating: fixup fake uname for 9.2.x strict_names=1
  * drbdadm,v9,parser: fixup globs, also rm GNU libc specific extensions
