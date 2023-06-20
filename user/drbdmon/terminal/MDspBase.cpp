@@ -337,6 +337,23 @@ bool MDspBase::mouse_action(MouseEvent& mouse)
             reposition_text_cursor();
         }
     }
+    else
+    if (mouse.event == MouseEvent::event_id::SCROLL_UP || mouse.event == MouseEvent::event_id::SCROLL_DOWN)
+    {
+        if (mouse.coord_row >= DisplayConsts::PAGE_NAV_Y &&
+            mouse.coord_row < (dsp_comp_hub.term_rows - DisplayConsts::CMD_LINE_Y))
+        {
+            if (mouse.event == MouseEvent::event_id::SCROLL_UP)
+            {
+                previous_page();
+            }
+            else
+            {
+                next_page();
+            }
+            intercepted = true;
+        }
+    }
     return intercepted;
 }
 
