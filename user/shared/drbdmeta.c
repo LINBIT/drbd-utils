@@ -4887,6 +4887,8 @@ int main(int argc, char **argv)
 		abort();
 	}
 
+	initialize_logging();
+
 #if 1
 	if (sizeof(struct md_on_disk_07) != 4096) {
 		fprintf(stderr, "Where did you get this broken build!?\n"

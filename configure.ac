@@ -451,9 +451,7 @@ AH_TEMPLATE(DRBD_LIB_DIR, [Local state directory. Commonly
 			  /var/lib/drbd or /usr/local/var/lib/drbd])
 AH_TEMPLATE(DRBD_RUN_DIR, [Runtime state directory. Commonly
 			  /var/run/drbd or /usr/local/var/run/drbd])
-AH_TEMPLATE(DRBD_LOCK_DIR, [Local lock directory. Commonly
-			   /var/lock or
-			   /usr/local/var/lock])
+AH_TEMPLATE(DRBD_LOCK_DIR, [Local lock directory. Typically DRBD_RUN_DIR/lock])
 AH_TEMPLATE(DRBD_CONFIG_DIR, [Local configuration directory. Commonly
 			   /etc or
 			   /usr/local/etc])
@@ -465,7 +463,7 @@ AH_TEMPLATE(WINDRBD, [Include support for windrbd (do not use this under Linux)]
 
 AC_SUBST(DRBD_LIB_DIR, [$localstatedir/lib/$PACKAGE_TARNAME])
 AC_SUBST(DRBD_RUN_DIR, [$localstatedir/run/$PACKAGE_TARNAME])
-AC_SUBST(DRBD_LOCK_DIR, [$localstatedir/lock])
+AC_SUBST(DRBD_LOCK_DIR, [$DRBD_RUN_DIR/lock])
 AC_SUBST(DRBD_CONFIG_DIR, [$sysconfdir])
 AC_SUBST(DRBD_BIN_DIR, [$exec_prefix/bin])
 

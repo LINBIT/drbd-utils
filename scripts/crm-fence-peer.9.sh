@@ -1397,9 +1397,9 @@ done
 #
 # Sanitize lock_file and lock_dir
 #
-if [[ ${lock_dir:=/var/lock/drbd} != /* ]] ; then
+if [[ ${lock_dir:=/var/run/drbd/lock} != /* ]] ; then
 	echo WARNING "lock_dir needs to be an absolute path, not [$lock_dir]; using default."
-	lock_dir=/var/lock/drbd
+	lock_dir=/var/run/drbd/lock
 fi
 case ${lock_file:-""} in
 "")	lock_file=$lock_dir/fence.${DRBD_RESOURCE//\//_} ;;

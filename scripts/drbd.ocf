@@ -1291,7 +1291,8 @@ drbd_demote() {
 			break
 			;;
 		$OCF_NOT_RUNNING)
-			ocf_log error "Trying to promote a resource that was not started"
+			ocf_log error "Trying to demote a resource that was not started"
+			rc=$OCF_NOT_RUNNING
 			break
 			;;
 		$OCF_RUNNING_MASTER)

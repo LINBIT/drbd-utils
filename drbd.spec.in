@@ -179,6 +179,7 @@ This packages includes the DRBD administration tools.
 %{_prefix}/lib/drbd/notify.sh
 %dir %{_var}/lib/drbd
 %ghost %dir %{_var}/run/drbd
+%ghost %dir %{_var}/run/drbd/lock
 
 %defattr(-,root,root,-)
 %if "%{initscripttype}" == "systemd"

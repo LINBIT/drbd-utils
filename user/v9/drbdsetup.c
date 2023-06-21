@@ -4346,6 +4346,7 @@ int drbdsetup_main(int argc, char **argv)
 		abort();
 	}
 
+	initialize_logging();
 	progname = basename(argv[0]);
 
 	if (chdir("/")) {

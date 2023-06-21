@@ -580,7 +580,14 @@ int get_fd_lockfile_timeout(const char *path, int seconds)
     };
 
     if ((fd = open(path, O_RDWR | O_CREAT, 0600)) < 0) {
-	fprintf(stderr,"open(%s): %m\n",path);
+	err = errno;
+	log_err("open(%s): %m\n", path);
+	if (err == EACCES) {
+		if (geteuid() != 0)
+			log_err("Try again with 'sudo' or as root?\n");
+		else
+			log_err("Maybe 'rm -f %s', or check sysctl fs.protected_regular\n");
+	}
 	return -1;
     }
 
@@ -674,6 +681,80 @@ int only_digits(const char *s)
 	return c != s && *c == 0;
 }
 
+void ensure_dir(const char *dirname)
+{
+	struct stat sb;
+	char *prefix;
+	char *s;
+
+	/* Nonsense usage. Handle followup failure elsewhere.
+	 * Won't happen, but make static analysers happy. */
+	if (!dirname || !*dirname)
+		return;
+
+	/* If we are not root,
+	 * do we even want to attempt to create the directory? */
+	if (geteuid() != 0)
+		return;
+
+	if (!stat(dirname, &sb) && S_ISDIR(sb.st_mode)) {
+		/* FIXME do we even want to check/enforce ownership? */
+		if (sb.st_uid != 0 /* && geteuid() == 0 */) {
+			int dfd = open(dirname, O_DIRECTORY,O_RDONLY);
+			if (dfd >= 0) {
+				if (fchown(dfd, 0, 0)) {
+					/* so I am root, but I cannot chown that directory? */
+					log_err("cannot chown root:root %s: %m\n", dirname);
+				}
+				close(dfd);
+			}
+		}
+		return;
+	}
+
+	prefix = strdupa(dirname);
+	if (NULL == prefix) {
+		perror("");
+		exit(20);
+	}
+
+	/* we could exit(20); on failure below, but let's try to continue and
+	 * produce the same error messages we would produce if we would just
+	 * try to use the directory without attempting to create it. */
+
+	/* recursively create directory */
+	s = prefix;
+	while ((s=strchrnul(s,'/'))) {
+		char slash_or_nul = *s;
+		*s = '\0';
+		if (*prefix) {
+			if (mkdir(prefix, S_IRWXU)) {
+				if (errno == EEXIST) {
+					if (stat(prefix,&sb)) {
+						log_err("stat(%s): %m\n", prefix);
+						return;
+					}
+					if (!S_ISDIR(sb.st_mode)) {
+						fprintf(stderr,
+							"Existing prefix %s is not a directory\n"
+							"Failed to create directory %s\n",
+							prefix, dirname);
+						return;
+					}
+				} else {
+					 /* Don't complain for read-only FS */
+					if (errno != EROFS)
+						log_err("Failed to create directory %s: %m\n", dirname);
+					return;
+				}
+			}
+		}
+		if (slash_or_nul == '\0')
+			break;
+		*s++ = '/';
+	}
+}
+
 int dt_lock_drbd(int minor)
 {
 	int sz, lfd;
@@ -692,11 +773,7 @@ int dt_lock_drbd(int minor)
 	 * We should store something in the meta data to detect such abuses.
 	 */
 
-	/* NOTE that /var/lock/drbd-*-* may not be "secure",
-	 * maybe we should rather use /var/lock/drbd/drbd-*-*,
-	 * and make sure that /var/lock/drbd is drwx.-..-. root:root  ...
-	 */
-
+	ensure_dir(drbd_lock_dir());
 	sz = asprintf(&lfname, "%s/drbd-%d-%d",
 		      drbd_lock_dir(), LANANA_DRBD_MAJOR, minor);
 	if (sz < 0) {
@@ -850,6 +927,7 @@ new_strtoll(const char *s, const char def_unit, unsigned long long *rv)
 }
 
 struct logging_state {
+	unsigned int initialized:1;
 	unsigned int stderr_available:1;
 };
 
@@ -860,6 +938,9 @@ void initialize_logging(void)
 {
 	int err;
 
+	if (logging_state.initialized)
+		return;
+
 	err = fcntl(STDERR_FILENO, F_GETFL);
 	if (err < 0 && errno == EBADF) {
 		logging_state.stderr_available = 0;
@@ -867,6 +948,7 @@ void initialize_logging(void)
 	} else {
 		logging_state.stderr_available = 1;
 	}
+	logging_state.initialized = 1;
 }
 
 /* print to stderr or syslog */
