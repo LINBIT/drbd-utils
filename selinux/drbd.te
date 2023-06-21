@@ -111,10 +111,10 @@ optional_policy(`
 	    type cluster_var_log_t;
     ')
     # crm_attribute (and possibly other things) want to append to pacemaker.log,
-    # which is hacluster:haclient 0660, while running as root.
-    # so we need them to either be setgid, or communicate via some log daemon socket,
-    # or use dac_override :shrug:
-    allow drbd_t self:capability { dac_override };
+    # which is (fchown-ed to be) hacluster:haclient 0660, while running as root.
+    # So we need them to either be setgid, or communicate via some log daemon socket,
+    # or use dac_override, fowner and fsetid :shrug:
+    allow drbd_t self:capability { dac_override fowner fsetid };
     allow drbd_t cluster_var_log_t:file { setattr };
     allow drbd_t cluster_t:unix_stream_socket connectto;
 ')
@@ -130,7 +130,3 @@ allow drbd_t var_lock_t:file { lock open read write };
 allow drbd_t modules_dep_t:file { map open read getattr };
 allow drbd_t modules_object_t:file map;
 allow drbd_t kernel_t:system module_request;
-
-# there are some systemwide dontaudit rules
-# or we'd get more noise about crm_attribute and fowner,fsetid
-# which we neither want not need. I think.
