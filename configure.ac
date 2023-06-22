@@ -258,6 +258,9 @@ if test x"$WITH_DRBDMON" = x"yes" ; then
    AC_CHECK_LIB([rt], [clock_gettime, timer_create, timer_settime, timer_delete], [],
                 [AC_MSG_WARN([Could not find required librt functions, disabling drbdmon build.])
                  WITH_DRBDMON=no])
+   AC_CHECK_LIB([pthread], [pthread_create], [],
+                [AC_MSG_WARN([Could not find required libpthread functions, disabling drbdmon build.])
+                 WITH_DRBDMON=no])
 fi
 
 if test x"$WITH_WINDRBD" = x"yes" ; then

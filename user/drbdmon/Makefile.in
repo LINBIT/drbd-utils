@@ -2,7 +2,7 @@ CXXFLAGS=-std=c++11 -I. -I../shared -Icppdsaext/src -Wall -Werror -pedantic-erro
 -Wsign-compare -Wpointer-arith -Wswitch-default -Wswitch-enum -Wtype-limits \
 -Wmissing-declarations -Wshadow
 CXX = @CXX@
-LIBS = @LIBS@ -lpthread
+LIBS = @LIBS@
 
 # variables set by configure
 sbindir = @sbindir@
