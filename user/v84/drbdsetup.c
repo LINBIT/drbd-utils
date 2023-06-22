@@ -1621,28 +1621,27 @@ static int remember_resource(const struct drbd_cmd *cmd, struct genl_info *info,
 {
 	struct resources_list ***tail = u_ptr;
 	struct drbd_cfg_context cfg = { .ctx_volume = -1U };
+	struct resources_list *r;
+	struct nlattr *res_opts = global_attrs[DRBD_NLA_RESOURCE_OPTS];
 
 	if (!info)
 		return 0;
 
 	drbd_cfg_context_from_attrs(&cfg, info);
-	if (cfg.ctx_resource_name) {
-		struct resources_list *r = calloc(1, sizeof(*r));
-		struct nlattr *res_opts = global_attrs[DRBD_NLA_RESOURCE_OPTS];
+	r = calloc(1, sizeof(*r));
 
-		r->name = strdup(cfg.ctx_resource_name);
-		if (res_opts) {
-			int size = nla_total_size(nla_len(res_opts));
+	r->name = strdup(cfg.ctx_resource_name);
+	if (res_opts) {
+		int size = nla_total_size(nla_len(res_opts));
 
-			r->res_opts = malloc(size);
-			memcpy(r->res_opts, res_opts, size);
-		}
-		resource_info_from_attrs(&r->info, info);
-		memset(&r->statistics, -1, sizeof(r->statistics));
-		resource_statistics_from_attrs(&r->statistics, info);
-		**tail = r;
-		*tail = &r->next;
+		r->res_opts = malloc(size);
+		memcpy(r->res_opts, res_opts, size);
 	}
+	resource_info_from_attrs(&r->info, info);
+	memset(&r->statistics, -1, sizeof(r->statistics));
+	resource_statistics_from_attrs(&r->statistics, info);
+	**tail = r;
+	*tail = &r->next;
 	return 0;
 }
 
@@ -1780,28 +1779,27 @@ static int remember_connection(const struct drbd_cmd *cmd, struct genl_info *inf
 {
 	struct connections_list ***tail = u_ptr;
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U };
+	struct connections_list *c;
+	struct nlattr *net_conf = global_attrs[DRBD_NLA_NET_CONF];
 
 	if (!info)
 		return 0;
 
 	drbd_cfg_context_from_attrs(&ctx, info);
-	if (ctx.ctx_resource_name) {
-		struct connections_list *c = calloc(1, sizeof(*c));
-		struct nlattr *net_conf = global_attrs[DRBD_NLA_NET_CONF];
+	c = calloc(1, sizeof(*c));
 
-		c->ctx = ctx;
-		if (net_conf) {
-			int size = nla_total_size(nla_len(net_conf));
+	c->ctx = ctx;
+	if (net_conf) {
+		int size = nla_total_size(nla_len(net_conf));
 
-			c->net_conf = malloc(size);
-			memcpy(c->net_conf, net_conf, size);
-		}
-		connection_info_from_attrs(&c->info, info);
-		memset(&c->statistics, -1, sizeof(c->statistics));
-		connection_statistics_from_attrs(&c->statistics, info);
-		**tail = c;
-		*tail = &c->next;
+		c->net_conf = malloc(size);
+		memcpy(c->net_conf, net_conf, size);
 	}
+	connection_info_from_attrs(&c->info, info);
+	memset(&c->statistics, -1, sizeof(c->statistics));
+	connection_statistics_from_attrs(&c->statistics, info);
+	**tail = c;
+	*tail = &c->next;
 	return 0;
 }
 
@@ -1880,24 +1878,23 @@ static int remember_peer_device(const struct drbd_cmd *cmd, struct genl_info *in
 {
 	struct peer_devices_list ***tail = u_ptr;
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U };
+	struct peer_devices_list *p;
 
 	if (!info)
 		return 0;
 
 	drbd_cfg_context_from_attrs(&ctx, info);
-	if (ctx.ctx_resource_name) {
-		struct peer_devices_list *p = calloc(1, sizeof(*p));
+	p = calloc(1, sizeof(*p));
 
-		if (!p)
-			exit(20);
+	if (!p)
+		exit(20);
 
-		p->ctx = ctx;
-		peer_device_info_from_attrs(&p->info, info);
-		memset(&p->statistics, -1, sizeof(p->statistics));
-		peer_device_statistics_from_attrs(&p->statistics, info);
-		**tail = p;
-		*tail = &p->next;
-	}
+	p->ctx = ctx;
+	peer_device_info_from_attrs(&p->info, info);
+	memset(&p->statistics, -1, sizeof(p->statistics));
+	peer_device_statistics_from_attrs(&p->statistics, info);
+	**tail = p;
+	*tail = &p->next;
 	return 0;
 }
 
@@ -2046,10 +2043,6 @@ static int lk_bdev_scmd(const struct drbd_cmd *cm, struct genl_info *info, void 
 
 	minor = ((struct drbd_genlmsghdr*)(info->userhdr))->minor;
 	disk_conf_from_attrs(&dc, info);
-	if (!dc.backing_dev) {
-		fprintf(stderr, "Has no disk config, try with drbdmeta.\n");
-		return 1;
-	}
 
 	if (dc.meta_dev_idx >= 0 || dc.meta_dev_idx == DRBD_MD_INDEX_FLEX_EXT) {
 		lk_bdev_delete(minor);
@@ -2095,8 +2088,7 @@ static int sh_status_scmd(const struct drbd_cmd *cm __attribute((unused)),
 	printf("%s_minor=%u\n", _P, minor);
 
 	drbd_cfg_context_from_attrs(&cfg, info);
-	if (cfg.ctx_resource_name)
-		printf("%s_res_name=%s\n", _P, shell_escape(cfg.ctx_resource_name));
+	printf("%s_res_name=%s\n", _P, shell_escape(cfg.ctx_resource_name));
 	printf("%s_volume=%d\n", _P, cfg.ctx_volume);
 
 	if (state_info_from_attrs(&si, info) == 0)
@@ -2760,15 +2752,15 @@ static int event_key(char *key, int size, const char *name, unsigned minor,
 	pos += ret;
 	if (size)
 		size -= ret;
-	if (ctx->ctx_resource_name) {
-		ret = snprintf(key + pos, size,
-			       " name:%s", ctx->ctx_resource_name);
-		if (ret < 0)
-			return ret;
-		pos += ret;
-		if (size)
-			size -= ret;
-	}
+
+	ret = snprintf(key + pos, size,
+		       " name:%s", ctx->ctx_resource_name);
+	if (ret < 0)
+		return ret;
+	pos += ret;
+	if (size)
+		size -= ret;
+
 	/* 8.4 drbd_cfg_context does not provide ctx->ctx_peer_node_id
 	 * check the corresponding name and fake it to 0 */
 	if (!strcmp(name, "connection") || !strcmp(name, "peer-device") || !strcmp(name, "helper")) {

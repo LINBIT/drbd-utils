@@ -1019,8 +1019,7 @@ static void print_helper(const char *timestamp_prefix, struct drbd_cfg_context *
 
 	printf("%s%s %s", timestamp_prefix, response ? action_response : action_call, object_helper);
 
-	if (ctx->ctx_resource_name)
-		printf(" name:%s", ctx->ctx_resource_name);
+	printf(" name:%s", ctx->ctx_resource_name);
 
 	if (ctx->ctx_peer_node_id != -1U)
 		printf(" peer-node-id:%d", ctx->ctx_peer_node_id);

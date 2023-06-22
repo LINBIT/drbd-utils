@@ -3446,9 +3446,6 @@ struct resources_list *new_resource_from_info(struct genl_info *info)
 	struct resources_list *r;
 
 	drbd_cfg_context_from_attrs(&cfg, info);
-	if (!cfg.ctx_resource_name)
-		return NULL;
-
 	r = calloc(1, sizeof(*r));
 
 	r->name = strdup(cfg.ctx_resource_name);
@@ -3646,9 +3643,6 @@ struct connections_list *new_connection_from_info(struct genl_info *info)
 	struct connections_list *c;
 
 	drbd_cfg_context_from_attrs(&ctx, info);
-	if (!ctx.ctx_resource_name)
-		return NULL;
-
 	c = calloc(1, sizeof(*c));
 
 	c->ctx = ctx;
@@ -3769,9 +3763,6 @@ struct peer_devices_list *new_peer_device_from_info(struct genl_info *info)
 	struct peer_devices_list *p;
 
 	drbd_cfg_context_from_attrs(&ctx, info);
-	if (!ctx.ctx_resource_name)
-		return NULL;
-
 	p = calloc(1, sizeof(*p));
 	if (!p)
 		exit(20);
@@ -3854,9 +3845,6 @@ struct paths_list *new_path_from_info(struct genl_info *info)
 	struct paths_list *p;
 
 	drbd_cfg_context_from_attrs(&ctx, info);
-	if (!ctx.ctx_resource_name)
-		return NULL;
-
 	p = calloc(1, sizeof(*p));
 	if (!p)
 		exit(20);
@@ -3892,12 +3880,6 @@ static int check_resize_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		if (device->minor != minor)
 			continue;
 		found = true;
-
-		if (!device->disk_conf.backing_dev) {
-			fprintf(stderr, "Has no disk config, try with drbdmeta.\n");
-			ret = 1;
-			break;
-		}
 
 		if (device->disk_conf.meta_dev_idx >= 0 ||
 		    device->disk_conf.meta_dev_idx == DRBD_MD_INDEX_FLEX_EXT) {
