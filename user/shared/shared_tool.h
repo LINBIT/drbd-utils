@@ -98,7 +98,7 @@ extern void get_random_bytes(void *buffer, size_t len);
    warn_unused_result attribute.... */
 extern int m_asprintf(char **strp, const char *fmt, ...);
 
-extern void fprintf_hex(FILE *fp, off_t file_offset, const void *buf, unsigned len);
+extern void fprintf_hex(FILE *fp, off_t file_offset, const void *buf, size_t len);
 
 
 extern void ensure_sanity_of_res_name(char *stg);

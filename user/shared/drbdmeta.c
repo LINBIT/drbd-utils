@@ -63,6 +63,8 @@
 
 #include "config.h"
 
+typedef void (*dump_func)(const char *const buffer, const size_t length, const off_t offset);
+
 extern FILE* yyin;
 YYSTYPE yylval;
 
@@ -820,6 +822,7 @@ int meta_get_gi(struct format *cfg, char **argv, int argc);
 int meta_show_gi(struct format *cfg, char **argv, int argc);
 int meta_dump_md(struct format *cfg, char **argv, int argc);
 int meta_dump_superblock(struct format *cfg, char **argv, int argc);
+int meta_hex_dump_superblock(struct format *cfg, char **argv, int argc);
 int meta_apply_al(struct format *cfg, char **argv, int argc);
 int meta_restore_md(struct format *cfg, char **argv, int argc);
 int meta_verify_dump_file(struct format *cfg, char **argv, int argc);
@@ -839,7 +842,8 @@ struct meta_cmd cmds[] = {
 	{"get-gi", 0, meta_get_gi, 1, 1, 0},
 	{"show-gi", 0, meta_show_gi, 1, 1, 0},
 	{"dump-md", 0, meta_dump_md, 1, 0, 0},
-	{"hexdump-superblock", 0, meta_dump_superblock, 1, 0, 0},
+	{"dump-superblock", 0, meta_dump_superblock, 1, 0, 0},
+	{"hexdump-superblock", 0, meta_hex_dump_superblock, 1, 0, 0},
 	{"restore-md", "file", meta_restore_md, 1, 0, 1},
 	{"verify-dump", "file", meta_verify_dump_file, 1, 0, 0},
 	{"apply-al", 0, meta_apply_al, 1, 0, 1},
@@ -3054,38 +3058,54 @@ int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc
 	return cfg->ops->close(cfg);
 }
 
-int meta_dump_superblock(struct format *cfg, char **argv __attribute((unused)), int argc)
+/**
+ * Writes a human-readable hex dump of the buffer to stdout
+ */
+void hex_dump_buffer(const char *const buffer, const size_t length, const off_t offset)
+{
+	fprintf_hex(stdout, offset, buffer, length);
+}
+
+/**
+ * Conditionally writes a binary dump of the buffer to stdout.
+ * If stdout is a terminal, writes a human-readable hex dump of the buffer instead.
+ */
+void cond_binary_dump_buffer(const char *const buffer, const size_t length, const off_t offset)
+{
+	if (isatty(STDOUT_FILENO) == 1) {
+		hex_dump_buffer(buffer, length, offset);
+	} else {
+		fwrite(buffer, length, 1, stdout);
+	}
+}
+
+/**
+ * Writes a dump of the location where the DRBD superblock is assumed to be
+ * to stdout using the specified dump function
+ */
+int meta_generic_dump_superblock(struct format *cfg, dump_func dump_impl)
 {
 	off_t flex_offset;
-	int i;
+	int open_rc;
 
-	/* we could have some variants here, or with extra command line
-	 * switches in getopt .
-	 * only exit code, dump hex, dump binary */
+	/* Always open meta data, even if it is in use
+	 * Drop O_EXCL in v07_style_md_open_device() */
+	force = true;
 
-	if (argc > 0) {
-		fprintf(stderr, "Ignoring additional arguments\n");
-	}
-
-	/* What, if it is attached or otherwise claimed already?
-	 * Do you want to always "implicitly force" this, that is:
-	 * drop the O_EXCL in v07_style_md_open_device()?
-	 * force = true;
-	 */
-
-	i = cfg->ops->open(cfg);
-	if (i == VALID_MD_FOUND_AT_LAST_KNOWN_LOCATION) {
+	open_rc = cfg->ops->open(cfg);
+	const char *const md_buffer = (char *) on_disk_buffer;
+	if (open_rc == VALID_MD_FOUND_AT_LAST_KNOWN_LOCATION) {
 		/* What follows is ugly global knowledge :-/
 		 * "I know^W hope that we read it into the other offset
 		 * of our global buffer, and it is still unclobbered"
 		 */
 		flex_offset = v07_style_md_get_byte_offset(
-			DRBD_MD_INDEX_FLEX_INT, cfg->lk_bd.bd_size);
-		fprintf_hex(stdout, flex_offset, on_disk_buffer + 4096, 4096);
+			DRBD_MD_INDEX_FLEX_INT, cfg->lk_bd.bd_size
+		);
+		dump_impl(&md_buffer[4096], 4096, flex_offset);
+	} else {
+		dump_impl(md_buffer, 4096, cfg->md_offset);
 	}
-	/* else or no else? do you want both positions to be reported? */
-	/* found or not found, expected position */
-	fprintf_hex(stdout, cfg->md_offset, on_disk_buffer, 4096);
 
 	/* ignore problems during "close" */
 	cfg->ops->close(cfg);
@@ -3094,17 +3114,31 @@ int meta_dump_superblock(struct format *cfg, char **argv __attribute((unused)), 
 	 * If we had any problems while accessing the device,
 	 * we would have exited already.
 	 *
-	 * Return value will be converted to exit code 0 or 1 by main().
-	 *
-	 * If you want to invent special exit codes for "valid at expected
-	 * position", "valid at last known position", "no valid md found",
-	 * you'd need to use explicit exit() here.
+	 * Return value will be converted to exit code 0 or 1 by main,
+	 * need explicit exit call for special exit codes.
 	 */
-	exit(
-		i == VALID_MD_FOUND ? 0 :
-		i == VALID_MD_FOUND_AT_LAST_KNOWN_LOCATION ? 2 :
-		3);
-	/* return	(i == NO_VALID_MD_FOUND); */
+	if (open_rc != VALID_MD_FOUND) {
+		exit(open_rc == VALID_MD_FOUND_AT_LAST_KNOWN_LOCATION ? 2 : 3);
+	}
+	return 0;
+}
+
+int meta_dump_superblock(struct format *cfg, char **argv __attribute((unused)), int argc)
+{
+	if (argc > 0) {
+		fprintf(stderr, "Ignoring additional arguments\n");
+	}
+
+	return meta_generic_dump_superblock(cfg, &cond_binary_dump_buffer);
+}
+
+int meta_hex_dump_superblock(struct format *cfg, char **argv __attribute((unused)), int argc)
+{
+	if (argc > 0) {
+		fprintf(stderr, "Ignoring additional arguments\n");
+	}
+
+	return meta_generic_dump_superblock(cfg, &hex_dump_buffer);
 }
 
 void md_parse_error(int expected_token, int seen_token,const char *etext)

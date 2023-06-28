@@ -372,10 +372,10 @@ int m_asprintf(char **strp, const char *fmt, ...)
 
 /* print len bytes from buf in the format of well known "hd",
  * adjust displayed offset by file_offset */
-void fprintf_hex(FILE *fp, off_t file_offset, const void *buf, unsigned len)
+void fprintf_hex(FILE *fp, off_t file_offset, const void *buf, size_t len)
 {
 	const unsigned char *c = buf;
-	unsigned o;
+	size_t o;
 	int skipped = 0;
 
 	for (o = 0; o + 16 < len; o += 16, c += 16) {
@@ -396,7 +396,7 @@ void fprintf_hex(FILE *fp, off_t file_offset, const void *buf, unsigned len)
 			"  %02x %02x %02x %02x %02x %02x %02x %02x"
 			/* the same as printable char or '.' */
 			"  |%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c|\n",
-			(unsigned long long)o + file_offset,
+			(unsigned long long) o + file_offset,
 			c[0], c[1], c[2], c[3], c[4], c[5], c[6], c[7],
 			c[8], c[9], c[10], c[11], c[12], c[13], c[14], c[15],
 
@@ -411,22 +411,22 @@ void fprintf_hex(FILE *fp, off_t file_offset, const void *buf, unsigned len)
 		fprintf(fp, "*\n");
 	}
 	if (o < len) {
-		unsigned remaining = len - o;
-		unsigned i;
-		fprintf(fp, "%08llx ", (unsigned long long)o + file_offset);
+		size_t remaining = len - o;
+		size_t i;
+		fprintf(fp, "%08llx ", (unsigned long long) o + file_offset);
 		for (i = 0; i < remaining; i++) {
 			if (i == 8)
 				fprintf(fp, " ");
 			fprintf(fp, " %02x", c[i]);
 		}
-		fprintf(fp, "%*s  |", (16 - i)*3 + (i < 8), "");
+		fprintf(fp, "%*s  |", (int) ((16 - i)*3 + (i < 8)), "");
 		for (i = 0; i < remaining; i++)
 			fprintf(fp, "%c", p_(c[i]));
 #undef p
 #undef p_
 		fprintf(fp, "|\n");
 	}
-	fprintf(fp, "%08llx\n", (unsigned long long)len + file_offset);
+	fprintf(fp, "%08llx\n", (unsigned long long) len + file_offset);
 }
 
 
