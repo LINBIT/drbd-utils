@@ -3,6 +3,14 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.25.0-rc.1
+-----------
+ * drbdmeta: {hex,}dump superblock
+ * drbdmon: major rewrite
+ * build: gcc v12 cleanups
+ * misc: put locks into separate dir
+ * selinux: add fowner fsetsid, they dropped a global noaudit rule
+
 9.24.0
 -----------
  * windrbd: various fixes
