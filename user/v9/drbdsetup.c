@@ -2236,8 +2236,9 @@ static void show_volume_json(struct devices_list *device)
 			       double_quote_string(device->disk_conf.meta_dev));
 			break;
 		default:
-			printI("%s : %d",
-			       double_quote_string(device->disk_conf.meta_dev),
+			printI(QUOTED("meta-disk") ": %s,\n",
+			       double_quote_string(device->disk_conf.meta_dev));
+			printI(QUOTED("meta-disk-index") ": %d\n",
 			       device->disk_conf.meta_dev_idx);
 		}
 	} else if (device->info.is_intentional_diskless == 1) {
