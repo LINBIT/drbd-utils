@@ -50,6 +50,7 @@ class SubProcessLx : public SubProcess
 
     int subproc_stdout_pipe[2];
     int subproc_stderr_pipe[2];
+    int wakeup_pipe[2];
 
     // @throws SubProcess::Exception, std::bad_alloc
     void read_subproc_output();

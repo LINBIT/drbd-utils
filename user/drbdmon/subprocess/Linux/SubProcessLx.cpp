@@ -17,8 +17,8 @@ extern "C"
 
 extern char** environ;
 
-const size_t    SubProcessLx::OBSERVED_EVENTS_COUNT     = 2;
-const size_t    SubProcessLx::FIRED_EVENTS_COUNT        = 2;
+const size_t    SubProcessLx::OBSERVED_EVENTS_COUNT     = 3;
+const size_t    SubProcessLx::FIRED_EVENTS_COUNT        = 3;
 
 // Buffer capacity increment steps. Increment steps must be larger than the buffer size for efficient operation.
 // 16 kiB, 64 kiB
@@ -32,6 +32,8 @@ SubProcessLx::SubProcessLx():
     subproc_stdout_pipe[PIPE_WRITE] = -1;
     subproc_stderr_pipe[PIPE_READ]  = -1;
     subproc_stderr_pipe[PIPE_WRITE] = -1;
+    wakeup_pipe[PIPE_READ]          = -1;
+    wakeup_pipe[PIPE_WRITE]         = -1;
 }
 
 SubProcessLx::~SubProcessLx() noexcept
@@ -41,6 +43,8 @@ SubProcessLx::~SubProcessLx() noexcept
     close_fd(subproc_stdout_pipe[PIPE_WRITE]);
     close_fd(subproc_stderr_pipe[PIPE_READ]);
     close_fd(subproc_stderr_pipe[PIPE_WRITE]);
+    close_fd(wakeup_pipe[PIPE_READ]);
+    close_fd(wakeup_pipe[PIPE_WRITE]);
 }
 
 uint64_t SubProcessLx::get_pid() const noexcept
@@ -78,6 +82,11 @@ void SubProcessLx::execute(const CmdLine& cmd)
             "Creation of the stderr pipe failed"
         );
 
+        throw_if_nonzero(
+            pipe(wakeup_pipe),
+            "Creation of the wakeup pipe failed"
+        );
+
         {
             const int read_io_flags = fcntl(subproc_stdout_pipe[PIPE_READ], F_GETFL, 0);
             fcntl(subproc_stdout_pipe[PIPE_READ], F_SETFL, read_io_flags | O_NONBLOCK);
@@ -85,6 +94,12 @@ void SubProcessLx::execute(const CmdLine& cmd)
         {
             const int read_io_flags = fcntl(subproc_stderr_pipe[PIPE_READ], F_GETFL, 0);
             fcntl(subproc_stderr_pipe[PIPE_READ], F_SETFL, read_io_flags | O_NONBLOCK);
+        }
+        {
+            const int read_io_flags = fcntl(wakeup_pipe[PIPE_READ], F_GETFL, 0);
+            fcntl(wakeup_pipe[PIPE_READ], F_SETFL, read_io_flags | O_NONBLOCK);
+            const int write_io_flags = fcntl(wakeup_pipe[PIPE_WRITE], F_GETFL, 0);
+            fcntl(wakeup_pipe[PIPE_WRITE], F_SETFL, write_io_flags | O_NONBLOCK);
         }
 
         throw_if_nonzero(
@@ -129,6 +144,20 @@ void SubProcessLx::execute(const CmdLine& cmd)
             ),
             "Closing the stderr pipe read end failed"
         );
+        throw_if_nonzero(
+            posix_spawn_file_actions_addclose(
+                file_actions,
+                wakeup_pipe[PIPE_READ]
+            ),
+            "Closing the wakeup pipe read end failed"
+        );
+        throw_if_nonzero(
+            posix_spawn_file_actions_addclose(
+                file_actions,
+                wakeup_pipe[PIPE_WRITE]
+            ),
+            "Closing the wakeup pipe write end failed"
+        );
 
         char** exec_args = sys_cmd_line->get_exec_args();
         int spawn_rc = 1;
@@ -168,6 +197,8 @@ void SubProcessLx::execute(const CmdLine& cmd)
 
             close_fd(subproc_stdout_pipe[PIPE_READ]);
             close_fd(subproc_stderr_pipe[PIPE_READ]);
+            close_fd(wakeup_pipe[PIPE_READ]);
+            close_fd(wakeup_pipe[PIPE_WRITE]);
         }
     }
     catch (std::exception& exc)
@@ -202,6 +233,14 @@ void SubProcessLx::terminate(const bool force)
     if (local_pid != -1 && local_exit_status == SubProcess::EXIT_STATUS_NONE)
     {
         kill(local_pid, (force ? SIGKILL : SIGTERM));
+        const char wakeup_char = 0;
+        ssize_t write_count = 0;
+        do
+        {
+            errno = 0;
+            write_count = write(wakeup_pipe[PIPE_WRITE], &wakeup_char, 1);
+        }
+        while (write_count == -1 && errno == EINTR);
     }
 }
 
@@ -238,6 +277,12 @@ void SubProcessLx::read_subproc_output()
             epoll_ctl(poll_fd, EPOLL_CTL_ADD, subproc_stderr_pipe[PIPE_READ], &(observed_events_ptr[1])),
             "I/O event setup for the stderr pipe failed"
         );
+        observed_events_ptr[2].data.fd = wakeup_pipe[PIPE_READ];
+        observed_events_ptr[2].events = EPOLLIN;
+        throw_if_nonzero(
+            epoll_ctl(poll_fd, EPOLL_CTL_ADD, wakeup_pipe[PIPE_READ], &(observed_events_ptr[2])),
+            "I/O event setup for the wakeup pipe failed"
+        );
     }
     catch (SubProcessLx::Exception&)
     {
@@ -245,15 +290,15 @@ void SubProcessLx::read_subproc_output()
         throw;
     }
 
-    bool have_fds = false;
+    bool poll_fds = false;
     int event_count = 0;
     do
     {
         const bool have_stdout = subproc_stdout_pipe[PIPE_READ] != -1;
         const bool have_stderr = subproc_stderr_pipe[PIPE_READ] != -1;
-        have_fds = have_stdout || have_stderr;
+        poll_fds = have_stdout || have_stderr;
 
-        if (have_fds)
+        if (poll_fds)
         {
             errno = 0;
             event_count = epoll_wait(poll_fd, fired_events_ptr, FIRED_EVENTS_COUNT, -1);
@@ -288,11 +333,28 @@ void SubProcessLx::read_subproc_output()
                             close_fd(subproc_stderr_pipe[PIPE_READ]);
                         }
                     }
+                    else
+                    if (fired_events_ptr[idx].data.fd == wakeup_pipe[PIPE_READ])
+                    {
+                        if ((fired_events_ptr[idx].events & EPOLLERR) == 0)
+                        {
+                            ssize_t read_count = 0;
+                            do
+                            {
+                                errno = 0;
+                                read_count = read(wakeup_pipe[PIPE_READ], read_buffer_ptr, READ_BUFFER_SIZE);
+                            }
+                            while (read_count >= 1 || (read_count == -1 && errno == EINTR));
+                        }
+
+                        epoll_ctl(poll_fd, EPOLL_CTL_DEL, wakeup_pipe[PIPE_READ], nullptr);
+                        poll_fds = false;
+                    }
                 }
             }
         }
     }
-    while (have_fds && (event_count != -1 || errno == EINTR));
+    while (poll_fds && (event_count != -1 || errno == EINTR));
 
     close_fd(poll_fd);
 }
