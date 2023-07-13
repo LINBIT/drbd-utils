@@ -133,6 +133,7 @@ void EventsIo::wakeup_wait() noexcept
     do
     {
         char wakeup_byte = 0;
+        errno = 0;
         rc = write(wakeup_fd[posix::PIPE_WRITE_SIDE], static_cast<void*> (&wakeup_byte), 1);
     }
     while (rc != 0 && errno == EINTR);
@@ -266,6 +267,7 @@ CoreIo::event EventsIo::wait_event()
             ssize_t read_count = 0;
             do
             {
+                errno = 0;
                 read_count = read(wakeup_fd[posix::PIPE_READ_SIDE], discard_buffer_ptr, DISCARD_BUFFER_SIZE);
                 initial_read = false;
             }
@@ -311,10 +313,10 @@ CoreIo::signal_type EventsIo::get_signal()
 {
     int sys_signal_id = 0;
 
-    errno = 0;
     ssize_t read_size = 0;
     do
     {
+        errno = 0;
         read_size = read(sig_fd, signal_buffer.get(), sizeof (struct signalfd_siginfo));
         if (read_size == sizeof (struct signalfd_siginfo))
         {
@@ -415,6 +417,7 @@ void EventsIo::read_events()
         ssize_t read_count = 0;
         do
         {
+            errno = 0;
             read_count = read(events_fd, &(events_buffer[events_length]), length);
         }
         while (read_count == -1 && errno == EINTR);
@@ -449,6 +452,7 @@ void EventsIo::read_errors()
     ssize_t read_count = 0;
     do
     {
+        errno = 0;
         read_count = read(error_fd, &(error_buffer[0]), ERROR_BUFFER_SIZE);
     }
     while (read_count == -1 && errno == EINTR);

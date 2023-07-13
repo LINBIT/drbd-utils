@@ -178,6 +178,7 @@ void SubProcessLx::execute(const CmdLine& cmd)
             int wait_result = -1;
             do
             {
+                errno = 0;
                 wait_result = waitpid(subproc_id, &local_exit_status, 0);
                 if (wait_result > 0)
                 {
@@ -292,16 +293,19 @@ void SubProcessLx::read_subproc_output()
 
     bool poll_fds = false;
     int event_count = 0;
+    int epoll_errno = 0;
     do
     {
         const bool have_stdout = subproc_stdout_pipe[PIPE_READ] != -1;
         const bool have_stderr = subproc_stderr_pipe[PIPE_READ] != -1;
         poll_fds = have_stdout || have_stderr;
 
+        epoll_errno = 0;
         if (poll_fds)
         {
             errno = 0;
             event_count = epoll_wait(poll_fd, fired_events_ptr, FIRED_EVENTS_COUNT, -1);
+            epoll_errno = errno;
             if (event_count > -1)
             {
                 for (size_t idx = 0; idx < static_cast<size_t> (event_count); ++idx)
@@ -354,7 +358,7 @@ void SubProcessLx::read_subproc_output()
             }
         }
     }
-    while (poll_fds && (event_count != -1 || errno == EINTR));
+    while (poll_fds && (event_count != -1 || epoll_errno == EINTR));
 
     close_fd(poll_fd);
 }

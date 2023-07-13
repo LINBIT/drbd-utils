@@ -46,6 +46,7 @@ void DisplayIo::write_buffer(const char* const buffer, const size_t write_length
     while (length > 0)
     {
         // Repeat temporarily failing write() calls until the entire contents of the buffer have been written
+        errno = 0;
         written = write(output_fd, static_cast<const void*> (buffer), length);
         if (written > 0)
         {
@@ -84,26 +85,34 @@ void DisplayIo::write_char(const char ch) const noexcept
 {
     // Repeat temporarily failing write() calls until the byte has been written
     uint32_t loop_guard {0};
-    while (write(output_fd, static_cast<const void*> (&ch), 1) != 1)
+    ssize_t write_count = 0;
+    do
     {
-        if (errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
+        errno = 0;
+        write_count = write(output_fd, static_cast<const void*> (&ch), 1);
+        if (write_count != 1)
         {
-            break;
-        }
+            if (write_count == -1 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR)
+            {
+                // I/O error
+                break;
+            }
 
-        if (loop_guard < MAX_YIELD_LOOP)
-        {
-            // Attempt to yield to other processes before retrying
-            static_cast<void> (sched_yield());
-            ++loop_guard;
-        }
-        else
-        {
-            // If yielding to other processes did not lead to any progress,
-            // suspend for a while
-            static_cast<void> (nanosleep(&write_retry_delay, nullptr));
+            if (loop_guard < MAX_YIELD_LOOP)
+            {
+                // Attempt to yield to other processes before retrying
+                static_cast<void> (sched_yield());
+                ++loop_guard;
+            }
+            else
+            {
+                // If yielding to other processes did not lead to any progress,
+                // suspend for a while
+                static_cast<void> (nanosleep(&write_retry_delay, nullptr));
+            }
         }
     }
+    while (write_count != 1);
 }
 
 /**
