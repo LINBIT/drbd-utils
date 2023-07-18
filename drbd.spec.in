@@ -502,12 +502,15 @@ install -m 0644 selinux/drbd.pp.bz2 %{buildroot}%{_datadir}/selinux/packages
 # compat: we used to live in /sbin/
 # there may be many hardcoded /sbin/drbd* out there,
 # including variants of our own scripts.
-mkdir -p %{buildroot}/var/run/drbd
 mkdir %{buildroot}/sbin/
 cd %{buildroot}/sbin/
 ln -sv ..%{_sbindir}/drbdadm .
 ln -sv ..%{_sbindir}/drbdmeta .
 ln -sv ..%{_sbindir}/drbdsetup .
+# the same old distributions that need the sbin symlinks
+# apparently want these "ghost" directories to exist in buildroot
+mkdir -m 0755 -p %{buildroot}%{_var}/run/drbd
+mkdir -m 0700 -p %{buildroot}%{_var}/run/drbd/lock
 %endif
 
 %clean
