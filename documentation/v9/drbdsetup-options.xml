@@ -1515,7 +1515,18 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
       9.0.19, and defaults to <constant>yes</constant>.</para>
     </definition>
   </drbdsetup_option>
+  <drbdsetup_option name="tls">
+    <term xml:id="tls"><option>tls <replaceable>bool-value</replaceable></option></term>
 
+    <definition>
+        <indexterm significance="normal">
+            <primary>drbd.conf</primary>
+            <secondary>tls</secondary>
+        </indexterm>
+
+        <para>Enable TLS.</para>
+    </definition>
+  </drbdsetup_option>
   <drbdsetup_option name="discard-my-data">
     <term xml:id="discard-my-data"><option>discard-my-data</option></term>
 

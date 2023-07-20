@@ -904,6 +904,7 @@ const struct en_map quorum_map[] = {
 	{ "fencing", ENUM(fencing_policy, FENCING) },					\
 	{ "max-buffers", NUMERIC(max_buffers, MAX_BUFFERS) },				\
 	{ "allow-remote-read", BOOLEAN(allow_remote_read, ALLOW_REMOTE_READ) },					\
+	{ "tls", BOOLEAN(tls, TLS) },					\
 	{ "_name", STRING_MAX_LEN(name, SHARED_SECRET_MAX) }
 
 struct context_def disk_options_ctx = {
