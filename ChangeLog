@@ -3,14 +3,11 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
-9.25.0-rc.2
+9.25.0
 -----------
  * drbdsetup,v9,show: fix meta disk format for json
  * drbdmon: various updates
  * build: fix RHEL6 spec builds
-
-9.25.0-rc.1
------------
  * drbdmeta: {hex,}dump superblock
  * drbdmon: major rewrite
  * build: gcc v12 cleanups
