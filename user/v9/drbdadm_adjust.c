@@ -390,7 +390,7 @@ static int proxy_reconf(const struct cfg_ctx *ctx, struct connection *running_co
 		goto redo_whole_conn;
 
 	running_path = STAILQ_FIRST(&running_conn->paths); /* multiple paths via proxy, later! */
-	if (!running_path->my_proxy)
+	if (!running_path || !running_path->my_proxy)
 		goto redo_whole_conn;
 
 	if (running_path->proxy_conn_is_down)
