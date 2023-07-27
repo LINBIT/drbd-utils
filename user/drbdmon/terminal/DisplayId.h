@@ -1,6 +1,7 @@
 #ifndef DISPLAYID_H
 #define DISPLAYID_H
 
+#include <stdint.h>
 #include <string>
 
 class DisplayId
