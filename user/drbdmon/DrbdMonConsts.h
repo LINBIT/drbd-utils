@@ -1,6 +1,7 @@
 #ifndef DRBDMONCONSTS_H
 #define DRBDMONCONSTS_H
 
+#include <stdint.h>
 #include <string>
 
 class DrbdMonConsts
