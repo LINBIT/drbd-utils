@@ -21,4 +21,6 @@ LABEL="have_symlink"
 
 ENV{DEVICE}=="drbd_?*", SYMLINK+="$env{DEVICE}"
 
+ENV{RESOURCE}!="", ENV{SYSTEMD_WANTS}="drbd@$env{RESOURCE}.service"
+
 LABEL="drbd_end"

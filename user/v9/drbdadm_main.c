@@ -896,6 +896,8 @@ static int sh_udev(const struct cfg_ctx *ctx)
 			printf("drbd/by-disk/%s\n", vol->disk);
 	}
 
+	printf("RESOURCE=%s\n", res->name);
+
 	return 0;
 }
 
