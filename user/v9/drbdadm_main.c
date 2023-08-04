@@ -2073,6 +2073,7 @@ static int adm_up(const struct cfg_ctx *ctx)
 	struct connection *conn;
 	struct d_volume *vol;
 
+	dt_lock_resource(ctx->res->name); /* until program termination */
 	schedule_deferred_cmd(&new_resource_cmd, ctx, CFG_PREREQ);
 
 	set_peer_in_resource(ctx->res, true);

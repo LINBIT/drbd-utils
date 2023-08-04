@@ -795,6 +795,32 @@ void dt_unlock_drbd(int lock_fd)
 		unlock_fd(lock_fd);
 }
 
+int dt_lock_resource(const char *res_name)
+{
+	int sz, lfd;
+	char *lfname;
+
+	ensure_dir(drbd_lock_dir());
+	sz = asprintf(&lfname, "%s/res-%s", drbd_lock_dir(), res_name);
+	if (sz < 0) {
+		perror("");
+		exit(20);
+	}
+
+	lfd = get_fd_lockfile_timeout(lfname, 1);
+	free(lfname);
+	if (lfd < 0)
+		exit(20);
+	return lfd;
+}
+
+/* ignore errors */
+void dt_unlock_resource(int lock_fd)
+{
+	if (lock_fd >= 0)
+		unlock_fd(lock_fd);
+}
+
 void dt_print_gc(const uint32_t* gen_cnt)
 {
 	printf("%d:%d:%d:%d:%d:%d:%d:%d\n",

@@ -109,6 +109,8 @@ extern unsigned long long m_strtoll(const char* s,const char def_unit);
 extern int only_digits(const char *s);
 extern int dt_lock_drbd(int minor);
 extern void dt_unlock_drbd(int lock_fd);
+extern int dt_lock_resource(const char *ren_name);
+extern void dt_unlock_resource(int lock_fd);
 extern int dt_minor_of_dev(const char *device);
 extern void dt_print_gc(const uint32_t* gen_cnt);
 extern void dt_pretty_print_gc(const uint32_t* gen_cnt);

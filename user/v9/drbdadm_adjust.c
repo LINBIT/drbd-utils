@@ -935,6 +935,8 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 	set_me_in_resource(ctx->res, true);
 	set_peer_in_resource(ctx->res, true);
 
+	dt_lock_resource(ctx->res->name); /* until program termination */
+
 	running = running_res_by_name(ctx->res->name);
 
 	if (running) {
