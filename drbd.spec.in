@@ -184,6 +184,7 @@ This packages includes the DRBD administration tools.
 %defattr(-,root,root,-)
 %if "%{initscripttype}" == "systemd"
 %{_unitdir}/drbd.service
+%{_unitdir}/drbd-graceful-shutdown.service
 %{_unitdir}/drbd-lvchange@.service
 %{_unitdir}/drbd-promote@.service
 %{_unitdir}/drbd-demote-or-escalate@.service

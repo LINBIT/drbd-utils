@@ -1,0 +1,16 @@
+# This unit gets "started" by udev at the moment of the first drbd
+# device gets created (starting it is a no-op). At system shutdown, it
+# ensures that all drbd resources shut down gracefully before the
+# machine stops the networking.
+
+[Unit]
+Description=ensure all DRBD resources shut down gracefully at system shut down
+Wants=network-online.target
+After=network-online.target
+Before=drbd.service drbd@.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+ExecStop=/lib/drbd/scripts/drbd-service-shim.sh down all

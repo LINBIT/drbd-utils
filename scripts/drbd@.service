@@ -26,7 +26,7 @@ Before=pacemaker.service
 # if you mean to immediately use this device (auto-promote, or
 # mount via fstab x-systemd.requires=drbd@$resname.target),
 # you may want to: systemctl enable drbd-wait-promotable@%i.service
-# 
+#
 
 [Service]
 SyslogIdentifier=drbd-%I

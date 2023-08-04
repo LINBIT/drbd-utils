@@ -20,5 +20,6 @@ ENV{RESOURCE}!="", SYMLINK+="drbd/by-res/$env{RESOURCE}"
 LABEL="have_symlink"
 
 ENV{DEVICE}=="drbd_?*", SYMLINK+="$env{DEVICE}"
+ENV{SYSTEMD_WANTS}="drbd-graceful-shutdown.service"
 
 LABEL="drbd_end"

@@ -64,6 +64,9 @@ SYSTEMD_TEMPLATES += drbd@.service
 SYSTEMD_TEMPLATES += drbd-lvchange@.service
 SYSTEMD_TEMPLATES += drbd-wait-promotable@.service
 
+SYSTEMD_UNITS  = drbd.service
+SYSTEMD_UNITS += drbd-graceful-shutdown.service
+
 # variables meant to be overridden from the make command line
 ifeq ($(WITH_WINDRBD),yes)
 DESTDIR ?=
@@ -86,7 +89,7 @@ endif
 # "systemd" or "both"
 ifeq ($(subst both,systemd,$(initscripttype)),systemd)
 	install -d $(DESTDIR)$(systemdunitdir)
-	install -m 644 drbd.service $(DESTDIR)$(systemdunitdir)/
+	install -m 644 $(SYSTEMD_UNITS) $(DESTDIR)$(systemdunitdir)/
 	install -m 644 $(SYSTEMD_TEMPLATES) $(DESTDIR)$(systemdunitdir)/
 	install -d $(DESTDIR)/lib/drbd/scripts
 	install -m 755 drbd $(DESTDIR)/lib/drbd/scripts
