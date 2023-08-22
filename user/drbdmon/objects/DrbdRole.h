@@ -1,9 +1,9 @@
 #ifndef DRBDROLE_H
 #define	DRBDROLE_H
 
+#include <default_types.h>
 #include <string>
 #include <exceptions.h>
-#include <cstdint>
 
 class DrbdRole
 {

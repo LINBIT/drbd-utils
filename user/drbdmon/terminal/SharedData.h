@@ -1,7 +1,7 @@
 #ifndef SHAREDDATA_H
 #define SHAREDDATA_H
 
-#include <cstdint>
+#include <default_types.h>
 #include <new>
 #include <memory>
 #include <string>

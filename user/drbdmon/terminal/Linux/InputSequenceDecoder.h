@@ -1,8 +1,7 @@
 #ifndef INPUTSEQUENCEDECODER_H
 #define INPUTSEQUENCEDECODER_H
 
-#include <cstddef>
-#include <cstdint>
+#include <default_types.h>
 #include <string>
 
 #include <terminal/MouseEvent.h>

@@ -1,7 +1,7 @@
 #ifndef TERMSIZE_H
 #define TERMSIZE_H
 
-#include <cstdint>
+#include <default_types.h>
 
 class TermSize
 {

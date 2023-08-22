@@ -1,6 +1,8 @@
 #ifndef EVENTSIOWAKEUP_H
 #define EVENTSIOWAKEUP_H
 
+#include <default_types.h>
+
 class EventsIoWakeup
 {
   public:

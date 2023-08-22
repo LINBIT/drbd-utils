@@ -1,9 +1,9 @@
 #ifndef RESOURCEDIRECTORY_H
 #define RESOURCEDIRECTORY_H
 
+#include <default_types.h>
 #include <DrbdMonCore.h>
 #include <memory>
-#include <cstdint>
 #include <map_types.h>
 // https://github.com/raltnoeder/cppdsaext
 #include <dsaext.h>

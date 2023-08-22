@@ -1,7 +1,7 @@
 #ifndef SUBPROCESSNT_H
 #define SUBPROCESSNT_H
 
-#include <cstddef>
+#include <default_types.h>
 #include <new>
 #include <memory>
 #include <mutex>

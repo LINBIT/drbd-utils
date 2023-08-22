@@ -1,6 +1,7 @@
 #ifndef MDSPHELPINDEX_H
 #define MDSPHELPINDEX_H
 
+#include <default_types.h>
 #include <terminal/MDspMenuBase.h>
 #include <terminal/ClickableCommand.h>
 #include <memory>

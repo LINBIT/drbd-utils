@@ -1,6 +1,7 @@
 #ifndef DISPLAYCONTROLLER_H
 #define DISPLAYCONTROLLER_H
 
+#include <default_types.h>
 #include <terminal/GenericDisplay.h>
 #include <terminal/DisplaySelector.h>
 #include <terminal/ModularDisplay.h>
@@ -29,8 +30,6 @@
 #include <VList.h>
 #include <memory>
 #include <string>
-#include <cstddef>
-#include <cstdint>
 
 class DisplayController : public GenericDisplay, public DisplaySelector
 {

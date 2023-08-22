@@ -1,6 +1,7 @@
 #ifndef MDSPCONFIGURATION_H
 #define MDSPCONFIGURATION_H
 
+#include <default_types.h>
 #include <terminal/MDspMenuBase.h>
 #include <configuration/Configuration.h>
 

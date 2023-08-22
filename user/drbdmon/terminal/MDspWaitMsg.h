@@ -1,6 +1,7 @@
 #ifndef MDSPWAITMSG_H
 #define MDSPWAITMSG_H
 
+#include <default_types.h>
 #include <terminal/MDspBase.h>
 #include <string>
 

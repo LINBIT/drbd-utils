@@ -1,6 +1,7 @@
 #ifndef CHARACTERTABLE_H
 #define CHARACTERTABLE_H
 
+#include <default_types.h>
 #include <string>
 
 class CharacterTable

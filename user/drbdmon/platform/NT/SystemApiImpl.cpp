@@ -1,7 +1,6 @@
 #include <platform/NT/SystemApiImpl.h>
 #include <subprocess/NT/SubProcessNt.h>
 #include <terminal/NT/TerminalControlImpl.h>
-#include <cstddef>
 #include <memory>
 #include <stdexcept>
 

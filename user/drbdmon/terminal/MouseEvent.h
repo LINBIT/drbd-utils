@@ -1,7 +1,7 @@
 #ifndef MOUSEEVENT_H
 #define MOUSEEVENT_H
 
-#include <cstdint>
+#include <default_types.h>
 
 class MouseEvent
 {

@@ -1,6 +1,7 @@
 #ifndef COMPONENTSHUB_H
 #define COMPONENTSHUB_H
 
+#include <default_types.h>
 #include <DrbdMonCore.h>
 #include <platform/SystemApi.h>
 #include <terminal/DisplaySelector.h>
@@ -18,7 +19,6 @@
 #include <configuration/Configuration.h>
 #include <MessageLog.h>
 #include <map_types.h>
-#include <cstdint>
 #include <string>
 
 class InputField;

@@ -1,9 +1,8 @@
 #ifndef SUBPROCESSNOTIFICATION_H
 #define SUBPROCESSNOTIFICATION_H
 
+#include <default_types.h>
 #include <mutex>
-#include <cstdint>
-
 #include <subprocess/SubProcessObserver.h>
 #include <EventsIoWakeup.h>
 

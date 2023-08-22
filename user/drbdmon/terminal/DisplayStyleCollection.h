@@ -1,6 +1,7 @@
 #ifndef DISPLAYSTYLECOLLECTION_H
 #define DISPLAYSTYLECOLLECTION_H
 
+#include <default_types.h>
 #include <new>
 #include <memory>
 #include <stdexcept>

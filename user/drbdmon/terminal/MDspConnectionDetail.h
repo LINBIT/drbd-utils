@@ -1,7 +1,7 @@
 #ifndef MDSPCONNECTIONDETAIL_H
 #define MDSPCONNECTIONDETAIL_H
 
-#include <cstdint>
+#include <default_types.h>
 #include <terminal/MDspMenuBase.h>
 
 class MDspConnectionDetail : public MDspMenuBase

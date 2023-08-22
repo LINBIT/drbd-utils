@@ -1,6 +1,7 @@
 #ifndef GLOBALCOMMANDSIMPL_H
 #define GLOBALCOMMANDSIMPL_H
 
+#include <default_types.h>
 #include <terminal/CommandsBase.h>
 #include <terminal/GlobalCommands.h>
 #include <terminal/ComponentsHub.h>

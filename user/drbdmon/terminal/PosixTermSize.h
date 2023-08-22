@@ -1,8 +1,8 @@
 #ifndef POSIXTERMSIZE_H
 #define POSIXTERMSIZE_H
 
+#include <default_types.h>
 #include <terminal/TermSize.h>
-#include <cstdint>
 
 extern "C"
 {

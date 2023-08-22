@@ -1,6 +1,7 @@
 #ifndef EXCEPTIONS_H
 #define EXCEPTIONS_H
 
+#include <default_types.h>
 #include <stdexcept>
 #include <memory>
 #include <string>

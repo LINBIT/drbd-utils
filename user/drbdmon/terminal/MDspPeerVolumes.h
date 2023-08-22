@@ -1,6 +1,7 @@
 #ifndef MDSPPEERVOLUMES_H
 #define MDSPPEERVOLUMES_H
 
+#include <default_types.h>
 #include <terminal/MDspStdListBase.h>
 #include <terminal/ComponentsHub.h>
 #include <terminal/MouseEvent.h>
@@ -9,7 +10,6 @@
 #include <objects/DrbdVolume.h>
 #include <terminal/DisplayConsts.h>
 #include <map_types.h>
-#include <cstdint>
 #include <string>
 #include <memory>
 #include <functional>

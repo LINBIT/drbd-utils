@@ -1,8 +1,7 @@
 #ifndef SUBPROCESS_H
 #define SUBPROCESS_H
 
-#include <cstddef>
-#include <cstdint>
+#include <default_types.h>
 #include <new>
 #include <memory>
 #include <atomic>

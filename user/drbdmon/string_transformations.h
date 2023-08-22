@@ -1,6 +1,7 @@
 #ifndef STRING_TRANSFORMATIONS_H
 #define STRING_TRANSFORMATIONS_H
 
+#include <default_types.h>
 #include <string>
 
 namespace string_transformations

@@ -1,6 +1,7 @@
 #ifndef MDSPLOGVIEWER_H
 #define MDSPLOGVIEWER_H
 
+#include <default_types.h>
 #include <terminal/MDspStdListBase.h>
 #include <functional>
 

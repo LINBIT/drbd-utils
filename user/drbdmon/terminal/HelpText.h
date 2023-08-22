@@ -1,6 +1,7 @@
 #ifndef HELPTEXT_H
 #define HELPTEXT_H
 
+#include <default_types.h>
 #include <terminal/ComponentsHub.h>
 
 namespace helptext

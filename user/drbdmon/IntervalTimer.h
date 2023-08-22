@@ -1,6 +1,7 @@
 #ifndef INTERVALTIMER_H
 #define	INTERVALTIMER_H
 
+#include <default_types.h>
 #include <exceptions.h>
 #include <MessageLog.h>
 #include <time.h>

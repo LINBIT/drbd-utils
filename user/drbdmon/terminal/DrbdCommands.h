@@ -1,6 +1,7 @@
 #ifndef DRBDCOMMANDS_H
 #define DRBDCOMMANDS_H
 
+#include <default_types.h>
 #include <StringTokenizer.h>
 #include <string>
 

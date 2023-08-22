@@ -1,8 +1,8 @@
 #ifndef INTEGERFMT_H
 #define INTEGERFMT_H
 
+#include <default_types.h>
 #include <string>
-#include <cstdint>
 
 namespace integerfmt
 {

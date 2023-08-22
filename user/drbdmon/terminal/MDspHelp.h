@@ -1,6 +1,7 @@
 #ifndef MDSPHELP_H
 #define MDSPHELP_H
 
+#include <default_types.h>
 #include <terminal/MDspBase.h>
 #include <terminal/TextColumn.h>
 

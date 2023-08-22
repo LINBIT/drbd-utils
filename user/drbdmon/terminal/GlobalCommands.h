@@ -1,6 +1,7 @@
 #ifndef GLOBALCOMMANDS_H
 #define GLOBALCOMMANDS_H
 
+#include <default_types.h>
 #include <StringTokenizer.h>
 #include <string>
 

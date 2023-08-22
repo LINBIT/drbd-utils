@@ -1,6 +1,7 @@
 #ifndef COMMANDSBASE_H_
 #define COMMANDSBASE_H_
 
+#include <default_types.h>
 #include <string>
 #include <new>
 #include <memory>

@@ -1,6 +1,7 @@
 #ifndef MDSPTASKDETAIL_H
 #define MDSPTASKDETAIL_H
 
+#include <default_types.h>
 #include <terminal/MDspMenuBase.h>
 #include <terminal/TextColumn.h>
 #include <subprocess/SubProcessQueue.h>

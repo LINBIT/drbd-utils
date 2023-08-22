@@ -1,7 +1,7 @@
 #ifndef DISPLAYUPDATEEVENT_H
 #define DISPLAYUPDATEEVENT_H
 
-#include <cstdint>
+#include <default_types.h>
 
 namespace update_event
 {

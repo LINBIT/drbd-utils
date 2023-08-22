@@ -1,7 +1,7 @@
 #ifndef MDSPVOLUMEDETAIL_H
 #define MDSPVOLUMEDETAIL_H
 
-#include <cstdint>
+#include <default_types.h>
 #include <terminal/MDspMenuBase.h>
 
 class MDspVolumeDetail : public MDspMenuBase

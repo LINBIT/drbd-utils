@@ -1,6 +1,7 @@
 #ifndef COMPARATORS_H
 #define	COMPARATORS_H
 
+#include <default_types.h>
 #include <string>
 
 namespace comparators

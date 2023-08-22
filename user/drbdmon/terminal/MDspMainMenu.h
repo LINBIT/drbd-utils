@@ -1,6 +1,7 @@
 #ifndef MDSPMAINMENU_H
 #define MDSPMAINMENU_H
 
+#include <default_types.h>
 #include <terminal/MDspMenuBase.h>
 #include <terminal/InputField.h>
 #include <terminal/MouseEvent.h>

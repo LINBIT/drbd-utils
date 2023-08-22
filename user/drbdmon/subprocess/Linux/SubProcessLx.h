@@ -1,7 +1,7 @@
 #ifndef SUBPROCESSLX_H
 #define SUBPROCESSLX_H
 
-#include <cstddef>
+#include <default_types.h>
 #include <new>
 #include <memory>
 #include <mutex>

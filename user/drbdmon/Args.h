@@ -1,6 +1,8 @@
 #ifndef ARGS_H
 #define	ARGS_H
 
+#include <default_types.h>
+
 class Args
 {
   public:

@@ -1,7 +1,7 @@
 #ifndef DISPLAYCOMMON_H
 #define DISPLAYCOMMON_H
 
-#include <cstdint>
+#include <default_types.h>
 
 class DisplayCommon
 {

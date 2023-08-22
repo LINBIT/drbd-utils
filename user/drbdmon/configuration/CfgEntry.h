@@ -1,7 +1,7 @@
 #ifndef CFGENTRY_H
 #define CFGENTRY_H
 
-#include <cstdint>
+#include <default_types.h>
 #include <new>
 #include <memory>
 #include <string>

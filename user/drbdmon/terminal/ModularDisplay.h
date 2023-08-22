@@ -1,6 +1,7 @@
 #ifndef MODULARDISPLAY_H
 #define MODULARDISPLAY_H
 
+#include <default_types.h>
 #include <terminal/MouseEvent.h>
 #include <string>
 #include <StringTokenizer.h>

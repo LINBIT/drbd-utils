@@ -1,6 +1,7 @@
 #ifndef LINUX_TERMINALCONTROL_H
 #define LINUX_TERMINALCONTROL_H
 
+#include <default_types.h>
 #include <terminal/TerminalControl.h>
 
 extern "C"

@@ -1,6 +1,7 @@
 #ifndef DRBDCMDCONSTS_H
 #define DRBDCMDCONSTS_H
 
+#include <default_types.h>
 #include <string>
 
 namespace drbdcmd

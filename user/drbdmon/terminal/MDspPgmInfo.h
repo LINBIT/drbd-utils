@@ -1,7 +1,7 @@
 #ifndef MDSPPGMINFO_H
 #define MDSPPGMINFO_H
 
-#include <cstddef>
+#include <default_types.h>
 #include <terminal/MDspBase.h>
 #include <terminal/TextColumn.h>
 

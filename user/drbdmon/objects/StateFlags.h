@@ -1,7 +1,7 @@
 #ifndef STATEFLAGS_H
 #define	STATEFLAGS_H
 
-#include <cstdint>
+#include <default_types.h>
 
 class StateFlags
 {

@@ -1,6 +1,7 @@
 #ifndef CONFIGOPTION_H
 #define	CONFIGOPTION_H
 
+#include <default_types.h>
 #include <stdexcept>
 #include <string>
 

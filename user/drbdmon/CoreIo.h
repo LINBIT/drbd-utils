@@ -1,6 +1,7 @@
 #ifndef COREIO_H
 #define COREIO_H
 
+#include <default_types.h>
 #include <terminal/MouseEvent.h>
 
 class CoreIo

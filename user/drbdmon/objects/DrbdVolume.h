@@ -1,8 +1,8 @@
 #ifndef DRBDVOLUME_H
 #define	DRBDVOLUME_H
 
+#include <default_types.h>
 #include <new>
-#include <cstdint>
 #include <string>
 
 #include <objects/StateFlags.h>

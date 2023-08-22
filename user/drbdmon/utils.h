@@ -1,6 +1,7 @@
 #ifndef UTILS_H
 #define	UTILS_H
 
+#include <default_types.h>
 #include <string>
 #include <cstdlib>
 #include <stdexcept>

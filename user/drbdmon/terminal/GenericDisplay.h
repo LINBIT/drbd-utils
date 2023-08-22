@@ -1,7 +1,7 @@
 #ifndef GENERICDISPLAY_H
 #define	GENERICDISPLAY_H
 
-#include <cstdint>
+#include <default_types.h>
 #include <terminal/MouseEvent.h>
 
 class GenericDisplay

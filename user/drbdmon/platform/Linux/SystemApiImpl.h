@@ -1,6 +1,7 @@
 #ifndef LINUX_SYSTEMAPIIMPL_H
 #define LINUX_SYSTEMAPIIMPL_H
 
+#include <default_types.h>
 #include <platform/SystemApi.h>
 
 extern "C"

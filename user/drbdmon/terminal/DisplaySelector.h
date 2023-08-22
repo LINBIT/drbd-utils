@@ -1,6 +1,7 @@
 #ifndef DISPLAYSELECTOR_H
 #define DISPLAYSELECTOR_H
 
+#include <default_types.h>
 #include <terminal/DisplayId.h>
 #include <terminal/ModularDisplay.h>
 #include <string>

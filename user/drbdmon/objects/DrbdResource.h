@@ -1,6 +1,7 @@
 #ifndef DRBDRESOURCE_H
 #define	DRBDRESOURCE_H
 
+#include <default_types.h>
 #include <new>
 #include <memory>
 #include <string>

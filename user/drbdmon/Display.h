@@ -1,12 +1,12 @@
 #ifndef DISPLAY_H
 #define	DISPLAY_H
 
+#include <default_types.h>
 #include <new>
 #include <stdexcept>
 #include <iostream>
 #include <iomanip>
 #include <string>
-#include <cstdint>
 
 #include <GenericDisplay.h>
 #include <map_types.h>

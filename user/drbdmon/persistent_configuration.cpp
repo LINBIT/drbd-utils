@@ -1,3 +1,4 @@
+#include <default_types.h>
 #include <persistent_configuration.h>
 #include <configuration/IoException.h>
 #include <configuration/CfgEntryStore.h>
@@ -5,7 +6,6 @@
 #include <configuration/CfgEntryIntegerTypes.h>
 #include <exceptions.h>
 #include <string_transformations.h>
-#include <cstdint>
 #include <string>
 #include <fstream>
 #include <iostream>

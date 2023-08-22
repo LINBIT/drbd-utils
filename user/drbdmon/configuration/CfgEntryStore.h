@@ -1,6 +1,7 @@
 #ifndef CFGENTRYSTORE_H
 #define CFGENTRYSTORE_H
 
+#include <default_types.h>
 #include <QTree.h>
 #include <configuration/CfgEntry.h>
 #include <string>

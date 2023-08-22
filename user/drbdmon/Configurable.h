@@ -1,6 +1,7 @@
 #ifndef CONFIGURABLE_H
 #define	CONFIGURABLE_H
 
+#include <default_types.h>
 #include <string>
 
 class Configurator;

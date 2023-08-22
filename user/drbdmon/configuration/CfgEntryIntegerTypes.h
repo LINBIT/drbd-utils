@@ -1,10 +1,10 @@
 #ifndef CFGENTRYINTEGERTYPES_H
 #define CFGENTRYINTEGERTYPES_H
 
+#include <default_types.h>
 #include <configuration/CfgEntry.h>
 #include <configuration/CfgEntryNumeric.h>
 #include <string>
-#include <cstdint>
 
 class CfgEntryUnsgInt8 : public CfgEntry
 {

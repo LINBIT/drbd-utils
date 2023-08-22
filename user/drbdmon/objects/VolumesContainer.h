@@ -1,9 +1,9 @@
 #ifndef VOLUMESCONTAINER_H
 #define	VOLUMESCONTAINER_H
 
+#include <default_types.h>
 #include <new>
 #include <memory>
-#include <cstdint>
 #include <string>
 
 #include <map_types.h>

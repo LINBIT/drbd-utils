@@ -1,6 +1,7 @@
 #ifndef IOEXCEPTION_H
 #define IOEXCEPTION_H
 
+#include <default_types.h>
 #include <string>
 #include <stdexcept>
 

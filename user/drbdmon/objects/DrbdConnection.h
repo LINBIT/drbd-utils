@@ -1,9 +1,9 @@
 #ifndef DRBDCONNECTION_H
 #define	DRBDCONNECTION_H
 
+#include <default_types.h>
 #include <new>
 #include <string>
-#include <cstdint>
 
 #include <objects/VolumesContainer.h>
 #include <objects/DrbdRole.h>

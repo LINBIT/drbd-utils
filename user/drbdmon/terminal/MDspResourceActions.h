@@ -1,7 +1,7 @@
 #ifndef MDSPRESOURCEACTIONS_H
 #define MDSPRESOURCEACTIONS_H
 
-#include <cstdint>
+#include <default_types.h>
 #include <terminal/MDspMenuBase.h>
 
 class MDspResourceActions: public MDspMenuBase

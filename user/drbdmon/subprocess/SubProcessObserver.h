@@ -1,6 +1,8 @@
 #ifndef SUBPROCESSOBSERVER_H
 #define SUBPROCESSOBSERVER_H
 
+#include <default_types.h>
+
 class SubProcessObserver
 {
   public:

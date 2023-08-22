@@ -1,6 +1,7 @@
 #ifndef NT_TERMINALCONTROLIMPL_H
 #define NT_TERMINALCONTROLIMPL_H
 
+#include <default_types.h>
 #include <terminal/TerminalControl.h>
 
 extern "C"

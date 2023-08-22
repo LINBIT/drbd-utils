@@ -1,10 +1,9 @@
 #ifndef INPUTFIELD_H
 #define INPUTFIELD_H
 
+#include <default_types.h>
 #include <terminal/ComponentsHub.h>
 #include <terminal/MouseEvent.h>
-#include <cstddef>
-#include <cstdint>
 #include <string>
 
 class InputField

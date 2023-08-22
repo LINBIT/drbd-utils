@@ -1,6 +1,7 @@
 #ifndef MDSPMESSAGE_H
 #define MDSPMESSAGE_H
 
+#include <default_types.h>
 #include <terminal/MDspBase.h>
 #include <terminal/TextColumn.h>
 #include <MessageLog.h>

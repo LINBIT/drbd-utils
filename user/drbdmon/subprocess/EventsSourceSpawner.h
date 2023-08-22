@@ -1,6 +1,7 @@
 #ifndef EVENTSSOURCESPAWNER_H
 #define	EVENTSSOURCESPAWNER_H
 
+#include <default_types.h>
 #include <new>
 #include <stdexcept>
 

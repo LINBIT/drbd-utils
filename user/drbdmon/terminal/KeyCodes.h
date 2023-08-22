@@ -1,7 +1,7 @@
 #ifndef KEY_CODES_H
 #define KEY_CODES_H
 
-#include <cstdint>
+#include <default_types.h>
 
 class KeyCodes
 {

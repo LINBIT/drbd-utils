@@ -1,12 +1,12 @@
 #ifndef TERMINAL_MDSPTASKQUEUE_H_
 #define TERMINAL_MDSPTASKQUEUE_H_
 
+#include <default_types.h>
 #include <terminal/MDspStdListBase.h>
 #include <terminal/DisplayConsts.h>
 #include <terminal/SharedData.h>
 #include <subprocess/SubProcessQueue.h>
 #include <VList.h>
-#include <cstdint>
 
 extern "C"
 {

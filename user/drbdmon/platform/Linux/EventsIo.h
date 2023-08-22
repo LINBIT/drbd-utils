@@ -1,6 +1,7 @@
 #ifndef EVENTSIO_H
 #define	EVENTSIO_H
 
+#include <default_types.h>
 #include <new>
 #include <memory>
 #include <stdexcept>

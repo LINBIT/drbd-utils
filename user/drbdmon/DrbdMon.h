@@ -1,9 +1,9 @@
 #ifndef LIVESTATUS_H
 #define	LIVESTATUS_H
 
+#include <default_types.h>
 #include <new>
 #include <memory>
-#include <cstdint>
 
 #include <DrbdMonCore.h>
 #include <MonitorEnvironment.h>

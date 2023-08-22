@@ -1,6 +1,7 @@
 #ifndef CFGENTRYBOOLEAN_H
 #define CFGENTRYBOOLEAN_H
 
+#include <default_types.h>
 #include <configuration/CfgEntry.h>
 #include <configuration/IoException.h>
 #include <istream>

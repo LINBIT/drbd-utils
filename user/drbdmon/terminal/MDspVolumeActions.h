@@ -1,6 +1,7 @@
 #ifndef MDSPVOLUMEACTIONS_H
 #define MDSPVOLUMEACTIONS_H
 
+#include <default_types.h>
 #include <terminal/MDspMenuBase.h>
 
 class MDspVolumeActions : public MDspMenuBase

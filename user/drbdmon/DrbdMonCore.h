@@ -1,7 +1,7 @@
 #ifndef DRBDMONCORE_H
 #define DRBDMONCORE_H
 
-#include <cstdint>
+#include <default_types.h>
 #include <platform/SystemApi.h>
 
 class DrbdMonCore

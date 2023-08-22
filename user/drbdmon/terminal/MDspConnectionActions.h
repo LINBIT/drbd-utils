@@ -1,6 +1,7 @@
 #ifndef MDSPCONNECTIONACTIONS_H
 #define MDSPCONNECTIONACTIONS_H
 
+#include <default_types.h>
 #include <terminal/MDspMenuBase.h>
 
 class MDspConnectionActions : public MDspMenuBase

@@ -1,6 +1,7 @@
 #ifndef SUBPROCESSQUEUE_H
 #define SUBPROCESSQUEUE_H
 
+#include <default_types.h>
 #include <memory>
 #include <mutex>
 #include <thread>

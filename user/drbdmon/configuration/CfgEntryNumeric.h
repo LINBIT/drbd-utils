@@ -1,9 +1,9 @@
 #ifndef CFGENTRYNUMERIC_H
 #define CFGENTRYNUMERIC_H
 
+#include <default_types.h>
 #include <configuration/CfgEntry.h>
 #include <configuration/IoException.h>
-#include <cstddef>
 #include <istream>
 #include <ostream>
 

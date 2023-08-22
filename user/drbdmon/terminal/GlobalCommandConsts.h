@@ -1,6 +1,7 @@
 #ifndef GLOBALCOMMANDCONSTS_H
 #define GLOBALCOMMANDCONSTS_H
 
+#include <default_types.h>
 #include <string>
 
 namespace cmd_names

@@ -1,8 +1,7 @@
 #ifndef CLICKABLECOMMAND_H
 #define CLICKABLECOMMAND_H
 
-#include <cstddef>
-#include <cstdint>
+#include <default_types.h>
 #include <string>
 #include <functional>
 #include <QTree.h>

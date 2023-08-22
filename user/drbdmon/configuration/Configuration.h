@@ -1,7 +1,7 @@
 #ifndef CONFIGURATION_H
 #define CONFIGURATION_H
 
-#include <cstdint>
+#include <default_types.h>
 #include <configuration/CfgEntryStore.h>
 #include <configuration/CfgEntry.h>
 #include <string>

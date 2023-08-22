@@ -1,10 +1,9 @@
 #ifndef TEXTCOLUMN_H
 #define TEXTCOLUMN_H
 
-#include <terminal/ComponentsHub.h>
-#include <cstddef>
-#include <cstdint>
+#include <default_types.h>
 #include <string>
+#include <terminal/ComponentsHub.h>
 
 class TextColumn
 {

@@ -1,7 +1,7 @@
 #ifndef MESSAGELOG_H
 #define MESSAGELOG_H
 
-#include <cstdint>
+#include <default_types.h>
 #include <new>
 #include <memory>
 #include <string>

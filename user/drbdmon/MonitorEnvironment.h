@@ -1,6 +1,7 @@
 #ifndef MONITORENVIRONMENT_H
 #define MONITORENVIRONMENT_H
 
+#include <default_types.h>
 #include <DrbdMonCore.h>
 #include <platform/SystemApi.h>
 #include <configuration/Configuration.h>

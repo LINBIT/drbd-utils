@@ -1,6 +1,7 @@
 #ifndef PERSISTENT_CONFIGURATION_H
 #define PERSISTENT_CONFIGURATION_H
 
+#include <default_types.h>
 #include <configuration/Configuration.h>
 #include <configuration/CfgEntryStore.h>
 #include <platform/SystemApi.h>

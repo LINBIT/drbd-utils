@@ -1,6 +1,8 @@
 #ifndef MESSAGELOGOBSERVER_H
 #define MESSAGELOGOBSERVER_H
 
+#include <default_types.h>
+
 class MessageLogObserver
 {
   public:

@@ -1,6 +1,8 @@
 #ifndef ESCSEQCODES_H
 #define ESCSEQCODES_H
 
+#include <default_types.h>
+
 class EscSeqCodes
 {
   public:

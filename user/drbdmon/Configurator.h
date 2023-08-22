@@ -1,6 +1,8 @@
 #ifndef CONFIGURATOR_H
 #define	CONFIGURATOR_H
 
+#include <default_types.h>
+
 class Configurable;
 class ConfigOption;
 

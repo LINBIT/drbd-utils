@@ -1,6 +1,7 @@
 #ifndef DISPLAYIDMAP_H
 #define DISPLAYIDMAP_H
 
+#include <default_types.h>
 #include <cppdsaext/src/QTree.h>
 #include <terminal/DisplayId.h>
 

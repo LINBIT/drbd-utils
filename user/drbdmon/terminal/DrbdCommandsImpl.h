@@ -1,6 +1,7 @@
 #ifndef DRBDCOMMANDSIMPL_H
 #define DRBDCOMMANDSIMPL_H
 
+#include <default_types.h>
 #include <terminal/CommandsBase.h>
 #include <terminal/DrbdCommands.h>
 #include <terminal/ComponentsHub.h>

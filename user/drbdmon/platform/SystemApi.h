@@ -1,6 +1,7 @@
 #ifndef SYSTEMAPI_H
 #define SYSTEMAPI_H
 
+#include <default_types.h>
 #include <memory>
 #include <string>
 #include <MessageLog.h>

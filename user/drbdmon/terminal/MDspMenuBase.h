@@ -1,6 +1,7 @@
 #ifndef MDSPMENUBASE_H
 #define MDSPMENUBASE_H
 
+#include <default_types.h>
 #include <terminal/MDspBase.h>
 #include <terminal/ClickableCommand.h>
 #include <terminal/InputField.h>

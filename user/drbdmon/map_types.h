@@ -1,8 +1,8 @@
 #ifndef MAP_TYPES_H
 #define	MAP_TYPES_H
 
+#include <default_types.h>
 #include <string>
-#include <cstdint>
 
 // https://github.com/raltnoeder/cppdsaext
 #include <QTree.h>

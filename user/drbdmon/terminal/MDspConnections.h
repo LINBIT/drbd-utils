@@ -1,13 +1,13 @@
 #ifndef MDSPCONNECTIONS_H
 #define MDSPCONNECTIONS_H
 
+#include <default_types.h>
 #include <terminal/MDspStdListBase.h>
 #include <terminal/ComponentsHub.h>
 #include <terminal/MouseEvent.h>
 #include <objects/DrbdResource.h>
 #include <objects/DrbdConnection.h>
 #include <map_types.h>
-#include <cstdint>
 #include <string>
 #include <memory>
 #include <functional>

@@ -1,8 +1,7 @@
 #ifndef DISPLAYIO_H
 #define DISPLAYIO_H
 
-#include <cstddef>
-#include <cstdint>
+#include <default_types.h>
 #include <string>
 #include <cstring>
 #include <memory>

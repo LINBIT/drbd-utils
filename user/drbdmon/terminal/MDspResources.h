@@ -1,12 +1,12 @@
 #ifndef MDSPRESOURCES_H
 #define MDSPRESOURCES_H
 
+#include <default_types.h>
 #include <terminal/ComponentsHub.h>
 #include <terminal/MDspStdListBase.h>
 #include <terminal/MouseEvent.h>
 #include <objects/DrbdResource.h>
 #include <map_types.h>
-#include <cstdint>
 #include <string>
 #include <memory>
 #include <functional>

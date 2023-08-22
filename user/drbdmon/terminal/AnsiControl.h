@@ -1,6 +1,7 @@
 #ifndef ANSICONTROL_H
 #define ANSICONTROL_H
 
+#include <default_types.h>
 #include <string>
 
 class AnsiControl

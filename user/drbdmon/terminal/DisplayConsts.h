@@ -1,7 +1,7 @@
 #ifndef DISPLAYCONSTS_H
 #define DISPLAYCONSTS_H
 
-#include <cstdint>
+#include <default_types.h>
 #include <string>
 
 namespace DisplayConsts

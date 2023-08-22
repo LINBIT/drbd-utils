@@ -1,6 +1,7 @@
 #ifndef DISPLAYCOMMONIMPL_H
 #define DISPLAYCOMMONIMPL_H
 
+#include <default_types.h>
 #include <terminal/DisplayCommon.h>
 #include <terminal/DisplayIo.h>
 #include <terminal/ComponentsHub.h>

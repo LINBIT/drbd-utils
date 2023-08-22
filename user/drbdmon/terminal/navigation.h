@@ -1,6 +1,7 @@
 #ifndef NAVIGATION_H
 #define NAVIGATION_H
 
+#include <default_types.h>
 #include <functional>
 
 namespace navigation

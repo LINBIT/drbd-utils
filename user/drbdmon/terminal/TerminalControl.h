@@ -1,6 +1,7 @@
 #ifndef TERMINALCONTROL_H
 #define TERMINALCONTROL_H
 
+#include <default_types.h>
 #include <stdexcept>
 
 class TerminalControl

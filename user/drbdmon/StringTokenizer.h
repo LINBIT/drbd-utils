@@ -1,6 +1,7 @@
 #ifndef STRINGTOKENIZER_H
 #define	STRINGTOKENIZER_H
 
+#include <default_types.h>
 #include <string>
 #include <stdexcept>
 

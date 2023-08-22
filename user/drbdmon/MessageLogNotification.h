@@ -1,6 +1,7 @@
 #ifndef MESSAGELOGNOTIFICATION_H
 #define MESSAGELOGNOTIFICATION_H
 
+#include <default_types.h>
 #include <MessageLogObserver.h>
 #include <EventsIoWakeup.h>
 #include <MessageLog.h>

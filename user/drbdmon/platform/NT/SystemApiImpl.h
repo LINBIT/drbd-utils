@@ -1,6 +1,7 @@
 #ifndef NT_SYSTEMAPIIMPL_H
 #define NT_SYSTEMAPIIMPL_H
 
+#include <default_types.h>
 #include <platform/SystemApi.h>
 
 class NtApi : public SystemApi

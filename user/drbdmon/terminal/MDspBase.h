@@ -1,6 +1,7 @@
 #ifndef MDSPBASE_H
 #define MDSPBASE_H
 
+#include <default_types.h>
 #include <terminal/ModularDisplay.h>
 #include <terminal/ComponentsHub.h>
 #include <terminal/MouseEvent.h>
