@@ -408,7 +408,7 @@ void DrbdCommandsImpl::exec_primary(const std::string& rsc_name)
 
     std::unique_ptr<CmdLine> command(new CmdLine());
     command->set_description(description);
-    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::DRBDSETUP_CMD);
     command->add_argument(drbdcmd::ARG_PRIMARY);
     command->add_argument(rsc_name);
 
@@ -425,7 +425,7 @@ void DrbdCommandsImpl::exec_force_primary(const std::string& rsc_name)
 
     std::unique_ptr<CmdLine> command(new CmdLine());
     command->set_description(description);
-    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::DRBDSETUP_CMD);
     command->add_argument(drbdcmd::ARG_PRIMARY);
     command->add_argument(drbdcmd::ARG_FORCE);
     command->add_argument(rsc_name);
@@ -443,7 +443,7 @@ void DrbdCommandsImpl::exec_secondary(const std::string& rsc_name)
 
     std::unique_ptr<CmdLine> command(new CmdLine());
     command->set_description(description);
-    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::DRBDSETUP_CMD);
     command->add_argument(drbdcmd::ARG_SECONDARY);
     command->add_argument(rsc_name);
 
