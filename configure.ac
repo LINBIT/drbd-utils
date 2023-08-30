@@ -359,79 +359,85 @@ RPM_REQ_XEN=""
 RPM_REQ_CHKCONFIG_POST=""
 RPM_REQ_CHKCONFIG_PREUN=""
 dnl figure out the distribution we're running on, and set some variables accordingly
-if test -z $DISTRO; then
-   AC_CHECK_FILE(/etc/redhat-release, [DISTRO="redhat"])
-   AC_CHECK_FILE(/etc/debian_version, [DISTRO="debian"])
-   AC_CHECK_FILE(/etc/SuSE-release, [DISTRO="suse"])
-fi
-case "$DISTRO" in
-     redhat)
-	test -z $INITDIR && INITDIR="$sysconfdir/rc.d/init.d"
-	RPM_DIST_TAG="%{?dist}"
-	dnl Fedora/Red Hat packaging guidelines mandate that packages
-	dnl belonging to the "minimal build system" should not be
-	dnl listed in BuildRequires
-	RPM_BUILDREQ_DEFAULT="flex"
-	RPM_REQ_CHKCONFIG_POST="Requires(post): chkconfig"
-	RPM_REQ_CHKCONFIG_PREUN="Requires(preun): chkconfig"
-	AC_MSG_NOTICE([configured for Red Hat (includes Fedora, RHEL, CentOS).])
 
-	AC_CHECK_FILE(/etc/fedora-release, [SUB_DISTRO="fedora"], [SUB_DISTRO="RHEL"])
-	if test "$SUB_DISTRO" = "fedora"; then
-		# pacemaker, heartbeat and bash-completion are not available in RHEL
-		# Xen: Be relaxed on RHEL (hassle free update). Be strict on Fedora
-		RPM_REQ_PACEMAKER="Requires: pacemaker"
-		RPM_REQ_HEARTBEAT="Requires: heartbeat"
-		RPM_REQ_BASH_COMPLETION="Requires: bash-completion"
-		RPM_REQ_XEN="Requires: xen"
-	fi
-	;;
-     debian)
-	AC_MSG_NOTICE([configured for Debian (includes Ubuntu).])
-        ;;
-     suse)
-	BASH_COMPLETION_SUFFIX=".sh"
-	# RPM_REQ_CHKCONFIG_POST="" chkconfig is part of aaa_base on suse
-	# RPM_REQ_CHKCONFIG_PREUN="" chkconfig is part of aaa_base on suse
-	AC_MSG_NOTICE([configured for SUSE (includes openSUSE, SLES).])
-
-	RPM_REQ_BASH_COMPLETION="Requires: bash"
-	# The following are disabled for hassle free updates:
-	# RPM_REQ_XEN="Requires: xen"
-	# RPM_REQ_PACEMAKER="Requires: pacemaker"
-	# RPM_REQ_HEARTBEAT="Requires: heartbeat"
-
-	# Unfortunately gcc on SLES9 is broken with -O2. Works with -O1
-	if grep -q 'VERSION = 9' /etc/SuSE-release; then
-		CFLAGS="-g -O1"
-	fi
-	;;
-     "")
-	AC_MSG_WARN([Unable to determine what distribution we are running on. Distribution-specific features will be disabled.])
-	;;
-esac
-dnl INITDIR may be set with --with-initdir, or set in the distro
-dnl detection magic above. If unset down to here, use a sensible
-dnl default.
-test -z $INITDIR && INITDIR="$sysconfdir/init.d"
-
-dnl Our udev rules file is known to work only with udev >= 85
-if test "$WITH_UDEV" = "yes"; then
-   udev_version=$( set -- $($UDEVADM version); echo $1 )
-   if test -z "$udev_version"; then
-	udev_version=$( set -- $($UDEVINFO -V); echo $3 )
+if test x"$WITH_WINDRBD" = x"yes" ; then
+   AC_MSG_RESULT([building for WinDRBD, not checking any Linux distros on this host])
+else
+   if test -z $DISTRO; then
+      AC_CHECK_FILE(/etc/redhat-release, [DISTRO="redhat"])
+      AC_CHECK_FILE(/etc/debian_version, [DISTRO="debian"])
+      AC_CHECK_FILE(/etc/SuSE-release, [DISTRO="suse"])
    fi
-   if test -z "$udev_version" || test "$udev_version" -lt 85; then
-      UDEV_RULE_SUFFIX=".disabled"
-      AC_MSG_WARN([Obsolete or unknown udev version. Installing disabled udev rules.])
-   fi
+   case "$DISTRO" in
+        redhat)
+	    test -z $INITDIR && INITDIR="$sysconfdir/rc.d/init.d"
+	    RPM_DIST_TAG="%{?dist}"
+	    dnl Fedora/Red Hat packaging guidelines mandate that packages
+	    dnl belonging to the "minimal build system" should not be
+	    dnl listed in BuildRequires
+	    RPM_BUILDREQ_DEFAULT="flex"
+	    RPM_REQ_CHKCONFIG_POST="Requires(post): chkconfig"
+	    RPM_REQ_CHKCONFIG_PREUN="Requires(preun): chkconfig"
+	    AC_MSG_NOTICE([configured for Red Hat (includes Fedora, RHEL, CentOS).])
+
+	    AC_CHECK_FILE(/etc/fedora-release, [SUB_DISTRO="fedora"], [SUB_DISTRO="RHEL"])
+	    if test "$SUB_DISTRO" = "fedora"; then
+		    # pacemaker, heartbeat and bash-completion are not available in RHEL
+		    # Xen: Be relaxed on RHEL (hassle free update). Be strict on Fedora
+		    RPM_REQ_PACEMAKER="Requires: pacemaker"
+		    RPM_REQ_HEARTBEAT="Requires: heartbeat"
+		    RPM_REQ_BASH_COMPLETION="Requires: bash-completion"
+		    RPM_REQ_XEN="Requires: xen"
+	    fi
+	    ;;
+        debian)
+	    AC_MSG_NOTICE([configured for Debian (includes Ubuntu).])
+            ;;
+        suse)
+	    BASH_COMPLETION_SUFFIX=".sh"
+	    # RPM_REQ_CHKCONFIG_POST="" chkconfig is part of aaa_base on suse
+	    # RPM_REQ_CHKCONFIG_PREUN="" chkconfig is part of aaa_base on suse
+	    AC_MSG_NOTICE([configured for SUSE (includes openSUSE, SLES).])
+
+	    RPM_REQ_BASH_COMPLETION="Requires: bash"
+	    # The following are disabled for hassle free updates:
+	    # RPM_REQ_XEN="Requires: xen"
+	    # RPM_REQ_PACEMAKER="Requires: pacemaker"
+	    # RPM_REQ_HEARTBEAT="Requires: heartbeat"
+
+	    # Unfortunately gcc on SLES9 is broken with -O2. Works with -O1
+	    if grep -q 'VERSION = 9' /etc/SuSE-release; then
+		    CFLAGS="-g -O1"
+	    fi
+	    ;;
+         "")
+	    AC_MSG_WARN([Unable to determine what distribution we are running on. Distribution-specific features will be disabled.])
+	    ;;
+    esac
+    dnl INITDIR may be set with --with-initdir, or set in the distro
+    dnl detection magic above. If unset down to here, use a sensible
+    dnl default.
+    test -z $INITDIR && INITDIR="$sysconfdir/init.d"
+
+    dnl Our udev rules file is known to work only with udev >= 85
+    if test "$WITH_UDEV" = "yes"; then
+       udev_version=$( set -- $($UDEVADM version); echo $1 )
+       if test -z "$udev_version"; then
+	    udev_version=$( set -- $($UDEVINFO -V); echo $3 )
+       fi
+       if test -z "$udev_version" || test "$udev_version" -lt 85; then
+          UDEV_RULE_SUFFIX=".disabled"
+          AC_MSG_WARN([Obsolete or unknown udev version. Installing disabled udev rules.])
+       fi
+    fi
+
+    dnl Our sub-packages can be built for noarch, but RPM only supports
+    dnl this from version 4.6.0 forward
+    if test "$WITH_NOARCH_SUBPACKAGES" = "yes"; then
+        RPM_SUBPACKAGE_NOARCH="BuildArch: noarch"
+    fi
 fi
 
-dnl Our sub-packages can be built for noarch, but RPM only supports
-dnl this from version 4.6.0 forward
-if test "$WITH_NOARCH_SUBPACKAGES" = "yes"; then
-   RPM_SUBPACKAGE_NOARCH="BuildArch: noarch"
-fi
 AC_SUBST(DISTRO)
 AC_SUBST(INITDIR)
 AC_SUBST(BASH_COMPLETION_SUFFIX)
