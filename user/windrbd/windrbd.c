@@ -1,5 +1,4 @@
 #define UNICODE 1
-#define _GNU_SOURCE 1
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +19,7 @@
 #include <assert.h>
 #include <setupapi.h>
 #include <newdev.h>
+#include <errno.h>
 #include <stdbool.h>
 
 #include <winioctl.h>
@@ -29,6 +29,10 @@
 
 #include "shared_windrbd.h"
 #include <windrbd/windrbd_ioctl.h>
+
+/* Define this to enable install/remove bus device */
+
+#define CONFIG_SETUPAPI 1
 
 static int quiet = 0;
 static int force = 0;
@@ -73,10 +77,12 @@ void usage_and_exit(void)
 	fprintf(stderr, "		Print (UNIX) path to this program\n");
 	fprintf(stderr, "	windrbd [opt] dump-memory-allocations\n");
 	fprintf(stderr, "		Cause kernel to dump (via printk) currently allocated memory\n");
+#ifdef CONFIG_SETUPAPI
 	fprintf(stderr, "	windrbd [opt] install-bus-device <inf-file>\n");
 	fprintf(stderr, "		Installs the WinDRBD Virtual Bus device on the system.\n");
 	fprintf(stderr, "	windrbd [opt] remove-bus-device <inf-file>\n");
 	fprintf(stderr, "		Removes the WinDRBD Virtual Bus device from the system.\n");
+#endif
 	fprintf(stderr, "	windrbd [opt] scan-partitions-for-minor <minor>\n");
 	fprintf(stderr, "		Reread partition table of disk minor (will cause drives to appear\n");
 	fprintf(stderr, "	windrbd [opt] set-syslog-ip <syslog-ipv4>\n");
@@ -92,8 +98,6 @@ void usage_and_exit(void)
 	fprintf(stderr, "	windrbd [opt] set-event-log-level <level>\n");
 	fprintf(stderr, "		Set threshold for printk's log level for event log\n");
 	fprintf(stderr, "	3..error, 4..warning, 5..notice, 6..info, 7..debug\n");
-	fprintf(stderr, "	windrbd [opt] di-install-driver <inf-file>\n");
-	fprintf(stderr, "		Installs the driver to the driver store (use -f)\n");
 	fprintf(stderr, "	windrbd [opt] get-blockdevice-size <drive-or-guid>\n");
 	fprintf(stderr, "		Prints size of blockdevice in bytes\n");
 	fprintf(stderr, "	windrbd [opt] check-for-metadata <drive-or-guid> <external|internal>\n");
@@ -1350,6 +1354,69 @@ void print_windows_error_code(const char *func)
 	printf("%s failed: error code %x\n", func, err);
 }
 
+#ifdef CONFIG_SETUPAPI
+
+struct setupapi_funcs {
+	HDEVINFO WINAPI (*SetupDiGetClassDevsExA)(CONST GUID *ClassGuid,PCSTR Enumerator,HWND hwndParent,DWORD Flags,HDEVINFO DeviceInfoSet,PCSTR MachineName,PVOID Reserved);
+	WINBOOL WINAPI (*SetupDiEnumDeviceInfo)(HDEVINFO DeviceInfoSet,DWORD MemberIndex,PSP_DEVINFO_DATA DeviceInfoData);
+	WINBOOL WINAPI (*SetupDiGetDeviceRegistryPropertyW)(HDEVINFO DeviceInfoSet,PSP_DEVINFO_DATA DeviceInfoData,DWORD Property,PDWORD PropertyRegDataType,PBYTE PropertyBuffer,DWORD PropertyBufferSize,PDWORD RequiredSize);
+	WINBOOL WINAPI (*SetupDiCallClassInstaller)(DI_FUNCTION InstallFunction,HDEVINFO DeviceInfoSet,PSP_DEVINFO_DATA DeviceInfoData);
+	WINBOOL WINAPI (*SetupDiGetINFClassW)(PCWSTR InfName,LPGUID ClassGuid,PWSTR ClassName,DWORD ClassNameSize,PDWORD RequiredSize);	
+	HDEVINFO WINAPI (*SetupDiCreateDeviceInfoList)(CONST GUID *ClassGuid,HWND hwndParent);
+	WINBOOL WINAPI (*SetupDiCreateDeviceInfoW)(HDEVINFO DeviceInfoSet,PCWSTR DeviceName,CONST GUID *ClassGuid,PCWSTR DeviceDescription,HWND hwndParent,DWORD CreationFlags,PSP_DEVINFO_DATA DeviceInfoData);
+	WINBOOL WINAPI (*SetupDiSetDeviceRegistryPropertyW)(HDEVINFO DeviceInfoSet,PSP_DEVINFO_DATA DeviceInfoData,DWORD Property,CONST BYTE *PropertyBuffer,DWORD PropertyBufferSize);
+	WINBOOL WINAPI (*SetupDiDestroyDeviceInfoList)(HDEVINFO DeviceInfoSet);	
+} setupapi_funcs;
+
+static int load_setupapi(void)
+{
+	HMODULE lib;
+
+	lib = LoadLibraryA("Setupapi.dll");
+	if (lib == NULL) {
+		print_windows_error_code("load_setupapi");
+		return -1;
+	}
+	if ((setupapi_funcs.SetupDiGetClassDevsExA = GetProcAddress(lib, "SetupDiGetClassDevsExA")) == NULL) {
+		print_windows_error_code("GetProcAddress SetupDiGetClassDevsExA");
+		return -1;
+	}
+	if ((setupapi_funcs.SetupDiEnumDeviceInfo = GetProcAddress(lib, "SetupDiEnumDeviceInfo")) == NULL) {
+		print_windows_error_code("GetProcAddress SetupDiEnumDeviceInfo");
+		return -1;
+	}
+	if ((setupapi_funcs.SetupDiGetDeviceRegistryPropertyW = GetProcAddress(lib, "SetupDiGetDeviceRegistryPropertyW")) == NULL) {
+		print_windows_error_code("GetProcAddress SetupDiGetDeviceRegistryPropertyW");
+		return -1;
+	}
+	if ((setupapi_funcs.SetupDiCallClassInstaller = GetProcAddress(lib, "SetupDiCallClassInstaller")) == NULL) {
+		print_windows_error_code("GetProcAddress SetupDiCallClassInstaller");
+		return -1;
+	}
+	if ((setupapi_funcs.SetupDiGetINFClassW = GetProcAddress(lib, "SetupDiGetINFClassW")) == NULL) {
+		print_windows_error_code("GetProcAddress SetupDiGetINFClassW");
+		return -1;
+	}
+	if ((setupapi_funcs.SetupDiCreateDeviceInfoList = GetProcAddress(lib, "SetupDiCreateDeviceInfoList")) == NULL) {
+		print_windows_error_code("GetProcAddress SetupDiCreateDeviceInfoList");
+		return -1;
+	}
+	if ((setupapi_funcs.SetupDiCreateDeviceInfoW = GetProcAddress(lib, "SetupDiCreateDeviceInfoW")) == NULL) {
+		print_windows_error_code("GetProcAddress SetupDiCreateDeviceInfoW");
+		return -1;
+	}
+	if ((setupapi_funcs.SetupDiSetDeviceRegistryPropertyW = GetProcAddress(lib, "SetupDiSetDeviceRegistryPropertyW")) == NULL) {
+		print_windows_error_code("GetProcAddress SetupDiSetDeviceRegistryPropertyW");
+		return -1;
+	}
+	if ((setupapi_funcs.SetupDiDestroyDeviceInfoList = GetProcAddress(lib, "SetupDiDestroyDeviceInfoList")) == NULL) {
+		print_windows_error_code("GetProcAddress SetupDiDestroyDeviceInfoList");
+		return -1;
+	}
+
+	return 0;
+}
+		
 	/* This iterates over all devices on the system and deletes
 	 * all devices with hardware ID WinDRBD.
 	 */
@@ -1363,7 +1430,7 @@ static int remove_all_windrbd_bus_devices(int delete_them)
 	TCHAR buf[1024];
 	int err;
 
-	h = SetupDiGetClassDevsExA(NULL, NULL, NULL, DIGCF_ALLCLASSES, NULL, NULL, NULL);
+	h = setupapi_funcs.SetupDiGetClassDevsExA(NULL, NULL, NULL, DIGCF_ALLCLASSES, NULL, NULL, NULL);
 	if (h == INVALID_HANDLE_VALUE) {
 		print_windows_error_code("SetupDiGetClassDevsExA");
 		return -1;
@@ -1372,13 +1439,13 @@ static int remove_all_windrbd_bus_devices(int delete_them)
 
 	i=0;
 	while (1) {
-		if (!SetupDiEnumDeviceInfo(h, i, &info)) {
+		if (!setupapi_funcs.SetupDiEnumDeviceInfo(h, i, &info)) {
 			err = GetLastError();
 			if (err != 0x103)	/* last item */
 				print_windows_error_code("SetupDiEnumDeviceInfo");
 			break;
 		}
-		if (!SetupDiGetDeviceRegistryProperty(h, &info, SPDRP_HARDWAREID, NULL, (unsigned char *) buf, sizeof(buf), NULL)) {
+		if (!setupapi_funcs.SetupDiGetDeviceRegistryProperty(h, &info, SPDRP_HARDWAREID, NULL, (unsigned char *) buf, sizeof(buf), NULL)) {
 			err = GetLastError();
 				/* invalid data, insufficient buffer: */
 				/* both do not happen with WinDRBD bus device */
@@ -1391,7 +1458,7 @@ static int remove_all_windrbd_bus_devices(int delete_them)
 /*		printf("device %d is %S\n", i, buf); */
 		if (wcscmp(buf, L"WinDRBD") == 0) {
 			if (delete_them) {
-				if (!SetupDiCallClassInstaller(DIF_REMOVE, h, &info)) {
+				if (!setupapi_funcs.SetupDiCallClassInstaller(DIF_REMOVE, h, &info)) {
 					print_windows_error_code("SetupDiCallClassInstaller");
 				} else {
 					num_deleted++;
@@ -1410,6 +1477,7 @@ next:
 	return num_deleted;
 }
 
+
 	/* This installs or removes the WinDRBD bus device object.
 	 * This code has been adapted from WinAoE (www.winaoe.org)
 	 * loader.c file.
@@ -1422,12 +1490,17 @@ static int install_windrbd_bus_device(int remove, const char *inf_file)
 	GUID ClassGUID;
 	TCHAR ClassName[MAX_CLASS_NAME];
 	HINSTANCE Library;
-	PROC UpdateDriverForPlugAndPlayDevicesA;
+	PROC UpdateDriverForPlugAndPlayDevicesW;
 	BOOL RebootRequired = FALSE;
 	TCHAR FullFilePath[1024];
 	TCHAR InfFile[1024];
 	int num_deleted;
 	int ret;
+
+	if (load_setupapi() < 0) {
+		fprintf(stderr, "setupapi.dll not found or error loading functions, does it exist at all (see C:\\Windows\\System32)\n");
+		return -1;
+	}
 
 	if ((ret = MultiByteToWideChar(CP_UTF8, 0, inf_file, -1, &InfFile[0], sizeof(InfFile) / sizeof(InfFile[0]) - 1)) == 0) {
 		print_windows_error_code("MultiByteToWideChar");
@@ -1441,24 +1514,24 @@ static int install_windrbd_bus_device(int remove, const char *inf_file)
 		print_windows_error_code("LoadLibraryError");
 		return -1;
 	}
-	if ((UpdateDriverForPlugAndPlayDevicesA = GetProcAddress(Library, "UpdateDriverForPlugAndPlayDevicesA")) == NULL) {
+	if ((UpdateDriverForPlugAndPlayDevicesW = GetProcAddress(Library, "UpdateDriverForPlugAndPlayDevicesW")) == NULL) {
 		print_windows_error_code("GetProcAddress");
 		return -1;
 	}
-	if (!SetupDiGetINFClass(FullFilePath, &ClassGUID, ClassName, sizeof(ClassName), 0)) {
+	if (!setupapi_funcs.SetupDiGetINFClassW(FullFilePath, &ClassGUID, ClassName, sizeof(ClassName), 0)) {
 		print_windows_error_code("SetupDiGetINFClass");
 		return -1;
 	}
-	if ((DeviceInfoSet = SetupDiCreateDeviceInfoList(&ClassGUID, 0)) == INVALID_HANDLE_VALUE) {
+	if ((DeviceInfoSet = setupapi_funcs.SetupDiCreateDeviceInfoList(&ClassGUID, 0)) == INVALID_HANDLE_VALUE) {
 		print_windows_error_code("SetupDiCreateDeviceInfoList");
 		return -1;
 	}
 	DeviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
-	if (!SetupDiCreateDeviceInfo(DeviceInfoSet, ClassName, &ClassGUID, NULL, 0, DICD_GENERATE_ID, &DeviceInfoData)) {
+	if (!setupapi_funcs.SetupDiCreateDeviceInfoW(DeviceInfoSet, ClassName, &ClassGUID, NULL, 0, DICD_GENERATE_ID, &DeviceInfoData)) {
 		print_windows_error_code("SetupDiCreateDeviceInfo");
 		goto cleanup_deviceinfo;
 	}
-	if (!SetupDiSetDeviceRegistryProperty(DeviceInfoSet, &DeviceInfoData, SPDRP_HARDWAREID, (unsigned char*) L"WinDRBD\0\0\0", (lstrlen(L"WinDRBD\0\0\0")+1+1) * sizeof(TCHAR))) {
+	if (!setupapi_funcs.SetupDiSetDeviceRegistryProperty(DeviceInfoSet, &DeviceInfoData, SPDRP_HARDWAREID, (unsigned char*) L"WinDRBD\0\0\0", (lstrlen(L"WinDRBD\0\0\0")+1+1) * sizeof(TCHAR))) {
 		print_windows_error_code("SetupDiSetDeviceRegistryProperty");
 		goto cleanup_deviceinfo;
 	}
@@ -1468,7 +1541,7 @@ static int install_windrbd_bus_device(int remove, const char *inf_file)
 			if (!quiet) {
 				printf("WinDRBD bus device already there, not doing anything.\n");
 			}
-			SetupDiDestroyDeviceInfoList(DeviceInfoSet);
+			setupapi_funcs.SetupDiDestroyDeviceInfoList(DeviceInfoSet);
 			return 0;
 		}
 	}
@@ -1478,12 +1551,12 @@ static int install_windrbd_bus_device(int remove, const char *inf_file)
 		goto cleanup_deviceinfo;
 
 	if (remove == 0) {
-		if (!SetupDiCallClassInstaller(DIF_REGISTERDEVICE, DeviceInfoSet, &DeviceInfoData)) {
+		if (!setupapi_funcs.SetupDiCallClassInstaller(DIF_REGISTERDEVICE, DeviceInfoSet, &DeviceInfoData)) {
 			print_windows_error_code("SetupDiCallClassInstaller");
 			goto cleanup_deviceinfo;
 		}
 		printf("UpdateDriverForPlugAndPlayDevices (.., INSTALLFLAG_FORCE, ..)\n");
-		if (!UpdateDriverForPlugAndPlayDevices(0, L"WinDRBD\0\0\0", FullFilePath, INSTALLFLAG_FORCE , &RebootRequired)) {
+		if (!UpdateDriverForPlugAndPlayDevicesW(0, L"WinDRBD\0\0\0", FullFilePath, INSTALLFLAG_FORCE , &RebootRequired)) {
 			print_windows_error_code("UpdateDriverForPlugAndPlayDevices");
 			goto remove_class;
 		}
@@ -1496,14 +1569,16 @@ static int install_windrbd_bus_device(int remove, const char *inf_file)
 	return 0;
 
 remove_class:
-	if (!SetupDiCallClassInstaller(DIF_REMOVE, DeviceInfoSet, &DeviceInfoData)) {
+	if (!setupapi_funcs.SetupDiCallClassInstaller(DIF_REMOVE, DeviceInfoSet, &DeviceInfoData)) {
 		print_windows_error_code("SetupDiCallClassInstaller");
 	}
 cleanup_deviceinfo:
-	SetupDiDestroyDeviceInfoList(DeviceInfoSet);
+	setupapi_funcs.SetupDiDestroyDeviceInfoList(DeviceInfoSet);
 
 	return -1;
 }
+
+#endif
 
 int scan_partitions_for_minor(int minor)
 {
@@ -1536,18 +1611,6 @@ int scan_partitions_for_minor(int minor)
 		return -1;
 	}
 	CloseHandle(h);
-	return 0;
-}
-
-int do_di_install_driver(const char *inf_file)
-{
-	BOOL ret;
-
-	ret = DiInstallDriverA(NULL, inf_file, force ? DIIRFLAG_FORCE_INF : 0, NULL);
-	if (!ret) {
-		print_windows_error_code("DiInstallDriverA");
-		return 1;
-	}
 	return 0;
 }
 
@@ -1707,6 +1770,7 @@ int main(int argc, char ** argv)
 	if (strcmp(op, "dump-memory-allocations") == 0)
 		return dump_memory_allocations();
 
+#if CONFIG_SETUPAPI
 	if (strcmp(op, "install-bus-device") == 0) {
 		if (argc != optind+2) {
 			usage_and_exit();
@@ -1719,6 +1783,7 @@ int main(int argc, char ** argv)
 		}
 		return install_windrbd_bus_device(1, argv[optind+1]);
 	}
+#endif
 	if (strcmp(op, "scan-partitions-for-minor") == 0) {
 		if (argc != optind+2) {
 			usage_and_exit();
@@ -1768,12 +1833,6 @@ int main(int argc, char ** argv)
 			usage_and_exit();
 		}
 		return print_lock_down_state();
-	}
-	if (strcmp(op, "di-install-driver") == 0) {
-		if (argc != optind+2) {
-			usage_and_exit();
-		}
-		return do_di_install_driver(argv[optind+1]);
 	}
 	if (strcmp(op, "get-blockdevice-size") == 0) {
 		if (argc != optind+2) {
