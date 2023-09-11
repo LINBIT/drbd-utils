@@ -1162,6 +1162,8 @@ static int adm_attach(const struct cfg_ctx *ctx)
 		if (rv)
 			return rv;
 
+		/* repair-md may implicitly move internal meta data
+		 * if it detects a backend resize */
 		rv = call_cmd_fn(&repair_md_cmd, ctx, KEEP_RUNNING);
 		if (rv)
 			return rv;

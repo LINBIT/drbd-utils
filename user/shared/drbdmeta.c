@@ -2092,10 +2092,6 @@ int meta_apply_al(struct format *cfg, char **argv __attribute((unused)), int arg
 	}
 
 	err = cfg->ops->open(cfg);
-	if (err == VALID_MD_FOUND_AT_LAST_KNOWN_LOCATION) {
-		if (v08_move_internal_md_after_resize(cfg) == 0)
-			err = cfg->ops->open(cfg);
-	}
 	if (err != VALID_MD_FOUND) {
 		fprintf(stderr, "No valid meta data found\n");
 		return -1;
@@ -4880,8 +4876,14 @@ int meta_repair_md(struct format *cfg, char **argv, int argc)
 	bool dirty = false;
 
 	err = cfg->ops->open(cfg);
-	if (err)
+	if (err == VALID_MD_FOUND_AT_LAST_KNOWN_LOCATION) {
+		if (v08_move_internal_md_after_resize(cfg) == 0)
+			err = cfg->ops->open(cfg);
+	}
+	if (err != VALID_MD_FOUND) {
+		fprintf(stderr, "No valid meta data found\n");
 		return -1;
+	}
 
 	day0_p = day0_peer_id(cfg);
 
