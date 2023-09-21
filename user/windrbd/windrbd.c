@@ -1496,6 +1496,7 @@ static int install_windrbd_bus_device(int remove, const char *inf_file)
 	TCHAR InfFile[1024];
 	int num_deleted;
 	int ret;
+	int cnt;
 
 	if (load_setupapi() < 0) {
 		fprintf(stderr, "setupapi.dll not found or error loading functions, does it exist at all (see C:\\Windows\\System32)\n");
@@ -1556,9 +1557,14 @@ static int install_windrbd_bus_device(int remove, const char *inf_file)
 			goto cleanup_deviceinfo;
 		}
 		printf("UpdateDriverForPlugAndPlayDevices (.., INSTALLFLAG_FORCE, ..)\n");
-		if (!UpdateDriverForPlugAndPlayDevicesW(0, L"WinDRBD\0\0\0", FullFilePath, INSTALLFLAG_FORCE , &RebootRequired)) {
-			print_windows_error_code("UpdateDriverForPlugAndPlayDevices");
-			goto remove_class;
+		cnt = 0;
+		while (!UpdateDriverForPlugAndPlayDevicesW(0, L"WinDRBD\0\0\0", FullFilePath, INSTALLFLAG_FORCE , &RebootRequired)) {
+			if (GetLastError() != ERROR_TIMEOUT || cnt++ > 10) {
+				print_windows_error_code("UpdateDriverForPlugAndPlayDevices");
+				goto remove_class;
+			}
+			printf("Got ERROR_TIMEOUT from system (%d), retrying in 5 seconds ...\n", cnt);
+			sleep(5);
 		}
 		printf("Installed 1 WinDRBD bus device\n");
 	}
