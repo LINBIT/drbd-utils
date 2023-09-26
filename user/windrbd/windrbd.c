@@ -106,6 +106,13 @@ void usage_and_exit(void)
 	fprintf(stderr, "		Erases DRBD meta data from drive if it exists\n");
 	fprintf(stderr, "	windrbd [opt] set-shutdown-flag <0 or 1>\n");
 	fprintf(stderr, "		Tells WinDRBD driver to stop all drbdsetup processes (when flag=1)\n");
+	fprintf(stderr, "	windrbd [opt] lock-driver\n");
+	fprintf(stderr, "		Tells WinDRBD driver to react to AddDevice requests.\n");
+	fprintf(stderr, "		The driver cannot be unloaded, then.\n");
+	fprintf(stderr, "	windrbd [opt] unlock-driver\n");
+	fprintf(stderr, "		Tells WinDRBD driver not to reacto to AddDevice requests.\n");
+	fprintf(stderr, "		This works only when the usage count is 0 (no DRBD resources, no bus devices)\n");
+	fprintf(stderr, "		The driver can be unloaded, then.\n");
 
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
@@ -1879,6 +1886,18 @@ int main(int argc, char ** argv)
 		int the_flag = atoi_or_die(argv[optind+1]);
 
 		return send_int_ioctl(IOCTL_WINDRBD_ROOT_SET_SHUTDOWN_FLAG, the_flag);
+	}
+	if (strcmp(op, "unlock-driver") == 0) {
+		if (argc != optind+1) {
+			usage_and_exit();
+		}
+		return send_int_ioctl(IOCTL_WINDRBD_ROOT_SET_DRIVER_LOCKED, 0);
+	}
+	if (strcmp(op, "lock-driver") == 0) {
+		if (argc != optind+1) {
+			usage_and_exit();
+		}
+		return send_int_ioctl(IOCTL_WINDRBD_ROOT_SET_DRIVER_LOCKED, 1);
 	}
 
 	usage_and_exit();
