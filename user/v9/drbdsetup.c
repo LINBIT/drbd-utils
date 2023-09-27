@@ -160,6 +160,7 @@ const char *ctx_arg_string(enum cfg_ctx_key key, enum usage_type ut)
 
 // other functions
 static int get_af_ssocks(int warn);
+static char *af_to_str(int af);
 static void print_command_usage(struct drbd_cmd *cm, enum usage_type);
 static void print_usage_and_exit(const char *addinfo)
 		__attribute__ ((noreturn));
@@ -202,6 +203,7 @@ static struct devices_list *list_devices(char *);
 static struct connections_list *sort_connections(struct connections_list *);
 static struct connections_list *list_connections(char *);
 static struct peer_devices_list *list_peer_devices(char *);
+static struct paths_list *list_paths(char *);
 
 struct option wait_cmds_options[] = {
 	{ "wfc-timeout", required_argument, 0, 't' },
@@ -2602,6 +2604,49 @@ static char *bool2json(bool b)
 	return b ? "true" : "false";
 }
 
+static void address_json(void *address, int addr_len, char *indent)
+{
+	union {
+		struct sockaddr     addr;
+		struct sockaddr_in  addr4;
+		struct sockaddr_in6 addr6;
+	} a;
+
+	/* avoid alignment issues on certain platforms (e.g. armel) */
+	memset(&a, 0, sizeof(a));
+	memcpy(&a.addr, address, addr_len);
+
+	if (a.addr.sa_family == AF_INET
+			|| a.addr.sa_family == get_af_ssocks(0)
+			|| a.addr.sa_family == AF_INET_SDP) {
+		printf("%s\"address\": \"%s\",\n", indent, inet_ntoa(a.addr4.sin_addr));
+		printf("%s\"port\": %u,\n", indent, ntohs(a.addr4.sin_port));
+	} else if (a.addr.sa_family == AF_INET6) {
+		char address_buffer[ADDRESS_STR_MAX];
+		address_buffer[0] = 0;
+		/* inet_ntop does not include scope info */
+		getnameinfo(&a.addr, addr_len, address_buffer, sizeof(address_buffer),
+			NULL, 0, NI_NUMERICHOST|NI_NUMERICSERV);
+		printf("%s\"address\": \"%s\",\n", indent, address_buffer);
+		printf("%s\"port\": %u,\n", indent, ntohs(a.addr6.sin6_port));
+	}
+
+	printf("%s\"family\": \"%s\"\n", indent, af_to_str(a.addr.sa_family));
+}
+
+static void path_status_json(struct paths_list *path)
+{
+	printf("        {\n");
+	printf("          \"this_host\": {\n");
+	address_json(path->ctx.ctx_my_addr, path->ctx.ctx_my_addr_len, "            ");
+	printf("          },\n");
+	printf("          \"remote_host\": {\n");
+	address_json(path->ctx.ctx_peer_addr, path->ctx.ctx_peer_addr_len, "            ");
+	printf("          },\n");
+	printf("          \"established\": %s\n", bool2json(path->info.path_established));
+	printf("        }");
+}
+
 static void peer_device_status_json(struct peer_devices_list *peer_device)
 {
 	struct peer_device_statistics *s = &peer_device->statistics;
@@ -2721,9 +2766,12 @@ static void peer_device_status_json(struct peer_devices_list *peer_device)
 }
 
 static void connection_status_json(struct connections_list *connection,
-				   struct peer_devices_list *peer_devices)
+				   struct peer_devices_list *peer_devices,
+				   struct paths_list *paths)
 {
 	struct peer_devices_list *peer_device;
+	struct paths_list *path;
+	int path_index = 0;
 	int i = 0;
 
 	printf("    {\n"
@@ -2743,6 +2791,19 @@ static void connection_status_json(struct connections_list *connection,
 		       "      \"rs-in-flight\": "U64",\n",
 			(uint64_t)connection->statistics.ap_in_flight,
 			(uint64_t)connection->statistics.rs_in_flight);
+	}
+
+	if (genl_op_known(drbd_sock->s_family, DRBD_ADM_GET_PATHS)) {
+		printf("      \"paths\": [\n");
+		for (path = paths; path; path = path->next) {
+			if (connection->ctx.ctx_peer_node_id != path->ctx.ctx_peer_node_id)
+				continue;
+			if (path_index)
+				puts(",");
+			path_status_json(path);
+			path_index++;
+		}
+		printf(" ],\n");
 	}
 
 	printf("      \"peer_devices\": [\n");
@@ -3224,6 +3285,7 @@ static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		struct devices_list *devices, *device;
 		struct connections_list *connections, *connection;
 		struct peer_devices_list *peer_devices = NULL;
+		struct paths_list *paths = NULL;
 		bool single_device;
 		static bool jsonisfirst = true;
 
@@ -3236,6 +3298,8 @@ static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		connections = sort_connections(list_connections(resource->name));
 		if (devices && connections)
 			peer_devices = list_peer_devices(resource->name);
+		if (connections && genl_op_known(drbd_sock->s_family, DRBD_ADM_GET_PATHS))
+			paths = list_paths(resource->name);
 
 		link_peer_devices_to_devices(peer_devices, devices);
 
@@ -3248,7 +3312,7 @@ static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
 			}
 			puts(" ],\n  \"connections\": [");
 			for (connection = connections; connection; connection = connection->next) {
-				connection_status_json(connection, peer_devices);
+				connection_status_json(connection, peer_devices, paths);
 				if (connection->next)
 					puts(",");
 			}
@@ -3854,6 +3918,49 @@ struct paths_list *new_path_from_info(struct genl_info *info)
 	drbd_path_info_from_attrs(&p->info, info);
 
 	return p;
+}
+
+static int remember_path(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
+{
+	struct paths_list ***tail = u_ptr;
+
+	if (info) {
+		struct paths_list *p = new_path_from_info(info);
+		PTR_NONNULL_OR_EXIT2(tail);
+		**tail = p;
+		*tail = &p->next;
+	}
+	return 0;
+}
+
+/*
+ * Expects objname to be set to the resource name or "all".
+ */
+static struct paths_list *list_paths(char *resource_name)
+{
+	struct drbd_cmd cmd = {
+		.cmd_id = DRBD_ADM_GET_PATHS,
+		.handle_reply = remember_path,
+		.missing_ok = false,
+	};
+	struct paths_list *list = NULL, **tail = &list;
+	char *old_objname = objname;
+	int old_my_addr_len = global_ctx.ctx_my_addr_len;
+	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
+	int err;
+
+	objname = resource_name ? resource_name : "all";
+	global_ctx.ctx_my_addr_len = 0;
+	global_ctx.ctx_peer_addr_len = 0;
+	err = generic_get(&cmd, 120000, &tail);
+	objname = old_objname;
+	global_ctx.ctx_my_addr_len = old_my_addr_len;
+	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
+	if (err) {
+		free_paths(list);
+		list = NULL;
+	}
+	return list;
 }
 
 void free_paths(struct paths_list *paths)
