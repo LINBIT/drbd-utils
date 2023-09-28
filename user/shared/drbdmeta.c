@@ -39,6 +39,7 @@
 #include <sys/utsname.h>
 #include <sys/time.h>
 
+#include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
@@ -62,8 +63,11 @@
 #include "drbdmeta_parser.h"
 
 #include "config.h"
+#include "drbdmeta.h"
 
-typedef void (*dump_func)(const char *const buffer, const size_t length, const off_t offset);
+typedef void (*dump_func)(
+		const struct format *const cfg,
+		const char *const buffer, const size_t length, const off_t offset);
 
 extern FILE* yyin;
 YYSTYPE yylval;
@@ -77,6 +81,15 @@ int     option_node_id = -1;
 unsigned option_al_stripes = 1;
 unsigned option_al_stripe_size_4k = 8;
 unsigned option_al_stripes_used = 0;
+
+/* for dump-superblock */
+enum {
+    DUMP_AUTO,
+    DUMP_HEX,
+    DUMP_BINARY,
+    DUMP_JSON
+} option_output_fmt;
+bool option_output_fmt_seen = false;
 
 enum initialize_bitmap_mode {
 	/* Yes, I'm going to prefix these with IBM ;-) */
@@ -103,6 +116,7 @@ struct option metaopt[] = {
     { "al-stripes",  required_argument, NULL, 's' },
     { "al-stripe-size-kB",  required_argument, NULL, 'z' },
     { "initialize-bitmap",  required_argument, NULL, 'b' },
+    { "output-format",  required_argument, NULL, 'o' },
     { NULL,     0,              0, 0 },
 };
 
@@ -232,8 +246,6 @@ void *on_disk_buffer = NULL;
 int global_argc;
 char **global_argv;
 char *progname = NULL;
-
-#include "drbdmeta.h"
 
 struct format_ops f_ops[];
 /*
@@ -842,7 +854,9 @@ struct meta_cmd cmds[] = {
 	{"get-gi", 0, meta_get_gi, 1, 1, 0},
 	{"show-gi", 0, meta_show_gi, 1, 1, 0},
 	{"dump-md", 0, meta_dump_md, 1, 0, 0},
-	{"dump-superblock", 0, meta_dump_superblock, 1, 0, 0},
+	{"dump-superblock",
+		"[--output-format={binary,hex,json}]",
+		meta_dump_superblock, 1, 0, 0},
 	{"hexdump-superblock", 0, meta_hex_dump_superblock, 1, 0, 0},
 	{"restore-md", "file", meta_restore_md, 1, 0, 1},
 	{"verify-dump", "file", meta_verify_dump_file, 1, 0, 0},
@@ -3057,22 +3071,178 @@ int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc
 /**
  * Writes a human-readable hex dump of the buffer to stdout
  */
-void hex_dump_buffer(const char *const buffer, const size_t length, const off_t offset)
+void hex_dump_buffer(
+	const struct format *const cfg,
+	const char *const buffer, const size_t length, const off_t offset)
 {
 	fprintf_hex(stdout, offset, buffer, length);
 }
 
 /**
- * Conditionally writes a binary dump of the buffer to stdout.
- * If stdout is a terminal, writes a human-readable hex dump of the buffer instead.
+ * Writes a binary dump of the buffer to stdout.
  */
-void cond_binary_dump_buffer(const char *const buffer, const size_t length, const off_t offset)
+void binary_dump_buffer(
+	const struct format *const cfg,
+	const char *const buffer, const size_t length, const off_t offset)
 {
-	if (isatty(STDOUT_FILENO) == 1) {
-		hex_dump_buffer(buffer, length, offset);
-	} else {
-		fwrite(buffer, length, 1, stdout);
+	fwrite(buffer, length, 1, stdout);
+}
+
+/**
+ * Writes a json representation of the buffer interpreted as drbd 9 super block data.
+ */
+void json_dump_buffer(
+	const struct format *const cfg,
+	const char *const buffer, const size_t length, const off_t offset)
+{
+	struct meta_data_on_disk_9 *md_on_disk = (struct meta_data_on_disk_9 *)buffer;
+	struct md_cpu md;
+	int i;
+
+	char *nodename = "?";
+	struct utsname utsname;
+	time_t tmp;
+	struct tm tm;
+	char dump_time[sizeof("YYYY-MM-DD HH:MM:SS")];
+
+	tmp = time(NULL);
+	gmtime_r(&tmp, &tm);
+	if (strftime(dump_time, sizeof(dump_time), "%F %T", &tm) == 0)
+		dump_time[0] = '\0';
+
+	if (uname(&utsname) >= 0)
+		nodename = utsname.nodename;
+
+	md_disk_09_to_cpu(&md, md_on_disk);
+	printf("{\n");
+	printf( "  \"#meta\": {\n"
+		"    \"dump_time_utc\": \"%sZ\",\n"
+		"    \"dump_host\": \"%s\",\n"
+		"    \"md_device_name\": \"%s\",\n"
+		"    \"dump_offset\": "U64",\n"
+		"    \"bd_size\": "U64"\n"
+		"  },\n",
+		dump_time,
+		nodename,
+		cfg->md_device_name,
+		offset,
+		cfg->bd_size
+		);
+
+	printf(
+		"  \"effective_size\": "U64",\n"
+		"  \"current_uuid\": \"0x"X64(016)"\",\n"
+		"  \"reserved_u64\": [ "
+		    "\"0x"X64(016)"\", "
+		    "\"0x"X64(016)"\", "
+		    "\"0x"X64(016)"\", "
+		    "\"0x"X64(016)"\" "
+		  "],\n"
+		"  \"device_uuid\": \"0x"X64(016)"\",\n"
+		"  \"flags\": \"0x"X32(08)"\",\n"
+		"  \"magic\": \"0x"X32(08)"\",\n"
+		"  \"md_size_sect\": "U32",\n"
+		"  \"al_offset\": "D32",\n"
+		"  \"al_nr_extents\": "U32",\n"
+		"  \"bm_offset\": "D32",\n"
+		"  \"bm_bytes_per_bit\": "U32",\n"
+		"  \"la_peer_max_bio_size\": "U32",\n"
+		"  \"bm_max_peers\": "U32",\n"
+		"  \"node_id\": "D32",\n"
+		"  \"al_stripes\": "U32",\n"
+		"  \"al_stripe_size_4k\": "U32",\n"
+		"  \"reserved_u32\": [ \"0x"X32(08)"\", \"0x"X32(08)"\" ],\n",
+
+		md.effective_size,
+		md.current_uuid,
+		be64_to_cpu(md_on_disk->reserved_u64[0].be),
+		be64_to_cpu(md_on_disk->reserved_u64[1].be),
+		be64_to_cpu(md_on_disk->reserved_u64[2].be),
+		be64_to_cpu(md_on_disk->reserved_u64[3].be),
+		md.device_uuid,
+		md.flags,
+		md.magic,
+		md.md_size_sect,
+		md.al_offset,
+		md.al_nr_extents,
+		md.bm_offset,
+		md.bm_bytes_per_bit,
+		md.la_peer_max_bio_size,
+		md.max_peers,
+		md.node_id,
+		md.al_stripes,
+		md.al_stripe_size_4k,
+		be32_to_cpu(md_on_disk->reserved_u32[0].be),
+		be32_to_cpu(md_on_disk->reserved_u32[1].be));
+
+	printf("  \"peers\": [");
+	for (i = 0; i < DRBD_PEERS_MAX; i++) {
+		printf(",\n    {"
+			" \"bitmap_uuid\": \"0x"X64(016)"\", "
+			" \"bitmap_dagtag\": "U64", "
+			" \"flags\": \"0x"X32(08)"\", "
+			" \"bitmap_index\": "D32", "
+			" \"reserved_u32\": [ \"0x"X32(08)"\", \"0x"X32(08)"\" ] }"
+			+ (i==0),
+			md.peers[i].bitmap_uuid,
+			md.peers[i].bitmap_dagtag,
+			md.peers[i].flags,
+			md.peers[i].bitmap_index,
+			be32_to_cpu(md_on_disk->peers[i].reserved_u32[0].be),
+			be32_to_cpu(md_on_disk->peers[i].reserved_u32[1].be)
+		);
 	}
+	printf("\n  ],\n");
+
+	BUILD_BUG_ON(HISTORY_UUIDS != 32);
+	printf( "  \"history_uuids\": [\n"
+		"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
+		"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
+		"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
+		"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
+		"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
+		"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
+		"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
+		"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\"\n"
+		"  ],\n",
+		md.history_uuids[0], md.history_uuids[1], md.history_uuids[2], md.history_uuids[3],
+		md.history_uuids[4], md.history_uuids[5], md.history_uuids[6], md.history_uuids[7],
+		md.history_uuids[8], md.history_uuids[9], md.history_uuids[10], md.history_uuids[11],
+		md.history_uuids[12], md.history_uuids[13], md.history_uuids[14], md.history_uuids[15],
+		md.history_uuids[16], md.history_uuids[17], md.history_uuids[18], md.history_uuids[19],
+		md.history_uuids[20], md.history_uuids[21], md.history_uuids[22], md.history_uuids[23],
+		md.history_uuids[24], md.history_uuids[25], md.history_uuids[26], md.history_uuids[27],
+		md.history_uuids[28], md.history_uuids[29], md.history_uuids[30], md.history_uuids[31]);
+
+	/* just double check that padding is all zero, if it is not, spit it out */
+	BUILD_BUG_ON(offsetof(typeof(*md_on_disk),padding_start) != offsetof(typeof(*md_on_disk),history_uuids[HISTORY_UUIDS]));
+	printf("  \"padding\": {");
+	size_t start = offsetof(typeof(*md_on_disk),padding_start);
+	size_t end = offsetof(typeof(*md_on_disk),padding_end);
+	int non_zero = 0;
+	for (i = start; i < end; i++)
+		non_zero += !!buffer[i];
+	if (non_zero == 0) {
+		printf(" \"start\": %zu, \"end\": %zu, \"non-zero\": { } }\n",
+			start, end);
+	} else {
+		int skip_comma = 1;
+		printf("\n"
+			"    \"start\": %zu,\n"
+			"    \"end\": %zu,\n"
+			"    \"non-zero\": {",
+			start, end);
+		for (i = start; i < end; i++) {
+			unsigned char c = buffer[i];
+			if (c == 0)
+				continue;
+			printf(",\n      \"%u\": \"0x%02x\"" + skip_comma,
+				i, c);
+			skip_comma = 0;
+		}
+		printf("\n    }\n  }\n");
+	}
+	printf("}\n");
 }
 
 /**
@@ -3081,7 +3251,7 @@ void cond_binary_dump_buffer(const char *const buffer, const size_t length, cons
  */
 int meta_generic_dump_superblock(struct format *cfg, dump_func dump_impl)
 {
-	off_t flex_offset;
+	off_t offset;
 	int open_rc;
 
 	/* Always open meta data, even if it is in use
@@ -3089,19 +3259,19 @@ int meta_generic_dump_superblock(struct format *cfg, dump_func dump_impl)
 	force = true;
 
 	open_rc = cfg->ops->open(cfg);
-	const char *const md_buffer = (char *) on_disk_buffer;
+	const char *md_buffer = (char *) on_disk_buffer;
+	offset = cfg->md_offset;
 	if (open_rc == VALID_MD_FOUND_AT_LAST_KNOWN_LOCATION) {
 		/* What follows is ugly global knowledge :-/
 		 * "I know^W hope that we read it into the other offset
 		 * of our global buffer, and it is still unclobbered"
 		 */
-		flex_offset = v07_style_md_get_byte_offset(
-			DRBD_MD_INDEX_FLEX_INT, cfg->lk_bd.bd_size
-		);
-		dump_impl(&md_buffer[4096], 4096, flex_offset);
-	} else {
-		dump_impl(md_buffer, 4096, cfg->md_offset);
+		offset = v07_style_md_get_byte_offset(
+			DRBD_MD_INDEX_FLEX_INT, cfg->lk_bd.bd_size);
+		md_buffer = &md_buffer[4096];
 	}
+
+	dump_impl(cfg, md_buffer, 4096, offset);
 
 	/* ignore problems during "close" */
 	cfg->ops->close(cfg);
@@ -3119,13 +3289,33 @@ int meta_generic_dump_superblock(struct format *cfg, dump_func dump_impl)
 	return 0;
 }
 
+/*
+ * Writes a representation of the "drbd superblock" to stdout,
+ * depending on option_output_fmt.
+ * bin: always write a binary dump.
+ * hex: always write a hex dump.
+ * auto:
+ * If stdout is a terminal, writes a hex dump,
+ * otherwise (pipe, file, ...) write a binary dump.
+ * json:
+ * interpret the data as good as we can,
+ * and write a json represenation.
+ */
 int meta_dump_superblock(struct format *cfg, char **argv __attribute((unused)), int argc)
 {
 	if (argc > 0) {
 		fprintf(stderr, "Ignoring additional arguments\n");
 	}
 
-	return meta_generic_dump_superblock(cfg, &cond_binary_dump_buffer);
+	dump_func dump_impl = binary_dump_buffer;
+
+	if ((option_output_fmt == DUMP_AUTO && isatty(STDOUT_FILENO) == 1)
+	||   option_output_fmt == DUMP_HEX)
+		dump_impl = hex_dump_buffer;
+	else if (option_output_fmt == DUMP_JSON)
+		dump_impl = json_dump_buffer;
+
+	return meta_generic_dump_superblock(cfg, dump_impl);
 }
 
 int meta_hex_dump_superblock(struct format *cfg, char **argv __attribute((unused)), int argc)
@@ -4414,7 +4604,7 @@ int v08_move_internal_md_after_resize(struct format *cfg)
 	return err;
 }
 
-int meta_create_md(struct format *cfg, char **argv __attribute((unused)), int argc)
+int meta_create_md(struct format *cfg, char **argv, int argc)
 {
 	int err = 0;
 	int max_peers = 1;
@@ -5053,6 +5243,21 @@ int main(int argc, char **argv)
 			    exit(10);
 		    }
 		    break;
+	    case 'o':
+		    if (strcmp(optarg, "auto") == 0)
+			option_output_fmt = DUMP_AUTO;
+		    else if (strcmp(optarg, "hex") == 0)
+			option_output_fmt = DUMP_HEX;
+		    else if (strcmp(optarg, "bin") == 0)
+			option_output_fmt = DUMP_BINARY;
+		    else if (strcmp(optarg, "json") == 0)
+			option_output_fmt = DUMP_JSON;
+		    else {
+			    fprintf(stderr, "Unknown output format '%s'\n", optarg);
+			    exit(10);
+		    }
+		    option_output_fmt_seen = true;
+		    break;
 	    case 's':
 		    option_al_stripes = m_strtoll(optarg, 1);
 		    option_al_stripes_used = 1;
@@ -5129,6 +5334,12 @@ int main(int argc, char **argv)
 	} else {
 		cfg->minor = -1;
 		cfg->lock_fd = -1;
+	}
+
+	if (option_output_fmt_seen &&
+	    command->function != &meta_dump_superblock) {
+		fprintf(stderr, "The -o|--output-format option is only allowed with dump-superblock\n");
+		exit(10);
 	}
 
 	if (option_peer_max_bio_size &&
