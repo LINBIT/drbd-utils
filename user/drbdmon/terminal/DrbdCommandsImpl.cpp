@@ -175,42 +175,72 @@ bool DrbdCommandsImpl::exec_for_connections(
     else
     if (can_run_connection_cmd())
     {
-        const std::string& rsc_name = dsp_comp_hub.dsp_shared->monitor_rsc;
-        const std::string& con_name = dsp_comp_hub.dsp_shared->monitor_con;
-        if (!rsc_name.empty())
+        DisplayId::display_page active_page = dsp_comp_hub.dsp_selector->get_active_page();
+        if ((active_page == DisplayId::display_page::RSC_LIST ||
+            active_page == DisplayId::display_page::RSC_ACTIONS) &&
+            dsp_comp_hub.dsp_shared->have_resources_selection())
         {
-            DisplayId::display_page active_page = dsp_comp_hub.dsp_selector->get_active_page();
-            if (!dsp_comp_hub.dsp_shared->ovrd_connection_selection &&
-                (active_page == DisplayId::display_page::CON_LIST ||
-                active_page == DisplayId::display_page::CON_ACTIONS) &&
-                dsp_comp_hub.dsp_shared->have_connections_selection())
-            {
-                ConnectionsMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_connections_map();
-                ConnectionsMap::KeysIterator con_iter(selection_map);
+            // On resource list or resource actions with a selection of multiple resources,
+            // operates on all connections or all selected resources, overrides any connection selection
 
-                while (con_iter.has_next())
-                {
-                    cmd_valid = true;
-                    const std::string& cur_con_name = *(con_iter.next());
-                    (this->*exec_func)(rsc_name, cur_con_name);
-                }
-            }
-            else
+            cmd_valid = true;
+
+            ResourcesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
+            ResourcesMap::KeysIterator rsc_iter(selection_map);
+
+            std::string empty_con_name;
+            while (rsc_iter.has_next())
             {
-                // TODO: Enable connection actions for a resource selection
+                std::string& cur_rsc_name = *(rsc_iter.next());
+                (this->*exec_func)(cur_rsc_name, empty_con_name);
+            }
+        }
+        else
+        {
+            const std::string& rsc_name = dsp_comp_hub.dsp_shared->monitor_rsc;
+            const std::string& con_name = dsp_comp_hub.dsp_shared->monitor_con;
+            if (!rsc_name.empty())
+            {
+                // Have at least a resource name, command is always valid
                 cmd_valid = true;
-                if (active_page == DisplayId::display_page::CON_LIST ||
-                    active_page == DisplayId::display_page::CON_DETAIL ||
-                    active_page == DisplayId::display_page::CON_ACTIONS ||
-                    active_page == DisplayId::display_page::PEER_VLM_LIST ||
-                    active_page == DisplayId::display_page::PEER_VLM_DETAIL)
+
+                if (!dsp_comp_hub.dsp_shared->ovrd_connection_selection &&
+                    (active_page == DisplayId::display_page::CON_LIST ||
+                    active_page == DisplayId::display_page::CON_ACTIONS) &&
+                    dsp_comp_hub.dsp_shared->have_connections_selection())
                 {
-                    (this->*exec_func)(rsc_name, con_name);
+                    // On connection list or connection details with a selection of multiple connections
+
+                    ConnectionsMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_connections_map();
+                    ConnectionsMap::KeysIterator con_iter(selection_map);
+
+                    while (con_iter.has_next())
+                    {
+                        const std::string& cur_con_name = *(con_iter.next());
+                        (this->*exec_func)(rsc_name, cur_con_name);
+                    }
                 }
                 else
                 {
-                    std::string empty_con_name;
-                    (this->*exec_func)(rsc_name, empty_con_name);
+                    if (active_page == DisplayId::display_page::CON_LIST ||
+                        active_page == DisplayId::display_page::CON_DETAIL ||
+                        active_page == DisplayId::display_page::CON_ACTIONS ||
+                        active_page == DisplayId::display_page::PEER_VLM_LIST ||
+                        active_page == DisplayId::display_page::PEER_VLM_DETAIL)
+                    {
+                        // On connection list or connection actions without a selection,
+                        // or operating from a page that selects a single connection.
+                        // Operates on all connections of a resource or on a single selected connection
+
+                        (this->*exec_func)(rsc_name, con_name);
+                    }
+                    else
+                    {
+                        // Operates on all connections of a single resource
+
+                        std::string empty_con_name;
+                        (this->*exec_func)(rsc_name, empty_con_name);
+                    }
                 }
             }
         }
