@@ -13,6 +13,7 @@
 
 #include <errno.h>
 #include <string.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -34,6 +35,8 @@
 #ifndef NLA_F_NESTED
 #define NLA_F_NESTED 0
 #endif
+
+#define GENL_MAX_OPS 128
 
 #define DEBUG_LEVEL 1
 
@@ -958,6 +961,7 @@ struct genl_family
 	/* 32 should be enough for most genl families */
 	struct genl_multicast_group mc_groups[32];
 	__u32			nl_groups;
+	bool			op_known[GENL_MAX_OPS];
 };
 
 /**
@@ -1083,5 +1087,6 @@ enum {
 };
 /* returns negative E_RCV_*, or length of message */
 extern int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int timeout_ms);
+extern bool genl_op_known(struct genl_family *family, int id);
 
 #endif	/* LIBGENL_H */

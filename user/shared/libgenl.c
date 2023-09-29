@@ -361,6 +361,22 @@ struct genl_sock *genl_connect_to_family(struct genl_family *family)
 			break;
 			};
 #endif
+		case CTRL_ATTR_OPS:
+			{
+			struct nlattr *ntb[__CTRL_ATTR_OP_MAX];
+			struct nlattr *idx;
+			int tmp;
+			nla_for_each_nested(idx, nla, tmp) {
+				nla_parse_nested(ntb, CTRL_ATTR_OP_MAX, idx, NULL);
+				if (ntb[CTRL_ATTR_OP_ID]) {
+					int id = nla_get_u32(ntb[CTRL_ATTR_OP_ID]);
+
+					if (id < GENL_MAX_OPS)
+						family->op_known[id] = true;
+				}
+			}
+			break;
+			}
 		default: ;
 		}
 	}
@@ -375,6 +391,14 @@ out:
 	msg_free(msg);
 
 	return s;
+}
+
+bool genl_op_known(struct genl_family *family, int id)
+{
+	if (id >= GENL_MAX_OPS)
+		return false;
+
+	return family->op_known[id];
 }
 
 /* Shared nla code from Lars has been moved to libnla.c */
