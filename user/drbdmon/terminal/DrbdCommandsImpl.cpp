@@ -129,12 +129,13 @@ bool DrbdCommandsImpl::exec_for_resources(
             active_page == DisplayId::display_page::RSC_ACTIONS) &&
             dsp_comp_hub.dsp_shared->have_resources_selection())
         {
+            cmd_valid = true;
+
             ResourcesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
             ResourcesMap::KeysIterator rsc_iter(selection_map);
 
             while (rsc_iter.has_next())
             {
-                cmd_valid = true;
                 const std::string& cur_rsc_name = *(rsc_iter.next());
                 (this->*exec_func)(cur_rsc_name);
             }
@@ -283,12 +284,13 @@ bool DrbdCommandsImpl::exec_for_volumes(
                 active_page == DisplayId::display_page::VLM_ACTIONS) &&
                 dsp_comp_hub.dsp_shared->have_volumes_selection())
             {
+                cmd_valid = true;
+
                 VolumesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_volumes_map();
                 VolumesMap::KeysIterator vlm_iter(selection_map);
 
                 while (vlm_iter.has_next())
                 {
-                    cmd_valid = true;
                     const uint16_t cur_vlm_nr = *(vlm_iter.next());
                     (this->*exec_func)(rsc_name, cur_vlm_nr);
                 }
