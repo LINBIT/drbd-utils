@@ -942,7 +942,7 @@ static int check_error(int err_no, char *desc, struct nlattr **tla)
 		return 0;
 	}
 
-	if (err_no == OTHER_ERROR) {
+	if (err_no == OTHER_ERROR || err_no == MODULE_UNLOADED) {
 		if (desc)
 			fprintf(stderr,"%s: %s\n", objname, desc);
 		return 20;
@@ -1728,7 +1728,7 @@ static int generic_recv(struct drbd_cmd *cm, int timeout_arg, void *u_ptr, int e
 					if (nla && nla_get_u16(nla) == drbd_genl_family.id) {
 						/* FIXME: We could wait for the
 						   multicast group to be recreated ... */
-						rv = OTHER_ERROR;
+						rv = MODULE_UNLOADED;
 						desc = "module unloaded";
 						goto out;
 					}
@@ -1801,8 +1801,14 @@ static int generic_recv(struct drbd_cmd *cm, int timeout_arg, void *u_ptr, int e
 	}
 
 out:
-	if (!err)
+	if (!err) {
+		if (rv == MODULE_UNLOADED) {
+			/* give it a little time before all the events2 tracking loops (e.g., linstor, reactor) spawn the next events2 which immediately loads the (old) module again */
+			fprintf(stderr, "giving module upgrade some time\n");
+			sleep(10);
+		}
 		err = check_error(rv, desc, tla);
+	}
 	free(iov.iov_base);
 	return err;
 }

@@ -9,6 +9,7 @@
 #include <linux/types.h>
 
 #define OTHER_ERROR 900
+#define MODULE_UNLOADED 901
 #define ADDRESS_STR_MAX 256
 
 /* is_intentional is a boolean value we get via nl from kernel. if we use new
