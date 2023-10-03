@@ -3,7 +3,7 @@ stages:
   - test
 
 variables:
-  BUILD_HELPERS_VERSION: 6959b310000055d1e941f948aeba00b30a4e3b73
+  BUILD_HELPERS_VERSION: 1aac59c8c8c2559448851ca5c6820fcf3a363363
   DRBD9_TESTS_REF: master
   # we have to change the way GitLab CI clones the repository.
   # by default, it is shallow, which gives us a wrong commit count when

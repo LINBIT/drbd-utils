@@ -131,6 +131,11 @@ Conflicts: drbd82 drbd83
 %if %{with selinux}
 Requires: (drbd-selinux if selinux-policy-targeted)
 %endif
+%if %{defined suse_version}
+BuildRequires: keyutils-devel
+%else
+BuildRequires: keyutils-libs-devel
+%endif
 
 %description utils
 DRBD mirrors a block device over the network to another machine.

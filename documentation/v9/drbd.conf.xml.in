@@ -863,6 +863,9 @@ resource
         <pick_drbdsetup_option name="verify-alg"/>
         <pick_drbdsetup_option name="allow-remote-read"/>
         <pick_drbdsetup_option name="tls"/>
+        <pick_drbdsetup_option name="tls-keyring"/>
+        <pick_drbdsetup_option name="tls-privkey"/>
+        <pick_drbdsetup_option name="tls-certificate"/>
       </variablelist>
     </refsect2>
 

@@ -155,6 +155,9 @@ AC_CHECK_TYPES([__free_fn_t],[],[],
 	#include <search.h>]]
 )
 
+dnl Check for keyutils
+AC_SEARCH_LIBS([request_key],[keyutils],[],[AC_MSG_ERROR([Need keyutils])],[])
+
 dnl Do we know where systemd unit files go?
 PKG_PROG_PKG_CONFIG
 AC_ARG_WITH([systemdunitdir],

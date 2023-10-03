@@ -59,6 +59,9 @@ struct field_def {
 			int max;
 			int def;
 		} en; /* ENUM_NUM */
+		struct {
+			const char *type;
+		} k;
 	} u;
 	bool needs_double_quoting;
 	bool argument_is_optional;

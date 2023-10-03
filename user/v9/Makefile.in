@@ -35,6 +35,7 @@ LIBDIR = @prefix@/lib/@PACKAGE_TARNAME@
 CC = @CC@
 CFLAGS = @CFLAGS@
 LDFLAGS = @LDFLAGS@
+LIBS = @LIBS@
 LN_S = @LN_S@
 
 DRBD_LIB_DIR = @DRBD_LIB_DIR@
@@ -108,19 +109,19 @@ include ../shared_prereqs.mk
 tools: drbdadm drbdmeta drbdsetup
 
 drbdadm: $(drbdadm-obj)
-	$(LINK.c) $(LDFLAGS) -o $@ $^
+	$(LINK.c) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 drbdadm_scanner.c: drbdadm_scanner.fl drbdadm_parser.h
 	flex -s -odrbdadm_scanner.c drbdadm_scanner.fl
 
 drbdsetup: $(drbdsetup-obj)
-	$(LINK.c) $(LDFLAGS) -o $@ $^
+	$(LINK.c) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 drbdmeta: $(drbdmeta-obj)
-	$(LINK.c) $(LDFLAGS) -o $@ $^
+	$(LINK.c) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 test/drbdsetup_events2_instrumented: $(drbdsetup-instrumented-test-obj)
-	$(LINK.c) $(LDFLAGS) -o $@ $^
+	$(LINK.c) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 .PHONY: test
 ifeq ($(WITH_CLITEST),yes)

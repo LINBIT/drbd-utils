@@ -2,9 +2,11 @@
 #include <string.h>
 #include <assert.h>
 
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
+#include <keyutils.h>
 
 #include "libgenl.h"
 #include "linux/drbd.h"
@@ -690,6 +692,92 @@ struct field_class fc_string = {
 	.check = string_check,
 };
 
+/* ---------------------------------------------------------------------------------------------- */
+
+static key_serial_t string_to_key_serial(const char *value, const char *key_type)
+{
+	if (!value)
+		return 0;
+
+	return request_key(key_type, value, NULL, 0);
+}
+
+static bool key_serial_is_default(const struct field_def *field, const char *value)
+{
+	return string_to_key_serial(value, field->u.k.type) == 0;
+}
+
+static bool key_serial_is_equal(const struct field_def *field, const char *a, const char *b)
+{
+	return string_to_key_serial(a, field->u.k.type) == string_to_key_serial(b, field->u.k.type);
+}
+
+static const char *get_key_serial(struct context_def *ctx, const struct field_def *field, struct nlattr *nla)
+{
+	char *buf;
+	static char description[256];
+	int ret;
+	key_serial_t serial;
+
+	assert(type_of_field(ctx, field) == NLA_U32);
+	serial = nla_get_u32(nla);
+	if (serial <= 0)
+		return NULL;
+
+	ret = keyctl_describe_alloc(serial, &buf);
+	if (ret == -1)
+		return NULL;
+
+	ret = sscanf(buf, "%*[^;];%*d;%*d;%*08x;%255s", description);
+	free(buf);
+
+	if (ret != 1) {
+		return NULL;
+	}
+
+	return description;
+}
+
+static bool put_key_serial(struct context_def *ctx, const struct field_def *field,
+                       struct msg_buff *msg, const char *value)
+{
+	key_serial_t key = request_key(field->u.k.type, value, "drbd", KEY_SPEC_THREAD_KEYRING);
+	if (key == -1)
+		return false;
+
+	nla_put_u32(msg, field->nla_type, key);
+	return true;
+}
+
+static int key_serial_usage(const struct field_def *field, char *str, int size)
+{
+	return snprintf(str, size,"[--%s=<key-description>]",
+	                field->name);
+}
+
+static void key_serial_describe_xml(const struct field_def *field)
+{
+	printf("\t<option name=\"%s\" type=\"string\">\n"
+	       "\t</option>\n",
+	       field->name);
+}
+
+static enum check_codes key_serial_check(const struct field_def *field, const char *value)
+{
+	return CC_OK;
+}
+
+struct field_class fc_key_serial = {
+	.is_default = key_serial_is_default,
+	.is_equal = key_serial_is_equal,
+	.get = get_key_serial,
+	.put = put_key_serial,
+	.usage = key_serial_usage,
+	.describe_xml = key_serial_describe_xml,
+	.check = key_serial_check,
+};
+
+
 /* ============================================================================================== */
 
 #define ENUM(f, d)									\
@@ -751,6 +839,11 @@ struct field_class fc_string = {
 		.max = num_max,					\
 		.def = DRBD_ ## d ## _DEF, } }			\
 
+#define KEY_SERIAL(f, key_type)					\
+	.nla_type = T_ ## f,					\
+	.ops = &fc_key_serial,					\
+	.u = { .k = {						\
+		.type = key_type, } }				\
 /* ============================================================================================== */
 
 const char *wire_protocol_map[] = {
@@ -903,8 +996,11 @@ const struct en_map quorum_map[] = {
 	{ "socket-check-timeout", NUMERIC(sock_check_timeo, SOCKET_CHECK_TIMEO) },	\
 	{ "fencing", ENUM(fencing_policy, FENCING) },					\
 	{ "max-buffers", NUMERIC(max_buffers, MAX_BUFFERS) },				\
-	{ "allow-remote-read", BOOLEAN(allow_remote_read, ALLOW_REMOTE_READ) },					\
-	{ "tls", BOOLEAN(tls, TLS) },					\
+	{ "allow-remote-read", BOOLEAN(allow_remote_read, ALLOW_REMOTE_READ) },		\
+	{ "tls", BOOLEAN(tls, TLS) },							\
+	{ "tls-keyring", KEY_SERIAL(tls_keyring, "keyring") },				\
+	{ "tls-privkey", KEY_SERIAL(tls_privkey, "user") },				\
+	{ "tls-certificate", KEY_SERIAL(tls_certificate, "user") },			\
 	{ "_name", STRING_MAX_LEN(name, SHARED_SECRET_MAX) }
 
 struct context_def disk_options_ctx = {

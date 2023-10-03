@@ -1527,6 +1527,43 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
         <para>Enable TLS.</para>
     </definition>
   </drbdsetup_option>
+  <drbdsetup_option name="tls-keyring">
+    <term xml:id="tls-keyring"><option>tls-keyring <replaceable>key-description</replaceable></option></term>
+
+    <definition>
+        <indexterm significance="normal">
+            <primary>drbd.conf</primary>
+            <secondary>tls-keyring</secondary>
+        </indexterm>
+
+        <para>Key description (name) of the keyring where the TLS key material
+	is stored. The keyring will be shared with the handshake daemon.</para>
+    </definition>
+  </drbdsetup_option>
+  <drbdsetup_option name="tls-privkey">
+    <term xml:id="tls-privkey"><option>tls-privkey <replaceable>key-description</replaceable></option></term>
+
+    <definition>
+        <indexterm significance="normal">
+            <primary>drbd.conf</primary>
+            <secondary>tls-privkey</secondary>
+        </indexterm>
+
+        <para>Key description (name) of the DER encoded private key for TLS encryption.</para>
+    </definition>
+  </drbdsetup_option>
+  <drbdsetup_option name="tls-certificate">
+    <term xml:id="tls-certificate"><option>tls-certificate <replaceable>key-description</replaceable></option></term>
+
+    <definition>
+        <indexterm significance="normal">
+            <primary>drbd.conf</primary>
+            <secondary>tls-certificate</secondary>
+        </indexterm>
+
+        <para>Key description (name) of the DER encoded certificate for TLS encryption.</para>
+    </definition>
+  </drbdsetup_option>
   <drbdsetup_option name="discard-my-data">
     <term xml:id="discard-my-data"><option>discard-my-data</option></term>
 
