@@ -1073,6 +1073,14 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 	int err;
 	char timestamp_prefix[TIMESTAMP_LEN];
 
+	if (!cm && !info && u_ptr != NULL) {
+		err = format_timestamp(timestamp_prefix);
+		if (err)
+			exit(20);
+		printf("%s%s\n", timestamp_prefix, (char*)u_ptr);
+		return 0;
+	}
+
 	if (!info)
 		return 0;
 

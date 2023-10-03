@@ -3621,7 +3621,7 @@ int main(int argc, char **argv)
 	if (try_genl) {
 		if (cmd->continuous_poll && kernel_older_than(2, 6, 23))
 			drbd_genl_family.nl_groups = -1;
-		drbd_sock = genl_connect_to_family(&drbd_genl_family);
+		drbd_sock = genl_connect_to_family(&drbd_genl_family, false);
 		if (!drbd_sock) {
 			try_genl = 0;
 			exec_legacy_drbdsetup(argv);

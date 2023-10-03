@@ -580,10 +580,16 @@ int lock_fd;
 
 struct genl_sock *drbd_sock = NULL;
 
-struct genl_family drbd_genl_family = {
-	.name = "drbd",
-	.version = GENL_MAGIC_VERSION,
-	.hdrsize = GENL_MAGIC_FAMILY_HDRSZ,
+#define drbd_genl_family_initializer (struct genl_family){	\
+	.name = "drbd",						\
+	.version = GENL_MAGIC_VERSION,				\
+	.hdrsize = GENL_MAGIC_FAMILY_HDRSZ,			\
+}
+
+struct genl_family drbd_genl_family = drbd_genl_family_initializer;
+void reset_drbd_genl_family(void)
+{
+	drbd_genl_family = drbd_genl_family_initializer;
 };
 
 #if 0
@@ -946,6 +952,11 @@ static int check_error(int err_no, char *desc, struct nlattr **tla)
 		if (desc)
 			fprintf(stderr,"%s: %s\n", objname, desc);
 		return 20;
+	}
+	if (err_no == ERR_EXIT_MODULE_UNLOADED) {
+		if (desc)
+			fprintf(stderr,"%s: %s\n", objname, desc);
+		return ERR_EXIT_MODULE_UNLOADED;
 	}
 
 	if ( ( err_no >= AFTER_LAST_ERR_CODE || err_no <= ERR_CODE_BASE ) &&
@@ -1541,6 +1552,7 @@ static bool parse_color_argument(void)
 
 bool opt_now;
 bool opt_poll;
+bool is_events2_poll;
 int opt_verbose;
 bool opt_statistics;
 bool opt_timestamps;
@@ -1578,6 +1590,20 @@ static int generic_send(struct drbd_cmd *cm)
 
 	msg_free(smsg);
 	return err;
+}
+
+static void verify_genl_family_version_or_die(void)
+{
+	if (drbd_genl_family.version != GENL_MAGIC_VERSION ||
+	    drbd_genl_family.hdrsize != sizeof(struct drbd_genlmsghdr)) {
+		fprintf(stderr, "API mismatch!\n\t"
+			"API version drbdsetup: %u kernel: %u\n\t"
+			"header size drbdsetup: %u kernel: %u\n",
+			GENL_MAGIC_VERSION, drbd_genl_family.version,
+			(unsigned)sizeof(struct drbd_genlmsghdr),
+			drbd_genl_family.hdrsize);
+		exit(20);
+	}
 }
 
 static int generic_recv(struct drbd_cmd *cm, int timeout_arg, void *u_ptr, int extra_poll_fd, bool expect_reply)
@@ -1720,20 +1746,24 @@ static int generic_recv(struct drbd_cmd *cm, int timeout_arg, void *u_ptr, int e
 				continue;
 			}
 			if (nlh->nlmsg_type == GENL_ID_CTRL) {
-#ifdef HAVE_CTRL_CMD_DELMCAST_GRP
+				struct nlattr *nla;
 				dbg(3, "received cmd:%x\n", info.genlhdr->cmd);
-				if (info.genlhdr->cmd == CTRL_CMD_DELMCAST_GRP) {
-					struct nlattr *nla =
-						nlmsg_find_attr(nlh, GENL_HDRLEN, CTRL_ATTR_FAMILY_ID);
+				switch (info.genlhdr->cmd) {
+#ifdef HAVE_CTRL_CMD_DELMCAST_GRP
+				case CTRL_CMD_DELMCAST_GRP:
+#else
+				case CTRL_CMD_DELFAMILY:
+#endif
+					nla = nlmsg_find_attr(nlh, GENL_HDRLEN, CTRL_ATTR_FAMILY_ID);
 					if (nla && nla_get_u16(nla) == drbd_genl_family.id) {
-						/* FIXME: We could wait for the
-						   multicast group to be recreated ... */
-						rv = OTHER_ERROR;
-						desc = "module unloaded";
+						rv = ERR_EXIT_MODULE_UNLOADED;
+						if (cm->handle_reply != &print_event)
+							desc = "module unloaded";
 						goto out;
 					}
+					break;
+				default:;
 				}
-#endif
 				/* Ignore other generic netlink control messages. */
 				continue;
 			}
@@ -2049,7 +2079,8 @@ static int generic_events_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		}
 	}
 
-	if (cm->handle_reply == &print_event && opt_poll)
+	is_events2_poll = cm->handle_reply == &print_event && opt_poll;
+	if (is_events2_poll)
 		err = events2_poll(cm, timeout_ms, peer_devices);
 	else
 		err = generic_get(cm, timeout_ms, peer_devices);
@@ -4504,7 +4535,9 @@ int drbdsetup_main(int argc, char **argv)
 	if (argc < 2)
 		print_usage_and_exit(NULL);
 
-	if (!modprobe_drbd()) {
+	if (!strcmp(argv[1], "events2")) {
+		/* no implicit modprobe on events2 */
+	} else if (!modprobe_drbd()) {
 		if (!strcmp(argv[1], "down") ||
 		    !strcmp(argv[1], "secondary") ||
 		    !strcmp(argv[1], "disconnect") ||
@@ -4540,22 +4573,6 @@ int drbdsetup_main(int argc, char **argv)
 		/* with newer kernels, we need to use setsockopt NETLINK_ADD_MEMBERSHIP */
 		/* maybe more specific: (1 << GENL_ID_CTRL)? */
 		drbd_genl_family.nl_groups = -1;
-	}
-	drbd_sock = genl_connect_to_family(&drbd_genl_family);
-	if (!drbd_sock) {
-		fprintf(stderr, "Could not connect to 'drbd' generic netlink family\n");
-		return 20;
-	}
-
-	if (drbd_genl_family.version != GENL_MAGIC_VERSION ||
-	    drbd_genl_family.hdrsize != sizeof(struct drbd_genlmsghdr)) {
-		fprintf(stderr, "API mismatch!\n\t"
-			"API version drbdsetup: %u kernel: %u\n\t"
-			"header size drbdsetup: %u kernel: %u\n",
-			GENL_MAGIC_VERSION, drbd_genl_family.version,
-			(unsigned)sizeof(struct drbd_genlmsghdr),
-			drbd_genl_family.hdrsize);
-		return 20;
 	}
 
 	context = 0;
@@ -4646,7 +4663,34 @@ int drbdsetup_main(int argc, char **argv)
 	if ((context & CTX_MINOR) && !cmd->lockless)
 		lock_fd = dt_lock_drbd(minor);
 
-	rv = cmd->function(cmd, argc, argv);
+	/* is_events2_poll = cmd->handle_reply == &print_event && opt_poll;
+	 * opt_poll was not parsed yet :-( This drbdsetup mess has to die!
+	 * so on first iteration, we don't wait for the module load.
+	 * But on the second iteration, it if was loaded, but then unloaded,
+	 * we wait for the reload. Only for "events2 --poll", though, for now.
+	 */
+	for (;;) {
+		drbd_sock = genl_connect_to_family(&drbd_genl_family, is_events2_poll);
+		if (!drbd_sock) {
+			fprintf(stderr, "Could not connect to 'drbd' generic netlink family\n");
+			return 20;
+		}
+
+		verify_genl_family_version_or_die();
+
+		if (is_events2_poll)
+			print_event(NULL, NULL, "module reloaded");
+
+		rv = cmd->function(cmd, argc, argv);
+		if (rv != ERR_EXIT_MODULE_UNLOADED || !is_events2_poll)
+			break;
+
+		if (cmd->handle_reply == &print_event)
+			print_event(NULL, NULL, "module unloaded");
+		shutdown(drbd_sock->s_fd, SHUT_RDWR);
+		close(drbd_sock->s_fd);
+		reset_drbd_genl_family();
+	};
 
 	if ((context & CTX_MINOR) && !cmd->lockless)
 		dt_unlock_drbd(lock_fd);

@@ -1071,8 +1071,9 @@ struct genl_sock {
 	struct genl_family	*s_family;
 };
 
-extern struct genl_sock *genl_connect_to_family(struct genl_family *family);
+extern struct genl_sock *genl_connect_to_family(struct genl_family *family, bool wait_for_family);
 extern int genl_join_mc_group(struct genl_sock *s, const char *name);
+extern int genl_leave_mc_groups(struct genl_sock *s);
 extern int genl_send(struct genl_sock *s, struct msg_buff *msg);
 enum {
 	E_RCV_TIMEDOUT = 0,

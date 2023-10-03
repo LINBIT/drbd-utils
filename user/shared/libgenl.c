@@ -271,48 +271,11 @@ static struct genl_family genl_ctrl = {
         .maxattr = CTRL_ATTR_MAX,
 };
 
-struct genl_sock *genl_connect_to_family(struct genl_family *family)
+static void process_family_message(struct nlmsghdr* nlh, struct genl_family *family)
 {
-	struct genl_sock *s = NULL;
-	struct msg_buff *msg;
-	struct nlmsghdr *nlh;
 	struct nlattr *nla;
-	struct iovec iov = { .iov_len = 0 };
 	int rem;
 
-	BUG_ON(!family);
-	BUG_ON(!strlen(family->name));
-
-	msg = msg_new(DEFAULT_MSG_SIZE);
-	if (!msg) {
-		dbg(1, "could not allocate genl message");
-		goto out;
-	}
-
-	s = genl_connect(family->nl_groups);
-	if (!s) {
-		dbg(1, "error creating netlink socket");
-		goto out;
-	}
-	genlmsg_put(msg, &genl_ctrl, 0, CTRL_CMD_GETFAMILY);
-
-	nla_put_string(msg, CTRL_ATTR_FAMILY_NAME, family->name);
-	if (genl_send(s, msg)) {
-		dbg(1, "failed to send netlink message");
-		free(s);
-		s = NULL;
-		goto out;
-	}
-
-	if (genl_recv_msgs(s, &iov, NULL, 3000) <= 0) {
-		close(s->s_fd);
-		free(s);
-		s = NULL;
-		goto out;
-	}
-
-
-	nlh = (struct nlmsghdr*)iov.iov_base;
 	nla_for_each_attr(nla, nlmsg_attrdata(nlh, GENL_HDRLEN),
 			nlmsg_attrlen(nlh, GENL_HDRLEN), rem) {
 		switch (nla_type(nla)) {
@@ -379,6 +342,104 @@ struct genl_sock *genl_connect_to_family(struct genl_family *family)
 			}
 		default: ;
 		}
+	}
+}
+
+
+
+#ifdef HAVE_CTRL_CMD_DELMCAST_GRP
+#define WAIT_FOR_THIS_CTRL_CMD			CTRL_CMD_NEWMCAST_GRP
+#else
+#define WAIT_FOR_THIS_CTRL_CMD			CTRL_CMD_NEWFAMILY
+#endif
+
+static int genl_wait_for_family(struct genl_sock *s, struct genl_family *family)
+{
+	s->s_seq_expect = 0;
+	dbg(2, "waiting for genetlink family '%s' to be (re)registered\n", family->name);
+	while (true) {
+		struct iovec iov = { .iov_len = 0 };
+		int received;
+		struct nlmsghdr *nlh;
+		struct nlattr *nla;
+		int rem;
+
+		received = genl_recv_msgs(s, &iov, NULL, -1);
+		if (received < 0)
+			return received;
+		nlh = (struct nlmsghdr*)iov.iov_base;
+		nlmsg_for_each_msg(nlh, nlh, received, rem) {
+			struct genl_info info = (struct genl_info){
+				.seq = nlh->nlmsg_seq,
+				.nlhdr = nlh,
+				.genlhdr = nlmsg_data(nlh),
+			};
+
+			dbg(3, "received type:%x\n", nlh->nlmsg_type);
+			dbg(3, "received cmd:%x\n", info.genlhdr->cmd);
+			/* Only interested in newfamily */
+			if (nlh->nlmsg_type != GENL_ID_CTRL
+			|| info.genlhdr->cmd != WAIT_FOR_THIS_CTRL_CMD)
+				continue;
+			nla = nlmsg_find_attr(nlh, GENL_HDRLEN, CTRL_ATTR_FAMILY_NAME);
+			if (nla && strcmp(nla_data(nla), family->name))
+				continue;
+			process_family_message(iov.iov_base, family);
+			if (family->id == 0)
+				return -1;
+			dbg(2, "genetlink family '%s' was (re)registered\n", family->name);
+			return 0;
+		}
+	}
+}
+
+struct genl_sock *genl_connect_to_family(struct genl_family *family, bool wait_for_newfamily)
+{
+	struct genl_sock *s = NULL;
+	struct msg_buff *msg;
+	struct iovec iov = { .iov_len = 0 };
+	int received;
+
+	BUG_ON(!family);
+	BUG_ON(!strlen(family->name));
+
+	msg = msg_new(DEFAULT_MSG_SIZE);
+	if (!msg) {
+		dbg(1, "could not allocate genl message");
+		goto out;
+	}
+
+	s = genl_connect(family->nl_groups);
+	if (!s) {
+		dbg(1, "error creating netlink socket");
+		goto out;
+	}
+	genlmsg_put(msg, &genl_ctrl, 0, CTRL_CMD_GETFAMILY);
+
+	nla_put_string(msg, CTRL_ATTR_FAMILY_NAME, family->name);
+	if (genl_send(s, msg)) {
+		dbg(1, "failed to send netlink message");
+		free(s);
+		s = NULL;
+		goto out;
+	}
+
+	received = genl_recv_msgs(s, &iov, NULL, 3000);
+	if (received > 0)
+		process_family_message(iov.iov_base, family);
+	else if (wait_for_newfamily) {
+		int id = GENL_ID_CTRL;
+		/* temporarily join CTRL mcast group */
+		if (0 == setsockopt(s->s_fd, SOL_NETLINK, NETLINK_ADD_MEMBERSHIP, &id, sizeof(id))
+		&&  0 == genl_wait_for_family(s, family)
+		&&  0 == setsockopt(s->s_fd, SOL_NETLINK, NETLINK_DROP_MEMBERSHIP, &id, sizeof(id)))
+			received = 1;
+	}
+	if (received <= 0) {
+		close(s->s_fd);
+		free(s);
+		s = NULL;
+		goto out;
 	}
 
 	if (!family->id)
