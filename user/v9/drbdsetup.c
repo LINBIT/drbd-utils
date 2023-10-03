@@ -1728,6 +1728,8 @@ static int generic_recv(struct drbd_cmd *cm, int timeout_arg, void *u_ptr, int e
 					if (nla && nla_get_u16(nla) == drbd_genl_family.id) {
 						/* FIXME: We could wait for the
 						   multicast group to be recreated ... */
+						rv = OTHER_ERROR;
+						desc = "module unloaded";
 						goto out;
 					}
 				}
