@@ -113,6 +113,12 @@ void usage_and_exit(void)
 	fprintf(stderr, "		Tells WinDRBD driver not to reacto to AddDevice requests.\n");
 	fprintf(stderr, "		This works only when the usage count is 0 (no DRBD resources, no bus devices)\n");
 	fprintf(stderr, "		The driver can be unloaded, then.\n");
+	fprintf(stderr, "	windrbd [opt] suspend-io-for-minor <minor>\n");
+	fprintf(stderr, "		Tells WinDRBD driver to suspend I/O by not submitting.\n");
+	fprintf(stderr, "		I/O requests to the DRBD engine.\n");
+	fprintf(stderr, "	windrbd [opt] resume-io-for-minor <minor>\n");
+	fprintf(stderr, "		Tells WinDRBD driver to resume I/O by submitting.\n");
+	fprintf(stderr, "		I/O requests (including the suspended ones) to the DRBD engine.\n");
 
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
@@ -1898,6 +1904,18 @@ int main(int argc, char ** argv)
 			usage_and_exit();
 		}
 		return send_int_ioctl(IOCTL_WINDRBD_ROOT_SET_DRIVER_LOCKED, 1);
+	}
+	if (strcmp(op, "suspend-io-for-minor") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		return send_int_ioctl(IOCTL_WINDRBD_ROOT_SET_IO_SUSPENDED_FOR_MINOR, atoi_or_die(argv[optind+1]));
+	}
+	if (strcmp(op, "resume-io-for-minor") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		return send_int_ioctl(IOCTL_WINDRBD_ROOT_CLEAR_IO_SUSPENDED_FOR_MINOR, atoi_or_die(argv[optind+1]));
 	}
 
 	usage_and_exit();
