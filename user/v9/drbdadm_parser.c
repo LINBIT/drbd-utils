@@ -64,7 +64,7 @@ struct d_name *names_from_str(char* str)
 {
 	struct d_name *names;
 
-	names = malloc(sizeof(struct d_name));
+	names = checked_malloc(sizeof(struct d_name));
 	names->name = strdup(str);
 
 	return names;
@@ -204,7 +204,7 @@ void range_check(const enum range_checks what, const char *name,
 
 struct d_option *new_opt(char *name, char *value)
 {
-	struct d_option *cn = calloc(1, sizeof(struct d_option));
+	struct d_option *cn = checked_calloc(1, sizeof(struct d_option));
 
 	/* log_err("%s:%d: %s = %s\n",config_file,line,name,value); */
 	cn->name = name;
@@ -300,12 +300,7 @@ int vcheck_uniq_file_line(
 	if (config_valid >= 2)
 		return 1;
 
-	e = calloc(1, sizeof *e);
-	if (!e) {
-		log_err("calloc: %m\n");
-		exit(E_THINKO);
-	}
-
+	e = checked_calloc(1, sizeof *e);
 	rv = vasprintf(&e->key, fmt, ap);
 
 	if (rv < 0) {
@@ -767,7 +762,7 @@ static void parse_hosts(struct names *hosts, char delimeter)
 		token = yylex();
 		switch (token) {
 		case TK_STRING:
-			name = malloc(sizeof(struct d_name));
+			name = checked_malloc(sizeof(struct d_name));
 			name->name = yylval.txt;
 			insert_tail(hosts, name);
 			nr_hosts++;
@@ -789,7 +784,7 @@ static struct d_proxy_info *parse_proxy_section(void)
 {
 	struct d_proxy_info *proxy;
 
-	proxy = calloc(1, sizeof(struct d_proxy_info));
+	proxy = checked_calloc(1, sizeof(struct d_proxy_info));
 	STAILQ_INIT(&proxy->on_hosts);
 
 	EXP(TK_ON);
@@ -887,11 +882,7 @@ struct d_volume *alloc_volume(void)
 {
 	struct d_volume *vol;
 
-	vol = calloc(1, sizeof(struct d_volume));
-	if (vol == NULL) {
-		log_err("calloc: %m\n");
-		exit(E_EXEC_ERROR);
-	}
+	vol = checked_calloc(1, sizeof(struct d_volume));
 
 	STAILQ_INIT(&vol->device_options);
 	STAILQ_INIT(&vol->disk_options);
@@ -1067,7 +1058,7 @@ static void parse_host_section(struct d_resource *res,
 	c_section_start = line;
 	fline = line;
 
-	host = calloc(1,sizeof(struct d_host_info));
+	host = checked_calloc(1,sizeof(struct d_host_info));
 	STAILQ_INIT(&host->res_options);
 	STAILQ_INIT(&host->volumes);
 	host->on_hosts = *on_hosts;
@@ -1210,7 +1201,7 @@ void parse_stacked_section(struct d_resource* res)
 	c_section_start = line;
 	fline = line;
 
-	host = calloc(1, sizeof(struct d_host_info));
+	host = checked_calloc(1, sizeof(struct d_host_info));
 	STAILQ_INIT(&host->res_options);
 	STAILQ_INIT(&host->on_hosts);
 	STAILQ_INIT(&host->volumes);
@@ -1333,16 +1324,12 @@ void proxy_delegate(void *ctx)
 				exit(E_CONFIG_INVALID);
 			}
 
-			word = malloc(sizeof(struct d_name));
-			if (!word)
-				pdperror("out of memory.");
+			word = checked_malloc(sizeof(struct d_name));
 			word->name = yylval.txt ? yylval.txt : strdup(yytext);
 			insert_tail(&line, word);
 		}
 
-		opt = calloc(1, sizeof(struct d_option));
-		if (!opt)
-			pdperror("out of memory.");
+		opt = checked_calloc(1, sizeof(struct d_option));
 		opt->name = strdup(names_to_str(&line));
 		insert_tail(&options, opt);
 		free_names(&line);
@@ -1372,7 +1359,7 @@ int parse_proxy_options_section(struct d_proxy_info **pp)
 	struct d_proxy_info *proxy;
 
 	if (!*pp)
-		*pp = calloc(1, sizeof(struct d_proxy_info));
+		*pp = checked_calloc(1, sizeof(struct d_proxy_info));
 	proxy = *pp;
 
 	token = yylex();
@@ -1408,7 +1395,7 @@ static struct hname_address *parse_hname_address_pair(struct path *path, int pre
 	struct hname_address *ha;
 	int token;
 
-	ha = calloc(1, sizeof(struct hname_address));
+	ha = checked_calloc(1, sizeof(struct hname_address));
 	ha->config_line = line;
 
 	switch (prev_token) {
@@ -1466,11 +1453,7 @@ struct connection *alloc_connection()
 {
 	struct connection *conn;
 
-	conn = calloc(1, sizeof(struct connection));
-	if (conn == NULL) {
-		log_err("calloc: %m\n");
-		exit(E_EXEC_ERROR);
-	}
+	conn = checked_calloc(1, sizeof(struct connection));
 	STAILQ_INIT(&conn->paths);
 	STAILQ_INIT(&conn->net_options);
 	STAILQ_INIT(&conn->peer_devices);
@@ -1488,11 +1471,7 @@ struct peer_device *alloc_peer_device()
 {
 	struct peer_device *peer_device;
 
-	peer_device = calloc(1, sizeof(*peer_device));
-	if (!peer_device)  {
-		log_err("calloc: %m\n");
-		exit(E_EXEC_ERROR);
-	}
+	peer_device = checked_calloc(1, sizeof(*peer_device));
 	STAILQ_INIT(&peer_device->pd_options);
 
 	return peer_device;
@@ -1519,7 +1498,7 @@ static struct d_host_info *parse_peer_node_id(void)
 {
 	struct d_host_info *host;
 
-	host = calloc(1,sizeof(struct d_host_info));
+	host = checked_calloc(1,sizeof(struct d_host_info));
 	STAILQ_INIT(&host->res_options);
 	STAILQ_INIT(&host->volumes);
 	STAILQ_INIT(&host->on_hosts);
@@ -1540,11 +1519,7 @@ struct path *alloc_path()
 {
 	struct path *path;
 
-	path = calloc(1, sizeof(struct path));
-	if (path == NULL) {
-		log_err("calloc: %m\n");
-		exit(E_EXEC_ERROR);
-	}
+	path = checked_calloc(1, sizeof(struct path));
 	STAILQ_INIT(&path->hname_address_pairs);
 
 	return path;
@@ -1690,7 +1665,7 @@ void parse_connection_mesh(struct d_resource *res, enum pr_flags flags)
 	int token;
 
 	EXP('{');
-	mesh = calloc(1, sizeof(struct mesh));
+	mesh = checked_calloc(1, sizeof(struct mesh));
 	STAILQ_INIT(&mesh->hosts);
 	STAILQ_INIT(&mesh->net_options);
 
@@ -1733,7 +1708,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 	check_upr_init();
 	check_uniq("resource section", res_name);
 
-	res = calloc(1, sizeof(struct d_resource));
+	res = checked_calloc(1, sizeof(struct d_resource));
 	STAILQ_INIT(&res->volumes);
 	STAILQ_INIT(&res->connections);
 	STAILQ_INIT(&res->all_hosts);
@@ -1887,12 +1862,7 @@ int was_file_already_seen(char *fn)
 	ENTRY *e;
 	char *real_path;
 
-	e = calloc(1, sizeof *e);
-	if (!e) {
-		log_err("calloc %m\n");
-		exit(E_THINKO);
-	}
-
+	e = checked_calloc(1, sizeof *e);
 	real_path = realpath(fn, NULL);
 	if (!real_path) {
 		real_path = strdup(fn);

@@ -556,6 +556,28 @@ static const struct adm_cmd forget_peer_setup_cmd = {
 	ACF1_DISCONNECT
 };
 
+void *checked_calloc(size_t nmemb, size_t size)
+{
+	void *mem = calloc(nmemb, size);
+
+	if (!mem) {
+		log_err("Out of memory.\n");
+		exit(E_NO_MEM);
+	}
+	return mem;
+}
+
+void *checked_malloc(size_t size)
+{
+	void *mem = malloc(size);
+
+	if (!mem) {
+		log_err("Out of memory.\n");
+		exit(E_NO_MEM);
+	}
+	return mem;
+}
+
 static void initialize_deferred_cmds()
 {
 	enum drbd_cfg_stage stage;

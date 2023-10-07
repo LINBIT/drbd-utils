@@ -605,5 +605,11 @@ const char *drbd_run_dir_with_slash(void);
 const char *drbd_bin_dir(void);
 const char *drbd_lock_dir(void);
 
+__attribute__ ((malloc, returns_nonnull))
+void *checked_calloc(size_t nmemb, size_t size);
+
+__attribute__ ((malloc, returns_nonnull))
+void *checked_malloc(size_t size);
+
 #endif
 

@@ -60,6 +60,7 @@ const char *drbd_buildtag(void);
 #define E_SYNTAX	  2
 #define E_CONFIG_INVALID 10
 #define E_EXEC_ERROR     20
+#define E_NO_MEM         30
 #define E_THINKO	 42 /* :) */
 
 enum {
