@@ -489,9 +489,13 @@ static char* run_adm_drbdmeta(const struct cfg_ctx *ctx, const char *arg_overrid
 	pid_t pid;
 
 	buffer = malloc(SLURP_SIZE);
-	if(!buffer) return 0;
+	if (!buffer)
+		return NULL;
 
-	if(pipe(pipes)) return 0;
+	if (pipe(pipes)) {
+		free(buffer);
+		return NULL;
+	}
 
 	pid = fork();
 	if(pid == -1) {
@@ -599,8 +603,10 @@ int adm_create_md(const struct cfg_ctx *ctx)
 	verbose = 0;
 	tb = run_adm_drbdmeta(ctx, "read-dev-uuid");
 	verbose = verbose_tmp;
-	device_uuid = strto_u64(tb,NULL,16);
-	free(tb);
+	if (tb) {
+		device_uuid = strto_u64(tb, NULL, 16);
+		free(tb);
+	}
 
 	/* This is "drbdmeta ... create-md".
 	 * It implicitly adds all backend_options to the command line. */
