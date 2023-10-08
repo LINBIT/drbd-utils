@@ -632,23 +632,24 @@ void parse_options_syncer(struct d_resource *res)
 	}
 }
 
-static struct options __parse_options(struct context_def *options_def,
+static void __parse_options(struct options *options,
+				      struct context_def *options_def,
 				      void (*delegate)(void*),
 				      void *delegate_context)
 {
-	struct options options = STAILQ_HEAD_INITIALIZER(options);
 	const struct field_def *field_def;
 	char *value;
 	bool no_prefix;
 	int token;
 
+	STAILQ_INIT(options);
 	c_section_start = line;
 	fline = line;
 
 	while (1) {
 		token = yylex();
 		if (token == '}')
-			return options;
+			return;
 
 		field_def = find_field(&no_prefix, options_def, yytext);
 		if (!field_def) {
@@ -661,13 +662,13 @@ static struct options __parse_options(struct context_def *options_def,
 		}
 
 		value = parse_option_value(field_def, no_prefix);
-		insert_tail(&options, new_opt((char *)field_def->name, value));
+		insert_tail(options, new_opt((char *)field_def->name, value));
 	}
 }
 
-static struct options parse_options(struct context_def *options_def)
+static void parse_options(struct options *options, struct context_def *options_def)
 {
-	return __parse_options(options_def, NULL, NULL);
+	__parse_options(options, options_def, NULL, NULL);
 }
 
 static void insert_pd_options_delegate(void *ctx)
@@ -698,9 +699,7 @@ static void parse_disk_options(struct options *disk_options,
 {
 	struct peer_delegate_data params = {device_options, peer_device_options};
 
-	*disk_options = __parse_options(&attach_cmd_ctx,
-					&insert_pd_options_delegate,
-					&params);
+	__parse_options(disk_options, &attach_cmd_ctx, &insert_pd_options_delegate, &params);
 }
 
 static void __parse_address(struct d_address *a)
@@ -1150,7 +1149,7 @@ static void parse_host_section(struct d_resource *res,
 			break;
 		case TK_OPTIONS:
 			EXP('{');
-			host->res_options = parse_options(&resource_options_ctx);
+			parse_options(&host->res_options, &resource_options_ctx);
 			break;
 		case TK_SKIP:
 			parse_skip();
@@ -1344,8 +1343,7 @@ static int parse_proxy_options(struct options *proxy_options, struct options *pr
 	struct options opts;
 
 	EXP('{');
-	opts = __parse_options(&proxy_options_ctx,
-			       proxy_delegate, proxy_plugins);
+	__parse_options(&opts, &proxy_options_ctx, proxy_delegate, proxy_plugins);
 
 	if (proxy_options)
 		*proxy_options = opts;
@@ -1488,7 +1486,7 @@ static struct peer_device *parse_peer_device(int vnr)
 	EXP('{');
 	EXP(TK_DISK);
 	EXP('{');
-	peer_device->pd_options = parse_options(&peer_device_options_ctx);
+	parse_options(&peer_device->pd_options, &peer_device_options_ctx);
 	EXP('}');
 
 	return peer_device;
@@ -1623,15 +1621,15 @@ static struct connection *parse_connection(enum pr_flags flags)
 				config_valid = 0;
 			}
 			EXP('{');
-			conn->net_options = __parse_options(&show_net_options_ctx,
-							    &net_delegate, (void *)flags);
+			__parse_options(&conn->net_options, &show_net_options_ctx,
+					&net_delegate, (void *)flags);
 			break;
 		case TK_SKIP:
 			parse_skip();
 			break;
 		case TK_DISK:
 			EXP('{');
-			conn->pd_options = parse_options(&peer_device_options_ctx);
+			parse_options(&conn->pd_options, &peer_device_options_ctx);
 			break;
 		case TK_VOLUME:
 			EXP(TK_INTEGER);
@@ -1682,10 +1680,8 @@ void parse_connection_mesh(struct d_resource *res, enum pr_flags flags)
 				config_valid = 0;
 			}
 			EXP('{');
-			mesh->net_options =
-				__parse_options(&show_net_options_ctx,
-						&net_delegate,
-						(void *)flags);
+			__parse_options(&mesh->net_options, &show_net_options_ctx,
+					&net_delegate, (void *)flags);
 			break;
 		case '}':
 			insert_tail(&res->meshes, mesh);
@@ -1779,8 +1775,8 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 		case TK_NET:
 			check_upr("net section", "%s:net", res->name);
 			EXP('{');
-			options = __parse_options(&show_net_options_ctx,
-						  &net_delegate, (void *)flags);
+			__parse_options(&options, &show_net_options_ctx,
+					net_delegate, (void *)flags);
 
 			STAILQ_CONCAT(&res->net_options, &options);
 			break;
@@ -1792,14 +1788,14 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 		case TK_STARTUP:
 			check_upr("startup section", "%s:startup", res->name);
 			EXP('{');
-			res->startup_options = __parse_options(&startup_options_ctx,
-							       &startup_delegate,
-							       res);
+			__parse_options(&res->startup_options, &startup_options_ctx,
+					&startup_delegate,
+					res);
 			break;
 		case TK_HANDLER:
 			check_upr("handlers section", "%s:handlers", res->name);
 			EXP('{');
-			res->handlers = parse_options(&handlers_ctx);
+			parse_options(&res->handlers, &handlers_ctx);
 			break;
 		case TK_PROXY:
 			check_upr("proxy section", "%s:proxy", res->name);
@@ -1818,7 +1814,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 		case TK_OPTIONS:
 			check_upr("resource options section", "%s:res_options", res->name);
 			EXP('{');
-			options = parse_options(&resource_options_ctx);
+			parse_options(&options, &resource_options_ctx);
 			STAILQ_CONCAT(&res->res_options, &options);
 			break;
 		case TK_CONNECTION:
