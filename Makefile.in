@@ -272,6 +272,13 @@ endif
 dockerpath:
 	@echo $(DOCKERREGPATH):latest $(DOCKERREGPATH):$(DOCKER_TAG)
 
+# The SPDX specifications is a bit different from
+# `date --utc --iso-8601=seconds` output. Both refer for iso 8601.
+DATE=$(shell date --utc +%FT%TZ)
+.PHONY: drbd-utils.spdx
+drbd-utils.spdx: check_VERSION drbd-utils.spdx.in
+	DATE=$(DATE) VERSION=$(VERSION) envsubst <drbd-utils.spdx.in >drbd-utils.spdx
+
 Makefile.in: ;
 Makefile: Makefile.in config.status
 	./config.status Makefile

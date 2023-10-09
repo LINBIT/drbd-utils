@@ -1,0 +1,43 @@
+SPDXVersion: SPDX-2.3
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+DocumentName: drbd-utils software bill of materials
+DocumentNamespace: https://linbit.org/spdx-docs/drbd-utils
+Creator: Person: Philipp Reisner (philipp.reisner@linbit.com)
+Created: $DATE
+
+PackageName: drbd-utils
+SPDXID: SPDXRef-Package-drbd-utils
+PackageVersion: $VERSION
+PackageSupplier: Organization: LINBIT HA-Solutions GmbH
+PackageDownloadLocation: https://github.com/LINBIT/drbd-utils
+FilesAnalyzed: false
+PackageLicenseDeclared: GPL-2.0-or-later
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-drbd-utils
+
+PackageName: drbd-bash-completion
+SPDXID: SPDXRef-Package-drbd-bash-completion
+PackageVersion: $VERSION
+PackageSupplier: Organization: LINBIT HA-Solutions GmbH
+PackageDownloadLocation: https://github.com/LINBIT/drbd-utils
+FilesAnalyzed: false
+PackageLicenseDeclared: GPL-2.0-or-later
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-drbd-bash-completion
+
+PackageName: drbd-udev
+SPDXID: SPDXRef-Package-drbd-udev
+PackageVersion: $VERSION
+PackageSupplier: Organization: LINBIT HA-Solutions GmbH
+PackageDownloadLocation: https://github.com/LINBIT/drbd-utils
+FilesAnalyzed: false
+PackageLicenseDeclared: GPL-2.0-or-later
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-drbd-udev
+
+PackageName: drbd-selinux
+SPDXID: SPDXRef-Package-drbd-selinux
+PackageVersion: $VERSION
+PackageSupplier: Organization: LINBIT HA-Solutions GmbH
+PackageDownloadLocation: https://github.com/LINBIT/drbd-utils
+FilesAnalyzed: false
+PackageLicenseDeclared: GPL-2.0-or-later
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-drbd-selinux
