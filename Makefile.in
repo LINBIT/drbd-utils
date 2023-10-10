@@ -189,6 +189,48 @@ check_VERSION:
 	true
 endif
 
+export define SPDX_HEADER
+SPDXVersion: SPDX-2.3
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+DocumentName: drbd-utils software bill of materials
+DocumentNamespace: https://linbit.com/spdx-docs/drbd-utils-$(VERSION)-$(SPDX_UUID)
+Creator: Person: Philipp Reisner (philipp.reisner@linbit.com)
+Created: $(SPDX_DATE)
+endef
+
+# only call this wrapper from drbd-utils.spdx
+.PHONY: spdx-header
+spdx-header:
+	@echo "$$SPDX_HEADER" > $(SPDX_FILE_TMP)
+
+export define SPDX_PKG
+PackageName: $(SPDX_PKG_NAME)
+SPDXID: SPDXRef-Package-$(SPDX_PKG_NAME)
+PackageVersion: $(VERSION)
+PackageSupplier: Organization: LINBIT HA-Solutions GmbH
+PackageDownloadLocation: https://github.com/LINBIT/drbd-utils
+FilesAnalyzed: false
+PackageLicenseDeclared: GPL-2.0-or-later
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-$(SPDX_PKG_NAME)
+endef
+
+# only call this wrapper from drbd-utils.spdx
+.PHONY: spdx-sub
+spdx-sub:
+	@ (echo && echo "$$SPDX_PKG") >> $(SPDX_FILE_TMP)
+	
+.PHONY: drbd-utils.spdx
+drbd-utils.spdx: check_VERSION
+	set -e; ( truncate -s0 $@.tmp; \
+		SPDX_DATE=$$(date --utc +%FT%TZ); \
+		SPDX_UUID=$$(cat /proc/sys/kernel/random/uuid); \
+		test -n "$$SPDX_HEADER"; test -n "$$SPDX_UUID"; \
+		$(MAKE) -s spdx-header SPDX_UUID="$$SPDX_UUID" SPDX_DATE="$$SPDX_DATE" SPDX_FILE_TMP="$@.tmp"; \
+		for SPDX_PKG_NAME in drbd-utils drbd-bash-completion drbd-udev drbd-selinux; do \
+			$(MAKE) -s spdx-sub SPDX_PKG_NAME="$$SPDX_PKG_NAME" SPDX_FILE_TMP="$@.tmp"; \
+		done; \
+		mv $@.tmp $@; )
 
 .PHONY: check_changelogs_up2date
 check_changelogs_up2date: check_VERSION
@@ -217,6 +259,7 @@ check_changelogs_up2date: check_VERSION
 	echo $(PNAME)-$(VERSION)/user/shared/config.h.in  >> .filelist ; \
 	echo $(PNAME)-$(VERSION)/.filelist            >> .filelist ; \
 	echo $(PNAME)-$(VERSION)/configure            >> .filelist ; \
+	echo $(PNAME)-$(VERSION)/drbd-utils.spdx      >> .filelist ; \
 	echo "./.filelist updated."
 
 tools doc: check-submods
@@ -244,7 +287,7 @@ configure: configure.ac
 config.status: configure
 	@printf "\nYou need to call ./configure with appropriate arguments (again).\n\n"; exit 1
 
-tarball: check_VERSION check-submods check_all_committed check_changelogs_up2date distclean doc configure .filelist
+tarball: check_VERSION check-submods check_all_committed check_changelogs_up2date distclean doc configure drbd-utils.spdx .filelist
 	rm -f drbd-utils-$(VERSION)
 	$(LN_S) . drbd-utils-$(VERSION)
 	for f in $$(<.filelist) ; do [ -e $$f ] && continue ; echo missing: $$f ; exit 1; done
