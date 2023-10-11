@@ -947,6 +947,11 @@ static int check_error(int err_no, char *desc, struct nlattr **tla)
 			fprintf(stderr,"%s: %s\n", objname, desc);
 		return 20;
 	}
+	if (err_no == ERR_MODULE_UNLOADED) {
+		if (desc)
+			fprintf(stderr,"%s: %s\n", objname, desc);
+		return ERR_EXIT_MODULE_UNLOADED;
+	}
 
 	if ( ( err_no >= AFTER_LAST_ERR_CODE || err_no <= ERR_CODE_BASE ) &&
 	     ( err_no > SS_CW_NO_NEED || err_no <= SS_AFTER_LAST_ERROR) ) {
@@ -1721,19 +1726,22 @@ static int generic_recv(struct drbd_cmd *cm, int timeout_arg, void *u_ptr, int e
 			}
 			if (nlh->nlmsg_type == GENL_ID_CTRL) {
 #ifdef HAVE_CTRL_CMD_DELMCAST_GRP
+#define CMD_INDICATING_MODULE_UNLOAD CTRL_CMD_DELMCAST_GRP
+#else
+#define CMD_INDICATING_MODULE_UNLOAD CTRL_CMD_DELFAMILY
+#endif
 				dbg(3, "received cmd:%x\n", info.genlhdr->cmd);
-				if (info.genlhdr->cmd == CTRL_CMD_DELMCAST_GRP) {
+				if (info.genlhdr->cmd == CMD_INDICATING_MODULE_UNLOAD) {
 					struct nlattr *nla =
 						nlmsg_find_attr(nlh, GENL_HDRLEN, CTRL_ATTR_FAMILY_ID);
 					if (nla && nla_get_u16(nla) == drbd_genl_family.id) {
 						/* FIXME: We could wait for the
 						   multicast group to be recreated ... */
-						rv = OTHER_ERROR;
+						rv = ERR_MODULE_UNLOADED;
 						desc = "module unloaded";
 						goto out;
 					}
 				}
-#endif
 				/* Ignore other generic netlink control messages. */
 				continue;
 			}

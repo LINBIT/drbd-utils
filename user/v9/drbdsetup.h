@@ -8,7 +8,13 @@
 #include <linux/drbd_genl_api.h>
 #include <linux/types.h>
 
+
 #define OTHER_ERROR 900
+#define ERR_MODULE_UNLOADED 901
+
+/* EXIT code to map ERR_MODULE_UNLOADED to */
+#define ERR_EXIT_MODULE_UNLOADED  121
+
 #define ADDRESS_STR_MAX 256
 
 /* is_intentional is a boolean value we get via nl from kernel. if we use new
