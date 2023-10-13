@@ -921,24 +921,41 @@ static struct option *make_longoptions(struct drbd_cmd *cm)
 	return buffer;
 }
 
+void fprintf_all_cfg_reply_info_text(const char *hdr, struct nlmsghdr *nlh)
+{
+	struct nlattr *msg_start = nlmsg_attrdata(nlh, GENL_HDRLEN + drbd_genl_family.hdrsize);
+	int msg_len = nlmsg_attrlen(nlh, GENL_HDRLEN + drbd_genl_family.hdrsize);
+
+	/* there may be more than one DRBD_NLA_CFG_REPLY,
+	 * and more than one T_info_text inside. */
+	struct nlattr *o_nla, *nla;
+	int o_rem, rem;
+
+	nla_for_each_attr(o_nla, msg_start, msg_len, o_rem) {
+		if (nla_type(o_nla) != DRBD_NLA_CFG_REPLY
+		|| o_nla->nla_len == 0)
+			continue;
+		if (hdr && *hdr) {
+			fprintf(stderr, "%s", hdr);
+			hdr = NULL;
+		}
+		nla_for_each_nested(nla, o_nla, rem) {
+			if (nla_type(nla) == __nla_type(T_info_text))
+				fprintf(stderr, "%s\n", (char*)nla_data(nla));
+		}
+	}
+}
+
 /* prepends global objname to output (if any) */
-static int check_error(int err_no, char *desc, struct nlattr **tla)
+static int check_error(int err_no, char *desc, struct nlattr **tla, struct nlmsghdr *nlh)
 {
 	int rv = 0;
 
 	if (err_no == NO_ERROR || err_no == SS_SUCCESS) {
-			/* drbdsetup primary may produce warnings,
-			 * which are no errors (on WinDRBD). */
-		if (tla[DRBD_NLA_CFG_REPLY] &&
-	            tla[DRBD_NLA_CFG_REPLY]->nla_len) {
-			struct nlattr *nla;
-			int rem;
-			fprintf(stderr, "warnings from kernel:\n");
-			nla_for_each_nested(nla, tla[DRBD_NLA_CFG_REPLY], rem) {
-				if (nla_type(nla) == __nla_type(T_info_text))
-					fprintf(stderr, "%s\n", (char*)nla_data(nla));
-			}
-		}
+		/* drbdsetup primary may produce warnings,
+		 * which are no errors (on WinDRBD). */
+		if (tla[DRBD_NLA_CFG_REPLY])
+			fprintf_all_cfg_reply_info_text("warnings from kernel:\n", nlh);
 		return 0;
 	}
 
@@ -988,16 +1005,9 @@ static int check_error(int err_no, char *desc, struct nlattr **tla)
 			}
 		}
 	}
-	if (tla[DRBD_NLA_CFG_REPLY] &&
-	    tla[DRBD_NLA_CFG_REPLY]->nla_len) {
-		struct nlattr *nla;
-		int rem;
-		fprintf(stderr, "additional info from kernel:\n");
-		nla_for_each_nested(nla, tla[DRBD_NLA_CFG_REPLY], rem) {
-			if (nla_type(nla) == __nla_type(T_info_text))
-				fprintf(stderr, "%s\n", (char*)nla_data(nla));
-		}
-	}
+
+	if (tla[DRBD_NLA_CFG_REPLY])
+		fprintf_all_cfg_reply_info_text("additional info from kernel:\n", nlh);
 	return rv;
 }
 
@@ -1033,7 +1043,7 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	struct drbd_genlmsghdr *dhdr;
 	struct msg_buff *smsg;
 	struct iovec iov;
-	struct nlmsghdr *nlh;
+	struct nlmsghdr *nlh = NULL;
 	struct drbd_genlmsghdr *dh;
 	struct timespec retry_timeout = {
 		.tv_nsec = 62500000L,  /* 1/16 second */
@@ -1210,7 +1220,7 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 error:
 	msg_free(smsg);
 
-	rv = check_error(rv, desc, tla);
+	rv = check_error(rv, desc, tla, nlh);
 	free(iov.iov_base);
 	return rv;
 }
@@ -1810,7 +1820,7 @@ static int generic_recv(struct drbd_cmd *cm, int timeout_arg, void *u_ptr, int e
 
 out:
 	if (!err)
-		err = check_error(rv, desc, tla);
+		err = check_error(rv, desc, tla, (struct nlmsghdr *)iov.iov_base);
 	free(iov.iov_base);
 	return err;
 }
