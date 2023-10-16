@@ -189,7 +189,7 @@ check_VERSION:
 	true
 endif
 
-export define SPDX_HEADER
+define SPDX_HEADER
 SPDXVersion: SPDX-2.3
 DataLicense: CC0-1.0
 SPDXID: SPDXRef-DOCUMENT
@@ -198,13 +198,14 @@ DocumentNamespace: https://linbit.com/spdx-docs/drbd-utils-$(VERSION)-$(SPDX_UUI
 Creator: Person: Philipp Reisner (philipp.reisner@linbit.com)
 Created: $(SPDX_DATE)
 endef
+export SPDX_HEADER
 
 # only call this wrapper from drbd-utils.spdx
 .PHONY: spdx-header
 spdx-header:
 	@echo "$$SPDX_HEADER" > $(SPDX_FILE_TMP)
 
-export define SPDX_PKG
+define SPDX_PKG
 PackageName: $(SPDX_PKG_NAME)
 SPDXID: SPDXRef-Package-$(SPDX_PKG_NAME)
 PackageVersion: $(VERSION)
@@ -214,6 +215,7 @@ FilesAnalyzed: false
 PackageLicenseDeclared: GPL-2.0-or-later
 Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-$(SPDX_PKG_NAME)
 endef
+export SPDX_PKG
 
 # only call this wrapper from drbd-utils.spdx
 .PHONY: spdx-sub
