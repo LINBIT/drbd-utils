@@ -3,6 +3,19 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.26.0-rc.1
+-----------
+ * drbdadm,v9: fix segfault if proxy has no path
+ * drbd: increase maximum CPU mask size
+ * systemd: introduce drbd-graceful-shutdown.service
+ * drbdmeta,v9: fix regression, allow attach after offline resize
+ * drbdsetup,v9: add path established information to JSON status
+ * events2: terminate on module unload even under --poll
+ * events2: specif exit code if module unload
+ * docs: add spdx license file
+ * drbdmon: various smaller improvements
+ * drbdsetup,v9: support for TLS/kTLS
+
 9.25.0
 -----------
  * drbdsetup,v9,show: fix meta disk format for json
