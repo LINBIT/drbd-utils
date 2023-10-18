@@ -1003,6 +1003,11 @@ const struct en_map quorum_map[] = {
 	{ "tls-certificate", KEY_SERIAL(tls_certificate, "user") },			\
 	{ "_name", STRING_MAX_LEN(name, SHARED_SECRET_MAX) }
 
+#define IMMUTABLE_NET_OPTIONS								\
+	{ "transport", STRING_MAX_LEN(transport_name, SHARED_SECRET_MAX) },		\
+	{ "load-balance-paths", BOOLEAN(load_balance_paths, LOAD_BALANCE_PATHS) }
+
+
 struct context_def disk_options_ctx = {
 	NLA_POLICY(disk_conf),
 	.nla_type = DRBD_NLA_DISK_CONF,
@@ -1062,7 +1067,7 @@ struct context_def new_peer_cmd_ctx = {
 	NLA_POLICY(net_conf),
 	.nla_type = DRBD_NLA_NET_CONF,
 	.fields = {
-		{ "transport", STRING_MAX_LEN(transport_name, SHARED_SECRET_MAX) },
+		IMMUTABLE_NET_OPTIONS,
 		CHANGEABLE_NET_OPTIONS,
 		{ } },
 };
@@ -1089,7 +1094,7 @@ struct context_def show_net_options_ctx = {
 	NLA_POLICY(net_conf),
 	.nla_type = DRBD_NLA_NET_CONF,
 	.fields = {
-		{ "transport", STRING(transport_name) },
+		IMMUTABLE_NET_OPTIONS,
 		CHANGEABLE_NET_OPTIONS,
 		{ } },
 };
