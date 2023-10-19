@@ -1001,6 +1001,8 @@ const struct en_map quorum_map[] = {
 	{ "tls-keyring", KEY_SERIAL(tls_keyring, "keyring") },				\
 	{ "tls-privkey", KEY_SERIAL(tls_privkey, "user") },				\
 	{ "tls-certificate", KEY_SERIAL(tls_certificate, "user") },			\
+	{ "rdma-ctrl-rcvbuf-size", NUMERIC(rdma_ctrl_rcvbuf_size, RDMA_CTRL_RCVBUF_SIZE) }, \
+	{ "rdma-ctrl-sndbuf-size", NUMERIC(rdma_ctrl_sndbuf_size, RDMA_CTRL_SNDBUF_SIZE) }, \
 	{ "_name", STRING_MAX_LEN(name, SHARED_SECRET_MAX) }
 
 #define IMMUTABLE_NET_OPTIONS								\
