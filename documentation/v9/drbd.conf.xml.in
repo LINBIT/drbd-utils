@@ -836,6 +836,7 @@ resource
         <pick_drbdsetup_option name="after-sb-0pri"/>
         <pick_drbdsetup_option name="after-sb-1pri"/>
         <pick_drbdsetup_option name="after-sb-2pri"/>
+        <pick_drbdsetup_option name="allow-remote-read"/>
         <pick_drbdsetup_option name="allow-two-primaries"/>
         <pick_drbdsetup_option name="always-asbp"/>
         <pick_drbdsetup_option name="connect-int"/>
@@ -845,6 +846,7 @@ resource
         <pick_drbdsetup_option name="data-integrity-alg"/>
         <pick_drbdsetup_option name="fencing"/>
         <pick_drbdsetup_option name="ko-count"/>
+	<pick_drbdsetup_option name="load-balance-paths"/>
         <pick_drbdsetup_option name="max-buffers"/>
         <pick_drbdsetup_option name="max-epoch-size"/>
         <pick_drbdsetup_option name="on-congestion"/>
@@ -853,19 +855,20 @@ resource
         <pick_drbdsetup_option name="socket-check-timeout"/>
         <pick_drbdsetup_option name="protocol"/>
         <pick_drbdsetup_option name="rcvbuf-size"/>
+	<pick_drbdsetup_option name="rdma-ctrl-rcvbuf-size"/>
+	<pick_drbdsetup_option name="rdma-ctrl-sndbuf-size"/>
         <pick_drbdsetup_option name="rr-conflict"/>
         <pick_drbdsetup_option name="shared-secret"/>
         <pick_drbdsetup_option name="sndbuf-size"/>
         <pick_drbdsetup_option name="tcp-cork"/>
         <pick_drbdsetup_option name="timeout"/>
-        <pick_drbdsetup_option name="transport"/>
-        <pick_drbdsetup_option name="use-rle"/>
-        <pick_drbdsetup_option name="verify-alg"/>
-        <pick_drbdsetup_option name="allow-remote-read"/>
         <pick_drbdsetup_option name="tls"/>
         <pick_drbdsetup_option name="tls-keyring"/>
         <pick_drbdsetup_option name="tls-privkey"/>
         <pick_drbdsetup_option name="tls-certificate"/>
+        <pick_drbdsetup_option name="transport"/>
+        <pick_drbdsetup_option name="use-rle"/>
+        <pick_drbdsetup_option name="verify-alg"/>
       </variablelist>
     </refsect2>
 

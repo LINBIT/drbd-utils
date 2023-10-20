@@ -1441,9 +1441,38 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	</indexterm> With DRBD9 the network transport used by DRBD is loaded as a
       seperate module. With this option you can specify which transport and
       module to load. At present only two options exist, <option>tcp</option>
-      and <option>rdma</option>. Please note that currently the RDMA transport
-      module is only available with a license purchased from LINBIT. Default
-      is <option>tcp</option>.</para>
+      and <option>rdma</option>. Default is <option>tcp</option>.</para>
+    </definition>
+  </drbdsetup_option>
+
+  <drbdsetup_option name="load-balance-paths">
+    <term xml:id="load-balance-paths"><option>load-balance-paths
+        <group choice="req" rep="norepeat">
+	  <arg choice="plain" rep="norepeat">yes</arg>
+	  <arg choice="plain" rep="norepeat">no</arg>
+        </group></option></term>
+    <definition>
+      <para><indexterm significance="normal">
+	  <primary>drbd.conf</primary>
+
+	  <secondary>load-balance-paths</secondary>
+
+	  </indexterm>By default, the TCP transport establishes only one
+	  configured path at a time. It switches to another path only in case
+	  the established one fails.
+	  When you set <option>load-balance-paths</option> to
+	  <option>yes</option> the TCP transport establishes all paths in
+	  parallel. It will transmit data packets over the paths with the least
+	  data in its socket send queue.</para>
+
+	  <para>Please note enabling load-balancing introduces additional chunking
+	  headers into the network protocol. In other words, you must enable it
+	  on both sides of a connection.</para>
+
+	  <para>As of drbd-9.2.6 the RDMA transport does not obey this setting. It
+	  always uses all paths in parallel.
+
+	  This option became available with drbd-9.2.6.</para>
     </definition>
   </drbdsetup_option>
 
@@ -1984,6 +2013,46 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	  finish.</para>
 	  <para><option>max-io-depth</option> has a default value of 8000, its minimum value is 4,
 	  and its maximum value is 2^32.
+      </para>
+    </definition>
+  </drbdsetup_option>
+
+  <drbdsetup_option name="rdma-ctrl-rcvbuf-size">
+    <term xml:id="rdma-ctrl-rcvbuf-size"><option>rdma-ctrl-rcvbuf-size <replaceable>value</replaceable></option></term>
+    <definition>
+      <para><indexterm significance="normal">
+	  <primary>drbd.conf</primary>
+	  <secondary>rdma</secondary>
+	  </indexterm> By default, the RDMA transport divides the
+	  <option>rcvbuf-size</option> by 64 and uses the result for the number
+	  of buffers on the control stream. This result might be too low
+	  depending on the timing characteristics of the backing storage
+	  devices and the network link.
+	  </para>
+	  <para>The option <option>rdma-ctrl-rcvbuf-size</option> allows you to
+	  explicitly set the number of buffers for the control stream,
+	  overruling the divide by 64 heuristics. The default unit of this setting
+	  is bytes.
+      </para>
+    </definition>
+  </drbdsetup_option>
+
+  <drbdsetup_option name="rdma-ctrl-sndbuf-size">
+    <term xml:id="rdma-ctrl-sndbuf-size"><option>rdma-ctrl-sndbuf-size <replaceable>value</replaceable></option></term>
+    <definition>
+      <para><indexterm significance="normal">
+	  <primary>drbd.conf</primary>
+	  <secondary>rdma</secondary>
+	  </indexterm> By default, the RDMA transport divides the
+	  <option>sndbuf-size</option> by 64 and uses the result for the number
+	  of buffers on the control stream. This result might be too low
+	  depending on the timing characteristics of the backing storage
+	  devices and the network link.
+	  </para>
+	  <para>The option <option>rdma-ctrl-sndbuf-size</option> allows you to
+	  explicitly set the number of buffers for the control stream,
+	  overruling the divide by 64 heuristics. The default unit of this setting
+	  is bytes.
       </para>
     </definition>
   </drbdsetup_option>
