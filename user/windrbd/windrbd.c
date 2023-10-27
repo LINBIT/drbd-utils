@@ -420,6 +420,26 @@ static int dismount_volume(HANDLE h)
 	return 0;
 }
 
+static int update_size(const char *drive)
+{
+	BOOL ret;
+	int err;
+	HANDLE h = do_open_device(drive);
+	if (h == INVALID_HANDLE_VALUE) {
+		return 1;
+	}
+
+	ret = DeviceIoControl(h, IOCTL_DISK_UPDATE_PROPERTIES, NULL, 0, NULL, 0, NULL, NULL);
+	if (ret) {
+		printf("Device size updated.\n");
+	} else {
+		err = GetLastError();
+		printf("Could not update device size (error code %d)\n", err);
+		return 1;
+	}
+	return 0;
+}
+
 static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 {
 	HANDLE h = do_open_device(drive);
@@ -1916,6 +1936,12 @@ int main(int argc, char ** argv)
 			usage_and_exit();
 		}
 		return send_int_ioctl(IOCTL_WINDRBD_ROOT_CLEAR_IO_SUSPENDED_FOR_MINOR, atoi_or_die(argv[optind+1]));
+	}
+	if (strcmp(op, "update-size") == 0) {
+		if (argc != optind+2) {
+			usage_and_exit();
+		}
+		return update_size(argv[optind+1]);
 	}
 
 	usage_and_exit();
