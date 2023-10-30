@@ -440,6 +440,47 @@ static int update_size(const char *drive)
 	return 0;
 }
 
+static int update_size2(const char *drive, unsigned long long delta)
+{
+	BOOL ret;
+	int err;
+	HANDLE h = do_open_device(drive);
+	struct _DRIVE_LAYOUT_INFORMATION_EX l;
+
+	if (h == INVALID_HANDLE_VALUE) {
+		return 1;
+	}
+
+	ret = DeviceIoControl(h, IOCTL_DISK_GET_DRIVE_LAYOUT_EX, NULL, 0, &l, sizeof(l), NULL, NULL);
+	if (ret) {
+		printf("Got device size.\n");
+	} else {
+		err = GetLastError();
+		printf("Could not get device size (error code %d)\n", err);
+		return 1;
+	}
+	if (l.PartitionStyle == PARTITION_STYLE_GPT) {
+		printf("Disk usable length is %llu\n", l.Gpt.UsableLength.QuadPart);
+		l.Gpt.UsableLength.QuadPart += delta;
+		printf("Updating disk usable length to %llu\n", l.Gpt.UsableLength.QuadPart);
+
+		l.PartitionEntry[0].PartitionLength.QuadPart += delta;
+
+		ret = DeviceIoControl(h, IOCTL_DISK_SET_DRIVE_LAYOUT_EX, &l, sizeof(l), NULL, 0, NULL, NULL);
+		if (ret) {
+			printf("Set device size.\n");
+		} else {
+			err = GetLastError();
+			printf("Could not set device size (error code %d)\n", err);
+			return 1;
+		}
+	} else {
+		printf("Disk must have a GPT to make this work.\n");
+		return 1;
+	}
+	return 0;
+}
+
 static int patch_bootsector_op(const char *drive, enum filesystem_ops op)
 {
 	HANDLE h = do_open_device(drive);
@@ -1667,6 +1708,20 @@ int atoi_or_die(const char *buf)
 	return result;
 }
 
+long long atoll_or_die(const char *buf)
+{
+	char *end;
+	long long result;
+
+	errno = 0;
+	result = strtoll(buf, &end, 10);
+	if (errno == ERANGE || end == buf || (*end != '\0' && !isspace(*end)) ||	   ((int)result != result)) {
+		fprintf(stderr, "Argument should be numeric (might be just out of (64-bit signed int) range)\n");
+		exit(1);
+	}
+	return result;
+}
+
 int main(int argc, char ** argv)
 {
 	const char *op;
@@ -1942,6 +1997,12 @@ int main(int argc, char ** argv)
 			usage_and_exit();
 		}
 		return update_size(argv[optind+1]);
+	}
+	if (strcmp(op, "update-size2") == 0) {
+		if (argc != optind+3) {
+			usage_and_exit();
+		}
+		return update_size2(argv[optind+1], atoll_or_die(argv[optind+2]));
 	}
 
 	usage_and_exit();
