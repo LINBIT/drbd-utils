@@ -3,13 +3,10 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
-9.26.0-rc.2
+9.26.0
 -----------
  * config,v9: new config option load-balance-paths
  * config,v9: new config options rdma-ctrls-(snd|rcv)buf-size
-
-9.26.0-rc.1
------------
  * drbdadm,v9: fix segfault if proxy has no path
  * drbd: increase maximum CPU mask size
  * systemd: introduce drbd-graceful-shutdown.service
