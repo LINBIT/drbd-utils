@@ -210,6 +210,34 @@ int have_ip_ipv6(const char *ip)
 	return 0;
 }
 
+/* INJECT_CMD_FAILURES=0,17 will inject exit code 17 for the second
+ * external command invocation */
+int inject_cmd_failure(void)
+{
+	static bool first_call = true;
+	static bool active = true;
+	char *cmd_fail_str = NULL;
+	char *exit_code_str;
+
+	if (!active)
+		return 0;
+
+	if (first_call) {
+		cmd_fail_str = getenv("INJECT_CMD_FAILURES");
+		first_call = false;
+		if (!cmd_fail_str) {
+			active = false;
+			return 0;
+		}
+	}
+	exit_code_str = strtok(cmd_fail_str, ",");
+	if (!exit_code_str) {
+		active = false;
+		return 0;
+	}
+	return strtoul(exit_code_str, NULL, 10);
+}
+
 int have_ip(const char *af, const char *ip)
 {
 	if (!strcmp(af, "ipv4"))
@@ -279,7 +307,7 @@ void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd
 			if (fd)
 				*fd = -1;
 			if (ex)
-				*ex = 0;
+				*ex = inject_cmd_failure();
 			return;
 		}
 	}

@@ -177,6 +177,7 @@ struct path
 	unsigned int adj_seen:1;
 	unsigned int proxy_conn_is_down:1;
 	unsigned int ignore:1;
+	unsigned int adj_new:1; /* This path gets added by adjust */
 	STAILQ_ENTRY(path) link;
 };
 STAILQ_HEAD(paths, path);
@@ -204,6 +205,7 @@ struct connection
 	/* on_cmdline is set it was explicity asked for on the command line.
 	   Not set if only found by iterating over all connextions in resource */
 	unsigned int on_cmdline:1;
+	unsigned int adj_new:1; /* This connection gets added by adjust */
 	STAILQ_ENTRY(connection) link;
 };
 STAILQ_HEAD(connections, connection);
@@ -393,12 +395,17 @@ enum drbd_cfg_stage {
 	/* actually start with connection attempts */
 	CFG_NET_CONNECT,
 
+	/* retrying after new connections established */
+	CFG_NET_RETRY,
+
 	__CFG_LAST
 };
 
-#define SCHEDULE_ONCE 0x1000
+#define SCHEDULE_ONCE       0x1000
+#define RETRY_AFTER_CONNECT 0x2000
 
-extern void schedule_deferred_cmd(struct adm_cmd *, const struct cfg_ctx *, enum drbd_cfg_stage);
+extern void schedule_deferred_cmd(const struct adm_cmd *, const struct cfg_ctx *,
+				  enum drbd_cfg_stage);
 extern void maybe_exec_legacy_drbdadm(char **argv);
 extern void uc_node(enum usage_count_type type);
 extern int have_ip(const char *af, const char *ip);

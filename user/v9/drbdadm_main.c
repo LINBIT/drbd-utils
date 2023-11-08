@@ -66,6 +66,7 @@ char *progname;
 
 struct deferred_cmd {
 	struct cfg_ctx ctx;
+	unsigned int retry_after_connect:1;
 	STAILQ_ENTRY(deferred_cmd) link;
 };
 
@@ -585,7 +586,7 @@ static void initialize_deferred_cmds()
 		STAILQ_INIT(&deferred_cmds[stage]);
 }
 
-void schedule_deferred_cmd(struct adm_cmd *cmd,
+void schedule_deferred_cmd(const struct adm_cmd *cmd,
 			   const struct cfg_ctx *ctx,
 			   enum drbd_cfg_stage stage)
 {
@@ -606,6 +607,11 @@ void schedule_deferred_cmd(struct adm_cmd *cmd,
 	d = checked_calloc(1, sizeof(struct deferred_cmd));
 	d->ctx = *ctx;
 	d->ctx.cmd = cmd;
+
+	if (stage & RETRY_AFTER_CONNECT) {
+		stage &= ~RETRY_AFTER_CONNECT;
+		d->retry_after_connect = true;
+	}
 
 	STAILQ_INSERT_TAIL(&deferred_cmds[stage], d, link);
 }
@@ -737,13 +743,48 @@ static char *drbd_cfg_stage_string[] = {
 	[CFG_NET] = "adjust net",
 	[CFG_PEER_DEVICE] = "adjust peer_devices",
 	[CFG_NET_CONNECT] = "attempt to connect",
+	[CFG_NET_RETRY] = "retry prepare net",
 };
+
+void schedule_retry(const struct cfg_ctx *ctx)
+{
+	/* We have a failed del-peer or del-path. There is a good
+	 * chance, that it will work if we make sure the new path or
+	 * peer are connected. Wait for that and retry then.
+	 */
+	struct cfg_ctx tmp_ctx = *ctx;
+	struct connection *conn;
+	struct d_resource *res;
+	struct path *path;
+
+	/* The ctx from del-peer/del-path points to the resource object of the
+	 * running resources. Get the corresponding resource object from the config */
+	res = res_by_name(ctx->res->name);
+
+	for_each_connection(conn, &res->connections) {
+		if (!conn->adj_new)
+			continue;
+		tmp_ctx.res = res;
+		tmp_ctx.conn = conn;
+		schedule_deferred_cmd(&wait_c_cmd, &tmp_ctx, CFG_NET_RETRY | SCHEDULE_ONCE);
+
+		for_each_path(path, &conn->paths) {
+			if (!path->adj_new)
+				continue;
+			/* TODO wait for the path to establish */
+		}
+	}
+
+	schedule_deferred_cmd(ctx->cmd, ctx, CFG_NET_RETRY);
+}
 
 int _run_deferred_cmds(enum drbd_cfg_stage stage)
 {
 	struct d_resource *last_res = NULL;
 	struct deferred_cmd *d = STAILQ_FIRST(&deferred_cmds[stage]);
 	struct deferred_cmd *t;
+	struct adm_cmd tmp_cmd;
+	struct cfg_ctx tmp_ctx;
 	int r;
 	int rv = 0;
 
@@ -766,7 +807,16 @@ int _run_deferred_cmds(enum drbd_cfg_stage stage)
 				if (d->ctx.res != last_res)
 					printf(" %s", d->ctx.res->name);
 			}
-			r = __call_cmd_fn(&d->ctx, KEEP_RUNNING);
+			tmp_ctx = d->ctx;
+			if (d->retry_after_connect) {
+				/* if we can retry it, hide stderr in the first run */
+				tmp_cmd = *tmp_ctx.cmd;
+				if (tmp_cmd.function == adm_drbdsetup) {
+					tmp_cmd.function = __adm_drbdsetup_silent;
+					tmp_ctx.cmd = &tmp_cmd;
+				}
+			}
+			r = __call_cmd_fn(&tmp_ctx, KEEP_RUNNING);
 			if (r) {
 				/* If something in the "prerequisite" stages failed,
 				 * there is no point in trying to continue.
@@ -774,11 +824,16 @@ int _run_deferred_cmds(enum drbd_cfg_stage stage)
 				 * options, or failed to attach, we still want
 				 * to adjust other options, or try to connect.
 				 */
-				if (stage == CFG_PREREQ
-				||  stage == CFG_DISK_PREP_DOWN
-				||  stage == CFG_DISK_PREP_UP
-				||  stage == CFG_NET_PREP_DOWN
-				||  stage == CFG_NET_PREP_UP)
+				if (d->retry_after_connect && r == 17) {
+					/* 17: SS_NO_UP_TO_DATE_DISK retry after new
+					 * connections got established */
+					schedule_retry(&d->ctx);
+					r = 0;
+				} else if (stage == CFG_PREREQ ||
+					   stage == CFG_DISK_PREP_DOWN ||
+					   stage == CFG_DISK_PREP_UP ||
+					   stage == CFG_NET_PREP_DOWN ||
+					   stage == CFG_NET_PREP_UP)
 					d->ctx.res->skip_further_deferred_command = 1;
 				if (adjust_with_progress)
 					printf(":failed(%s:%u)", d->ctx.cmd->name, r);
@@ -1566,12 +1621,18 @@ static int __adm_drbdsetup_silent(const struct cfg_ctx *ctx)
 		if (alarm_raised) {
 			rv = 0x100;
 		}
+	} else /* dry_run */ {
+		rv = inject_cmd_failure();
 	}
 
-	/* see drbdsetup.c, print_config_error():
-	 *  11: some unspecific state change error. (ignore for invalidate)
-	 *  17: SS_NO_UP_TO_DATE_DISK */
-	if ((strcmp(ctx->cmd->name, "invalidate") && rv == 11) || rv == 17)
+	/* print stderr except the exit code is...
+	 * 11: some unspecific state change error  and the command is invalidate
+	 *     the call site will retry with drbdmeta
+	 * 17: SS_NO_UP_TO_DATE_DISK  and the command is del-peer
+	 *     the call site retries after new connections got established
+	 */
+	if ((strcmp(ctx->cmd->name, "invalidate") && rv == 11) ||
+	    (strcmp(ctx->cmd->name, "del-peer") && rv == 17))
 		rw = write(fileno(stderr), buffer, s);
 
 	return rv;
