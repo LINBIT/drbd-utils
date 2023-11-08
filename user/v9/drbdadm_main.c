@@ -603,12 +603,7 @@ void schedule_deferred_cmd(struct adm_cmd *cmd,
 		}
 	}
 
-	d = calloc(1, sizeof(struct deferred_cmd));
-	if (d == NULL) {
-		perror("calloc");
-		exit(E_EXEC_ERROR);
-	}
-
+	d = checked_calloc(1, sizeof(struct deferred_cmd));
 	d->ctx = *ctx;
 	d->ctx.cmd = cmd;
 
@@ -2833,11 +2828,7 @@ void verify_ips(struct d_resource *res)
 
 	if (!have_ip(res->me->address.af, res->me->address.addr)) {
 		ENTRY *e, *ep, *f;
-		e = calloc(1, sizeof *e);
-		if (!e) {
-			log_err("calloc: %m\n");
-			exit(E_EXEC_ERROR);
-		}
+		e = checked_calloc(1, sizeof *e);
 		m_asprintf(&e->key, "%s:%s", res->me->address.addr, res->me->address.port);
 		f = tfind(e, &global_btree, btree_key_cmp);
 		free(e);
@@ -3022,7 +3013,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 
 	STAILQ_INIT(&backend_options_check);
 	*cmd = NULL;
-	*resource_names = calloc(argc + 1, sizeof(char *));
+	*resource_names = checked_calloc(argc + 1, sizeof(char *));
 
 	opterr = 1;
 	optind = 0;
