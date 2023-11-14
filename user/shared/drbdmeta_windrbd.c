@@ -222,7 +222,7 @@ static int get_windows_device_geometry(HANDLE hdisk, int *md_hard_sect_size, uin
 	GET_LENGTH_INFORMATION length_info;
 
 	if (DeviceIoControl(hdisk, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, 0, &geometry, sizeof(geometry), &ret_bytes, NULL) == 0) {
-		fprintf(stderr, "Failed to get disk geometry: error is %d falling back to 512 bytes sector size.\n", GetLastError());
+//		fprintf(stderr, "Failed to get disk geometry: error is %d falling back to 512 bytes sector size.\n", GetLastError());
 		geometry.Geometry.BytesPerSector = 512;
 	} else {
 		if (verbose >= 1) {
