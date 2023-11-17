@@ -6,6 +6,11 @@
 # Roland Kammerer <roland.kammerer@linbit.com>
 ###
 
+LC_ALL=C
+LANG=C
+LANGUAGE=C
+TZ=UTC
+
 die() {
 	>&2 echo "$1"
 	exit 1
