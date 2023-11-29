@@ -198,7 +198,7 @@ static void _set_host_info_in_host_address_pairs(struct d_resource *res,
 			log_err("%s:%d: in resource %s a hostname (\"%s\") is given\n"
 			    "with a \"host\" keyword, has no \"address\" keyword, and no matching\n"
 			    "host section (\"on\" keyword)\n",
-			    config_file, ha->config_line, res->name, ha->name);
+			    res->config_file, ha->config_line, res->name, ha->name);
 			config_valid = 0;
 			/* Can't continue. */
 			return;
@@ -225,7 +225,7 @@ static void _set_host_info_in_host_address_pairs(struct d_resource *res,
 			if (!(have_address && have_port)) {
 				log_err("%s:%d: Resource %s, host %s: "
 				    "cannot determine which %s%s%s to use\n",
-				    config_file, ha->config_line, res->name,
+				    res->config_file, ha->config_line, res->name,
 				    ha->name, have_address ? "" : "address",
 				    have_address != have_port ? "" : " and ",
 				    have_port ? "" : "port");
@@ -707,7 +707,7 @@ static void check_volume_sets_equal(struct d_resource *res, struct d_host_info *
 	while (a || b) {
 		while (a && (!b || a->vnr < b->vnr)) {
 			log_err("%s:%d: in resource %s, on %s { ... }: volume %d not defined on %s\n",
-			    config_file, line, res->name,
+			    res->config_file, res->start_line, res->name,
 			    names_to_str(&host1->on_hosts), a->vnr,
 			    compare_stacked ? host1->lower->name : names_to_str(&host2->on_hosts));
 			a = STAILQ_NEXT(a, link);
@@ -721,7 +721,7 @@ static void check_volume_sets_equal(struct d_resource *res, struct d_host_info *
 			if (!(compare_stacked && no_tty))
 				log_err("%s:%d: in resource %s, on %s { ... }: "
 				    "volume %d missing (present on %s)\n",
-				    config_file, line, res->name,
+				    res->config_file, res->start_line, res->name,
 				    names_to_str(&host1->on_hosts), b->vnr,
 				    compare_stacked ? host1->lower->name : names_to_str(&host2->on_hosts));
 			if (!compare_stacked)
@@ -731,7 +731,7 @@ static void check_volume_sets_equal(struct d_resource *res, struct d_host_info *
 		if (a && b && a->vnr == b->vnr) {
 			if (a->implicit != b->implicit) {
 				log_err("%s:%d: in resource %s, on %s resp. %s: volume %d must not be implicit on one but not the other\n",
-				    config_file, line, res->name,
+				    res->config_file, res->start_line, res->name,
 				    names_to_str(&host1->on_hosts),
 				    compare_stacked ? host1->lower->name : names_to_str(&host2->on_hosts),
 				    a->vnr);
@@ -1151,7 +1151,7 @@ void post_parse(struct resources *resources, enum pp_flags flags)
 
 		if (any_implicit && any_non_zero_vnr) {
 			log_err("%s:%d: in resource %s: you must not mix implicit and explicit volumes\n",
-			    config_file, line, res->name);
+			    res->config_file, res->start_line, res->name);
 			config_valid = 0;
 		}
 	}

@@ -3490,24 +3490,15 @@ int main(int argc, char **argv)
 		config_save = canonify_path(config_file);
 
 	my_parse();
+	fclose(yyin);
 
 	if (config_test) {
-		char *saved_config_file = config_file;
-		char *saved_config_save = config_save;
-
-		config_file = config_test;
-		config_save = canonify_path(config_test);
-
-		fclose(yyin);
-		yyin = fopen(config_test, "r");
-		if (!yyin) {
+		FILE *f = fopen(config_test, "r");
+		if (!f) {
 			log_err("Can not open '%s'.\n.", config_test);
 			exit(E_EXEC_ERROR);
 		}
-		my_parse();
-
-		config_file = saved_config_file;
-		config_save = saved_config_save;
+		include_file(f, config_test);
 	}
 
 	if (!config_valid)
