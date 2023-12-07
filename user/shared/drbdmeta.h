@@ -49,6 +49,7 @@ struct peer_md_cpu {
 struct md_cpu {
 	uint64_t current_uuid;
 	uint64_t history_uuids[HISTORY_UUIDS];
+	uint64_t members;
 	/* present since drbd 0.6 */
 	uint32_t gc[GEN_CNT_SIZE];	/* generation counter */
 	uint32_t magic;

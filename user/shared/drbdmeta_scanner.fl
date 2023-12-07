@@ -54,6 +54,7 @@ gc		DP; CP; return TK_GC;
 bm		DP; CP; return TK_BM;
 uuid		DP; CP; return TK_UUID;
 version		DP; CP; return TK_VERSION;
+members         DP; CP; return TK_MEMBERS;
 la-size-sect	DP; CP; return TK_LA_SIZE;
 bm-byte-per-bit DP; CP; return TK_BM_BYTE_PER_BIT;
 device-uuid	DP; CP; return TK_DEVICE_UUID;

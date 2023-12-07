@@ -618,6 +618,7 @@ void md_disk_09_to_cpu(struct md_cpu *cpu, const struct meta_data_on_disk_9 *dis
 	cpu->effective_size = be64_to_cpu(disk->effective_size.be);
 	cpu->device_uuid = be64_to_cpu(disk->device_uuid.be);
 	cpu->flags = be32_to_cpu(disk->flags.be);
+	cpu->members = be64_to_cpu(disk->members.be);
 	cpu->magic = be32_to_cpu(disk->magic.be);
 	cpu->md_size_sect = be32_to_cpu(disk->md_size_sect.be);
 	cpu->al_offset = be32_to_cpu(disk->al_offset.be);
@@ -657,6 +658,7 @@ void md_cpu_to_disk_09(struct meta_data_on_disk_9 *disk, const struct md_cpu *cp
 	disk->effective_size.be = cpu_to_be64(cpu->effective_size);
 	disk->device_uuid.be = cpu_to_be64(cpu->device_uuid);
 	disk->flags.be = cpu_to_be32(cpu->flags);
+	disk->members.be = cpu_to_be64(cpu->members);
 	disk->magic.be = cpu_to_be32(cpu->magic);
 	disk->md_size_sect.be = cpu_to_be32(cpu->md_size_sect);
 	disk->al_offset.be = cpu_to_be32(cpu->al_offset);
@@ -3008,9 +3010,10 @@ int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc
 	case DRBD_V09:
 		printf("node-id %d;\n"
 		       "current-uuid 0x"X64(016)";\n"
-		       "flags 0x"X32(08)";\n",
+		       "flags 0x"X32(08)";\n"
+		       "members 0x"X64(016)";\n",
 		       cfg->md.node_id,
-		       cfg->md.current_uuid, cfg->md.flags);
+		       cfg->md.current_uuid, cfg->md.flags, cfg->md.members);
 		for (i = 0; i < DRBD_NODE_ID_MAX; i++) {
 			struct peer_md_cpu *peer = &cfg->md.peers[i];
 			char flag_buf[80];
@@ -3132,8 +3135,8 @@ void json_dump_buffer(
 	printf(
 		"  \"effective_size\": "U64",\n"
 		"  \"current_uuid\": \"0x"X64(016)"\",\n"
+		"  \"members\": \"0x"X64(016)"\",\n"
 		"  \"reserved_u64\": [ "
-		    "\"0x"X64(016)"\", "
 		    "\"0x"X64(016)"\", "
 		    "\"0x"X64(016)"\", "
 		    "\"0x"X64(016)"\" "
@@ -3155,10 +3158,10 @@ void json_dump_buffer(
 
 		md.effective_size,
 		md.current_uuid,
+		md.members,
 		be64_to_cpu(md_on_disk->reserved_u64[0].be),
 		be64_to_cpu(md_on_disk->reserved_u64[1].be),
 		be64_to_cpu(md_on_disk->reserved_u64[2].be),
-		be64_to_cpu(md_on_disk->reserved_u64[3].be),
 		md.device_uuid,
 		md.flags,
 		md.magic,
@@ -3588,7 +3591,7 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 {
 	int old_max_peers = -1;
 	int new_max_peers = 1;
-	int i;
+	int i, token;
 	int err;
 	char slots_seen[DRBD_NODE_ID_MAX] = { 0, };
 	int cur_slot;
@@ -3668,9 +3671,19 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 			cfg->md.current_uuid = yylval.u64;
 			EXP(TK_FLAGS); EXP(TK_U32); EXP(';');
 			cfg->md.flags = (uint32_t)yylval.u64;
-
+			token = yylex();
+			if (token == TK_MEMBERS) {
+				EXP(TK_U64);
+				EXP(';');
+				cfg->md.members = yylval.u64;
+			} else {
+				cfg->md.members = 0;
+			}
 			for (i = 0; i < DRBD_NODE_ID_MAX; i++) {
-				EXP(TK_PEER); EXP('[');
+				if (token != TK_PEER)
+					EXP(TK_PEER);
+				token = 0; /* 0 != TK_PEER */
+				EXP('[');
 				EXP(TK_NUM); EXP(']');
 				cur_slot = yylval.u64;
 				if (cur_slot < 0 || cur_slot >= DRBD_NODE_ID_MAX) {
