@@ -154,26 +154,24 @@ handle_linstor_loopback()
 	# old location
 	elif [ -f /var/lib/linstor/loop_device_mapping ]; then
 		loop_mapping=/var/lib/linstor/loop_device_mapping
-	fi
-
-	if [[ "${loop_mapping}x" == "x" ]]; then
+	else
 		# at least we tried.
 		return 0
-	else
-		# || [[ -n $line ]]: in case there is no newline at EOF
-		while read -r line || [[ -n $line ]] ; do
-			dev=${line%%:*}
-			file=${line#*:}
-			test -f "$file" && test -r "$file" && test -w "$file" || continue
-			# should -f be allowed?
-			[[ $dev = loop* ]] || [[ $dev = /dev/loop* ]] || continue
-			case "$1" in
-				# what about existing, but "wrong", mappings?
-				start) losetup "$dev" 2>/dev/null || losetup "$dev" "$file";;
-				stop)  losetup "$dev" 2>/dev/null && losetup -d "$dev";;
-			esac
-		done < "$loop_mapping"
 	fi
+
+	# || [[ -n $line ]]: in case there is no newline at EOF
+	while read -r line || [[ -n $line ]] ; do
+		dev=${line%%:*}
+		file=${line#*:}
+		test -f "$file" && test -r "$file" && test -w "$file" || continue
+		# should -f be allowed?
+		[[ $dev = loop* ]] || [[ $dev = /dev/loop* ]] || continue
+		case "$1" in
+			# what about existing, but "wrong", mappings?
+			start) losetup "$dev" 2>/dev/null || losetup "$dev" "$file";;
+			stop)  losetup "$dev" 2>/dev/null && losetup -d "$dev";;
+		esac
+	done < "$loop_mapping"
 }
 
 run_hook()
