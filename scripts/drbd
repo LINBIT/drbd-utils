@@ -149,9 +149,15 @@ handle_linstor_loopback()
 	local line dev file loop_mapping
 
 	# new location
-	loop_mapping=/var/lib/linstor.d/loop_device_mapping
-	# fallback to old location
-	[ -f "$loop_mapping" ] || loop_mapping=/var/lib/linstor/loop_device_mapping
+	if [ -f /var/lib/linstor.d/loop_device_mapping ]; then
+		loop_mapping=/var/lib/linstor.d/loop_device_mapping
+	# old location
+	elif [ -f /var/lib/linstor/loop_device_mapping ]; then
+		loop_mapping=/var/lib/linstor/loop_device_mapping
+	else
+		# nothing to do.
+		return 0
+	fi
 
 	# || [[ -n $line ]]: in case there is no newline at EOF
 	while read -r line || [[ -n $line ]] ; do
