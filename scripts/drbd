@@ -172,6 +172,7 @@ handle_linstor_loopback()
 			stop)  losetup "$dev" 2>/dev/null && losetup -d "$dev";;
 		esac
 	done < "$loop_mapping"
+	return 0
 }
 
 run_hook()
