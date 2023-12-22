@@ -81,6 +81,8 @@ int     option_node_id = -1;
 unsigned option_al_stripes = 1;
 unsigned option_al_stripe_size_4k = 8;
 unsigned option_al_stripes_used = 0;
+uint64_t option_effective_size = 0;
+uint64_t option_diskful_peer_mask = 0;
 
 /* for dump-superblock */
 enum {
@@ -113,6 +115,8 @@ struct option metaopt[] = {
     { "verbose",  no_argument,    0, 'v' },
     { "peer-max-bio-size",  required_argument, NULL, 'p' },
     { "node-id",  required_argument, NULL, 'i' },
+    { "effective-size",  required_argument, NULL, 'Z' },
+    { "diskful-peers",  required_argument, NULL, 'D' },
     { "al-stripes",  required_argument, NULL, 's' },
     { "al-stripe-size-kB",  required_argument, NULL, 'z' },
     { "initialize-bitmap",  required_argument, NULL, 'b' },
@@ -873,6 +877,8 @@ struct meta_cmd cmds[] = {
 	{"set-gi", ":::VAL:VAL:...", meta_set_gi, 0, 1, 1},
 	{"check-resize", 0, meta_chk_offline_resize, 1, 0, 1},
 	{"create-md",
+		"[--effective-size {val}] "
+		"[--diskful-peers {val}] "
 		"[--peer-max-bio-size {val}] "
 		"[--al-stripes {val}] "
 		"[--al-stripe-size-kB {val}] "
@@ -4621,6 +4627,7 @@ int meta_create_md(struct format *cfg, char **argv, int argc)
 {
 	int err = 0;
 	int max_peers = 1;
+	int i;
 
 	if (is_v09(cfg)) {
 		if (argc < 1) {
@@ -4699,6 +4706,12 @@ int meta_create_md(struct format *cfg, char **argv, int argc)
 	}
 
 	cfg->md.la_peer_max_bio_size = option_peer_max_bio_size;
+
+	cfg->md.effective_size = option_effective_size;
+	for (i = 0; i < DRBD_PEERS_MAX; i++) {
+		if (option_diskful_peer_mask & (1<<i))
+			cfg->md.peers[i].flags |= MDF_PEER_DEVICE_SEEN;
+	}
 
 	/* FIXME
 	 * if this converted fixed-size 128MB internal meta data
@@ -5170,6 +5183,50 @@ static enum initialize_bitmap_mode check_ibm_arg(const char *arg)
 	exit(10);
 }
 
+static uint64_t node_mask_from_arg(const char *arg)
+{
+	uint64_t result = 0;
+	long long tmp = 0;
+	int base = 10;
+	char *endptr;
+
+	/* If it starts with 0x, we take it as a mask given in hex.
+	 * Otherwise, it is a comma separated list of node ids.
+	 *
+	 * Is an explicit zero node mask useful?  Technically, it is valid.
+	 * Because, well, that's been the default...
+	 */
+	if (!arg)
+		return 0;
+
+	if (arg[0] == '0' && arg[1] == 'x') {
+		base = 16;
+		arg += 2;
+	}
+
+	for (;;) {
+		tmp = strtoll(arg, &endptr, base);
+		if (base == 16)
+			result = tmp;
+		else if (0 <= tmp && tmp < DRBD_NODE_ID_MAX)
+			result |= 1<<tmp;
+		else
+			break;
+
+		if (endptr[0] == '\0')
+			return result;
+
+		if (endptr[0] != ',' || base != 10)
+			break;
+
+		arg = endptr + 1;
+		continue;
+	}
+
+	fprintf(stderr, "invalid node list / mask value '%s'\n", arg);
+	exit(10);
+}
+
 int main(int argc, char **argv)
 {
 	struct format *cfg;
@@ -5279,6 +5336,12 @@ int main(int argc, char **argv)
 		    option_al_stripe_size_4k = m_strtoll(optarg, 'k')/4;
 		    option_al_stripes_used = 1;
 		    break;
+	    case 'Z':
+		    option_effective_size = m_strtoll(optarg, 's');
+		    break;
+	    case 'D':
+		    option_diskful_peer_mask = node_mask_from_arg(optarg);
+		    break;
 	    case 'b':
 		option_initialize_bitmap_mode = check_ibm_arg(optarg);
 	    	break;
@@ -5360,10 +5423,23 @@ int main(int argc, char **argv)
 		fprintf(stderr, "The --peer-max-bio-size option is only allowed with create-md\n");
 		exit(10);
 	}
+
 	if (option_al_stripes_used &&
 	    command->function != &meta_create_md &&
 	    command->function != &meta_restore_md) {
 		fprintf(stderr, "The --al-stripe* options are only allowed with create-md and restore-md\n");
+		exit(10);
+	}
+
+	if (option_effective_size &&
+	    command->function != &meta_create_md) {
+		fprintf(stderr, "The -Z|--effective-size option is only allowed with create-md\n");
+		exit(10);
+	}
+
+	if (option_diskful_peer_mask &&
+	    command->function != &meta_create_md) {
+		fprintf(stderr, "The -D|--diskful-peers option is only allowed with create-md\n");
 		exit(10);
 	}
 
