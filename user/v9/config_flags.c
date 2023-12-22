@@ -1226,6 +1226,8 @@ struct context_def create_md_ctx = {
 		{ .name = "al-stripes", .argument_is_optional = false },
 		{ .name = "al-stripe-size-kB", .argument_is_optional = false },
 		{ .name = "force", .argument_is_optional = true },
+		{ .name = "effective-size", .argument_is_optional = false },
+		{ .name = "diskful-peers", .argument_is_optional = false },
 		{ } },
 };
 

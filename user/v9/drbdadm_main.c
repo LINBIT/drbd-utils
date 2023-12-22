@@ -1473,6 +1473,9 @@ bool is_set_gi_single_node(const struct cfg_ctx *ctx)
 
 int _adm_drbdmeta(const struct cfg_ctx *ctx, int flags, char *argument)
 {
+	/* that's enough for "--diskful-peers=" + a comma separated list of 0 .. 31 and then some */
+	char diskful_peers[120] = "";
+
 	struct d_volume *vol = ctx->vol;
 	char *argv[MAX_ARGS];
 	int argc = 0;
@@ -1506,6 +1509,43 @@ int _adm_drbdmeta(const struct cfg_ctx *ctx, int flags, char *argument)
 	if (argument)
 		argv[NA(argc)] = argument;
 	add_setup_options(argv, &argc, ctx->cmd->drbdsetup_ctx);
+
+	/* For create-md, if effective-size is set,
+	 * add the list of "diskful" peer node ids for this volume.
+	 * Unless that is explicitly specified as well.  */
+	if (!strcmp("create-md", ctx->cmd->name)
+	&& find_backend_option("--effective-size")
+	&& !find_backend_option("--diskful-peers")) {
+		struct connection *conn;
+		char sep = '=';
+		char *pos = diskful_peers;
+		int len;
+		len = snprintf(pos, pos - diskful_peers + sizeof(diskful_peers), "--diskful-peers");
+		assert(len > 0 && pos + len < diskful_peers + sizeof(diskful_peers));
+		pos += len;
+		for_each_connection(conn, &ctx->res->connections) {
+			struct peer_device *peer_device;
+
+			if (conn->ignore)
+				continue;
+
+			STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
+				if (peer_device->vnr == vol->vnr) {
+					if (!peer_diskless(peer_device)) {
+						len = snprintf(pos, pos - diskful_peers + sizeof(diskful_peers),
+								"%c%s", sep, conn->peer->node_id);
+						assert(len > 0 && pos + len < diskful_peers + sizeof(diskful_peers));
+						pos += len;
+						sep = ',';
+					}
+					break;
+				}
+			}
+		}
+		if (sep != '=')
+			argv[NA(argc)] = diskful_peers;
+	}
+
 	argv[NA(argc)] = 0;
 
 	return m_system_ex(argv, flags, ctx->res->name);
