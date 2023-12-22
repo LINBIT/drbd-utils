@@ -548,7 +548,7 @@ m_strtoll(const char *s, const char def_unit)
 		fprintf(stderr, "%s: out of range\n", s);
 		exit(20);
 	default:
-		fprintf(stderr, "m_stroll() is confused\n");
+		fprintf(stderr, "m_strtoll() is confused\n");
 		exit(20);
 	}
 }
