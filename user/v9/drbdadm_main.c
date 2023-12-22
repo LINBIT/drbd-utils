@@ -58,6 +58,7 @@
 #include "config_flags.h"
 #include "drbdadm_dump.h"
 #include "shared_main.h"
+#include "shared_parser.h"
 #include "drbdadm_parser.h"
 
 #define MAX_ARGS 40
