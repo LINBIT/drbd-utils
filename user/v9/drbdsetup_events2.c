@@ -541,6 +541,11 @@ static struct promotion_info compute_promotion_info(struct resources_list *resou
 	if (!resource->devices)
 		return info;
 
+	/* Do not attempt to promote a resource that is failing IO.  That may
+	 * be a "--force secondary" still held open by old references. */
+	if (resource->info.res_fail_io)
+		return info;
+
 	for (device = resource->devices; device; device = device->next) {
 		int up_to_date_replicas = count_up_to_date_replicas(resource, device);
 		bool stable_up_to_date_replicas = have_stable_up_to_date_replicas(resource, device);
