@@ -55,6 +55,7 @@ l-obj += configuration/CfgEntryStore.o configuration/CfgEntryBoolean.o configura
 l-obj += configuration/CfgEntry.o configuration/Configuration.o configuration/IoException.o
 l-obj += persistent_configuration.o
 l-obj += StringTokenizer.o comparators.o utils.o exceptions.o integerfmt.o string_transformations.o
+l-obj += string_matching.o
 
 ls-obj := drbdmon_main.o $(l-obj) $(dsaext-obj) $(integerparse-obj)
 
