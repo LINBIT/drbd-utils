@@ -1,5 +1,7 @@
+#include <terminal/ModularDisplay.h>
 #include <terminal/GlobalCommandsImpl.h>
 #include <terminal/GlobalCommandConsts.h>
+#include <terminal/DisplayConsts.h>
 #include <terminal/ColorTable.h>
 #include <terminal/CharacterTable.h>
 #include <terminal/DisplayId.h>
@@ -17,7 +19,10 @@ GlobalCommandsImpl::GlobalCommandsImpl(ComponentsHub& comp_hub, Configuration& c
     entry_charset(&cmd_names::KEY_CMD_CHARSET, &GlobalCommandsImpl::cmd_charset),
     entry_select_all(&cmd_names::KEY_CMD_SELECT_ALL, &GlobalCommandsImpl::cmd_select_all),
     entry_deselect(&cmd_names::KEY_CMD_DESELECT, &GlobalCommandsImpl::cmd_deselect),
-    entry_cursor(&cmd_names::KEY_CMD_CURSOR, &GlobalCommandsImpl::local_command)
+    entry_cursor(&cmd_names::KEY_CMD_CURSOR, &GlobalCommandsImpl::local_command),
+    entry_resource(&cmd_names::KEY_CMD_RESOURCE, &GlobalCommandsImpl::cmd_resource),
+    entry_connection(&cmd_names::KEY_CMD_CONNECTION, &GlobalCommandsImpl::cmd_connection),
+    entry_volume(&cmd_names::KEY_CMD_VOLUME, &GlobalCommandsImpl::cmd_volume)
 {
     add_command(entry_exit);
     add_command(entry_display);
@@ -26,6 +31,9 @@ GlobalCommandsImpl::GlobalCommandsImpl(ComponentsHub& comp_hub, Configuration& c
     add_command(entry_select_all);
     add_command(entry_deselect);
     add_command(entry_cursor);
+    add_command(entry_resource);
+    add_command(entry_connection);
+    add_command(entry_volume);
 }
 
 GlobalCommandsImpl::~GlobalCommandsImpl() noexcept
@@ -182,6 +190,106 @@ bool GlobalCommandsImpl::cmd_deselect(const std::string& command, StringTokenize
         dsp_comp_hub.dsp_shared->clear_log_entry_selection(*(dsp_comp_hub.dsp_shared->selected_log_entries));
         dsp_comp_hub.dsp_selector->refresh_display();
         accepted = true;
+    }
+    return accepted;
+}
+
+bool GlobalCommandsImpl::cmd_resource(const std::string& command, StringTokenizer& tokenizer)
+{
+    bool accepted = false;
+    if (tokenizer.has_next())
+    {
+        const std::string cmd_arg = tokenizer.next();
+        if (!cmd_arg.empty())
+        {
+            DisplayId::display_page active_page = dsp_comp_hub.dsp_selector->get_active_page();
+            if (active_page == DisplayId::display_page::RSC_LIST ||
+                active_page == DisplayId::display_page::RSC_DETAIL ||
+                active_page == DisplayId::display_page::RSC_ACTIONS ||
+                active_page == DisplayId::display_page::CON_LIST ||
+                active_page == DisplayId::display_page::CON_DETAIL ||
+                active_page == DisplayId::display_page::CON_ACTIONS ||
+                active_page == DisplayId::display_page::VLM_LIST ||
+                active_page == DisplayId::display_page::VLM_DETAIL ||
+                active_page == DisplayId::display_page::VLM_ACTIONS ||
+                active_page == DisplayId::display_page::PEER_VLM_LIST ||
+                active_page == DisplayId::display_page::PEER_VLM_DETAIL)
+            {
+                dsp_comp_hub.dsp_shared->update_monitor_rsc(cmd_arg);
+                ModularDisplay& active_display = dsp_comp_hub.dsp_selector->get_active_display();
+                active_display.notify_data_updated();
+                accepted = true;
+            }
+        }
+    }
+    return accepted;
+}
+
+bool GlobalCommandsImpl::cmd_connection(const std::string& command, StringTokenizer& tokenizer)
+{
+    bool accepted = false;
+    if (tokenizer.has_next())
+    {
+        const std::string cmd_arg = tokenizer.next();
+        if (!cmd_arg.empty())
+        {
+            DisplayId::display_page active_page = dsp_comp_hub.dsp_selector->get_active_page();
+            if (active_page == DisplayId::display_page::CON_LIST ||
+                active_page == DisplayId::display_page::CON_DETAIL ||
+                active_page == DisplayId::display_page::CON_ACTIONS ||
+                active_page == DisplayId::display_page::PEER_VLM_LIST ||
+                active_page == DisplayId::display_page::PEER_VLM_DETAIL)
+            {
+                dsp_comp_hub.dsp_shared->update_monitor_con(cmd_arg);
+                ModularDisplay& active_display = dsp_comp_hub.dsp_selector->get_active_display();
+                active_display.notify_data_updated();
+                accepted = true;
+            }
+        }
+    }
+    return accepted;
+}
+
+bool GlobalCommandsImpl::cmd_volume(const std::string& command, StringTokenizer& tokenizer)
+{
+    bool accepted = false;
+    if (tokenizer.has_next())
+    {
+        const std::string cmd_arg = tokenizer.next();
+        uint16_t vlm_nr = DisplayConsts::VLM_NONE;
+        try
+        {
+            vlm_nr = dsaext::parse_unsigned_int16(cmd_arg);
+        }
+        catch (dsaext::NumberFormatException&)
+        {
+            // ignored
+        }
+
+        if (vlm_nr != DisplayConsts::VLM_NONE)
+        {
+            DisplayId::display_page active_page = dsp_comp_hub.dsp_selector->get_active_page();
+            if (active_page == DisplayId::display_page::VLM_LIST ||
+                active_page == DisplayId::display_page::VLM_DETAIL ||
+                active_page == DisplayId::display_page::VLM_ACTIONS)
+            {
+                dsp_comp_hub.dsp_shared->update_monitor_vlm(vlm_nr);
+                accepted = true;
+            }
+            else
+            if (active_page == DisplayId::display_page::PEER_VLM_LIST ||
+                active_page == DisplayId::display_page::PEER_VLM_DETAIL)
+            {
+                dsp_comp_hub.dsp_shared->update_monitor_peer_vlm(vlm_nr);
+                accepted = true;
+            }
+
+            if (accepted)
+            {
+                ModularDisplay& active_display = dsp_comp_hub.dsp_selector->get_active_display();
+                active_display.notify_data_updated();
+            }
+        }
     }
     return accepted;
 }

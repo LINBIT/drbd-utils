@@ -39,6 +39,11 @@ void MDspBase::reset_display()
     base_input_mode = base_input_mode_type::GLOBAL_KEYS;
 }
 
+void MDspBase::notify_data_updated()
+{
+    // Default no-op action; to be overridden by subclasses
+}
+
 void MDspBase::display()
 {
     dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.ansi_ctl->ANSI_CURSOR_OFF.c_str());

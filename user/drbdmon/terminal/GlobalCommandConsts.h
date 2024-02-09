@@ -13,6 +13,9 @@ namespace cmd_names
     extern const std::string    KEY_CMD_SELECT_ALL;
     extern const std::string    KEY_CMD_DESELECT;
     extern const std::string    KEY_CMD_CURSOR;
+    extern const std::string    KEY_CMD_RESOURCE;
+    extern const std::string    KEY_CMD_CONNECTION;
+    extern const std::string    KEY_CMD_VOLUME;
 }
 
 #endif /* GLOBALCOMMANDCONSTS_H */

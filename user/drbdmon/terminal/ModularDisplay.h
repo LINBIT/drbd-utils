@@ -30,9 +30,18 @@ class ModularDisplay
     // Called to reset the display, e.g. go back to page 1, clear cursor & selection
     virtual void reset_display() = 0;
 
-    // Called to synchronize data shared between displays, such as the currently selected
-    // resource, connection, volume, etc., before switching displays, running commands, etc.
+    // Called to synchronize the active display's data to the SharedData object that contains
+    // data shared between displays, e.g., the resource/connection/volume currently under the
+    // cursor.
+    // This method should be called before switching displays and before running commands, and
+    // more generally, before invoking methods or functions that operate on shared data.
     virtual void synchronize_data() = 0;
+
+    // Called to synchronize data shared between displays to the active display.
+    // This method should be called when shared data is updated without the active display's knowledge,
+    // for example, if a global command changes which resource is under the cursor while the resource
+    // list is being displayed.
+    virtual void notify_data_updated() = 0;
 
     // Called to execute a command line, returns true if the command was accepted, otherwise false
     // (invalid command, etc.)

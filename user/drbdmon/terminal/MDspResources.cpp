@@ -7,9 +7,10 @@
 #include <terminal/navigation.h>
 #include <terminal/HelpText.h>
 #include <terminal/GlobalCommandConsts.h>
-#include <comparators.h>
 #include <objects/DrbdVolume.h>
 #include <objects/DrbdConnection.h>
+#include <comparators.h>
+#include <string_matching.h>
 #include <bounds.h>
 
 const uint8_t  MDspResources::RSC_HEADER_Y      = 3;
@@ -32,6 +33,7 @@ MDspResources::~MDspResources() noexcept
 void MDspResources::display_activated()
 {
     MDspStdListBase::display_activated();
+    cursor_rsc = dsp_comp_hub.dsp_shared->monitor_rsc;
     dsp_comp_hub.dsp_shared->ovrd_resource_selection = false;
 }
 
@@ -43,6 +45,8 @@ void MDspResources::display_deactivated()
 void MDspResources::reset_display()
 {
     MDspStdListBase::reset_display();
+    cursor_rsc.clear();
+    set_page_nr(1);
 }
 
 void MDspResources::display_list()
@@ -587,9 +591,44 @@ bool MDspResources::execute_command(const std::string& command, StringTokenizer&
     {
         if (tokenizer.has_next())
         {
-            cursor_rsc = tokenizer.next();
+            const std::string cmd_arg = tokenizer.next();
+            if (!cmd_arg.empty())
+            {
+                if (string_matching::is_pattern(cmd_arg))
+                {
+                    try
+                    {
+                        std::unique_ptr<string_matching::PatternItem> pattern;
+                        string_matching::process_pattern(cmd_arg, pattern);
+
+                        ResourcesMap& selected_map = select_resources_map();
+                        ResourcesMap::KeysIterator rsc_iter(selected_map);
+                        while (!accepted && rsc_iter.has_next())
+                        {
+                            const std::string* const rsc_name_ptr = rsc_iter.next();
+                            const std::string& rsc_name = *rsc_name_ptr;
+                            accepted = string_matching::match_text(rsc_name, pattern.get());
+                            if (accepted)
+                            {
+                                cursor_rsc = rsc_name;
+                            }
+                        }
+                    }
+                    catch (string_matching::PatternLimitException&)
+                    {
+                        std::string error_msg(cmd_names::KEY_CMD_CURSOR);
+                        error_msg += " command rejected: Excessive number of wildcard characters";
+                        dsp_comp_hub.log->add_entry(MessageLog::log_level::ALERT, error_msg);
+                    }
+                }
+                else
+                {
+                    tokenizer.restart();
+                    tokenizer.advance();
+                    accepted = dsp_comp_hub.global_cmd_exec->execute_command(cmd_names::KEY_CMD_RESOURCE, tokenizer);
+                }
+            }
         }
-        accepted = true;
     }
     else
     if (command == cmd_names::KEY_CMD_SELECT_ALL)
@@ -699,6 +738,16 @@ void MDspResources::synchronize_data()
     {
         dsp_comp_hub.dsp_shared->update_monitor_rsc(cursor_rsc);
     }
+}
+
+void MDspResources::notify_data_updated()
+{
+    cursor_rsc = dsp_comp_hub.dsp_shared->monitor_rsc;
+    if (!is_cursor_nav())
+    {
+        set_page_nr(1);
+    }
+    dsp_comp_hub.dsp_selector->refresh_display();
 }
 
 uint64_t MDspResources::get_update_mask() noexcept

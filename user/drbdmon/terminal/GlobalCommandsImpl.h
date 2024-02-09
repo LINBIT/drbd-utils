@@ -30,6 +30,9 @@ class GlobalCommandsImpl : public GlobalCommands, public CommandsBase<GlobalComm
     Entry entry_select_all;
     Entry entry_deselect;
     Entry entry_cursor;
+    Entry entry_resource;
+    Entry entry_connection;
+    Entry entry_volume;
 
     bool cmd_exit(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_display(const std::string& command, StringTokenizer& tokenizer);
@@ -37,6 +40,9 @@ class GlobalCommandsImpl : public GlobalCommands, public CommandsBase<GlobalComm
     bool cmd_charset(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_select_all(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_deselect(const std::string& command, StringTokenizer& tokenizer);
+    bool cmd_resource(const std::string& command, StringTokenizer& tokenizer);
+    bool cmd_connection(const std::string& command, StringTokenizer& tokenizer);
+    bool cmd_volume(const std::string& command, StringTokenizer& tokenizer);
     // Dummy method for display local commands
     bool local_command(const std::string& command, StringTokenizer& tokenizer);
 };

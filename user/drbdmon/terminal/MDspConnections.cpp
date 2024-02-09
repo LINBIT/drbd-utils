@@ -10,6 +10,7 @@
 #include <objects/DrbdResource.h>
 #include <comparators.h>
 #include <bounds.h>
+#include <string_matching.h>
 #include <functional>
 
 const uint8_t   MDspConnections::RSC_HEADER_Y       = 3;
@@ -39,7 +40,12 @@ void MDspConnections::display_activated()
 {
     if (displayed_rsc != dsp_comp_hub.dsp_shared->monitor_rsc)
     {
-        reset_display();
+        displayed_rsc = dsp_comp_hub.dsp_shared->monitor_rsc;
+        cursor_con = dsp_comp_hub.dsp_shared->monitor_con;
+        if (cursor_con.empty())
+        {
+            set_page_nr(1);
+        }
     }
     dsp_comp_hub.dsp_shared->ovrd_connection_selection = false;
 }
@@ -53,8 +59,8 @@ void MDspConnections::reset_display()
 {
     MDspStdListBase::reset_display();
     cursor_con.clear();
+    clear_selection();
     set_page_nr(1);
-    displayed_rsc = dsp_comp_hub.dsp_shared->monitor_rsc;
 }
 
 void MDspConnections::display_list()
@@ -604,11 +610,73 @@ bool MDspConnections::execute_command(const std::string& command, StringTokenize
     bool accepted = false;
     if (command == cmd_names::KEY_CMD_CURSOR)
     {
-        if (tokenizer.has_next())
+        DrbdResource* const rsc = dsp_comp_hub.get_monitor_resource();
+        if (rsc != nullptr)
         {
-            cursor_con = tokenizer.next();
+            if (tokenizer.has_next())
+            {
+                const std::string cmd_arg = tokenizer.next();
+                if (!cmd_arg.empty())
+                {
+                    if (string_matching::is_pattern(cmd_arg))
+                    {
+                        try
+                        {
+                            std::unique_ptr<string_matching::PatternItem> pattern;
+                            string_matching::process_pattern(cmd_arg, pattern);
+
+                            DrbdResource::ConnectionsIterator con_iter = rsc->connections_iterator();
+                            if (is_problem_mode(rsc))
+                            {
+                                while (!accepted && con_iter.has_next())
+                                {
+                                    DrbdConnection* const con = con_iter.next();
+                                    if (problem_filter(con))
+                                    {
+                                        const std::string& con_name = con->get_name();
+                                        accepted = string_matching::match_text(con_name, pattern.get());
+
+                                        if (accepted)
+                                        {
+                                            cursor_con = con_name;
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                while (!accepted && con_iter.has_next())
+                                {
+                                    const DrbdConnection* const con = con_iter.next();
+                                    const std::string& con_name = con->get_name();
+                                    accepted = string_matching::match_text(con_name, pattern.get());
+
+                                    if (accepted)
+                                    {
+                                        cursor_con = con_name;
+                                    }
+                                }
+                            }
+                        }
+                        catch (string_matching::PatternLimitException&)
+                        {
+                            std::string error_msg(cmd_names::KEY_CMD_CURSOR);
+                            error_msg += " command rejected: Excessive number of wildcard characters";
+                            dsp_comp_hub.log->add_entry(MessageLog::log_level::ALERT, error_msg);
+                        }
+                    }
+                    else
+                    {
+                        tokenizer.restart();
+                        tokenizer.advance();
+                        accepted = dsp_comp_hub.global_cmd_exec->execute_command(
+                            cmd_names::KEY_CMD_CONNECTION,
+                            tokenizer
+                        );
+                    }
+                }
+            }
         }
-        accepted = true;
     }
     else
     if (command == cmd_names::KEY_CMD_SELECT_ALL)
@@ -799,6 +867,21 @@ void MDspConnections::synchronize_data()
     {
         dsp_comp_hub.dsp_shared->update_monitor_con(cursor_con);
     }
+}
+
+void MDspConnections::notify_data_updated()
+{
+    if (displayed_rsc != dsp_comp_hub.dsp_shared->monitor_rsc)
+    {
+        reset_display();
+    }
+    displayed_rsc = dsp_comp_hub.dsp_shared->monitor_rsc;
+    cursor_con = dsp_comp_hub.dsp_shared->monitor_con;
+    if (!is_cursor_nav())
+    {
+        set_page_nr(1);
+    }
+    dsp_comp_hub.dsp_selector->refresh_display();
 }
 
 uint64_t MDspConnections::get_update_mask() noexcept

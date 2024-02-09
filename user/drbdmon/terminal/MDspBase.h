@@ -27,6 +27,8 @@ class MDspBase : public ModularDisplay
     virtual void display_closed() override;
     virtual void reset_display() override;
 
+    virtual void notify_data_updated() override;
+
     virtual void display() override;
     virtual void display_content() = 0;
     virtual void reposition_text_cursor() final;

@@ -318,6 +318,8 @@ void MDspPeerVolumes::display_activated()
     {
         reset_display();
     }
+    displayed_rsc = dsp_comp_hub.dsp_shared->monitor_rsc;
+    displayed_con = dsp_comp_hub.dsp_shared->monitor_con;
 }
 
 void MDspPeerVolumes::display_deactivated()
@@ -331,13 +333,26 @@ void MDspPeerVolumes::reset_display()
     cursor_vlm = DisplayConsts::VLM_NONE;
     clear_selection_impl();
     set_page_nr(1);
-    displayed_rsc = dsp_comp_hub.dsp_shared->monitor_rsc;
-    displayed_con = dsp_comp_hub.dsp_shared->monitor_con;
 }
 
 void MDspPeerVolumes::synchronize_data()
 {
     dsp_comp_hub.dsp_shared->monitor_peer_vlm = cursor_vlm;
+}
+
+void MDspPeerVolumes::notify_data_updated()
+{
+    if (displayed_rsc != dsp_comp_hub.dsp_shared->monitor_rsc ||
+        displayed_con != dsp_comp_hub.dsp_shared->monitor_con)
+    {
+        reset_display();
+    }
+    cursor_vlm = dsp_comp_hub.dsp_shared->monitor_peer_vlm;
+    if (!is_cursor_nav())
+    {
+        set_page_nr(1);
+    }
+    dsp_comp_hub.dsp_selector->refresh_display();
 }
 
 void MDspPeerVolumes::clear_selection_impl() noexcept

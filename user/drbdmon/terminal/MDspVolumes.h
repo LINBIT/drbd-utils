@@ -43,6 +43,7 @@ class MDspVolumes : public MDspStdListBase
     virtual void display_deactivated() override;
     virtual void reset_display() override;
     virtual void synchronize_data() override;
+    virtual void notify_data_updated() override;
 
     virtual uint64_t get_update_mask() noexcept override;
 

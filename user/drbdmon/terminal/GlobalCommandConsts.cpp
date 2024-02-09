@@ -10,4 +10,7 @@ namespace cmd_names
     const std::string   KEY_CMD_SELECT_ALL("SELECT-ALL");
     const std::string   KEY_CMD_DESELECT("CLEAR-SELECTION");
     const std::string   KEY_CMD_CURSOR("CURSOR");
+    const std::string   KEY_CMD_RESOURCE("RESOURCE");
+    const std::string   KEY_CMD_CONNECTION("CONNECTION");
+    const std::string   KEY_CMD_VOLUME("VOLUME");
 }

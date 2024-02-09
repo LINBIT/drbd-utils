@@ -43,6 +43,7 @@ void MDspVolumes::display_activated()
     {
         reset_display();
     }
+    displayed_rsc = dsp_comp_hub.dsp_shared->monitor_rsc;
     dsp_comp_hub.dsp_shared->ovrd_volume_selection = false;
 }
 
@@ -57,7 +58,6 @@ void MDspVolumes::reset_display()
     cursor_vlm = DisplayConsts::VLM_NONE;
     clear_selection();
     set_page_nr(1);
-    displayed_rsc = dsp_comp_hub.dsp_shared->monitor_rsc;
 }
 
 void MDspVolumes::display_list()
@@ -785,6 +785,21 @@ bool MDspVolumes::is_problem_mode(DrbdResource* const rsc)
 void MDspVolumes::synchronize_data()
 {
     dsp_comp_hub.dsp_shared->monitor_vlm = cursor_vlm;
+}
+
+void MDspVolumes::notify_data_updated()
+{
+    if (displayed_rsc != dsp_comp_hub.dsp_shared->monitor_rsc)
+    {
+        reset_display();
+    }
+    displayed_rsc = dsp_comp_hub.dsp_shared->monitor_rsc;
+    cursor_vlm = dsp_comp_hub.dsp_shared->monitor_vlm;
+    if (!is_cursor_nav())
+    {
+        set_page_nr(1);
+    }
+    dsp_comp_hub.dsp_selector->refresh_display();
 }
 
 uint64_t MDspVolumes::get_update_mask() noexcept
