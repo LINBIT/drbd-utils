@@ -17,7 +17,9 @@ class StringTokenizer
     {
     }
 
+    virtual void restart();
     virtual bool has_next();
+    virtual bool advance();
     // @throws std::bad_alloc, std::out_of_range
     virtual std::string next();
 

@@ -9,8 +9,24 @@ StringTokenizer::StringTokenizer(const std::string& tokens_line, const std::stri
     find_next_token();
 }
 
+void StringTokenizer::restart()
+{
+    token_offset = 0;
+    token_length = 0;
+    index = 0;
+    have_token = false;
+
+    find_next_token();
+}
+
 bool StringTokenizer::has_next()
 {
+    return have_token;
+}
+
+bool StringTokenizer::advance()
+{
+    find_next_token();
     return have_token;
 }
 
