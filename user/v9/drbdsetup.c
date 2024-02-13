@@ -2793,18 +2793,21 @@ static void connection_status_json(struct connections_list *connection,
 	struct paths_list *path;
 	int path_index = 0;
 	int i = 0;
+	struct nlattr *tls_nla = nla_find_nested(connection->net_conf, __nla_type(T_tls));
 
 	printf("    {\n"
 	       "      \"peer-node-id\": %d,\n"
 	       "      \"name\": \"%s\",\n"
 	       "      \"connection-state\": \"%s\", \n"
 	       "      \"congested\": %s,\n"
-	       "      \"peer-role\": \"%s\",\n",
+	       "      \"peer-role\": \"%s\",\n"
+	       "      \"tls\": %s,\n",
 	       connection->ctx.ctx_peer_node_id,
 	       connection->ctx.ctx_conn_name,
 	       drbd_conn_str(connection->info.conn_connection_state),
 	       bool2json(connection->statistics.conn_congested),
-	       drbd_role_str(connection->info.conn_role));
+	       drbd_role_str(connection->info.conn_role),
+	       bool2json(tls_nla && *(uint8_t *)nla_data(tls_nla)));
 
 	if (connection->statistics.ap_in_flight != -1ULL) {
 		printf("      \"ap-in-flight\": "U64",\n"
@@ -3222,6 +3225,11 @@ static void connection_status(struct connections_list *connection,
 			    role_color_start(role, false),
 			    drbd_role_str(role),
 			    role_color_stop(role, false));
+
+		struct nlattr *tls_nla = nla_find_nested(connection->net_conf, __nla_type(T_tls));
+		if (opt_verbose || (tls_nla && *(uint8_t *)nla_data(tls_nla)))
+			wrap_printf(6, " tls:%s",
+				    tls_nla && *(uint8_t *)nla_data(tls_nla) ? "yes" : "no");
 	}
 	if (opt_verbose || connection->statistics.conn_congested > 0)
 		print_connection_statistics(6, NULL, &connection->statistics, wrap_printf);
