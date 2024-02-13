@@ -365,8 +365,35 @@ bool MDspVolumes::execute_command(const std::string& command, StringTokenizer& t
             }
             catch (dsaext::NumberFormatException&)
             {
+                // ignored, command rejected
             }
         }
+    }
+    else
+    if (command == cmd_names::KEY_CMD_SELECT || command == cmd_names::KEY_CMD_DESELECT)
+    {
+        if (tokenizer.has_next())
+        {
+            const std::string obj_id = tokenizer.next();
+            try
+            {
+                const uint16_t vlm_id = dsaext::parse_unsigned_int16(obj_id);
+                if (command == cmd_names::KEY_CMD_SELECT)
+                {
+                    dsp_comp_hub.dsp_shared->select_volume(vlm_id);
+                }
+                else
+                {
+                    dsp_comp_hub.dsp_shared->deselect_volume(vlm_id);
+                }
+                accepted = true;
+            }
+            catch (dsaext::NumberFormatException&)
+            {
+                // ignored, command rejected
+            }
+        }
+        return accepted;
     }
     else
     if (command == cmd_names::KEY_CMD_SELECT_ALL)
@@ -389,7 +416,7 @@ bool MDspVolumes::execute_command(const std::string& command, StringTokenizer& t
         accepted = true;
     }
     else
-    if (command == cmd_names::KEY_CMD_DESELECT)
+    if (command == cmd_names::KEY_CMD_DESELECT_ALL || command == cmd_names::KEY_CMD_CLEAR_SELECTION)
     {
         clear_selection();
         accepted = true;

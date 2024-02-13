@@ -136,6 +136,70 @@ bool MDspPeerVolumes::execute_command(const std::string& command, StringTokenize
             }
         }
     }
+    else
+    if (command == cmd_names::KEY_CMD_SELECT || command == cmd_names::KEY_CMD_DESELECT)
+    {
+        if (tokenizer.has_next())
+        {
+            const std::string obj_id = tokenizer.next();
+            try
+            {
+                const uint16_t vlm_id = dsaext::parse_unsigned_int16(obj_id);
+                if (command == cmd_names::KEY_CMD_SELECT)
+                {
+                    select_volume(vlm_id);
+                }
+                else
+                {
+                    deselect_volume(vlm_id);
+                }
+                accepted = true;
+            }
+            catch (dsaext::NumberFormatException&)
+            {
+                // ignored, command rejected
+            }
+        }
+        return accepted;
+    }
+    else
+    if (command == cmd_names::KEY_CMD_SELECT_ALL)
+    {
+        DrbdResource* const rsc = dsp_comp_hub.get_monitor_resource();
+        DrbdConnection* const con = dsp_comp_hub.get_monitor_connection();
+        if (rsc != nullptr && con != nullptr)
+        {
+            DrbdConnection::VolumesIterator vlm_iter(*con);
+            if (is_problem_mode(rsc, con))
+            {
+                while (vlm_iter.has_next())
+                {
+                    DrbdVolume* const peer_vlm = vlm_iter.next();
+                    if (problem_filter(peer_vlm))
+                    {
+                        const uint16_t vlm_nr = peer_vlm->get_volume_nr();
+                        select_volume(vlm_nr);
+                    }
+                }
+            }
+            else
+            {
+                while (vlm_iter.has_next())
+                {
+                    DrbdVolume* const peer_vlm = vlm_iter.next();
+                    const uint16_t vlm_nr = peer_vlm->get_volume_nr();
+                    select_volume(vlm_nr);
+                }
+            }
+        }
+        accepted = true;
+    }
+    else
+    if (command == cmd_names::KEY_CMD_DESELECT_ALL || command == cmd_names::KEY_CMD_CLEAR_SELECTION)
+    {
+        clear_selection();
+        accepted = true;
+    }
     if (accepted)
     {
         dsp_comp_hub.dsp_selector->refresh_display();

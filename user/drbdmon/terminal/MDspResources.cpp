@@ -631,6 +631,40 @@ bool MDspResources::execute_command(const std::string& command, StringTokenizer&
         }
     }
     else
+    if (command == cmd_names::KEY_CMD_SELECT || command == cmd_names::KEY_CMD_DESELECT)
+    {
+        if (tokenizer.has_next())
+        {
+            std::string cmd_arg = tokenizer.next();
+            if (string_matching::is_pattern(cmd_arg))
+            {
+                try
+                {
+                    accepted = change_selection(cmd_arg, command == cmd_names::KEY_CMD_SELECT);
+                }
+                catch (string_matching::PatternLimitException&)
+                {
+                    std::string error_msg(command);
+                    error_msg += " command rejected: Excessive number of wildcard characters";
+                    dsp_comp_hub.log->add_entry(MessageLog::log_level::ALERT, error_msg);
+                }
+            }
+            else
+            {
+                if (command == cmd_names::KEY_CMD_SELECT)
+                {
+                    dsp_comp_hub.dsp_shared->select_resource(cmd_arg);
+                }
+                else
+                {
+                    dsp_comp_hub.dsp_shared->deselect_resource(cmd_arg);
+                }
+                accepted = true;
+            }
+        }
+        return accepted;
+    }
+    else
     if (command == cmd_names::KEY_CMD_SELECT_ALL)
     {
         ResourcesMap& selected_map = select_resources_map();
@@ -643,7 +677,7 @@ bool MDspResources::execute_command(const std::string& command, StringTokenizer&
         accepted = true;
     }
     else
-    if (command == cmd_names::KEY_CMD_DESELECT)
+    if (command == cmd_names::KEY_CMD_DESELECT_ALL || command == cmd_names::KEY_CMD_CLEAR_SELECTION)
     {
         clear_selection();
 
@@ -720,6 +754,35 @@ void MDspResources::toggle_select_cursor_item()
             dsp_comp_hub.dsp_selector->refresh_display();
         }
     }
+}
+
+// @throws std::bad_alloc, string_matching::PatternLimitException
+bool MDspResources::change_selection(const std::string& pattern_text, const bool select_flag)
+{
+    ResourcesMap& selected_map = select_resources_map();
+    std::unique_ptr<string_matching::PatternItem> pattern;
+    string_matching::process_pattern(pattern_text, pattern);
+
+    bool matched = false;
+    ResourcesMap::KeysIterator rsc_iter(selected_map);
+    while (rsc_iter.has_next())
+    {
+        const std::string* const rsc_name_ptr = rsc_iter.next();
+        const std::string& rsc_name = *rsc_name_ptr;
+        if (string_matching::match_text(rsc_name, pattern.get()))
+        {
+            matched = true;
+            if (select_flag)
+            {
+                dsp_comp_hub.dsp_shared->select_resource(rsc_name);
+            }
+            else
+            {
+                dsp_comp_hub.dsp_shared->deselect_resource(rsc_name);
+            }
+        }
+    }
+    return matched;
 }
 
 // Public entry point to private/non-virtual clear_selection_impl, which is also used by the destructor

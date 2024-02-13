@@ -448,6 +448,64 @@ void MDspConnections::display_at_page()
     }
 }
 
+// @throws std::bad_alloc, string_matching::PatternLimitException
+bool MDspConnections::change_selection(const std::string& pattern_text, const bool select_flag)
+{
+    DrbdResource* const rsc = dsp_comp_hub.get_monitor_resource();
+    bool matched = false;
+    if (rsc != nullptr)
+    {
+        std::unique_ptr<string_matching::PatternItem> pattern;
+        string_matching::process_pattern(pattern_text, pattern);
+
+        DrbdResource::ConnectionsIterator con_iter = rsc->connections_iterator();
+        if (is_problem_mode(rsc))
+        {
+            while (con_iter.has_next())
+            {
+                DrbdConnection* const con = con_iter.next();
+                if (problem_filter(con))
+                {
+                    const std::string& con_name = con->get_name();
+                    if (string_matching::match_text(con_name, pattern.get()))
+                    {
+                        matched = true;
+                        if (select_flag)
+                        {
+                            dsp_comp_hub.dsp_shared->select_connection(con_name);
+                        }
+                        else
+                        {
+                            dsp_comp_hub.dsp_shared->deselect_connection(con_name);
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            while (con_iter.has_next())
+            {
+                DrbdConnection* const con = con_iter.next();
+                const std::string& con_name = con->get_name();
+                if (string_matching::match_text(con_name, pattern.get()))
+                {
+                    matched = true;
+                    if (select_flag)
+                    {
+                        dsp_comp_hub.dsp_shared->select_connection(con_name);
+                    }
+                    else
+                    {
+                        dsp_comp_hub.dsp_shared->deselect_connection(con_name);
+                    }
+                }
+            }
+        }
+    }
+    return matched;
+}
+
 void MDspConnections::clear_selection()
 {
     dsp_comp_hub.dsp_shared->clear_connections_selection();
@@ -679,6 +737,40 @@ bool MDspConnections::execute_command(const std::string& command, StringTokenize
         }
     }
     else
+    if (command == cmd_names::KEY_CMD_SELECT || command == cmd_names::KEY_CMD_DESELECT)
+    {
+        if (tokenizer.has_next())
+        {
+            std::string cmd_arg = tokenizer.next();
+            if (string_matching::is_pattern(cmd_arg))
+            {
+                try
+                {
+                    accepted = change_selection(cmd_arg, command == cmd_names::KEY_CMD_SELECT);
+                }
+                catch (string_matching::PatternLimitException&)
+                {
+                    std::string error_msg(command);
+                    error_msg += " command rejected: Excessive number of wildcard characters";
+                    dsp_comp_hub.log->add_entry(MessageLog::log_level::ALERT, error_msg);
+                }
+            }
+            else
+            {
+                if (command == cmd_names::KEY_CMD_SELECT)
+                {
+                    dsp_comp_hub.dsp_shared->select_connection(cmd_arg);
+                }
+                else
+                {
+                    dsp_comp_hub.dsp_shared->deselect_connection(cmd_arg);
+                }
+                accepted = true;
+            }
+        }
+        return accepted;
+    }
+    else
     if (command == cmd_names::KEY_CMD_SELECT_ALL)
     {
         DrbdResource* const rsc = dsp_comp_hub.get_monitor_resource();
@@ -699,7 +791,7 @@ bool MDspConnections::execute_command(const std::string& command, StringTokenize
         accepted = true;
     }
     else
-    if (command == cmd_names::KEY_CMD_DESELECT)
+    if (command == cmd_names::KEY_CMD_DESELECT_ALL || command == cmd_names::KEY_CMD_CLEAR_SELECTION)
     {
         clear_selection();
         accepted = true;

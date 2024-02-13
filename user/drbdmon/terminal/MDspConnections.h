@@ -27,6 +27,8 @@ class MDspConnections : public MDspStdListBase
     virtual bool mouse_action(MouseEvent& mouse) override;
 
     virtual bool execute_command(const std::string& command, StringTokenizer& tokenizer);
+    // @throws std::bad_alloc, string_matching::PatternLimitException
+    virtual bool change_selection(const std::string& pattern_text, const bool select_flag);
     virtual void clear_selection() override;
 
     virtual void cursor_to_next_item() override;

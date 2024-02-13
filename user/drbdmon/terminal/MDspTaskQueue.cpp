@@ -339,7 +339,7 @@ bool MDspTaskQueue::execute_command(const std::string& command, StringTokenizer&
         accepted = true;
     }
     else
-    if (command == cmd_names::KEY_CMD_DESELECT)
+    if (command == cmd_names::KEY_CMD_DESELECT_ALL || command == cmd_names::KEY_CMD_CLEAR_SELECTION)
     {
         dsp_comp_hub.dsp_shared->clear_task_selection(selection_map);
         dsp_comp_hub.dsp_selector->refresh_display();

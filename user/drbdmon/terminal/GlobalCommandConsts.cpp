@@ -7,8 +7,11 @@ namespace cmd_names
     const std::string   KEY_CMD_DISPLAY("DISPLAY");
     const std::string   KEY_CMD_COLORS("COLORS");
     const std::string   KEY_CMD_CHARSET("CHARSET");
+    const std::string   KEY_CMD_SELECT("SELECT");
     const std::string   KEY_CMD_SELECT_ALL("SELECT-ALL");
-    const std::string   KEY_CMD_DESELECT("CLEAR-SELECTION");
+    const std::string   KEY_CMD_DESELECT("DESELECT");
+    const std::string   KEY_CMD_DESELECT_ALL("DESELECT-ALL");
+    const std::string   KEY_CMD_CLEAR_SELECTION("CLEAR-SELECTION");
     const std::string   KEY_CMD_CURSOR("CURSOR");
     const std::string   KEY_CMD_RESOURCE("RESOURCE");
     const std::string   KEY_CMD_CONNECTION("CONNECTION");

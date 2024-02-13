@@ -27,8 +27,11 @@ class GlobalCommandsImpl : public GlobalCommands, public CommandsBase<GlobalComm
     Entry entry_display;
     Entry entry_colors;
     Entry entry_charset;
-    Entry entry_select_all;
+    Entry entry_select;
     Entry entry_deselect;
+    Entry entry_select_all;
+    Entry entry_deselect_all;
+    Entry entry_clear_selection;
     Entry entry_cursor;
     Entry entry_resource;
     Entry entry_connection;
@@ -39,7 +42,7 @@ class GlobalCommandsImpl : public GlobalCommands, public CommandsBase<GlobalComm
     bool cmd_colors(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_charset(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_select_all(const std::string& command, StringTokenizer& tokenizer);
-    bool cmd_deselect(const std::string& command, StringTokenizer& tokenizer);
+    bool cmd_deselect_all(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_resource(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_connection(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_volume(const std::string& command, StringTokenizer& tokenizer);

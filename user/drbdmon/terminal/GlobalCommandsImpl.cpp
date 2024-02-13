@@ -17,8 +17,11 @@ GlobalCommandsImpl::GlobalCommandsImpl(ComponentsHub& comp_hub, Configuration& c
     entry_display(&cmd_names::KEY_CMD_DISPLAY, &GlobalCommandsImpl::cmd_display),
     entry_colors(&cmd_names::KEY_CMD_COLORS, &GlobalCommandsImpl::cmd_colors),
     entry_charset(&cmd_names::KEY_CMD_CHARSET, &GlobalCommandsImpl::cmd_charset),
+    entry_select(&cmd_names::KEY_CMD_SELECT, &GlobalCommandsImpl::local_command),
+    entry_deselect(&cmd_names::KEY_CMD_DESELECT, &GlobalCommandsImpl::local_command),
     entry_select_all(&cmd_names::KEY_CMD_SELECT_ALL, &GlobalCommandsImpl::cmd_select_all),
-    entry_deselect(&cmd_names::KEY_CMD_DESELECT, &GlobalCommandsImpl::cmd_deselect),
+    entry_deselect_all(&cmd_names::KEY_CMD_DESELECT_ALL, &GlobalCommandsImpl::cmd_deselect_all),
+    entry_clear_selection(&cmd_names::KEY_CMD_CLEAR_SELECTION, &GlobalCommandsImpl::cmd_deselect_all),
     entry_cursor(&cmd_names::KEY_CMD_CURSOR, &GlobalCommandsImpl::local_command),
     entry_resource(&cmd_names::KEY_CMD_RESOURCE, &GlobalCommandsImpl::cmd_resource),
     entry_connection(&cmd_names::KEY_CMD_CONNECTION, &GlobalCommandsImpl::cmd_connection),
@@ -28,8 +31,11 @@ GlobalCommandsImpl::GlobalCommandsImpl(ComponentsHub& comp_hub, Configuration& c
     add_command(entry_display);
     add_command(entry_colors);
     add_command(entry_charset);
-    add_command(entry_select_all);
+    add_command(entry_select);
     add_command(entry_deselect);
+    add_command(entry_select_all);
+    add_command(entry_deselect_all);
+    add_command(entry_clear_selection);
     add_command(entry_cursor);
     add_command(entry_resource);
     add_command(entry_connection);
@@ -181,7 +187,7 @@ bool GlobalCommandsImpl::cmd_select_all(const std::string& command, StringTokeni
     return accepted;
 }
 
-bool GlobalCommandsImpl::cmd_deselect(const std::string& command, StringTokenizer& tokenizer)
+bool GlobalCommandsImpl::cmd_deselect_all(const std::string& command, StringTokenizer& tokenizer)
 {
     bool accepted = false;
     DisplayId::display_page active_page = dsp_comp_hub.dsp_selector->get_active_page();

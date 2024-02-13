@@ -26,6 +26,8 @@ class MDspResources : public MDspStdListBase
 
     virtual bool execute_command(const std::string& command, StringTokenizer& tokenizer);
     virtual void clear_selection() override;
+    // @throws std::bad_alloc, string_matching::PatternLimitException
+    virtual bool change_selection(const std::string& pattern_text, const bool select_flag);
 
     virtual void cursor_to_next_item() override;
     virtual void cursor_to_previous_item() override;
