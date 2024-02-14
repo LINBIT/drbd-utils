@@ -27,8 +27,6 @@ class MDspConnections : public MDspStdListBase
     virtual bool mouse_action(MouseEvent& mouse) override;
 
     virtual bool execute_command(const std::string& command, StringTokenizer& tokenizer);
-    // @throws std::bad_alloc, string_matching::PatternLimitException
-    virtual bool change_selection(const std::string& pattern_text, const bool select_flag);
     virtual void clear_selection() override;
 
     virtual void cursor_to_next_item() override;
@@ -65,6 +63,8 @@ class MDspConnections : public MDspStdListBase
     void write_no_connections_line(const bool problem_mode_flag);
     void monitor_cursor_common_keys(const uint32_t key);
     bool is_problem_mode(DrbdResource* const rsc);
+    // @throws std::bad_alloc, string_matching::PatternLimitException
+    bool change_selection(const std::string& pattern_text, const bool select_flag);
 
     uint32_t get_lines_per_page();
 };

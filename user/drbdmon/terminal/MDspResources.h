@@ -26,8 +26,6 @@ class MDspResources : public MDspStdListBase
 
     virtual bool execute_command(const std::string& command, StringTokenizer& tokenizer);
     virtual void clear_selection() override;
-    // @throws std::bad_alloc, string_matching::PatternLimitException
-    virtual bool change_selection(const std::string& pattern_text, const bool select_flag);
 
     virtual void cursor_to_next_item() override;
     virtual void cursor_to_previous_item() override;
@@ -59,6 +57,8 @@ class MDspResources : public MDspStdListBase
     void write_resource_line(DrbdResource* const rsc, uint32_t& current_line, const bool selecting);
     void write_no_resources_line(const bool problem_mode_flag);
     bool is_problem_mode(DrbdResource* const rsc);
+    // @throws std::bad_alloc, string_matching::PatternLimitException
+    bool change_selection(const std::string& pattern_text, const bool select_flag);
 
     uint32_t get_lines_per_page();
     DrbdResource* find_resource_near_cursor(ResourcesMap& selected_map);
