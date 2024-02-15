@@ -20,6 +20,8 @@ namespace helptext
         CON_DETAIL,
         CON_ACTIONS,
         PVLM_LIST,
+        PVLM_DETAIL,
+        PVLM_ACTIONS,
         MAIN_MENU,
         MESSAGE_LOG,
         MESSAGE_DETAIL,
@@ -42,6 +44,8 @@ namespace helptext
     extern const char* const PEER_VLM_LIST_HELP_2;
     extern const char* const PEER_VLM_LIST_HELP_3;
     extern const char* const PEER_VLM_LIST_HELP_4;
+    extern const char* const PEER_VLM_DETAIL_HELP_1;
+    extern const char* const PEER_VLM_ACT_HELP_1;
     extern const char* const CON_LIST_HELP_1;
     extern const char* const CON_LIST_HELP_2;
     extern const char* const CON_LIST_HELP_3;

@@ -181,6 +181,29 @@ namespace helptext
         "following DRBD commands are available within the peer volume list display. The "
         "commands work either on the resource or the connection associated with the peer volumes.\n";
 
+    const char* const PEER_VLM_DETAIL_HELP_1 =
+        "\x1B\x01" "Help - Peer volume details" "\x1B\xFF" "\n"
+        "\n"
+        "\x1B\x01" "Contents" "\x1B\xFF" "\n"
+        "\n"
+        "Volume details overview\n"
+        "Navigation keys\n"
+        "Commands\n"
+        "\n"
+        "\n"
+        "\x1B\x03" "Experimental version - Help text not available yet." "\x1B\xFF" "\n";
+
+    const char* const PEER_VLM_ACT_HELP_1 =
+        "\x1B\x01" "Help - Peer volume details" "\x1B\xFF" "\n"
+        "\n"
+        "\x1B\x01" "Contents" "\x1B\xFF" "\n"
+        "\n"
+        "Volume actions overview\n"
+        "Volume actions\n"
+        "\n"
+        "\n"
+        "\x1B\x03" "Experimental version - Help text not available yet." "\x1B\xFF" "\n";
+
     const char* const CON_LIST_HELP_1 =
         "\x1B\x01" "Help - Connection list" "\x1B\xFF" "\n"
         "\n"
@@ -920,6 +943,14 @@ namespace helptext
                 help_text += helptext::PEER_VLM_LIST_HELP_4;
                 help_text += helptext::INSERT_RSC_CMD_HELP_1;
                 help_text += helptext::INSERT_CON_CMD_HELP_1;
+                break;
+            }
+            case id_type::PVLM_DETAIL:
+            {
+                break;
+            }
+            case id_type::PVLM_ACTIONS:
+            {
                 break;
             }
             case id_type::MAIN_MENU:
