@@ -13,6 +13,8 @@
 #include <terminal/MDspConnectionDetail.h>
 #include <terminal/MDspConnectionActions.h>
 #include <terminal/MDspPeerVolumes.h>
+#include <terminal/MDspPeerVolumeDetail.h>
+#include <terminal/MDspPeerVolumeActions.h>
 #include <terminal/MDspTaskQueue.h>
 #include <terminal/MDspTaskDetail.h>
 #include <terminal/MDspHelpIndex.h>
@@ -151,6 +153,12 @@ DisplayController::DisplayController(
         );
         peer_volume_view_mgr = std::unique_ptr<ModularDisplay>(
             dynamic_cast<ModularDisplay*> (new MDspPeerVolumes(dsp_comp_hub))
+        );
+        peer_volume_detail_mgr = std::unique_ptr<ModularDisplay>(
+            dynamic_cast<ModularDisplay*> (new MDspPeerVolumeDetail(dsp_comp_hub))
+        );
+        peer_volume_actions_mgr = std::unique_ptr<ModularDisplay>(
+            dynamic_cast<ModularDisplay*> (new MDspPeerVolumeActions(dsp_comp_hub))
         );
         active_tasks_mgr = std::unique_ptr<ModularDisplay>(
             dynamic_cast<ModularDisplay*> (
@@ -697,6 +705,7 @@ void DisplayController::get_display(
             dsp_obj = peer_volume_view_mgr.get();
             break;
         case DisplayId::display_page::PEER_VLM_DETAIL:
+            dsp_obj = peer_volume_detail_mgr.get();
             break;
         case DisplayId::display_page::MAIN_MENU:
             dsp_obj = main_menu_mgr.get();
@@ -738,6 +747,9 @@ void DisplayController::get_display(
             break;
         case DisplayId::display_page::CON_ACTIONS:
             dsp_obj = connection_actions_mgr.get();
+            break;
+        case DisplayId::display_page::PEER_VLM_ACTIONS:
+            dsp_obj = peer_volume_actions_mgr.get();
             break;
         case DisplayId::display_page::PGM_INFO:
             dsp_obj = pgm_info_mgr.get();

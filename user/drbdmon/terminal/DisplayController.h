@@ -121,6 +121,8 @@ class DisplayController : public GenericDisplay, public DisplaySelector
     std::unique_ptr<ModularDisplay>     connection_detail_mgr;
     std::unique_ptr<ModularDisplay>     connection_actions_mgr;
     std::unique_ptr<ModularDisplay>     peer_volume_view_mgr;
+    std::unique_ptr<ModularDisplay>     peer_volume_detail_mgr;
+    std::unique_ptr<ModularDisplay>     peer_volume_actions_mgr;
     std::unique_ptr<ModularDisplay>     active_tasks_mgr;
     std::unique_ptr<ModularDisplay>     pending_tasks_mgr;
     std::unique_ptr<ModularDisplay>     suspended_tasks_mgr;
