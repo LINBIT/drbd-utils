@@ -92,7 +92,26 @@ bool MDspPeerVolumes::key_pressed(const uint32_t key)
             dsp_comp_hub.dsp_selector->refresh_display();
             intercepted = true;
         }
+        else
+        if (is_cursor_nav())
+        {
+            if (key == KeyCodes::ENTER)
+            {
+                dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::PEER_VLM_DETAIL);
+                intercepted = true;
+            }
+        }
+
+        if (!intercepted && (is_cursor_nav() || dsp_comp_hub.dsp_shared->have_peer_volumes_selection()))
+        {
+            if (key == static_cast<uint32_t> ('A') || key == static_cast<uint32_t> ('a'))
+            {
+                dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::PEER_VLM_ACTIONS);
+                intercepted = true;
+            }
+        }
     }
+
     return intercepted;
 }
 
