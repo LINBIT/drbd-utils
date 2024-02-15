@@ -20,6 +20,7 @@ const std::string   DisplayId::MDSP_MSG_VIEW        = {"MSG"};
 const std::string   DisplayId::MDSP_RSC_ACT         = {"RSCA"};
 const std::string   DisplayId::MDSP_VLM_ACT         = {"VLMA"};
 const std::string   DisplayId::MDSP_CON_ACT         = {"CONA"};
+const std::string   DisplayId::MDSP_PEER_VLM_ACT    = {"PVLMA"};
 const std::string   DisplayId::MDSP_PGM_INFO        = {"INFO"};
 const std::string   DisplayId::MDSP_TASK_DETAIL     = {"TASK"};
 const std::string   DisplayId::MDSP_CONFIGURATION   = {"CONF"};

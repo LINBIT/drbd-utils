@@ -15,6 +15,8 @@ namespace dspid
     extern const DisplayId ID_VLM_DETAIL;
     extern const DisplayId ID_CON_LIST;
     extern const DisplayId ID_CON_DETAIL;
+    extern const DisplayId ID_PEER_VLM_LIST;
+    extern const DisplayId ID_PEER_VLM_DETAIL;
     extern const DisplayId ID_MAIN_MENU;
     extern const DisplayId ID_TASKQ_ACT;
     extern const DisplayId ID_TASKQ_SSP;
@@ -27,6 +29,7 @@ namespace dspid
     extern const DisplayId ID_RSC_ACT;
     extern const DisplayId ID_VLM_ACT;
     extern const DisplayId ID_CON_ACT;
+    extern const DisplayId ID_PEER_VLM_ACT;
     extern const DisplayId ID_TASK_DETAIL;
     extern const DisplayId ID_CONFIGURATION;
 

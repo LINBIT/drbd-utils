@@ -10,8 +10,8 @@ class DisplayId
     enum class display_page : uint16_t
     {
         RSC_LIST        = 0,
-        CON_LIST,
         VLM_LIST,
+        CON_LIST,
         PEER_VLM_LIST,
         RSC_DETAIL,
         VLM_DETAIL,
@@ -30,6 +30,7 @@ class DisplayId
         RSC_ACTIONS,
         VLM_ACTIONS,
         CON_ACTIONS,
+        PEER_VLM_ACTIONS,
         PGM_INFO,
         TASK_DETAIL,
         CONFIGURATION
@@ -55,6 +56,7 @@ class DisplayId
     static const std::string    MDSP_RSC_ACT;
     static const std::string    MDSP_VLM_ACT;
     static const std::string    MDSP_CON_ACT;
+    static const std::string    MDSP_PEER_VLM_ACT;
     static const std::string    MDSP_PGM_INFO;
     static const std::string    MDSP_TASK_DETAIL;
     static const std::string    MDSP_CONFIGURATION;

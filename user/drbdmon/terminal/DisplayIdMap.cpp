@@ -25,6 +25,7 @@ namespace dspid
     const DisplayId ID_RSC_ACT(&DisplayId::MDSP_RSC_ACT, DisplayId::display_page::RSC_ACTIONS);
     const DisplayId ID_VLM_ACT(&DisplayId::MDSP_VLM_ACT, DisplayId::display_page::VLM_ACTIONS);
     const DisplayId ID_CON_ACT(&DisplayId::MDSP_CON_ACT, DisplayId::display_page::CON_ACTIONS);
+    const DisplayId ID_PEER_VLM_ACT(&DisplayId::MDSP_PEER_VLM_ACT, DisplayId::display_page::PEER_VLM_ACTIONS);
     const DisplayId ID_PGM_INFO(&DisplayId::MDSP_PGM_INFO, DisplayId::display_page::PGM_INFO);
     const DisplayId ID_TASK_DETAIL(&DisplayId::MDSP_TASK_DETAIL, DisplayId::display_page::TASK_DETAIL);
     const DisplayId ID_CONFIGURATION(&DisplayId::MDSP_CONFIGURATION, DisplayId::display_page::CONFIGURATION);
@@ -54,6 +55,7 @@ namespace dspid
             map.insert(&DisplayId::MDSP_RSC_ACT,            &ID_RSC_ACT);
             map.insert(&DisplayId::MDSP_VLM_ACT,            &ID_VLM_ACT);
             map.insert(&DisplayId::MDSP_CON_ACT,            &ID_CON_ACT);
+            map.insert(&DisplayId::MDSP_PEER_VLM_ACT,       &ID_PEER_VLM_ACT);
             map.insert(&DisplayId::MDSP_PGM_INFO,           &ID_PGM_INFO);
             map.insert(&DisplayId::MDSP_TASK_DETAIL,        &ID_TASK_DETAIL);
             map.insert(&DisplayId::MDSP_CONFIGURATION,      &ID_CONFIGURATION);
