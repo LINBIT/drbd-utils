@@ -124,28 +124,6 @@ void MDspVolumeDetail::display_content()
 
                 dsp_comp_hub.dsp_io->cursor_xy(1, current_line);
                 dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->emphasis_text.c_str());
-                dsp_comp_hub.dsp_io->write_text("Replication state:");
-                dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
-                dsp_comp_hub.dsp_io->cursor_xy(21, current_line);
-                if (vlm->has_replication_alert())
-                {
-                    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->alert.c_str());
-                }
-                else
-                if (vlm->has_replication_warning())
-                {
-                    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->warn.c_str());
-                }
-                else
-                {
-                    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->norm.c_str());
-                }
-                const char* const repl_state_label = vlm->get_replication_state_label();
-                dsp_comp_hub.dsp_io->write_text(repl_state_label);
-                ++current_line;
-
-                dsp_comp_hub.dsp_io->cursor_xy(1, current_line);
-                dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->emphasis_text.c_str());
                 dsp_comp_hub.dsp_io->write_text("Quorum:");
                 dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
                 dsp_comp_hub.dsp_io->cursor_xy(21, current_line);
