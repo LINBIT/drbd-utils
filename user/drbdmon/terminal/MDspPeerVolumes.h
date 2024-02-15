@@ -56,7 +56,6 @@ class MDspPeerVolumes : public MDspStdListBase
     std::string displayed_con;
 
     uint16_t    cursor_vlm      {DisplayConsts::VLM_NONE};
-    bool        selecting       {false};
 
     std::function<bool(DrbdVolume*)>                problem_filter;
     std::function<const uint16_t&(DrbdVolume*)>     vlm_key_func;
@@ -65,7 +64,7 @@ class MDspPeerVolumes : public MDspStdListBase
     void display_at_cursor();
     void display_at_page();
     void list_item_clicked(MouseEvent& mouse);
-    void write_volume_line(DrbdVolume* const vlm, uint32_t& current_line);
+    void write_volume_line(DrbdVolume* const vlm, uint32_t& current_line, const bool selecting);
     bool is_problem_mode(DrbdResource* const rsc, DrbdConnection* const con);
 
     uint32_t get_lines_per_page();

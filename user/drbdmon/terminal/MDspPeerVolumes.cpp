@@ -418,6 +418,7 @@ void MDspPeerVolumes::display_at_cursor()
     DrbdConnection* const con = dsp_comp_hub.get_monitor_connection();
     if (rsc != nullptr && con != nullptr)
     {
+        const bool selecting = dsp_comp_hub.dsp_shared->have_peer_volumes_selection();
         const uint16_t vlm_count = con->get_volume_count();
         const bool problem_mode_flag = is_problem_mode(rsc, con);
         dsp_comp_hub.dsp_common->display_problem_mode_label(problem_mode_flag);
@@ -456,7 +457,7 @@ void MDspPeerVolumes::display_at_cursor()
                     if (problem_filter(vlm))
                     {
                         dsp_comp_hub.dsp_io->cursor_xy(1, PEER_VLM_LIST_Y + line_nr);
-                        write_volume_line(vlm, current_line);
+                        write_volume_line(vlm, current_line, selecting);
                         ++line_nr;
                     }
                 }
@@ -489,7 +490,7 @@ void MDspPeerVolumes::display_at_cursor()
                 {
                     DrbdVolume* const vlm = dsp_vlm_iter.next();
                     dsp_comp_hub.dsp_io->cursor_xy(1, PEER_VLM_LIST_Y + line_nr);
-                    write_volume_line(vlm, current_line);
+                    write_volume_line(vlm, current_line, selecting);
                     ++line_nr;
                 }
             }
@@ -510,6 +511,7 @@ void MDspPeerVolumes::display_at_page()
     DrbdConnection* const con = dsp_comp_hub.get_monitor_connection();
     if (dsp_rsc != nullptr && con != nullptr)
     {
+        const bool selecting = dsp_comp_hub.dsp_shared->have_peer_volumes_selection();
         const uint32_t lines_per_page = get_lines_per_page();
         const bool problem_mode_flag = is_problem_mode(dsp_rsc, con);
         dsp_comp_hub.dsp_common->display_problem_mode_label(problem_mode_flag);
@@ -533,7 +535,7 @@ void MDspPeerVolumes::display_at_page()
                     if (problem_filter(dsp_vlm))
                     {
                         dsp_io->cursor_xy(1, PEER_VLM_LIST_Y + line_nr);
-                        write_volume_line(dsp_vlm, current_line);
+                        write_volume_line(dsp_vlm, current_line, selecting);
                         ++line_nr;
                     }
                 }
@@ -557,7 +559,7 @@ void MDspPeerVolumes::display_at_page()
             {
                 DrbdVolume* const vlm = vlm_iter.next();
                 dsp_io->cursor_xy(1, PEER_VLM_LIST_Y + line_nr);
-                write_volume_line(vlm, current_line);
+                write_volume_line(vlm, current_line, selecting);
                 ++line_nr;
             }
         }
@@ -630,7 +632,7 @@ void MDspPeerVolumes::list_item_clicked(MouseEvent& mouse)
     }
 }
 
-void MDspPeerVolumes::write_volume_line(DrbdVolume* const vlm, uint32_t& current_line)
+void MDspPeerVolumes::write_volume_line(DrbdVolume* const vlm, uint32_t& current_line, const bool selecting)
 {
     DisplayIo* const dsp_io = dsp_comp_hub.dsp_io;
     dsp_io->cursor_xy(1, current_line);
