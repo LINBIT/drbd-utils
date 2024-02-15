@@ -219,7 +219,8 @@ bool GlobalCommandsImpl::cmd_resource(const std::string& command, StringTokenize
                 active_page == DisplayId::display_page::VLM_DETAIL ||
                 active_page == DisplayId::display_page::VLM_ACTIONS ||
                 active_page == DisplayId::display_page::PEER_VLM_LIST ||
-                active_page == DisplayId::display_page::PEER_VLM_DETAIL)
+                active_page == DisplayId::display_page::PEER_VLM_DETAIL ||
+                active_page == DisplayId::display_page::PEER_VLM_ACTIONS)
             {
                 dsp_comp_hub.dsp_shared->update_monitor_rsc(cmd_arg);
                 ModularDisplay& active_display = dsp_comp_hub.dsp_selector->get_active_display();
@@ -244,7 +245,8 @@ bool GlobalCommandsImpl::cmd_connection(const std::string& command, StringTokeni
                 active_page == DisplayId::display_page::CON_DETAIL ||
                 active_page == DisplayId::display_page::CON_ACTIONS ||
                 active_page == DisplayId::display_page::PEER_VLM_LIST ||
-                active_page == DisplayId::display_page::PEER_VLM_DETAIL)
+                active_page == DisplayId::display_page::PEER_VLM_DETAIL ||
+                active_page == DisplayId::display_page::PEER_VLM_ACTIONS)
             {
                 dsp_comp_hub.dsp_shared->update_monitor_con(cmd_arg);
                 ModularDisplay& active_display = dsp_comp_hub.dsp_selector->get_active_display();
@@ -284,7 +286,8 @@ bool GlobalCommandsImpl::cmd_volume(const std::string& command, StringTokenizer&
             }
             else
             if (active_page == DisplayId::display_page::PEER_VLM_LIST ||
-                active_page == DisplayId::display_page::PEER_VLM_DETAIL)
+                active_page == DisplayId::display_page::PEER_VLM_DETAIL ||
+                active_page == DisplayId::display_page::PEER_VLM_ACTIONS)
             {
                 dsp_comp_hub.dsp_shared->update_monitor_peer_vlm(vlm_nr);
                 accepted = true;
