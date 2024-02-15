@@ -86,7 +86,7 @@ void MDspVolumeDetail::display_content()
 
                 dsp_comp_hub.dsp_io->cursor_xy(1, current_line);
                 dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->emphasis_text.c_str());
-                dsp_comp_hub.dsp_io->write_text("Disk state:");
+                dsp_comp_hub.dsp_io->write_text("Minor number:");
                 dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
                 dsp_comp_hub.dsp_io->cursor_xy(21, current_line);
                 const uint32_t minor_nr = vlm->get_minor_nr();
