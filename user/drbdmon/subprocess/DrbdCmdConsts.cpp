@@ -19,6 +19,7 @@ namespace drbdcmd
     const std::string   ARG_RESUME_SYNC("resume-sync");
     const std::string   ARG_RESIZE("resize");
     const std::string   ARG_INVALIDATE("invalidate");
+    const std::string   ARG_INVALIDATE_REMOTE("invalidate-remote");
     const std::string   ARG_FORCE("--force");
     const std::string   ARG_DISCARD("--discard-my-data");
 

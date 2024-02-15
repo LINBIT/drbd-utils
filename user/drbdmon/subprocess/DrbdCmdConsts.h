@@ -23,6 +23,7 @@ namespace drbdcmd
     extern const std::string    ARG_RESUME_SYNC;
     extern const std::string    ARG_RESIZE;
     extern const std::string    ARG_INVALIDATE;
+    extern const std::string    ARG_INVALIDATE_REMOTE;
     extern const std::string    ARG_FORCE;
     extern const std::string    ARG_DISCARD;
 
