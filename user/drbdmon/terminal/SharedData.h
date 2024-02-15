@@ -37,6 +37,7 @@ class SharedData
     std::unique_ptr<ResourcesMap>   selected_resources;
     std::unique_ptr<ConnectionsMap> selected_connections;
     std::unique_ptr<VolumesMap>     selected_volumes;
+    std::unique_ptr<VolumesMap>     selected_peer_volumes;
 
     std::unique_ptr<TaskEntryMap>   selected_actq_entries;
     std::unique_ptr<TaskEntryMap>   selected_pndq_entries;
@@ -50,6 +51,7 @@ class SharedData
     bool    ovrd_resource_selection     {false};
     bool    ovrd_connection_selection   {false};
     bool    ovrd_volume_selection       {false};
+    bool    ovrd_peer_volume_selection  {false};
 
     SharedData();
     virtual ~SharedData() noexcept;
@@ -67,6 +69,7 @@ class SharedData
     virtual void clear_resources_selection();
     virtual void clear_connections_selection();
     virtual void clear_volumes_selection();
+    virtual void clear_peer_volumes_selection();
 
     virtual void select_resource(const std::string& name);
     virtual void deselect_resource(const std::string& name);
@@ -74,22 +77,29 @@ class SharedData
     virtual void deselect_connection(const std::string& name);
     virtual void select_volume(const uint16_t vlm_nr);
     virtual void deselect_volume(const uint16_t vlm_nr);
+    virtual void select_peer_volume(const uint16_t vlm_nr);
+    virtual void deselect_peer_volume(const uint16_t vlm_nr);
 
     virtual bool toggle_resource_selection(const std::string& name);
     virtual bool toggle_connection_selection(const std::string& name);
     virtual bool toggle_volume_selection(const uint16_t vlm_nr);
+    virtual bool toggle_peer_volume_selection(const uint16_t vlm_nr);
 
     virtual bool have_resources_selection();
     virtual bool have_connections_selection();
     virtual bool have_volumes_selection();
+    virtual bool have_peer_volumes_selection();
 
     virtual bool is_resource_selected(const std::string& name);
     virtual bool is_connection_selected(const std::string& name);
     virtual bool is_volume_selected(const uint16_t vlm_nr);
+    virtual bool is_peer_volume_selected(const uint16_t vlm_nr);
 
     virtual ResourcesMap& get_selected_resources_map();
     virtual VolumesMap& get_selected_volumes_map();
+    virtual VolumesMap& get_selected_peer_volumes_map();
     virtual ConnectionsMap& get_selected_connections_map();
+
 
     virtual void select_task(TaskEntryMap& selection_map, const uint64_t entry_id);
     virtual void deselect_task(TaskEntryMap& selection_map, const uint64_t entry_id);
@@ -117,6 +127,7 @@ class SharedData
     void clear_resources_selection_impl() noexcept;
     void clear_connections_selection_impl() noexcept;
     void clear_volumes_selection_impl() noexcept;
+    void clear_peer_volumes_selection_impl() noexcept;
 };
 
 #endif /* SHAREDDATA_H */

@@ -61,9 +61,6 @@ class MDspPeerVolumes : public MDspStdListBase
     std::function<bool(DrbdVolume*)>                problem_filter;
     std::function<const uint16_t&(DrbdVolume*)>     vlm_key_func;
 
-    std::unique_ptr<VolumesMap> selected_volumes_mgr;
-
-    void clear_selection_impl() noexcept;
     void display_volume_header();
     void display_at_cursor();
     void display_at_page();

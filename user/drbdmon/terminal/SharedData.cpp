@@ -6,6 +6,7 @@ SharedData::SharedData()
     selected_resources = std::unique_ptr<ResourcesMap>(new ResourcesMap(&comparators::compare_string));
     selected_connections = std::unique_ptr<ConnectionsMap>(new ConnectionsMap(&comparators::compare_string));
     selected_volumes = std::unique_ptr<VolumesMap>(new VolumesMap(&comparators::compare<uint16_t>));
+    selected_peer_volumes = std::unique_ptr<VolumesMap>(new VolumesMap(&comparators::compare<uint16_t>));
 
     selected_actq_entries = std::unique_ptr<TaskEntryMap>(new TaskEntryMap(&comparators::compare<uint64_t>));
     selected_pndq_entries = std::unique_ptr<TaskEntryMap>(new TaskEntryMap(&comparators::compare<uint64_t>));
@@ -20,6 +21,7 @@ SharedData::~SharedData() noexcept
     clear_resources_selection_impl();
     clear_connections_selection_impl();
     clear_volumes_selection_impl();
+    clear_peer_volumes_selection_impl();
 
     generic_id_clear_selection(*selected_actq_entries);
     generic_id_clear_selection(*selected_pndq_entries);
@@ -40,6 +42,7 @@ void SharedData::update_monitor_rsc(const std::string& rsc_name)
 
         clear_connections_selection_impl();
         clear_volumes_selection_impl();
+        clear_peer_volumes_selection_impl();
     }
 }
 
@@ -49,7 +52,7 @@ void SharedData::update_monitor_con(const std::string& con_name)
     {
         monitor_con = con_name;
         // The peer volumes are supposed to be the same for each connection,
-        // therefore, the cursor is not reset
+        // therefore, the cursor and selection are not reset
     }
 }
 
@@ -72,6 +75,7 @@ void SharedData::clear_monitor_rsc()
 
     clear_connections_selection_impl();
     clear_volumes_selection_impl();
+    clear_peer_volumes_selection_impl();
 }
 
 void SharedData::clear_monitor_con()
@@ -106,6 +110,11 @@ void SharedData::clear_volumes_selection()
     clear_volumes_selection_impl();
 }
 
+void SharedData::clear_peer_volumes_selection()
+{
+    clear_peer_volumes_selection_impl();
+}
+
 void SharedData::clear_resources_selection_impl() noexcept
 {
     ResourcesMap::KeysIterator iter(*selected_resources);
@@ -137,6 +146,17 @@ void SharedData::clear_volumes_selection_impl() noexcept
         delete key;
     }
     selected_volumes->clear();
+}
+
+void SharedData::clear_peer_volumes_selection_impl() noexcept
+{
+    VolumesMap::KeysIterator iter(*selected_peer_volumes);
+    while (iter.has_next())
+    {
+        const uint16_t* const key = iter.next();
+        delete key;
+    }
+    selected_peer_volumes->clear();
 }
 
 void SharedData::select_resource(const std::string& name)
@@ -208,6 +228,30 @@ void SharedData::deselect_volume(const uint16_t vlm_nr)
     }
 }
 
+void SharedData::select_peer_volume(const uint16_t vlm_nr)
+{
+    const VolumesMap::Node* const existing_entry = selected_peer_volumes->get_node(&vlm_nr);
+    if (existing_entry == nullptr)
+    {
+        std::unique_ptr<uint16_t> key_mgr(new uint16_t);
+        uint16_t* const key = key_mgr.get();
+        *key = vlm_nr;
+
+        selected_peer_volumes->insert(key, nullptr);
+        key_mgr.release();
+    }
+}
+
+void SharedData::deselect_peer_volume(const uint16_t vlm_nr)
+{
+    VolumesMap::Node* const existing_entry = selected_peer_volumes->get_node(&vlm_nr);
+    if (existing_entry != nullptr)
+    {
+        delete existing_entry->get_key();
+        selected_peer_volumes->remove_node(existing_entry);
+    }
+}
+
 bool SharedData::toggle_resource_selection(const std::string& name)
 {
     bool selected = false;
@@ -257,6 +301,22 @@ bool SharedData::toggle_volume_selection(const uint16_t vlm_nr)
     return selected;
 }
 
+bool SharedData::toggle_peer_volume_selection(const uint16_t vlm_nr)
+{
+    bool selected = false;
+    VolumesMap::Node* const existing_entry = selected_peer_volumes->get_node(&vlm_nr);
+    if (existing_entry == nullptr)
+    {
+        select_peer_volume(vlm_nr);
+        selected = true;
+    }
+    else
+    {
+        deselect_peer_volume(vlm_nr);
+    }
+    return selected;
+}
+
 bool SharedData::have_resources_selection()
 {
     return selected_resources->get_size() > 0;
@@ -270,6 +330,11 @@ bool SharedData::have_connections_selection()
 bool SharedData::have_volumes_selection()
 {
     return selected_volumes->get_size() > 0;
+}
+
+bool SharedData::have_peer_volumes_selection()
+{
+    return selected_peer_volumes->get_size() > 0;
 }
 
 bool SharedData::is_resource_selected(const std::string& name)
@@ -287,6 +352,11 @@ bool SharedData::is_volume_selected(const uint16_t vlm_nr)
     return selected_volumes->get_node(&vlm_nr) != nullptr;
 }
 
+bool SharedData::is_peer_volume_selected(const uint16_t vlm_nr)
+{
+    return selected_peer_volumes->get_node(&vlm_nr) != nullptr;
+}
+
 ResourcesMap& SharedData::get_selected_resources_map()
 {
     return *selected_resources;
@@ -300,6 +370,11 @@ ConnectionsMap& SharedData::get_selected_connections_map()
 VolumesMap& SharedData::get_selected_volumes_map()
 {
     return *selected_volumes;
+}
+
+VolumesMap& SharedData::get_selected_peer_volumes_map()
+{
+    return *selected_peer_volumes;
 }
 
 void SharedData::select_task(TaskEntryMap& selection_map, const uint64_t entry_id)

@@ -24,8 +24,6 @@ const uint8_t   MDspPeerVolumes::PEER_VLM_LIST_Y    = 8;
 MDspPeerVolumes::MDspPeerVolumes(const ComponentsHub& comp_hub):
     MDspStdListBase::MDspStdListBase(comp_hub)
 {
-    selected_volumes_mgr = std::unique_ptr<VolumesMap>(new VolumesMap(&comparators::compare<uint16_t>));
-
     problem_filter =
         [](DrbdVolume* vlm) -> bool
         {
@@ -40,7 +38,6 @@ MDspPeerVolumes::MDspPeerVolumes(const ComponentsHub& comp_hub):
 
 MDspPeerVolumes::~MDspPeerVolumes() noexcept
 {
-    clear_selection_impl();
 }
 
 void MDspPeerVolumes::display_list()
@@ -209,37 +206,24 @@ bool MDspPeerVolumes::execute_command(const std::string& command, StringTokenize
 
 void MDspPeerVolumes::clear_selection()
 {
-    clear_selection_impl();
+    dsp_comp_hub.dsp_shared->clear_peer_volumes_selection();
 }
 
 bool MDspPeerVolumes::is_selecting()
 {
-    return selecting;
+    return dsp_comp_hub.dsp_shared->have_peer_volumes_selection();
 }
 
 void MDspPeerVolumes::toggle_select_cursor_item()
 {
-    if (!dsp_comp_hub.dsp_shared->monitor_rsc.empty() && !dsp_comp_hub.dsp_shared->monitor_con.empty() &&
-        cursor_vlm != DisplayConsts::VLM_NONE)
+    if (cursor_vlm != DisplayConsts::VLM_NONE)
     {
+        DrbdResource* const rsc = dsp_comp_hub.get_monitor_resource();
         DrbdConnection* const con = dsp_comp_hub.get_monitor_connection();
-        if (con != nullptr)
+        if (rsc != nullptr && con != nullptr)
         {
-            DrbdVolume* const vlm = con->get_volume(cursor_vlm);
-            if (vlm != nullptr)
-            {
-                VolumesMap* const selected_volumes = selected_volumes_mgr.get();
-                VolumesMap::Node* const existing_entry = selected_volumes->get_node(&cursor_vlm);
-                if (existing_entry == nullptr)
-                {
-                    select_volume(cursor_vlm);
-                }
-                else
-                {
-                    deselect_volume(cursor_vlm);
-                }
-                dsp_comp_hub.dsp_selector->refresh_display();
-            }
+            dsp_comp_hub.dsp_shared->toggle_peer_volume_selection(cursor_vlm);
+            dsp_comp_hub.dsp_selector->refresh_display();
         }
     }
 }
@@ -349,41 +333,24 @@ void MDspPeerVolumes::clear_cursor()
 
 void MDspPeerVolumes::select_volume(const uint16_t vlm_nr)
 {
-    VolumesMap* const selected_volumes = selected_volumes_mgr.get();
-    const VolumesMap::Node* const existing_entry = selected_volumes->get_node(&vlm_nr);
-    if (existing_entry == nullptr)
-    {
-        std::unique_ptr<uint16_t> key_mgr(new uint16_t);
-        uint16_t* const key = key_mgr.get();
-        *key = vlm_nr;
-
-        selected_volumes->insert(key, nullptr);
-        key_mgr.release();
-        selecting = true;
-    }
+    dsp_comp_hub.dsp_shared->select_peer_volume(vlm_nr);
 }
 
 void MDspPeerVolumes::deselect_volume(const uint16_t vlm_nr)
 {
-    VolumesMap* const selected_volumes = selected_volumes_mgr.get();
-    VolumesMap::Node* const existing_entry = selected_volumes->get_node(&vlm_nr);
-    if (existing_entry != nullptr)
-    {
-        delete existing_entry->get_key();
-        selected_volumes->remove_node(existing_entry);
-        selecting = selected_volumes->get_size() >= 1;
-    }
+    dsp_comp_hub.dsp_shared->deselect_peer_volume(vlm_nr);
 }
 
 void MDspPeerVolumes::display_activated()
 {
     MDspStdListBase::display_activated();
-    if (displayed_rsc != dsp_comp_hub.dsp_shared->monitor_rsc || displayed_con != dsp_comp_hub.dsp_shared->monitor_con)
+    if (displayed_rsc != dsp_comp_hub.dsp_shared->monitor_rsc)
     {
         reset_display();
     }
     displayed_rsc = dsp_comp_hub.dsp_shared->monitor_rsc;
     displayed_con = dsp_comp_hub.dsp_shared->monitor_con;
+    dsp_comp_hub.dsp_shared->ovrd_peer_volume_selection = false;
 }
 
 void MDspPeerVolumes::display_deactivated()
@@ -395,13 +362,13 @@ void MDspPeerVolumes::reset_display()
 {
     MDspStdListBase::reset_display();
     cursor_vlm = DisplayConsts::VLM_NONE;
-    clear_selection_impl();
+    clear_selection();
     set_page_nr(1);
 }
 
 void MDspPeerVolumes::synchronize_data()
 {
-    dsp_comp_hub.dsp_shared->monitor_peer_vlm = cursor_vlm;
+    dsp_comp_hub.dsp_shared->update_monitor_peer_vlm(cursor_vlm);
 }
 
 void MDspPeerVolumes::notify_data_updated()
@@ -417,18 +384,6 @@ void MDspPeerVolumes::notify_data_updated()
         set_page_nr(1);
     }
     dsp_comp_hub.dsp_selector->refresh_display();
-}
-
-void MDspPeerVolumes::clear_selection_impl() noexcept
-{
-    VolumesMap::KeysIterator iter(*(selected_volumes_mgr));
-    while (iter.has_next())
-    {
-        const uint16_t* const key = iter.next();
-        delete key;
-    }
-    selected_volumes_mgr->clear();
-    selecting = false;
 }
 
 void MDspPeerVolumes::display_volume_header()
@@ -691,7 +646,7 @@ void MDspPeerVolumes::write_volume_line(DrbdVolume* const vlm, uint32_t& current
     bool is_selected = false;
     if (selecting)
     {
-        is_selected = selected_volumes_mgr->get_node(&vlm_nr) != nullptr;
+        is_selected = dsp_comp_hub.dsp_shared->is_peer_volume_selected(vlm_nr);
     }
 
     const std::string& rst_bg = is_under_cursor ? dsp_comp_hub.active_color_table->bg_cursor :
