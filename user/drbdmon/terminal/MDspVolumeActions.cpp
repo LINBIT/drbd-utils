@@ -111,7 +111,14 @@ void MDspVolumeActions::display_content()
             {
                 VolumesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_volumes_map();
                 const size_t count = selection_map.get_size();
-                dsp_comp_hub.dsp_io->write_fmt("%lu selected volumes", static_cast<unsigned long> (count));
+                if (count > 1)
+                {
+                    dsp_comp_hub.dsp_io->write_fmt("%lu selected volumes", static_cast<unsigned long> (count));
+                }
+                else
+                {
+                    dsp_comp_hub.dsp_io->write_fmt("%lu selected volume", static_cast<unsigned long> (count));
+                }
             }
             else
             if (dsp_comp_hub.dsp_shared->monitor_vlm != DisplayConsts::VLM_NONE)

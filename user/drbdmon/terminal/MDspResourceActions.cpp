@@ -225,7 +225,14 @@ void MDspResourceActions::display_content()
     {
         ResourcesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
         const size_t count = selection_map.get_size();
-        dsp_comp_hub.dsp_io->write_fmt("%lu selected resources", static_cast<unsigned long> (count));
+        if (count > 1)
+        {
+            dsp_comp_hub.dsp_io->write_fmt("%lu selected resources", static_cast<unsigned long> (count));
+        }
+        else
+        {
+            dsp_comp_hub.dsp_io->write_fmt("%lu selected resource", static_cast<unsigned long> (count));
+        }
     }
     else
     if (!dsp_comp_hub.dsp_shared->monitor_rsc.empty())
