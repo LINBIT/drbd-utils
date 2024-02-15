@@ -811,7 +811,7 @@ bool MDspVolumes::is_problem_mode(DrbdResource* const rsc)
 
 void MDspVolumes::synchronize_data()
 {
-    dsp_comp_hub.dsp_shared->monitor_vlm = cursor_vlm;
+    dsp_comp_hub.dsp_shared->update_monitor_vlm(cursor_vlm);
 }
 
 void MDspVolumes::notify_data_updated()
