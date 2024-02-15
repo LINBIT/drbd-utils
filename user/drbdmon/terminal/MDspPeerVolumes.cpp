@@ -369,6 +369,7 @@ void MDspPeerVolumes::display_activated()
     }
     displayed_rsc = dsp_comp_hub.dsp_shared->monitor_rsc;
     displayed_con = dsp_comp_hub.dsp_shared->monitor_con;
+    cursor_vlm = dsp_comp_hub.dsp_shared->monitor_peer_vlm;
     dsp_comp_hub.dsp_shared->ovrd_peer_volume_selection = false;
 }
 
@@ -392,11 +393,11 @@ void MDspPeerVolumes::synchronize_data()
 
 void MDspPeerVolumes::notify_data_updated()
 {
-    if (displayed_rsc != dsp_comp_hub.dsp_shared->monitor_rsc ||
-        displayed_con != dsp_comp_hub.dsp_shared->monitor_con)
+    if (displayed_rsc != dsp_comp_hub.dsp_shared->monitor_rsc)
     {
         reset_display();
     }
+    displayed_con = dsp_comp_hub.dsp_shared->monitor_con;
     cursor_vlm = dsp_comp_hub.dsp_shared->monitor_peer_vlm;
     if (!is_cursor_nav())
     {

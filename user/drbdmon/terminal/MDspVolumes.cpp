@@ -44,6 +44,7 @@ void MDspVolumes::display_activated()
         reset_display();
     }
     displayed_rsc = dsp_comp_hub.dsp_shared->monitor_rsc;
+    cursor_vlm = dsp_comp_hub.dsp_shared->monitor_vlm;
     dsp_comp_hub.dsp_shared->ovrd_volume_selection = false;
 }
 

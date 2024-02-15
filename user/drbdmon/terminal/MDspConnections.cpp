@@ -40,13 +40,10 @@ void MDspConnections::display_activated()
 {
     if (displayed_rsc != dsp_comp_hub.dsp_shared->monitor_rsc)
     {
-        displayed_rsc = dsp_comp_hub.dsp_shared->monitor_rsc;
-        cursor_con = dsp_comp_hub.dsp_shared->monitor_con;
-        if (cursor_con.empty())
-        {
-            set_page_nr(1);
-        }
+        reset_display();
     }
+    displayed_rsc = dsp_comp_hub.dsp_shared->monitor_rsc;
+    cursor_con = dsp_comp_hub.dsp_shared->monitor_con;
     dsp_comp_hub.dsp_shared->ovrd_connection_selection = false;
 }
 
