@@ -307,17 +307,20 @@ bool MDspVolumes::key_pressed(const uint32_t key)
             intercepted = true;
         }
         else
-        if (is_cursor_nav() || dsp_comp_hub.dsp_shared->have_volumes_selection())
+        if (is_cursor_nav())
+        {
+            if (key == KeyCodes::ENTER)
+            {
+                dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::VLM_DETAIL);
+                intercepted = true;
+            }
+        }
+
+        if (!intercepted && (is_cursor_nav() || dsp_comp_hub.dsp_shared->have_volumes_selection()))
         {
             if (key == static_cast<uint32_t> ('A') || key == static_cast<uint32_t> ('a'))
             {
                 dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::VLM_ACTIONS);
-                intercepted = true;
-            }
-            else
-            if (key == KeyCodes::ENTER)
-            {
-                dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::VLM_DETAIL);
                 intercepted = true;
             }
         }
