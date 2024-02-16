@@ -772,6 +772,7 @@ void DisplayCommonImpl::command_completion(
 ) const
 {
     bool unique = true;
+    bool completed_drbd_cmd = false;
     std::string completion;
     if (prefix == "d" || prefix == "D")
     {
@@ -786,12 +787,13 @@ void DisplayCommonImpl::command_completion(
         if (cmd_scope_drbd || completion.empty())
         {
             unique = dsp_comp_hub.drbd_cmd_exec->complete_command(prefix, completion);
+            completed_drbd_cmd = !completion.empty();
         }
     }
 
     if (!completion.empty())
     {
-        std::string updated_command = cmd_scope_drbd ? "//" : "/";
+        std::string updated_command = completed_drbd_cmd ? "//" : "/";
         updated_command.append(completion);
         if (!arguments.empty())
         {
@@ -805,7 +807,7 @@ void DisplayCommonImpl::command_completion(
         }
         dsp_comp_hub.command_line->set_text(updated_command);
         dsp_comp_hub.command_line->set_cursor_position(
-            completion.length() + (cmd_scope_drbd ? 2 : 1) + (unique ? 1 : 0)
+            completion.length() + (completed_drbd_cmd ? 2 : 1) + (unique ? 1 : 0)
         );
         dsp_comp_hub.command_line->display();
         dsp_comp_hub.command_line->cursor();
