@@ -25,7 +25,8 @@ GlobalCommandsImpl::GlobalCommandsImpl(ComponentsHub& comp_hub, Configuration& c
     entry_cursor(&cmd_names::KEY_CMD_CURSOR, &GlobalCommandsImpl::local_command),
     entry_resource(&cmd_names::KEY_CMD_RESOURCE, &GlobalCommandsImpl::cmd_resource),
     entry_connection(&cmd_names::KEY_CMD_CONNECTION, &GlobalCommandsImpl::cmd_connection),
-    entry_volume(&cmd_names::KEY_CMD_VOLUME, &GlobalCommandsImpl::cmd_volume)
+    entry_volume(&cmd_names::KEY_CMD_VOLUME, &GlobalCommandsImpl::cmd_volume),
+    entry_close(&cmd_names::KEY_CMD_CLOSE, &GlobalCommandsImpl::cmd_close)
 {
     add_command(entry_exit);
     add_command(entry_display);
@@ -40,6 +41,7 @@ GlobalCommandsImpl::GlobalCommandsImpl(ComponentsHub& comp_hub, Configuration& c
     add_command(entry_resource);
     add_command(entry_connection);
     add_command(entry_volume);
+    add_command(entry_close);
 }
 
 GlobalCommandsImpl::~GlobalCommandsImpl() noexcept
@@ -300,6 +302,15 @@ bool GlobalCommandsImpl::cmd_volume(const std::string& command, StringTokenizer&
             }
         }
     }
+    return accepted;
+}
+
+bool GlobalCommandsImpl::cmd_close(const std::string& command, StringTokenizer& tokenizer)
+{
+    bool accepted = true;
+
+    dsp_comp_hub.dsp_selector->leave_display();
+
     return accepted;
 }
 

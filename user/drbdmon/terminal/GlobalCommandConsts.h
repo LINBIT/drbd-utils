@@ -19,6 +19,7 @@ namespace cmd_names
     extern const std::string    KEY_CMD_RESOURCE;
     extern const std::string    KEY_CMD_CONNECTION;
     extern const std::string    KEY_CMD_VOLUME;
+    extern const std::string    KEY_CMD_CLOSE;
 }
 
 #endif /* GLOBALCOMMANDCONSTS_H */
