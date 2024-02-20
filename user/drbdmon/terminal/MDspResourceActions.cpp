@@ -530,8 +530,9 @@ void MDspResourceActions::action_invalidate(const std::string& rsc_name)
 
     std::string text;
     text.reserve(DisplayConsts::ACTION_DESC_PREALLOC);
-    text.append("Invalidate data & resync resource ");
+    text.append("Invalidate local data, resource ");
     text.append(rsc_name);
+    text.append(", all volumes");
 
     command->set_description(text);
 

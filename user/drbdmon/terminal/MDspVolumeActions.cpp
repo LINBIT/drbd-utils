@@ -288,7 +288,7 @@ void MDspVolumeActions::action_invalidate(const std::string& rsc_name, const uin
 
     std::string text;
     text.reserve(DisplayConsts::ACTION_DESC_PREALLOC);
-    text.append("Invalidate data, resource ");
+    text.append("Invalidate local data, resource ");
     text.append(rsc_name);
     text.append(", volume ");
     text.append(std::to_string(static_cast<unsigned int> (vlm_nr)));
