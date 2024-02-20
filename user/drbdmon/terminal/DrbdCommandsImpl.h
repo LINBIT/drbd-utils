@@ -23,13 +23,18 @@ class DrbdCommandsImpl : public DrbdCommands, public CommandsBase<DrbdCommandsIm
     static const std::string    KEY_CMD_PRIMARY;
     static const std::string    KEY_CMD_FORCE_PRIMARY;
     static const std::string    KEY_CMD_SECONDARY;
+    static const std::string    KEY_CMD_FORCE_SECONDARY;
     static const std::string    KEY_CMD_CONNECT;
     static const std::string    KEY_CMD_DISCONNECT;
+    static const std::string    KEY_CMD_FORCE_DISCONNECT;
     static const std::string    KEY_CMD_ATTACH;
     static const std::string    KEY_CMD_DETACH;
     static const std::string    KEY_CMD_DISCARD_CONNECT;
     static const std::string    KEY_CMD_VERIFY;
     static const std::string    KEY_CMD_INVALIDATE;
+    static const std::string    KEY_CMD_INVALIDATE_REMOTE;
+    static const std::string    KEY_CMD_PAUSE_SYNC;
+    static const std::string    KEY_CMD_RESUME_SYNC;
 
     static const size_t         STRING_PREALLOC_LENGTH;
 
@@ -43,6 +48,11 @@ class DrbdCommandsImpl : public DrbdCommands, public CommandsBase<DrbdCommandsIm
     typedef void (DrbdCommandsImpl::*exec_rsc_type)(const std::string& rsc_name);
     typedef void (DrbdCommandsImpl::*exec_con_type)(const std::string& rsc_name, const std::string& con_name);
     typedef void (DrbdCommandsImpl::*exec_vlm_type)(const std::string& rsc_name, const uint16_t vlm_nr);
+    typedef void (DrbdCommandsImpl::*exec_peer_vlm_type)(
+        const std::string&  rsc_name,
+        const std::string&  con_name,
+        const uint16_t      vlm_nr
+    );
 
     const ComponentsHub& dsp_comp_hub;
 
@@ -54,13 +64,18 @@ class DrbdCommandsImpl : public DrbdCommands, public CommandsBase<DrbdCommandsIm
     Entry entry_primary;
     Entry entry_force_primary;
     Entry entry_secondary;
+    Entry entry_force_secondary;
     Entry entry_connect;
     Entry entry_disconnect;
+    Entry entry_force_disconnect;
     Entry entry_attach;
     Entry entry_detach;
     Entry entry_discard_connect;
     Entry entry_verify;
     Entry entry_invalidate;
+    Entry entry_invalidate_remote;
+    Entry entry_pause_sync;
+    Entry entry_resume_sync;
 
     bool cmd_start(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_stop(const std::string& command, StringTokenizer& tokenizer);
@@ -68,9 +83,11 @@ class DrbdCommandsImpl : public DrbdCommands, public CommandsBase<DrbdCommandsIm
     bool cmd_primary(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_force_primary(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_secondary(const std::string& command, StringTokenizer& tokenizer);
+    bool cmd_force_secondary(const std::string& command, StringTokenizer& tokenizer);
 
     bool cmd_connect(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_disconnect(const std::string& command, StringTokenizer& tokenizer);
+    bool cmd_force_disconnect(const std::string& command, StringTokenizer& tokenizer);
 
     bool cmd_attach(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_detach(const std::string& command, StringTokenizer& tokenizer);
@@ -78,10 +95,15 @@ class DrbdCommandsImpl : public DrbdCommands, public CommandsBase<DrbdCommandsIm
     bool cmd_discard_connect(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_verify(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_invalidate(const std::string& command, StringTokenizer& tokenizer);
+    bool cmd_invalidate_remote(const std::string& command, StringTokenizer& tokenizer);
+
+    bool cmd_pause_sync(const std::string& command, StringTokenizer& tokenizer);
+    bool cmd_resume_sync(const std::string& command, StringTokenizer& tokenizer);
 
     bool exec_for_resources(const std::string& command, StringTokenizer& tokenizer, exec_rsc_type exec_func);
     bool exec_for_connections(const std::string& command, StringTokenizer& tokenizer, exec_con_type exec_func);
     bool exec_for_volumes(const std::string& command, StringTokenizer& tokenizer, exec_vlm_type exec_func);
+    bool exec_for_peer_volumes(const std::string& command, StringTokenizer& tokenizer, exec_peer_vlm_type exec_func);
 
     void exec_start(const std::string& rsc_name);
     void exec_stop(const std::string& rsc_name);
@@ -89,9 +111,11 @@ class DrbdCommandsImpl : public DrbdCommands, public CommandsBase<DrbdCommandsIm
     void exec_primary(const std::string& rsc_name);
     void exec_force_primary(const std::string& rsc_name);
     void exec_secondary(const std::string& rsc_name);
+    void exec_force_secondary(const std::string& rsc_name);
 
     void exec_connect(const std::string& rsc_name, const std::string& con_name);
     void exec_disconnect(const std::string& rsc_name, const std::string& con_name);
+    void exec_force_disconnect(const std::string& rsc_name, const std::string& con_name);
 
     void exec_attach(const std::string& rsc_name, const uint16_t vlm_nr);
     void exec_detach(const std::string& rsc_name, const uint16_t vlm_nr);
@@ -99,6 +123,10 @@ class DrbdCommandsImpl : public DrbdCommands, public CommandsBase<DrbdCommandsIm
     void exec_discard_connect(const std::string& rsc_name, const std::string& con_name);
     void exec_verify(const std::string& rsc_name, const std::string& con_name, const uint16_t vlm_nr);
     void exec_invalidate(const std::string& rsc_name, const uint16_t vlm_nr);
+    void exec_invalidate_remote(const std::string& rsc_name, const std::string& con_name, const uint16_t vlm_nr);
+
+    void exec_pause_sync(const std::string& rsc_name, const std::string& con_name, const uint16_t vlm_nr);
+    void exec_resume_sync(const std::string& rsc_name, const std::string& con_name, const uint16_t vlm_nr);
 
     void get_resource_name(const std::string& argument, std::string& rsc_name);
     void get_connection_name(const std::string& argument, std::string& con_name);
@@ -107,6 +135,7 @@ class DrbdCommandsImpl : public DrbdCommands, public CommandsBase<DrbdCommandsIm
     bool can_run_resource_cmd();
     bool can_run_connection_cmd();
     bool can_run_volume_cmd();
+    bool can_run_peer_volume_cmd();
 
     void queue_command(std::unique_ptr<CmdLine>& command);
 };
