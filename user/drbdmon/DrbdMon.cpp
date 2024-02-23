@@ -163,6 +163,7 @@ void DrbdMon::run()
                     rsc_map,
                     prb_rsc_map,
                     log,
+                    debug_log,
                     config,
                     node_name
                 );

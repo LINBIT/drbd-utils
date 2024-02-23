@@ -37,6 +37,7 @@ class ComponentsHub
     ResourcesMap*           rsc_map         {nullptr};
     ResourcesMap*           prb_rsc_map     {nullptr};
     MessageLog*             log             {nullptr};
+    MessageLog*             debug_log       {nullptr};
     GlobalCommands*         global_cmd_exec {nullptr};
     DrbdCommands*           drbd_cmd_exec   {nullptr};
     const Configuration*    config          {nullptr};

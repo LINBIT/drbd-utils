@@ -25,7 +25,9 @@ namespace dspid
     extern const DisplayId ID_SYNC_LIST;
     extern const DisplayId ID_HELP_IDX;
     extern const DisplayId ID_LOG_VIEW;
+    extern const DisplayId ID_DEBUG_LOG_VIEW;
     extern const DisplayId ID_MSG_VIEW;
+    extern const DisplayId ID_DEBUG_MSG_VIEW;
     extern const DisplayId ID_RSC_ACT;
     extern const DisplayId ID_VLM_ACT;
     extern const DisplayId ID_CON_ACT;

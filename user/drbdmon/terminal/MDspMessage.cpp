@@ -6,8 +6,9 @@
 
 const uint16_t  MDspMessage::MAX_MSG_TEXT_WIDTH = 160;
 
-MDspMessage::MDspMessage(const ComponentsHub& comp_hub):
+MDspMessage::MDspMessage(const ComponentsHub& comp_hub, MessageLog& log_ref):
     MDspBase::MDspBase(comp_hub),
+    log(log_ref),
     format_text(comp_hub)
 {
 }
@@ -18,7 +19,9 @@ MDspMessage::~MDspMessage() noexcept
 
 void MDspMessage::display_content()
 {
-    dsp_comp_hub.dsp_common->display_page_id(DisplayId::MDSP_MSG_VIEW);
+    dsp_comp_hub.dsp_common->display_page_id(
+        (&log == dsp_comp_hub.debug_log) ? DisplayId::MDSP_DEBUG_MSG_VIEW : DisplayId::MDSP_MSG_VIEW
+    );
 
     uint32_t current_line = DisplayConsts::PAGE_NAV_Y + 1;
     if (have_message)
@@ -165,11 +168,13 @@ void MDspMessage::display_activated()
     saved_term_rows = 0;
     have_message = false;
 
-    if (dsp_comp_hub.dsp_shared->message_id != MessageLog::ID_NONE)
+    const uint64_t message_id = (&log == dsp_comp_hub.debug_log) ?
+        dsp_comp_hub.dsp_shared->debug_message_id : dsp_comp_hub.dsp_shared->message_id;
+    if (message_id != MessageLog::ID_NONE)
     {
-        std::unique_lock<std::recursive_mutex> lock(dsp_comp_hub.log->queue_lock);
+        std::unique_lock<std::recursive_mutex> lock(log.queue_lock);
 
-        MessageLog::Entry* log_entry = dsp_comp_hub.log->get_entry(dsp_comp_hub.dsp_shared->message_id);
+        MessageLog::Entry* log_entry = log.get_entry(message_id);
         if (log_entry != nullptr)
         {
             level = log_entry->get_log_level();

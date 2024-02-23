@@ -46,6 +46,7 @@ DisplayController::DisplayController(
     ResourcesMap&               rsc_map_ref,
     ResourcesMap&               prb_rsc_map_ref,
     MessageLog&                 log_ref,
+    MessageLog&                 debug_log_ref,
     Configuration&              config_ref,
     const std::string* const    node_name_ptr
 ):
@@ -73,6 +74,7 @@ DisplayController::DisplayController(
     dsp_comp_hub_mgr->rsc_map           = &rsc_map_ref;
     dsp_comp_hub_mgr->prb_rsc_map       = &prb_rsc_map_ref;
     dsp_comp_hub_mgr->log               = &log_ref;
+    dsp_comp_hub_mgr->debug_log         = &debug_log_ref;
     dsp_comp_hub_mgr->node_name         = node_name_ptr;
     dsp_comp_hub_mgr->style_coll        = dsp_styles_mgr.get();
     dsp_comp_hub_mgr->ansi_ctl          = ansi_ctl_mgr.get();
@@ -226,10 +228,16 @@ DisplayController::DisplayController(
             dynamic_cast<ModularDisplay*> (new MDspHelp(dsp_comp_hub))
         );
         log_view_mgr = std::unique_ptr<ModularDisplay>(
-            dynamic_cast<ModularDisplay*> (new MDspLogViewer(dsp_comp_hub))
+            dynamic_cast<ModularDisplay*> (new MDspLogViewer(dsp_comp_hub, log_ref))
+        );
+        debug_log_view_mgr = std::unique_ptr<ModularDisplay>(
+            dynamic_cast<ModularDisplay*> (new MDspLogViewer(dsp_comp_hub, debug_log_ref))
         );
         msg_view_mgr = std::unique_ptr<ModularDisplay>(
-            dynamic_cast<ModularDisplay*> (new MDspMessage(dsp_comp_hub))
+            dynamic_cast<ModularDisplay*> (new MDspMessage(dsp_comp_hub, log_ref))
+        );
+        debug_msg_view_mgr = std::unique_ptr<ModularDisplay>(
+            dynamic_cast<ModularDisplay*> (new MDspMessage(dsp_comp_hub, debug_log_ref))
         );
         pgm_info_mgr = std::unique_ptr<ModularDisplay>(
             dynamic_cast<ModularDisplay*> (new MDspPgmInfo(dsp_comp_hub))
@@ -736,8 +744,14 @@ void DisplayController::get_display(
         case DisplayId::display_page::LOG_VIEWER:
             dsp_obj = log_view_mgr.get();
             break;
+        case DisplayId::display_page::DEBUG_LOG_VIEWER:
+            dsp_obj = debug_log_view_mgr.get();
+            break;
         case DisplayId::display_page::MSG_VIEWER:
             dsp_obj = msg_view_mgr.get();
+            break;
+        case DisplayId::display_page::DEBUG_MSG_VIEWER:
+            dsp_obj = debug_msg_view_mgr.get();
             break;
         case DisplayId::display_page::RSC_ACTIONS:
             dsp_obj = resource_actions_mgr.get();

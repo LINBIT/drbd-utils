@@ -21,7 +21,9 @@ namespace dspid
     const DisplayId ID_HELP_IDX(&DisplayId::MDSP_HELP_IDX, DisplayId::display_page::HELP_IDX);
     const DisplayId ID_SYNC_LIST(&DisplayId::MDSP_SYNC_LIST, DisplayId::display_page::SYNC_LIST);
     const DisplayId ID_LOG_VIEW(&DisplayId::MDSP_LOG_VIEW, DisplayId::display_page::LOG_VIEWER);
+    const DisplayId ID_DEBUG_LOG_VIEW(&DisplayId::MDSP_DEBUG_LOG_VIEW, DisplayId::display_page::DEBUG_LOG_VIEWER);
     const DisplayId ID_MSG_VIEW(&DisplayId::MDSP_MSG_VIEW, DisplayId::display_page::MSG_VIEWER);
+    const DisplayId ID_DEBUG_MSG_VIEW(&DisplayId::MDSP_DEBUG_MSG_VIEW, DisplayId::display_page::DEBUG_MSG_VIEWER);
     const DisplayId ID_RSC_ACT(&DisplayId::MDSP_RSC_ACT, DisplayId::display_page::RSC_ACTIONS);
     const DisplayId ID_VLM_ACT(&DisplayId::MDSP_VLM_ACT, DisplayId::display_page::VLM_ACTIONS);
     const DisplayId ID_CON_ACT(&DisplayId::MDSP_CON_ACT, DisplayId::display_page::CON_ACTIONS);
@@ -51,7 +53,9 @@ namespace dspid
             map.insert(&DisplayId::MDSP_HELP_IDX,           &ID_HELP_IDX);
             map.insert(&DisplayId::MDSP_SYNC_LIST,          &ID_SYNC_LIST);
             map.insert(&DisplayId::MDSP_LOG_VIEW,           &ID_LOG_VIEW);
+            map.insert(&DisplayId::MDSP_DEBUG_LOG_VIEW,     &ID_DEBUG_LOG_VIEW);
             map.insert(&DisplayId::MDSP_MSG_VIEW,           &ID_MSG_VIEW);
+            map.insert(&DisplayId::MDSP_DEBUG_MSG_VIEW,     &ID_DEBUG_MSG_VIEW);
             map.insert(&DisplayId::MDSP_RSC_ACT,            &ID_RSC_ACT);
             map.insert(&DisplayId::MDSP_VLM_ACT,            &ID_VLM_ACT);
             map.insert(&DisplayId::MDSP_CON_ACT,            &ID_CON_ACT);

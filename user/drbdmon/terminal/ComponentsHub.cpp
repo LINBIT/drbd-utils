@@ -46,6 +46,7 @@ void ComponentsHub::verify() const
         rsc_map == nullptr ||
         prb_rsc_map == nullptr ||
         log == nullptr ||
+        debug_log == nullptr ||
         node_name == nullptr ||
         ansi_ctl == nullptr ||
         style_coll == nullptr ||

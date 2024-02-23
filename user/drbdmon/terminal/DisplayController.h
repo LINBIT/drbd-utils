@@ -53,6 +53,7 @@ class DisplayController : public GenericDisplay, public DisplaySelector
         ResourcesMap&               rsc_map_ref,
         ResourcesMap&               prb_rsc_map_ref,
         MessageLog&                 log_ref,
+        MessageLog&                 debug_log_ref,
         Configuration&              config_ref,
         const std::string* const    node_name_ptr
     );
@@ -131,7 +132,9 @@ class DisplayController : public GenericDisplay, public DisplaySelector
     std::unique_ptr<ModularDisplay>     help_idx_mgr;
     std::unique_ptr<ModularDisplay>     help_view_mgr;
     std::unique_ptr<ModularDisplay>     log_view_mgr;
+    std::unique_ptr<ModularDisplay>     debug_log_view_mgr;
     std::unique_ptr<ModularDisplay>     msg_view_mgr;
+    std::unique_ptr<ModularDisplay>     debug_msg_view_mgr;
     std::unique_ptr<ModularDisplay>     pgm_info_mgr;
     std::unique_ptr<ModularDisplay>     config_mgr;
 

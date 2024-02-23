@@ -24,6 +24,8 @@ class SharedData
     uint16_t    monitor_peer_vlm    {DisplayConsts::VLM_NONE};
     // The selected message in the message log
     uint64_t	message_id			{MessageLog::ID_NONE};
+    // The selected message in the debug message log
+    uint64_t    debug_message_id    {MessageLog::ID_NONE};
     // The selected task for a task details display
     uint64_t    task_id             {SubProcessQueue::TASKQ_NONE};
 
@@ -45,6 +47,7 @@ class SharedData
     std::unique_ptr<TaskEntryMap>   selected_finq_entries;
 
     std::unique_ptr<MessageMap>     selected_log_entries;
+    std::unique_ptr<MessageMap>     selected_debug_log_entries;
 
     bool    activate_tasks  {true};
 

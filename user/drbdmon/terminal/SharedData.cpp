@@ -14,6 +14,7 @@ SharedData::SharedData()
     selected_finq_entries = std::unique_ptr<TaskEntryMap>(new TaskEntryMap(&comparators::compare<uint64_t>));
 
     selected_log_entries = std::unique_ptr<MessageMap>(new MessageMap(&comparators::compare<uint64_t>));
+    selected_debug_log_entries = std::unique_ptr<MessageMap>(new MessageMap(&comparators::compare<uint64_t>));
 }
 
 SharedData::~SharedData() noexcept
@@ -29,6 +30,7 @@ SharedData::~SharedData() noexcept
     generic_id_clear_selection(*selected_finq_entries);
 
     generic_id_clear_selection(*selected_log_entries);
+    generic_id_clear_selection(*selected_debug_log_entries);
 }
 
 void SharedData::update_monitor_rsc(const std::string& rsc_name)

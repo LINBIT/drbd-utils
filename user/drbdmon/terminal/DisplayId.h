@@ -26,7 +26,9 @@ class DisplayId
         HELP_VIEWER,
         SYNC_LIST,
         LOG_VIEWER,
+        DEBUG_LOG_VIEWER,
         MSG_VIEWER,
+        DEBUG_MSG_VIEWER,
         RSC_ACTIONS,
         VLM_ACTIONS,
         CON_ACTIONS,
@@ -52,7 +54,9 @@ class DisplayId
     static const std::string    MDSP_HELP_IDX;
     static const std::string    MDSP_SYNC_LIST;
     static const std::string    MDSP_LOG_VIEW;
+    static const std::string    MDSP_DEBUG_LOG_VIEW;
     static const std::string    MDSP_MSG_VIEW;
+    static const std::string    MDSP_DEBUG_MSG_VIEW;
     static const std::string    MDSP_RSC_ACT;
     static const std::string    MDSP_VLM_ACT;
     static const std::string    MDSP_CON_ACT;

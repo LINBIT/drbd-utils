@@ -2,6 +2,7 @@
 #define MDSPMESSAGE_H
 
 #include <default_types.h>
+#include <MessageLog.h>
 #include <terminal/MDspBase.h>
 #include <terminal/TextColumn.h>
 #include <MessageLog.h>
@@ -11,7 +12,7 @@ class MDspMessage : public MDspBase
   public:
     static const uint16_t   MAX_MSG_TEXT_WIDTH;
 
-    MDspMessage(const ComponentsHub& comp_hub);
+    MDspMessage(const ComponentsHub& comp_hub, MessageLog& log_ref);
     virtual ~MDspMessage() noexcept;
 
     virtual void display_content() override;
@@ -35,6 +36,8 @@ class MDspMessage : public MDspBase
     virtual uint64_t get_update_mask() noexcept override;
 
   private:
+    MessageLog& log;
+
     uint16_t    saved_term_cols     {0};
     uint16_t    saved_term_rows     {0};
     TextColumn  format_text;
