@@ -34,6 +34,15 @@ void MDspTaskDetail::display_content()
         SubProcessQueue::Entry* const task_entry = dsp_comp_hub.sub_proc_queue->get_entry(task_id);
         if (task_entry != nullptr)
         {
+            if (task_id != saved_task_id)
+            {
+                if (saved_task_id != SubProcessQueue::TASKQ_NONE)
+                {
+                    reset();
+                }
+                saved_task_id = task_id;
+            }
+
             SubProcessQueue::entry_state_type local_task_state =
                 dsp_comp_hub.sub_proc_queue->get_entry_state(task_entry);
 
@@ -392,6 +401,7 @@ void MDspTaskDetail::reset()
     exit_code           = 0;
     proc_info.clear();
     task_state          = SubProcessQueue::entry_state_type::INVALID_ID;
+    saved_task_id       = SubProcessQueue::TASKQ_NONE;
 }
 
 bool MDspTaskDetail::is_task_state(const uint64_t task_id, const SubProcessQueue::entry_state_type query_task_state)

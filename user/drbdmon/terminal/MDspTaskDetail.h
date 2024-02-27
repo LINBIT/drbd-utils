@@ -27,6 +27,7 @@ class MDspTaskDetail : public MDspMenuBase
     TextColumn  format_text;
     uint16_t    saved_term_cols     {0};
     uint16_t    saved_term_rows     {0};
+    uint64_t    saved_task_id       {SubProcessQueue::TASKQ_NONE};
     bool        fin_initialized     {false};
     bool        info_initialized    {false};
     uint64_t    proc_id             {0};
