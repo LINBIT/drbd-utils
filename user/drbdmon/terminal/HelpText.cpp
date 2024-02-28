@@ -808,10 +808,14 @@ namespace helptext
         "    Forces promotion of an inconsistent or outdated DRBD resource to the Primary role\n"
         "\x1B\x04" "//secondary" "\x1B\xFF" "\n"
         "    Demotes a DRBD resource to the Secondary role\n"
+        "\x1B\x04" "//force-secondary" "\x1B\xFF" "\n"
+        "    Forces demotion of a DRBD resource to the Secondary role\n"
         "\x1B\x04" "//connect" "\x1B\xFF" "\n"
         "    Connects a resource's replication link\n"
         "\x1B\x04" "//disconnect" "\x1B\xFF" "\n"
         "    Disconnects a resource's replication link\n"
+        "\x1B\x04" "//force-disconnect" "\x1B\xFF" "\n"
+        "    Forces disconnection of a resource's replication link\n"
         "\x1B\x04" "//attach" "\x1B\xFF" "\n"
         "    Attaches local backing storage to a DRBD volume\n"
         "\x1B\x04" "//detach" "\x1B\xFF" "\n"
@@ -822,9 +826,17 @@ namespace helptext
         "\x1B\x04" "//verify" "\x1B\xFF" "\n"
         "    Starts a DRBD verification process to compare the data on the local volume to the data on the volume "
         "of a peer node's resource\n"
+        "\x1B\x04" "//pause-sync" "\x1B\xFF" "\n"
+        "    Pauses resynchronization of a volume\n"
+        "\x1B\x04" "//resume-sync" "\x1B\xFF" "\n"
+        "    Resumes resynchronization of a volume\n"
         "\x1B\x04" "//invalidate" "\x1B\xFF" "\n"
         "    Invalidates the data on a local DRBD volume, thereby causing a full resynchronization of the "
-        "data from the volume of a peer node's resource\n";
+        "data using another node as the data source\n"
+        "\x1B\x04" "//invalidate-remote" "\x1B\xFF" "\n"
+        "    Invalidates the data on a DRBD peer volume, thereby causing a full resynchronization of the "
+        "data on a remote node, using another node as the data source\n";
+
 
     const char* const MAIN_MENU_HELP_1 =
         "\x1B\x01" "Help - Main menu" "\x1B\xFF" "\n"
