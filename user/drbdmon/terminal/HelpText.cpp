@@ -728,6 +728,7 @@ namespace helptext
         "\x1B\x01" "Description of available commands" "\x1B\xFF" "\n"
         "\n"
         "The following DRBDmon commands are available:\n"
+
         "\x1B\x04" "/display" "\x1B\xFF" "\n"
         "    Switches to the display the identifier of which is specified in the argument to the command. "
         "The identifier of a display is shown below the title bar in the upper left corner of the "
@@ -736,14 +737,68 @@ namespace helptext
         "        Switches to the main menu display\n"
         "    The string " "\x1B\x04" "/d" "\x1B\xFF" " always completes to the " "\x1B\x04" "/display" "\x1B\xFF"
         " command for convenience.\n"
+
+        "\x1B\x04" "/cursor" "\x1B\xFF" "\n"
+        "    Positions the cursor on the selected item\n"
+        "    This command is available on the following displays:\n"
+        "        Resource list\n"
+        "        Connection list\n"
+        "        Volume list\n"
+        "        Peer volume list\n"
+        "    The " "\x1B\x03" "*" "\x1B\xFF" " character is interpreted as a wildcard matching any string "
+        "    on the resource list and connection list displays. If a wildcard character is present, the "
+        "    argument to the " "\x1B\x04" "/cursor" "\x1B\xFF" " command is interpreted as a pattern, "
+        "    and the command will select the first resource or connection, respectively, where the name "
+        "    matches the pattern. If there is no match, the command is rejected.\n"
+        "    If no wildcard character is present, then the command is treated as an alias for the "
+        "    " "\x1B\x04" "/resource" "\x1BxFF" " or " "\x1B\x04" "/connection" "\x1B\xFF" " command, "
+        "    respectively and will position the cursor on item with the literal name specified in the "
+        "    argument to the command.\n"
+        "    A wildcard character is not supported on the volume list and peer volume list displays, "
+        "    the argument must be a volume number, and the command is treated as an alias for the "
+        "    " "\x1B\x04" "/volume" "\x1B\xFF" " or " "\x1B\x04" "/peer-volume" "\x1B\xFF" " comamnd, "
+        "    respectively.\n"
+
+        "\x1B\x04" "/resource" "\x1B\xFF" "\n"
+        "    Positions the cursor on the resource with the literal name specified in the argument "
+        " to the command\n"
+
+        "\x1B\x04" "/connection" "\x1B\xFF" "\n"
+        "    Positions the cursor on the connection with the literal name specified in the argument "
+        " to the command\n"
+
+        "\x1B\x04" "/volume" "\x1B\xFF" "\n"
+        "    Positions the cursor on the resource with the volume number specified in the argument "
+        " to the command\n"
+
+        "\x1B\x04" "/peer-volume" "\x1B\xFF" "\n"
+        "    Positions the cursor on the resource with the peer volume number specified in the argument "
+        " to the command\n"
+
+        "\x1B\x04" "/close" "\x1B\xFF" "\n"
+        "    Closes the current display\n"
+
+        "\x1B\x04" "/select" "\x1B\xFF" "\n"
+        "    Selects resources that have a resource name matching the specified pattern. The "
+        "\x1B\x03" "*" "\x1B\xFF" " character is interpreted as a wildcard matching any string.\n"
+
+        "\x1B\x04" "/deselect" "\x1B\xFF" "\n"
+        "    Deselects resources that have a resource name matching the specified pattern. The "
+        "\x1B\x03" "*" "\x1B\xFF" " character is interpreted as a wildcard matching any string.\n"
+
         "\x1B\x04" "/select-all" "\x1B\xFF" "\n"
         "    Selects all items of a list display. For example, running the /select-all command from the "
         "resource list display selects all resources. If only items with warnings or alerts are displayed due "
         "to a problem mode have been selected, only those items are selected.\n"
-        "\x1B\x04" "/clear-selection" "\x1B\xFF" "\n"
+
+        "\x1B\x04" "/deselect-all" "\x1B\xFF" "\n"
         "    Clears the selection of items of a list display. For example, running the "
-        "\x1B\x04" "/clear-selection" "\x1B\xFF"
+        "\x1B\x04" "/deselect-all" "\x1B\xFF"
         " command from the resource list display clears the selection of resources.\n"
+
+        "\x1B\x04" "/clear-selection" "\x1B\xFF" "\n"
+        "    This is an alias of the " "\x1B\x04" "/deselect-all" "\x1B\xFF" " command\n"
+
         "\x1B\x04" "/colors" "\x1B\xFF" "\n"
         "    Temporarily sets the selected color scheme.\n"
         "    Available color schemes are:\n"
@@ -757,6 +812,7 @@ namespace helptext
         "            16 colors scheme for terminals with a light background color\n"
         "        DEFAULT\n"
         "            Default color scheme\n"
+
         "\x1B\x04" "/charset" "\x1B\xFF" "\n"
         "    Temporarily sets the selected color scheme.\n"
         "    Available color schemes are:\n"
@@ -768,6 +824,7 @@ namespace helptext
         "            ASCII character set\n"
         "        DEFAULT\n"
         "            Default character set\n"
+
         "\x1B\x04" "/exit" "\x1B\xFF" "\n"
         "    Exits DRBDmon\n";
 
@@ -791,48 +848,68 @@ namespace helptext
         "\n"
         "\x1B\x01" "Description of available commands" "\x1B\xFF" "\n"
         "\n"
+
         "\x1B\x04" "//start" "\x1B\xFF" "\n"
         "    Starts a DRBD resource\n"
+
         "\x1B\x04" "//stop" "\x1B\xFF" "\n"
         "    Stops a DRBD resource\n"
+
         "\x1B\x04" "//up" "\x1B\xFF" "\n"
         "    Starts a DRBD resource (same as //start)\n"
+
         "\x1B\x04" "//down" "\x1B\xFF" "\n"
         "    Stops a DRBD resource (same as //stop)\n"
+
         "\x1B\x04" "//adjust" "\x1B\xFF" "\n"
         "    Adjusts a DRBD resource, in order to make its runtime state match the settings in its "
         "configuration file\n"
+
         "\x1B\x04" "//primary" "\x1B\xFF" "\n"
         "    Promotes a DRBD resource to the Primary role\n"
+
         "\x1B\x04" "//force-primary" "\x1B\xFF" "\n"
         "    Forces promotion of an inconsistent or outdated DRBD resource to the Primary role\n"
+
         "\x1B\x04" "//secondary" "\x1B\xFF" "\n"
         "    Demotes a DRBD resource to the Secondary role\n"
+
         "\x1B\x04" "//force-secondary" "\x1B\xFF" "\n"
         "    Forces demotion of a DRBD resource to the Secondary role\n"
+
         "\x1B\x04" "//connect" "\x1B\xFF" "\n"
         "    Connects a resource's replication link\n"
+
         "\x1B\x04" "//disconnect" "\x1B\xFF" "\n"
         "    Disconnects a resource's replication link\n"
+
         "\x1B\x04" "//force-disconnect" "\x1B\xFF" "\n"
         "    Forces disconnection of a resource's replication link\n"
+
         "\x1B\x04" "//attach" "\x1B\xFF" "\n"
         "    Attaches local backing storage to a DRBD volume\n"
+
         "\x1B\x04" "//detach" "\x1B\xFF" "\n"
         "    Detaches local backing storage from a DRBD volume\n"
+
         "\x1B\x04" "//connect-discard" "\x1B\xFF" "\n"
         "    Connects a resource's replication link and discard the local volumes' data changes, which will cause it "
         "to resynchronize with the volumes of a peer node's resource to resolve a split-brain situation\n"
+
         "\x1B\x04" "//verify" "\x1B\xFF" "\n"
         "    Starts a DRBD verification process to compare the data on the local volume to the data on the volume "
         "of a peer node's resource\n"
+
         "\x1B\x04" "//pause-sync" "\x1B\xFF" "\n"
         "    Pauses resynchronization of a volume\n"
+
         "\x1B\x04" "//resume-sync" "\x1B\xFF" "\n"
         "    Resumes resynchronization of a volume\n"
+
         "\x1B\x04" "//invalidate" "\x1B\xFF" "\n"
         "    Invalidates the data on a local DRBD volume, thereby causing a full resynchronization of the "
         "data using another node as the data source\n"
+
         "\x1B\x04" "//invalidate-remote" "\x1B\xFF" "\n"
         "    Invalidates the data on a DRBD peer volume, thereby causing a full resynchronization of the "
         "data on a remote node, using another node as the data source\n";
