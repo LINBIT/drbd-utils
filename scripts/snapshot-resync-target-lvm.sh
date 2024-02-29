@@ -64,7 +64,7 @@ fi
 set_vg_lv_size()
 {
 	local X
-	if ! X=$(lvs --noheadings --nosuffix --units s -o vg_name,lv_name,lv_size "$BACKING_BDEV") ; then
+	if ! X=$(lvs --config 'devices { filter=["r|/dev/drbd.*|"] }' --noheadings --nosuffix --units s -o vg_name,lv_name,lv_size "$BACKING_BDEV") ; then
 		# if lvs cannot tell me the info I need,
 		# this is:
 		echo "Cannot create snapshot of $BACKING_BDEV, apparently no LVM LV."
@@ -150,7 +150,7 @@ else
 				p;
 				q; }' < /proc/drbd) # unit KiB
 		SNAP_SIZE=$((OUT_OF_SYNC + SNAP_ADDITIONAL + LV_SIZE_K * SNAP_PERC / 100))
-		lvcreate -s -n $SNAP_NAME -L ${SNAP_SIZE}k $LVC_OPTIONS $VG_NAME/$LV_NAME
+		lvcreate --config 'devices { filter=["r|/dev/drbd.*|"] }' -s -n $SNAP_NAME -L ${SNAP_SIZE}k $LVC_OPTIONS $VG_NAME/$LV_NAME
 	)
 	RV=$?
 	[ $DISCONNECT_ON_ERROR = 0 ] && exit 0
