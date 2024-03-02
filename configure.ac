@@ -71,6 +71,11 @@ AC_ARG_WITH([udev],
 	[AS_HELP_STRING([--with-udev],
 			[Enable udev integration])],
 	[WITH_UDEV=$withval])
+AC_ARG_ENABLE([udevchecks],
+	[AS_HELP_STRING([--disable-udevchecks],
+			[Disable host udev version checks])],
+	[],
+	[enable_udevchecks=yes])
 AC_ARG_WITH([xen],
 	[AS_HELP_STRING([--with-xen],
 			[Enable Xen integration])],
@@ -315,7 +320,7 @@ if test -z $GIT; then
    AC_MSG_WARN(Cannot update buildtag without git. You may safely ignore this warning when building from a tarball.)
 fi
 
-if test $UDEVADM = false && test $UDEVINFO = false; then
+if test "x$enable_udevchecks" != "xno" && test $UDEVADM = false && test $UDEVINFO = false; then
    if test "$WITH_UDEV" = "yes"; then
      AC_MSG_WARN([udev support enabled, but neither udevadm nor udevinfo found on this system.])
    fi
@@ -423,7 +428,7 @@ else
     test -z $INITDIR && INITDIR="$sysconfdir/init.d"
 
     dnl Our udev rules file is known to work only with udev >= 85
-    if test "$WITH_UDEV" = "yes"; then
+    if test "x$enable_udevchecks" != "xno" && test "$WITH_UDEV" = "yes"; then
        udev_version=$( set -- $($UDEVADM version); echo $1 )
        if test -z "$udev_version"; then
 	    udev_version=$( set -- $($UDEVINFO -V); echo $3 )
