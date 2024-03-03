@@ -934,7 +934,7 @@ guess_if_pacemaker_will_fence()
 
 	# for further inspiration, see pacemaker:lib/pengine/unpack.c, determine_online_status_fencing()
 	[[ -z $in_ccm ]] && will_fence=true
-	[[ $crmd = "banned" ]] && will_fence=true
+	[[ $join = "banned" ]] && will_fence=true
 	if [[ ${expected-down} = "down" && $in_ccm = "false"  && $crmd != "online" ]]; then
 		: "pacemaker considers this as clean down"
 	elif [[ $in_ccm = false ]] || [[ $crmd != "online" ]]; then
