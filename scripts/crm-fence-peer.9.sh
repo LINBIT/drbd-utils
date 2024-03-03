@@ -888,6 +888,31 @@ guess_if_pacemaker_will_fence()
 		esac
 	done
 
+	# Copied from pacemaker-2.1.7:lib/pengine/unpack.c:
+	# Since crm_feature_set 3.18.0 (pacemaker-2.1.7):
+	#
+	# - in_ccm		::= <timestamp>|0
+	# Since when node has been a cluster member. A value 0 of means the
+	# node is not a cluster member.
+	# - crmd		::= <timestamp>|0
+	# Since when peer has been online in CPG. A value 0 means the peer
+	# is offline in CPG.
+	if [[ $in_ccm =~ ^[0-9]+$ ]]; then
+		if [[ $in_ccm = "0" ]]; then
+			in_ccm="false"
+		else
+			in_ccm="true"
+		fi
+	fi
+
+	if [[ $crmd =~ ^[0-9]+$ ]]; then
+		if [[ $crmd = "0" ]]; then
+			crmd="offline"
+		else
+			crmd="online"
+		fi
+	fi
+
 	# if it is not enabled, no point in waiting for it.
 	if ! $stonith_enabled ; then
 		# "normalize" the rest of the logic
