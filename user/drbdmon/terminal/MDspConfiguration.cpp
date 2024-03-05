@@ -721,6 +721,9 @@ void MDspConfiguration::opt_load_config()
 
         apply_config();
 
+        const std::string interval_str = std::to_string(static_cast<unsigned int> (config->dsp_interval));
+        input_display_interval.set_text(interval_str);
+
         action_message = action_message_type::MSG_CONFIG_LOADED;
         dsp_comp_hub.dsp_selector->refresh_display();
     }
@@ -754,6 +757,9 @@ void MDspConfiguration::opt_default_config()
     config->reset();
 
     apply_config();
+
+    const std::string interval_str = std::to_string(static_cast<unsigned int> (config->dsp_interval));
+    input_display_interval.set_text(interval_str);
 
     action_message = action_message_type::MSG_CONFIG_RESET;
 
