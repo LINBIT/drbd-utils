@@ -8,8 +8,8 @@
 #include <cstring>
 
 // Configuration Entry Store UUID
-// Variant 1 Version 4 (random): 6A454A5D-347A-498D-8E0A-6AD5F51A3399
-const std::string   CfgEntryStore::CES_UUID("\x6A\x45\x4A\x5D\x34\x7A\x49\x8D\x8E\x0A\x6A\xD5\xF5\1A\x33\x99");
+// Variant 1 Version 4 (random): 6A454A5D-347A-498D-8E0A-6AD5F5014133
+const std::string   CfgEntryStore::CES_UUID("\x6A\x45\x4A\x5D\x34\x7A\x49\x8D\x8E\x0A\x6A\xD5\xF5\x01\x41\x33");
 
 // Configuration Entry Store Version: Major version (16 bits), minor version (16 bits)
 // Minor versions are supposed to be backwards compatible
