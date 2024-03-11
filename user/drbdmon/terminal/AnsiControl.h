@@ -19,7 +19,7 @@ class AnsiControl
     static const std::string ANSI_FMT_CURSOR_POS;
 
     AnsiControl();
-    ~AnsiControl() noexcept;
+    virtual ~AnsiControl() noexcept;
 };
 
 #endif /* ANSICONTROL_H */
