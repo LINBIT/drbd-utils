@@ -208,6 +208,7 @@ static int cstate_scmd(const struct drbd_cmd *cm, struct genl_info *info, void *
 static int dstate_scmd(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
 static int uuids_scmd(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
 static int lk_bdev_scmd(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
+static int udev_scmd(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
 static int print_broadcast_events(const struct drbd_cmd *, struct genl_info *, void *u_ptr);
 static int w_connected_state(const struct drbd_cmd *, struct genl_info *, void *u_ptr);
 static int w_synced_state(const struct drbd_cmd *, struct genl_info *, void *u_ptr);
@@ -417,7 +418,8 @@ const struct drbd_cmd commands[] = {
 	 .ctx = &new_minor_cmd_ctx },
 
 	{"del-minor", CTX_MINOR, DRBD_ADM_DEL_MINOR, NO_PAYLOAD, del_minor_cmd, },
-	{"del-resource", CTX_RESOURCE, DRBD_ADM_DEL_RESOURCE, NO_PAYLOAD, del_resource_cmd, }
+	{"del-resource", CTX_RESOURCE, DRBD_ADM_DEL_RESOURCE, NO_PAYLOAD, del_resource_cmd, },
+	{"udev", CTX_MINOR, F_GET_CMD(udev_scmd), NO_PAYLOAD, .lockless=true, }
 };
 
 bool show_defaults;
@@ -2309,6 +2311,29 @@ static int down_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		free_minors(minors);
 		return print_config_error(rv, NULL);
 	}
+	return 0;
+}
+
+static int udev_scmd(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
+{
+	struct drbd_cfg_context cfg = { .ctx_volume = -1U };
+	struct disk_conf dc = { .disk_size = 0, };
+
+	if (!info) {
+		return 1;
+	}
+
+	drbd_cfg_context_from_attrs(&cfg, info);
+	disk_conf_from_attrs(&dc, info);
+
+	printf("DEVICE=drbd%u\n", ((struct drbd_genlmsghdr*)(info->userhdr))->minor);
+	printf("SYMLINK_BY_RES=drbd/by-res/%s/%u\n", cfg.ctx_resource_name, cfg.ctx_volume);
+
+	if (!strncmp("/dev/", dc.backing_dev, 5))
+		printf("SYMLINK_BY_DISK=drbd/by-disk/%s\n", dc.backing_dev + 5);
+	else if (dc.backing_dev[0])
+		printf("SYMLINK_BY_DISK=drbd/by-disk/%s\n", dc.backing_dev);
+
 	return 0;
 }
 

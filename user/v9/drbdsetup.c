@@ -179,6 +179,7 @@ static int cstate_cmd(struct drbd_cmd *cm, int argc, char **argv);
 static int dstate_cmd(struct drbd_cmd *cm, int argc, char **argv);
 static int check_resize_cmd(struct drbd_cmd *cm, int argc, char **argv);
 static int show_or_get_gi_cmd(struct drbd_cmd *cm, int argc, char **argv);
+static int udev_cmd(struct drbd_cmd *cm, int argc, char **argv);
 
 // sub commands for generic_get_cmd
        int print_event(struct drbd_cmd *, struct genl_info *, void *); /* is in drbdsetup_events2.c */
@@ -461,6 +462,9 @@ struct drbd_cmd commands[] = {
 		{ "new_name", T_new_resource_name, conv_str },
 		{ } },
 	.summary = "Rename a resource." },
+	{"udev", CTX_MINOR, 0, NO_PAYLOAD, udev_cmd,
+	.lockless = true,
+	.summary = "Generate output for udev rules."},
 };
 
 bool show_defaults;
@@ -3467,6 +3471,35 @@ static int dstate_cmd(struct drbd_cmd *cm, int argc, char **argv)
 				printf("/%s", drbd_disk_str(peer_device->info.peer_disk_state));
 		}
 		printf("\n");
+		found = true;
+		break;
+	}
+	free_devices(devices);
+
+	if (!found) {
+		fprintf(stderr, "%s: No such device\n", objname);
+		return 10;
+	}
+	return 0;
+}
+
+static int udev_cmd(struct drbd_cmd *cm, int argc, char **argv)
+{
+	struct devices_list *devices, *device;
+	bool found = false;
+
+	devices = list_devices(NULL);
+	for (device = devices; device; device = device->next) {
+		if (device->minor != minor)
+			continue;
+
+		printf("DEVICE=drbd%u\n", device->minor);
+		printf("SYMLINK_BY_RES=drbd/by-res/%s/%u\n", device->ctx.ctx_resource_name, device->ctx.ctx_volume);
+		if (!strncmp("/dev/", device->disk_conf.backing_dev, 5))
+			printf("SYMLINK_BY_DISK=drbd/by-disk/%s\n", device->disk_conf.backing_dev + 5);
+		else if (device->disk_conf.backing_dev[0])
+			printf("SYMLINK_BY_DISK=drbd/by-disk/%s\n", device->disk_conf.backing_dev);
+
 		found = true;
 		break;
 	}
