@@ -3,7 +3,7 @@
 SUBSYSTEM!="block", GOTO="drbd_end"
 KERNEL!="drbd*", GOTO="drbd_end"
 
-IMPORT{program}="@sbindir@/drbdadm sh-udev minor-%m"
+IMPORT{program}="@sbindir@/drbdsetup udev %m"
 
 # Use symlink from the environment if available
 # some udev version thought it was a good idea to change a long established
@@ -11,15 +11,6 @@ IMPORT{program}="@sbindir@/drbdadm sh-udev minor-%m"
 # therefore, recent enough drbdadm will no longer export space separated lists.
 ENV{SYMLINK_BY_DISK}!="", SYMLINK+="$env{SYMLINK_BY_DISK}"
 ENV{SYMLINK_BY_RES}!="", SYMLINK+="$env{SYMLINK_BY_RES}", GOTO="have_symlink"
-ENV{SYMLINK}!="", OPTIONS+="string_escape=none", SYMLINK="$env{SYMLINK}", GOTO="have_symlink"
-
-# Legacy rules for older DRBD 8.3 & 8.4 when drbdadm sh-udev did not yet export SYMLINK
-ENV{DISK}!="", SYMLINK+="drbd/by-disk/$env{DISK}"
-ENV{RESOURCE}!="", SYMLINK+="drbd/by-res/$env{RESOURCE}"
-
-LABEL="have_symlink"
-
-ENV{DEVICE}=="drbd_?*", SYMLINK+="$env{DEVICE}"
 ENV{SYSTEMD_WANTS}="drbd-graceful-shutdown.service"
 
 LABEL="drbd_end"
