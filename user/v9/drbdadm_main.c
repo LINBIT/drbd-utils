@@ -170,7 +170,6 @@ int do_register = 1;
 int adjust_more_than_one_resource = 0;
 char *drbdsetup = NULL;
 char *drbdmeta = NULL;
-char *drbdadm_83 = NULL;
 char *drbdadm_84 = NULL;
 char *drbd_proxy_ctl;
 char *sh_varname = NULL;

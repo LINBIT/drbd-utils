@@ -1,5 +1,5 @@
 /* These are common functions that are used across _all_ userspace,
- * ie. even across 9, 84, and 83.
+ * ie. even across 9, and 84.
  *
  * Deduplicated here for easier maintenance. */
 

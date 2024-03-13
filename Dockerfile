@@ -31,7 +31,7 @@ RUN cd ${HOME} && . "$NV" && \
   cd ${DRBD_UTILS_PKGNAME}-${DRBD_UTILS_VERSION} && \
   ./configure --with-prebuiltman && make drbd.spec && \
   rpmbuild -bb --define "debug_package %{nil}" \
-		--without drbdmon --with prebuiltman --without sbinsymlinks --without manual --without heartbeat --without xen --without 83support --without 84support drbd.spec
+		--without drbdmon --with prebuiltman --without sbinsymlinks --without manual --without heartbeat --without xen --without 84support drbd.spec
 
 
 FROM registry.access.redhat.com/ubi8/ubi

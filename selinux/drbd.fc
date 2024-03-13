@@ -1,8 +1,6 @@
 /etc/rc\.d/init\.d/drbd	--	gen_context(system_u:object_r:drbd_initrc_exec_t,s0)
 
-/lib/drbd/drbdadm-83	--	gen_context(system_u:object_r:drbd_exec_t,s0)
 /lib/drbd/drbdadm-84	--	gen_context(system_u:object_r:drbd_exec_t,s0)
-/lib/drbd/drbdsetup-83	--	gen_context(system_u:object_r:drbd_exec_t,s0)
 /lib/drbd/drbdsetup-84	--	gen_context(system_u:object_r:drbd_exec_t,s0)
 
 /sbin/drbdadm	--	gen_context(system_u:object_r:drbd_exec_t,s0)

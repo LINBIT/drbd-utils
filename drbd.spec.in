@@ -38,7 +38,6 @@
 %bcond_without sbinsymlinks
 # --with xen is ignored on any non-x86 architecture
 %bcond_without xen
-%bcond_without 83support
 %bcond_without 84support
 %bcond_without drbdmon
 %bcond_with prebuiltman
@@ -114,10 +113,6 @@ Provides: drbd-utils = 8.4.2
 Provides: drbd-utils = 8.4.1
 Provides: drbd-utils = 8.4.0
 %endif
-%if %{with 83support}
-# which 8.3 version equivalent this package provides
-Provides: drbd-utils = 8.3.16
-%endif
 # We used to have one monolithic userland package.
 # Since all other packages require drbd-utils,
 # it should be sufficient to add the conflict here.
@@ -154,11 +149,6 @@ This packages includes the DRBD administration tools.
 %{_sbindir}/drbdsetup
 %{_sbindir}/drbdadm
 %{_sbindir}/drbdmeta
-%if %{with 83support}
-%dir /lib/drbd/
-/lib/drbd/drbdsetup-83
-/lib/drbd/drbdadm-83
-%endif
 %if %{with 84support}
 /lib/drbd/drbdsetup-84
 /lib/drbd/drbdadm-84
@@ -334,7 +324,7 @@ in the Cluster distribution.
 %{_datadir}/cluster/drbd.metadata
 %endif # with rgmanager
 
-%if %{with 84support}%{with 83support}
+%if %{with 84support}
 %if %{with heartbeat}
 %package heartbeat
 Summary: Heartbeat resource agent for DRBD
@@ -358,7 +348,7 @@ resource manager (in v1 compatibility mode).
 %{_mandir}/man8/drbddisk-*
 %endif
 %endif # with heartbeat
-%endif # 83 || 84 support
+%endif # 84 support
 
 %if %{with bashcompletion}
 %package bash-completion
@@ -481,7 +471,6 @@ autoconf
     %{?_without_heartbeat} \
     %{?_with_rgmanager} \
     %{?_without_bashcompletion} \
-    %{?_without_83support} \
     %{?_without_84support} \
     %{?_without_manual} \
     %{?_with_prebuiltman} \

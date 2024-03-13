@@ -29,7 +29,7 @@ variables:
         git config --global user.name "Dummy"
         git commit -am "CI $version - $release"
         ./autogen.sh
-        ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --without-83support --without-manual
+        ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --without-manual
         install /dev/null $(which lbvers.py)
         make debrelease VERSION="$version" FORCE=1
         curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD --upload-file drbd-utils-*.tar.gz $LINBIT_REGISTRY_URL/repository/lbbuild-upstream/

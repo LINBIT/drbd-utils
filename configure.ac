@@ -46,7 +46,6 @@ mandir="`eval echo ${mandir}`"
 docdir="`eval echo ${docdir}`"
 
 dnl "--with-<foo>" options (all except rgm enabled by default, pass --without-<foo> to disable)
-WITH_83_SUPPORT=yes
 WITH_84_SUPPORT=yes
 WITH_UDEV=yes
 WITH_XEN=yes
@@ -59,10 +58,6 @@ WITH_MANUAL=yes
 WITH_DRBDMON=yes
 WITH_WINDRBD=no
 WITH_PREBUILTMAN=no
-AC_ARG_WITH([83support],
-	[AS_HELP_STRING([--without-83support],
-			[Do not include support for drbd driver/module <= 8.3])],
-	[WITH_83_SUPPORT=$withval])
 AC_ARG_WITH([84support],
 	[AS_HELP_STRING([--without-84support],
 			[Do not include support for drbd driver/module 8.4])],
@@ -129,17 +124,12 @@ AC_ARG_WITH([windrbd],
 AC_SUBST(WITH_WINDRBD)
 
 if test x"$WITH_WINDRBD" = x"yes" ; then
-   if test x"$WITH_83_SUPPORT" = x"yes" ; then
-      AC_MSG_WARN([DRBD 8.3 (and earlier) not supported with WinDRBD, disabling drbd 8.3 userland tools build.])
-      WITH_83_SUPPORT=no
-   fi
    if test x"$WITH_84_SUPPORT" = x"yes" ; then
       AC_MSG_WARN([DRBD 8.4 (and earlier) not supported with WinDRBD, disabling drbd 8.4 userland tools build.])
       WITH_84_SUPPORT=no
    fi
 fi
 
-AC_SUBST(WITH_83_SUPPORT)
 AC_SUBST(WITH_84_SUPPORT)
 AC_SUBST(WITH_UDEV)
 AC_SUBST(WITH_XEN)
@@ -471,7 +461,6 @@ AH_TEMPLATE(DRBD_CONFIG_DIR, [Local configuration directory. Commonly
 			   /usr/local/etc])
 AH_TEMPLATE(DRBD_BIN_DIR, [Installation directory. Commonly
 			   /usr/bin])
-AH_TEMPLATE(DRBD_LEGACY_83, [Include support for drbd-8.3 kernel code])
 AH_TEMPLATE(DRBD_LEGACY_84, [Include support for drbd-8.4 kernel code])
 AH_TEMPLATE(WINDRBD, [Include support for windrbd (do not use this under Linux)])
 
@@ -487,10 +476,6 @@ AC_DEFINE_UNQUOTED(DRBD_LOCK_DIR, ["$DRBD_LOCK_DIR"])
 AC_DEFINE_UNQUOTED(DRBD_CONFIG_DIR, ["$DRBD_CONFIG_DIR"])
 AC_DEFINE_UNQUOTED(DRBD_BIN_DIR, ["$DRBD_BIN_DIR"])
 
-if test "$WITH_83_SUPPORT" = "yes"; then
-   AC_DEFINE(DRBD_LEGACY_83, [1])
-fi
-
 if test "$WITH_84_SUPPORT" = "yes"; then
    AC_DEFINE(DRBD_LEGACY_84, [1])
 fi
@@ -501,7 +486,7 @@ fi
 
 dnl The configuration files we create (from their .in template)
 if test -z $SPECMODE; then
-   AC_CONFIG_FILES(Makefile user/shared/Makefile user/v9/Makefile user/v83/Makefile user/v84/Makefile scripts/Makefile documentation/v83/Makefile scripts/drbd.rules user/windrbd/Makefile user/drbdmon/Makefile documentation/common/Makefile_v84_com documentation/common/Makefile_v9_com)
+   AC_CONFIG_FILES(Makefile user/shared/Makefile user/v9/Makefile user/v84/Makefile scripts/Makefile scripts/drbd.rules user/windrbd/Makefile user/drbdmon/Makefile documentation/common/Makefile_v84_com documentation/common/Makefile_v9_com)
    AC_CONFIG_HEADERS(user/shared/config.h)
 else
    AC_CONFIG_FILES(drbd.spec)

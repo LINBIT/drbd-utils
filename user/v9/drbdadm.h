@@ -473,7 +473,6 @@ extern int adjust_more_than_one_resource;
 extern char* drbdsetup;
 extern char* drbdmeta;
 extern char* drbd_proxy_ctl;
-extern char* drbdadm_83;
 extern char* drbdadm_84;
 extern char ss_buffer[1024];
 extern const char *hostname;
@@ -586,7 +585,6 @@ void parse_device(struct names* on_hosts, struct d_volume *vol);
 
 extern char *drbdsetup;
 extern char *drbdmeta;
-extern char *drbdadm_83;
 extern char *drbdadm_84;
 extern char *drbd_proxy_ctl;
 

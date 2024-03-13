@@ -4474,20 +4474,6 @@ static void maybe_exec_legacy_drbdsetup(char **argv)
 	const struct version *driver_version = drbd_driver_version(FALLBACK_TO_UTILS);
 
 	if (driver_version->version.major == 8 &&
-	    driver_version->version.minor == 3) {
-#ifdef DRBD_LEGACY_83
-		static const char * const drbdsetup_83 = "drbdsetup-83";
-
-		add_lib_drbd_to_path();
-		execvp(drbdsetup_83, argv);
-		fprintf(stderr, "execvp() failed to exec %s: %m\n", drbdsetup_83);
-#else
-		config_help_legacy("drbdsetup", driver_version);
-
-#endif
-		exit(20);
-	}
-	if (driver_version->version.major == 8 &&
 	    driver_version->version.minor == 4) {
 #ifdef DRBD_LEGACY_84
 		static const char * const drbdsetup_84 = "drbdsetup-84";

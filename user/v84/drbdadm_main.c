@@ -204,7 +204,6 @@ int do_register = 1;
 int all_resources = 0;
 char *drbdsetup = NULL;
 char *drbdmeta = NULL;
-char *drbdadm_83 = NULL;
 char *drbd_proxy_ctl;
 char *sh_varname = NULL;
 struct setup_option *setup_options;
@@ -3164,7 +3163,6 @@ void assign_command_names_from_argv0(char **argv)
 		{"drbdsetup-84", &drbdsetup},
 		{"drbdmeta", &drbdmeta},
 		{"drbd-proxy-ctl", &drbd_proxy_ctl},
-		{"drbdadm-83", &drbdadm_83},
 		{NULL, NULL}
 	};
 	struct cmd_helper *c;
@@ -3639,8 +3637,6 @@ int main(int argc, char **argv)
 
 	if (!getenv("DRBD_DONT_WARN_ON_VERSION_MISMATCH"))
 		warn_on_version_mismatch();
-
-	maybe_exec_drbdadm_83(argv);
 
 	recognize_all_drbdsetup_options();
 	rv = parse_options(argc, argv, &cmd, &resource_names);

@@ -2,7 +2,7 @@ Drbd-utils for WinDRBD
 ======================
 
 These drbd-utils can be also built for DRBD for Windows (WinDRBD),
-except for drbdmon (coming soon) and the drbd-83 and drbd-84 utilities
+except for drbdmon (coming soon) and drbd-84 utilities
 (which don't and never exist for Windows, driver is based on DRBD 9)
 
 To clone this, do a
@@ -24,7 +24,7 @@ not installed).
 Once you are done installing Cygwin, do
 
 	./autogen.sh
-	./configure --prefix=/cygdrive/c/windrbd/usr --localstatedir=/cygdrive/c/windrbd/var --sysconfdir=/cygdrive/c/windrbd/etc --without-83support --without-84support --without-drbdmon --with-windrbd
+	./configure --prefix=/cygdrive/c/windrbd/usr --localstatedir=/cygdrive/c/windrbd/var --sysconfdir=/cygdrive/c/windrbd/etc --without-84support --without-drbdmon --with-windrbd
 	make
 	make install
 

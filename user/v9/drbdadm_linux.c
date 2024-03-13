@@ -16,7 +16,6 @@ struct cmd_helper helpers[] = {
 	{"drbdsetup", &drbdsetup},
 	{"drbdmeta", &drbdmeta},
 	{"drbd-proxy-ctl", &drbd_proxy_ctl},
-	{"drbdadm-83", &drbdadm_83},
 	{"drbdadm-84", &drbdadm_84},
 	{NULL, NULL}
 };

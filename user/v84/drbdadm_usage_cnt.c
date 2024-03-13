@@ -289,24 +289,6 @@ void add_lib_drbd_to_path(void)
 	setenv("PATH", new_path, 1);
 }
 
-void maybe_exec_drbdadm_83(char **argv)
-{
-	if (current_vcs_rel.version.major == 8 &&
-	    current_vcs_rel.version.minor == 3) {
-#ifdef DRBD_LEGACY_83
-		/* This drbdadm warned already... */
-		setenv("DRBD_DONT_WARN_ON_VERSION_MISMATCH", "1", 0);
-		add_lib_drbd_to_path();
-		execvp(drbdadm_83, argv);
-		fprintf(stderr, "execvp() failed to exec %s: %m\n", drbdadm_83);
-#else
-		fprintf(stderr, "This drbdadm was not built with support for drbd-8.3\n"
-			"Consider to rebuild with ./configure --with-83-support\n");
-#endif
-		exit(E_EXEC_ERROR);
-	}
-}
-
 static char *vcs_to_str(struct vcs_rel *rev)
 {
 	static char buffer[80]; // Not generic, sufficient for the purpose.

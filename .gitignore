@@ -34,8 +34,6 @@ user/windrbd/windrbd.exe
 
 user/v9/.*.d
 user/v9/Makefile
-user/v83/.*.d
-user/v83/Makefile
 user/v84/.*.d
 user/v84/Makefile
 user/windrbd/.*.d

@@ -38,7 +38,6 @@ WITH_PACEMAKER = @WITH_PACEMAKER@
 WITH_HEARTBEAT = @WITH_HEARTBEAT@
 WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
-WITH_83_SUPPORT = @WITH_83_SUPPORT@
 WITH_84_SUPPORT = @WITH_84_SUPPORT@
 WITH_MANUAL = @WITH_MANUAL@
 WITH_DRBDMON = @WITH_DRBDMON@
@@ -60,10 +59,6 @@ DOCKER_TAG ?= latest
 
 TOOLS_DIRS  := user/shared user/v9 scripts
 DOC_DIRS    := documentation/v9 documentation/ja/v9
-ifeq ($(WITH_83_SUPPORT),yes)
-TOOLS_DIRS  += user/v83
-DOC_DIRS    += documentation/v83
-endif
 ifeq ($(WITH_84_SUPPORT),yes)
 TOOLS_DIRS  += user/v84
 DOC_DIRS    += documentation/v84 documentation/ja/v84
@@ -93,9 +88,6 @@ tools:
 doc:
 	$(MAKE) -C documentation/v9 doc
 	$(MAKE) -C documentation/ja/v9 doc
-ifeq ($(WITH_83_SUPPORT),yes)
-	$(MAKE) -C documentation/v83 doc
-endif
 ifeq ($(WITH_84_SUPPORT),yes)
 	$(MAKE) -C documentation/v84 doc
 	$(MAKE) -C documentation/ja/v84 doc
@@ -139,9 +131,6 @@ check-submods:
 doc-clean:
 	$(MAKE) -C documentation/v9 doc-clean
 	$(MAKE) -C documentation/ja/v9 doc-clean
-ifeq ($(WITH_83_SUPPORT),yes)
-	$(MAKE) -C documentation/v83 doc-clean
-endif
 ifeq ($(WITH_84_SUPPORT),yes)
 	$(MAKE) -C documentation/v84 doc-clean
 	$(MAKE) -C documentation/ja/v84 doc-clean
@@ -170,8 +159,8 @@ distclean:
 	rm -rf autom4te.cache
 	rm -f config.log
 
-EXTRA_CLEAN += Makefile user/Makefile user/v83/Makefile user/v84/Makefile user/v9/Makefile scripts/Makefile user/drbdmon/Makefile
-EXTRA_CLEAN += documentation/Makefile documentation/v83/Makefile documentation/v84/Makefile documentation/v9/Makefile documentation/ja/v84/Makefile documentation/ja/v9/Makefile
+EXTRA_CLEAN += Makefile user/Makefile user/v84/Makefile user/v9/Makefile scripts/Makefile user/drbdmon/Makefile
+EXTRA_CLEAN += documentation/Makefile documentation/v84/Makefile documentation/v9/Makefile documentation/ja/v84/Makefile documentation/ja/v9/Makefile
 EXTRA_CLEAN += user/shared/config.h drbd.spec
 EXTRA_CLEAN += configure config.status
 extra-clean: distclean
