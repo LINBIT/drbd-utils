@@ -51,7 +51,22 @@ std::string NtApi::get_config_file_path()
     return path;
 }
 
-bool NtApi::is_file_accessible(const char* const file_path)
+std::string NtApi::file_name_for_path(const std::string path) const
+{
+    std::string file_name;
+    const size_t split_idx = path.rfind('\\');
+    if (split_idx == std::string::npos)
+    {
+        file_name = path;
+    }
+    else
+    {
+        file_name = path.substr(split_idx + 1);
+    }
+    return file_name;
+}
+
+bool NtApi::is_file_accessible(const char* const file_path) const
 {
     return PathFileExistsA(file_path) != 0;
 }
@@ -72,8 +87,9 @@ namespace system_api
         return true;
     }
 
-    void init_node_name(std::unique_ptr<std::string>& node_name_mgr)
+    void init_node_name(std::string& node_name)
     {
+        node_name.clear();
         try
         {
             std::unique_ptr<char[]> name_buffer(new char[MAX_COMPUTER_NAME_LENGTH]);
@@ -83,14 +99,13 @@ namespace system_api
             {
                 if (length >= 1 && length < MAX_COMPUTER_NAME_LENGTH)
                 {
-                    node_name_mgr = std::unique_ptr<std::string>(new std::string());
-                    node_name_mgr->append(name_buffer.get(), length);
+                    node_name->append(name_buffer.get(), length);
                 }
             }
         }
         catch (std::bad_alloc&)
         {
-            node_name_mgr = nullptr;
+            // no-op
         }
     }
 }

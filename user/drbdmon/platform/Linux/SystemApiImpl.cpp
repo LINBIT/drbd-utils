@@ -48,7 +48,7 @@ std::unique_ptr<TerminalControl> LinuxApi::create_terminal_control()
     return std::unique_ptr<TerminalControl>(dynamic_cast<TerminalControl*> (new TerminalControlImpl()));
 }
 
-bool LinuxApi::is_file_accessible(const char* const file_path)
+bool LinuxApi::is_file_accessible(const char* const file_path) const
 {
     struct stat file_info;
     std::memset(&file_info, 0, sizeof (file_info));
@@ -71,6 +71,21 @@ std::string LinuxApi::get_config_file_path()
         }
     }
     return path;
+}
+
+std::string LinuxApi::file_name_for_path(const std::string path) const
+{
+    std::string file_name;
+    const size_t split_idx = path.rfind('/');
+    if (split_idx == std::string::npos)
+    {
+        file_name = path;
+    }
+    else
+    {
+        file_name = path.substr(split_idx + 1);
+    }
+    return file_name;
 }
 
 namespace system_api
@@ -192,13 +207,13 @@ namespace system_api
         return ids_safe;
     }
 
-    void init_node_name(std::unique_ptr<std::string>& node_name_mgr)
+    void init_node_name(std::string& node_name)
     {
         std::unique_ptr<struct utsname> uname_buffer(new struct utsname);
         int rc = uname(uname_buffer.get());
         if (rc == 0)
         {
-            node_name_mgr = std::unique_ptr<std::string>(new std::string(uname_buffer->nodename));
+            node_name = uname_buffer->nodename;
         }
     }
 }
