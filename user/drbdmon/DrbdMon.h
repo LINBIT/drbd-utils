@@ -137,7 +137,7 @@ class DrbdMon : public DrbdMonCore, public Configurable, public Configurator
     }
     option_entry;
 
-    SystemApi& sys_api;
+    MonitorEnvironment& mon_env;
 
     using OptionsMap = QTree<const std::string, DrbdMon::option_entry>;
 
@@ -149,11 +149,8 @@ class DrbdMon : public DrbdMonCore, public Configurable, public Configurator
 
     std::unique_ptr<OptionsMap>   options;
 
-    DrbdMonCore::fail_info&     fail_data;
-    DrbdMonCore::finish_action  fin_action      {DrbdMonCore::finish_action::RESTART_IMMED};
     MessageLog&                 log;
     MessageLog&                 debug_log;
-    const std::string* const    node_name;
     Configuration&              config;
 
     bool    shutdown_flag       {false};

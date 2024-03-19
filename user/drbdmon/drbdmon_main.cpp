@@ -216,7 +216,6 @@ static void drbdmon::monitor_loop(
                 new DrbdMon(argc, argv, mon_env)
             );
             dm_instance->run();
-            mon_env.fin_action = dm_instance->get_fin_action();
             if (mon_env.fin_action != DrbdMon::finish_action::TERMINATE_NO_CLEAR)
             {
                 drbdmon::clear_screen();

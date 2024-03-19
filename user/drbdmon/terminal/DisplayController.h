@@ -25,6 +25,7 @@
 #include <configuration/Configuration.h>
 #include <platform/SystemApi.h>
 #include <DrbdMonCore.h>
+#include <MonitorEnvironment.h>
 #include <MessageLog.h>
 #include <map_types.h>
 #include <VList.h>
@@ -48,14 +49,10 @@ class DisplayController : public GenericDisplay, public DisplaySelector
     // @throws std::bad_alloc, std::logic_error
     DisplayController(
         DrbdMonCore&                core_instance_ref,
-        SystemApi&                  sys_api_ref,
+        MonitorEnvironment&         mon_env_ref,
         SubProcessObserver&         sub_proc_obs_ref,
         ResourcesMap&               rsc_map_ref,
-        ResourcesMap&               prb_rsc_map_ref,
-        MessageLog&                 log_ref,
-        MessageLog&                 debug_log_ref,
-        Configuration&              config_ref,
-        const std::string* const    node_name_ptr
+        ResourcesMap&               prb_rsc_map_ref
     );
     virtual ~DisplayController() noexcept;
     DisplayController(const DisplayController& other) = delete;
@@ -87,6 +84,7 @@ class DisplayController : public GenericDisplay, public DisplaySelector
     using DisplayStack = VList<DisplayId::display_page>;
 
     DrbdMonCore&            core_instance;
+    MonitorEnvironment&     mon_env;
 
     std::unique_ptr<DisplayMap> dsp_map;
 

@@ -71,15 +71,14 @@ DrbdMon::DrbdMon(
     char*                       argv[],
     MonitorEnvironment&         mon_env_ref
 ):
-    sys_api(*(mon_env_ref.sys_api)),
+    mon_env(mon_env_ref),
     arg_count(argc),
     arg_values(argv),
-    fail_data(mon_env_ref.fail_data),
     log(*(mon_env_ref.log)),
     debug_log(*(mon_env_ref.debug_log)),
-    node_name(mon_env_ref.node_name_mgr.get()),
     config(*(mon_env_ref.config))
 {
+    mon_env.fin_action = DrbdMonCore::finish_action::RESTART_IMMED;
     rsc_dir_mgr = std::unique_ptr<ResourceDirectory>(
         new ResourceDirectory(*(mon_env_ref.log), *(mon_env_ref.debug_log))
     );
@@ -92,7 +91,7 @@ DrbdMon::~DrbdMon() noexcept
 
 SystemApi& DrbdMon::get_system_api() const noexcept
 {
-    return sys_api;
+    return *(mon_env.sys_api);
 }
 
 // @throws std::bad_alloc
@@ -158,14 +157,10 @@ void DrbdMon::run()
                 ResourcesMap& prb_rsc_map           = rsc_dir->get_problem_resources_map();
                 display_impl = new DisplayController(
                     *core_instance,
-                    sys_api,
+                    mon_env,
                     *sub_proc_obs,
                     rsc_map,
-                    prb_rsc_map,
-                    log,
-                    debug_log,
-                    config,
-                    node_name
+                    prb_rsc_map
                 );
             }
 
@@ -239,7 +234,7 @@ void DrbdMon::run()
                             case CoreIo::signal_type::SIGNAL_EXIT:
                             {
                                 // Terminate main loop
-                                fin_action = DrbdMonCore::finish_action::TERMINATE;
+                                mon_env.fin_action = DrbdMonCore::finish_action::TERMINATE;
                                 shutdown_flag = true;
                                 break;
                             }
@@ -257,7 +252,7 @@ void DrbdMon::run()
                             }
                             case CoreIo::signal_type::SIGNAL_DEBUG:
                             {
-                                fin_action = DrbdMonCore::finish_action::DEBUG_MODE;
+                                mon_env.fin_action = DrbdMonCore::finish_action::DEBUG_MODE;
                                 shutdown_flag = true;
                                 break;
                             }
@@ -346,8 +341,8 @@ void DrbdMon::run()
                 MessageLog::log_level::ALERT,
                 "The connection to the DRBD events source failed due to an I/O error"
             );
-            fin_action = DrbdMonCore::finish_action::RESTART_DELAYED;
-            fail_data = DrbdMonCore::fail_info::EVENTS_IO;
+            mon_env.fin_action = DrbdMonCore::finish_action::RESTART_DELAYED;
+            mon_env.fail_data = DrbdMonCore::fail_info::EVENTS_IO;
         }
         catch (EventsSourceException& src_exc)
         {
@@ -371,8 +366,8 @@ void DrbdMon::run()
                     *debug_info
                 );
             }
-            fin_action = DrbdMonCore::finish_action::RESTART_DELAYED;
-            fail_data = DrbdMonCore::fail_info::EVENTS_SOURCE;
+            mon_env.fin_action = DrbdMonCore::finish_action::RESTART_DELAYED;
+            mon_env.fail_data = DrbdMonCore::fail_info::EVENTS_SOURCE;
         }
         catch (EventsIoException& io_exc)
         {
@@ -396,8 +391,8 @@ void DrbdMon::run()
                     *debug_info
                 );
             }
-            fin_action = DrbdMonCore::finish_action::RESTART_DELAYED;
-            fail_data = DrbdMonCore::fail_info::EVENTS_IO;
+            mon_env.fin_action = DrbdMonCore::finish_action::RESTART_DELAYED;
+            mon_env.fail_data = DrbdMonCore::fail_info::EVENTS_IO;
         }
         catch (EventException& event_exc)
         {
@@ -437,15 +432,15 @@ void DrbdMon::run()
                 );
             }
 
-            fin_action = DrbdMonCore::finish_action::RESTART_DELAYED;
-            fail_data = DrbdMonCore::fail_info::GENERIC;
+            mon_env.fin_action = DrbdMonCore::finish_action::RESTART_DELAYED;
+            mon_env.fail_data = DrbdMonCore::fail_info::GENERIC;
         }
         catch (ConfigurationException&)
         {
             // A ConfigurationException is thrown to abort and exit
             // while configuring options
             // (--help uses this too)
-            fin_action = DrbdMonCore::finish_action::TERMINATE_NO_CLEAR;
+            mon_env.fin_action = DrbdMonCore::finish_action::TERMINATE_NO_CLEAR;
         }
     }
     catch (std::bad_alloc&)
@@ -459,7 +454,7 @@ void DrbdMon::run()
 
 void DrbdMon::shutdown(const DrbdMonCore::finish_action action) noexcept
 {
-    fin_action = action;
+    mon_env.fin_action = action;
     shutdown_flag = true;
 }
 
@@ -556,7 +551,7 @@ void DrbdMon::process_event_message(
             // Report recovering from errors that triggered reinitialization
             // of the DrbdMon instance
 
-            switch (fail_data)
+            switch (mon_env.fail_data)
             {
                 case DrbdMonCore::fail_info::NONE:
                     // no-op
@@ -597,7 +592,7 @@ void DrbdMon::process_event_message(
             // In case that multiple "exists -" lines are received,
             // which is actually not supposed to happen, avoid spamming
             // the message log
-            fail_data = fail_info::NONE;
+            mon_env.fail_data = fail_info::NONE;
         }
     }
     else
@@ -697,7 +692,7 @@ void DrbdMon::process_event_message(
  */
 DrbdMonCore::finish_action DrbdMon::get_fin_action() const
 {
-    return fin_action;
+    return mon_env.fin_action;
 }
 
 /**

@@ -41,21 +41,17 @@ const std::string DisplayController::INITIAL_WAIT_MSG   = "Reading initial DRBD 
 // @throws std::bad_alloc, std::logic_error
 DisplayController::DisplayController(
     DrbdMonCore&                core_instance_ref,
-    SystemApi&                  sys_api_ref,
+    MonitorEnvironment&         mon_env_ref,
     SubProcessObserver&         sub_proc_obs_ref,
     ResourcesMap&               rsc_map_ref,
-    ResourcesMap&               prb_rsc_map_ref,
-    MessageLog&                 log_ref,
-    MessageLog&                 debug_log_ref,
-    Configuration&              config_ref,
-    const std::string* const    node_name_ptr
+    ResourcesMap&               prb_rsc_map_ref
 ):
-    core_instance(core_instance_ref)
+    core_instance(core_instance_ref),
+    mon_env(mon_env_ref)
 {
-    SystemApi& sys_api = core_instance.get_system_api();
     dsp_map = std::unique_ptr<DisplayMap>(new DisplayMap(&comparators::compare_string));
 
-    term_ctl_mgr = sys_api.create_terminal_control();
+    term_ctl_mgr = mon_env.sys_api->create_terminal_control();
 
     dsp_comp_hub_mgr = std::unique_ptr<ComponentsHub>(new ComponentsHub());
     dsp_io_mgr = std::unique_ptr<DisplayIo>(new DisplayIo(STDOUT_FILENO));
@@ -66,32 +62,32 @@ DisplayController::DisplayController(
     sub_proc_queue_mgr = std::unique_ptr<SubProcessQueue>(new SubProcessQueue());
 
     dsp_comp_hub_mgr->core_instance     = &core_instance;
-    dsp_comp_hub_mgr->sys_api           = &sys_api_ref;
+    dsp_comp_hub_mgr->sys_api           = &(mon_env.sys_api);
     dsp_comp_hub_mgr->dsp_selector      = dynamic_cast<DisplaySelector*> (this);
     dsp_comp_hub_mgr->dsp_io            = dsp_io_mgr.get();
     dsp_comp_hub_mgr->dsp_shared        = dsp_shared_mgr.get();
     dsp_comp_hub_mgr->term_size         = dynamic_cast<TermSize*> (term_size_mgr.get());
     dsp_comp_hub_mgr->rsc_map           = &rsc_map_ref;
     dsp_comp_hub_mgr->prb_rsc_map       = &prb_rsc_map_ref;
-    dsp_comp_hub_mgr->log               = &log_ref;
-    dsp_comp_hub_mgr->debug_log         = &debug_log_ref;
-    dsp_comp_hub_mgr->node_name         = node_name_ptr;
+    dsp_comp_hub_mgr->log               = &(mon_env.log);
+    dsp_comp_hub_mgr->debug_log         = &(mon_env.debug_log);
+    dsp_comp_hub_mgr->node_name         = mon_env.node_name_mgr.get();
     dsp_comp_hub_mgr->style_coll        = dsp_styles_mgr.get();
     dsp_comp_hub_mgr->ansi_ctl          = ansi_ctl_mgr.get();
     dsp_comp_hub_mgr->sub_proc_queue    = sub_proc_queue_mgr.get();
-    dsp_comp_hub_mgr->config            = &config_ref;
+    dsp_comp_hub_mgr->config            = mon_env.config.get();
     dsp_comp_hub_mgr->have_term_size    = false;
     dsp_comp_hub_mgr->term_cols         = 100;
     dsp_comp_hub_mgr->term_rows         = 30;
 
     {
         const DisplayStyleCollection::ColorStyle selected_color_style =
-            dsp_styles_mgr->get_color_style_by_numeric_id(config_ref.color_scheme);
+            dsp_styles_mgr->get_color_style_by_numeric_id(mon_env.config->color_scheme);
         dsp_comp_hub_mgr->active_color_table =
             &(dsp_styles_mgr->get_color_table(selected_color_style));
 
         const DisplayStyleCollection::CharacterStyle selected_character_style =
-            dsp_styles_mgr->get_character_style_by_numeric_id(config_ref.character_set);
+            dsp_styles_mgr->get_character_style_by_numeric_id(mon_env.config->character_set);
         dsp_comp_hub_mgr->active_character_table =
             &(dsp_styles_mgr->get_character_table(selected_character_style));
     }
@@ -108,16 +104,16 @@ DisplayController::DisplayController(
     dsp_comp_hub_mgr->drbd_cmd_exec     = dynamic_cast<DrbdCommands*> (drbd_cmd_exec_mgr.get());
 
     global_cmd_exec_mgr = std::unique_ptr<GlobalCommandsImpl>(
-        new GlobalCommandsImpl(*dsp_comp_hub_mgr, config_ref)
+        new GlobalCommandsImpl(*dsp_comp_hub_mgr, *(mon_env.config))
     );
     dsp_comp_hub_mgr->global_cmd_exec   = dynamic_cast<GlobalCommands*> (global_cmd_exec_mgr.get());
 
     dsp_comp_hub_mgr->sub_proc_queue->set_observer(&sub_proc_obs_ref);
 
     // Sub process queue configuration
-    sub_proc_queue_mgr->set_discard_succeeded_tasks(config_ref.discard_succ_tasks);
-    sub_proc_queue_mgr->set_discard_finished_tasks(config_ref.discard_fail_tasks);
-    dsp_shared_mgr->activate_tasks = !(config_ref.suspend_new_tasks);
+    sub_proc_queue_mgr->set_discard_succeeded_tasks(mon_env.config->discard_succ_tasks);
+    sub_proc_queue_mgr->set_discard_finished_tasks(mon_env.config->discard_fail_tasks);
+    dsp_shared_mgr->activate_tasks = !(mon_env.config->suspend_new_tasks);
 
     dsp_stack = std::unique_ptr<DisplayStack>(new DisplayStack(&DisplayController::compare_display_id));
 
@@ -228,23 +224,23 @@ DisplayController::DisplayController(
             dynamic_cast<ModularDisplay*> (new MDspHelp(dsp_comp_hub))
         );
         log_view_mgr = std::unique_ptr<ModularDisplay>(
-            dynamic_cast<ModularDisplay*> (new MDspLogViewer(dsp_comp_hub, log_ref))
+            dynamic_cast<ModularDisplay*> (new MDspLogViewer(dsp_comp_hub, *(mon_env.log)))
         );
         debug_log_view_mgr = std::unique_ptr<ModularDisplay>(
-            dynamic_cast<ModularDisplay*> (new MDspLogViewer(dsp_comp_hub, debug_log_ref))
+            dynamic_cast<ModularDisplay*> (new MDspLogViewer(dsp_comp_hub, *(mon_env.debug_log)))
         );
         msg_view_mgr = std::unique_ptr<ModularDisplay>(
-            dynamic_cast<ModularDisplay*> (new MDspMessage(dsp_comp_hub, log_ref))
+            dynamic_cast<ModularDisplay*> (new MDspMessage(dsp_comp_hub, *(mon_env.log)))
         );
         debug_msg_view_mgr = std::unique_ptr<ModularDisplay>(
-            dynamic_cast<ModularDisplay*> (new MDspMessage(dsp_comp_hub, debug_log_ref))
+            dynamic_cast<ModularDisplay*> (new MDspMessage(dsp_comp_hub, *(mon_env.debug_log)))
         );
         pgm_info_mgr = std::unique_ptr<ModularDisplay>(
             dynamic_cast<ModularDisplay*> (new MDspPgmInfo(dsp_comp_hub))
         );
         // Pass a mutable components hub to the configuration display
         config_mgr = std::unique_ptr<ModularDisplay>(
-            dynamic_cast<ModularDisplay*> (new MDspConfiguration(*dsp_comp_hub_mgr, config_ref))
+            dynamic_cast<ModularDisplay*> (new MDspConfiguration(*dsp_comp_hub_mgr, *(mon_env.config)))
         );
 
         wait_msg_mgr = std::unique_ptr<MDspWaitMsg>(new MDspWaitMsg(dsp_comp_hub));
@@ -256,7 +252,7 @@ DisplayController::DisplayController(
         DisplayIo* dsp_io = dsp_comp_hub_mgr->dsp_io;
         dsp_io->write_text(ansi_ctl->ANSI_ALTBFR_ON.c_str());
         dsp_io->write_text(ansi_ctl->ANSI_CURSOR_OFF.c_str());
-        if (config_ref.enable_mouse_nav)
+        if (mon_env.config->enable_mouse_nav)
         {
             dsp_io->write_text(ansi_ctl->ANSI_MOUSE_ON.c_str());
         }
