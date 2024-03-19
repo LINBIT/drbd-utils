@@ -28,6 +28,8 @@ class MDspConnectionActions : public MDspMenuBase
     std::unique_ptr<ClickableCommand>   cmd_disconnect;
     std::unique_ptr<ClickableCommand>   cmd_discard;
 
+    void show_actions();
+
     void selection_action(const action_func_type action_func);
 
     void action_connect(const std::string& rsc_name, const std::string& con_name);

@@ -84,6 +84,21 @@ MDspPeerVolumeActions::~MDspPeerVolumeActions() noexcept
 
 void MDspPeerVolumeActions::display_content()
 {
+    if (dsp_comp_hub.enable_drbd_actions)
+    {
+        show_actions();
+    }
+    else
+    {
+        dsp_comp_hub.dsp_common->display_page_id(DisplayId::MDSP_CON_ACT);
+
+        dsp_comp_hub.dsp_io->cursor_xy(1, DisplayConsts::PAGE_NAV_Y + 3);
+        dsp_comp_hub.dsp_io->write_text("This page is currently disabled");
+    }
+}
+
+void MDspPeerVolumeActions::show_actions()
+{
     dsp_comp_hub.dsp_common->display_page_id(DisplayId::MDSP_PEER_VLM_ACT);
 
     dsp_comp_hub.dsp_io->cursor_xy(1, DisplayConsts::PAGE_NAV_Y + 1);

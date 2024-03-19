@@ -63,6 +63,9 @@ DisplayController::DisplayController(
     ansi_ctl_mgr = std::unique_ptr<AnsiControl>(new AnsiControl());
     sub_proc_queue_mgr = std::unique_ptr<SubProcessQueue>(new SubProcessQueue());
 
+    // Enable DRBD actions/commands if tracking live events, and not an events log file
+    dsp_comp_hub_mgr->enable_drbd_actions   = events_file.empty();
+
     dsp_comp_hub_mgr->core_instance     = &core_instance;
     dsp_comp_hub_mgr->sys_api           = mon_env.sys_api.get();
     dsp_comp_hub_mgr->dsp_selector      = dynamic_cast<DisplaySelector*> (this);

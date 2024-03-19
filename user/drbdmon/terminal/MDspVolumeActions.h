@@ -30,6 +30,8 @@ class MDspVolumeActions : public MDspMenuBase
     std::unique_ptr<ClickableCommand>   cmd_resize;
     std::unique_ptr<ClickableCommand>   cmd_invalidate;
 
+    void show_actions();
+
     void selection_action(const action_func_type action_func);
 
     void action_attach(const std::string& rsc_name, const uint16_t vlm_nr);

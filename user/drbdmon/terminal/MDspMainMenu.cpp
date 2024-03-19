@@ -188,8 +188,11 @@ void MDspMainMenu::display_content()
     display_option(" 8   ", "About DRBDmon", *cmd_about, std_color);
     display_option(" 9   ", "DRBDmon configuration", *cmd_configuration, std_color);
 
-    display_option("90   ", "Start/adjust all resources", *cmd_start_all_rsc, std_color);
-    display_option("99   ", "Stop all resources", *cmd_stop_all_rsc, caution_color);
+    if (dsp_comp_hub.enable_drbd_actions)
+    {
+        display_option("90   ", "Start/adjust all resources", *cmd_start_all_rsc, std_color);
+        display_option("99   ", "Stop all resources", *cmd_stop_all_rsc, caution_color);
+    }
 
     display_option(" X   ", "Exit DRBDmon", *cmd_exit, std_color);
 
@@ -281,68 +284,74 @@ void MDspMainMenu::opt_configuration()
 
 void MDspMainMenu::opt_start_all_resources()
 {
-    try
+    if (dsp_comp_hub.enable_drbd_actions)
     {
-        std::unique_ptr<CmdLine> command(new CmdLine());
-        command->add_argument(drbdcmd::DRBDADM_CMD);
-        command->add_argument(drbdcmd::ARG_ADJUST);
-        command->add_argument(drbdcmd::ARG_ALL);
+        try
+        {
+            std::unique_ptr<CmdLine> command(new CmdLine());
+            command->add_argument(drbdcmd::DRBDADM_CMD);
+            command->add_argument(drbdcmd::ARG_ADJUST);
+            command->add_argument(drbdcmd::ARG_ALL);
 
-        std::string text("Start all resources");
+            std::string text("Start all resources");
 
-        command->set_description(text);
+            command->set_description(text);
 
-        dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+            dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+        }
+        catch (SubProcessQueue::QueueCapacityException&)
+        {
+            dsp_comp_hub.log->add_entry(
+                MessageLog::log_level::ALERT,
+                "Command start all resources: Cannot execute, insufficient queue capacity"
+            );
+        }
+        catch (SubProcess::Exception&)
+        {
+            dsp_comp_hub.log->add_entry(
+                MessageLog::log_level::ALERT,
+                "Command start all resources: Sub-process execution failed"
+            );
+        }
+
+        dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::RSC_LIST);
     }
-    catch (SubProcessQueue::QueueCapacityException&)
-    {
-        dsp_comp_hub.log->add_entry(
-            MessageLog::log_level::ALERT,
-            "Command start all resources: Cannot execute, insufficient queue capacity"
-        );
-    }
-    catch (SubProcess::Exception&)
-    {
-        dsp_comp_hub.log->add_entry(
-            MessageLog::log_level::ALERT,
-            "Command start all resources: Sub-process execution failed"
-        );
-    }
-
-    dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::RSC_LIST);
 }
 
 void MDspMainMenu::opt_stop_all_resources()
 {
-    try
+    if (dsp_comp_hub.enable_drbd_actions)
     {
-        std::unique_ptr<CmdLine> command(new CmdLine());
-        command->add_argument(drbdcmd::DRBDSETUP_CMD);
-        command->add_argument(drbdcmd::ARG_STOP);
-        command->add_argument(drbdcmd::ARG_ALL);
+        try
+        {
+            std::unique_ptr<CmdLine> command(new CmdLine());
+            command->add_argument(drbdcmd::DRBDSETUP_CMD);
+            command->add_argument(drbdcmd::ARG_STOP);
+            command->add_argument(drbdcmd::ARG_ALL);
 
-        std::string text("Stop all resources");
+            std::string text("Stop all resources");
 
-        command->set_description(text);
+            command->set_description(text);
 
-        dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+            dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+        }
+        catch (SubProcessQueue::QueueCapacityException&)
+        {
+            dsp_comp_hub.log->add_entry(
+                MessageLog::log_level::ALERT,
+                "Command stop all resources: Cannot execute, insufficient queue capacity"
+            );
+        }
+        catch (SubProcess::Exception&)
+        {
+            dsp_comp_hub.log->add_entry(
+                MessageLog::log_level::ALERT,
+                "Command stop all resources: Sub-process execution failed"
+            );
+        }
+
+        dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::RSC_LIST);
     }
-    catch (SubProcessQueue::QueueCapacityException&)
-    {
-        dsp_comp_hub.log->add_entry(
-            MessageLog::log_level::ALERT,
-            "Command stop all resources: Cannot execute, insufficient queue capacity"
-        );
-    }
-    catch (SubProcess::Exception&)
-    {
-        dsp_comp_hub.log->add_entry(
-            MessageLog::log_level::ALERT,
-            "Command stop all resources: Sub-process execution failed"
-        );
-    }
-
-    dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::RSC_LIST);
 }
 
 void MDspMainMenu::opt_exit()

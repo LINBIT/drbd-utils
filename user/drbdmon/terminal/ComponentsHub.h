@@ -56,6 +56,8 @@ class ComponentsHub
     uint16_t    term_cols       {100};
     uint16_t    term_rows       {30};
 
+    bool        enable_drbd_actions     {true};
+
     ComponentsHub();
     virtual ~ComponentsHub() noexcept;
 

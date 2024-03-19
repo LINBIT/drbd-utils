@@ -48,6 +48,8 @@ class MDspResourceActions: public MDspMenuBase
     std::unique_ptr<ClickableCommand>   cmd_connect_discard;
     std::unique_ptr<ClickableCommand>   cmd_invalidate;
 
+    void show_actions();
+
     void selection_action(const action_func_type action_func);
 
     void action_start(const std::string& rsc_name);

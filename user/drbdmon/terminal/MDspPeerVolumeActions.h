@@ -34,6 +34,8 @@ class MDspPeerVolumeActions : public MDspMenuBase
     std::unique_ptr<ClickableCommand>   cmd_verify;
     std::unique_ptr<ClickableCommand>   cmd_invalidate_remote;
 
+    void show_actions();
+
     void selection_action(const action_func_type action_func);
 
     void action_pause_sync(const std::string& rsc_name, const std::string& con_name, const uint16_t vlm_nr);

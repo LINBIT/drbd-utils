@@ -83,29 +83,41 @@ DrbdCommandsImpl::~DrbdCommandsImpl() noexcept
 bool DrbdCommandsImpl::execute_command(const std::string& command, StringTokenizer& tokenizer)
 {
     bool processed = false;
-    Entry* const cmd_entry = cmd_map->get(&command);
-    if (cmd_entry != nullptr)
+    if (dsp_comp_hub.enable_drbd_actions)
     {
-        cmd_func_type cmd_func = cmd_entry->cmd_func;
-        try
+        Entry* const cmd_entry = cmd_map->get(&command);
+        if (cmd_entry != nullptr)
         {
-            dsp_comp_hub.dsp_selector->synchronize_displays();
-            processed = (this->*cmd_func)(command, tokenizer);
+            cmd_func_type cmd_func = cmd_entry->cmd_func;
+            try
+            {
+                dsp_comp_hub.dsp_selector->synchronize_displays();
+                processed = (this->*cmd_func)(command, tokenizer);
+            }
+            catch (SubProcessQueue::QueueCapacityException&)
+            {
+                dsp_comp_hub.log->add_entry(
+                    MessageLog::log_level::ALERT,
+                    "Cannot execute command, insufficient queue capacity"
+                );
+            }
+            catch (SubProcess::Exception&)
+            {
+                dsp_comp_hub.log->add_entry(
+                    MessageLog::log_level::ALERT,
+                    "Command failed: Sub-process execution error"
+                );
+            }
         }
-        catch (SubProcessQueue::QueueCapacityException&)
-        {
-            dsp_comp_hub.log->add_entry(
-                MessageLog::log_level::ALERT,
-                "Cannot execute command, insufficient queue capacity"
-            );
-        }
-        catch (SubProcess::Exception&)
-        {
-            dsp_comp_hub.log->add_entry(
-                MessageLog::log_level::ALERT,
-                "Command failed: Sub-process execution error"
-            );
-        }
+    }
+    else
+    {
+        const uint64_t msg_id = dsp_comp_hub.log->add_entry(
+            MessageLog::log_level::WARN,
+            "DRBD commands are currently disabled"
+        );
+        dsp_comp_hub.dsp_shared->message_id = msg_id;
+        dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::MSG_VIEWER);
     }
     return processed;
 }
