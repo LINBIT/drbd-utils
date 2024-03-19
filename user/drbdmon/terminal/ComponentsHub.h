@@ -42,6 +42,7 @@ class ComponentsHub
     DrbdCommands*           drbd_cmd_exec   {nullptr};
     const Configuration*    config          {nullptr};
     const std::string*      node_name       {nullptr};
+    const std::string*      events_file     {nullptr};
 
     AnsiControl*            ansi_ctl    {nullptr};
     DisplayStyleCollection* style_coll  {nullptr};

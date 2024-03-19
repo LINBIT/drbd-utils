@@ -86,6 +86,8 @@ class DisplayController : public GenericDisplay, public DisplaySelector
     DrbdMonCore&            core_instance;
     MonitorEnvironment&     mon_env;
 
+    std::string             events_file;
+
     std::unique_ptr<DisplayMap> dsp_map;
 
     std::unique_ptr<TerminalControl> term_ctl_mgr;

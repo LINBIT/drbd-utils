@@ -34,9 +34,11 @@ extern "C"
 const std::string DrbdMon::OPT_HELP_KEY = "help";
 const std::string DrbdMon::OPT_VERSION_KEY = "version";
 const std::string DrbdMon::OPT_FREQ_LMT_KEY = "freqlmt";
+const std::string DrbdMon::OPT_EVENTS_LOG_KEY = "events-log";
 const ConfigOption DrbdMon::OPT_HELP(true, OPT_HELP_KEY);
 const ConfigOption DrbdMon::OPT_VERSION(true, OPT_VERSION_KEY);
 const ConfigOption DrbdMon::OPT_FREQ_LMT(false, OPT_FREQ_LMT_KEY);
+const ConfigOption DrbdMon::OPT_EVENTS_LOG(false, OPT_EVENTS_LOG_KEY);
 
 const char* DrbdMon::ENV_COLOR_MODE         = "DRBDMON_COLORS";
 const char* DrbdMon::COLOR_MODE_EXTENDED    = "extended";
@@ -108,11 +110,24 @@ void DrbdMon::run()
     {
         try
         {
+            // Interval timer initialization
+            // Must be constructed before configuring the Configurable instances
+            interval_timer_mgr = std::unique_ptr<IntervalTimer>(
+                new IntervalTimer(log, bounds<uint16_t>(0, config.dsp_interval, MAX_INTERVAL))
+            );
+            timer_available = config.dsp_interval != 0;
+            timer_armed = false;
+
+            configurables = std::unique_ptr<Configurable*[]>(new Configurable*[2]);
+            configurables[0] = dynamic_cast<Configurable*> (this);
+            configurables[1] = nullptr;
+            configure_options();
+
             event_props   = std::unique_ptr<PropsMap>(new PropsMap(&comparators::compare_string));
 
             events_source = std::unique_ptr<EventsSourceSpawner>(new EventsSourceSpawner(log));
 
-            events_source->spawn_source();
+            events_source->spawn_source(&(mon_env.events_file_path));
             events_io = std::unique_ptr<EventsIo>(
                 new EventsIo(events_source->get_events_out_fd(), events_source->get_events_err_fd())
             );
@@ -124,21 +139,6 @@ void DrbdMon::run()
             sub_proc_notifier = std::unique_ptr<SubProcessNotification>(
                 new SubProcessNotification(dynamic_cast<EventsIoWakeup*> (events_io.get()))
             );
-
-            // Interval timer initialization
-            // Must be constructed before configuring the Configurable instances
-            interval_timer_mgr = std::unique_ptr<IntervalTimer>(
-                new IntervalTimer(log, bounds<uint16_t>(0, config.dsp_interval, MAX_INTERVAL))
-            );
-            timer_available = config.dsp_interval != 0;
-            timer_armed = false;
-
-            configurables = std::unique_ptr<Configurable*[]>(new Configurable*[3]);
-            configurables[0] = dynamic_cast<Configurable*> (this);
-            // configurables[1] = dynamic_cast<Configurable*> (display_impl);
-            configurables[1] = nullptr;
-            configurables[2] = nullptr;
-            configure_options();
 
             // Cleanup any zombies that might not have been collected,
             // because SIGCHLD is blocked during reinitialization
@@ -886,6 +886,7 @@ void DrbdMon::announce_options(Configurator& collector)
     collector.add_config_option(owner, OPT_HELP);
     collector.add_config_option(owner, OPT_VERSION);
     collector.add_config_option(owner, OPT_FREQ_LMT);
+    collector.add_config_option(owner, OPT_EVENTS_LOG);
 }
 
 void DrbdMon::options_help() noexcept
@@ -894,6 +895,7 @@ void DrbdMon::options_help() noexcept
     std::cerr << DrbdMonConsts::PROGRAM_NAME << " configuration options:\n";
     std::cerr << "  --version        Display version information\n";
     std::cerr << "  --help           Display help\n";
+    std::cerr << "  --events-log <file>      Display the DRBD state saved in the specified file\n";
     std::cerr << "  --freqlmt <interval>     Set a frequency limit for display updates\n";
     std::cerr << "    <interval>             Minimum delay between display updates [integer]\n";
     std::cerr << "    Supported unit suffixes: s (seconds), ms (milliseconds)\n";
@@ -907,7 +909,7 @@ void DrbdMon::options_help() noexcept
 }
 
 // @throws std::bad_alloc, ConfigurationException
-void DrbdMon::set_flag(std::string& key)
+void DrbdMon::set_flag(const std::string& key)
 {
     if (key == OPT_HELP.key)
     {
@@ -929,7 +931,7 @@ void DrbdMon::set_flag(std::string& key)
 }
 
 // @throws std::bad_alloc, ConfigurationException
-void DrbdMon::set_option(std::string& key, std::string& value)
+void DrbdMon::set_option(const std::string& key, const std::string& value)
 {
     if (key == OPT_FREQ_LMT.key)
     {
@@ -983,6 +985,11 @@ void DrbdMon::set_option(std::string& key, std::string& value)
             log.add_entry(MessageLog::log_level::ALERT, error_message);
             throw ConfigurationException();
         }
+    }
+    else
+    if (key == OPT_EVENTS_LOG.key)
+    {
+        mon_env.events_file_path = value;
     }
 }
 

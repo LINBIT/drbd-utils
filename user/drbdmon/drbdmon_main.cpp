@@ -65,9 +65,9 @@ namespace drbdmon
     static void clear_screen() noexcept;
     static void cond_print_error_header(
         bool& error_header_printed,
-        const std::unique_ptr<std::string>& node_name
+        const std::string& node_name
     ) noexcept;
-    static void set_window_title(const std::string* const node_name);
+    static void set_window_title(const std::string& node_name);
     static void clear_window_title();
 }
 
@@ -164,7 +164,7 @@ int main(int argc, char* argv[])
         }
         else
         {
-            drbdmon::cond_print_error_header(mon_env.error_header_printed, mon_env.node_name_mgr);
+            drbdmon::cond_print_error_header(mon_env.error_header_printed, mon_env.node_name);
             std::cout << "Application start failed, cannot adjust security settings" << std::endl;
             exit_code = drbdmon::EXIT_ERR_SECURITY;
         }
@@ -206,15 +206,13 @@ static void drbdmon::monitor_loop(
         mon_env.error_header_printed = false;
         try
         {
-            if (mon_env.node_name_mgr == nullptr)
+            if (mon_env.node_name.empty())
             {
-                system_api::init_node_name(mon_env.node_name_mgr);
+                system_api::init_node_name(mon_env.node_name);
             }
-            drbdmon::set_window_title(mon_env.node_name_mgr.get());
+            drbdmon::set_window_title(mon_env.node_name);
 
-            const std::unique_ptr<DrbdMon> dm_instance(
-                new DrbdMon(argc, argv, mon_env)
-            );
+            const std::unique_ptr<DrbdMon> dm_instance(new DrbdMon(argc, argv, mon_env));
             dm_instance->run();
             if (mon_env.fin_action != DrbdMon::finish_action::TERMINATE_NO_CLEAR)
             {
@@ -237,7 +235,7 @@ static void drbdmon::monitor_loop(
         {
             if (mon_env.log->has_entries())
             {
-                drbdmon::cond_print_error_header(mon_env.error_header_printed, mon_env.node_name_mgr);
+                drbdmon::cond_print_error_header(mon_env.error_header_printed, mon_env.node_name);
                 std::cout << "** " << DrbdMonConsts::PROGRAM_NAME << " messages log\n\n";
                 mon_env.log->display_messages(std::cout);
                 std::cout << std::endl;
@@ -246,7 +244,7 @@ static void drbdmon::monitor_loop(
 
         if (mon_env.fail_data == DrbdMon::fail_info::OUT_OF_MEMORY)
         {
-            drbdmon::cond_print_error_header(mon_env.error_header_printed, mon_env.node_name_mgr);
+            drbdmon::cond_print_error_header(mon_env.error_header_printed, mon_env.node_name);
             std::cout << "** " << DrbdMonConsts::PROGRAM_NAME <<
                 ": Out of memory, trying to restart" << std::endl;
         }
@@ -258,7 +256,7 @@ static void drbdmon::monitor_loop(
         else
         if (mon_env.fin_action == DrbdMon::finish_action::RESTART_DELAYED)
         {
-            drbdmon::cond_print_error_header(mon_env.error_header_printed, mon_env.node_name_mgr);
+            drbdmon::cond_print_error_header(mon_env.error_header_printed, mon_env.node_name);
             std::cout << "** " << DrbdMonConsts::PROGRAM_NAME << ": Reinitializing in " <<
                 (static_cast<unsigned long> (drbdmon::DELAY_MSECS) / 1000) << " seconds" << std::endl;
 
@@ -282,7 +280,7 @@ static void drbdmon::monitor_loop(
         else
         if (mon_env.fin_action == DrbdMon::finish_action::RESTART_IMMED)
         {
-            drbdmon::cond_print_error_header(mon_env.error_header_printed, mon_env.node_name_mgr);
+            drbdmon::cond_print_error_header(mon_env.error_header_printed, mon_env.node_name);
             std::cout << "** " << DrbdMonConsts::PROGRAM_NAME << ": Reinitializing immediately" << std::endl;
         }
     }
@@ -295,26 +293,25 @@ static void drbdmon::clear_screen() noexcept
 
 static void drbdmon::cond_print_error_header(
     bool& error_header_printed,
-    const std::unique_ptr<std::string>& node_name
+    const std::string& node_name
 ) noexcept
 {
     if (!error_header_printed)
     {
         std::cout << "** " << DrbdMonConsts::PROGRAM_NAME << " v" << DrbdMonConsts::UTILS_VERSION << '\n';
-        if (node_name != nullptr)
+        if (!node_name.empty())
         {
-            std::string* node_name_ptr = node_name.get();
-            std::cout << "    Node " << *node_name_ptr << '\n';
+            std::cout << "    Node " << node_name << '\n';
         }
         error_header_printed = true;
     }
 }
 
-static void drbdmon::set_window_title(const std::string* const node_name)
+static void drbdmon::set_window_title(const std::string& node_name)
 {
-    if (node_name != nullptr)
+    if (!node_name.empty())
     {
-        std::cout << "\x1B]2;" << WINDOW_TITLE_APP << "(Node " << *node_name << ")\x07";
+        std::cout << "\x1B]2;" << WINDOW_TITLE_APP << "(Node " << node_name << ")\x07";
     }
     else
     {

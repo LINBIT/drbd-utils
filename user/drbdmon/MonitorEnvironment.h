@@ -18,8 +18,9 @@ class MonitorEnvironment
     std::unique_ptr<MessageLog>     log;
     std::unique_ptr<MessageLog>     debug_log;
     std::unique_ptr<Configuration>  config;
-    std::unique_ptr<std::string>    node_name_mgr;
+    std::string                     node_name;
     std::string                     config_file_path;
+    std::string                     events_file_path;
 };
 
 #endif /* MONITORENVIRONMENT_H */

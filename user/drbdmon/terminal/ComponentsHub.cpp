@@ -48,6 +48,7 @@ void ComponentsHub::verify() const
         log == nullptr ||
         debug_log == nullptr ||
         node_name == nullptr ||
+        events_file == nullptr ||
         ansi_ctl == nullptr ||
         style_coll == nullptr ||
         active_color_table == nullptr ||

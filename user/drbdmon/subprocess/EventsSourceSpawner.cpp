@@ -13,14 +13,15 @@ extern "C"
     #include <errno.h>
 }
 
-const char* EventsSourceSpawner::EVENTS_PROGRAM = "drbdsetup";
-const char* EventsSourceSpawner::EVENTS_PROGRAM_ARGS[] =
+const char* const EventsSourceSpawner::EVENTS_PROGRAM = "drbdsetup";
+const char* const EventsSourceSpawner::EVENTS_PROGRAM_ARGS[] =
 {
     "drbdsetup",
     "events2",
     "all",
     nullptr
 };
+const char* const EventsSourceSpawner::SAVED_EVENTS_PROGRAM = "eventsfeeder";
 
 EventsSourceSpawner::EventsSourceSpawner(MessageLog& logRef):
     log(logRef)
@@ -73,7 +74,7 @@ int EventsSourceSpawner::get_events_err_fd()
 }
 
 // @throws std::bad_alloc, EventSourceException
-void EventsSourceSpawner::spawn_source()
+void EventsSourceSpawner::spawn_source(const std::string* const save_file_path_ptr)
 {
     // Initialize the pipes
     posix::Pipe out_pipe_mgr(&out_pipe_fd);
@@ -89,7 +90,23 @@ void EventsSourceSpawner::spawn_source()
     // Initialize the datastructures for posix_spawn())
     posix::SpawnFileActions pipe_init;
     posix::SpawnAttr spawn_attr;
-    posix::SpawnArgs spawn_args(EVENTS_PROGRAM_ARGS);
+    std::unique_ptr<posix::SpawnArgs> spawn_args;
+
+    const char* provider_pgm = nullptr;
+    if (save_file_path_ptr == nullptr || save_file_path_ptr->empty())
+    {
+        provider_pgm = EVENTS_PROGRAM;
+        spawn_args = std::unique_ptr<posix::SpawnArgs>(new posix::SpawnArgs(EVENTS_PROGRAM_ARGS));
+    }
+    else
+    {
+        provider_pgm = SAVED_EVENTS_PROGRAM;
+        const char* args[3];
+        args[0] = SAVED_EVENTS_PROGRAM;
+        args[1] = save_file_path_ptr->c_str();
+        args[2] = nullptr;
+        spawn_args = std::unique_ptr<posix::SpawnArgs>(new posix::SpawnArgs(args));
+    }
 
     // Redirect stdout to the pipes write side
     checked_int_rc(
@@ -132,8 +149,8 @@ void EventsSourceSpawner::spawn_source()
     checked_int_rc(posix_spawnattr_setflags(spawn_attr.attr, POSIX_SPAWN_SETSIGDEF));
 
     // Attempt to spawn the events source program
-    int spawn_rc = posix_spawnp(&spawned_pid, EVENTS_PROGRAM, pipe_init.actions, spawn_attr.attr,
-                                spawn_args.args, environ);
+    int spawn_rc = posix_spawnp(&spawned_pid, provider_pgm, pipe_init.actions, spawn_attr.attr,
+                                spawn_args->args, environ);
     if (spawn_rc != 0)
     {
         spawned_pid = -1;

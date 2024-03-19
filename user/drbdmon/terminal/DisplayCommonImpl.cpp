@@ -38,6 +38,17 @@ void DisplayCommonImpl::display_header() const
         "%s%s%s", clr.title_bar.c_str(), AnsiControl::ANSI_CLEAR_LINE.c_str(),
         program_version.c_str()
     );
+    if (dsp_comp_hub.events_file != nullptr && !dsp_comp_hub.events_file->empty())
+    {
+        dsp_io.write_text(" | ");
+        dsp_io.write_text(clr.alert_label.c_str());
+        dsp_io.write_text("File ");
+        dsp_io.write_string_field(
+            *(dsp_comp_hub.events_file),
+            dsp_comp_hub.term_cols - program_version.length() - 8, false
+        );
+    }
+    else
     if (dsp_comp_hub.node_name != nullptr)
     {
         dsp_io.write_text(" | Node ");

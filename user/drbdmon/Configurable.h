@@ -19,10 +19,10 @@ class Configurable
     virtual void options_help() noexcept = 0;
 
     // @throws std::bad_alloc, ConfigurationException
-    virtual void set_flag(std::string& key) = 0;
+    virtual void set_flag(const std::string& key) = 0;
 
     // @throws std::bad_alloc, ConfigurationException
-    virtual void set_option(std::string& key, std::string& value) = 0;
+    virtual void set_option(const std::string& key, const std::string& value) = 0;
 };
 
 #endif	/* CONFIGURABLE_H */

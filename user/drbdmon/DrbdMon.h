@@ -42,9 +42,11 @@ class DrbdMon : public DrbdMonCore, public Configurable, public Configurator
     static const std::string OPT_HELP_KEY;
     static const std::string OPT_VERSION_KEY;
     static const std::string OPT_FREQ_LMT_KEY;
+    static const std::string OPT_EVENTS_LOG_KEY;
     static const ConfigOption OPT_HELP;
     static const ConfigOption OPT_VERSION;
     static const ConfigOption OPT_FREQ_LMT;
+    static const ConfigOption OPT_EVENTS_LOG;
 
     // Environment variable for color mode selection
     static const char* ENV_COLOR_MODE;
@@ -120,10 +122,10 @@ class DrbdMon : public DrbdMonCore, public Configurable, public Configurator
     virtual void options_help() noexcept override;
 
     // @throws std::bad_alloc
-    virtual void set_flag(std::string& key) override;
+    virtual void set_flag(const std::string& key) override;
 
     // @throws std::bad_alloc
-    virtual void set_option(std::string& key, std::string& value) override;
+    virtual void set_option(const std::string& key, const std::string& value) override;
 
     virtual uint32_t get_problem_count() const noexcept override;
 

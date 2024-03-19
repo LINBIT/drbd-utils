@@ -3,6 +3,7 @@
 
 #include <default_types.h>
 #include <new>
+#include <string>
 #include <stdexcept>
 
 #include <MessageLog.h>
@@ -16,8 +17,9 @@ extern "C"
 class EventsSourceSpawner
 {
   public:
-    static const char* EVENTS_PROGRAM;
-    static const char* EVENTS_PROGRAM_ARGS[];
+    static const char* const EVENTS_PROGRAM;
+    static const char* const EVENTS_PROGRAM_ARGS[];
+    static const char* const SAVED_EVENTS_PROGRAM;
 
     EventsSourceSpawner(MessageLog& logRef);
     virtual ~EventsSourceSpawner();
@@ -32,7 +34,7 @@ class EventsSourceSpawner
     virtual int get_events_err_fd();
 
     // @throws std::bad_alloc, EventSourceException
-    virtual void spawn_source();
+    virtual void spawn_source(const std::string* const save_file_path_ptr);
 
     // @throws EventsSourceException
     virtual void cleanup_child_processes();

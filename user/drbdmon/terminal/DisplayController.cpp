@@ -49,6 +49,8 @@ DisplayController::DisplayController(
     core_instance(core_instance_ref),
     mon_env(mon_env_ref)
 {
+    events_file = mon_env.sys_api->file_name_for_path(mon_env.events_file_path);
+
     dsp_map = std::unique_ptr<DisplayMap>(new DisplayMap(&comparators::compare_string));
 
     term_ctl_mgr = mon_env.sys_api->create_terminal_control();
@@ -62,16 +64,17 @@ DisplayController::DisplayController(
     sub_proc_queue_mgr = std::unique_ptr<SubProcessQueue>(new SubProcessQueue());
 
     dsp_comp_hub_mgr->core_instance     = &core_instance;
-    dsp_comp_hub_mgr->sys_api           = &(mon_env.sys_api);
+    dsp_comp_hub_mgr->sys_api           = mon_env.sys_api.get();
     dsp_comp_hub_mgr->dsp_selector      = dynamic_cast<DisplaySelector*> (this);
     dsp_comp_hub_mgr->dsp_io            = dsp_io_mgr.get();
     dsp_comp_hub_mgr->dsp_shared        = dsp_shared_mgr.get();
     dsp_comp_hub_mgr->term_size         = dynamic_cast<TermSize*> (term_size_mgr.get());
     dsp_comp_hub_mgr->rsc_map           = &rsc_map_ref;
     dsp_comp_hub_mgr->prb_rsc_map       = &prb_rsc_map_ref;
-    dsp_comp_hub_mgr->log               = &(mon_env.log);
-    dsp_comp_hub_mgr->debug_log         = &(mon_env.debug_log);
-    dsp_comp_hub_mgr->node_name         = mon_env.node_name_mgr.get();
+    dsp_comp_hub_mgr->log               = mon_env.log.get();
+    dsp_comp_hub_mgr->debug_log         = mon_env.debug_log.get();
+    dsp_comp_hub_mgr->node_name         = &(mon_env.node_name);
+    dsp_comp_hub_mgr->events_file       = &events_file;
     dsp_comp_hub_mgr->style_coll        = dsp_styles_mgr.get();
     dsp_comp_hub_mgr->ansi_ctl          = ansi_ctl_mgr.get();
     dsp_comp_hub_mgr->sub_proc_queue    = sub_proc_queue_mgr.get();
