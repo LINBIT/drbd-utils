@@ -174,14 +174,22 @@ bool GlobalCommandsImpl::cmd_select_all(const std::string& command, StringTokeni
     DisplayId::display_page active_page = dsp_comp_hub.dsp_selector->get_active_page();
     if (active_page == DisplayId::display_page::LOG_VIEWER)
     {
-        std::unique_lock<std::recursive_mutex> lock(dsp_comp_hub.log->queue_lock);
-
-        MessageLog::Queue::ValuesIterator entry_iter = dsp_comp_hub.log->iterator();
-        while (entry_iter.has_next())
+        MessageLog* const log = active_page == DisplayId::display_page::LOG_VIEWER ?
+            dsp_comp_hub.log : dsp_comp_hub.debug_log;
+        MessageMap& selection = active_page == DisplayId::display_page::LOG_VIEWER ?
+            *(dsp_comp_hub.dsp_shared->selected_log_entries) :
+            *(dsp_comp_hub.dsp_shared->selected_debug_log_entries);
+        dsp_comp_hub.dsp_common->application_working();
         {
-            MessageLog::Entry* const entry = entry_iter.next();
-            const uint64_t entry_id = entry->get_id();
-            dsp_comp_hub.dsp_shared->select_log_entry(*(dsp_comp_hub.dsp_shared->selected_log_entries), entry_id);
+            std::unique_lock<std::recursive_mutex> lock(log->queue_lock);
+
+            MessageLog::Queue::ValuesIterator entry_iter = log->iterator();
+            while (entry_iter.has_next())
+            {
+                MessageLog::Entry* const entry = entry_iter.next();
+                const uint64_t entry_id = entry->get_id();
+                dsp_comp_hub.dsp_shared->select_log_entry(selection, entry_id);
+            }
         }
         dsp_comp_hub.dsp_selector->refresh_display();
         accepted = true;
@@ -193,9 +201,14 @@ bool GlobalCommandsImpl::cmd_deselect_all(const std::string& command, StringToke
 {
     bool accepted = false;
     DisplayId::display_page active_page = dsp_comp_hub.dsp_selector->get_active_page();
-    if (active_page == DisplayId::display_page::LOG_VIEWER)
+    if (active_page == DisplayId::display_page::LOG_VIEWER ||
+        active_page == DisplayId::display_page::DEBUG_LOG_VIEWER)
     {
-        dsp_comp_hub.dsp_shared->clear_log_entry_selection(*(dsp_comp_hub.dsp_shared->selected_log_entries));
+        MessageMap& selection = active_page == DisplayId::display_page::LOG_VIEWER ?
+            *(dsp_comp_hub.dsp_shared->selected_log_entries) :
+            *(dsp_comp_hub.dsp_shared->selected_debug_log_entries);
+        dsp_comp_hub.dsp_common->application_working();
+        dsp_comp_hub.dsp_shared->clear_log_entry_selection(selection);
         dsp_comp_hub.dsp_selector->refresh_display();
         accepted = true;
     }

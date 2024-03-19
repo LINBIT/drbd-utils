@@ -61,6 +61,7 @@ bool MDspStdListBase::key_pressed(const uint32_t key)
         else
         if (key == KeyCodes::FUNC_04)
         {
+            dsp_comp_hub.dsp_common->application_working();
             clear_selection();
             dsp_comp_hub.dsp_selector->refresh_display();
             intercepted = true;

@@ -405,6 +405,7 @@ bool MDspVolumes::execute_command(const std::string& command, StringTokenizer& t
         DrbdResource* const rsc = dsp_comp_hub.get_monitor_resource();
         if (rsc != nullptr)
         {
+            dsp_comp_hub.dsp_common->application_working();
             const bool prb_mode = is_problem_mode(rsc);
             DrbdResource::VolumesIterator vlm_iter = rsc->volumes_iterator();
             while (vlm_iter.has_next())
@@ -422,12 +423,18 @@ bool MDspVolumes::execute_command(const std::string& command, StringTokenizer& t
     else
     if (command == cmd_names::KEY_CMD_DESELECT_ALL || command == cmd_names::KEY_CMD_CLEAR_SELECTION)
     {
+        dsp_comp_hub.dsp_common->application_working();
         clear_selection();
         accepted = true;
     }
     if (accepted)
     {
         dsp_comp_hub.dsp_selector->refresh_display();
+    }
+    else
+    {
+        dsp_comp_hub.dsp_common->application_idle();
+        reposition_text_cursor();
     }
     return accepted;
 }

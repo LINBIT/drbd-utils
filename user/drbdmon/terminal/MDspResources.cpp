@@ -596,6 +596,7 @@ bool MDspResources::execute_command(const std::string& command, StringTokenizer&
             {
                 if (string_matching::is_pattern(cmd_arg))
                 {
+                    dsp_comp_hub.dsp_common->application_working();
                     try
                     {
                         std::unique_ptr<string_matching::PatternItem> pattern;
@@ -638,6 +639,7 @@ bool MDspResources::execute_command(const std::string& command, StringTokenizer&
             std::string cmd_arg = tokenizer.next();
             if (string_matching::is_pattern(cmd_arg))
             {
+                dsp_comp_hub.dsp_common->application_working();
                 try
                 {
                     accepted = change_selection(cmd_arg, command == cmd_names::KEY_CMD_SELECT);
@@ -667,6 +669,7 @@ bool MDspResources::execute_command(const std::string& command, StringTokenizer&
     else
     if (command == cmd_names::KEY_CMD_SELECT_ALL)
     {
+        dsp_comp_hub.dsp_common->application_working();
         ResourcesMap& selected_map = select_resources_map();
         ResourcesMap::KeysIterator rsc_iter(selected_map);
         while (rsc_iter.has_next())
@@ -679,13 +682,18 @@ bool MDspResources::execute_command(const std::string& command, StringTokenizer&
     else
     if (command == cmd_names::KEY_CMD_DESELECT_ALL || command == cmd_names::KEY_CMD_CLEAR_SELECTION)
     {
+        dsp_comp_hub.dsp_common->application_working();
         clear_selection();
-
         accepted = true;
     }
     if (accepted)
     {
         dsp_comp_hub.dsp_selector->refresh_display();
+    }
+    else
+    {
+        dsp_comp_hub.dsp_common->application_idle();
+        reposition_text_cursor();
     }
     return accepted;
 }

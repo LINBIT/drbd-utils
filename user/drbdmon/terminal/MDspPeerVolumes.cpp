@@ -185,6 +185,7 @@ bool MDspPeerVolumes::execute_command(const std::string& command, StringTokenize
         DrbdConnection* const con = dsp_comp_hub.get_monitor_connection();
         if (rsc != nullptr && con != nullptr)
         {
+            dsp_comp_hub.dsp_common->application_working();
             DrbdConnection::VolumesIterator vlm_iter(*con);
             if (is_problem_mode(rsc, con))
             {
@@ -213,12 +214,18 @@ bool MDspPeerVolumes::execute_command(const std::string& command, StringTokenize
     else
     if (command == cmd_names::KEY_CMD_DESELECT_ALL || command == cmd_names::KEY_CMD_CLEAR_SELECTION)
     {
+        dsp_comp_hub.dsp_common->application_working();
         clear_selection();
         accepted = true;
     }
     if (accepted)
     {
         dsp_comp_hub.dsp_selector->refresh_display();
+    }
+    else
+    {
+        dsp_comp_hub.dsp_common->application_idle();
+        reposition_text_cursor();
     }
     return accepted;
 }

@@ -678,6 +678,7 @@ bool MDspConnections::execute_command(const std::string& command, StringTokenize
                 {
                     if (string_matching::is_pattern(cmd_arg))
                     {
+                        dsp_comp_hub.dsp_common->application_working();
                         try
                         {
                             std::unique_ptr<string_matching::PatternItem> pattern;
@@ -744,6 +745,7 @@ bool MDspConnections::execute_command(const std::string& command, StringTokenize
             std::string cmd_arg = tokenizer.next();
             if (string_matching::is_pattern(cmd_arg))
             {
+                dsp_comp_hub.dsp_common->application_working();
                 try
                 {
                     accepted = change_selection(cmd_arg, command == cmd_names::KEY_CMD_SELECT);
@@ -776,6 +778,7 @@ bool MDspConnections::execute_command(const std::string& command, StringTokenize
         DrbdResource* const rsc = dsp_comp_hub.get_monitor_resource();
         if (rsc != nullptr)
         {
+            dsp_comp_hub.dsp_common->application_working();
             const bool prb_mode = is_problem_mode(rsc);
             DrbdResource::ConnectionsIterator con_iter = rsc->connections_iterator();
             while (con_iter.has_next())
@@ -793,12 +796,18 @@ bool MDspConnections::execute_command(const std::string& command, StringTokenize
     else
     if (command == cmd_names::KEY_CMD_DESELECT_ALL || command == cmd_names::KEY_CMD_CLEAR_SELECTION)
     {
+        dsp_comp_hub.dsp_common->application_working();
         clear_selection();
         accepted = true;
     }
     if (accepted)
     {
         dsp_comp_hub.dsp_selector->refresh_display();
+    }
+    else
+    {
+        dsp_comp_hub.dsp_common->application_idle();
+        reposition_text_cursor();
     }
     return accepted;
 }

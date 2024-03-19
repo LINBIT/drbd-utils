@@ -144,6 +144,8 @@ bool DrbdCommandsImpl::exec_for_resources(
             active_page == DisplayId::display_page::RSC_ACTIONS) &&
             dsp_comp_hub.dsp_shared->have_resources_selection())
         {
+            dsp_comp_hub.dsp_common->application_working();
+
             cmd_valid = true;
 
             ResourcesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
@@ -199,6 +201,8 @@ bool DrbdCommandsImpl::exec_for_connections(
             // On resource list or resource actions with a selection of multiple resources,
             // operates on all connections or all selected resources, overrides any connection selection
 
+            dsp_comp_hub.dsp_common->application_working();
+
             cmd_valid = true;
 
             ResourcesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
@@ -226,6 +230,8 @@ bool DrbdCommandsImpl::exec_for_connections(
                     dsp_comp_hub.dsp_shared->have_connections_selection())
                 {
                     // On connection list or connection details with a selection of multiple connections
+
+                    dsp_comp_hub.dsp_common->application_working();
 
                     ConnectionsMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_connections_map();
                     ConnectionsMap::KeysIterator con_iter(selection_map);
@@ -299,6 +305,8 @@ bool DrbdCommandsImpl::exec_for_volumes(
                 active_page == DisplayId::display_page::VLM_ACTIONS) &&
                 dsp_comp_hub.dsp_shared->have_volumes_selection())
             {
+                dsp_comp_hub.dsp_common->application_working();
+
                 cmd_valid = true;
 
                 VolumesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_volumes_map();
@@ -368,6 +376,8 @@ bool DrbdCommandsImpl::exec_for_peer_volumes(
                 active_page == DisplayId::display_page::PEER_VLM_ACTIONS) &&
                 dsp_comp_hub.dsp_shared->have_peer_volumes_selection())
             {
+                dsp_comp_hub.dsp_common->application_working();
+
                 cmd_valid = true;
 
                 VolumesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_peer_volumes_map();

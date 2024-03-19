@@ -206,6 +206,11 @@ bool MDspBase::key_pressed(const uint32_t key)
             dsp_comp_hub.dsp_common->display_command_line();
             leave_command_line_mode();
         }
+        else
+        {
+            dsp_comp_hub.dsp_common->application_idle();
+            reposition_text_cursor();
+        }
 
         intercepted = true;
     }
