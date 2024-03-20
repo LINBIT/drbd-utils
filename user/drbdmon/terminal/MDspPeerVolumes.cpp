@@ -123,12 +123,18 @@ bool MDspPeerVolumes::mouse_action(MouseEvent& mouse)
     bool intercepted = MDspStdListBase::mouse_action(mouse);
     if (!intercepted)
     {
-        if (mouse.coord_row >= PEER_VLM_LIST_Y)
+        if ((mouse.button == MouseEvent::button_id::BUTTON_01 || mouse.button == MouseEvent::button_id::BUTTON_03) &&
+            mouse.event == MouseEvent::event_id::MOUSE_RELEASE &&
+            mouse.coord_row >= PEER_VLM_LIST_Y)
         {
             const uint32_t lines_per_page = get_lines_per_page();
             if (mouse.coord_row < PEER_VLM_LIST_Y + lines_per_page)
             {
                 list_item_clicked(mouse);
+                if (mouse.button == MouseEvent::button_id::BUTTON_03 && is_cursor_nav())
+                {
+                    dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::PEER_VLM_DETAIL);
+                }
                 intercepted = true;
             }
         }
