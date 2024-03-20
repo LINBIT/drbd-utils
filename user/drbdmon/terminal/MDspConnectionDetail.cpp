@@ -148,10 +148,18 @@ void MDspConnectionDetail::display_content()
             current_line += 2;
 
             dsp_comp_hub.dsp_io->cursor_xy(1, current_line);
-            dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->hotkey_field.c_str());
-            dsp_comp_hub.dsp_io->write_text(" A ");
-            dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->hotkey_label.c_str());
-            dsp_comp_hub.dsp_io->write_text(" Actions");
+            if (dsp_comp_hub.enable_drbd_actions)
+            {
+                dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->hotkey_field.c_str());
+                dsp_comp_hub.dsp_io->write_text(" A ");
+                dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->hotkey_label.c_str());
+                dsp_comp_hub.dsp_io->write_text(" Actions");
+            }
+            else
+            {
+                dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
+                dsp_comp_hub.dsp_io->write_text("[Actions disabled]");
+            }
 
             dsp_comp_hub.dsp_io->cursor_xy(21, current_line);
             dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->hotkey_field.c_str());
@@ -241,10 +249,13 @@ void MDspConnectionDetail::display_deactivated()
 
 void MDspConnectionDetail::opt_actions()
 {
-    DrbdConnection* const con = dsp_comp_hub.get_monitor_connection();
-    if (con != nullptr)
+    if (dsp_comp_hub.enable_drbd_actions)
     {
-        dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::CON_ACTIONS);
+        DrbdConnection* const con = dsp_comp_hub.get_monitor_connection();
+        if (con != nullptr)
+        {
+            dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::CON_ACTIONS);
+        }
     }
 }
 

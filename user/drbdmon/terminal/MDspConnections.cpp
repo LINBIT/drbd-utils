@@ -631,8 +631,11 @@ bool MDspConnections::key_pressed(const uint32_t key)
         {
             if (key == static_cast<uint32_t> ('A') || key == static_cast<uint32_t> ('a'))
             {
-                dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::CON_ACTIONS);
-                intercepted = true;
+                if (dsp_comp_hub.enable_drbd_actions)
+                {
+                    dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::CON_ACTIONS);
+                    intercepted = true;
+                }
             }
         }
     }

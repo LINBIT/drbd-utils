@@ -243,10 +243,19 @@ void MDspResourceDetail::display_content()
         current_line += 2;
 
         dsp_comp_hub.dsp_io->cursor_xy(1, current_line);
-        dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->hotkey_field.c_str());
-        dsp_comp_hub.dsp_io->write_text(" A ");
-        dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->hotkey_label.c_str());
-        dsp_comp_hub.dsp_io->write_text(" Actions");
+
+        if (dsp_comp_hub.enable_drbd_actions)
+        {
+            dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->hotkey_field.c_str());
+            dsp_comp_hub.dsp_io->write_text(" A ");
+            dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->hotkey_label.c_str());
+            dsp_comp_hub.dsp_io->write_text(" Actions");
+        }
+        else
+        {
+            dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
+            dsp_comp_hub.dsp_io->write_text("[Actions disabled]");
+        }
 
         dsp_comp_hub.dsp_io->cursor_xy(21, current_line);
         dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->hotkey_field.c_str());
@@ -344,7 +353,7 @@ void MDspResourceDetail::display_deactivated()
 
 void MDspResourceDetail::opt_actions()
 {
-    if (!dsp_comp_hub.dsp_shared->monitor_rsc.empty())
+    if (!dsp_comp_hub.dsp_shared->monitor_rsc.empty() && dsp_comp_hub.enable_drbd_actions)
     {
         dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::RSC_ACTIONS);
     }

@@ -146,10 +146,18 @@ void MDspVolumeDetail::display_content()
             current_line += 2;
 
             dsp_comp_hub.dsp_io->cursor_xy(1, current_line);
-            dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->hotkey_field.c_str());
-            dsp_comp_hub.dsp_io->write_text(" A ");
-            dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->hotkey_label.c_str());
-            dsp_comp_hub.dsp_io->write_text(" Actions");
+            if (dsp_comp_hub.enable_drbd_actions)
+            {
+                dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->hotkey_field.c_str());
+                dsp_comp_hub.dsp_io->write_text(" A ");
+                dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->hotkey_label.c_str());
+                dsp_comp_hub.dsp_io->write_text(" Actions");
+            }
+            else
+            {
+                dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
+                dsp_comp_hub.dsp_io->write_text("[Actions disabled]");
+            }
 
             if (current_line != saved_options_line)
             {
@@ -224,16 +232,19 @@ void MDspVolumeDetail::display_deactivated()
 
 void MDspVolumeDetail::opt_actions()
 {
-    DrbdResource* const rsc = dsp_comp_hub.get_monitor_resource();
-    if (rsc != nullptr)
+    if (dsp_comp_hub.enable_drbd_actions)
     {
-        const uint16_t vlm_nr = dsp_comp_hub.dsp_shared->monitor_vlm;
-        if (vlm_nr != DisplayConsts::VLM_NONE)
+        DrbdResource* const rsc = dsp_comp_hub.get_monitor_resource();
+        if (rsc != nullptr)
         {
-            DrbdVolume* const vlm = rsc->get_volume(vlm_nr);
-            if (vlm != nullptr)
+            const uint16_t vlm_nr = dsp_comp_hub.dsp_shared->monitor_vlm;
+            if (vlm_nr != DisplayConsts::VLM_NONE)
             {
-                dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::VLM_ACTIONS);
+                DrbdVolume* const vlm = rsc->get_volume(vlm_nr);
+                if (vlm != nullptr)
+                {
+                    dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::VLM_ACTIONS);
+                }
             }
         }
     }
