@@ -214,6 +214,11 @@ static void drbdmon::monitor_loop(
 
             const std::unique_ptr<DrbdMon> dm_instance(new DrbdMon(argc, argv, mon_env));
             dm_instance->run();
+            if (!mon_env.events_file_path.empty())
+            {
+                // Always terminate if the events source is a file, except for out of memory
+                mon_env.fin_action = DrbdMon::finish_action::TERMINATE;
+            }
             if (mon_env.fin_action != DrbdMon::finish_action::TERMINATE_NO_CLEAR)
             {
                 drbdmon::clear_screen();
@@ -248,7 +253,7 @@ static void drbdmon::monitor_loop(
             std::cout << "** " << DrbdMonConsts::PROGRAM_NAME <<
                 ": Out of memory, trying to restart" << std::endl;
         }
-        else
+
         if (mon_env.fin_action == DrbdMon::finish_action::DEBUG_MODE)
         {
             // FIXME: Move debug mode elsewhere
