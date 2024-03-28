@@ -36,6 +36,7 @@ class GlobalCommandsImpl : public GlobalCommands, public CommandsBase<GlobalComm
     Entry entry_resource;
     Entry entry_connection;
     Entry entry_volume;
+    Entry entry_minor_nr;
     Entry entry_close;
 
     bool cmd_exit(const std::string& command, StringTokenizer& tokenizer);
@@ -47,6 +48,7 @@ class GlobalCommandsImpl : public GlobalCommands, public CommandsBase<GlobalComm
     bool cmd_resource(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_connection(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_volume(const std::string& command, StringTokenizer& tokenizer);
+    bool cmd_minor_nr(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_close(const std::string& command, StringTokenizer& tokenizer);
     // Dummy method for display local commands
     bool local_command(const std::string& command, StringTokenizer& tokenizer);

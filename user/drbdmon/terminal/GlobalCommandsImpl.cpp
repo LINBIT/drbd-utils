@@ -5,6 +5,9 @@
 #include <terminal/ColorTable.h>
 #include <terminal/CharacterTable.h>
 #include <terminal/DisplayId.h>
+#include <objects/DrbdResource.h>
+#include <objects/DrbdVolume.h>
+#include <objects/VolumesContainer.h>
 #include <integerparse.h>
 #include <dsaext.h>
 #include <string_transformations.h>
@@ -26,6 +29,7 @@ GlobalCommandsImpl::GlobalCommandsImpl(ComponentsHub& comp_hub, Configuration& c
     entry_resource(&cmd_names::KEY_CMD_RESOURCE, &GlobalCommandsImpl::cmd_resource),
     entry_connection(&cmd_names::KEY_CMD_CONNECTION, &GlobalCommandsImpl::cmd_connection),
     entry_volume(&cmd_names::KEY_CMD_VOLUME, &GlobalCommandsImpl::cmd_volume),
+    entry_minor_nr(&cmd_names::KEY_CMD_MINOR_NR, &GlobalCommandsImpl::cmd_minor_nr),
     entry_close(&cmd_names::KEY_CMD_CLOSE, &GlobalCommandsImpl::cmd_close)
 {
     add_command(entry_exit);
@@ -41,6 +45,7 @@ GlobalCommandsImpl::GlobalCommandsImpl(ComponentsHub& comp_hub, Configuration& c
     add_command(entry_resource);
     add_command(entry_connection);
     add_command(entry_volume);
+    add_command(entry_minor_nr);
     add_command(entry_close);
 }
 
@@ -312,6 +317,70 @@ bool GlobalCommandsImpl::cmd_volume(const std::string& command, StringTokenizer&
             {
                 ModularDisplay& active_display = dsp_comp_hub.dsp_selector->get_active_display();
                 active_display.notify_data_updated();
+            }
+        }
+    }
+    return accepted;
+}
+
+bool GlobalCommandsImpl::cmd_minor_nr(const std::string& command, StringTokenizer& tokenizer)
+{
+    bool accepted = false;
+    if (tokenizer.has_next())
+    {
+        const std::string cmd_arg = tokenizer.next();
+        int32_t cmd_minor_nr = -1;
+
+        DisplayId::display_page active_page = dsp_comp_hub.dsp_selector->get_active_page();
+        if (active_page == DisplayId::display_page::RSC_LIST ||
+            active_page == DisplayId::display_page::RSC_DETAIL ||
+            active_page == DisplayId::display_page::RSC_ACTIONS ||
+            active_page == DisplayId::display_page::VLM_LIST ||
+            active_page == DisplayId::display_page::VLM_DETAIL ||
+            active_page == DisplayId::display_page::VLM_ACTIONS ||
+            active_page == DisplayId::display_page::CON_LIST ||
+            active_page == DisplayId::display_page::CON_DETAIL ||
+            active_page == DisplayId::display_page::CON_ACTIONS ||
+            active_page == DisplayId::display_page::PEER_VLM_LIST ||
+            active_page == DisplayId::display_page::PEER_VLM_DETAIL ||
+            active_page == DisplayId::display_page::PEER_VLM_ACTIONS)
+        {
+            try
+            {
+                cmd_minor_nr = dsaext::parse_signed_int32(cmd_arg);
+            }
+            catch (dsaext::NumberFormatException&)
+            {
+                // ignored
+            }
+
+            bool have_match = false;
+            if (cmd_minor_nr >= 0 && cmd_minor_nr < static_cast<int32_t> (0x100000L))
+            {
+                ResourcesMap::ValuesIterator rsc_iter(*(dsp_comp_hub.rsc_map));
+                while (rsc_iter.has_next() && !have_match)
+                {
+                    DrbdResource* const rsc = rsc_iter.next();
+                    VolumesContainer::VolumesIterator vlm_iter = rsc->volumes_iterator();
+                    while (vlm_iter.has_next() && !have_match)
+                    {
+                        DrbdVolume* const vlm = vlm_iter.next();
+                        const int32_t vlm_minor_nr = vlm->get_minor_nr();
+                        have_match = vlm_minor_nr == cmd_minor_nr;
+                        if (have_match)
+                        {
+                            const std::string& rsc_name = rsc->get_name();
+                            const uint16_t vlm_nr = vlm->get_volume_nr();
+                            dsp_comp_hub.dsp_shared->update_monitor_rsc(rsc_name);
+                            dsp_comp_hub.dsp_shared->update_monitor_vlm(vlm_nr);
+                            dsp_comp_hub.dsp_shared->update_monitor_peer_vlm(vlm_nr);
+                            ModularDisplay& active_dsp = dsp_comp_hub.dsp_selector->get_active_display();
+                            active_dsp.notify_data_updated();
+                            dsp_comp_hub.dsp_selector->refresh_display();
+                            accepted = true;
+                        }
+                    }
+                }
             }
         }
     }

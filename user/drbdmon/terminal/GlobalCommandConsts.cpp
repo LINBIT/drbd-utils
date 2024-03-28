@@ -16,5 +16,6 @@ namespace cmd_names
     const std::string   KEY_CMD_RESOURCE("RESOURCE");
     const std::string   KEY_CMD_CONNECTION("CONNECTION");
     const std::string   KEY_CMD_VOLUME("VOLUME");
+    const std::string   KEY_CMD_MINOR_NR("MINOR-NR");
     const std::string   KEY_CMD_CLOSE("CLOSE");
 }
