@@ -127,6 +127,20 @@ void usage_and_exit(void)
 	exit(1);
 }
 
+void timestamp(void)
+{
+	char the_time[80];
+	struct timeval tv;
+	struct tm nowtm;
+	time_t nowtime;
+
+	gettimeofday(&tv, NULL);
+	nowtime = tv.tv_sec;
+	localtime_r(&nowtime, &nowtm);
+	strftime(the_time, sizeof(the_time), "%Y-%m-%d %H:%M:%S", &nowtm);
+	printf("%s.%06ld ", the_time, tv.tv_usec);
+}
+
 	/* TODO: move those to user/shared/windrbd_helper.c */
 
 enum volume_spec { VS_UNKNOWN, VS_DRIVE_LETTER, VS_GUID };
@@ -743,7 +757,14 @@ int log_server_op(const char *log_file)
 
 	printf("Waiting for log messages from windrbd kernel driver.\r\n");
 	printf("Press Ctrl-C to stop.\r\n");
-	while ((len = recv(s, buf, sizeof(buf)-1, 0)) >= 0) {
+	while (1) {
+		len = recv(s, buf, sizeof(buf)-1, 0);
+		if (len < 0) {
+			perror("recv");
+			fprintf(stderr, "Could not receive logging packet, retrying again in 1 second\n");
+			sleep(1);
+			continue;
+		}
 		if (len > sizeof(buf)-1)	/* just to be sure ... */
 			len = sizeof(buf)-1;
 
@@ -755,7 +776,7 @@ int log_server_op(const char *log_file)
 				perror("write (ignored)");
 		}
 	}
-	perror("recv");
+	fprintf(stderr, "We should never get here.");
 	return 1;
 }
 
@@ -951,6 +972,7 @@ static int check_for_retvals(void)
 		child_pid = waitpid(-1, &retval, WNOHANG);
 		if (child_pid < 0) {
 			if (errno != ECHILD) {
+				timestamp();
 				perror("wait");
 				printf("Error waiting for child process in signal handler.\n");
 				return -1;
@@ -974,21 +996,27 @@ static int check_for_retvals(void)
 				free(p);
 
 				if (!quiet) {
-					if (WIFSIGNALED(retval))
+					if (WIFSIGNALED(retval)) {
+						timestamp();
 						printf("handler was terminated by signal %d\n", WTERMSIG(retval));
-					else
+					} else {
+						timestamp();
 						printf("handler terminated and returned exit status %d\n", retval);
+					}
 				}
 				ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_SEND_USERMODE_HELPER_RETURN_VALUE, &rv, sizeof(rv), NULL, 0, &unused, NULL);
 				if (!ret) {
 					err = GetLastError();
+					timestamp();
 					printf("Error in sending ioctl to kernel, err is %d\n", err);
 				}
 				break;
 			}
 		}
-		if (p == NULL)
+		if (p == NULL) {
+			timestamp();
 			printf("Warning: Process %d not found on process list\n", child_pid);
+		}
 	}
 	return 0;
 }
@@ -1041,15 +1069,24 @@ static int exec_command(struct windrbd_usermode_helper *next_cmd)
 	envp[i] = NULL;
 
 	if (!quiet) {
+		timestamp();
 		printf("about to exec %s ...\n", cmd);
-		for (i=0;argv[i]!=NULL;i++)
+		timestamp();
+		for (i=0;argv[i]!=NULL;i++) {
 			printf("%s ", argv[i]);
-		printf("\nEnvironment: \n");
-		for (i=0;envp[i]!=NULL;i++)
+		}
+		printf("\n");
+		timestamp();
+		printf("Environment: \n");
+		for (i=0;envp[i]!=NULL;i++) {
+			timestamp();
 			printf("%s\n", envp[i]);
-		printf("\n(pid is %d)\n", getpid());
+		}
+		timestamp();
+		printf("(pid is %d)\n", getpid());
 	}
 	execvpe(cmd, argv, envp);
+	timestamp();
 	perror("execvpe");
 	printf("Could not exec %s\n", cmd);
 	exit(102);
@@ -1061,6 +1098,7 @@ static struct process *add_command_to_process_list(struct windrbd_usermode_helpe
 
 	p = malloc(sizeof(*p));
 	if (p == NULL) {
+		timestamp();
 		printf("Could not allocate memory for process struct\n");
 		return NULL;
 	}
@@ -1081,6 +1119,7 @@ static int fork_and_exec_command(struct windrbd_usermode_helper *next_cmd)
 		exit(101);
 
 	case -1:
+		timestamp();
 		perror("fork");
 		printf("Cannot fork process\n");
 		return -1;
@@ -1097,6 +1136,7 @@ static int get_exe_path(char *buf, size_t bufsize)
 	size_t len;
 
 	if (fd < 0) {
+		timestamp();
 		perror("open /proc/self/exename");
 		fprintf(stderr, "Could not open /proc/self/exename, does /proc exist?\n");
 
@@ -1104,6 +1144,7 @@ static int get_exe_path(char *buf, size_t bufsize)
 	}
 	len = read(fd, buf, bufsize-1);
 	if (len < 0) {
+		timestamp();
 		perror("read /proc/self/exename");
 		fprintf(stderr, "Could not read /proc/self/exename\n");
 		close(fd);
@@ -1123,8 +1164,10 @@ static int print_exe_path(void)
 	int ret;
 
 	ret = get_exe_path(buf, sizeof(buf));
-	if (ret == 0)
+	if (ret == 0) {
+		timestamp();
 		printf("%s\n", buf);
+	}
 
 	return ret;
 }
@@ -1185,7 +1228,9 @@ static int user_mode_helper_daemon(void)
 	BOOL ret;
 
 	if (!quiet) {
+		timestamp();
 		printf("Starting WinDRBD user mode helper daemon\n");
+		timestamp();
 		printf("Press Ctrl-C to stop.\n");
 	}
 
@@ -1199,8 +1244,10 @@ static int user_mode_helper_daemon(void)
 			break;
 		sleep(1);
 	}
-	if (!quiet)
+	if (!quiet) {
+		timestamp();
 		printf("Connected to WinDRBD kernel driver\n");
+	}
 
 /* Later: */
 /*	set_um_helper(); */
@@ -1209,6 +1256,7 @@ static int user_mode_helper_daemon(void)
 		ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_RECEIVE_USERMODE_HELPER, NULL, 0, &get_size, sizeof(get_size), &size, NULL);
 		if (!ret) {
 			err = GetLastError();
+			timestamp();
 			printf("Error in sending ioctl to kernel, err is %d\n", err);
 			break;
 		}
@@ -1217,16 +1265,19 @@ static int user_mode_helper_daemon(void)
 
 			next_cmd = malloc(req_size);
 			if (next_cmd == NULL) {
+				timestamp();
 				printf("Could not alloc %zd bytes for command, aborting\n", req_size);
 				break;
 			}
 			ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_RECEIVE_USERMODE_HELPER, NULL, 0, next_cmd, req_size, &size2, NULL);
 			if (!ret) {
 				err = GetLastError();
+				timestamp();
 				printf("Error in sending ioctl to kernel, err is %d\n", err);
 				break;
 			}
 			if (size2 != req_size) {
+				timestamp();
 				printf("Size mismatch from ioctl: expected %zd actual %d\n", req_size, size2);
 				break;
 			}
