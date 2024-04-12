@@ -972,8 +972,8 @@ static int check_for_retvals(void)
 		child_pid = waitpid(-1, &retval, WNOHANG);
 		if (child_pid < 0) {
 			if (errno != ECHILD) {
-				timestamp();
 				perror("wait");
+				timestamp();
 				printf("Error waiting for child process in signal handler.\n");
 				return -1;
 			}
@@ -1086,8 +1086,8 @@ static int exec_command(struct windrbd_usermode_helper *next_cmd)
 		printf("(pid is %d)\n", getpid());
 	}
 	execvpe(cmd, argv, envp);
-	timestamp();
 	perror("execvpe");
+	timestamp();
 	printf("Could not exec %s\n", cmd);
 	exit(102);
 }
@@ -1119,8 +1119,8 @@ static int fork_and_exec_command(struct windrbd_usermode_helper *next_cmd)
 		exit(101);
 
 	case -1:
-		timestamp();
 		perror("fork");
+		timestamp();
 		printf("Cannot fork process\n");
 		return -1;
 
@@ -1136,16 +1136,16 @@ static int get_exe_path(char *buf, size_t bufsize)
 	size_t len;
 
 	if (fd < 0) {
-		timestamp();
 		perror("open /proc/self/exename");
+		timestamp();
 		fprintf(stderr, "Could not open /proc/self/exename, does /proc exist?\n");
 
 		return -1;
 	}
 	len = read(fd, buf, bufsize-1);
 	if (len < 0) {
-		timestamp();
 		perror("read /proc/self/exename");
+		timestamp();
 		fprintf(stderr, "Could not read /proc/self/exename\n");
 		close(fd);
 
@@ -1232,6 +1232,16 @@ static int user_mode_helper_daemon(void)
 		printf("Starting WinDRBD user mode helper daemon\n");
 		timestamp();
 		printf("Press Ctrl-C to stop.\n");
+	}
+	if (dup2(1, 2) < 0) {
+		perror("dup2");
+		timestamp();
+		fprintf(stderr, "Error redirecting stderr to stdout\n");
+	} else {
+		if (!quiet) {
+			timestamp();
+			printf("Redirected stderr to stdout\n");
+		}
 	}
 
 		/* We might be started when the driver isn't started
