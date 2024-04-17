@@ -4127,8 +4127,8 @@ int guessed_size_from_pvs(struct fstype_s *f, char *dev_name)
 		/* child */
 		char *argv[] = {
 			"sh", "-vxc",
-			"pvs -vvv --noheadings --nosuffix --units s -o pv_size"
-			" --config \"devices { write_cache_state=0 filter = [ 'a|$dev_name|', 'r|.|' ] }\"",
+			"pvs -vvv --readonly --noheadings --nosuffix --units s -o pv_size"
+			" --config \"devices { write_cache_state=0 filter = [ 'a|$dev_name|', 'r|.|' ] scan_lvs = 1 }\"",
 			NULL,
 		};
 		close(pipes[0][1]); /* close unused pipe ends */
