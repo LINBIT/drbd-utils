@@ -1066,6 +1066,32 @@ static struct nlmsg_entry *nlmsg_copy(struct genl_info *info)
 	return entry;
 }
 
+static int apply_stored_event(const char *timestamp_prefix, struct nlmsg_entry *entry)
+{
+	struct nlattr *tla[ARRAY_SIZE(drbd_tla_nl_policy)];
+	struct genl_info stored_info = {
+		.seq = entry->nlh->nlmsg_seq,
+		.nlhdr = entry->nlh,
+		.genlhdr = nlmsg_data(entry->nlh),
+		.userhdr = genlmsg_data(nlmsg_data(entry->nlh)),
+		.attrs = tla,
+	};
+	int err;
+
+	err = drbd_tla_parse(stored_info.attrs, entry->nlh);
+	if (err) {
+		fprintf(stderr, "drbd_tla_parse() failed");
+		return 1;
+	}
+
+	err = apply_event(timestamp_prefix, &stored_info);
+
+	free(entry->nlh);
+	free(entry);
+
+	return err;
+}
+
 int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 {
 	static uint32_t last_seq;
@@ -1098,7 +1124,6 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 		exit(20);
 
 	if (info->genlhdr->cmd == DRBD_INITIAL_STATE_DONE) {
-		struct nlmsg_entry *entry, *next_entry;
 
 		if (initial_state)
 			printf("%s%s -\n", timestamp_prefix, action_exists);
@@ -1108,31 +1133,15 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 		receive_update = false;
 
 		/* now apply stored messages */
-		for (entry = stored_messages; entry; entry = next_entry) {
-			struct nlattr *tla[ARRAY_SIZE(drbd_tla_nl_policy)];
-			struct genl_info stored_info = {
-				.seq = entry->nlh->nlmsg_seq,
-				.nlhdr = entry->nlh,
-				.genlhdr = nlmsg_data(entry->nlh),
-				.userhdr = genlmsg_data(nlmsg_data(entry->nlh)),
-				.attrs = tla,
-			};
+		while (stored_messages) {
+			struct nlmsg_entry *next = stored_messages->next;
 
-			err = drbd_tla_parse(stored_info.attrs, entry->nlh);
-			if (err) {
-				fprintf(stderr, "drbd_tla_parse() failed");
-				return 1;
-			}
-
-			err = apply_event(timestamp_prefix, &stored_info);
+			err = apply_stored_event(timestamp_prefix, stored_messages);
 			if (err)
 				return err;
 
-			next_entry = entry->next;
-			free(entry->nlh);
-			free(entry);
+			stored_messages = next;
 		}
-		stored_messages = NULL;
 		tail_next = &stored_messages;
 
 		return 0;
