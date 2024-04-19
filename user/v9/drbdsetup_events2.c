@@ -1092,10 +1092,15 @@ static int apply_stored_event(const char *timestamp_prefix, struct nlmsg_entry *
 	return err;
 }
 
+static bool seq_a_less_or_equal_b(uint32_t a, uint32_t b)
+{
+	return (int32_t)a - (int32_t)b <= 0;
+}
+
 int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 {
-	static uint32_t last_seq;
-	static bool last_seq_known;
+	static uint32_t next_seq; /* nlmsg_seq of the next message to apply */
+	static bool next_seq_known;
 	static struct nlmsg_entry *stored_messages = NULL;
 	static struct nlmsg_entry **tail_next = &stored_messages;
 
@@ -1104,6 +1109,7 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 	struct drbd_genlmsghdr *dh;
 	int err;
 	char timestamp_prefix[TIMESTAMP_LEN];
+	struct nlmsg_entry *entry, **iter_prev_next;
 
 	if (!info)
 		return 0;
@@ -1124,50 +1130,59 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 		exit(20);
 
 	if (info->genlhdr->cmd == DRBD_INITIAL_STATE_DONE) {
-
 		if (initial_state)
 			printf("%s%s -\n", timestamp_prefix, action_exists);
 		fflush(stdout);
 
 		initial_state = false;
 		receive_update = false;
+	} else if (action == NOTIFY_EXISTS) {
+		/* apply initial state "exists" messages immediately */
+		return apply_event(timestamp_prefix, info);
+	} else {
+		uint32_t seq = info->nlhdr->nlmsg_seq;
+		struct nlmsg_entry *entry = nlmsg_copy(info);
 
-		/* now apply stored messages */
-		while (stored_messages) {
-			struct nlmsg_entry *next = stored_messages->next;
+		if (!next_seq_known) {
+			next_seq = seq;
+			next_seq_known = true;
+		}
 
-			err = apply_stored_event(timestamp_prefix, stored_messages);
+		*tail_next = entry;
+		tail_next = &entry->next;
+	}
+
+	if (initial_state || receive_update)
+		return 0;
+
+	/* apply messages in order according to their nlmsg_seq values */
+restart:
+	iter_prev_next = &stored_messages;
+	entry = stored_messages;
+	while (entry) {
+		/* if the first messages were out-of-order, seq may decrease */
+		if (seq_a_less_or_equal_b(entry->nlh->nlmsg_seq, next_seq)) {
+			if (tail_next == &entry->next) /* tail element will be freed */
+				tail_next = iter_prev_next;
+
+			if (entry->nlh->nlmsg_seq == next_seq)
+				next_seq++;
+
+			/* remove entry from list */
+			*iter_prev_next = entry->next;
+
+			err = apply_stored_event(timestamp_prefix, entry);
 			if (err)
 				return err;
 
-			stored_messages = next;
-		}
-		tail_next = &stored_messages;
-
-		return 0;
-	}
-
-	if (action != NOTIFY_EXISTS) {
-		if (last_seq_known) {
-			int skipped = info->nlhdr->nlmsg_seq - (last_seq + 1);
-
-			if (skipped) {
-				printf("%s- skipped %d\n", timestamp_prefix, skipped);
-				fflush(stdout);
-			}
-		}
-		last_seq = info->nlhdr->nlmsg_seq;
-		last_seq_known = true;
-
-		if (initial_state || receive_update) {
-			struct nlmsg_entry *entry = nlmsg_copy(info);
-			*tail_next = entry;
-			tail_next = &entry->next;
-			return 0;
+			goto restart;
+		} else {
+			iter_prev_next = &entry->next;
+			entry = entry->next;
 		}
 	}
 
-	return apply_event(timestamp_prefix, info);
+	return 0;
 }
 
 static int apply_event(const char *prefix, struct genl_info *info)
