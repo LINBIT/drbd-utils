@@ -1071,6 +1071,7 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 	static uint32_t last_seq;
 	static bool last_seq_known;
 	static struct nlmsg_entry *stored_messages = NULL;
+	static struct nlmsg_entry **tail_next = &stored_messages;
 
 	struct drbd_notification_header nh = { .nh_type = -1U };
 	enum drbd_notification_type action;
@@ -1132,6 +1133,7 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 			free(entry);
 		}
 		stored_messages = NULL;
+		tail_next = &stored_messages;
 
 		return 0;
 	}
@@ -1149,11 +1151,9 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 		last_seq_known = true;
 
 		if (initial_state || receive_update) {
-			/* store message until initial state is finished */
-			struct nlmsg_entry *entry, **previous_next = &stored_messages;
-			for (entry = stored_messages; entry; entry = entry->next)
-				previous_next = &entry->next;
-			*previous_next = nlmsg_copy(info);
+			struct nlmsg_entry *entry = nlmsg_copy(info);
+			*tail_next = entry;
+			tail_next = &entry->next;
 			return 0;
 		}
 	}
