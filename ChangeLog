@@ -3,6 +3,16 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.28.0-rc.1
+-----------
+ * events2: set may_promote:no promotion_score:0 while
+   force-io-failure:yes
+ * drbdsetup,v9: show TLS in connection status
+ * drbdsetup,v9: add udev command
+ * 8.3: remove
+ * crm-fence-peer.9.sh: fixes for pacemaker 2.1.7
+ * events2: improved out of order message handling
+
 9.27.0
 -----------
  * adjust,v9: retry for diskless primaries

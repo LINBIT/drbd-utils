@@ -556,6 +556,9 @@ fi
 
 
 %changelog
+* Tue Apr 23 2024 Roland Kammerer <roland.kammerer@linbit.com> - 9.28.0~rc.1-1
+-  New upstream release
+
 * Fri Dec 22 2023 Roland Kammerer <roland.kammerer@linbit.com> - 9.27.0-1
 -  New upstream release
 
