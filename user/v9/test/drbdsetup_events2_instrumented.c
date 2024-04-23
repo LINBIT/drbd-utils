@@ -542,15 +542,21 @@ int test_events2()
 	char input[MAX_INPUT_LENGTH];
 
 	while (fgets(input, MAX_INPUT_LENGTH, stdin)) {
+		char msg_name[MAX_INPUT_LENGTH];
+		int index;
+		int argument_count;
 		struct msg_buff *smsg;
 		struct nlmsghdr *nlh;
 		int err;
 
-		input[strcspn(input, "\n")] = 0;
+		argument_count = sscanf(input, "%s %d", msg_name, &index);
+
+		if (argument_count >= 2)
+			msg_index = index;
 
 		/* build msg as if sending */
 		smsg = msg_new(DEFAULT_MSG_SIZE);
-		err = test_build_msg(smsg, input);
+		err = test_build_msg(smsg, msg_name);
 		if (err) {
 			msg_free(smsg);
 			return err;
@@ -604,6 +610,8 @@ int main(int argc, char **argv)
 		case 'h':
 		case '?':
 			fprintf(stderr, "drbdsetup_events2_instrumented - Fake drbdsetup events2 from messages on stdin\n\n");
+			fprintf(stderr, "Input line format:\n");
+			fprintf(stderr, "message_name [sequence_number]\n\n");
 			fprintf(stderr, "USAGE: %s [options]\n", argv[0]);
 			fprintf(stderr, "    [--timestamps] [--statistics] [--now] [--diff] [--full] [--color]\n");
 			return 1;

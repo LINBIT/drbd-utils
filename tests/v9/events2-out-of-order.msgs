@@ -1,0 +1,5 @@
+initial_state_done
+resource_create 56
+device_create_b 58
+device_create 57
+connection_create 59
