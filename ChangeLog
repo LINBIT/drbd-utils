@@ -3,7 +3,7 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
-9.28.0-rc.1
+9.28.0
 -----------
  * events2: set may_promote:no promotion_score:0 while
    force-io-failure:yes
