@@ -20,6 +20,8 @@ class MDspHelpIndex : public MDspMenuBase
     std::unique_ptr<ClickableCommand>   cmd_con_detail;
     std::unique_ptr<ClickableCommand>   cmd_con_actions;
     std::unique_ptr<ClickableCommand>   cmd_pvlm_list;
+    std::unique_ptr<ClickableCommand>   cmd_pvlm_detail;
+    std::unique_ptr<ClickableCommand>   cmd_pvlm_actions;
     std::unique_ptr<ClickableCommand>   cmd_msg_log;
     std::unique_ptr<ClickableCommand>   cmd_msg_detail;
     std::unique_ptr<ClickableCommand>   cmd_taskq;
@@ -48,6 +50,8 @@ class MDspHelpIndex : public MDspMenuBase
     std::function<void()>     cmd_fn_con_detail;
     std::function<void()>     cmd_fn_con_actions;
     std::function<void()>     cmd_fn_pvlm_list;
+    std::function<void()>     cmd_fn_pvlm_detail;
+    std::function<void()>     cmd_fn_pvlm_actions;
     std::function<void()>     cmd_fn_msg_log;
     std::function<void()>     cmd_fn_msg_detail;
     std::function<void()>     cmd_fn_taskq;

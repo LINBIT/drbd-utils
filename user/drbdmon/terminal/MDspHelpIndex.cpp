@@ -59,6 +59,16 @@ MDspHelpIndex::MDspHelpIndex(const ComponentsHub& comp_hub):
         {
             helptext::open_help_page(helptext::id_type::PVLM_LIST, dsp_comp_hub);
         };
+    cmd_fn_pvlm_detail =
+        [this]() -> void
+        {
+            helptext::open_help_page(helptext::id_type::PVLM_DETAIL, dsp_comp_hub);
+        };
+    cmd_fn_pvlm_actions =
+        [this]() -> void
+        {
+            helptext::open_help_page(helptext::id_type::PVLM_ACTIONS, dsp_comp_hub);
+        };
     cmd_fn_msg_log =
         [this]() -> void
         {
@@ -129,16 +139,22 @@ MDspHelpIndex::MDspHelpIndex(const ComponentsHub& comp_hub):
     cmd_con_detail = std::unique_ptr<ClickableCommand>(
         cmd_builder.create_with_auto_nr(cmd_fn_con_detail)
     );
+    cmd_con_actions = std::unique_ptr<ClickableCommand>(
+        cmd_builder.create_with_auto_nr(cmd_fn_con_actions)
+    );
 
     cmd_builder.coords.row = 6;
     cmd_builder.coords.start_col = 50;
     cmd_builder.coords.end_col = 95;
 
-    cmd_con_actions = std::unique_ptr<ClickableCommand>(
-        cmd_builder.create_with_auto_nr(cmd_fn_con_actions)
-    );
     cmd_pvlm_list = std::unique_ptr<ClickableCommand>(
         cmd_builder.create_with_auto_nr(cmd_fn_pvlm_list)
+    );
+    cmd_pvlm_detail = std::unique_ptr<ClickableCommand>(
+        cmd_builder.create_with_auto_nr(cmd_fn_pvlm_detail)
+    );
+    cmd_pvlm_actions = std::unique_ptr<ClickableCommand>(
+        cmd_builder.create_with_auto_nr(cmd_fn_pvlm_actions)
     );
     cmd_msg_log = std::unique_ptr<ClickableCommand>(
         cmd_builder.create_with_auto_nr(cmd_fn_msg_log)
@@ -173,6 +189,8 @@ MDspHelpIndex::MDspHelpIndex(const ComponentsHub& comp_hub):
     add_option(*cmd_con_detail);
     add_option(*cmd_con_actions);
     add_option(*cmd_pvlm_list);
+    add_option(*cmd_pvlm_detail);
+    add_option(*cmd_pvlm_actions);
     add_option(*cmd_msg_log);
     add_option(*cmd_msg_detail);
     add_option(*cmd_taskq);
@@ -182,7 +200,7 @@ MDspHelpIndex::MDspHelpIndex(const ComponentsHub& comp_hub):
     add_option(*cmd_conf);
 
     InputField& option_field = get_option_field();
-    option_field.set_position(15, 16);
+    option_field.set_position(15, 17);
 }
 
 MDspHelpIndex::~MDspHelpIndex() noexcept
@@ -211,15 +229,17 @@ void MDspHelpIndex::display_content()
 
     display_option("10   ", "Connection actions", *cmd_con_actions, std_color);
     display_option("11   ", "Peer volume list", *cmd_pvlm_list, std_color);
-    display_option("12   ", "Message log", *cmd_msg_log, std_color);
-    display_option("13   ", "Message details", *cmd_msg_detail, std_color);
-    display_option("14   ", "Task queues", *cmd_taskq, std_color);
-    display_option("15   ", "Task details", *cmd_task_detail, std_color);
-    display_option("16   ", "DRBDmon commands", *cmd_global_cmd, std_color);
-    display_option("17   ", "DRBD commands", *cmd_drbd_cmd, std_color);
-    display_option("18   ", "DRBDmon configuration", *cmd_conf, std_color);
+    display_option("12   ", "Peer volume details", *cmd_pvlm_detail, std_color);
+    display_option("13   ", "Peer volume actions", *cmd_pvlm_actions, std_color);
+    display_option("14   ", "Message log", *cmd_msg_log, std_color);
+    display_option("15   ", "Message details", *cmd_msg_detail, std_color);
+    display_option("16   ", "Task queues", *cmd_taskq, std_color);
+    display_option("17   ", "Task details", *cmd_task_detail, std_color);
+    display_option("18   ", "DRBDmon commands", *cmd_global_cmd, std_color);
+    display_option("19   ", "DRBD commands", *cmd_drbd_cmd, std_color);
+    display_option("20   ", "DRBDmon configuration", *cmd_conf, std_color);
 
-    display_option_query(5, 16);
+    display_option_query(5, 17);
 }
 
 uint64_t MDspHelpIndex::get_update_mask() noexcept
