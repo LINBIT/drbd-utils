@@ -22,7 +22,11 @@ drbd_buildtag_h() {
 		grep GITHASH "${out}"
 		grep GITDIFF "${out}"
 	fi
-	mv -f "${out}.new" "${out}"
+	if cmp -s "${out}.new" "${out}"; then
+		rm -f "${out}.new"
+	else
+		mv -f "${out}.new" "${out}"
+	fi
 
 	exit 0
 }
