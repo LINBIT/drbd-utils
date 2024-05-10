@@ -186,8 +186,7 @@ int generic_md_close(struct format *cfg)
 
 int zeroout_bitmap_fast(struct format *cfg)
 {
-	const size_t bitmap_bytes =
-		ALIGN(bm_bytes(&cfg->md, cfg->bd_size >> 9), cfg->md_hard_sect_size);
+	const size_t bitmap_bytes = ALIGN(cfg->bm_bytes, cfg->md_hard_sect_size);
 
 	off_t bm_on_disk_off = cfg->bm_offset;
 	unsigned int percent_done = 0;
@@ -204,16 +203,25 @@ int zeroout_bitmap_fast(struct format *cfg)
 	 * Do it in "chunks" per call so this can show progress
 	 * and can be interrupted, if necessary. */
 	const size_t bytes_per_iteration = 1024*1024*1024;
+
+	if (verbose >= 2)
+		fflush(stdout);
+
 	for (;;) {
 		chunk = bytes_per_iteration < bytes_left ? bytes_per_iteration : bytes_left;
 		range[0] = bm_on_disk_off;
 		range[1] = chunk; /* len */
 
+		++n_writes;
 		err = ioctl(cfg->md_fd, BLKZEROOUT, &range);
 		if (err) {
 			PERROR("ioctl(%s, BLKZEROOUT, [%llu, %llu]) failed", cfg->md_device_name,
 					(unsigned long long)range[0], (unsigned long long)range[1]);
 			return -1;
+		}
+		if (verbose >= 2) {
+			fprintf(stderr, " %-26s: ioctl(%u, BLKZEROOUT, [%"PRIu64", %"PRIu64"])\n",
+				"md_initialize_common:BM", cfg->md_fd, range[0], range[1]);
 		}
 		bm_on_disk_off += chunk;
 		bytes_left -= chunk;

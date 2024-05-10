@@ -1348,24 +1348,28 @@ void re_initialize_md_offsets(struct format *cfg)
 		cfg->md.md_size_sect = MD_RESERVED_SECT_07;
 		cfg->md.al_offset = MD_AL_OFFSET_07;
 		cfg->md.bm_offset = cfg->md.al_offset + al_size_sect;
+		cfg->bm_bytes = 512ULL * (cfg->md.md_size_sect - cfg->md.bm_offset);
 		break;
 	case DRBD_MD_INDEX_FLEX_EXT:
 		/* just occupy the full device; unit: sectors */
 		cfg->md.md_size_sect = cfg->bd_size >> 9;
 		cfg->md.al_offset = MD_AL_OFFSET_07;
 		cfg->md.bm_offset = cfg->md.al_offset + al_size_sect;
+		cfg->bm_bytes = 512ULL * (cfg->md.md_size_sect - cfg->md.bm_offset);
 		break;
 	case DRBD_MD_INDEX_INTERNAL: /* only v07 */
 		cfg->md.md_size_sect = MD_RESERVED_SECT_07;
 		cfg->md.al_offset = MD_AL_OFFSET_07;
 		cfg->md.bm_offset = MD_BM_OFFSET_07;
+		cfg->bm_bytes = 512ULL * (cfg->md.md_size_sect - cfg->md.bm_offset);
 		break;
 	case DRBD_MD_INDEX_FLEX_INT:
 		/* al size is still fixed */
 		cfg->md.al_offset = -al_size_sect;
 
 		/* we need (slightly less than) ~ this much bitmap sectors: */
-		md_size_sect = bm_bytes(&cfg->md, cfg->bd_size >> 9) >> 9;
+		cfg->bm_bytes = bm_bytes(&cfg->md, cfg->bd_size >> 9);
+		md_size_sect = cfg->bm_bytes >> 9;
 		md_size_sect = ALIGN(md_size_sect, 8);    /* align on 4K blocks */
 		if (md_size_sect > (MD_BM_MAX_BYTE_FLEX>>9)*cfg->md.max_peers) {
 			fprintf(stderr, "Bitmap for that device got too large.\n");
@@ -1390,6 +1394,7 @@ void re_initialize_md_offsets(struct format *cfg)
 		fprintf(stderr,"bm_offset: "U64" (%d)\n", cfg->bm_offset, cfg->md.bm_offset);
 		fprintf(stderr,"md_size_sect: "U32"\n", cfg->md.md_size_sect);
 		fprintf(stderr,"max_usable_sect: "U64"\n", cfg->max_usable_sect);
+		fprintf(stderr,"bm_bytes: "U64"\n", cfg->bm_bytes);
 	}
 }
 
@@ -1430,8 +1435,7 @@ void check_for_existing_data(struct format *cfg);
 
 static void zeroout_bitmap_pwrite(struct format *cfg)
 {
-	const size_t bitmap_bytes =
-		ALIGN(bm_bytes(&cfg->md, cfg->bd_size >> 9), cfg->md_hard_sect_size);
+	const size_t bitmap_bytes = ALIGN(cfg->bm_bytes, cfg->md_hard_sect_size);
 
 	/* need to sector-align this for O_DIRECT.
 	 * "sector" here means hard-sect size, which may be != 512.
@@ -1467,8 +1471,7 @@ static void zeroout_bitmap_pwrite(struct format *cfg)
 
 static void initialize_bitmap(struct format *cfg)
 {
-	const size_t bitmap_kbytes =
-		ALIGN(bm_bytes(&cfg->md, cfg->bd_size >> 9), cfg->md_hard_sect_size) >> 10;
+	const size_t bitmap_kbytes = ALIGN(cfg->bm_bytes, cfg->md_hard_sect_size) >> 10;
 	char ppb[10];
 
 	ppsize(ppb, bitmap_kbytes);
