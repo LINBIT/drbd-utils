@@ -1288,10 +1288,10 @@ static int user_mode_helper_daemon(void)
 			}
 			if (size2 != req_size) {
 				timestamp();
-				printf("Size mismatch from ioctl: expected %zd actual %d\n", req_size, size2);
-				break;
+				printf("Size mismatch from ioctl: expected %zd actual %d, omitting this request\n", req_size, size2);
+			} else {
+				fork_and_exec_command(next_cmd);
 			}
-			fork_and_exec_command(next_cmd);
 		} /* else nothing to do, wait a little and poll again */
 
 			/* This checks for terminated child processes and
