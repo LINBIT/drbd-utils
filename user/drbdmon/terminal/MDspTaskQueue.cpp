@@ -203,7 +203,7 @@ bool MDspTaskQueue::key_pressed(const uint32_t key)
         {
             if (task_queue == DisplayConsts::task_queue_type::ACTIVE_QUEUE)
             {
-                if (selection_map.get_size() >= 1)
+                if (is_selecting())
                 {
                     TaskEntryMap::KeysIterator task_iter(selection_map);
                     while (task_iter.has_next())
@@ -221,7 +221,7 @@ bool MDspTaskQueue::key_pressed(const uint32_t key)
             }
             else
             {
-                if (selection_map.get_size() >= 1)
+                if (is_selecting())
                 {
                     TaskEntryMap::KeysIterator task_iter(selection_map);
                     while (task_iter.has_next())
