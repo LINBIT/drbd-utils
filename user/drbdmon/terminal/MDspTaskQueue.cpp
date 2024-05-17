@@ -243,7 +243,7 @@ bool MDspTaskQueue::key_pressed(const uint32_t key)
         else
         if (key == KeyCodes::BACKSPACE || key == static_cast<uint32_t> ('s') || key == static_cast<uint32_t> ('S'))
         {
-            if (task_queue == DisplayConsts::task_queue_type::PENDING_QUEUE && cursor_nav)
+            if (task_queue == DisplayConsts::task_queue_type::PENDING_QUEUE)
             {
                 if (selection_map.get_size() >= 1)
                 {
@@ -256,6 +256,7 @@ bool MDspTaskQueue::key_pressed(const uint32_t key)
                     dsp_comp_hub.dsp_shared->clear_task_selection(selection_map);
                 }
                 else
+                if (is_cursor_nav())
                 {
                     const uint64_t entry_id = (subproc_queue.*get_cursor_func)();
                     subproc_queue.inactivate_entry(entry_id);
@@ -266,7 +267,7 @@ bool MDspTaskQueue::key_pressed(const uint32_t key)
         else
         if (key == KeyCodes::INSERT || key == static_cast<uint32_t> ('p') || key == static_cast<uint32_t> ('P'))
         {
-            if (task_queue == DisplayConsts::task_queue_type::SUSPENDED_QUEUE && cursor_nav)
+            if (task_queue == DisplayConsts::task_queue_type::SUSPENDED_QUEUE)
             {
                 if (selection_map.get_size() >= 1)
                 {
@@ -279,6 +280,7 @@ bool MDspTaskQueue::key_pressed(const uint32_t key)
                     dsp_comp_hub.dsp_shared->clear_task_selection(selection_map);
                 }
                 else
+                if (is_cursor_nav())
                 {
                     const uint64_t entry_id = (subproc_queue.*get_cursor_func)();
                     subproc_queue.activate_entry(entry_id);
