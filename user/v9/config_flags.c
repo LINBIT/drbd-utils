@@ -6,7 +6,10 @@
 #include <sys/socket.h>
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
+
+#ifdef KEYUTILS
 #include <keyutils.h>
+#endif
 
 #include "libgenl.h"
 #include "linux/drbd.h"
@@ -694,6 +697,7 @@ struct field_class fc_string = {
 
 /* ---------------------------------------------------------------------------------------------- */
 
+#ifdef KEYUTILS
 static key_serial_t string_to_key_serial(const char *value, const char *key_type)
 {
 	if (!value)
@@ -776,7 +780,7 @@ struct field_class fc_key_serial = {
 	.describe_xml = key_serial_describe_xml,
 	.check = key_serial_check,
 };
-
+#endif
 
 /* ============================================================================================== */
 
@@ -839,11 +843,24 @@ struct field_class fc_key_serial = {
 		.max = num_max,					\
 		.def = DRBD_ ## d ## _DEF, } }			\
 
+#ifdef KEYUTILS
 #define KEY_SERIAL(f, key_type)					\
 	.nla_type = T_ ## f,					\
 	.ops = &fc_key_serial,					\
 	.u = { .k = {						\
 		.type = key_type, } }				\
+
+#else
+#define KEY_SERIAL(f, keytype)					\
+	.nla_type = T_ ## f,					\
+	.ops = &fc_numeric,					\
+	.u = { .n = {						\
+		.min = INT32_MIN,				\
+		.max = INT32_MAX,				\
+		.def = 0,					\
+		.is_signed = true,				\
+		.scale = 1 } }
+#endif
 /* ============================================================================================== */
 
 const char *wire_protocol_map[] = {

@@ -58,6 +58,7 @@ WITH_MANUAL=yes
 WITH_DRBDMON=yes
 WITH_WINDRBD=no
 WITH_PREBUILTMAN=no
+WITH_KEYUTILS=yes
 AC_ARG_WITH([84support],
 	[AS_HELP_STRING([--without-84support],
 			[Do not include support for drbd driver/module 8.4])],
@@ -116,6 +117,10 @@ AC_ARG_WITH([prebuiltman],
 	[AS_HELP_STRING([--with-prebuiltman],
 			[Do not try to (re)generate man pages])],
 	[WITH_PREBUILTMAN=$withval])
+AC_ARG_WITH([keyutils],
+	[AS_HELP_STRING([--with-keyutils],
+			[Enable keyring integration for DRBD TLS])],
+	[WITH_KEYUTILS=$withval])
 
 AC_ARG_WITH([windrbd],
 	[AS_HELP_STRING([--with-windrbd],
@@ -151,7 +156,23 @@ AC_CHECK_TYPES([__free_fn_t],[],[],
 )
 
 dnl Check for keyutils
-AC_SEARCH_LIBS([request_key],[keyutils],[],[AC_MSG_ERROR([Need keyutils])],[])
+if test x"$with_keyutils" != xno; then
+	AC_SEARCH_LIBS(
+		[request_key],
+		[keyutils],
+		[WITH_KEYUTILS=yes],
+		[
+			if test x"$with_keyutils" = xyes; then
+				AC_MSG_ERROR([Could not find keyutils])
+			else
+				AC_MSG_WARN([Could not find keyutils])
+				WITH_KEYUTILS=no
+			fi
+		],
+		[]
+	)
+fi
+AC_SUBST(WITH_KEYUTILS)
 
 dnl Do we know where systemd unit files go?
 PKG_PROG_PKG_CONFIG

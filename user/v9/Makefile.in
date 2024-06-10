@@ -53,6 +53,7 @@ WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 WITH_WINDRBD = @WITH_WINDRBD@
 WITH_CLITEST = @WITH_CLITEST@
+WITH_KEYUTILS = @WITH_KEYUTILS@
 
 # for some reason some of the commands below only work correctly in bash,
 # and not in e.g. dash. I'm too lazy to fix it to be compatible.
@@ -68,6 +69,9 @@ endif
 CFLAGS += -Wall -I../../drbd-headers -I.. -I. -I../shared
 ifeq ($(WITH_WINDRBD),yes)
 CFLAGS += -I../windrbd-compat-headers -DWINDRBD
+endif
+ifeq ($(WITH_KEYUTILS),yes)
+CFLAGS += -DKEYUTILS
 endif
 CFLAGS += $(EXTRA_CFLAGS)
 
