@@ -686,7 +686,8 @@ static void print_device_changes(const char *prefix, const char *action_new, con
 	bool statistics_changed;
 
 	info_changed = !old_device || new_device->info.dev_disk_state != old_device->info.dev_disk_state ||
-		new_device->info.dev_has_quorum != old_device->info.dev_has_quorum;
+		new_device->info.dev_has_quorum != old_device->info.dev_has_quorum ||
+		new_device->info.dev_is_open != old_device->info.dev_is_open;
 	statistics_changed = opt_statistics &&
 		(!old_device ||
 		 memcmp(&new_device->statistics, &old_device->statistics, sizeof(struct device_statistics)));
@@ -727,6 +728,15 @@ static void print_device_changes(const char *prefix, const char *action_new, con
 			else
 				printf(" client:%s", intentional_diskless_str(&new_device->info));
 
+			if (!old_device || old_device->info.dev_is_open != new_device->info.dev_is_open) {
+				const char *old_dev_is_open = UNKNOWN_STRING;
+				if (old_device)
+					old_dev_is_open = no_yes_unknown_str(old_device->info.dev_is_open);
+				printf(" open:%s->%s",
+					old_dev_is_open, no_yes_unknown_str(new_device->info.dev_is_open));
+			} else
+				printf(" open:%s", no_yes_unknown_str(new_device->info.dev_is_open));
+
 			if (!old_device || old_device->info.dev_has_quorum != new_device->info.dev_has_quorum) {
 				char *old_dev_has_quorum = UNKNOWN_STRING;
 				if (old_device)
@@ -742,6 +752,7 @@ static void print_device_changes(const char *prefix, const char *action_new, con
 			printf(" disk:%s%s%s",
 					DISK_COLOR_STRING(new_device->info.dev_disk_state, intentional, true));
 			printf(" client:%s", intentional_diskless_str(&new_device->info));
+			printf(" open:%s", no_yes_unknown_str(new_device->info.dev_is_open));
 			printf(" quorum:%s", new_device->info.dev_has_quorum ? "yes" : "no");
 		}
 	}
@@ -1281,6 +1292,7 @@ static int apply_event(const char *prefix, struct genl_info *info)
 			disk_conf_from_attrs(&device->disk_conf, info);
 			device->info.dev_disk_state = D_DISKLESS;
 			device->info.is_intentional_diskless = IS_INTENTIONAL_DEF;
+			device->info.dev_is_open = DEV_IS_OPEN_UNKNOWN;
 			device_info_from_attrs(&device->info, info);
 			memset(&device->statistics, -1, sizeof(device->statistics));
 			device_statistics_from_attrs(&device->statistics, info);

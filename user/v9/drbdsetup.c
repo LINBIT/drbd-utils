@@ -2891,11 +2891,14 @@ static void device_status_json(struct devices_list *device)
 	       "      \"minor\": %d,\n"
 	       "      \"disk-state\": \"%s\",\n"
 	       "      \"client\": %s,\n"
+	       "      \"open\": %s,\n"
 	       "      \"quorum\": %s%s\n",
 	       device->ctx.ctx_volume,
 	       device->minor,
 	       drbd_disk_str(disk_state),
 	       bool2json(device->info.is_intentional_diskless == 1),
+		/* "Unknown" represented as false :-( */
+	       bool2json(device->info.dev_is_open == 1),
 	       bool2json(device->info.dev_has_quorum),
 	       d_statistics ? "," : "");
 
@@ -3091,6 +3094,19 @@ const char *backing_dev_str(struct device_info *info) {
 	return info->backing_dev_path;
 }
 
+/* Older DRBD may just not provide some information yet. */
+const char *no_yes_unknown_str(unsigned char almost_bool)
+{
+	switch (almost_bool) {
+		case 0:
+			return "no";
+		case 1:
+			return "yes";
+		default:
+			return "unknown";
+	}
+}
+
 static void device_status(struct devices_list *device, bool single_device, bool is_a_tty)
 {
 	enum drbd_disk_state disk_state = device->info.dev_disk_state;
@@ -3113,6 +3129,13 @@ static void device_status(struct devices_list *device, bool single_device, bool 
 			    quorum_color_start(device->info.dev_has_quorum),
 			    device->info.dev_has_quorum ? "yes" : "no",
 			    quorum_color_stop(device->info.dev_has_quorum));
+	if (opt_verbose || device->info.dev_is_open != DEV_IS_OPEN_UNKNOWN)
+		wrap_printf(indent, " open:%s%s%s",
+			dev_is_open_color_start(device->info.dev_is_open),
+			no_yes_unknown_str(device->info.dev_is_open),
+			dev_is_open_color_stop(device->info.dev_is_open)
+		);
+
 	indent = 6;
 	if (device->statistics.dev_size != -1) {
 		if (opt_statistics)
@@ -3122,24 +3145,13 @@ static void device_status(struct devices_list *device, bool single_device, bool 
 	wrap_printf(indent, "\n");
 }
 
-static const char *_intentional_diskless_str(unsigned char intentional_diskless) {
-	switch (intentional_diskless) {
-		case 0:
-			return "no";
-		case 1:
-			return "yes";
-		default:
-			return "unknown";
-	}
-}
-
 const char *intentional_diskless_str(struct device_info *info)
 {
-	return _intentional_diskless_str(info->is_intentional_diskless);
+	return no_yes_unknown_str(info->is_intentional_diskless);
 }
 
 const char *peer_intentional_diskless_str(struct peer_device_info *info) {
-	return _intentional_diskless_str(info->peer_is_intentional_diskless);
+	return no_yes_unknown_str(info->peer_is_intentional_diskless);
 }
 
 const char *resync_susp_str(struct peer_device_info *info)
@@ -3732,6 +3744,7 @@ struct devices_list *new_device_from_info(struct genl_info *info)
 	disk_conf_from_attrs(&d->disk_conf, info);
 	d->info.dev_disk_state = D_DISKLESS;
 	d->info.is_intentional_diskless = IS_INTENTIONAL_DEF;
+	d->info.dev_is_open = DEV_IS_OPEN_UNKNOWN;
 	device_info_from_attrs(&d->info, info);
 	memset(&d->statistics, -1, sizeof(d->statistics));
 	device_statistics_from_attrs(&d->statistics, info);

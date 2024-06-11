@@ -113,6 +113,7 @@ void test_device_info(struct msg_buff *smsg, __u32 dev_disk_state, __u8 dev_has_
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_DEVICE_INFO);
 	nla_put_u32(smsg, T_dev_disk_state, dev_disk_state);
 	nla_put_u8(smsg, T_is_intentional_diskless, false);
+	nla_put_u8(smsg, T_dev_is_open, false);
 	nla_put_u8(smsg, T_dev_has_quorum, dev_has_quorum);
 	nla_put_string(smsg, T_backing_dev_path, backing_dev(dev_disk_state));
 	nla_nest_end(smsg, nla);

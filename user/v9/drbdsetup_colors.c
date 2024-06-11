@@ -69,6 +69,11 @@ int bool_colors[] = {
 	[true] = COLOR_GOOD,
 };
 
+int dev_is_open_colors[] = {
+	[false] = COLOR_NORMAL,
+	[true] = COLOR_PRIMARY,
+};
+
 const char *stop_color_code(void)
 {
 	return LC "0" RC;
@@ -179,4 +184,14 @@ const char *fail_io_color_start(bool fail_io)
 const char *fail_io_color_stop(bool fail_io)
 {
 	return color_code(!fail_io, bool_colors, ARRAY_SIZE(bool_colors), false, true);
+}
+
+const char *dev_is_open_color_start(bool dev_is_open)
+{
+	return color_code(dev_is_open, dev_is_open_colors, ARRAY_SIZE(dev_is_open_colors), true, true);
+}
+
+const char *dev_is_open_color_stop(bool dev_is_open)
+{
+	return color_code(dev_is_open, dev_is_open_colors, ARRAY_SIZE(dev_is_open_colors), false, true);
 }

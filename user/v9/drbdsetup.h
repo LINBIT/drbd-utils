@@ -21,6 +21,8 @@
  * utils and old kernel we don't get it, so we set this default, get kernel
  * info, and then decide from the value if the kernel was new enough */
 #define IS_INTENTIONAL_DEF 3
+/* same for DEV_IS_OPEN */
+#define DEV_IS_OPEN_UNKNOWN 3
 
 struct drbd_argument {
 	const char* name;
@@ -143,6 +145,7 @@ int modprobe_drbd(void);
 char *address_str(char *buffer, void* address, int addr_len);
 const char *susp_str(struct resource_info *info);
 const char *resync_susp_str(struct peer_device_info *info);
+const char *no_yes_unknown_str(unsigned char almost_bool);
 const char *intentional_diskless_str(struct device_info *info);
 const char *peer_intentional_diskless_str(struct peer_device_info *info);
 const char *backing_dev_str(struct device_info *info);
