@@ -1284,7 +1284,7 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	</indexterm> Configure the size of the TCP/IP receive buffer.  A value
 	of 0 (the default) causes the buffer size to adjust dynamically.
 	This parameter usually does not need to be set, but it can be set
-	to a value up to 10 MiB.  The default unit is bytes.</para>
+	to a value up to 128 MiB.  The default unit is bytes.</para>
     </definition>
   </drbdsetup_option>
 
@@ -1391,7 +1391,7 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
       adjust dynamically.  Values below 32 KiB are harmful to the throughput
       on this connection.  Large buffer sizes can be useful especially when
       protocol A is used over high-latency networks; the maximum value
-      supported is 10 MiB.</para>
+      supported is 128 MiB.</para>
     </definition>
   </drbdsetup_option>
 
