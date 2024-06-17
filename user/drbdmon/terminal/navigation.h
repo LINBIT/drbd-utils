@@ -192,7 +192,7 @@ namespace navigation
     }
 
     // Selects the item closest to the cursor if it exists.
-    // The selection oder is:
+    // The selection order is:
     // 1. the item selected by the cursor
     // 2. its successor item
     // 3. its predecessor item
