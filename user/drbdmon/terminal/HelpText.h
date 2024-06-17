@@ -35,7 +35,6 @@ namespace helptext
 
     extern const char* const RSC_LIST_HELP_1;
     extern const char* const RSC_LIST_HELP_2;
-    extern const char* const RSC_LIST_HELP_3;
     extern const char* const RSC_LINE_HELP;
     extern const char* const VLM_LIST_HELP_1;
     extern const char* const VLM_LIST_HELP_2;
@@ -73,6 +72,7 @@ namespace helptext
     extern const char* const INSERT_NAV_LIST_HELP_1;
     extern const char* const INSERT_RSC_CMD_HELP_1;
     extern const char* const INSERT_VLM_CMD_HELP_1;
+    extern const char* const INSERT_PEER_VLM_CMD_HELP_1;
     extern const char* const INSERT_CON_CMD_HELP_1;
 
     extern void open_help_page(const id_type help_id, const ComponentsHub& dsp_comp_hub);

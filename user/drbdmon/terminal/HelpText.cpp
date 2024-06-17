@@ -11,28 +11,27 @@ namespace helptext
         "  Markers:\n"
         "    Selection marker\n"
         "      (Unicode: filled in square, ASCII: asterisk)\n"
-        "    Warning/Alert marker\n"
-        "      (Unicode: yellow hollow/red filled in triangle, ASCII: yellow/red exclamation mark)\n"
+        "    Warning marker\n"
+        "      (Unicode: yellow hollow triangle, ASCII: yellow exclamation mark)\n"
+        "    Alert marker\n"
+        "      (Unicode: red filled-in triangle, ASCII: red exclamation mark)\n"
         "    Role symbol:\n"
-        "      Primary (Unicode: filled in circle, ASCII: plus sign)\n"
+        "      Primary (Unicode: filled-in circle, ASCII: plus sign)\n"
         "      Secondary (Unicode: hollow circle, ASCII: minus sign)\n"
         "      Unknown resource role (Question mark)\n"
         "  Resource name\n"
         "  Volume status:\n"
-        "    Volume alert marker\n"
+        "    Volume warning/alert marker\n"
         "    Count of volumes with a normal state\n"
         "    Total count of volumes\n"
         "  Connection status:\n"
-        "    Connection alert marker\n"
+        "    Connection warning/alert marker\n"
         "    Count of connections with a normal state\n"
         "    Total count of connections\n"
         "  Quorum indicator (Y or N)\n\n";
 
     const char* const RSC_LIST_HELP_1 =
         "\x1B\x01" "Help - Resource list" "\x1B\xFF" "\n"
-        "\n"
-        "The resource list display shows an overview of all DRBD resources that are currently "
-        "active on the local node.\n"
         "\n"
         "\x1B\x01" "Contents" "\x1B\xFF" "\n"
         "\n"
@@ -47,41 +46,33 @@ namespace helptext
         "The resource list display show the list of active DRBD resources and a summary of the state of "
         "its volumes and connections.\n"
         "\n"
+        "\n"
         "\x1B\x01" "Display columns and symbols" "\x1B\xFF" "\n"
         "\n"
-        "The resource list display shows, from left to right, the following columns:\n"
-        "\n";
+        "The resource list display shows, from left to right, the following columns:\n";
 
     const char* const RSC_LIST_HELP_2 =
         "\x1B\x05" "ENTER      " "\x1B\xFF" " Show resource details for highlighted resource\n"
         "\x1B\x05" "A          " "\x1B\xFF" " Shows resource actions menu\n"
-        "\x1B\x05" "C          " "\x1B\xFF" " Shows connections list\n"
+        "\x1B\x05" "C          " "\x1B\xFF" " Shows connection list\n"
         "\x1B\x05" "R          " "\x1B\xFF" " Shows resource list\n"
-        "\x1B\x05" "V          " "\x1B\xFF" " Shows volumes list\n"
+        "\x1B\x05" "V          " "\x1B\xFF" " Shows volume list\n"
+        "\n"
         "\n"
         "\x1B\x01" "Commands" "\x1B\xFF" "\n"
         "\n"
-        "In addition to DRBDmon commands (see help index -> DRBDmon commands), the following commands are available "
+        "In addition to DRBDmon commands (see Help index -> DRBDmon commands), the following commands are available "
         "within the resource list display. The commands work either on the currently highlighted resource or else "
         "a selection of one or more resources.\n";
-
-    const char* const RSC_LIST_HELP_3 =
-        "\x1B\x04" "connect" "\x1B\xFF" "\n"
-        "    Connect the local node to the resource\n"
-        "\x1B\x04" "connect-discard" "\x1B\xFF" "\n"
-        "    Same as connect, but forces the local node to discard its data modifications for the resource\n"
-        "\x1B\x04" "disconnect" "\x1B\xFF" "\n"
-        "    Disconnect the local node from the resource\n"
-        "\x1B\x04" "invalidate" "\x1B\xFF" "\n"
-        "    \x1B\x03" "CAUTION:" "\x1B\xFF Invalidates local node's data for the resource, "
-        "forcing a resynchronization if connected\n";
 
     const char* const VLM_LINE_HELP =
         "  Markers:\n"
         "    Selection marker\n"
         "      (Unicode: filled in square, ASCII: asterisk)\n"
-        "    Warning/Alert marker\n"
-        "      (Unicode: yellow hollow/red filled in triangle, ASCII: yellow/red exclamation mark)\n"
+        "    Warning marker\n"
+        "      (Unicode: yellow hollow triangle, ASCII: yellow exclamation mark)\n"
+        "    Alert marker\n"
+        "      (Unicode: red filled-in triangle, ASCII: red exclamation mark)\n"
         "    DRBD volume number\n"
         "    Minor number of the block special file associated with the DRBD volume\n"
         "    Disk state of the DRBD volume\n"
@@ -103,9 +94,8 @@ namespace helptext
         "\n"
         "The volume list display shows a list of all active volumes for a resource and a summary of "
         "details about each volume on the local node. Typically, you access this display from the resource "
-        "details display. The summarized details shown for each volume include: volume "
-        "number, DRBD minor number, disk state, quorum status, and synchroniziation "
-        "percentage if a synchronization is in progress.\n"
+        "details display.\n"
+        "\n"
         "\n"
         "\x1B\x01" "Display columns and symbols" "\x1B\xFF" "\n"
         "\n"
@@ -118,15 +108,16 @@ namespace helptext
     const char* const VLM_LIST_HELP_3 =
         "\x1B\x05" "ENTER      " "\x1B\xFF" " Show volume details for highlighted resource\n"
         "\x1B\x05" "A          " "\x1B\xFF" " Shows volume actions menu.\n"
-        "            This key also works in page mode if you have a currently selected volume.\n"
-        "\x1B\x05" "C          " "\x1B\xFF" " Shows connections list\n"
+        "            This key also works in page mode if one or multiple volumes are selected.\n"
+        "\x1B\x05" "C          " "\x1B\xFF" " Shows connection list\n"
         "\x1B\x05" "R          " "\x1B\xFF" " Shows resource list\n"
+        "\n"
         "\n"
         "\x1B\x01" "Commands" "\x1B\xFF" "\n"
         "\n"
-        "In addition to DRBDmon commands (see help index -> DRBDmon commands), the"
-        "following DRBD commands are available within the volume list display. The"
-        "commands work either on the currently highlighted volume or else a selection of"
+        "In addition to DRBDmon commands (see Help index -> DRBDmon commands), the "
+        "following DRBD commands are available within the volume list display. The "
+        "commands work either on the currently highlighted volume or else a selection of "
         "one or more volumes.\n";
 
     const char* const PEER_VLM_LIST_HELP_1 =
@@ -134,7 +125,7 @@ namespace helptext
         "\n"
         "\x1B\x01" "Contents" "\x1B\xFF" "\n"
         "\n"
-        "Volume list overview\n"
+        "Peer volume list overview\n"
         "Display columns and symbols\n"
         "Navigation keys\n"
         "Commands\n"
@@ -146,6 +137,7 @@ namespace helptext
         "and a summary of details about each volume on the local node. "
         "Typically, you access this display from the connection details display.\n"
         "\n"
+        "\n"
         "\x1B\x01" "Display columns and symbols" "\x1B\xFF" "\n\n"
         "The line that shows the resource that the peer volume list belongs to shows, from "
         "left to right, the following columns:\n";
@@ -156,7 +148,6 @@ namespace helptext
 
     const char* const PEER_VLM_LIST_HELP_3 =
         "The list of peer volumes shows, from left to right, the following columns:\n"
-        "\n"
         "  Markers:\n"
         "    Selection marker\n"
         "      (Unicode: filled in square, ASCII: asterisk)\n"
@@ -172,12 +163,13 @@ namespace helptext
         "\x1B\x05" "ENTER      " "\x1B\xFF" " Show volume details for highlighted resource\n"
         "\x1B\x05" "A          " "\x1B\xFF" " Shows volume actions menu.\n"
         "                This key also works in page mode if you have a currently selected volume.\n"
-        "\x1B\x05" "C          " "\x1B\xFF" " Shows connections list\n"
+        "\x1B\x05" "C          " "\x1B\xFF" " Shows connection list\n"
         "\x1B\x05" "R          " "\x1B\xFF" " Shows resource list\n"
+        "\n"
         "\n"
         "\x1B\x01" "Commands" "\x1B\xFF" "\n"
         "\n"
-        "In addition to DRBDmon commands (see help index -> DRBDmon commands), the "
+        "In addition to DRBDmon commands (see Help index -> DRBDmon commands), the "
         "following DRBD commands are available within the peer volume list display. The "
         "commands work either on the resource or the connection associated with the peer volumes.\n";
 
@@ -186,23 +178,68 @@ namespace helptext
         "\n"
         "\x1B\x01" "Contents" "\x1B\xFF" "\n"
         "\n"
-        "Volume details overview\n"
+        "Peer volume details overview\n"
         "Navigation keys\n"
         "Commands\n"
         "\n"
         "\n"
-        "\x1B\x03" "Experimental version - Help text not available yet." "\x1B\xFF" "\n";
+        "\x1B\x01" "Peer volume details overview" "\x1B\xFF" "\n"
+        "\n"
+        "The peer volume details display shows information about a peer node's volume. "
+        "Typically, you access this display from the peer volume list display while in cursor "
+        "mode, after pressing ENTER on the currently highlighted peer volume. "
+        "The volume information shown is similar to what is shown in the volume list "
+        "display but in an unabbreviated way.\n"
+        "\n"
+        "\n"
+        "\x1B\x01" "Navigation Keys" "\x1B\xFF" "\n"
+        "\n"
+        "\x1B\x05" "A          " "\x1B\xFF" " Shows the peer volume actions menu for the peer volume.\n"
+        "            See Help index -> Peer volume actions for more details.\n"
+        "\n"
+        "\n"
+        "\x1B\x01" "Commands" "\x1B\xFF" "\n"
+        "\n"
+        "In addition to DRBDmon commands (see Help index -> DRBDmon commands), the "
+        "following DRBD commands are available within the peer volume details display:\n";
 
     const char* const PEER_VLM_ACT_HELP_1 =
-        "\x1B\x01" "Help - Peer volume details" "\x1B\xFF" "\n"
+        "\x1B\x01" "Help - Peer volume actions" "\x1B\xFF" "\n"
         "\n"
         "\x1B\x01" "Contents" "\x1B\xFF" "\n"
         "\n"
-        "Volume actions overview\n"
-        "Volume actions\n"
+        "Peer volume actions overview\n"
+        "Peer volume actions\n"
         "\n"
         "\n"
-        "\x1B\x03" "Experimental version - Help text not available yet." "\x1B\xFF" "\n";
+        "\x1B\x01" "Peer volume actions overview" "\x1B\xFF" "\n"
+        "\n"
+        "The peer volume actions display shows a menu of actions that you can choose from to "
+        "affect the selected peer volume for a given resource. Typically, you access this "
+        "display from the peer volume details display. Actions correspond to various drbdadm "
+        "and drbdsetup commands.\n"
+        "\n"
+        "\n"
+        "\x1B\x01" "Peer volume actions" "\x1B\xFF" "\n"
+        "\n"
+        "The volume actions available are:\n"
+
+        "\x1B\x04" "Pause resynchronization" "\x1B\xFF" "\n"
+        "    Pauses an active resynchronization to or from the peer node. Note that this may not stop the "
+        "resynchronization process if other nodes are available as data source or data target for the "
+        "resynchronization.\n"
+
+        "\x1B\x04" "Resume resynchronization" "\x1B\xFF" "\n"
+        "    Resumes a previously paused resynchronization to or from the peer node. This command must be "
+        "executed on the same node where the pause-resynchronization command was executed.\n"
+
+        "\x1B\x04" "Verify data" "\x1B\xFF" "\n"
+        "    Begins an online verification process, comparing data on the local node's volume with data on "
+        "the remote (peer) node's volume\n"
+
+        "\x1B\x04" "Invalidate peer volume" "\x1B\xFF" "\n"
+        "    \x1B\x03" "CAUTION:" "\x1B\xFF Invalidates the remote (peer) node's data for the volume, "
+        "forcing a resynchronization\n";
 
     const char* const CON_LIST_HELP_1 =
         "\x1B\x01" "Help - Connection list" "\x1B\xFF" "\n"
@@ -221,6 +258,7 @@ namespace helptext
         "and a summary of details about each connection. Typically, you access this "
         "display from the resource details display.\n"
         "\n"
+        "\n"
         "\x1B\x01" "Display columns and symbols" "\x1B\xFF" "\n"
         "\n"
         "The line that shows the resource that the connection list belongs to shows, from "
@@ -232,13 +270,14 @@ namespace helptext
     const char* const CON_LIST_HELP_3 =
         "\x1B\x05" "ENTER      " "\x1B\xFF" " Show connection details for highlighted connection\n"
         "\x1B\x05" "A          " "\x1B\xFF" " Shows connection actions menu.\n"
-        "            This key also works in page mode if you have a currently selected connection."
+        "            This key also works in page mode if you have a currently selected connection.\n"
         "\x1B\x05" "R          " "\x1B\xFF" " Shows resource list\n"
         "\x1B\x05" "V          " "\x1B\xFF" " Shows volume list\n"
         "\n"
+        "\n"
         "\x1B\x01" "Commands" "\x1B\xFF" "\n"
         "\n"
-        "In addition to DRBDmon commands (see help index -> DRBDmon commands), the "
+        "In addition to DRBDmon commands (see Help index -> DRBDmon commands), the "
         "following DRBD commands are available within the connection list display. The "
         "commands work either on the currently highlighted connection or else a selection of "
         "one or more connections.\n";
@@ -278,13 +317,14 @@ namespace helptext
         "        Shows tasks that are currently running\n"
         "\x1B\x01" "    Pending tasks queue (PNDQ)" "\x1B\xFF" "\n"
         "        Shows tasks that are pending execution. Tasks in this queue move to the active queue automatically "
-        "as active tasks complete, or they can be manually moved to the suspended tasks queue instead\n"
+        "as active tasks complete, or they can be manually moved to the suspended tasks queue instead.\n"
         "\x1B\x01" "    Suspended tasks queue (SSPQ)" "\x1B\xFF" "\n"
         "        Shows tasks that are suspended. Tasks in this queue may be canceled or may be moved to the "
         "pending tasks queue.\n"
         "\x1B\x01" "    Finished tasks queue (FINQ)" "\x1B\xFF" "\n"
         "        Shows tasks that have finished execution. A task automatically moves from the active tasks queue "
-        "to the finished tasks queue as the task completes.\n"
+        "to the finished tasks queue as the task completes. Note that depending on how DRBDmon is configured, "
+        "tasks may be discarded automatically upon completion instead of being moved to the finished tasks queue.\n"
         "\n";
 
     const char* const TASKQ_HELP_2 =
@@ -309,7 +349,7 @@ namespace helptext
         "\n"
         "\x1B\x01" "Task details overview" "\x1B\xFF" "\n"
         "\n"
-        "The task detail display shows information about a task entry on one of the task queues.\n"
+        "The task details display shows information about a task entry on one of the task queues.\n"
         "\n"
         "The information provided includes the command line being executed, and, depending on the task's state, "
         "may include the ID of the operating system process running the task, the exit code of a completed task "
@@ -343,17 +383,19 @@ namespace helptext
         "The resource information shown is similar to what is shown in the resource list "
         "display but in an unabbreviated way.\n"
         "\n"
+        "\n"
         "\x1B\x01" "Navigation Keys" "\x1B\xFF" "\n"
         "\n"
         "\x1B\x05" "A          " "\x1B\xFF" " Shows the resource actions menu for the resource.\n"
-        "            See \"Help - Resource actions\" for more details.\n"
+        "            See Help index -> Resource actions for more details.\n"
         "\x1B\x05" "C          " "\x1B\xFF" " Shows the connection list for the resource.\n"
         "\x1B\x05" "V          " "\x1B\xFF" " Shows the volume list for the resource.\n"
         "\n"
+        "\n"
         "\x1B\x01" "Commands" "\x1B\xFF" "\n"
         "\n"
-        "In addition to DRBDmon commands (see help index -> DRBDmon commands), the "
-        "following DRBD commands are available within the resource details display.\n";
+        "In addition to DRBDmon commands (see Help index -> DRBDmon commands), the "
+        "following DRBD commands are available within the resource details display:\n";
 
     const char* const VLM_DETAIL_HELP_1 =
         "\x1B\x01" "Help - Volume details" "\x1B\xFF" "\n"
@@ -367,21 +409,23 @@ namespace helptext
         "\n"
         "\x1B\x01" "Volume details overview" "\x1B\xFF" "\n"
         "\n"
-        "The volume details display shows information about a resource's volume."
+        "The volume details display shows information about a resource's volume. "
         "Typically, you access this display from the volume list display while in cursor "
-        "mode, after pressing ENTER on the currently highlighted volume."
+        "mode, after pressing ENTER on the currently highlighted volume. "
         "The volume information shown is similar to what is shown in the volume list "
         "display but in an unabbreviated way.\n"
+        "\n"
         "\n"
         "\x1B\x01" "Navigation Keys" "\x1B\xFF" "\n"
         "\n"
         "\x1B\x05" "A          " "\x1B\xFF" " Shows the volume actions menu for the volume.\n"
-        "            See \"Help - Volume actions\" for more details.\n"
+        "            See Help index -> Volume actions for more details.\n"
+        "\n"
         "\n"
         "\x1B\x01" "Commands" "\x1B\xFF" "\n"
         "\n"
-        "In addition to DRBDmon commands (see help index -> DRBDmon commands), the "
-        "following DRBD commands are available within the volume details display.\n";
+        "In addition to DRBDmon commands (see Help index -> DRBDmon commands), the "
+        "following DRBD commands are available within the volume details display:\n";
 
     const char* const CON_DETAIL_HELP_1 =
         "\x1B\x01" "Help - Connection details" "\x1B\xFF" "\n"
@@ -402,16 +446,18 @@ namespace helptext
         "The connection information shown is similar to what is shown in the connection "
         "list display but in an unabbreviated way.\n"
         "\n"
+        "\n"
         "\x1B\x01" "Navigation Keys" "\x1B\xFF" "\n"
         "\n"
         "\x1B\x05" "A          " "\x1B\xFF" " Shows the connection actions menu for the connection\n"
-        "            See \"Help - Connection actions\" for more details.\n"
+        "            See Help index -> Connection actions for more details.\n"
         "\x1B\x05" "V          " "\x1B\xFF" " Shows the peer volume list\n"
+        "\n"
         "\n"
         "\x1B\x01" "Commands" "\x1B\xFF" "\n"
         "\n"
-        "In addition to DRBDmon commands (see help index -> DRBDmon commands), the "
-        "following DRBD commands are available within the connection details display.\n";
+        "In addition to DRBDmon commands (see Help index -> DRBDmon commands), the "
+        "following DRBD commands are available within the connection details display:\n";
 
     const char* const RSC_ACT_HELP_1 =
         "\x1B\x01" "Help - Resource actions" "\x1B\xFF" "\n"
@@ -428,15 +474,16 @@ namespace helptext
         "affect the selected resource. Typically, you access this display from the "
         "resource details display. Actions correspond to various drbdadm commands.\n"
         "\n"
+        "\n"
         "\x1B\x01" "Resource actions" "\x1B\xFF" "\n"
         "\n"
         "The resource actions available are:\n"
         "\x1B\x04" "Start resource" "\x1B\xFF" "\n"
-        "    Start the resource on local node\n"
+        "    Start the resource on the local node\n"
         "\x1B\x04" "Stop resource" "\x1B\xFF" "\n"
-        "    Stop the resource on local node\n"
+        "    Stop the resource on the local node\n"
         "\x1B\x04" "Adjust resource" "\x1B\xFF" "\n"
-        "    Adjust the resource on local node, for example, after a DRBD resource configuration change\n"
+        "    Adjust the resource on the local node, for example, after a DRBD resource configuration change\n"
         "\x1B\x04" "Make primary" "\x1B\xFF" "\n"
         "    Make the local node primary for the resource\n"
         "\x1B\x04" "Make secondary" "\x1B\xFF" "\n"
@@ -448,16 +495,16 @@ namespace helptext
         "\x1B\x04" "Run verification" "\x1B\xFF" "\n"
         "    Verifies that the data on this node matches the data on a peer node\n"
         "\x1B\x04" "Pause resynchronization" "\x1B\xFF" "\n"
-        "    Pauses local node resource synchronization with peer nodes\n"
+        "    Pauses the local node's resource synchronization with peer nodes\n"
         "\x1B\x04" "Resume resynchronization" "\x1B\xFF" "\n"
-        "    Resumes local node resource synchronization with peer nodes\n"
+        "    Resumes the local node's resource synchronization with peer nodes\n"
         "\x1B\x04" "Force make primary" "\x1B\xFF" "\n"
         "    \x1B\x03" "CAUTION:" "\x1B\xFF This may result in overwriting the data on peer volumes\n"
         "\x1B\x04" "Discard & resolve split-brain" "\x1B\xFF" "\n"
-        "    \x1B\x03" "CAUTION:" "\x1B\xFF Same as connect but forces local node to discard its data modifications "
-        "for the resource\n"
+        "    \x1B\x03" "CAUTION:" "\x1B\xFF Same as connect, but forces the local node to discard its "
+        "data modifications for the resource\n"
         "\x1B\x04" "Invalidate & resynchronize" "\x1B\xFF" "\n"
-        "    \x1B\x03" "CAUTION:" "\x1B\xFF Invalidates local node's data for the resource, forcing a "
+        "    \x1B\x03" "CAUTION:" "\x1B\xFF Invalidates the local node's data for the resource, forcing a "
         "resynchronization\n";
 
     const char* const VLM_ACT_HELP_1 =
@@ -476,16 +523,21 @@ namespace helptext
         "display from the volume details display. Actions correspond to various drbdadm "
         "and drbdsetup commands.\n"
         "\n"
+        "\n"
         "\x1B\x01" "Volume actions" "\x1B\xFF" "\n"
         "\n"
         "The volume actions available are:\n"
-        "\x1B\x04" "Attach       " "\x1B\xFF" "\n"
+
+        "\x1B\x04" "Attach" "\x1B\xFF" "\n"
         "    Attach the local backing storage device\n"
-        "\x1B\x04" "Detach       " "\x1B\xFF" "\n"
+
+        "\x1B\x04" "Detach" "\x1B\xFF" "\n"
         "    Detach the local backing storage device\n"
-        "\x1B\x04" "Resize       " "\x1B\xFF" "\n"
+
+        "\x1B\x04" "Resize" "\x1B\xFF" "\n"
         "    Resizes the DRBD volume after a change of the size of its backing storage\n"
-        "\x1B\x04" "Invalidate   " "\x1B\xFF" "\n"
+
+        "\x1B\x04" "Invalidate" "\x1B\xFF" "\n"
         "    \x1B\x03" "CAUTION:" "\x1B\xFF Invalidates the local node's data for the volume, "
         "forcing a resynchronization if connected\n";
 
@@ -504,6 +556,7 @@ namespace helptext
         "to affect the selected connection between the local node and a peer node for a "
         "given resource. Typically, you access this display from the connection details "
         "display. Actions correspond to various drbdadm or drbdsetup commands.\n"
+        "\n"
         "\n"
         "\x1B\x01" "Connection actions" "\x1B\xFF" "\n"
         "\n"
@@ -530,7 +583,7 @@ namespace helptext
         "The message log display shows a list of DRBD log events and a summary of "
         "details about each event. Typically, you access this display from the main menu "
         "display. The summarized details shown for each log event include: the severity "
-        "level of the event, the time of the time, and the first line of the event's log message. "
+        "level of the event, the time of the event, and the first line of the event's log message. "
         "The first line of the log message will be truncated if it is too long to fit on one line. "
         "The full log message can be displayed using the message details display.\n"
         "\n";
@@ -538,12 +591,13 @@ namespace helptext
     const char* const MSG_LOG_HELP_2 =
         "\n"
         "In cursor navigation mode:\n"
-        "\x1B\x05" "ARROW UP   " "\x1B\xFF" " Move cursor to next log event above cursor\n"
-        "\x1B\x05" "ARROW DOWN " "\x1B\xFF" " Move cursor to next log event below cursor\n"
-        "\x1B\x05" "ENTER      " "\x1B\xFF" " Show message details for highlighted log event\n"
+        "\x1B\x05" "ARROW UP   " "\x1B\xFF" " Move cursor to next log event above the cursor\n"
+        "\x1B\x05" "ARROW DOWN " "\x1B\xFF" " Move cursor to next log event below the cursor\n"
+        "\x1B\x05" "ENTER      " "\x1B\xFF" " Show message details for the highlighted log event\n"
         "\x1B\x05" "SPACE      " "\x1B\xFF" " Toggle log event selection\n"
         "\x1B\x05" "F4         " "\x1B\xFF" " Clear selection\n"
-        "\x1B\x05" "DEL        " "\x1B\xFF" " Delete highlighted entry or all selected entries\n";
+        "\x1B\x05" "DEL        " "\x1B\xFF" " Delete the highlighted entry, or all selected entries if multiple "
+        "entries have been selected\n";
 
     const char* const MSG_DETAIL_HELP_1 =
         "\x1B\x01" "Help - Message details" "\x1B\xFF" "\n"
@@ -558,7 +612,8 @@ namespace helptext
         "\n"
         "The message details display shows the alert level, date, time and message of a log entry. Messages "
         "that consist of multiple lines of text and messages that are too long for display in the list shown "
-        "by the message log display can be viewed in full in the message details view.\n"
+        "by the message log display can be viewed in full in the message details display.\n"
+        "\n"
         "\n";
 
     const char* const CONF_HELP_1 =
@@ -585,13 +640,14 @@ namespace helptext
         "\x1B\x04" "Discard all completed tasks" "\x1B\xFF" "\n"
         "    Discards task entries upon completion of the task, instead of moving them to the finished tasks queue\n"
         "\x1B\x04" "Suspend new tasks" "\x1B\xFF" "\n"
-        "    Instead starting new tasks immediately or moving the associated task entries into the pending tasks "
+        "    Instead of starting new tasks immediately or moving the associated task entries into the pending tasks "
         "queue, places new task entries into the suspended tasks queue, from where they can either be manually moved "
         "to the pending tasks queue, or be manually discarded\n"
         "\x1B\x04" "Color scheme" "\x1B\xFF" "\n"
         "    Sets the display color scheme\n"
         "\x1B\x04" "Character set" "\x1B\xFF" "\n"
         "    Sets the display character set\n"
+        "\n"
         "\n"
         "\x1B\x01" "Changing the configuration from the command line" "\x1B\xFF" "\n"
         "\n"
@@ -618,14 +674,20 @@ namespace helptext
         "\n"
         "\x1B\x01" "Contents" "\x1B\xFF" "\n"
         "\n"
+        "DRBDmon Overview\n"
         "Navigating DRBDmon displays\n"
         "Mouse navigation\n"
         "Using the DRBDmon command line\n"
         "\n"
         "\n"
+        "\x1B\x01" "DRBDmon overview" "\x1B\xFF" "\n"
+        "\n"
+        "DRBDmon is a utility to monitor and manage DRBD resources.\n"
+        "\n"
+        "\n"
         "\x1B\x01" "Navigating DRBDmon displays" "\x1B\xFF" "\n"
         "\n"
-        "DRBDmon functions with the concept of a display stack, where navigating to a display, puts that display "
+        "DRBDmon functions with the concept of a display stack, where navigating to a display puts that display "
         "on top of DRBDmon's current display, and closing a display returns you to the previous display. Various "
         "hotkeys, menu items or items clickable by mouse on a display will open another display. Most displays are "
         "also directly accessible from the main menu, which can be opened from any display by pressing the "
@@ -639,6 +701,7 @@ namespace helptext
         "page navigation mode, the display will automatically switch to the page that contains the item under the "
         "cursor in cursor navigation mode.\n"
         "\n"
+        "\n"
         "\x1B\x01" "Mouse navigation" "\x1B\xFF" "\n"
         "\n"
         "If mouse navigation is enabled in the DRBDmon configuration, and provided that the terminal that is used "
@@ -646,6 +709,7 @@ namespace helptext
         "navigate or to perform actions. In most terminals, mouse navigation prevents the selection of text as a "
         "side effect. Mouse navigation can be turned off temporarily in the DRBDmon configuration for selecting "
         "and copying text displayed by DRBDmon.\n"
+        "\n"
         "\n"
         "\x1B\x01" "Using the DRBDmon command line" "\x1B\xFF" "\n"
         "\n"
@@ -669,13 +733,16 @@ namespace helptext
         "\x1B\x05" "PAGE UP    " "\x1B\xFF" " Show previous page, if multiple pages\n"
         "\x1B\x05" "PAGE DOWN  " "\x1B\xFF" " Show next page, if multiple pages\n"
         "\x1B\x05" "F1         " "\x1B\xFF" " Show help text\n"
+        "            Pressing " "\x1B\x05" "F1" "\x1B\xFF" " again from the help text display shows the "
+        "help index menu.\n"
+        "\x1B\x05" "F2         " "\x1B\xFF" " Show the main menu\n"
         "\x1B\x05" "F3         " "\x1B\xFF" " Exit DRBDmon\n"
         "\x1B\x05" "F5         " "\x1B\xFF" " Refresh display\n"
-        "\x1B\x05" "F6         " "\x1B\xFF" " Go to page number entry field\n"
+        "\x1B\x05" "F6" "\x1B\xFF" " x       " " Go to page number x.\n"
         "            \x1B\x05" "ENTER" "\x1B\xFF" " or " "\x1B\x05" "TAB" "\x1B\xFF" " confirm page number entry\n"
         "            \x1B\x05" "F12" "\x1B\xFF" " cancels page number entry\n"
         "\x1B\x05" "F10        " "\x1B\xFF" " Close display\n"
-        "\x1B\x05" "/          " "\x1B\xFF" " Go to command line entry field\n"
+        "\x1B\x05" "/          " "\x1B\xFF" " Go to the command line entry field\n"
         "            \x1B\x05" "F12" "\x1B\xFF" " cancels command line entry\n";
 
     const char* const INSERT_NAV_LIST_HELP_1 =
@@ -684,26 +751,32 @@ namespace helptext
         "\n"
         "In cursor navigation mode:\n"
         "\x1B\x05" "SPACE      " "\x1B\xFF" " Toggle highlighted item selection\n"
-        "\x1B\x05" "ARROW UP   " "\x1B\xFF" " Move cursor to next item above cursor\n"
-        "\x1B\x05" "ARROW DOWN " "\x1B\xFF" " Move cursor to next item below cursor\n";
+        "\x1B\x05" "ARROW UP   " "\x1B\xFF" " Move cursor to next item above the cursor\n"
+        "\x1B\x05" "ARROW DOWN " "\x1B\xFF" " Move cursor to next item below the cursor\n";
 
     const char* const INSERT_RSC_CMD_HELP_1 =
         "\x1B\x04" "//start        " "\x1B\xFF" "\n"
-        "    Start the resource on local node\n"
+        "    Start the resource on the local node\n"
+
         "\x1B\x04" "//stop         " "\x1B\xFF" "\n"
-        "    Stop the resource on local node\n"
+        "    Stop the resource on the local node\n"
+
         "\x1B\x04" "//adjust       " "\x1B\xFF" "\n"
-        "    Adjust the resource on local node, for example, after a DRBD resource configuration change\n"
+        "    Adjust the resource on the local node, for example, after a DRBD resource configuration change\n"
+
         "\x1B\x04" "//primary      " "\x1B\xFF" "\n"
         "    Make the local node primary for the resource\n"
+
         "\x1B\x04" "//secondary    " "\x1B\xFF" "\n"
         "    Make the local node secondary for the resource\n";
 
     const char* const INSERT_VLM_CMD_HELP_1 =
         "\x1B\x04" "//attach       " "\x1B\xFF" "\n"
         "    Attach the local backing storage device\n"
+
         "\x1B\x04" "//detach       " "\x1B\xFF" "\n"
         "    Detach the local backing storage device\n"
+
         "\x1B\x04" "//invalidate   " "\x1B\xFF" "\n"
         "    \x1B\x03" "CAUTION:" "\x1B\xFF Invalidates the local node's data for the volume, "
         "forcing a resynchronization if connected\n";
@@ -711,11 +784,35 @@ namespace helptext
     const char* const INSERT_CON_CMD_HELP_1 =
         "\x1B\x04" "//connect" "\x1B\xFF" "\n"
         "    Connects to the peer node\n"
+
         "\x1B\x04" "//connect-discard" "\x1B\xFF" "\n"
         "    Same as connect, but forces the local node to discard its data modifications for the resource. "
         "This command is normally used to discard changes that are the result of a split brain situation.\n"
+
         "\x1B\x04" "//disconnect" "\x1B\xFF" "\n"
-        "    Disconnects from the peer node\n";
+        "    Disconnects from the peer node\n"
+
+        "\x1B\x04" "//force-disconnect" "\x1B\xFF" "\n"
+        "    Forces disconnection from the peer node. The effect on the state of the DRBD resource is equivalent "
+        "to the effect of a failed network connection.\n";
+
+    const char* const INSERT_PEER_VLM_CMD_HELP_1 =
+        "\x1B\x04" "//pause-sync" "\x1B\xFF" "\n"
+        "    Pauses an active resynchronization to or from the peer node. Note that this may not stop the "
+        "resynchronization process if other nodes are available as data source or data target for the "
+        "resynchronization.\n"
+
+        "\x1B\x04" "//resume-sync" "\x1B\xFF" "\n"
+        "    Resumes a previously paused resynchronization to or from the peer node. This command must be "
+        "executed on the same node where the pause-sync command was executed.\n"
+
+        "\x1B\x04" "//verify" "\x1B\xFF" "\n"
+        "    Begins an online verification process, comparing data on the local node's volume with data on "
+        "the remote (peer) node's volume\n"
+
+        "\x1B\x04" "//invalidate-remote" "\x1B\xFF" "\n"
+        "    \x1B\x03" "CAUTION:" "\x1B\xFF Invalidates the remote (peer) node's data for the volume, "
+        "forcing a resynchronization\n";
 
     const char* const DRBDMON_CMD_HELP_1 =
         "\x1B\x01" "Help - DRBDmon commands" "\x1B\xFF" "\n"
@@ -728,6 +825,7 @@ namespace helptext
         "\x1B\x01" "Description of available commands" "\x1B\xFF" "\n"
         "\n"
         "The following DRBDmon commands are available:\n"
+        "\n"
 
         "\x1B\x04" "/display" "\x1B\xFF" "\n"
         "    Switches to the display the identifier of which is specified in the argument to the command. "
@@ -737,67 +835,104 @@ namespace helptext
         "        Switches to the main menu display\n"
         "    The string " "\x1B\x04" "/d" "\x1B\xFF" " always completes to the " "\x1B\x04" "/display" "\x1B\xFF"
         " command for convenience.\n"
+        "\n"
 
         "\x1B\x04" "/cursor" "\x1B\xFF" "\n"
-        "    Positions the cursor on the selected item\n"
-        "    This command is available on the following displays:\n"
-        "        Resource list\n"
-        "        Connection list\n"
-        "        Volume list\n"
-        "        Peer volume list\n"
-        "    The " "\x1B\x03" "*" "\x1B\xFF" " character is interpreted as a wildcard matching any string "
-        "    on the resource list and connection list displays. If a wildcard character is present, the "
-        "    argument to the " "\x1B\x04" "/cursor" "\x1B\xFF" " command is interpreted as a pattern, "
-        "    and the command will select the first resource or connection, respectively, where the name "
-        "    matches the pattern. If there is no match, the command is rejected.\n"
-        "    If no wildcard character is present, then the command is treated as an alias for the "
-        "    " "\x1B\x04" "/resource" "\x1BxFF" " or " "\x1B\x04" "/connection" "\x1B\xFF" " command, "
-        "    respectively and will position the cursor on item with the literal name specified in the "
-        "    argument to the command.\n"
-        "    A wildcard character is not supported on the volume list and peer volume list displays, "
-        "    the argument must be a volume number, and the command is treated as an alias for the "
-        "    " "\x1B\x04" "/volume" "\x1B\xFF" " or " "\x1B\x04" "/peer-volume" "\x1B\xFF" " comamnd, "
-        "    respectively.\n"
+        "    On the resource list and connection list displays, puts the cursor on the list item that matches "
+        "the string you specify. "
+        "You can use asterisk (*) wildcard characters in the string. If your string with a wildcard character "
+        "matches more than one list item, the cursor will be put on the first item that matches. For example, if "
+        "given a connection list of \"node-1\", \"node-2\", and \"node-3\", the command "
+        "\x1B\x04" "/cursor node*" "\x1B\xFF" " "
+        "would put the cursor on the \"node-1\" connection.\n"
+        "    If no list item matches your specified string with a wildcard character, the command is rejected.\n"
+        "    If no wildcard characters are present in the string, the behavior is identical to the "
+        "\x1B\x04" "/resource" "\x1B\xFF" " command on the resource list display, and identical to the "
+        "\x1B\x04" "/connection" "\x1B\xFF" " command on the connection list display.\n"
+        "    On the volume list display, the behavior is always identical to the "
+        "\x1B\x04" "/volume" "\x1B\xFF" " command.\n"
+        "    On the peer volume list display, the behavior is always identical to the "
+        "\x1B\x04" "/peer-volume" "\x1B\xFF" " command.\n"
+        "\n"
 
-        "\x1B\x04" "/resource" "\x1B\xFF" "\n"
-        "    Positions the cursor on the resource with the literal name specified in the argument "
-        " to the command\n"
+        "\x1B\x04" "/resource <resource-name>" "\x1B\xFF" "\n"
+        "    Puts the cursor on the specified resource if on the resource list (RSCL) display. "
+        "If on a different list or details display, the display will show items or details related to the "
+        "specified resource, if applicable.\n"
+        "\n"
 
-        "\x1B\x04" "/connection" "\x1B\xFF" "\n"
-        "    Positions the cursor on the connection with the literal name specified in the argument "
-        " to the command\n"
+        "\x1B\x04" "/connection <connection-name>" "\x1B\xFF" "\n"
+        "    Puts the cursor on the specified connection if on the connection list (CONL) display. "
+        "If on a different list or details display, the display will show items or details related to the "
+        "specified connection, if applicable.\n"
+        "\n"
 
-        "\x1B\x04" "/volume" "\x1B\xFF" "\n"
-        "    Positions the cursor on the resource with the volume number specified in the argument "
-        " to the command\n"
+        "\x1B\x04" "/volume <volume-number>" "\x1B\xFF" "\n"
+        "    Puts the cursor on the specified volume if on the volume list (VLML) display. "
+        "If on a different list or details display, the display will show items or details related to the "
+        "specified volume, if applicable.\n"
+        "\n"
 
-        "\x1B\x04" "/peer-volume" "\x1B\xFF" "\n"
-        "    Positions the cursor on the resource with the peer volume number specified in the argument "
-        " to the command\n"
+        "\x1B\x04" "/peer-volume <volume-number>" "\x1B\xFF" "\n"
+        "    Puts the cursor on the specified peer volume if on the peer volume list (PVLML) display. "
+        "If on a different list or details display, the display will show items or details related to the "
+        "specified peer volume, if applicable.\n"
+        "\n"
+
+        "\x1B\x04" "/minor-nr <number>" "\x1B\xFF" "\n"
+        "    Changes the display context to show items or details related to the resource that contains the "
+        "volume with the specified block device minor number (as if by the " "\x1B\x04" "/resource" "\x1B\xFF"
+        " command), and positions the cursor on the volume with that "
+        "minor number, if applicable.\n"
+        "\n"
 
         "\x1B\x04" "/close" "\x1B\xFF" "\n"
         "    Closes the current display\n"
+        "\n"
 
-        "\x1B\x04" "/select" "\x1B\xFF" "\n"
-        "    Selects resources that have a resource name matching the specified pattern. The "
-        "\x1B\x03" "*" "\x1B\xFF" " character is interpreted as a wildcard matching any string.\n"
-
-        "\x1B\x04" "/deselect" "\x1B\xFF" "\n"
-        "    Deselects resources that have a resource name matching the specified pattern. The "
-        "\x1B\x03" "*" "\x1B\xFF" " character is interpreted as a wildcard matching any string.\n"
+        "\x1B\x04" "/select <string or number>" "\x1B\xFF" "\n"
+        "    Select all items of a list display that match the specified string "
+        "(or number for volume related list displays). "
+        "You can use asterisk (*) wildcard characters in the string. "
+        "This works similarly to as described in the " "\x1B\x04" "/cursor" "\x1B\xFF" " command.\n"
+        "    If a specified string with wildcards does not match any list items, the command is rejected.\n"
+        "\n"
 
         "\x1B\x04" "/select-all" "\x1B\xFF" "\n"
-        "    Selects all items of a list display. For example, running the /select-all command from the "
-        "resource list display selects all resources. If only items with warnings or alerts are displayed due "
-        "to a problem mode have been selected, only those items are selected.\n"
+        "    Selects all items of a list display. For example, running the " "\x1B\x04" "/select-all" "\x1B\xFF" " "
+        "command from the resource list display selects all resources. If only items with warnings or alerts "
+        "are displayed due to a problem mode having been selected, only those items are selected.\n"
+        "\n"
+
+        "\x1B\x04" "/select *" "\x1B\xFF" "\n"
+        "    Effectively the same as " "\x1B\x04" "/select-all" "\x1B\xFF" " for \"string\" list items such as "
+        "resources and connections. "
+        "If a specified string or number does not match any list items, the command is rejected.\n"
+        "    Not supported for volume list items, as no pattern matching is performed for volume numbers - use the "
+        "\x1B\x04" "/select-all" "\x1B\xFF" " command instead.\n"
+        "\n"
+
+        "\x1B\x04" "/deselect <string or number>" "\x1B\xFF" "\n"
+        "    Deselect all items of a list display that match the specified string "
+        "(or number for volume related list displays). You can use asterisk (*) wildcard characters "
+        "in the string. This works similarly to as described in the " "\x1B\x04" "/cursor" "\x1B\xFF" " command. "
+        "If a specified string or number does not match any list items, the command is rejected.\n"
+        "\n"
 
         "\x1B\x04" "/deselect-all" "\x1B\xFF" "\n"
-        "    Clears the selection of items of a list display. For example, running the "
-        "\x1B\x04" "/deselect-all" "\x1B\xFF"
-        " command from the resource list display clears the selection of resources.\n"
+        "    Deselects all selected items of a list display.\n"
+        "\n"
+
+        "\x1B\x04" "/deselect *" "\x1B\xFF" "\n"
+        "    Effectively the same as " "\x1B\x04" "/deselect-all" "\x1B\xFF" " for \"string\" list items such as "
+        "resources and connections.\n"
+        "    Not supported for volume list items, as no pattern matching is performed for volume numbers - use the "
+        "\x1B\x04" "/deselect-all" "\x1B\xFF" " command instead.\n"
+        "\n"
 
         "\x1B\x04" "/clear-selection" "\x1B\xFF" "\n"
-        "    This is an alias of the " "\x1B\x04" "/deselect-all" "\x1B\xFF" " command\n"
+        "    Same as " "\x1B\x04" "/deselect-all" "\x1B\xFF" "\n"
+        "\n"
 
         "\x1B\x04" "/colors" "\x1B\xFF" "\n"
         "    Temporarily sets the selected color scheme.\n"
@@ -812,10 +947,11 @@ namespace helptext
         "            16 colors scheme for terminals with a light background color\n"
         "        DEFAULT\n"
         "            Default color scheme\n"
+        "\n"
 
         "\x1B\x04" "/charset" "\x1B\xFF" "\n"
-        "    Temporarily sets the selected color scheme.\n"
-        "    Available color schemes are:\n"
+        "    Temporarily sets the selected character set.\n"
+        "    Available character sets are:\n"
         "        UNICODE\n"
         "            Unicode character set (UTF-8)\n"
         "        UTF-8\n"
@@ -824,6 +960,7 @@ namespace helptext
         "            ASCII character set\n"
         "        DEFAULT\n"
         "            Default character set\n"
+        "\n"
 
         "\x1B\x04" "/exit" "\x1B\xFF" "\n"
         "    Exits DRBDmon\n";
@@ -842,9 +979,11 @@ namespace helptext
         "DRBD commands can be used in two ways:\n"
         "    - In the context of the currently highlighted or selected item(s)\n"
         "    - With an argument specifying the DRBD resource, connection or volume for the command\n"
+        "\n"
         "If a command is entered without any arguments, it will affect the item under the cursor, or, if "
         "there is a selection of multiple items, the selected items. A suitable item must be selected for "
         "the command to be able to be executed.\n"
+        "\n"
         "\n"
         "\x1B\x01" "Description of available commands" "\x1B\xFF" "\n"
         "\n"
@@ -856,17 +995,21 @@ namespace helptext
         "    Stops a DRBD resource\n"
 
         "\x1B\x04" "//up" "\x1B\xFF" "\n"
-        "    Starts a DRBD resource (same as //start)\n"
+        "    Same as " "\x1B\x04" "//start" "\x1B\xFF" "\n"
 
         "\x1B\x04" "//down" "\x1B\xFF" "\n"
-        "    Stops a DRBD resource (same as //stop)\n"
+        "    Same as " "\x1B\x04" "//stop" "\x1B\xFF" "\n"
 
         "\x1B\x04" "//adjust" "\x1B\xFF" "\n"
         "    Adjusts a DRBD resource, in order to make its runtime state match the settings in its "
-        "configuration file\n"
+        "configuration file. This command can also be used instead of the " "\x1B\x04" "//start" "\x1B\xFF" " "
+        "(or " "\x1B\x04" "//up" "\x1B\xFF" " command) to start resources, and is a safer alternative, because "
+        "it can also be used on resources that are already started, whereas issuing a "
+        "\x1B\x04" "//start" "\x1B\xFF" " "
+        "command for a resource that is already started causes the command to fail." "\n"
 
         "\x1B\x04" "//primary" "\x1B\xFF" "\n"
-        "    Promotes a DRBD resource to the Primary role\n"
+        "    Promotes a DRBD resource to the Primary role on the local node\n"
 
         "\x1B\x04" "//force-primary" "\x1B\xFF" "\n"
         "    Forces promotion of an inconsistent or outdated DRBD resource to the Primary role\n"
@@ -911,8 +1054,10 @@ namespace helptext
         "data using another node as the data source\n"
 
         "\x1B\x04" "//invalidate-remote" "\x1B\xFF" "\n"
-        "    Invalidates the data on a DRBD peer volume, thereby causing a full resynchronization of the "
-        "data on a remote node, using another node as the data source\n";
+        "    Invalidates the data on a peer node's DRBD volume, thereby causing a full resynchronization of the data "
+        "on the peer node's volume. You might think of this as an "
+        "\"update peer volume data by using local volume data\" command.\n"
+        "    (Same effect as running the " "\x1B\x04" "//invalidate" "\x1B\xFF" " command on the peer)\n";
 
 
     const char* const MAIN_MENU_HELP_1 =
@@ -929,6 +1074,7 @@ namespace helptext
         "The main menu shows a selection of options that navigate to various displays or that perform a function. "
         "Items can be selected from the main menu by entering the item's identifier, which is displayed to the left "
         "of the item's title.\n"
+        "\n"
         "\n"
         "\x1B\x01" "Navigation Keys" "\x1B\xFF" "\n"
         "\n"
@@ -952,10 +1098,13 @@ namespace helptext
             {
                 help_text = helptext::RSC_LIST_HELP_1;
                 help_text += helptext::RSC_LINE_HELP;
+                help_text += '\n';
                 help_text += helptext::INSERT_NAV_HELP_1;
                 help_text += helptext::INSERT_NAV_LIST_HELP_1;
+                help_text += '\n';
                 help_text += helptext::RSC_LIST_HELP_2;
                 help_text += helptext::INSERT_RSC_CMD_HELP_1;
+                help_text += helptext::INSERT_CON_CMD_HELP_1;
                 break;
             }
             case id_type::RSC_DETAIL:
@@ -975,6 +1124,7 @@ namespace helptext
                 help_text += helptext::RSC_LINE_HELP;
                 help_text += helptext::VLM_LIST_HELP_2;
                 help_text += helptext::VLM_LINE_HELP;
+                help_text += '\n';
                 help_text += helptext::INSERT_NAV_HELP_1;
                 help_text += helptext::INSERT_NAV_LIST_HELP_1;
                 help_text += helptext::VLM_LIST_HELP_3;
@@ -1000,6 +1150,7 @@ namespace helptext
                 help_text += helptext::RSC_LINE_HELP;
                 help_text += helptext::CON_LIST_HELP_2;
                 help_text += helptext::CON_LINE_HELP;
+                help_text += '\n';
                 help_text += helptext::INSERT_NAV_HELP_1;
                 help_text += helptext::INSERT_NAV_LIST_HELP_1;
                 help_text += helptext::CON_LIST_HELP_3;
@@ -1027,19 +1178,26 @@ namespace helptext
                 help_text += helptext::CON_LINE_HELP;
                 help_text += helptext::PEER_VLM_LIST_HELP_3;
                 help_text += helptext::VLM_LINE_HELP;
+                help_text += '\n';
                 help_text += helptext::INSERT_NAV_HELP_1;
                 help_text += helptext::INSERT_NAV_LIST_HELP_1;
                 help_text += helptext::PEER_VLM_LIST_HELP_4;
                 help_text += helptext::INSERT_RSC_CMD_HELP_1;
                 help_text += helptext::INSERT_CON_CMD_HELP_1;
+                help_text += helptext::INSERT_PEER_VLM_CMD_HELP_1;
                 break;
             }
             case id_type::PVLM_DETAIL:
             {
+                help_text = helptext::PEER_VLM_DETAIL_HELP_1;
+                help_text += helptext::INSERT_RSC_CMD_HELP_1;
+                help_text += helptext::INSERT_CON_CMD_HELP_1;
+                help_text += helptext::INSERT_PEER_VLM_CMD_HELP_1;
                 break;
             }
             case id_type::PVLM_ACTIONS:
             {
+                help_text = helptext::PEER_VLM_ACT_HELP_1;
                 break;
             }
             case id_type::MAIN_MENU:
@@ -1050,6 +1208,7 @@ namespace helptext
             case id_type::MESSAGE_LOG:
             {
                 help_text = helptext::MSG_LOG_HELP_1;
+                help_text += '\n';
                 help_text += helptext::INSERT_NAV_HELP_1;
                 help_text += helptext::INSERT_NAV_LIST_HELP_1;
                 help_text += helptext::MSG_LOG_HELP_2;
@@ -1064,6 +1223,7 @@ namespace helptext
             case id_type::TASK_QUEUE:
             {
                 help_text = helptext::TASKQ_HELP_1;
+                help_text += '\n';
                 help_text += helptext::INSERT_NAV_HELP_1;
                 help_text += helptext::INSERT_NAV_LIST_HELP_1;
                 help_text += helptext::TASKQ_HELP_2;
