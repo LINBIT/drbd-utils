@@ -6,10 +6,10 @@
 # Roland Kammerer <roland.kammerer@linbit.com>
 ###
 
-LC_ALL=C
-LANG=C
-LANGUAGE=C
-TZ=UTC
+export LC_ALL=C
+export LANG=C
+export LANGUAGE=C
+export TZ=UTC
 
 die() {
 	>&2 echo "$1"
