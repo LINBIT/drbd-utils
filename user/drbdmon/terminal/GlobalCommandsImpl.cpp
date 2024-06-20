@@ -329,7 +329,7 @@ bool GlobalCommandsImpl::cmd_minor_nr(const std::string& command, StringTokenize
     if (tokenizer.has_next())
     {
         const std::string cmd_arg = tokenizer.next();
-        int32_t cmd_minor_nr = -1;
+        int32_t req_minor_nr = -1;
 
         DisplayId::display_page active_page = dsp_comp_hub.dsp_selector->get_active_page();
         if (active_page == DisplayId::display_page::RSC_LIST ||
@@ -347,7 +347,7 @@ bool GlobalCommandsImpl::cmd_minor_nr(const std::string& command, StringTokenize
         {
             try
             {
-                cmd_minor_nr = dsaext::parse_signed_int32(cmd_arg);
+                req_minor_nr = dsaext::parse_signed_int32(cmd_arg);
             }
             catch (dsaext::NumberFormatException&)
             {
@@ -355,7 +355,7 @@ bool GlobalCommandsImpl::cmd_minor_nr(const std::string& command, StringTokenize
             }
 
             bool have_match = false;
-            if (cmd_minor_nr >= 0 && cmd_minor_nr < static_cast<int32_t> (0x100000L))
+            if (req_minor_nr >= 0 && req_minor_nr < static_cast<int32_t> (0x100000L))
             {
                 ResourcesMap::ValuesIterator rsc_iter(*(dsp_comp_hub.rsc_map));
                 while (rsc_iter.has_next() && !have_match)
@@ -366,7 +366,7 @@ bool GlobalCommandsImpl::cmd_minor_nr(const std::string& command, StringTokenize
                     {
                         DrbdVolume* const vlm = vlm_iter.next();
                         const int32_t vlm_minor_nr = vlm->get_minor_nr();
-                        have_match = vlm_minor_nr == cmd_minor_nr;
+                        have_match = vlm_minor_nr == req_minor_nr;
                         if (have_match)
                         {
                             const std::string& rsc_name = rsc->get_name();
