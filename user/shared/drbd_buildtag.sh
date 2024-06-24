@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 drbd_buildtag_h() {
 	local out=$1
