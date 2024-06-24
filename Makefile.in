@@ -57,6 +57,8 @@ endif
 DOCKERREGPATH = $(DOCKERREGISTRY)/$(PNAME)
 DOCKER_TAG ?= latest
 
+RPM_SUBPROJECTS = drbd-utils drbd-bash-completion drbd-udev drbd-selinux
+
 TOOLS_DIRS  := user/shared user/v9 scripts
 DOC_DIRS    := documentation/v9 documentation/ja/v9
 ifeq ($(WITH_84_SUPPORT),yes)
@@ -218,10 +220,20 @@ drbd-utils.spdx: check_VERSION
 		SPDX_UUID=$$(cat /proc/sys/kernel/random/uuid); \
 		test -n "$$SPDX_HEADER"; test -n "$$SPDX_UUID"; \
 		$(MAKE) -s spdx-header SPDX_UUID="$$SPDX_UUID" SPDX_DATE="$$SPDX_DATE" SPDX_FILE_TMP="$@.tmp"; \
-		for SPDX_PKG_NAME in drbd-utils drbd-bash-completion drbd-udev drbd-selinux; do \
+		for SPDX_PKG_NAME in $(RPM_SUBPROJECTS); do \
 			$(MAKE) -s spdx-sub SPDX_PKG_NAME="$$SPDX_PKG_NAME" SPDX_FILE_TMP="$@.tmp"; \
 		done; \
 		mv $@.tmp $@; )
+
+# only call this wrapper from drbd-utils.cdx.json
+.PHONY: cdx-sub
+cdx-sub:
+	cat $(CDX_FILE).in | jq --args '.metadata.timestamp = "$(CDX_DATE)" | .metadata.component.version = "$(VERSION)" | .metadata.component."bom-ref" = "https://github.com/LINBIT/drbd-utils/releases/tag/v$(VERSION)" | .components = [$$ARGS.positional[] | {name:., type: "application", version: "$(VERSION)", licenses: [{licenses:{id: "GPL-2.0-or-later"}}], externalReferences:[{url: "https://github.com/LINBIT/drbd-utils", type: "website"}]}]' $(RPM_SUBPROJECTS) > $(CDX_FILE)
+
+.PHONY: drbd-utils.cdx.json
+drbd-utils.cdx.json: check_VERSION
+	$(MAKE) -s cdx-sub CDX_DATE="$$(date --utc +%FT%TZ)" CDX_FILE="$@"
+	! grep -q __PLACEHOLDER__ $@
 
 .PHONY: check_changelogs_up2date
 check_changelogs_up2date: check_VERSION
@@ -251,6 +263,7 @@ check_changelogs_up2date: check_VERSION
 	echo $(PNAME)-$(VERSION)/.filelist            >> .filelist ; \
 	echo $(PNAME)-$(VERSION)/configure            >> .filelist ; \
 	echo $(PNAME)-$(VERSION)/drbd-utils.spdx      >> .filelist ; \
+	echo $(PNAME)-$(VERSION)/drbd-utils.cdx.json  >> .filelist ; \
 	echo "./.filelist updated."
 
 tools doc: check-submods
@@ -278,7 +291,7 @@ configure: configure.ac
 config.status: configure
 	@printf "\nYou need to call ./configure with appropriate arguments (again).\n\n"; exit 1
 
-tarball: check_VERSION check-submods check_all_committed check_changelogs_up2date distclean doc configure drbd-utils.spdx .filelist
+tarball: check_VERSION check-submods check_all_committed check_changelogs_up2date distclean doc configure drbd-utils.spdx drbd-utils.cdx.json .filelist
 	rm -f drbd-utils-$(VERSION)
 	$(LN_S) . drbd-utils-$(VERSION)
 	for f in $$(<.filelist) ; do [ -e $$f ] && continue ; echo missing: $$f ; exit 1; done

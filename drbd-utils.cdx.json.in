@@ -1,0 +1,48 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "metadata": {
+    "timestamp": "__PLACEHOLDER__",
+    "authors": [
+      {
+        "name": "Philipp Reisner",
+        "email": "philipp.reisner@linbit.com"
+      },
+      {
+        "name": "Lars Ellenberg",
+        "email": "lars.ellenberg@linbit.com"
+      }
+    ],
+    "component": {
+      "type": "application",
+      "name": "drbd-utils",
+      "version": "__PLACEHOLDER__",
+      "bom-ref": "__PLACEHOLDER__"
+    },
+    "manufacturer": {
+      "name": "LINBIT HA-Solutions GmbH",
+      "url": [
+        "https://www.linbit.com"
+      ],
+      "contact": [
+        {
+          "name": "LINBIT HA-Solutions GmbH",
+          "email": "office@linbit.com"
+        }
+      ]
+    },
+    "supplier": {
+      "name": "LINBIT HA-Solutions GmbH",
+      "url": [
+        "https://www.linbit.com"
+      ],
+      "contact": [
+        {
+          "name": "LINBIT HA-Solutions GmbH",
+          "email": "office@linbit.com"
+        }
+      ]
+    }
+  },
+  "components": [ "__PLACEHOLDER__" ]
+}
