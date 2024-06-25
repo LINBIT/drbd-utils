@@ -97,6 +97,7 @@ char *progname;
 static int indent = 0;
 #define INDENT_WIDTH	4
 #define printI(fmt, args... ) printf("%*s" fmt,INDENT_WIDTH * indent,"" , ## args )
+#define indent_str(buf) snprintf(buf, sizeof(buf), "%*s", INDENT_WIDTH * indent, "")
 #define QUOTED(str) "\"" str "\""
 static bool json_output = false;
 #define pJ(fmt, args...) do { if (json_output) printI(fmt, ##args); } while(0)
@@ -164,6 +165,8 @@ static char *af_to_str(int af);
 static void print_command_usage(struct drbd_cmd *cm, enum usage_type);
 static void print_usage_and_exit(const char *addinfo)
 		__attribute__ ((noreturn));
+static void address_json(void *address, int addr_len, char *indent);
+static void address_json_indent(void *address, int addr_len);
 
 // command functions
 static int generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv);
@@ -2132,8 +2135,9 @@ static void print_paths(struct connections_list *connection)
 	struct nlattr *nla;
 	int tmp;
 
+	pJ(QUOTED("paths") ": [\n");
 	if (!connection->path_list)
-		return;
+		goto out;
 
 	nla_for_each_nested(nla, connection->path_list, tmp) {
 		int l = nla_len(nla);
@@ -2144,16 +2148,38 @@ static void print_paths(struct connections_list *connection)
 		if (colon)
 			*colon = ' ';
 		if (nla->nla_type == T_my_addr) {
-			pD("path {\n"); pJ(QUOTED("path") ": {\n");
+			pD("path {\n");
 			++indent;
-			pD("_this_host %s;\n", address); pJ(QUOTED("_this_host") ": \"%s\",\n", address);
+			pD("_this_host %s;\n", address);
+			if (json_output) {
+				printI("{\n");
+				++indent;
+				printI(QUOTED("this_host") ": {\n");
+				address_json_indent(nla_data(nla), l);
+				printI("},\n");
+				--indent;
+			}
 		}
 		if (nla->nla_type == T_peer_addr) {
-			pD("_remote_host %s;\n", address); pJ(QUOTED("_remote_host") ": \"%s\"\n", address);
+			pD("_remote_host %s;\n", address);
+			if (json_output) {
+				int rem = tmp;
+				struct nlattr *nla_nxt = nla_next(nla, &rem);
+
+				++indent;
+				printI(QUOTED("remote_host") ": {\n");
+				address_json_indent(nla_data(nla), l);
+				printI("}\n");
+				--indent;
+				nla_ok(nla_nxt, rem) ? printI("},\n") : printI("}\n");
+			}
 			--indent;
-			pD("}\n"); pJ("},\n");
+			pD("}\n");
 		}
 	}
+
+out:
+	pJ("],\n"); // paths: [
 }
 
 static void show_connection(struct connections_list *connection, struct peer_devices_list *peer_devices)
@@ -2656,6 +2682,16 @@ static void address_json(void *address, int addr_len, char *indent)
 	}
 
 	printf("%s\"family\": \"%s\"\n", indent, af_to_str(a.addr.sa_family));
+}
+
+/* version of address_json that uses "indent" and converts it to the non sense api of address_json that takes a char* */
+static void address_json_indent(void *address, int addr_len)
+{
+	char buf[256];
+	++indent;
+	indent_str(buf);
+	address_json(address, addr_len, buf);
+	--indent;
 }
 
 static void path_status_json(struct paths_list *path)
