@@ -542,7 +542,7 @@ m_strtoll(const char *s, const char def_unit)
 		fprintf(stderr, "%s is not a valid number\n", s);
 		exit(20);
 	case MSE_INVALID_UNIT:
-		fprintf(stderr, "%s is not a valid number\n", s);
+		fprintf(stderr, "%s is not a valid unit\n", s);
 		exit(20);
 	case MSE_OUT_OF_RANGE:
 		fprintf(stderr, "%s: out of range\n", s);
