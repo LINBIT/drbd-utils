@@ -1327,4 +1327,5 @@ struct context_def startup_options_ctx = {
 };
 
 struct context_def wildcard_ctx = {
+       .fields = { { } },
 };
