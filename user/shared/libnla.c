@@ -414,7 +414,9 @@ void __nla_put(struct msg_buff *msg, int attrtype, int attrlen,
 	struct nlattr *nla;
 
 	nla = __nla_reserve(msg, attrtype, attrlen);
-	memcpy(nla_data(nla), data, attrlen);
+	// make compiler happy for -fsanitize=undefined
+	if (attrlen != 0)
+		memcpy(nla_data(nla), data, attrlen);
 }
 
 /**
@@ -430,8 +432,11 @@ void __nla_put_nohdr(struct msg_buff *msg, int attrlen, const void *data)
 {
 	void *start;
 
+
 	start = __nla_reserve_nohdr(msg, attrlen);
-	memcpy(start, data, attrlen);
+	// make compiler happy for -fsanitize=undefined
+	if (attrlen != 0)
+		memcpy(start, data, attrlen);
 }
 
 /**
