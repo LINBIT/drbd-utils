@@ -184,14 +184,18 @@ int sget_token(char *s, int size, const char** text)
 	*sp = 0; /* terminate even if nothing is found */
 	--size;  /* account for the terminating NUL */
 	do { // eat white spaces in front.
-		c = *(*text)++;
-		if( c == 0) return EOF;
+		c = **text;
+		if (!c)
+			return EOF;
+		(*text)++;
 	} while (!isgraph(c));
 
 	do { // read the first word into s
 		*sp++ = c;
-		c = *(*text)++;
-		if ( c == 0) break;
+		c = **text;
+		if (!c)
+			break;
+		(*text)++;
 	} while (isgraph(c) && --size);
 
 	*sp=0;
