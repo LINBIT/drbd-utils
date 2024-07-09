@@ -73,12 +73,38 @@ build:
     - fi
     - drbd_utils_build $DRBD_UTILS_VERSION $DRBD_UTILS_RELEASE
 
+drbd-utils-tests:
+  stage: test
+  rules:
+    - if: $CI_MERGE_REQUEST_ID
+  image: fedora
+  needs: []
+  variables:
+    CC: clang
+    CFLAGS: -fsanitize=address -fsanitize=undefined
+    LDFLAGS: -fsanitize=address -fsanitize=undefined
+    # We ignore leaks for now, too many issues here
+    ASAN_OPTIONS: log_path=sanitizer,log_exe_name=yes,log_suffix=.txt,detect_leaks=0
+    UBSAN_OPTIONS: log_path=sanitizer,log_exe_name=yes,log_suffix=.txt
+  before_script:
+    - dnf install -y clang llvm libubsan libasan keyutils-libs-devel flex git clitest automake
+  script:
+    - ./autogen.sh
+    - ./configure --without-manual
+    - make test
+  artifacts:
+    when: always
+    paths:
+      - "**/sanitizer.*.txt"
+
 drbd-tests:
   stage: test
   rules:
     - if: $CI_MERGE_REQUEST_ID
   tags:
     - libvirt
+  needs:
+    - build
   cache:
     paths:
       - download
