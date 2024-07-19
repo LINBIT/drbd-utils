@@ -150,8 +150,8 @@ This packages includes the DRBD administration tools.
 %{_sbindir}/drbdadm
 %{_sbindir}/drbdmeta
 %if %{with 84support}
-/lib/drbd/drbdsetup-84
-/lib/drbd/drbdadm-84
+%{_prefix}/lib/drbd/drbdsetup-84
+%{_prefix}/lib/drbd/drbdadm-84
 %endif
 %if %{with drbdmon}
 %{_sbindir}/drbdmon
@@ -190,10 +190,10 @@ This packages includes the DRBD administration tools.
 %{_unitdir}/drbd@.target
 %{_unitdir}/ocf.ra@.service
 %{_tmpfilesdir}/drbd.conf
-/lib/drbd/scripts/drbd
-/lib/drbd/scripts/drbd-service-shim.sh
-/lib/drbd/scripts/drbd-wait-promotable.sh
-/lib/drbd/scripts/ocf.ra.wrapper.sh
+%{_prefix}/lib/drbd/scripts/drbd
+%{_prefix}/lib/drbd/scripts/drbd-service-shim.sh
+%{_prefix}/lib/drbd/scripts/drbd-wait-promotable.sh
+%{_prefix}/lib/drbd/scripts/ocf.ra.wrapper.sh
 %endif
 %config(noreplace) %{_sysconfdir}/drbd.conf
 %dir %{_sysconfdir}/drbd.d
