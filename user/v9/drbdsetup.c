@@ -4241,6 +4241,20 @@ static int down_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	return rv;
 }
 
+void peer_devices_remove(struct peer_devices_list **peer_devices, struct drbd_cfg_context *ctx)
+{
+	struct peer_devices_list *to_delete, **peer_device;
+
+	for (peer_device = peer_devices; *peer_device; peer_device = &(*peer_device)->next) {
+		if (peer_device_ctx_match(&(*peer_device)->ctx, ctx)) {
+			to_delete = *peer_device;
+			*peer_device = (*peer_device)->next;
+			free_peer_device(to_delete);
+			break;
+		}
+	}
+}
+
 void peer_devices_append(struct peer_devices_list *peer_devices, struct genl_info *info)
 {
 	struct peer_devices_list *peer_device, **tail = NULL;
@@ -4278,12 +4292,12 @@ static int wait_for_family(struct drbd_cmd *cm, struct genl_info *info, void *u_
 	if (dh->ret_code != NO_ERROR)
 		return dh->ret_code;
 
-	if ((nh.nh_type & ~NOTIFY_FLAGS) == NOTIFY_DESTROY)
-		return 0;
-
 	switch(info->genlhdr->cmd) {
 	case DRBD_CONNECTION_STATE: {
 		struct connection_info connection_info;
+
+		if ((nh.nh_type & ~NOTIFY_FLAGS) == NOTIFY_DESTROY)
+			break;
 
 		if ((nh.nh_type & ~NOTIFY_FLAGS) == NOTIFY_CREATE)
 			break; /* Ignore C_STANDALONE while creating it */
@@ -4317,6 +4331,9 @@ static int wait_for_family(struct drbd_cmd *cm, struct genl_info *info, void *u_
 		}
 
 		wait_connect = strstr(cm->cmd, "sync") == NULL;
+
+		if ((nh.nh_type & ~NOTIFY_FLAGS) == NOTIFY_DESTROY)
+			peer_devices_remove(&peer_devices, &ctx);
 
 		if ((nh.nh_type & ~NOTIFY_FLAGS) == NOTIFY_CREATE)
 			peer_devices_append(peer_devices, info);
