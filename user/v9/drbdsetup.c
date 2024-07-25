@@ -2008,6 +2008,22 @@ static int generic_events_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		return 20;
 	}
 
+	if (cm->handle_reply == &print_event && opt_now) {
+		/* When --now is given, we just need the replies from the
+		 * initial state request. So we do not need to subscribe to the
+		 * multicast events or try to receive them.
+		 *
+		 * When --poll is also set, we block at the point where we
+		 * attempt to read from stdin. */
+		cm->continuous_poll = false;
+	} else {
+		if (genl_join_mc_group_and_ctrl(drbd_sock, "events")) {
+			fprintf(stderr,"%s: unable to join drbd events multicast group\n", objname);
+			err = 20;
+			goto out;
+		}
+	}
+
 	timeout_ms = -1;
 	if (cm->handle_reply == &wait_for_family) {
 		struct peer_devices_list *peer_device;
@@ -2056,22 +2072,6 @@ static int generic_events_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		free(iov.iov_base);
 
 		timeout_ms = MULTIPLE_TIMEOUTS;
-	}
-
-	if (cm->handle_reply == &print_event && opt_now) {
-		/* When --now is given, we just need the replies from the
-		 * initial state request. So we do not need to subscribe to the
-		 * multicast events or try to receive them.
-		 *
-		 * When --poll is also set, we block at the point where we
-		 * attempt to read from stdin. */
-		cm->continuous_poll = false;
-	} else {
-		if (genl_join_mc_group_and_ctrl(drbd_sock, "events")) {
-			fprintf(stderr,"%s: unable to join drbd events multicast group\n", objname);
-			err = 20;
-			goto out;
-		}
 	}
 
 	if (cm->handle_reply == &print_event && opt_poll)
