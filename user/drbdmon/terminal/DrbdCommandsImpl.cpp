@@ -83,10 +83,10 @@ DrbdCommandsImpl::~DrbdCommandsImpl() noexcept
 bool DrbdCommandsImpl::execute_command(const std::string& command, StringTokenizer& tokenizer)
 {
     bool processed = false;
-    if (dsp_comp_hub.enable_drbd_actions)
+    Entry* const cmd_entry = cmd_map->get(&command);
+    if (cmd_entry != nullptr)
     {
-        Entry* const cmd_entry = cmd_map->get(&command);
-        if (cmd_entry != nullptr)
+        if (dsp_comp_hub.enable_drbd_actions)
         {
             cmd_func_type cmd_func = cmd_entry->cmd_func;
             try
@@ -109,16 +109,18 @@ bool DrbdCommandsImpl::execute_command(const std::string& command, StringTokeniz
                 );
             }
         }
+        else
+        {
+            const uint64_t msg_id = dsp_comp_hub.log->add_entry(
+                MessageLog::log_level::WARN,
+                "DRBD commands are currently disabled"
+            );
+            dsp_comp_hub.dsp_shared->message_id = msg_id;
+            dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::MSG_VIEWER);
+        }
+
     }
-    else
-    {
-        const uint64_t msg_id = dsp_comp_hub.log->add_entry(
-            MessageLog::log_level::WARN,
-            "DRBD commands are currently disabled"
-        );
-        dsp_comp_hub.dsp_shared->message_id = msg_id;
-        dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::MSG_VIEWER);
-    }
+
     return processed;
 }
 
