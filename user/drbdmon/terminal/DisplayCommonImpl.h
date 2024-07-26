@@ -3,6 +3,7 @@
 
 #include <default_types.h>
 #include <terminal/DisplayCommon.h>
+#include <terminal/ModularDisplay.h>
 #include <terminal/DisplayIo.h>
 #include <terminal/ComponentsHub.h>
 #include <string>
@@ -35,9 +36,12 @@ class DisplayCommonImpl : public DisplayCommon
     virtual void display_problem_mode_label(const bool using_problem_mode) const override;
     virtual problem_mode_type get_problem_mode() const noexcept;
     virtual void toggle_problem_mode() noexcept;
-    virtual DisplayCommon::command_state_type command_line_key_pressed(const uint32_t key) const;
+    virtual command_state_type command_line_key_pressed(
+        const uint32_t  key,
+        ModularDisplay& display
+    ) const override;
     virtual void activate_command_line() const;
-    virtual bool global_command() const override;
+    virtual bool execute_command(ModularDisplay& display) const override;
     virtual void application_idle() const override;
     virtual void application_working() const override;
 

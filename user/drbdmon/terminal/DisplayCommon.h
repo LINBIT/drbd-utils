@@ -2,6 +2,7 @@
 #define DISPLAYCOMMON_H
 
 #include <default_types.h>
+#include <terminal/ModularDisplay.h>
 
 class DisplayCommon
 {
@@ -16,9 +17,7 @@ class DisplayCommon
     enum command_state_type : uint8_t
     {
         INPUT       = 0,
-        CANCEL      = 1,
-        CMD_LOCAL   = 2,
-        CMD_GLOBAL  = 3
+        CANCEL      = 1
     };
 
     virtual ~DisplayCommon() noexcept
@@ -47,9 +46,12 @@ class DisplayCommon
     virtual void display_problem_mode_label(const bool using_problem_mode) const = 0;
     virtual problem_mode_type get_problem_mode() const noexcept = 0;
     virtual void toggle_problem_mode() noexcept = 0;
-    virtual command_state_type command_line_key_pressed(const uint32_t key) const = 0;
+    virtual command_state_type command_line_key_pressed(
+        const uint32_t  key,
+        ModularDisplay& display
+    ) const = 0;
     virtual void activate_command_line() const = 0;
-    virtual bool global_command() const = 0;
+    virtual bool execute_command(ModularDisplay& display) const = 0;
     virtual void application_idle() const = 0;
     virtual void application_working() const = 0;
 };
