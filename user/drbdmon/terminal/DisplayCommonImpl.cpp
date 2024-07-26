@@ -706,7 +706,10 @@ void DisplayCommonImpl::toggle_problem_mode() noexcept
     }
 }
 
-DisplayCommon::command_state_type DisplayCommonImpl::command_line_key_pressed(const uint32_t key) const
+DisplayCommon::command_state_type DisplayCommonImpl::command_line_key_pressed(
+    const uint32_t  key,
+    ModularDisplay& display
+) const
 {
     DisplayCommon::command_state_type state = DisplayCommon::command_state_type::INPUT;
     if (key == KeyCodes::FUNC_12)
@@ -717,11 +720,8 @@ DisplayCommon::command_state_type DisplayCommonImpl::command_line_key_pressed(co
     else
     if (key == KeyCodes::ENTER)
     {
-        state = DisplayCommon::command_state_type::CMD_LOCAL;
-        if (global_command())
-        {
-            state = DisplayCommon::command_state_type::CMD_GLOBAL;
-        }
+        const bool processed = execute_command(display);
+        state = processed ? DisplayCommon::command_state_type::CANCEL : DisplayCommon::command_state_type::INPUT;
     }
     else
     {
@@ -834,7 +834,7 @@ void DisplayCommonImpl::activate_command_line() const
     }
 }
 
-bool DisplayCommonImpl::global_command() const
+bool DisplayCommonImpl::execute_command(ModularDisplay& display) const
 {
     bool processed = false;
     const std::string& command = dsp_comp_hub.command_line->get_text();
@@ -859,7 +859,11 @@ bool DisplayCommonImpl::global_command() const
                     processed = dsp_comp_hub.global_cmd_exec->execute_command(upper_keyword, tokenizer);
                     if (!processed)
                     {
-                        processed = dsp_comp_hub.drbd_cmd_exec->execute_command(upper_keyword, tokenizer);
+                        processed = display.execute_command(upper_keyword, tokenizer);
+                        if (!processed)
+                        {
+                            processed = dsp_comp_hub.drbd_cmd_exec->execute_command(upper_keyword, tokenizer);
+                        }
                     }
                 }
             }

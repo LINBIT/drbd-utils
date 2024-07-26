@@ -176,29 +176,10 @@ bool MDspBase::key_pressed(const uint32_t key)
     else
     if (base_input_mode == base_input_mode_type::COMMAND)
     {
-        const DisplayCommon::command_state_type state = dsp_comp_hub.dsp_common->command_line_key_pressed(key);
-        bool exit_cmd_mode = false;
-        if (state == DisplayCommon::command_state_type::CMD_LOCAL)
-        {
-            StringTokenizer tokenizer(dsp_comp_hub.command_line->get_text(), DisplayConsts::CMD_TOKEN_DELIMITER);
-            if (tokenizer.has_next())
-            {
-                std::string keyword(tokenizer.next());
-                if (keyword.length() >= 2)
-                {
-                    keyword.erase(0, 1);
-                    std::string upper_keyword = string_transformations::uppercase_copy_of(keyword);
-                    exit_cmd_mode = execute_command(upper_keyword, tokenizer);
-                }
-            }
-        }
-        else
+        const DisplayCommon::command_state_type state = dsp_comp_hub.dsp_common->command_line_key_pressed(
+            key, *this
+        );
         if (state != DisplayCommon::command_state_type::INPUT)
-        {
-            exit_cmd_mode = true;
-        }
-
-        if (exit_cmd_mode)
         {
             base_input_mode = base_input_mode_type::GLOBAL_KEYS;
             dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.ansi_ctl->ANSI_CURSOR_OFF.c_str());
