@@ -1,5 +1,6 @@
 [Unit]
 Description= Backing LVM LVs for DRBD %I
+Documentation=man:drbd-lvchange@.service(7)
 PartOf=drbd@%i.target
 Before=drbd@%i.service
 

@@ -1,5 +1,6 @@
 [Unit]
 Description=Wrapper for OCF Resource Agent Instance: %I
+Documentation=man:ocf.ra@.service
 
 [Service]
 Type=notify

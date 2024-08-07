@@ -5,6 +5,7 @@
 
 [Unit]
 Description=ensure all DRBD resources shut down gracefully at system shut down
+Documentation=man:drbd-graceful-shutdown.service(7)
 
 # The whole point of this is to try to demote DRBD while the network
 # is still up and DRBD still has a chance to communicate with its peers.

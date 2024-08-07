@@ -1,6 +1,6 @@
 [Unit]
 Description=Reconfigure DRBD %I on-no-(quorum|data) to suspend-io/io-error during start/stop
-
+Documentation=man:drbd-reconfigure-suspend-or-error@.service(7)
 PartOf=drbd-services@%i.target
 
 RefuseManualStart=yes

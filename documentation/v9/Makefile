@@ -33,6 +33,7 @@ MANPAGES	+= drbdmon.8
 endif
 
 ADOC_MANPAGES :=
+ADOC_MANPAGES += drbd-graceful-shutdown.service.adoc
 ADOC_MANPAGES += drbd-lvchange@.service.adoc
 ADOC_MANPAGES += drbd-promote@.service.adoc
 ADOC_MANPAGES += drbd-reconfigure-suspend-or-error@.service.adoc
