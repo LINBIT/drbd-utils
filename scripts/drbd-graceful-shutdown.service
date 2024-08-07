@@ -5,6 +5,7 @@
 
 [Unit]
 Description=ensure all DRBD resources shut down gracefully at system shut down
+Documentation=man:drbd-graceful-shutdown.service(7)
 Wants=network-online.target
 After=network-online.target
 Before=drbd.service drbd@.service

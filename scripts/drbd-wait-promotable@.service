@@ -1,5 +1,6 @@
 [Unit]
 Description=DRBD %i Wait Promotable
+Documentation=man:drbd-wait-promotable@.service(7)
 Requires=drbd@%i.service
 After=drbd@%i.service
 Before=drbd@%i.target

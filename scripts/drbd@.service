@@ -1,5 +1,6 @@
 [Unit]
 Description= (Re)configure DRBD resource %I
+Documentation=man:drbd@.service(8)
 
 PartOf=drbd@%i.target
 

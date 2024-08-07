@@ -1,5 +1,6 @@
 [Unit]
 Description=Promotion of DRBD resource %I
+Documentation=man:drbd-promote@.service
 PartOf=drbd-services@%i.target
 
 Requires=drbd@%i.target

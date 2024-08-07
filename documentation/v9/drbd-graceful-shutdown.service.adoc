@@ -1,0 +1,19 @@
+drbd-graceful-shutdown.service(7)
+=================================
+
+Name
+----
+drbd-graceful-shutdown.service - Attempt graceful shut down of DRBD resource on system shut down
+
+Synopsis
+--------
+**drbd-graceful-shutdown.service**
+
+Description
+-----------
+This unit gets started by udev at the moment of the first drbd device gets created.
+At system shutdown, it attempts to gracefully shut down gracefully all resource.
+
+Graceful shutdown requires DRBD device to still be connected to their peers. For this
+reason, this unit is ordered after **network-online.target**: on system shut down, this
+service will be stopped before the network is torn down.

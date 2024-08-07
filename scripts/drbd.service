@@ -1,5 +1,6 @@
 [Unit]
 Description=DRBD -- please disable. Unless you are NOT using a cluster manager.
+Documentation=man:drbd.service(7)
 Wants=network-online.target sshd.service
 After=network-online.target sshd.service drbdproxy.service
 Before=pacemaker.service

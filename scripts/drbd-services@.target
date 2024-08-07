@@ -1,3 +1,4 @@
 [Unit]
 Description=Services for DRBD resource %I
+Documentation=man:drbd-services@.target(7)
 BindsTo=drbd-promote@%i.service

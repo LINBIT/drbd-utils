@@ -1,5 +1,6 @@
 [Unit]
 Description=DBRD %I configured
+Documentation=man:drbd@.target(7)
 After=network-online.target nss-lookup.target
 Requires=drbd@%i.service
 
