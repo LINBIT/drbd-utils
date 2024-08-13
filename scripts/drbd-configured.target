@@ -1,0 +1,6 @@
+[Unit]
+Description=All DBRD devices configured
+Documentation=man:drbd-configured.target(7)
+
+[Install]
+WantedBy=multi-user.target

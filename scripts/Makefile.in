@@ -32,6 +32,7 @@ datadir = @datadir@
 sbindir = @sbindir@
 sysconfdir = @sysconfdir@
 systemdunitdir = @systemdunitdir@
+systemdgeneratordir = @systemdgeneratordir@
 tmpfilesdir = @tmpfilesdir@
 udevrulesdir = @udevrulesdir@
 initscripttype = @initscripttype@
@@ -65,6 +66,9 @@ SYSTEMD_TEMPLATES += drbd-wait-promotable@.service
 
 SYSTEMD_UNITS  = drbd.service
 SYSTEMD_UNITS += drbd-graceful-shutdown.service
+SYSTEMD_UNITS += drbd-configured.target
+
+SYSTEMD_GENERATORS = drbd-generator
 
 # variables meant to be overridden from the make command line
 ifeq ($(WITH_WINDRBD),yes)
@@ -90,6 +94,8 @@ ifeq ($(subst both,systemd,$(initscripttype)),systemd)
 	install -d $(DESTDIR)$(systemdunitdir)
 	install -m 644 $(SYSTEMD_UNITS) $(DESTDIR)$(systemdunitdir)/
 	install -m 644 $(SYSTEMD_TEMPLATES) $(DESTDIR)$(systemdunitdir)/
+	install -d $(DESTDIR)$(systemdgeneratordir)
+	install -m 755 $(SYSTEMD_GENERATORS) $(DESTDIR)$(systemdgeneratordir)/
 	install -d $(DESTDIR)$(LIBDIR)/scripts
 	install -m 755 drbd $(DESTDIR)$(LIBDIR)/scripts
 	install -m 755 drbd-service-shim.sh $(DESTDIR)$(LIBDIR)/scripts

@@ -17,12 +17,8 @@ After=drbdproxy.service
 # but if combined, it should be ordered before pacemaker.
 Before=pacemaker.service
 
-#
-# in an instantiation of this service,
-# you may want to add "BindsTo=/dev/vg/lv" and "After=" for all backing devices
-#
-# if this is on top of LVM,
-# you may want to: systemctl enable drbd-lvchange@%i.service
+# Dependencies on backing devices are automatically added by
+# drbd-generator(8).
 #
 # if you mean to immediately use this device (auto-promote, or
 # mount via fstab x-systemd.requires=drbd@$resname.target),

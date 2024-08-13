@@ -193,6 +193,24 @@ fi
 AC_SUBST(systemdunitdir)
 AC_MSG_RESULT([Using systemd unit directory: $systemdunitdir])
 
+dnl Do we know where systemd generator files go?
+AC_ARG_WITH([systemdgeneratordir],
+	[AS_HELP_STRING([--with-systemdgeneratordir=DIR],[Directory for systemd generator files [Auto]])],
+	[WITH_SYSTEMD_UNIT_DIR=$withval])
+if test x"$with_systemdgeneratordir" = x || \
+   test x"$with_systemdgeneratordir" = xyes ; then
+	if test x"$PKG_CONFIG" != x; then
+		systemdgeneratordir=$($PKG_CONFIG --variable=systemdsystemgeneratordir systemd)
+	fi
+	if test x"$systemdgeneratordir" = x; then
+		AC_MSG_NOTICE([Could not detect systemd generator directory])
+	fi
+else
+	systemdgeneratordir=$with_systemdgeneratordir
+fi
+AC_SUBST(systemdgeneratordir)
+AC_MSG_RESULT([Using systemd generator directory: $systemdgeneratordir])
+
 AC_ARG_WITH(tmpfilesdir,
 	AS_HELP_STRING([--with-tmpfilesdir=DIR],[install configuration files for management of volatile files and directories in DIR [[PREFIX/lib/tmpfiles.d]]]),
 		tmpfilesdir=$withval, tmpfilesdir='${prefix}/lib/tmpfiles.d')

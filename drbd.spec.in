@@ -7,6 +7,9 @@
 %{!?with:          %{expand: %%global with()          %%{expand:%%%%{?with_%%{1}:1}%%%%{!?with_%%{1}:0}}}}
 %{!?without:       %{expand: %%global without()       %%{expand:%%%%{?with_%%{1}:0}%%%%{!?with_%%{1}:1}}}}
 
+# Compatibility macro for older systemd RPM macros not having _systemdgeneratordir defined.
+%{!?_systemdgeneratordir: %{expand: %%global _systemdgeneratordir /usr/lib/systemd/system-generators}}
+
 %if 0%{!?initscripttype:1}
 # initscripttype not explicitly defined in some macro file or on commandline
 # use presence of systemd_post macro to determine the initscripttype
@@ -188,7 +191,9 @@ This packages includes the DRBD administration tools.
 %{_unitdir}/drbd-wait-promotable@.service
 %{_unitdir}/drbd@.service
 %{_unitdir}/drbd@.target
+%{_unitdir}/drbd-configured.target
 %{_unitdir}/ocf.ra@.service
+%{_systemdgeneratordir}/drbd-generator
 %{_tmpfilesdir}/drbd.conf
 %{_prefix}/lib/drbd/scripts/drbd
 %{_prefix}/lib/drbd/scripts/drbd-service-shim.sh
