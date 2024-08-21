@@ -53,6 +53,7 @@ YYSTYPE yylval;
 struct peer_delegate_data {
 	struct options *device_options;
 	struct options *peer_device_options;
+	struct options *net_options;
 };
 
 static int c_section_start;
@@ -620,10 +621,16 @@ void parse_options_syncer(struct d_resource *res)
 			} else {
 				field_def = find_field(&no_prefix, &resource_options_ctx,
 						       text);
-				if (field_def)
+				if (field_def) {
 					options = &res->res_options;
-				else
-					pe_expected("a syncer option keyword");
+				} else {
+					field_def = find_field(&no_prefix, &peer_device_options_ctx,
+							       text);
+					if (field_def)
+						options = &res->pd_options;
+					else
+						pe_expected("a syncer option keyword");
+				}
 			}
 		}
 
@@ -690,14 +697,25 @@ static void insert_pd_options_delegate(void *ctx)
 		insert_tail(params->device_options, new_opt((char *)field_def->name, value));
 		return;
 	}
+	if (!strcmp(yytext, "fencing") && params->net_options) {
+		field_def = find_field(&no_prefix, &net_options_ctx, yytext);
+		value = parse_option_value(field_def, no_prefix);
+		insert_tail(params->net_options, new_opt((char *)field_def->name, value));
+		return;
+	}
 	pe_options(&peer_device_options_ctx); /* also mention device_options? */
 }
 
 static void parse_disk_options(struct options *disk_options,
 			       struct options *device_options,
-			       struct options *peer_device_options)
+			       struct options *peer_device_options,
+			       struct options *net_options)
 {
-	struct peer_delegate_data params = {device_options, peer_device_options};
+	struct peer_delegate_data params = {
+		device_options,
+		peer_device_options,
+		net_options
+	};
 
 	__parse_options(disk_options, &attach_cmd_ctx, &insert_pd_options_delegate, &params);
 }
@@ -926,7 +944,7 @@ int parse_volume_stmt(struct d_volume *vol, struct names* on_hosts, int token)
 			EXP(';');
 			break;
 		case '{':
-			parse_disk_options(&vol->disk_options, &vol->device_options, &vol->pd_options);
+			parse_disk_options(&vol->disk_options, &vol->device_options, &vol->pd_options, NULL);
 			break;
 		default:
 			check_string_error(token);
@@ -1008,7 +1026,7 @@ struct d_volume *parse_stacked_volume(int vnr)
 			break;
 		case TK_DISK:
 			EXP('{');
-			parse_disk_options(&vol->disk_options, &vol->device_options, &vol->pd_options);
+			parse_disk_options(&vol->disk_options, &vol->device_options, &vol->pd_options, NULL);
 			break;
 		case '}':
 			goto exit_loop;
@@ -1764,7 +1782,8 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 				break;
 			case '{':
 				check_upr("disk section", "%s:disk", res->name);
-				parse_disk_options(&options, &res->device_options, &res->pd_options);
+				parse_disk_options(&options, &res->device_options, &res->pd_options,
+					&res->net_options);
 				STAILQ_CONCAT(&res->disk_options, &options);
 				break;
 			default:

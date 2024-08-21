@@ -1,0 +1,10 @@
+$ drbdadm -c ./drbd_8.4.res up -d dbdata_resource 2>/dev/null
+drbdsetup new-resource dbdata_resource 1
+drbdsetup new-minor dbdata_resource 1 0
+drbdsetup new-peer dbdata_resource 0 --_name=peer-host --fencing=resource-and-stonith --protocol=C --csums-alg=md5 --verify-alg=crc32c --timeout=50 --connect-int=10 --ping-int=5 --ping-timeout=50 --cram-hmac-alg=md5 --csums-after-crash-only=yes --shared-secret=gaeWoor7dawei3Oo --ko-count=0
+drbdsetup new-path dbdata_resource 0 ipv4:172.16.6.211:1120 ipv4:172.16.0.249:1120
+drbdsetup peer-device-options dbdata_resource 0 0 --c-max-rate=500M --c-min-rate=20M --resync-rate=25M
+drbdmeta 1 v09 /dev/dbdata01/lvdbdata01 internal repair-md
+drbdmeta 1 v09 /dev/dbdata01/lvdbdata01 internal apply-al
+drbdsetup attach 1 /dev/dbdata01/lvdbdata01 /dev/dbdata01/lvdbdata01 internal --disk-timeout=0 --on-io-error=call-local-io-error --md-flushes=no --disk-flushes=no --al-extents=379
+drbdsetup connect dbdata_resource 0
