@@ -17,6 +17,7 @@
       "type": "application",
       "name": "drbd-utils",
       "version": "__PLACEHOLDER__",
+      "purl": "__PLACEHOLDER__",
       "bom-ref": "__PLACEHOLDER__"
     },
     "manufacturer": {
