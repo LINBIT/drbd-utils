@@ -1307,11 +1307,11 @@ int adm_new_minor(const struct cfg_ctx *ctx)
 
 	argv[NA(argc)] = drbdsetup;
 	argv[NA(argc)] = "new-minor";
-	argv[NA(argc)] = ssprintf("%s", ctx->res->name);
+	argv[NA(argc)] = ctx->res->name;
 	argv[NA(argc)] = ssprintf("%u", ctx->vol->device_minor);
 	argv[NA(argc)] = ssprintf("%u", ctx->vol->vnr);
 	if (!ctx->vol->disk)
-		argv[NA(argc)] = ssprintf("--diskless");
+		argv[NA(argc)] = "--diskless";
 	make_options(argv[NA(argc)], &ctx->vol->device_options, ctx->cmd->drbdsetup_ctx);
 	argv[NA(argc)] = NULL;
 
@@ -1335,7 +1335,7 @@ static int adm_resource(const struct cfg_ctx *ctx)
 
 	argv[NA(argc)] = drbdsetup;
 	argv[NA(argc)] = (char *)ctx->cmd->name; /* "new-resource" or "resource-options" */
-	argv[NA(argc)] = ssprintf("%s", res->name);
+	argv[NA(argc)] = res->name;
 	if (do_new_resource)
 		argv[NA(argc)] = ctx->res->me->node_id;
 	if (reset)
@@ -1569,14 +1569,14 @@ static void __adm_drbdsetup(const struct cfg_ctx *ctx, int flags, pid_t *pid, in
 	argv[NA(argc)] = (char *)ctx->cmd->name;
 
 	if (ctx->cmd->backend_res_name && ctx->res)
-		argv[NA(argc)] = ssprintf("%s", ctx->res->name);
+		argv[NA(argc)] = ctx->res->name;
 
 	if (ctx->cmd->need_peer)
-		argv[NA(argc)] = ssprintf("%s", ctx->conn->peer->node_id);
+		argv[NA(argc)] = ctx->conn->peer->node_id;
 
 	if (ctx->vol) {
 		if (ctx->cmd == &detach_cmd && !ctx->vol->device)
-			argv[NA(argc)] = ssprintf("--diskless");
+			argv[NA(argc)] = "--diskless";
 
 		if (ctx->cmd->need_peer && ctx->cmd->iterate_volumes)
 			argv[NA(argc)] = ssprintf("%d", ctx->vol->vnr);
@@ -1589,7 +1589,7 @@ static void __adm_drbdsetup(const struct cfg_ctx *ctx, int flags, pid_t *pid, in
 		int i;
 
 		for (i = 0; i < verbose; i++)
-			argv[NA(argc)] = ssprintf("--verbose");
+			argv[NA(argc)] = "--verbose";
 	}
 
 	add_setup_options(argv, &argc, ctx->cmd->drbdsetup_ctx);
@@ -1935,8 +1935,8 @@ int adm_peer_device(const struct cfg_ctx *ctx)
 	argv[NA(argc)] = drbdsetup;
 	argv[NA(argc)] = (char *)ctx->cmd->name; /* peer-device-options */
 
-	argv[NA(argc)] = ssprintf("%s", res->name);
-	argv[NA(argc)] = ssprintf("%s", conn->peer->node_id);
+	argv[NA(argc)] = res->name;
+	argv[NA(argc)] = conn->peer->node_id;
 	argv[NA(argc)] = ssprintf("%d", vol->vnr);
 
 	if (reset)
@@ -1958,8 +1958,8 @@ static int adm_connect(const struct cfg_ctx *ctx)
 
 	argv[NA(argc)] = drbdsetup;
 	argv[NA(argc)] = (char *)ctx->cmd->name; /* "connect" */
-	argv[NA(argc)] = ssprintf("%s", res->name);
-	argv[NA(argc)] = ssprintf("%s", conn->peer->node_id);
+	argv[NA(argc)] = res->name;
+	argv[NA(argc)] = conn->peer->node_id;
 
 	add_setup_options(argv, &argc, ctx->cmd->drbdsetup_ctx);
 	argv[NA(argc)] = 0;
@@ -1979,8 +1979,8 @@ static int adm_new_peer(const struct cfg_ctx *ctx)
 
 	argv[NA(argc)] = drbdsetup;
 	argv[NA(argc)] = (char *)ctx->cmd->name; /* "new-peer", "net-options" */
-	argv[NA(argc)] = ssprintf("%s", res->name);
-	argv[NA(argc)] = ssprintf("%s", conn->peer->node_id);
+	argv[NA(argc)] = res->name;
+	argv[NA(argc)] = conn->peer->node_id;
 
 	if (reset)
 		argv[NA(argc)] = "--set-defaults";
@@ -2007,8 +2007,8 @@ static int adm_path(const struct cfg_ctx *ctx)
 
 	argv[NA(argc)] = drbdsetup;
 	argv[NA(argc)] = (char *)ctx->cmd->name; /* add-path, del-path */
-	argv[NA(argc)] = ssprintf("%s", res->name);
-	argv[NA(argc)] = ssprintf("%s", conn->peer->node_id);
+	argv[NA(argc)] = res->name;
+	argv[NA(argc)] = conn->peer->node_id;
 
 	argv[NA(argc)] = ssprintf_addr(path->my_address);
 	argv[NA(argc)] = ssprintf_addr(path->connect_to);
@@ -2257,12 +2257,12 @@ static int adm_wait_c(const struct cfg_ctx *ctx)
 	if (ctx->vol && ctx->conn) {
 		argv[NA(argc)] = ssprintf("%s-%s", ctx->cmd->name, "volume");
 		argv[NA(argc)] = res->name;
-		argv[NA(argc)] = ssprintf("%s", ctx->conn->peer->node_id);
+		argv[NA(argc)] = ctx->conn->peer->node_id;
 		argv[NA(argc)] = ssprintf("%d", vol->vnr);
 	} else if (ctx->conn) {
 		argv[NA(argc)] = ssprintf("%s-%s", ctx->cmd->name, "connection");
 		argv[NA(argc)] = res->name;
-		argv[NA(argc)] = ssprintf("%s", ctx->conn->peer->node_id);
+		argv[NA(argc)] = ctx->conn->peer->node_id;
 	} else {
 		argv[NA(argc)] = ssprintf("%s-%s", ctx->cmd->name, "resource");
 		argv[NA(argc)] = res->name;
