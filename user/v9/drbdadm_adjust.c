@@ -49,7 +49,7 @@
 /* drbdsetup show might complain that the device minor does
    not exist at all. Redirect stderr to /dev/null therefore.
  */
-static FILE *m_popen(int *pid, char * const* argv)
+static FILE *m_popen(int *pid, const char * const* argv)
 {
 	int mpid;
 	int pipes[2];
@@ -77,7 +77,10 @@ static FILE *m_popen(int *pid, char * const* argv)
 		close(pipes[1]);
 		dup2(dev_null, fileno(stderr));
 		close(dev_null);
-		execvp(argv[0],argv);
+		execvp(argv[0], (char * const*)argv);
+		/* removing the const by cast is okay, since we do not care if the
+		 *  argv strings got modified in the failure case.
+		 */
 		log_err("Can not exec");
 		exit(E_EXEC_ERROR);
 	}
@@ -310,7 +313,7 @@ static int disk_equal(struct d_volume *conf, struct d_volume *running)
 static int do_proxy_reconf(const struct cfg_ctx *ctx)
 {
 	int rv;
-	char *argv[4] = { drbd_proxy_ctl, "-c", (char*)ctx->cmd->name, NULL };
+	const char *argv[4] = { drbd_proxy_ctl, "-c", ctx->cmd->name, NULL };
 
 	rv = m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
 	return rv;
@@ -842,7 +845,7 @@ struct d_resource *parse_drbdsetup_show(const char *name)
 {
 	struct d_resource *res = NULL;
 	char *fake_drbdsetup_show;
-	char* argv[4];
+	const char* argv[4];
 	int pid = -1, argc;
 	int token;
 
@@ -859,7 +862,7 @@ struct d_resource *parse_drbdsetup_show(const char *name)
 	argv[argc++] = drbdsetup;
 	argv[argc++] = "show";
 	if (name)
-		argv[argc++] = ssprintf("%s", name);
+		argv[argc++] = name;
 	argv[argc++] = NULL;
 
 	if (fake_drbdsetup_show) {
@@ -960,7 +963,7 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 			struct cfg_ctx tmp_ctx = { .res = ctx->res };
 			char *show_conn;
 			int pid, argc, status, w;
-			char *argv[20];
+			const char *argv[20];
 
 			if (!path)
 				continue;

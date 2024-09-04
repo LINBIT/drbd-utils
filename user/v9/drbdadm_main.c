@@ -1176,7 +1176,7 @@ static bool is_valid_backend_option(const char* name, const struct context_def *
 	return false;
 }
 
-static void add_setup_options(char **argv, int *argcp, const struct context_def *context_def)
+static void add_setup_options(const char **argv, int *argcp, const struct context_def *context_def)
 {
 	struct d_name *b_opt;
 	int argc = *argcp;
@@ -1224,7 +1224,7 @@ ssprintf(strcmp((A)->af, "ipv6") ? "%s:%s:%s" : "%s:[%s]:%s",	\
 static int adm_attach(const struct cfg_ctx *ctx)
 {
 	struct d_volume *vol = ctx->vol;
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	int argc = 0;
 	bool do_attach = (ctx->cmd == &attach_cmd);
 	bool reset = (ctx->cmd == &disk_options_defaults_cmd);
@@ -1247,7 +1247,7 @@ static int adm_attach(const struct cfg_ctx *ctx)
 	}
 
 	argv[NA(argc)] = drbdsetup;
-	argv[NA(argc)] = (char *)ctx->cmd->name; /* "attach" : "disk-options"; */
+	argv[NA(argc)] = ctx->cmd->name; /* "attach" : "disk-options"; */
 	argv[NA(argc)] = ssprintf("%d", vol->device_minor);
 	if (do_attach) {
 		assert(vol->disk != NULL);
@@ -1302,7 +1302,7 @@ bool del_opt(struct options *base, const char * const name)
 
 int adm_new_minor(const struct cfg_ctx *ctx)
 {
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	int argc = 0, ex;
 
 	argv[NA(argc)] = drbdsetup;
@@ -1328,13 +1328,13 @@ int adm_new_minor(const struct cfg_ctx *ctx)
 static int adm_resource(const struct cfg_ctx *ctx)
 {
 	struct d_resource *res = ctx->res;
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	int argc = 0, ex;
 	bool do_new_resource = (ctx->cmd == &new_resource_cmd);
 	bool reset = (ctx->cmd == &res_options_defaults_cmd);
 
 	argv[NA(argc)] = drbdsetup;
-	argv[NA(argc)] = (char *)ctx->cmd->name; /* "new-resource" or "resource-options" */
+	argv[NA(argc)] = ctx->cmd->name; /* "new-resource" or "resource-options" */
 	argv[NA(argc)] = res->name;
 	if (do_new_resource)
 		argv[NA(argc)] = ctx->res->me->node_id;
@@ -1373,7 +1373,7 @@ static off_t read_drbd_dev_size(int minor)
 
 int adm_resize(const struct cfg_ctx *ctx)
 {
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	struct d_option *opt;
 	bool is_resize = !strcmp(ctx->cmd->name, "resize");
 	off_t old_size = -1;
@@ -1479,7 +1479,7 @@ int _adm_drbdmeta(const struct cfg_ctx *ctx, int flags, char *argument)
 	char diskful_peers[120] = "";
 
 	struct d_volume *vol = ctx->vol;
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	int argc = 0;
 
 	argv[NA(argc)] = drbdmeta;
@@ -1509,7 +1509,7 @@ int _adm_drbdmeta(const struct cfg_ctx *ctx, int flags, char *argument)
 		else
 			argv[NA(argc)] = ssprintf("--node-id=%s", ctx->conn->peer->node_id);
 	}
-	argv[NA(argc)] = (char *)ctx->cmd->name;
+	argv[NA(argc)] = ctx->cmd->name;
 	if (argument)
 		argv[NA(argc)] = argument;
 	add_setup_options(argv, &argc, ctx->cmd->drbdsetup_ctx);
@@ -1562,11 +1562,11 @@ static int adm_drbdmeta(const struct cfg_ctx *ctx)
 
 static void __adm_drbdsetup(const struct cfg_ctx *ctx, int flags, pid_t *pid, int *fd, int *ex)
 {
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	int argc = 0;
 
 	argv[NA(argc)] = drbdsetup;
-	argv[NA(argc)] = (char *)ctx->cmd->name;
+	argv[NA(argc)] = ctx->cmd->name;
 
 	if (ctx->cmd->backend_res_name && ctx->res)
 		argv[NA(argc)] = ctx->res->name;
@@ -1838,7 +1838,7 @@ static int adm_khelper(const struct cfg_ctx *ctx)
 	char *sh_cmd;
 	char minor_string[8];
 	char volume_string[8];
-	char *argv[4] = { NULL, };
+	const char *argv[4] = { NULL, };
 
 	setenv("DRBD_CONF", config_save, 1);
 	setenv("DRBD_RESOURCE", res->name, 1);
@@ -1923,7 +1923,7 @@ int adm_peer_device(const struct cfg_ctx *ctx)
 	struct connection *conn = ctx->conn;
 	struct d_volume *vol = ctx->vol;
 	struct peer_device *peer_device;
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	int argc = 0;
 
 	peer_device = find_peer_device(conn, vol->vnr);
@@ -1933,7 +1933,7 @@ int adm_peer_device(const struct cfg_ctx *ctx)
 	}
 
 	argv[NA(argc)] = drbdsetup;
-	argv[NA(argc)] = (char *)ctx->cmd->name; /* peer-device-options */
+	argv[NA(argc)] = ctx->cmd->name; /* peer-device-options */
 
 	argv[NA(argc)] = res->name;
 	argv[NA(argc)] = conn->peer->node_id;
@@ -1953,11 +1953,11 @@ static int adm_connect(const struct cfg_ctx *ctx)
 {
 	struct d_resource *res = ctx->res;
 	struct connection *conn = ctx->conn;
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	int argc = 0;
 
 	argv[NA(argc)] = drbdsetup;
-	argv[NA(argc)] = (char *)ctx->cmd->name; /* "connect" */
+	argv[NA(argc)] = ctx->cmd->name; /* "connect" */
 	argv[NA(argc)] = res->name;
 	argv[NA(argc)] = conn->peer->node_id;
 
@@ -1972,13 +1972,13 @@ static int adm_new_peer(const struct cfg_ctx *ctx)
 	struct d_resource *res = ctx->res;
 	struct connection *conn = ctx->conn;
 
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	int argc = 0;
 
 	bool reset = (ctx->cmd == &net_options_defaults_cmd);
 
 	argv[NA(argc)] = drbdsetup;
-	argv[NA(argc)] = (char *)ctx->cmd->name; /* "new-peer", "net-options" */
+	argv[NA(argc)] = ctx->cmd->name; /* "new-peer", "net-options" */
 	argv[NA(argc)] = res->name;
 	argv[NA(argc)] = conn->peer->node_id;
 
@@ -2001,12 +2001,11 @@ static int adm_path(const struct cfg_ctx *ctx)
 	struct d_resource *res = ctx->res;
 	struct connection *conn = ctx->conn;
 	struct path *path = ctx->path;
-
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	int argc = 0;
 
 	argv[NA(argc)] = drbdsetup;
-	argv[NA(argc)] = (char *)ctx->cmd->name; /* add-path, del-path */
+	argv[NA(argc)] = ctx->cmd->name; /* add-path, del-path */
 	argv[NA(argc)] = res->name;
 	argv[NA(argc)] = conn->peer->node_id;
 
@@ -2046,7 +2045,7 @@ char *_proxy_connection_name(char *conn_name, const struct d_resource *res, cons
 
 static int do_proxy_conn_up(const struct cfg_ctx *ctx)
 {
-	char *argv[4] = { drbd_proxy_ctl, "-c", NULL, NULL };
+	const char *argv[4] = { drbd_proxy_ctl, "-c", NULL, NULL };
 	struct connection *conn = ctx->conn;
 	struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
 	char *conn_name;
@@ -2075,7 +2074,7 @@ static int do_proxy_conn_plugins(const struct cfg_ctx *ctx)
 {
 	struct connection *conn = ctx->conn;
 	struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	char *conn_name;
 	int argc = 0;
 	struct d_option *opt;
@@ -2117,7 +2116,7 @@ static int do_proxy_conn_down(const struct cfg_ctx *ctx)
 	struct connection *conn = ctx->conn;
 	struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
 	char *conn_name;
-	char *argv[4] = { drbd_proxy_ctl, "-c", NULL, NULL};
+	const char *argv[4] = { drbd_proxy_ctl, "-c", NULL, NULL};
 
 	if (!path->my_proxy || !path->peer_proxy)
 		return 0;
@@ -2250,7 +2249,7 @@ static int adm_wait_c(const struct cfg_ctx *ctx)
 {
 	struct d_resource *res = ctx->res;
 	struct d_volume *vol = ctx->vol;
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	int argc = 0, rv;
 
 	argv[NA(argc)] = drbdsetup;
@@ -2623,7 +2622,8 @@ static int check_exit_codes(pid_t * pids)
 static int adm_wait_ci(const struct cfg_ctx *ctx)
 {
 	struct d_resource *res;
-	char *argv[20], answer[40];
+	const char *argv[20];
+	char answer[40];
 	pid_t *pids;
 	int rr, wtime, argc, i = 0;
 	time_t start;

@@ -1353,7 +1353,7 @@ static void find_drbdcmd(char **cmd, char **pathes)
      (ARGC)++; \
   })
 
-static void add_setup_options(char **argv, int *argcp)
+static void add_setup_options(const char **argv, int *argcp)
 {
 	int argc = *argcp;
 	int i;
@@ -1387,7 +1387,7 @@ static void add_setup_options(char **argv, int *argcp)
 static int adm_attach_or_disk_options(struct cfg_ctx *ctx, bool do_attach, bool reset)
 {
 	struct d_volume *vol = ctx->vol;
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	struct d_option *opt;
 	int argc = 0;
 
@@ -1459,7 +1459,7 @@ struct d_option *find_opt(struct d_option *base, char *name)
 
 int adm_new_minor(struct cfg_ctx *ctx)
 {
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	int argc = 0, ex;
 
 	argv[NA(argc)] = drbdsetup;
@@ -1477,7 +1477,7 @@ int adm_new_minor(struct cfg_ctx *ctx)
 
 static int adm_new_resource_or_res_options(struct cfg_ctx *ctx, bool do_new_resource, bool reset)
 {
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	int argc = 0, ex;
 
 	argv[NA(argc)] = drbdsetup;
@@ -1514,7 +1514,7 @@ int adm_set_default_res_options(struct cfg_ctx *ctx)
 
 int adm_resize(struct cfg_ctx *ctx)
 {
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	struct d_option *opt;
 	int argc = 0;
 	int silent;
@@ -1558,7 +1558,7 @@ int adm_resize(struct cfg_ctx *ctx)
 int _admm_generic(struct cfg_ctx *ctx, int flags)
 {
 	struct d_volume *vol = ctx->vol;
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	int argc = 0;
 
 	argv[NA(argc)] = drbdmeta;
@@ -1592,7 +1592,7 @@ static int admm_generic(struct cfg_ctx *ctx)
 
 static void _adm_generic(struct cfg_ctx *ctx, int flags, pid_t *pid, int *fd, int *ex)
 {
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	int argc = 0;
 
 	if (!ctx->res) {
@@ -1792,7 +1792,7 @@ static int adm_khelper(struct cfg_ctx *ctx)
 	char *sh_cmd;
 	char minor_string[8];
 	char volume_string[8];
-	char *argv[] = { "/bin/sh", "-c", NULL, NULL };
+	const char *argv[] = { "/bin/sh", "-c", NULL, NULL };
 
 	if (!res->peer) {
 		/* Since 8.3.2 we get DRBD_PEER_AF and DRBD_PEER_ADDRESS from the kernel.
@@ -1941,10 +1941,10 @@ static int adm_connect_or_net_options(struct cfg_ctx *ctx, bool do_connect, bool
 		make_options(opt);
 	}
 
-	add_setup_options(argv, &argc);
+	add_setup_options((const char **)argv, &argc);
 	argv[NA(argc)] = 0;
 
-	return m_system_ex(argv, SLEEPS_SHORT, res->name);
+	return m_system_ex((const char **)argv, SLEEPS_SHORT, res->name);
 }
 
 int adm_connect(struct cfg_ctx *ctx)
@@ -1976,11 +1976,11 @@ int adm_disconnect(struct cfg_ctx *ctx)
 	argv[NA(argc)] = drbdsetup;
 	argv[NA(argc)] = (char *)ctx->arg;
 	add_connection_endpoints(argv, &argc, ctx->res);
-	add_setup_options(argv, &argc);
+	add_setup_options((const char **)argv, &argc);
 	argv[NA(argc)] = 0;
 
 	setenv("DRBD_RESOURCE", ctx->res->name, 1);
-	return m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
+	return m_system_ex((const char **)argv, SLEEPS_SHORT, ctx->res->name);
 }
 
 struct d_option *del_opt(struct d_option *base, struct d_option *item)
@@ -2086,7 +2086,7 @@ char *_proxy_connection_name(char *conn_name, struct d_resource *res)
 int do_proxy_conn_up(struct cfg_ctx *ctx)
 {
 	struct d_resource *res = ctx->res;
-	char *argv[4] = { drbd_proxy_ctl, "-c", NULL, NULL };
+	const char *argv[4] = { drbd_proxy_ctl, "-c", NULL, NULL };
 	char *conn_name;
 	int rv;
 
@@ -2110,7 +2110,7 @@ int do_proxy_conn_up(struct cfg_ctx *ctx)
 int do_proxy_conn_plugins(struct cfg_ctx *ctx)
 {
 	struct d_resource *res = ctx->res;
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	char *conn_name;
 	int argc = 0;
 	struct d_option *opt;
@@ -2154,7 +2154,7 @@ int do_proxy_conn_down(struct cfg_ctx *ctx)
 {
 	struct d_resource *res = ctx->res;
 	char *conn_name;
-	char *argv[4] = { drbd_proxy_ctl, "-c", NULL, NULL};
+	const char *argv[4] = { drbd_proxy_ctl, "-c", NULL, NULL};
 	int rv;
 
 	conn_name = proxy_connection_name(res);
@@ -2252,7 +2252,7 @@ static int adm_wait_c(struct cfg_ctx *ctx)
 {
 	struct d_resource *res = ctx->res;
 	struct d_volume *vol = ctx->vol;
-	char *argv[MAX_ARGS];
+	const char *argv[MAX_ARGS];
 	struct d_option *opt;
 	int argc = 0, rv;
 
@@ -2528,7 +2528,8 @@ static int check_exit_codes(pid_t * pids)
 static int adm_wait_ci(struct cfg_ctx *ctx)
 {
 	struct d_resource *res, *t;
-	char *argv[20], answer[40];
+	const char *argv[20];
+	char answer[40];
 	pid_t *pids;
 	struct d_option *opt;
 	int rr, wtime, argc, i = 0;

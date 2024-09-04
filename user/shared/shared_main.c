@@ -274,12 +274,12 @@ pid_t my_fork(void)
 	return pid;
 }
 
-void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd, int *ex)
+void m__system(const char **argv, int flags, const char *res_name, pid_t *kid, int *fd, int *ex)
 {
 	pid_t pid;
 	int status, rv = -1;
 	int timeout = 0;
-	char **cmdline = argv;
+	const char **cmdline = argv;
 	int pipe_fds[2];
 
 	struct sigaction so;
@@ -352,7 +352,12 @@ void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd
 				fprintf(stderr, "freopen(/dev/null) failed\n");
 		}
 		if (argv[0])
-			execvp(argv[0], argv);
+			execvp(argv[0], (char **)argv);
+		/* exec() has the freedom to change the argv strings. But that is
+		 * irrelevant in the success case, and for our use, also irrelevant
+		 * in the failure case. Therefore is casting away the const char **
+		 * here valid */
+
 		fprintf(stderr, "Can not exec\n");
 		exit(E_EXEC_ERROR);
 	}

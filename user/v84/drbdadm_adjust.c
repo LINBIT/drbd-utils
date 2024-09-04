@@ -250,7 +250,7 @@ static void find_option_in_resources(char *name,
 static int do_proxy_reconf(struct cfg_ctx *ctx)
 {
 	int rv;
-	char *argv[4] = { drbd_proxy_ctl, "-c", (char*)ctx->arg, NULL };
+	const char *argv[4] = { drbd_proxy_ctl, "-c", ctx->arg, NULL };
 
 	rv = m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
 	return rv;

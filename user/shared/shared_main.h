@@ -127,8 +127,8 @@ extern int verbose;
 extern int adjust_with_progress;
 extern char *sh_varname;
 
-extern void m__system(char **argv, int flags, const char *res_name, pid_t *kid, int *fd, int *ex);
-static inline int m_system_ex(char **argv, int flags, const char *res_name)
+extern void m__system(const char **argv, int flags, const char *res_name, pid_t *kid, int *fd, int *ex);
+static inline int m_system_ex(const char **argv, int flags, const char *res_name)
 {
 	int ex = -1;
 	m__system(argv, flags, res_name, NULL, NULL, &ex);
