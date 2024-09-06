@@ -1,0 +1,61 @@
+{
+  "SPDXID" : "SPDXRef-DOCUMENT",
+  "spdxVersion" : "SPDX-2.3",
+  "creationInfo" : {
+    "created" : "__PLACEHOLDER__",
+    "creators" : [ "Person: Philipp Reisner (philipp.reisner@linbit.com)" ]
+  },
+  "name" : "drbd-utils software bill of materials",
+  "dataLicense" : "CC0-1.0",
+  "documentNamespace" : "__PLACEHOLDER__",
+  "packages" : [ {
+    "SPDXID" : "SPDXRef-Package-drbd-utils",
+    "downloadLocation" : "https://github.com/LINBIT/drbd-utils",
+    "filesAnalyzed" : false,
+    "licenseDeclared" : "GPL-2.0-or-later",
+    "name" : "drbd-utils",
+    "supplier" : "Organization: LINBIT HA-Solutions GmbH",
+    "versionInfo" : "__PLACEHOLDER__"
+  }, {
+    "SPDXID" : "SPDXRef-Package-drbd-selinux",
+    "downloadLocation" : "https://github.com/LINBIT/drbd-utils",
+    "filesAnalyzed" : false,
+    "licenseDeclared" : "GPL-2.0-or-later",
+    "name" : "drbd-selinux",
+    "supplier" : "Organization: LINBIT HA-Solutions GmbH",
+    "versionInfo" : "__PLACEHOLDER__"
+  }, {
+    "SPDXID" : "SPDXRef-Package-drbd-bash-completion",
+    "downloadLocation" : "https://github.com/LINBIT/drbd-utils",
+    "filesAnalyzed" : false,
+    "licenseDeclared" : "GPL-2.0-or-later",
+    "name" : "drbd-bash-completion",
+    "supplier" : "Organization: LINBIT HA-Solutions GmbH",
+    "versionInfo" : "__PLACEHOLDER__"
+  }, {
+    "SPDXID" : "SPDXRef-Package-drbd-udev",
+    "downloadLocation" : "https://github.com/LINBIT/drbd-utils",
+    "filesAnalyzed" : false,
+    "licenseDeclared" : "GPL-2.0-or-later",
+    "name" : "drbd-udev",
+    "supplier" : "Organization: LINBIT HA-Solutions GmbH",
+    "versionInfo" : "__PLACEHOLDER__"
+  } ],
+  "relationships" : [ {
+    "spdxElementId" : "SPDXRef-DOCUMENT",
+    "relationshipType" : "DESCRIBES",
+    "relatedSpdxElement" : "SPDXRef-Package-drbd-udev"
+  }, {
+    "spdxElementId" : "SPDXRef-DOCUMENT",
+    "relationshipType" : "DESCRIBES",
+    "relatedSpdxElement" : "SPDXRef-Package-drbd-bash-completion"
+  }, {
+    "spdxElementId" : "SPDXRef-DOCUMENT",
+    "relationshipType" : "DESCRIBES",
+    "relatedSpdxElement" : "SPDXRef-Package-drbd-selinux"
+  }, {
+    "spdxElementId" : "SPDXRef-DOCUMENT",
+    "relationshipType" : "DESCRIBES",
+    "relatedSpdxElement" : "SPDXRef-Package-drbd-utils"
+  } ]
+}
