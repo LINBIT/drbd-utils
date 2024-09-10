@@ -6,6 +6,7 @@
    Copyright (C) 2002-2008, LINBIT Information Technologies GmbH.
    Copyright (C) 2002-2008, Philipp Reisner <philipp.reisner@linbit.com>.
    Copyright (C) 2002-2008, Lars Ellenberg <lars.ellenberg@linbit.com>.
+   Copyright (C) 2008-2024, LINBIT HA-Solutions GmbH.
 
    drbd is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

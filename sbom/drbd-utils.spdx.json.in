@@ -13,6 +13,7 @@
     "downloadLocation" : "https://github.com/LINBIT/drbd-utils",
     "filesAnalyzed" : false,
     "licenseDeclared" : "GPL-2.0-or-later",
+    "copyrightText": "2001-2008, LINBIT Information Technologies GmbH\n2008-2024, LINBIT HA-Solutions GmbH",
     "name" : "drbd-utils",
     "supplier" : "Organization: LINBIT HA-Solutions GmbH",
     "versionInfo" : "__PLACEHOLDER__"
@@ -21,6 +22,7 @@
     "downloadLocation" : "https://github.com/LINBIT/drbd-utils",
     "filesAnalyzed" : false,
     "licenseDeclared" : "GPL-2.0-or-later",
+    "copyrightText": "2001-2008, LINBIT Information Technologies GmbH\n2008-2024, LINBIT HA-Solutions GmbH",
     "name" : "drbd-selinux",
     "supplier" : "Organization: LINBIT HA-Solutions GmbH",
     "versionInfo" : "__PLACEHOLDER__"
@@ -29,6 +31,7 @@
     "downloadLocation" : "https://github.com/LINBIT/drbd-utils",
     "filesAnalyzed" : false,
     "licenseDeclared" : "GPL-2.0-or-later",
+    "copyrightText": "2001-2008, LINBIT Information Technologies GmbH\n2008-2024, LINBIT HA-Solutions GmbH",
     "name" : "drbd-bash-completion",
     "supplier" : "Organization: LINBIT HA-Solutions GmbH",
     "versionInfo" : "__PLACEHOLDER__"
@@ -37,6 +40,7 @@
     "downloadLocation" : "https://github.com/LINBIT/drbd-utils",
     "filesAnalyzed" : false,
     "licenseDeclared" : "GPL-2.0-or-later",
+    "copyrightText": "2001-2008, LINBIT Information Technologies GmbH\n2008-2024, LINBIT HA-Solutions GmbH",
     "name" : "drbd-udev",
     "supplier" : "Organization: LINBIT HA-Solutions GmbH",
     "versionInfo" : "__PLACEHOLDER__"

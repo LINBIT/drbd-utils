@@ -4,6 +4,7 @@
    This file is part of DRBD by Philipp Reisner and Lars Ellenberg.
 
    Copyright (C) 2012, LINBIT Information Technologies GmbH
+   Copyright (C) 2008-2024, LINBIT HA-Solutions GmbH.
 
    drbd is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
