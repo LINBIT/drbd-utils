@@ -4995,18 +4995,20 @@ int meta_chk_offline_resize(struct format *cfg, char **argv, int argc)
 	/* this is first, so that lk-bdev-info files are removed/updated
 	 * if we find valid meta data in the expected place. */
 	if (err == VALID_MD_FOUND) {
-		/* Do not clutter the output of the init script
-		printf("Found valid meta data in the expected location, %llu bytes into %s.\n",
-		       (unsigned long long)cfg->md_offset, cfg->md_device_name);
-		*/
-		/* create, delete or update the last known info */
-		if (lk_bdev_load(cfg->minor, &cfg->lk_bd) < 0)
-				return -1;
+		/* create, delete or update the last known info
+		 * If it is not internal meta data,
+		 * remove the "last known block device" info file.
+		 * Otherwise, try to load it, and,
+		 * if necessary, try to update it.
+		 */
 		if (cfg->md_index != DRBD_MD_INDEX_FLEX_INT)
 			lk_bdev_delete(cfg->minor);
-		else if (cfg->lk_bd.bd_size != cfg->bd_size ||
-			 cfg->lk_bd.bd_uuid != cfg->md.device_uuid)
+		if (lk_bdev_load(cfg->minor, &cfg->lk_bd) < 0
+		||  cfg->lk_bd.bd_size != cfg->bd_size
+		||  cfg->lk_bd.bd_uuid != cfg->md.device_uuid)
+		{
 			cfg->update_lk_bdev = 1;
+		}
 		return cfg->ops->close(cfg);
 	} else if (err == NO_VALID_MD_FOUND) {
 		if (format_version(cfg) < DRBD_V08 || cfg->md_index != DRBD_MD_INDEX_FLEX_INT) {
