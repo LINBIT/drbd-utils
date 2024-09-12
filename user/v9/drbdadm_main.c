@@ -1251,7 +1251,9 @@ static int adm_attach(const struct cfg_ctx *ctx)
 	argv[NA(argc)] = ssprintf("%d", vol->device_minor);
 	if (do_attach) {
 		assert(vol->disk != NULL);
+		assert(vol->meta_disk != NULL);
 		assert(vol->disk[0] != '\0');
+		assert(vol->meta_disk[0] != '\0');
 		argv[NA(argc)] = vol->disk;
 		if (!strcmp(vol->meta_disk, "internal")) {
 			argv[NA(argc)] = vol->disk;
@@ -1483,6 +1485,8 @@ int _adm_drbdmeta(const struct cfg_ctx *ctx, int flags, char *argument)
 	argv[NA(argc)] = drbdmeta;
 	argv[NA(argc)] = ssprintf("%d", vol->device_minor);
 	argv[NA(argc)] = "v09";
+	assert(vol->meta_disk != NULL);
+	assert(vol->meta_disk[0] != '\0');
 	if (!strcmp(vol->meta_disk, "internal")) {
 		assert(vol->disk != NULL);
 		assert(vol->disk[0] != '\0');
@@ -1704,6 +1708,11 @@ static int adm_outdate(const struct cfg_ctx *ctx)
 	return rv;
 }
 
+bool backing_device_configured(const struct cfg_ctx *ctx)
+{
+	return (ctx->vol && ctx->vol->disk && ctx->vol->meta_disk);
+}
+
 /* shell equivalent:
  * ( drbdsetup resize && drbdsetup check-resize ) || drbdmeta check-resize */
 static int adm_chk_resize(const struct cfg_ctx *ctx)
@@ -1711,15 +1720,16 @@ static int adm_chk_resize(const struct cfg_ctx *ctx)
 	/* drbdsetup resize && drbdsetup check-resize */
 	int ex = adm_resize(ctx);
 	if (ex == 0)
-		return 0;
+		return ex;
+
+	if (!backing_device_configured(ctx)) {
+		fprintf(stderr, "No backing device configured for drbd%u, cannot fall back to drbdmeta.\n",
+			ctx->vol->device_minor);
+		return ex;
+	}
 
 	/* try drbdmeta check-resize */
 	return adm_drbdmeta(ctx);
-}
-
-bool backing_device_configured(const struct cfg_ctx *ctx)
-{
-	return (ctx->vol && ctx->vol->disk && ctx->vol->meta_disk);
 }
 
 /* try drbdsetup first (i.e., what does the kernel know
