@@ -10,7 +10,7 @@ Type=oneshot
 
 # on first start, wait for access to "good data"
 # let systemd handle timeouts
-ExecStart=/lib/drbd/scripts/drbd-wait-promotable.sh %I
+ExecStart=@libdir@/scripts/drbd-wait-promotable.sh %I
 RemainAfterExit=yes
 
 [Install]

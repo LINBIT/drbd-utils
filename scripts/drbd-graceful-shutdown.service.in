@@ -13,4 +13,4 @@ Before=drbd.service drbd@.service
 Type=oneshot
 RemainAfterExit=yes
 
-ExecStop=/lib/drbd/scripts/drbd-service-shim.sh down all
+ExecStop=@libdir@/scripts/drbd-service-shim.sh down all

@@ -22,5 +22,5 @@ Environment=monitor_inverval=30
 # Only the first argument is used by the wrapper,
 # the %n is just to identify which is which in the process list.
 # All parameterization is done via Environment= in per instance override.conf
-ExecStart=/lib/drbd/scripts/ocf.ra.wrapper.sh start-and-monitor %n
-ExecStopPost=/lib/drbd/scripts/ocf.ra.wrapper.sh stop %n
+ExecStart=@libdir@/scripts/ocf.ra.wrapper.sh start-and-monitor %n
+ExecStopPost=@libdir@/scripts/ocf.ra.wrapper.sh stop %n

@@ -67,9 +67,20 @@ SYSTEMD_TEMPLATES += drbd-wait-promotable@.service
 SYSTEMD_UNITS  = drbd.service
 SYSTEMD_UNITS += drbd-graceful-shutdown.service
 
-SERVICE_TEMPLATES  = drbd-promote@.service
+UDEV_TEMPLATES  = drbd.rules
 
-TEMPLATES := $(SERVICE_TEMPLATES)
+SERVICE_TEMPLATES  = drbd.service
+SERVICE_TEMPLATES += drbd@.service
+SERVICE_TEMPLATES += drbd-demote-or-escalate@.service
+SERVICE_TEMPLATES += drbd-graceful-shutdown.service
+SERVICE_TEMPLATES += drbd-promote@.service
+SERVICE_TEMPLATES += drbd-reconfigure-suspend-or-error@.service
+SERVICE_TEMPLATES += drbd-wait-promotable@.service
+SERVICE_TEMPLATES += ocf.ra@.service
+
+SCRIPT_TEMPLATES = drbd-service-shim.sh
+
+TEMPLATES := $(SCRIPT_TEMPLATES) $(SERVICE_TEMPLATES) $(UDEV_TEMPLATES)
 
 # variables meant to be overridden from the make command line
 ifeq ($(WITH_WINDRBD),yes)
@@ -82,7 +93,7 @@ all: $(TEMPLATES)
 
 install: install-utils install-udev install-xen install-heartbeat install-pacemaker install-rgmanager install-bashcompletion
 
-install-utils: $(SERVICE_TEMPLATES)
+install-utils: $(SERVICE_TEMPLATES) $(SCRIPT_TEMPLATES)
 	install -d $(DESTDIR)$(LIBDIR)
 # "sysv" or "both"
 ifeq ($(subst both,sysv,$(initscripttype)),sysv)
@@ -172,7 +183,7 @@ ifeq ($(WITH_XEN),yes)
 	install -m 755 block-drbd $(DESTDIR)$(sysconfdir)/xen/scripts
 endif
 
-install-udev:
+install-udev: $(UDEV_TEMPLATES)
 ifeq ($(WITH_UDEV),yes)
 	mkdir -p $(DESTDIR)$(udevrulesdir)
 	install -m 644 drbd.rules $(DESTDIR)$(udevrulesdir)/65-drbd.rules$(UDEV_RULE_SUFFIX)
@@ -214,7 +225,9 @@ Makefile.in: ;
 Makefile: Makefile.in ../config.status
 	cd .. && ./config.status scripts/Makefile
 
-edit = sed -e ''
+edit = sed -e '' \
+	-e 's|@sbindir[@]|$(sbindir)|g' \
+	-e 's|@libdir[@]|$(LIBDIR)|g' \
 
 ifeq ($(SYSTEMD_EXEC_CONDITION),no)
 	edit += -e 's|^ExecCondition=|ExecStart=|'

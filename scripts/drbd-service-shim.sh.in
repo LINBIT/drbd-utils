@@ -14,7 +14,7 @@ secondary_check() {
 	local ex_secondary current_state opts
 	opts="$1"
 
-	/usr/sbin/drbdsetup secondary $opts "$res"
+	@sbindir@/drbdsetup secondary $opts "$res"
 	ex_secondary=$?
 	case $ex_secondary in
 	 0)
@@ -26,7 +26,7 @@ secondary_check() {
 	# any other special treatment for special exit codes?
 	*)
 		# double check for "resource does not exist"
-		current_state=$(/usr/sbin/drbdsetup events2 --now "$res")
+		current_state=$(@sbindir@/drbdsetup events2 --now "$res")
 		if [[ $current_state = "exists -" ]]; then
 			echo >&2 "<7>not even configured"
 			return 0
@@ -40,23 +40,23 @@ secondary_check() {
 
 case "$cmd" in
 adjust)
-  exec /usr/sbin/drbdadm adjust "$res"
+  exec @sbindir@/drbdadm adjust "$res"
   ;;
 down)
-  exec /usr/sbin/drbdsetup down "$res"
+  exec @sbindir@/drbdsetup down "$res"
   ;;
 primary)
-  exec /usr/sbin/drbdsetup primary "$res"
+  exec @sbindir@/drbdsetup primary "$res"
   ;;
 secondary)
-  exec /usr/sbin/drbdsetup secondary "$res"
+  exec @sbindir@/drbdsetup secondary "$res"
   ;;
 secondary-force)
-  exec /usr/sbin/drbdsetup secondary --force=yes "$res"
+  exec @sbindir@/drbdsetup secondary --force=yes "$res"
   ;;
 secondary-secondary-force)
-  /usr/sbin/drbdsetup secondary "$res" && exit 0
-  exec /usr/sbin/drbdsetup secondary --force=yes "$res"
+  @sbindir@/drbdsetup secondary "$res" && exit 0
+  exec @sbindir@/drbdsetup secondary --force=yes "$res"
   ;;
 secondary*-or-escalate)
 	# Log something and try to get journald to flush its logs

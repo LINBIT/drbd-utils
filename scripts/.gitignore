@@ -1,3 +1,11 @@
 /drbd.rules
 /Makefile
+/drbd.service
+/drbd@.service
+/drbd-demote-or-escalate@.service
+/drbd-graceful-shutdown.service
 /drbd-promote@.service
+/drbd-reconfigure-suspend-or-error@.service
+/drbd-service-shim.sh
+/drbd-wait-promotable@.service
+/ocf.ra@.service

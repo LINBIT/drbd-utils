@@ -35,8 +35,8 @@ RemainAfterExit=yes
 
 # depends... do we want this as ExecCondition or as ExecStart
 # failed start is "failed", failed condition is just "not startable yet"
-ExecStart=/lib/drbd/scripts/drbd-service-shim.sh adjust %I
-ExecReload=/lib/drbd/scripts/drbd-service-shim.sh adjust %I
+ExecStart=@libdir@/scripts/drbd-service-shim.sh adjust %I
+ExecReload=@libdir@/scripts/drbd-service-shim.sh adjust %I
 
 # can only succeed, if you first stop all depending services
-ExecStopPost=/lib/drbd/scripts/drbd-service-shim.sh down %I
+ExecStopPost=@libdir@/scripts/drbd-service-shim.sh down %I

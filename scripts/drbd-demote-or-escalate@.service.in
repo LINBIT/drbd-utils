@@ -28,5 +28,5 @@ TimeoutSec=60
 # "Type=forking" would be an option to have it retry a number of times,
 # and then only escalate to FailureAction if that did not help.
 Type=oneshot
-ExecStart=/lib/drbd/scripts/drbd-service-shim.sh secondary-or-escalate %I
+ExecStart=@libdir@/scripts/drbd-service-shim.sh secondary-or-escalate %I
 ExecStopPost=-/bin/journalctl --sync
