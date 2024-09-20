@@ -193,6 +193,24 @@ fi
 AC_SUBST(systemdunitdir)
 AC_MSG_RESULT([Using systemd unit directory: $systemdunitdir])
 
+dnl Does systemd support ExecCondition=?
+AC_ARG_WITH([systemd_exec_condition],
+	[AS_HELP_STRING([--with-systemd-exec-condition],[Enable systemd scripts to use ExecCondition=, introduced with systemd 243 [Auto]])])
+case "$with_systemd_exec_condition" in
+	"")
+		if test x"$PKG_CONFIG" != x && $PKG_CONFIG --atleast-version=243 systemd ; then
+			systemd_exec_condition=yes
+		else
+			systemd_exec_condition=no
+		fi ;;
+	yes|no)
+		systemd_exec_condition=$with_systemd_exec_condition ;;
+	*)
+		AC_MSG_ERROR([Illegal value -$with_systemd_exec_condition- for option --with-systemd-exec-condition]) ;;
+esac
+AC_SUBST(systemd_exec_condition)
+AC_MSG_RESULT([checking wether systemd supports ExecCondition... $systemd_exec_condition])
+
 AC_ARG_WITH(tmpfilesdir,
 	AS_HELP_STRING([--with-tmpfilesdir=DIR],[install configuration files for management of volatile files and directories in DIR [[PREFIX/lib/tmpfiles.d]]]),
 		tmpfilesdir=$withval, tmpfilesdir='${prefix}/lib/tmpfiles.d')

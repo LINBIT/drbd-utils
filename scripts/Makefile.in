@@ -40,6 +40,7 @@ UDEV_RULE_SUFFIX = @UDEV_RULE_SUFFIX@
 INITDIR = @INITDIR@
 LIBDIR = @prefix@/lib/@PACKAGE_TARNAME@
 LN_S = @LN_S@
+SYSTEMD_EXEC_CONDITION = @systemd_exec_condition@
 
 # features enabled or disabled by configure
 WITH_UDEV = @WITH_UDEV@
@@ -66,6 +67,10 @@ SYSTEMD_TEMPLATES += drbd-wait-promotable@.service
 SYSTEMD_UNITS  = drbd.service
 SYSTEMD_UNITS += drbd-graceful-shutdown.service
 
+SERVICE_TEMPLATES  = drbd-promote@.service
+
+TEMPLATES := $(SERVICE_TEMPLATES)
+
 # variables meant to be overridden from the make command line
 ifeq ($(WITH_WINDRBD),yes)
 DESTDIR ?=
@@ -73,11 +78,11 @@ else
 DESTDIR ?= /
 endif
 
-all:
+all: $(TEMPLATES)
 
 install: install-utils install-udev install-xen install-heartbeat install-pacemaker install-rgmanager install-bashcompletion
 
-install-utils:
+install-utils: $(SERVICE_TEMPLATES)
 	install -d $(DESTDIR)$(LIBDIR)
 # "sysv" or "both"
 ifeq ($(subst both,sysv,$(initscripttype)),sysv)
@@ -209,3 +214,13 @@ Makefile.in: ;
 Makefile: Makefile.in ../config.status
 	cd .. && ./config.status scripts/Makefile
 
+edit = sed -e ''
+
+ifeq ($(SYSTEMD_EXEC_CONDITION),no)
+	edit += -e 's|^ExecCondition=|ExecStart=|'
+endif
+
+$(TEMPLATES): %: %.in Makefile
+	rm -f $@ $@.tmp
+	$(edit) $@.in >$@.tmp
+	mv $@.tmp $@

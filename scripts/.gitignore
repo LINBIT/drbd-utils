@@ -1,2 +1,3 @@
 /drbd.rules
 /Makefile
+/drbd-promote@.service
