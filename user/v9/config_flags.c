@@ -771,6 +771,52 @@ static enum check_codes key_serial_check(const struct field_def *field, const ch
 	return CC_OK;
 }
 
+#else
+
+static bool key_serial_is_default(const struct field_def *field, const char *value)
+{
+	return true;
+}
+
+static bool key_serial_is_equal(const struct field_def *field, const char *a, const char *b)
+{
+	return true;
+}
+
+static const char *get_key_serial(struct context_def *ctx, const struct field_def *field, struct nlattr *nla)
+{
+	static char description[] = "\"\"";
+
+	return description;
+}
+
+static bool put_key_serial(struct context_def *ctx, const struct field_def *field,
+                       struct msg_buff *msg, const char *value)
+{
+	nla_put_u32(msg, field->nla_type, 0);
+	return true;
+}
+
+static int key_serial_usage(const struct field_def *field, char *str, int size)
+{
+	return snprintf(str, size,"[--%s=<n/a>]",
+	                field->name);
+}
+
+static void key_serial_describe_xml(const struct field_def *field)
+{
+	printf("\t<option name=\"%s\" type=\"string\">\n"
+	       "\t</option>\n",
+	       field->name);
+}
+
+static enum check_codes key_serial_check(const struct field_def *field, const char *value)
+{
+	return CC_OK;
+}
+
+#endif
+
 struct field_class fc_key_serial = {
 	.is_default = key_serial_is_default,
 	.is_equal = key_serial_is_equal,
@@ -780,7 +826,7 @@ struct field_class fc_key_serial = {
 	.describe_xml = key_serial_describe_xml,
 	.check = key_serial_check,
 };
-#endif
+
 
 /* ============================================================================================== */
 
@@ -843,24 +889,12 @@ struct field_class fc_key_serial = {
 		.max = num_max,					\
 		.def = DRBD_ ## d ## _DEF, } }			\
 
-#ifdef KEYUTILS
 #define KEY_SERIAL(f, key_type)					\
 	.nla_type = T_ ## f,					\
 	.ops = &fc_key_serial,					\
 	.u = { .k = {						\
 		.type = key_type, } }				\
 
-#else
-#define KEY_SERIAL(f, keytype)					\
-	.nla_type = T_ ## f,					\
-	.ops = &fc_numeric,					\
-	.u = { .n = {						\
-		.min = INT32_MIN,				\
-		.max = INT32_MAX,				\
-		.def = 0,					\
-		.is_signed = true,				\
-		.scale = 1 } }
-#endif
 /* ============================================================================================== */
 
 const char *wire_protocol_map[] = {
