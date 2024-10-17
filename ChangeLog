@@ -3,6 +3,23 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.29.0-rc.1
+-----------
+ * drbdmeta: fix initialization for external md
+ * build: allow disbling keyutils
+ * tests: export sanitized environment
+ * drbdmon: various improvements
+ * build: add cyclonedx
+ * drbsetup,v9: fix multiple paths drbdsetup show --json
+   strictly spreaking breaking change, but maily used internally
+ * events2: expose if device is open
+ * drbdadm: fix undefined behavior that triggered on amd64
+ * shared: fix out-of-bounds access in parsing
+ * drbsetup,v9: event consistency with peer devices
+ * drbdadm: fix parsing of v8.4 configs for compatibility
+ * drbdmeta: fix segfault for check-resize on intentionally diskless
+ * drbd-promote@.service: check if ExecCondition is available
+
 9.28.0
 -----------
  * events2: set may_promote:no promotion_score:0 while
