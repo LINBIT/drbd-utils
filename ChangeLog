@@ -3,7 +3,7 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
-9.29.0-rc.1
+9.29.0
 -----------
  * drbdmeta: fix initialization for external md
  * build: allow disbling keyutils
