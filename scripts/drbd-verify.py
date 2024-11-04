@@ -8,6 +8,7 @@ import sys
 import re
 import os
 
+ssh_opts = ['-oStrictHostKeyChecking=no']
 events_re = re.compile(r'change peer-device name:(\S+) peer-node-id:(\d+) conn-name:(\S+) volume:0 replication:(\w+)->(\w+)')
 progress_re = re.compile(r'change peer-device name:(\S+) peer-node-id:(\d+) conn-name:(\S+) volume:0 done:(\d+\.\d+)')
 
@@ -103,7 +104,7 @@ def verify_res(res_json, peers, mbr_only: bool, level2:bool):
     if len(diskful_peers) >= 1:
         for i, peer_json in enumerate(diskful_peers):
             peer_name = peer_json['name']
-            args = ['ssh', peer_name, '/tmp/' + this_prog_name, '--json']
+            args = ['ssh'] + ssh_opts + [peer_name, '/tmp/' + this_prog_name, '--json']
             args += ['--resource', res_name, '--level2']
             peers = [p['name'] for j, p in enumerate(diskful_peers) if j > i]
             if peers:
@@ -114,7 +115,7 @@ def verify_res(res_json, peers, mbr_only: bool, level2:bool):
                 if level2:
                     continue
                 args.append('--mbr-only')
-            subprocess.run(['scp', '-q', this_prog_path, '{}:/tmp/'.format(peer_name)])
+            subprocess.run(['scp'] + ssh_opts + ['-q', this_prog_path, '{}:/tmp/'.format(peer_name)])
             with subprocess.Popen(args, stdout=subprocess.PIPE) as p:
                 peer_result = json.load(p.stdout)
                 result_json['oos'].update(peer_result[res_name]['oos'])
