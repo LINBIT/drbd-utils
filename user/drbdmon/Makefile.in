@@ -16,7 +16,7 @@ else
 DESTDIR ?= /
 endif
 
-binaries := drbdmon
+binaries := drbdmon drbd-events-log-supplier
 
 ifeq ($(WITH_DRBDMON),yes)
 all: $(binaries)
@@ -28,6 +28,7 @@ PHONY := all
 
 dsaext-obj := cppdsaext/src/dsaext.o
 integerparse-obj := cppdsaext/src/integerparse.o
+supplier-obj := drbd-events-log-supplier.o
 
 l-obj := DrbdMon.o DrbdMonConsts.o MessageLog.o IntervalTimer.o SubProcessNotification.o
 l-obj += MessageLogNotification.o
@@ -77,6 +78,9 @@ $(integerparse-obj): $(basename $(integerparse-obj)).cpp $(basename $(integerpar
 drbdmon: $(ls-obj)
 	$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) $^ $(LIBS)
 
+drbd-events-log-supplier: $(supplier-obj)
+	$(CXX) -o $@ $(CPPFLAGS) $(CXXFLAGS) $^
+
 # do not try to rebuild Makefile itself
 Makefile: ;
 
@@ -89,16 +93,18 @@ Makefile: ;
 install:
 ifeq ($(WITH_DRBDMON),yes)
 	install -m 755 drbdmon $(DESTDIR)$(sbindir)
+	install -m 755 drbd-events-log-supplier $(DESTDIR)$(sbindir)
 endif
 
 uninstall:
 ifeq ($(WITH_DRBDMON),yes)
 	rm -f $(DESTDIR)$(sbindir)/drbdmon
+	rm -r $(DESTDIR)$(sbindir)/drbd-events-log-supplier
 endif
 
 PHONY += clean distclean
 clean:
-	rm -f $(local-obj) $(dsaext-obj) $(integerparse-obj) $(binaries)
+	rm -f $(local-obj) $(dsaext-obj) $(integerparse-obj) $(supplier-obj) $(binaries)
 distclean: clean
 	rm -f $(local-dep)
 
