@@ -155,6 +155,7 @@ This packages includes the DRBD administration tools.
 %endif
 %if %{with drbdmon}
 %{_sbindir}/drbdmon
+%{_sbindir}/drbd-events-log-supplier
 %endif
 %if "%{initscripttype}" == "sysv"
 %{_initddir}/drbd
