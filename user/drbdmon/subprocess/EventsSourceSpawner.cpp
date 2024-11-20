@@ -21,7 +21,7 @@ const char* const EventsSourceSpawner::EVENTS_PROGRAM_ARGS[] =
     "all",
     nullptr
 };
-const char* const EventsSourceSpawner::SAVED_EVENTS_PROGRAM = "eventsfeeder";
+const char* const EventsSourceSpawner::SAVED_EVENTS_PROGRAM = "drbd-events-log-supplier";
 
 EventsSourceSpawner::EventsSourceSpawner(MessageLog& logRef):
     log(logRef)
