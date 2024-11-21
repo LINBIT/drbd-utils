@@ -2043,19 +2043,33 @@ char *_proxy_connection_name(char *conn_name, const struct d_resource *res, cons
 	return conn_name;
 }
 
+#define ADD_CONNECTION_MAX_LEN 4096
+
 static int do_proxy_conn_up(const struct cfg_ctx *ctx)
 {
 	const char *argv[4] = { drbd_proxy_ctl, "-c", NULL, NULL };
 	struct connection *conn = ctx->conn;
 	struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
 	char *conn_name;
+	char *buffer;
+	char *buffer_pos;
+	int buffer_remaining;
+	int n;
+	struct d_option *opt;
+	int rv = -1;
 
 	if (!path->my_proxy || !path->peer_proxy)
 		return 0;
 
 	conn_name = proxy_connection_name(ctx->res, conn);
 
-	argv[2] = ssprintf(
+	buffer_remaining = ADD_CONNECTION_MAX_LEN;
+	buffer = checked_malloc(buffer_remaining);
+	buffer_pos = buffer;
+
+	n = snprintf(
+		buffer_pos,
+		buffer_remaining,
 		"add connection %s %s:%s %s:%s %s:%s %s:%s",
 		conn_name,
 		path->my_proxy->inside.addr,
@@ -2066,8 +2080,28 @@ static int do_proxy_conn_up(const struct cfg_ctx *ctx)
 		path->my_proxy->outside.port,
 		path->my_address->addr,
 		path->my_address->port);
+	if (n < 0 || n >= buffer_remaining)
+		goto out;
+	buffer_pos += n;
+	buffer_remaining -= n;
 
-	return m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
+	STAILQ_FOREACH(opt, &path->my_proxy->options, link) {
+		n = snprintf(
+			buffer_pos,
+			buffer_remaining,
+			" --%s=%s",
+			opt->name, opt->value);
+		if (n < 0 || n >= buffer_remaining)
+			goto out;
+		buffer_pos += n;
+		buffer_remaining -= n;
+	}
+
+	argv[2] = buffer;
+	rv = m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
+out:
+	free(buffer);
+	return rv;
 }
 
 static int do_proxy_conn_plugins(const struct cfg_ctx *ctx)
