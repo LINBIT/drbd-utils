@@ -53,6 +53,7 @@
 #	OCF_RESKEY_CRM_meta_master_max
 #	OCF_RESKEY_CRM_meta_master_node_max
 #
+#	OCF_RESKEY_CRM_meta_timeout
 #	OCF_RESKEY_CRM_meta_interval
 #
 #	OCF_RESKEY_CRM_meta_notify
@@ -515,22 +516,55 @@ if $USE_DEBUG_LOG ; then
 fi
 
 do_cmd_success_log_level=""
-do_cmd() {
+do_cmd() { __do_cmd_with_timeout "" "$@"; }
+do_cmd_CRM_meta_timeout()
+{
+	local timeout=$(( ($OCF_RESKEY_CRM_meta_timeout - 500 - $SECONDS*1000) / 1000 ))
+	# if we are short on time already,
+	# try to get away with whatever time is left
+	(( timeout > 0 )) || timeout=0
+	__do_cmd_with_timeout "$timeout" "$@";
+}
+__do_cmd_with_timeout() {
 	# Run a command, return its exit code, capture any output, and log
 	# everything if appropriate.
+	# use coreutils "timeout", if timeout is != 0.
+	local timeout=$1; shift
 	local cmd="$*" cmd_out cmd_err ret=125
 	local success_log_level=${do_cmd_success_log_level:-debug}
 	local failure_log_level=${do_cmd_failure_log_level:-err}
 	ocf_log debug "$DRBD_RESOURCE: Calling $cmd"
 
+	if [[ $timeout =~ ^[1-9][0-9]*$ ]]; then
+		timeout="-t $timeout"
+	else
+		timeout=""
+	fi
+
+	local pipe
+	local pipe_pid
+	local result
+
 	# capture stdout, stderr, and exit code
-	eval	"$(exec 3>&1;
+	if	exec {pipe}< <(exec 3>&1;
 			printf "cmd_err=%q\n" \
 				"$( exec 2>&1 1>&3 3>&-; \
 					out=$( "$@" ); \
 					ex=$?; \
 				printf "cmd_out=%q\nret=%q\n" "$out" "$ex" )"
-		)"
+		)
+	then
+		pipe_pid=$!
+
+		read -r -d "" -u $pipe $timeout result
+		if (( $? > 128 )) ; then
+			kill -KILL $pipe_pid
+			# wait $pipe_pid
+		fi
+		exec {pipe}<&-
+
+		eval "$result"
+	fi
 
 	if [ $ret != 0 ]; then
 		ocf_log $failure_log_level "$DRBD_RESOURCE: Called $cmd"
@@ -585,13 +619,13 @@ set_master_score() {
 	if [[ $1 -le 0 ]]; then
 		remove_master_score
 	else
-		do_cmd ${HA_SBIN_DIR}/crm_master -Q -l reboot -v $1 &&
+		do_cmd_CRM_meta_timeout ${HA_SBIN_DIR}/crm_master -Q -l reboot -v $1 &&
 		current_master_score=$1
 	fi
 }
 
 remove_master_score() {
-	do_cmd ${HA_SBIN_DIR}/crm_master -l reboot -D
+	do_cmd_CRM_meta_timeout ${HA_SBIN_DIR}/crm_master -l reboot -D
 	current_master_score=""
 }
 
