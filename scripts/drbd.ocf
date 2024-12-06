@@ -1021,7 +1021,7 @@ crm_resource_locate_master()
 	called_crm_resource_locate=true
 	DRBD_PRIMARY_PEER_according_to_pcmk=$(
 		crm_resource --resource "$OCF_RESOURCE_INSTANCE" --locate 2>/dev/null |
-		sed -ne 's/^.*is running on: \([^ ]*\) Master.*$/\1/p' |
+		sed -ne 's/^.*is running on: \([^ ]*\) \(Master\|Promoted\).*$/\1/p' |
 		grep -vix -m1 -e "$HOSTNAME")
 }
 
