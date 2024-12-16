@@ -332,7 +332,7 @@ else
 fi
 
 if test -z $PO4A_TRANSLATE; then
-   AC_MSG_WARN([Cannot build man pages without po4a-translage. You may safely ignore this warning when building from a tarball.])
+   AC_MSG_WARN([Cannot build man pages without po4a-translate. You may safely ignore this warning when building from a tarball.])
    dnl default to some sane value at least,
    dnl so the error message about command not found makes sense
    PO4A_TRANSLATE=po4a-translate
