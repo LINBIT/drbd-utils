@@ -48,11 +48,6 @@ class DrbdMon : public DrbdMonCore, public Configurable, public Configurator
     static const ConfigOption OPT_FREQ_LMT;
     static const ConfigOption OPT_EVENTS_LOG;
 
-    // Environment variable for color mode selection
-    static const char* ENV_COLOR_MODE;
-    static const char* COLOR_MODE_EXTENDED;
-    static const char* COLOR_MODE_BASIC;
-
     static const std::string UNIT_SFX_SECONDS;
     static const std::string UNIT_SFX_MILLISECONDS;
     static const uint16_t MAX_INTERVAL;

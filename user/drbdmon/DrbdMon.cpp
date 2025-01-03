@@ -40,10 +40,6 @@ const ConfigOption DrbdMon::OPT_VERSION(true, OPT_VERSION_KEY);
 const ConfigOption DrbdMon::OPT_FREQ_LMT(false, OPT_FREQ_LMT_KEY);
 const ConfigOption DrbdMon::OPT_EVENTS_LOG(false, OPT_EVENTS_LOG_KEY);
 
-const char* DrbdMon::ENV_COLOR_MODE         = "DRBDMON_COLORS";
-const char* DrbdMon::COLOR_MODE_EXTENDED    = "extended";
-const char* DrbdMon::COLOR_MODE_BASIC       = "basic";
-
 const std::string DrbdMon::UNIT_SFX_SECONDS = "s";
 const std::string DrbdMon::UNIT_SFX_MILLISECONDS = "ms";
 const uint16_t DrbdMon::MAX_INTERVAL = 10000;
@@ -892,7 +888,7 @@ void DrbdMon::announce_options(Configurator& collector)
 void DrbdMon::options_help() noexcept
 {
     std::cerr.clear();
-    std::cerr << DrbdMonConsts::PROGRAM_NAME << " configuration options:\n";
+    std::cerr << DrbdMonConsts::PROGRAM_NAME << " options:\n";
     std::cerr << "  --version        Display version information\n";
     std::cerr << "  --help           Display help\n";
     std::cerr << "  --events-log <file>      Display the DRBD state saved in the specified file\n";
@@ -901,10 +897,17 @@ void DrbdMon::options_help() noexcept
     std::cerr << "    Supported unit suffixes: s (seconds), ms (milliseconds)\n";
     std::cerr << "    Default unit: s (seconds)\n";
     std::cerr << '\n';
-    std::cerr << "Environment variables:\n";
-    std::cerr << "  " << std::left << std::setw(25) << ENV_COLOR_MODE << " Select color mode\n";
-    std::cerr << "    " << std::left << std::setw(23) << COLOR_MODE_EXTENDED << " Extended color mode (256 colors)\n";
-    std::cerr << "    " << std::left << std::setw(23) << COLOR_MODE_BASIC << " Basic color mode (16 colors)\n";
+    std::cerr << DrbdMonConsts::PROGRAM_NAME << " configuration:\n";
+    std::cerr << "  settings                 Display all configuration settings\n";
+    std::cerr << "  get <key>                Display the specified configuration entry\n";
+    std::cerr << "  set <key> <value>        Change the specified configuration entry\n";
+    std::cerr << '\n';
+    std::cerr << "The configuration file path is:\n";
+    std::cerr << "    " << mon_env.config_file_path << '\n';
+    std::cerr << '\n';
+    std::cerr << "If no configuration file exists, the \"settings\" command and the \"get\" command\n";
+    std::cerr << "will display the default configuration, and using the \"set\" command to change a\n";
+    std::cerr << "configuration entry will create a new configuration file.\n";
     std::cerr << std::endl;
 }
 
