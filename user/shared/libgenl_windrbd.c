@@ -219,3 +219,11 @@ struct genl_sock *genl_connect_to_family(struct genl_family *family)
 	return s;
 }
 
+bool genl_op_known(struct genl_family *family, int id)
+{
+	if (id >= GENL_MAX_OPS)
+		return false;
+
+	return true;
+}
+
