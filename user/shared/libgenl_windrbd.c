@@ -219,3 +219,23 @@ struct genl_sock *genl_connect_to_family(struct genl_family *family)
 	return s;
 }
 
+bool genl_op_known(struct genl_family *family, int cmd)
+{
+	int err;
+	unsigned int unused;
+	int val;
+	HANDLE h;
+
+	h = do_open_root_device(1);
+	if (h == INVALID_HANDLE_VALUE)
+		return false;
+
+        if (DeviceIoControl(h, IOCTL_WINDRBD_ROOT_DRBD_OP_IS_KNOWN, &cmd, sizeof(cmd), &val, sizeof(val), &unused, NULL) == 0) {
+		CloseHandle(h);
+		return false;	/* error. We assume that older WinDRBD versions do not support newer DRBD cmds */
+	}
+
+	CloseHandle(h);
+	return val;
+}
+
