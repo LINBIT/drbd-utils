@@ -7,7 +7,7 @@
 Description=ensure all DRBD resources shut down gracefully at system shut down
 Wants=network-online.target
 After=network-online.target
-Before=drbd.service drbd@.service
+Before=drbd.service
 
 [Service]
 Type=oneshot

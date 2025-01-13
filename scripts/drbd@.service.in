@@ -12,6 +12,10 @@ After=network-online.target nss-lookup.target sshd.service
 # If drbd-proxy is used, we want it to be running already.
 After=drbdproxy.service
 
+# Actually, reverse: on shutdown, we want to stop explicit instances first,
+# then only stop those resources that have been started by other means.
+After=drbd-graceful-shutdown.service
+
 # This is not intended to be combined with pacemaker,
 # but if combined, it should be ordered before pacemaker.
 Before=pacemaker.service
