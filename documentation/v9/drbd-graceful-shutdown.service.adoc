@@ -1,0 +1,35 @@
+drbd-graceful-shutdown.service(7)
+=================================
+
+Name
+----
+drbd-graceful-shutdown.service - Attempt graceful shut down of DRBD resource on system shut down
+
+Synopsis
+--------
+**drbd-graceful-shutdown.service**
+
+Description
+-----------
+This service is the attempt to shutdown DRBD resources while they still have a
+chance to communicate this with their peers so they can "gracefully" leave the
+DRBD replication.
+
+For this reason, this unit is ordered after **network-online.target**: on
+system shut down, this service will be stopped before the network is torn down.
+
+Resources that are explicitly managed by other systemd services should be stopped there.
+So this is also ordered before **resource-agents-deps.target** and **drbd.service**
+and the per-resource **drbd@.service** templates, which makes it be stopped
+only after those are stopped.
+
+If you have some other **foo.service** that starts and stops DRBD resources,
+you should add a drop-in `/etc/systemd/system/drbd-graceful-shutdown.service.d/foo.conf`
+```
+[Unit]
+Before=foo.service
+```
+
+(Or the inverse, add an `After=drbd-graceful-shutdown.service` to your `foo.service`).
+
+If you for some reason want to opt-out of this service, you can still `systemctl mask` it.

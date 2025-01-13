@@ -5,12 +5,27 @@
 
 [Unit]
 Description=ensure all DRBD resources shut down gracefully at system shut down
+
+# The whole point of this is to try to demote DRBD while the network
+# is still up and DRBD still has a chance to communicate with its peers.
 Wants=network-online.target
 After=network-online.target
+
+# This is to try to gracefully shut down DRBD you forgot to shutdown.
+# The per-resource template drbd@.service has a reverse dependency.
+# But maybe they still use the "global" activation service.
+# Don't try to demote DRBD while "drbd.service" is still running.
 Before=drbd.service
+
+# Don't shut down DRBD while Pacemaker is still running!
+Before=resource-agents-deps.target
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 
 ExecStop=@libdir@/scripts/drbd-service-shim.sh down all
+
+# No [Install] section here.  If you want to opt-out of the
+# drbd-graceful-shutdown.service for some reason, you can still
+# systemctl mask it.
