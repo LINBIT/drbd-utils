@@ -30,12 +30,6 @@ clean:
 .PHONY: all clean doc man doc-clean distclean
 .PHONY: install uninstall html pdf ps
 doc:	man
-ORIG_VERSION=9.0
-ifeq ($(WITH_84_SUPPORT),yes)
-MAN_LINK=8.4
-else
-MAN_LINK=$(ORIG_VERSION)
-endif
 
 
 doc-clean: distclean
@@ -164,24 +158,18 @@ install:
 	set -e; for f in $(MANPAGES) ; do \
 		s=$${f##*.}; \
 		b=$${f%.[0-9]}; \
-		case $$f in *.7) \
-			install -v -D -m 644 $$f $(DESTDIR)$(mandir)/$(MANLANG)/man$$s/$$f ; \
-			continue ;; \
+		case $$f in \
+		drbdmon.8|*.7) \
+			install -v -D -m 644 $$f $(DESTDIR)$(mandir)/$(MANLANG)/man$$s/$$f ;; \
+		*)	install -v -D -m 644 $$f $(DESTDIR)$(mandir)/$(MANLANG)/man$$s/$$b-9.0.$$s ;; \
 		esac ; \
-		install -v -D -m 644 $$f $(DESTDIR)$(mandir)/$(MANLANG)/man$$s/$$b-$(ORIG_VERSION).$$s ; \
-		if [ "$(CREATE_MAN_LINK)" = "yes" ]; then \
-			ML=$(MAN_LINK); \
-			case $$f in drbdmon.8) ML=$(ORIG_VERSION);; esac ; \
-			ln -sf $$b-$$ML.$$s $(DESTDIR)$(mandir)/$(MANLANG)/man$$s/$$f ; \
-		fi \
 	done
 
 uninstall:
 	@ set -e; for f in $(MANPAGES) ; do \
 		s=$${f##*.}; \
 		b=$${f%.[0-9]}; \
-		rm -vf $(DESTDIR)$(mandir)/$(MANLANG)/man$$s/$$b-$(ORIG_VERSION).$$s ; \
-		rm -vf $(DESTDIR)$(mandir)/$(MANLANG)/man$$s/$$f ; \
+		rm -vf $(DESTDIR)$(mandir)/$(MANLANG)/man$$s/$$b{,-9.0}.$$s ; \
 	done
 
 html:	$(addsuffix .html,$(basename $(MANPAGES)))

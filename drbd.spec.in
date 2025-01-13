@@ -211,7 +211,7 @@ This packages includes the DRBD administration tools.
 %{_mandir}/man5/drbd.conf-*
 %{_mandir}/man8/drbdmeta-*
 %if %{with drbdmon}
-%{_mandir}/man8/drbdmon-*
+%{_mandir}/man8/drbdmon.*
 %endif
 %endif
 %doc scripts/drbd.conf.example
@@ -439,24 +439,21 @@ This package contains Japanese man pages for DRBD.
 %endif
 %endif # with heartbeat
 %if %{with drbdmon}
-%{_mandir}/ja/man8/drbdmon-*
+%{_mandir}/ja/man8/drbdmon.*
 %endif
 
 %post man-ja
+_v=9.0
 for f in drbd drbdadm drbdmeta drbdsetup; do
-    ln -sf $f-8.4.8.gz %{_mandir}/ja/man8/$f.8.gz
+    ln -sf $f-${_v}.8.gz %{_mandir}/ja/man8/$f.8.gz
 done
-ln -sf drbd.conf-8.4.5.gz %{_mandir}/ja/man5/drbd.conf.5.gz
-%if %{with drbdmon}
-ln -sf drbdmon-9.0.8.gz %{_mandir}/ja/man8/drbdmon.8.gz
-%endif
+ln -sf drbd.conf-${_v}.5.gz %{_mandir}/ja/man5/drbd.conf.5.gz
 
 %preun man-ja
 for f in drbd drbdadm drbdmeta drbdsetup; do
     rm -f %{_mandir}/ja/man8/$f.8.gz
 done
 rm -f %{_mandir}/ja/man5/drbd.conf.5.gz
-rm -f %{_mandir}/ja/man8/drbdmon.8.gz
 %endif # with manual
 
 %prep
@@ -522,13 +519,11 @@ rm -rf %{buildroot}
 chkconfig --add drbd
 %endif
 %if %{with manual}
+_v=9.0
 for f in drbd drbdadm drbdmeta drbdsetup; do
-    ln -sf $f-8.4.8.gz %{_mandir}/man8/$f.8.gz
+    ln -sf $f-${_v}.8.gz %{_mandir}/man8/$f.8.gz
 done
-ln -sf drbd.conf-8.4.5.gz %{_mandir}/man5/drbd.conf.5.gz
-%if %{with drbdmon}
-ln -sf drbdmon-9.0.8.gz %{_mandir}/man8/drbdmon.8.gz
-%endif
+ln -sf drbd.conf-${_v}.5.gz %{_mandir}/man5/drbd.conf.5.gz
 %endif
 %if %{without udev}
 for i in `seq 0 15` ; do
