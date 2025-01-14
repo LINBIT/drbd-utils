@@ -17,7 +17,7 @@ const uint32_t      CfgEntryStore::CES_VERSION  = 0x00010000UL;
 
 CfgEntryStore::CfgEntryStore()
 {
-    config_mgr = std::unique_ptr<CfgMap> (new CfgMap(&comparators::compare_string));
+    config_mgr = std::unique_ptr<CfgMap>(new CfgMap(&comparators::compare_string));
     config = config_mgr.get();
 }
 
@@ -39,6 +39,9 @@ void CfgEntryStore::clear_impl() noexcept
     config->clear();
 }
 
+// Links the entry into the configuration entry store.
+// Unless this method throws an exception, the caller must ensure that the entry remains allocated,
+// e.g., by calling release() on the unique_ptr that manages the entry's allocation.
 void CfgEntryStore::set_entry(CfgEntry* const entry)
 {
     std::unique_ptr<CfgMap::Node> existing_node_mgr;

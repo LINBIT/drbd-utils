@@ -276,11 +276,13 @@ namespace configuration
                 if (new_entry != nullptr)
                 {
                     config_store.set_entry(new_entry.get());
+                    // New entry linked into the configuration, release immediately to prevent deallocation
+                    // if saving the configuration throws.
+                    CfgEntry* const changed_entry = new_entry.release();
                     entry = nullptr;
 
                     std::ofstream data_out(mon_env.config_file_path);
                     config_store.save_to(data_out);
-                    CfgEntry* const changed_entry = new_entry.release();
 
                     std::cout << "Changed configuration entry:\n";
                     display_entry(changed_entry);
