@@ -18,6 +18,8 @@ GlobalCommandsImpl::GlobalCommandsImpl(ComponentsHub& comp_hub, Configuration& c
     config(&config_ref),
     entry_exit(&cmd_names::KEY_CMD_EXIT, &GlobalCommandsImpl::cmd_exit),
     entry_display(&cmd_names::KEY_CMD_DISPLAY, &GlobalCommandsImpl::cmd_display),
+    entry_page(&cmd_names::KEY_CMD_PAGE, &GlobalCommandsImpl::local_command),
+    entry_refresh(&cmd_names::KEY_CMD_REFRESH, &GlobalCommandsImpl::cmd_refresh),
     entry_colors(&cmd_names::KEY_CMD_COLORS, &GlobalCommandsImpl::cmd_colors),
     entry_charset(&cmd_names::KEY_CMD_CHARSET, &GlobalCommandsImpl::cmd_charset),
     entry_select(&cmd_names::KEY_CMD_SELECT, &GlobalCommandsImpl::local_command),
@@ -34,6 +36,8 @@ GlobalCommandsImpl::GlobalCommandsImpl(ComponentsHub& comp_hub, Configuration& c
 {
     add_command(entry_exit);
     add_command(entry_display);
+    add_command(entry_page);
+    add_command(entry_refresh);
     add_command(entry_colors);
     add_command(entry_charset);
     add_command(entry_select);
@@ -85,6 +89,14 @@ bool GlobalCommandsImpl::cmd_display(const std::string& command, StringTokenizer
         std::string upper_display_name = string_transformations::uppercase_copy_of(cmd_arg);
         cmd_valid = dsp_comp_hub.dsp_selector->switch_to_display(upper_display_name);
     }
+    return cmd_valid;
+}
+
+bool GlobalCommandsImpl::cmd_refresh(const std::string& command, StringTokenizer& tokenizer)
+{
+    // Command does not take any arguments
+    bool cmd_valid = !tokenizer.has_next();
+    dsp_comp_hub.dsp_selector->refresh_display();
     return cmd_valid;
 }
 

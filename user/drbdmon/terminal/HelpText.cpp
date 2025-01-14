@@ -837,6 +837,16 @@ namespace helptext
         " command for convenience.\n"
         "\n"
 
+        "\x1B\x04" "/refresh" "\x1B\xFF" "\n"
+        "    Refreshes (clears and redraws) the display\n"
+        "\n"
+
+        "\x1B\x04" "/page" "\x1B\xFF" "\n"
+        "    Switches a multiple-page display to the specified page number.\n"
+        "    The keyword " "\x1B\x04" "LAST" "\x1B\xFF" " switches to the last page, and on displays that "
+        "support auto-scrolling, it also enables auto-scrolling to the last page.\n"
+        "\n"
+
         "\x1B\x04" "/cursor" "\x1B\xFF" "\n"
         "    On the resource list and connection list displays, puts the cursor on the list item that matches "
         "the string you specify. "

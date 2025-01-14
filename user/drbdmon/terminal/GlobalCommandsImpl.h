@@ -25,6 +25,8 @@ class GlobalCommandsImpl : public GlobalCommands, public CommandsBase<GlobalComm
 
     Entry entry_exit;
     Entry entry_display;
+    Entry entry_page;
+    Entry entry_refresh;
     Entry entry_colors;
     Entry entry_charset;
     Entry entry_select;
@@ -41,6 +43,8 @@ class GlobalCommandsImpl : public GlobalCommands, public CommandsBase<GlobalComm
 
     bool cmd_exit(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_display(const std::string& command, StringTokenizer& tokenizer);
+    bool cmd_refresh(const std::string& command, StringTokenizer& tokenizer);
+    bool cmd_page(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_colors(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_charset(const std::string& command, StringTokenizer& tokenizer);
     bool cmd_select_all(const std::string& command, StringTokenizer& tokenizer);

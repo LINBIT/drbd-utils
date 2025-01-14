@@ -10,6 +10,8 @@
 class MDspBase : public ModularDisplay
 {
   public:
+    static const std::string    KEYWORD_PAGE_LAST;
+
     enum class page_change_type : uint8_t
     {
         PG_CHG_CANCELED,
@@ -38,7 +40,10 @@ class MDspBase : public ModularDisplay
 
     virtual bool key_pressed(const uint32_t key) override;
     virtual bool mouse_action(MouseEvent& mouse) override;
-    bool execute_command(const std::string& command, StringTokenizer& tokenizer) override;
+    // Displays based on MDspBase should override execute_custom_command to keep the commands common
+    // to all MDspBase displays, such as /page
+    virtual bool execute_command(const std::string& command, StringTokenizer& tokenizer) override;
+    virtual bool execute_custom_command(const std::string& command, StringTokenizer& tokenizer);
 
     virtual void enter_command_line_mode() = 0;
     virtual void leave_command_line_mode() = 0;

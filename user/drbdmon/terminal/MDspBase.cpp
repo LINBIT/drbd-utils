@@ -4,11 +4,14 @@
 #include <terminal/DisplayConsts.h>
 #include <terminal/MouseEvent.h>
 #include <terminal/InputField.h>
+#include <terminal/GlobalCommandConsts.h>
 #include <cppdsaext/src/integerparse.h>
 #include <cppdsaext/src/dsaext.h>
 #include <string_transformations.h>
 #include <bounds.h>
 #include <algorithm>
+
+const std::string   MDspBase::KEYWORD_PAGE_LAST("LAST");
 
 MDspBase::MDspBase(const ComponentsHub& comp_hub):
     dsp_comp_hub(comp_hub)
@@ -431,6 +434,44 @@ void MDspBase::base_enter_page_nav_mode()
 }
 
 bool MDspBase::execute_command(const std::string& command, StringTokenizer& tokenizer)
+{
+    bool cmd_valid = false;
+    if (command == cmd_names::KEY_CMD_PAGE)
+    {
+        if (tokenizer.has_next())
+        {
+            const std::string arg_page = tokenizer.next();
+            if (!tokenizer.has_next())
+            {
+                try
+                {
+                    const uint32_t arg_page_nr = dsaext::parse_unsigned_int32(arg_page);
+                    if (arg_page_nr >= 1 && arg_page_nr <= DisplayConsts::MAX_PAGE_NR)
+                    {
+                        set_page_nr(arg_page_nr);
+                        cmd_valid = true;
+                    }
+                }
+                catch (dsaext::NumberFormatException&)
+                {
+                    const std::string upper_arg_page = string_transformations::uppercase_copy_of(arg_page);
+                    if (upper_arg_page == KEYWORD_PAGE_LAST)
+                    {
+                        set_page_nr(DisplayConsts::MAX_PAGE_NR);
+                        cmd_valid = true;
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        cmd_valid = execute_custom_command(command, tokenizer);
+    }
+    return cmd_valid;
+}
+
+bool MDspBase::execute_custom_command(const std::string& command, StringTokenizer& tokenizer)
 {
     return false;
 }

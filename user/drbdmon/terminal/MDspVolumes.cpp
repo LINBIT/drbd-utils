@@ -356,7 +356,7 @@ bool MDspVolumes::mouse_action(MouseEvent& mouse)
     return intercepted;
 }
 
-bool MDspVolumes::execute_command(const std::string& command, StringTokenizer& tokenizer)
+bool MDspVolumes::execute_custom_command(const std::string& command, StringTokenizer& tokenizer)
 {
     bool accepted = false;
     if (command == cmd_names::KEY_CMD_CURSOR)

@@ -29,7 +29,7 @@ class MDspPeerVolumes : public MDspStdListBase
     virtual bool key_pressed(const uint32_t key) override;
     virtual bool mouse_action(MouseEvent& mouse) override;
 
-    virtual bool execute_command(const std::string& command, StringTokenizer& tokenizer);
+    virtual bool execute_custom_command(const std::string& command, StringTokenizer& tokenizer) override;
     virtual void clear_selection();
     virtual bool is_selecting() override;
     virtual void toggle_select_cursor_item() override;

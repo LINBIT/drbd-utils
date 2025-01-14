@@ -8,6 +8,8 @@ namespace cmd_names
 {
     extern const std::string    KEY_CMD_EXIT;
     extern const std::string    KEY_CMD_DISPLAY;
+    extern const std::string    KEY_CMD_PAGE;
+    extern const std::string    KEY_CMD_REFRESH;
     extern const std::string    KEY_CMD_COLORS;
     extern const std::string    KEY_CMD_CHARSET;
     extern const std::string    KEY_CMD_SELECT;

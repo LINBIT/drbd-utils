@@ -4,6 +4,8 @@ namespace cmd_names
 {
     // Command names must be all upper-case
     const std::string   KEY_CMD_EXIT("EXIT");
+    const std::string   KEY_CMD_REFRESH("REFRESH");
+    const std::string   KEY_CMD_PAGE("PAGE");
     const std::string   KEY_CMD_DISPLAY("DISPLAY");
     const std::string   KEY_CMD_COLORS("COLORS");
     const std::string   KEY_CMD_CHARSET("CHARSET");
