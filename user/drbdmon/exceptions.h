@@ -21,8 +21,6 @@ class EventException : public std::exception
         const std::string* const event_line_ref
     );
     virtual ~EventException() noexcept;
-    EventException(const EventException& orig) = default;
-    EventException& operator=(const EventException& orig) = default;
     EventException(EventException&& orig) = default;
     EventException& operator=(EventException&& orig) = default;
     // @throws std::bad_alloc
