@@ -36,15 +36,10 @@
 # conditionals may not contain "-" nor "_", hence "bashcompletion"
 %bcond_without bashcompletion
 %bcond_without sbinsymlinks
-# --with xen is ignored on any non-x86 architecture
-%bcond_without xen
 %bcond_without 84support
 %bcond_without drbdmon
 %bcond_with prebuiltman
 %bcond_with selinux
-%ifnarch %{ix86} x86_64
-%global _without_xen --without-xen
-%endif
 
 Name: drbd
 Summary: DRBD driver for Linux
@@ -60,11 +55,6 @@ URL: http://www.drbd.org/
 BuildRoot: %(mktemp -ud %{_tmppath}/drbd-utils-%{version}-%{release}-XXXXXX)
 BuildRequires: @RPM_BUILDREQ_DEFAULT@
 Requires: drbd-utils = %{version}-%{release}
-%ifarch %{ix86} x86_64
-%if %{with xen}
-Requires: drbd-xen = %{version}-%{release}
-%endif
-%endif
 %if %{with udev}
 Requires: drbd-udev = %{version}-%{release}
 BuildRequires: udev
@@ -222,25 +212,6 @@ This packages includes the DRBD administration tools.
 %doc COPYING
 %doc ChangeLog
 %doc README.md
-
-%ifarch %{ix86} x86_64
-%if %{with xen}
-%package xen
-Summary: Xen block device management script for DRBD
-Group: System Environment/Kernel
-Requires: drbd-utils = %{version}-%{release}
-@RPM_REQ_XEN@
-@RPM_SUBPACKAGE_NOARCH@
-
-%description xen
-This package contains a Xen block device helper script for DRBD, capable of
-promoting and demoting DRBD resources as necessary.
-
-%files xen
-%defattr(755,root,root,-)
-%{_sysconfdir}/xen/scripts/block-drbd
-%endif # with xen
-%endif # arch %{ix86} x86_64
 
 %if %{with udev}
 %package udev
@@ -473,7 +444,6 @@ autoheader
 autoconf
 %configure \
     %{?_without_udev} \
-    %{?_without_xen} \
     %{?_without_pacemaker} \
     %{?_without_heartbeat} \
     %{?_with_rgmanager} \

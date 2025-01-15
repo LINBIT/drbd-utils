@@ -45,7 +45,6 @@ SYSTEMD_EXEC_CONDITION = @systemd_exec_condition@
 
 # features enabled or disabled by configure
 WITH_UDEV = @WITH_UDEV@
-WITH_XEN = @WITH_XEN@
 WITH_PACEMAKER = @WITH_PACEMAKER@
 WITH_HEARTBEAT = @WITH_HEARTBEAT@
 WITH_RGMANAGER = @WITH_RGMANAGER@
@@ -93,7 +92,7 @@ endif
 
 all: $(TEMPLATES)
 
-install: install-utils install-udev install-xen install-heartbeat install-pacemaker install-rgmanager install-bashcompletion
+install: install-utils install-udev install-heartbeat install-pacemaker install-rgmanager install-bashcompletion
 
 install-utils: $(SERVICE_TEMPLATES) $(SCRIPT_TEMPLATES)
 	install -d $(DESTDIR)$(LIBDIR)
@@ -181,12 +180,6 @@ ifeq ($(WITH_RGMANAGER),yes)
 	install -m 755 rhcs_fence $(DESTDIR)$(LIBDIR)
 endif
 
-install-xen:
-ifeq ($(WITH_XEN),yes)
-	mkdir -p $(DESTDIR)$(sysconfdir)/xen/scripts
-	install -m 755 block-drbd $(DESTDIR)$(sysconfdir)/xen/scripts
-endif
-
 install-udev: $(UDEV_TEMPLATES)
 ifeq ($(WITH_UDEV),yes)
 	mkdir -p $(DESTDIR)$(udevrulesdir)
@@ -216,7 +209,6 @@ ifeq ($(subst both,systemd,$(initscripttype)),systemd)
 endif
 	rm -f $(DESTDIR)$(sysconfdir)/ha.d/resource.d/drbddisk
 	rm -f $(DESTDIR)$(sysconfdir)/ha.d/resource.d/drbdupper
-	rm -f $(DESTDIR)$(sysconfdir)/xen/scripts/block-drbd
 	rm -f $(DESTDIR)$(sysconfdir)/bash_completion.d/drbdadm$(BASH_COMPLETION_SUFFIX)
 	! test -L $(DESTDIR)/sbin/rcdrbd || rm $(DESTDIR)/sbin/rcdrbd
 

@@ -48,7 +48,6 @@ docdir="`eval echo ${docdir}`"
 dnl "--with-<foo>" options (all except rgm enabled by default, pass --without-<foo> to disable)
 WITH_84_SUPPORT=yes
 WITH_UDEV=yes
-WITH_XEN=yes
 WITH_PACEMAKER=yes
 WITH_HEARTBEAT=yes
 WITH_RGMANAGER=no
@@ -72,10 +71,6 @@ AC_ARG_ENABLE([udevchecks],
 			[Disable host udev version checks])],
 	[],
 	[enable_udevchecks=yes])
-AC_ARG_WITH([xen],
-	[AS_HELP_STRING([--with-xen],
-			[Enable Xen integration])],
-	[WITH_XEN=$withval])
 AC_ARG_WITH([pacemaker],
 	[AS_HELP_STRING([--with-pacemaker],
 			[Enable Pacemaker integration])],
@@ -137,7 +132,6 @@ fi
 
 AC_SUBST(WITH_84_SUPPORT)
 AC_SUBST(WITH_UDEV)
-AC_SUBST(WITH_XEN)
 AC_SUBST(WITH_PACEMAKER)
 AC_SUBST(WITH_HEARTBEAT)
 AC_SUBST(WITH_RGMANAGER)
@@ -197,6 +191,7 @@ AC_ARG_WITH(systemdpresetdir,
 	AS_HELP_STRING([--with-systemdpresetdir=DIR],
 	[Directory for systemd system preset files [Auto]]),
 	systemdpresetdir=$withval,systemdpresetdir=$($PKG_CONFIG --variable=systemdsystempresetdir systemd))
+AC_SUBST(systemdpresetdir)
 
 dnl Does systemd support ExecCondition=?
 AC_ARG_WITH([systemd_exec_condition],
@@ -397,7 +392,6 @@ RPM_SUBPACKAGE_NOARCH=""
 RPM_REQ_PACEMAKER=""
 RPM_REQ_HEARTBEAT=""
 RPM_REQ_BASH_COMPLETION=""
-RPM_REQ_XEN=""
 RPM_REQ_CHKCONFIG_POST=""
 RPM_REQ_CHKCONFIG_PREUN=""
 dnl figure out the distribution we're running on, and set some variables accordingly
@@ -425,11 +419,9 @@ else
 	    AC_CHECK_FILE(/etc/fedora-release, [SUB_DISTRO="fedora"], [SUB_DISTRO="RHEL"])
 	    if test "$SUB_DISTRO" = "fedora"; then
 		    # pacemaker, heartbeat and bash-completion are not available in RHEL
-		    # Xen: Be relaxed on RHEL (hassle free update). Be strict on Fedora
 		    RPM_REQ_PACEMAKER="Requires: pacemaker"
 		    RPM_REQ_HEARTBEAT="Requires: heartbeat"
 		    RPM_REQ_BASH_COMPLETION="Requires: bash-completion"
-		    RPM_REQ_XEN="Requires: xen"
 	    fi
 	    ;;
         debian)
@@ -443,7 +435,6 @@ else
 
 	    RPM_REQ_BASH_COMPLETION="Requires: bash"
 	    # The following are disabled for hassle free updates:
-	    # RPM_REQ_XEN="Requires: xen"
 	    # RPM_REQ_PACEMAKER="Requires: pacemaker"
 	    # RPM_REQ_HEARTBEAT="Requires: heartbeat"
 
@@ -490,7 +481,6 @@ AC_SUBST(RPM_SUBPACKAGE_NOARCH)
 AC_SUBST(RPM_REQ_PACEMAKER)
 AC_SUBST(RPM_REQ_HEARTBEAT)
 AC_SUBST(RPM_REQ_BASH_COMPLETION)
-AC_SUBST(RPM_REQ_XEN)
 AC_SUBST(RPM_REQ_CHKCONFIG_POST)
 AC_SUBST(RPM_REQ_CHKCONFIG_PREUN)
 AC_SUBST(WITH_CLITEST)

@@ -3,6 +3,9 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+ * drop XEN block-drbd; if you think you want that,
+   look into the LINSTOR + xcp-ng integration instead.
+
 9.30.0
 -----------
  * drbdmon: various improvements
