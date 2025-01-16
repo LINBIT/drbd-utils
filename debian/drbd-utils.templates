@@ -1,5 +1,5 @@
 Template: drbd-utils/manpages
 Type: select
-Choices: 8.3, 8.4, 9.0
+Choices: 8.4, 9.0
 Default: 9.0
 Description: Which version of the drbd man pages do you want to use?
