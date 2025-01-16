@@ -3,6 +3,17 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.30.0-rc.1
+-----------
+ * drbdmon: various improvements
+ * drbdadm: preparations for drbd-proxy v4
+ * ocf: explicitly timeout crm_master IPC early
+ * ocf: account for "recent" name change to "Promoted"
+ * windrbd: various improvements
+ * doc: switch to drbd9 manpages by default
+ * init: reverse dependency for drbd-graceful-shutdown.service
+   drbd@.service now has an After dependency for it.
+
 9.29.0
 -----------
  * drbdmeta: fix initialization for external md
