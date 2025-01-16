@@ -450,10 +450,13 @@ done
 ln -sf drbd.conf-${_v}.5.gz %{_mandir}/ja/man5/drbd.conf.5.gz
 
 %preun man-ja
+# don't run on upgrades:
+if [ $1 -eq 0 ]; then
 for f in drbd drbdadm drbdmeta drbdsetup; do
     rm -f %{_mandir}/ja/man8/$f.8.gz
 done
 rm -f %{_mandir}/ja/man5/drbd.conf.5.gz
+fi
 %endif # with manual
 
 %prep
@@ -532,11 +535,14 @@ done
 %endif #without udev
 
 %preun utils
+# don't run on upgrades:
+if [ $1 -eq 0 ]; then
 for f in drbd drbdadm drbdmeta drbdsetup; do
     rm -f %{_mandir}/man8/$f.8.gz
 done
 rm -f %{_mandir}/man5/drbd.conf.5.gz
 rm -f %{_mandir}/man8/drbdmon.8.gz
+fi
 %if "%{initscripttype}" == "systemd"
 %systemd_preun drbd.service
 %endif
