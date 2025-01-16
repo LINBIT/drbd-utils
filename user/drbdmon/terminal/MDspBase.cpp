@@ -449,6 +449,7 @@ bool MDspBase::execute_command(const std::string& command, StringTokenizer& toke
                     if (arg_page_nr >= 1 && arg_page_nr <= DisplayConsts::MAX_PAGE_NR)
                     {
                         set_page_nr(arg_page_nr);
+                        leave_page_nav_mode(page_change_type::PG_CHG_CHANGED);
                         cmd_valid = true;
                     }
                 }
@@ -458,6 +459,7 @@ bool MDspBase::execute_command(const std::string& command, StringTokenizer& toke
                     if (upper_arg_page == KEYWORD_PAGE_LAST)
                     {
                         set_page_nr(DisplayConsts::MAX_PAGE_NR);
+                        leave_page_nav_mode(page_change_type::PG_CHG_CHANGED);
                         cmd_valid = true;
                     }
                 }
