@@ -560,7 +560,7 @@ fi
 
 
 %changelog
-* Thu Jan 16 2025 Roland Kammerer <roland.kammerer@linbit.com> - 9.30.0~rc.1-1
+* Thu Jan 23 2025 Roland Kammerer <roland.kammerer@linbit.com> - 9.30.0-1
 -  New upstream release
 
 * Mon Oct 28 2024 Roland Kammerer <roland.kammerer@linbit.com> - 9.29.0-1
