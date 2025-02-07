@@ -775,7 +775,11 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running)
 				connect = true;
 
 			if (!opts_equal(oc, conf_o, runn_o)) {
-				if (!opt_equal(oc, "transport", conf_o, runn_o)) {
+				/* TODO this should be more generic, and check
+				 * all IMMUTABLE_NET_OPTIONS on ajdust. Currently that's only these two.
+				 * Convert to del-peer/new-peer, if changed, filter out if not. */
+				if (!opt_equal(oc, "load-balance-paths", conf_o, runn_o)
+				||  !opt_equal(oc, "transport", conf_o, runn_o)) {
 					/* disconnect implicit by del-peer */
 					schedule_deferred_cmd(&del_peer_cmd, &tmp_ctx, CFG_NET_PREP_DOWN);
 					schedule_deferred_cmd(&new_peer_cmd, &tmp_ctx, CFG_NET_PREP_UP);
@@ -784,6 +788,7 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running)
 					schedule_peer_device_options(&tmp_ctx);
 				} else {
 					del_opt(&tmp_ctx.conn->net_options, "transport");
+					del_opt(&tmp_ctx.conn->net_options, "load-balance-paths");
 					schedule_deferred_cmd(&net_options_defaults_cmd, &tmp_ctx, CFG_NET);
 				}
 			}
