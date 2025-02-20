@@ -123,7 +123,7 @@ drbd-tests:
     - export DRBD_TEST_DOCKER_IMAGE=$LINBIT_DOCKER_REGISTRY/drbd9-tests:latest
     - docker image pull $DRBD_TEST_DOCKER_IMAGE
     - |
-      export DRBD_VERSION=9.1.0.latest
+      export DRBD_VERSION=9.2.0.latest
       export DRBD_UTILS_VERSION=9.0.0.$CI_COMMIT_SHA-1
       cd drbd9-tests
       ./virter/run-test.sh --out-dir=../tests-out
