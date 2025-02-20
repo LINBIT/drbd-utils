@@ -10,7 +10,7 @@ PartOf=drbd@%i.target
 Wants=network-online.target sshd.service
 After=network-online.target nss-lookup.target sshd.service
 # If drbd-proxy is used, we want it to be running already.
-After=drbdproxy.service
+After=drbd-proxy.service
 
 # Actually, reverse: on shutdown, we want to stop explicit instances first,
 # then only stop those resources that have been started by other means.
