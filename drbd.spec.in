@@ -560,6 +560,9 @@ fi
 
 
 %changelog
+* Thu Feb 20 2025 Joel Colledge <joel.colledge@linbit.com> - 9.30.0+feature.2.gd5082812b57f-1
+-  New upstream release
+
 * Thu Jan 23 2025 Roland Kammerer <roland.kammerer@linbit.com> - 9.30.0-1
 -  New upstream release
 

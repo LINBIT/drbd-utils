@@ -3,6 +3,10 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.30.0+feature.2.gd5082812b57f
+-----------
+ * drbdadm: support for resync-without-replication
+
 9.30.0
 -----------
  * drbdmon: various improvements
