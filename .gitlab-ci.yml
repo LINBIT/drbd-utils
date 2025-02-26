@@ -39,6 +39,7 @@ variables:
         # * rhelX.y is replaced by rhelX.0
         local dists=$(rq -t < drbd9-tests/virter/vms.toml | jq -r '[
           .vms[].metadata.BuildDistribution
+          | values
           | select(. != "mainline")
           | sub("rhel(?<major>\\d)\\.\\d"; "rhel\(.major).0")
         ] | unique | join(",")')
