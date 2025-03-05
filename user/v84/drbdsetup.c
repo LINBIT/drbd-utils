@@ -2320,7 +2320,7 @@ static int udev_scmd(const struct drbd_cmd *cm, struct genl_info *info, void *u_
 	struct disk_conf dc = { .disk_size = 0, };
 
 	if (!info) {
-		return 1;
+		return 0;
 	}
 
 	drbd_cfg_context_from_attrs(&cfg, info);
