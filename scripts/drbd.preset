@@ -1,0 +1,8 @@
+# This file is part of drbd-utils
+#
+# By default, these targets and services should enabled,
+# respectively disabled,
+# even if the system wide policy has a default of "enable/disable *"
+
+# Not this one; enable per-resource drbd@<resname>.target instead.
+disable drbd.service

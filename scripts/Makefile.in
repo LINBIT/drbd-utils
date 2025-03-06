@@ -32,6 +32,7 @@ datadir = @datadir@
 sbindir = @sbindir@
 sysconfdir = @sysconfdir@
 systemdunitdir = @systemdunitdir@
+systemdpresetdir = @systemdpresetdir@
 tmpfilesdir = @tmpfilesdir@
 udevrulesdir = @udevrulesdir@
 initscripttype = @initscripttype@
@@ -106,6 +107,8 @@ ifeq ($(subst both,systemd,$(initscripttype)),systemd)
 	install -d $(DESTDIR)$(systemdunitdir)
 	install -m 644 $(SYSTEMD_UNITS) $(DESTDIR)$(systemdunitdir)/
 	install -m 644 $(SYSTEMD_TEMPLATES) $(DESTDIR)$(systemdunitdir)/
+	install -d $(DESTDIR)$(systemdpresetdir)/
+	install -m 644 drbd.preset $(DESTDIR)$(systemdpresetdir)/50-drbd.preset
 	install -d $(DESTDIR)$(LIBDIR)/scripts
 	install -m 755 drbd $(DESTDIR)$(LIBDIR)/scripts
 	install -m 755 drbd-service-shim.sh $(DESTDIR)$(LIBDIR)/scripts

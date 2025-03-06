@@ -193,6 +193,11 @@ fi
 AC_SUBST(systemdunitdir)
 AC_MSG_RESULT([Using systemd unit directory: $systemdunitdir])
 
+AC_ARG_WITH(systemdpresetdir,
+	AS_HELP_STRING([--with-systemdpresetdir=DIR],
+	[Directory for systemd system preset files [Auto]]),
+	systemdpresetdir=$withval,systemdpresetdir=$($PKG_CONFIG --variable=systemdsystempresetdir systemd))
+
 dnl Does systemd support ExecCondition=?
 AC_ARG_WITH([systemd_exec_condition],
 	[AS_HELP_STRING([--with-systemd-exec-condition],[Enable systemd scripts to use ExecCondition=, introduced with systemd 243 [Auto]])])
