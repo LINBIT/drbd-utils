@@ -43,18 +43,17 @@ tests/v84/drbdadm
 tests/v9/drbdadm
 tests/v9/drbdsetup_events2_instrumented
 
-documentation/v9/drbd.8
-documentation/v9/drbd.conf.5
-documentation/v9/drbdadm.8
-documentation/v9/drbddisk.8
-documentation/v9/drbdmeta.8
-documentation/v9/drbdmon.8
-documentation/v9/drbdsetup.8
+documentation/v9/*.8
+documentation/v9/*.7
+documentation/v9/*.5
 documentation/v9/manpage.links
 documentation/v9/manpage.refs
 documentation/v9/drbdsetup_*.xml
 documentation/v9/drbd.conf.xml
 documentation/v9/drbdsetup.xml
+documentation/v9/*.target.xml
+documentation/v9/*.service.xml
+documentation/v9/ocf_linbit_drbd*.xml
 documentation/v9/*.pot
 
 documentation/v84/drbdsetup_*.xml
