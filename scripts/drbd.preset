@@ -6,3 +6,5 @@
 
 # Not this one; enable per-resource drbd@<resname>.target instead.
 disable drbd.service
+
+enable drbd-configured.target

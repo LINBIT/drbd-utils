@@ -1,0 +1,6 @@
+[Unit]
+Description=All DRBD resources configured (all enabled drbd@.target units started)
+Documentation=man:drbd-configured.target(7)
+
+[Install]
+WantedBy=multi-user.target

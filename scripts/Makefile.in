@@ -67,6 +67,7 @@ SYSTEMD_TEMPLATES += drbd-wait-promotable@.service
 
 SYSTEMD_UNITS  = drbd.service
 SYSTEMD_UNITS += drbd-graceful-shutdown.service
+SYSTEMD_UNITS += drbd-configured.target
 
 UDEV_TEMPLATES  = drbd.rules
 

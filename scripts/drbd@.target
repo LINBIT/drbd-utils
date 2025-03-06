@@ -2,7 +2,8 @@
 Description=DBRD %I configured
 Documentation=man:drbd@.target(7)
 After=network-online.target nss-lookup.target
+Before=drbd-configured.target
 Requires=drbd@%i.service
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=drbd-configured.target

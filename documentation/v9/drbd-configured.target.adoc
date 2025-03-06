@@ -1,0 +1,33 @@
+drbd-configured.target(7)
+=========================
+
+Name
+----
+drbd-configured.target - System target unit indicating all (enabled) DRBD resources are configured
+
+
+Synopsis
+--------
+drbd-configured.target
+
+Description
+-----------
+This target should be enabled by default, and acts as a synchronization point
+to "install" the individual **drbd@**__RESNAME__**.target** instances.
+
+You can then order any units that expect on one or more DRBD resources to be
+configured after **drbd-configured.target**.
+
+Example
+-------
+
+-------------
+systemctl enable drbd-configured.target
+for res in $(drbdadm sh-resources); do
+    systemctl enable drbd@$(systemd-escape "$res").target
+done
+-------------
+
+See Also
+--------
+linkgit:drbd@.target[7]
