@@ -1,5 +1,5 @@
 [Unit]
-Description=DRBD -- please disable. Unless you are NOT using a cluster manager.
+Description=DRBD -- please disable. Instead, use the per resource drbd@.target template unit.
 Documentation=man:drbd.service(7)
 Wants=network-online.target sshd.service
 After=network-online.target sshd.service drbdproxy.service

@@ -37,6 +37,16 @@ If you think you want to enable this unit, you probably still should disable
 this unit, as this unit may not do what you think it does, and there likely are
 better ways to do what you expected this unit to do.
 
+Usually you are better of with
+
+-------------
+systemctl enable drbd-configured.target
+for res in $(drbdadm sh-resources); do
+    systemctl enable drbd@$(systemd-escape "$res").target
+done
+-------------
+
+
 See Also
 --------
 linkgit:drbd-reactor[1],

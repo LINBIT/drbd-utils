@@ -43,6 +43,8 @@ systemctl enable drbd-wait-promotable@webdata.service
 echo "/dev/drbdX /mnt/point xfs defaults,nofail,x-systemd.requires=drbd@webdata.target 0 0" >> /etc/fstab
 -------------
 
+But you really should let *drbd-reactor* handle the mount (and services using it) instead.
+
 See Also
 --------
 linkgit:drbd-reactor[1],
