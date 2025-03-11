@@ -1,4 +1,0 @@
-type DRBDConfigure (
-	static str ArgList[] = { ResName }
-	str ResName
-)

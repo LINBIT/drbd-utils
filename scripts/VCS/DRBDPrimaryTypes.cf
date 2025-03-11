@@ -1,4 +1,0 @@
-type DRBDPrimary (
-	static str ArgList[] = { ResName };
-	str ResName;
-)
