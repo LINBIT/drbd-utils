@@ -923,7 +923,7 @@ static int sh_resource(const struct cfg_ctx *ctx)
 
 static int sh_dev(const struct cfg_ctx *ctx)
 {
-	printf("%s\n", ctx->vol->device);
+	printf("/dev/drbd%u\n", ctx->vol->device_minor);
 	return 0;
 }
 

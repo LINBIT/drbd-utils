@@ -922,11 +922,15 @@ static void check_minor_nonsense(const char *devname, const int explicit_minor)
 		    config_file, fline, explicit_minor, explicit_minor);
 		config_valid = 0;
 		return;
-	} else if (devname[9] == '_')
+	} else if (devname[9] == '_') {
+		log_err("%s:%d: arbitrary device names (/dev/drbd_...) are no longer generated from current udev rules.\n"
+			"\tYou may need to manually mknod %s b 147 %u\n"
+			"\tYou should no longer use them.\n",
+		    config_file, fline, devname, explicit_minor);
 		return;
+	}
 
-	log_err("%s:%d: arbitrary device name must start with /dev/drbd_\n"
-	    "\tmind the '_'! (/dev/ is optional, but drbd_ is required)\n",
+	log_err("%s:%d: explicit device names should be of the form /dev/drbd<minor>\n",
 	    config_file, fline);
 	config_valid = 0;
 	return;

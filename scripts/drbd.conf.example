@@ -57,8 +57,14 @@ resource "ipv6_example_res" {
 		shared-secret "ieho4CiiUmaes6Ai";
 	}
 
-	volume 2 {
-		device	"/dev/drbd_fancy_name" minor 0;
+	# Volume numbers are per resource, and arbitrary.
+	# You can start anywhere, and have gaps.
+	volume 22 {
+		# Device minor numbers are per node! Not per resource.
+		# Each volume must have its own minor number.
+		# It is strongly advised to use the same minor number for the
+		# same resource/volume on all participating nodes.
+		device	minor 5;
 		disk	/dev/vg0/example2;
 		meta-disk internal;
 	}
