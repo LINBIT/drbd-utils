@@ -3,8 +3,17 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
- * drop XEN block-drbd; if you think you want that,
-   look into the LINSTOR + xcp-ng integration instead.
+9.31.0-rc.1
+-----------
+ * VCS: drop integration
+ * XEN block-drbd: drop. if you think you want that,
+   look into the LINSTOR + xcp-ng integration instead
+ * drbd-configured.target: new sync point
+ * drbd.service: disable this old sysvinit/sh wrapper
+   (not to be confused with drbd@.service)
+ * drbd-graceful-shutdown.service: improve handling
+   of pacemaker shutdown
+ * drbdsetup,v8.4: fix udev command
 
 9.30.0
 -----------
