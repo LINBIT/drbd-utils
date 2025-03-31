@@ -1265,7 +1265,8 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 
 	    <listitem>
 	      <para>Writes to the DRBD device complete as soon as they have
-	      reached the local and all remote disks.</para>
+	      reached the local and all remote disks.
+	      This is the default protocol.</para>
 	    </listitem>
 	  </varlistentry>
 	</variablelist>
