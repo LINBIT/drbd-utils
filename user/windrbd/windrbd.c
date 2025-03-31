@@ -119,6 +119,9 @@ void usage_and_exit(void)
 	fprintf(stderr, "	windrbd [opt] resume-io-for-minor <minor>\n");
 	fprintf(stderr, "		Tells WinDRBD driver to resume I/O by submitting.\n");
 	fprintf(stderr, "		I/O requests (including the suspended ones) to the DRBD engine.\n");
+	fprintf(stderr, "	windrbd [opt] bus-device-is-working\n");
+	fprintf(stderr, "		Queries WinDRBD driver if it can access the bus device\n");
+	fprintf(stderr, "		Exit status is 0 (success) if bus device is working.\n");
 
 	fprintf(stderr, "Options are:\n");
 	fprintf(stderr, "	-q (quiet): be a little less verbose.\n");
@@ -1482,6 +1485,26 @@ int print_lock_down_state(void)
 	return ret;
 }
 
+int print_bus_device_working(void)
+{
+	int value, ret;
+
+	ret = get_int_ioctl(IOCTL_WINDRBD_ROOT_BUS_DEVICE_IS_WORKING, &value);
+	if (ret == 0) {
+		if (!quiet) {
+			if (value)
+				printf("WinDRBD Virtual Bus Device works as expected.\n");
+			else
+				printf("WinDRBD Virtual Bus Device does NOT work as expected, please recreate\nwindrbd remove-bus-device <inf-file>\nwindrbd install-bus-device <inf-file>\n");
+		}
+		/* return 0 (= success in bash) only if ioctl succeeded
+		 * and ioctl reported bus device working.
+		 */
+		return value ? 0 : 1;
+	}
+	return ret;
+}
+
 void print_windows_error_code(const char *func)
 {
 	int err = GetLastError();
@@ -2064,6 +2087,12 @@ int main(int argc, char ** argv)
 			usage_and_exit();
 		}
 		return update_size2(argv[optind+1], atoll_or_die(argv[optind+2]));
+	}
+	if (strcmp(op, "bus-device-is-working") == 0) {
+		if (argc != optind+1) {
+			usage_and_exit();
+		}
+		return print_bus_device_working();
 	}
 
 	usage_and_exit();
