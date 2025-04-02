@@ -123,6 +123,11 @@ struct paths_list {
 	struct drbd_cfg_context ctx;
 	struct drbd_path_info info;
 };
+enum usage_type {
+	BRIEF,
+	FULL,
+	XML,
+};
 
 typedef
 __attribute__((format(printf, 2, 3)))
@@ -136,6 +141,19 @@ extern bool opt_statistics;
 extern bool opt_timestamps;
 extern bool opt_diff;
 extern bool opt_fullch;
+extern struct drbd_cfg_context global_ctx;
+extern enum cfg_ctx_key context;
+extern const struct drbd_cmd connect_cmd;
+extern const struct drbd_cmd new_peer_cmd;
+extern const struct drbd_cmd del_peer_cmd;
+extern const struct drbd_cmd new_path_cmd;
+extern const struct drbd_cmd del_path_cmd;
+extern const struct drbd_cmd disconnect_cmd;
+
+struct option *make_longoptions(const struct drbd_cmd *cm);
+int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv);
+void print_command_usage(const struct drbd_cmd *cm, enum usage_type);
+int sockaddr_from_str(struct sockaddr_storage *storage, const char *str);
 
 bool kernel_older_than(int version, int patchlevel, int sublevel);
 int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);

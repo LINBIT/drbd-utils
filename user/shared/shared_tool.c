@@ -528,16 +528,14 @@ bool ipv6_addresses_match(const char *const addr_1st,
 	return match;
 }
 
-unsigned long long
-m_strtoll(const char *s, const char def_unit)
+void print_strtoll_error_and_exit(int err, const char *s, const char def_unit)
 {
-	unsigned long long r;
-
-	switch(new_strtoll(s, def_unit, &r)) {
+	switch(err) {
 	case MSE_OK:
-		return r;
+		fprintf(stderr, "unexpected MSE_OK\n");
+		exit(100);
 	case MSE_DEFAULT_UNIT:
-		fprintf(stderr, "unexpected default unit: %d\n",def_unit);
+		fprintf(stderr, "unexpected default unit: %d\n", def_unit);
 		exit(100);
 	case MSE_MISSING_NUMBER:
 		fprintf(stderr, "missing number argument\n");
@@ -555,6 +553,19 @@ m_strtoll(const char *s, const char def_unit)
 		fprintf(stderr, "m_strtoll() is confused\n");
 		exit(20);
 	}
+}
+
+unsigned long long
+m_strtoll(const char *s, const char def_unit)
+{
+	enum new_strtoll_errs err;
+	unsigned long long r;
+
+	err = new_strtoll(s, def_unit, &r);
+	if (err != MSE_OK) {
+		print_strtoll_error_and_exit(err, s, def_unit);
+	}
+	return r;
 }
 
 

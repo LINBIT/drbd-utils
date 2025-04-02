@@ -76,6 +76,7 @@
 #include "config_flags.h"
 #include "wrap_printf.h"
 #include "drbdsetup_colors.h"
+#include "drbdsetup_compat84.h"
 
 #define EXIT_NOMEM 20
 #define EXIT_NO_FAMILY 20
@@ -112,13 +113,6 @@ static bool json_output = false;
 } while(0)
 
 #define PTR_NONNULL_OR_EXIT2(p) do { PTR_NONNULL_OR_EXIT(p); PTR_NONNULL_OR_EXIT(*p); } while(0)
-
-enum usage_type {
-	BRIEF,
-	FULL,
-	XML,
-};
-
 
 enum cfg_ctx_key ctx_next_arg(enum cfg_ctx_key *key)
 {
@@ -163,7 +157,6 @@ const char *ctx_arg_string(enum cfg_ctx_key key, enum usage_type ut)
 // other functions
 static int get_af_ssocks(int warn);
 static char *af_to_str(int af);
-static void print_command_usage(const struct drbd_cmd *cm, enum usage_type);
 static void print_usage_and_exit(const char *addinfo)
 		__attribute__ ((noreturn));
 static void address_json(void *address, int addr_len, char *indent);
@@ -760,7 +753,7 @@ static void split_address(int *af, char** address, int* port)
 		*port = 7788;
 }
 
-static int sockaddr_from_str(struct sockaddr_storage *storage, const char *str)
+int sockaddr_from_str(struct sockaddr_storage *storage, const char *str)
 {
 	int af, port;
 	char *address = strdupa(str);
@@ -856,7 +849,7 @@ static int get_af_ssocks(int warn_and_use_default)
 	return af;
 }
 
-static struct option *make_longoptions(const struct drbd_cmd *cm)
+struct option *make_longoptions(const struct drbd_cmd *cm)
 {
 	static struct option buffer[47];
 	int i = 0;
@@ -1047,7 +1040,7 @@ int drbd_tla_parse(struct nlattr *tla[], struct nlmsghdr *nlh)
 #define ASSERT(exp) if (!(exp)) \
 		fprintf(stderr,"ASSERT( " #exp " ) in %s:%d\n", __FILE__,__LINE__);
 
-static int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
+int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 {
 	struct drbd_argument *ad;
 	struct nlattr *nla;
@@ -1136,6 +1129,23 @@ static int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 
 	for (i = optind, ad = cm->drbd_args; ad && ad->name; i++) {
 		if (argc < i + 1) {
+#ifdef WITH_84_SUPPORT
+			if (strcmp(cm->cmd, "new-resource") == 0 && strcmp(ad->name, "node_id") == 0) {
+				/* This is the "new-resource" command, and we are missing the node_id argument.
+				 * This might be the user trying to use the old drbd8-style command line syntax.
+				 * Set the node ID to the magic value (u32)-1 for now and tell the kernel that
+				 * we are using the drbd8 compatibility mode.
+				 * The node ID will later be overwritten to the correct value (arbitrated by the IP address)
+				 * when the "connect" command is called.
+				 */
+				fprintf(stderr, "new-resource called without node-id: enabling drbd8 compat mode\n");
+				nla = nla_nest_start(smsg, cm->tla_id);
+				nla_put_u32(smsg, ad->nla_type, -1);
+				nla_put_u8(smsg, T_drbd8_compat_mode, 1);
+				ad++;
+				continue;
+			}
+#endif
 			fprintf(stderr, "Missing argument '%s'\n", ad->name);
 			print_command_usage(cm, FULL);
 			rv = OTHER_ERROR;
@@ -4781,6 +4791,18 @@ int drbdsetup_main(int argc, char **argv)
 			} else if (next_arg == CTX_VOLUME) {
 				global_ctx.ctx_volume = m_strtoll(argv[optind], 1);
 			} else if (next_arg == CTX_PEER_NODE_ID) {
+				enum new_strtoll_errs err;
+				unsigned long long r;
+				const char def_unit = 1;
+
+				err = new_strtoll(argv[optind], def_unit, &r);
+				if (err != MSE_OK) {
+					int e = drbd8_compat_connect_or_disconnect(argc, argv, cmd);
+					if (!e)
+						return 0;
+
+					print_strtoll_error_and_exit(err, argv[optind], def_unit);
+				}
 				global_ctx.ctx_peer_node_id = m_strtoll(argv[optind], 1);
 			} else
 				assert(0);

@@ -68,6 +68,9 @@ endif
 ifeq ($(WITH_KEYUTILS),yes)
 CFLAGS += -DKEYUTILS
 endif
+ifeq ($(WITH_84_SUPPORT),yes)
+CFLAGS += -DWITH_84_SUPPORT
+endif
 CFLAGS += $(EXTRA_CFLAGS)
 
 drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_postparse.o \
@@ -82,6 +85,10 @@ drbdsetup-core-obj = libnla.o registry.o drbdsetup.o drbdtool_common.o \
 
 drbdmeta-obj = drbdmeta.o drbdmeta_scanner.o drbdtool_common.o drbd_buildtag.o \
 	       drbd_strings.o shared_tool.o
+
+ifeq ($(WITH_84_SUPPORT),yes)
+drbdsetup-core-obj += drbdsetup_compat84.o
+endif
 
 ifeq ($(WITH_WINDRBD),yes)
 drbdadm-obj += drbdadm_windrbd.o shared_windrbd.o libgenl_windrbd.o drbdtool_common_windrbd.o path_windrbd.o

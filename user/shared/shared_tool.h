@@ -105,7 +105,8 @@ extern void ensure_sanity_of_res_name(char *stg);
 
 extern bool addr_scope_local(const char *input);
 
-extern unsigned long long m_strtoll(const char* s,const char def_unit);
+extern void print_strtoll_error_and_exit(int err, const char *s, char def_unit);
+extern unsigned long long m_strtoll(const char* s, char def_unit);
 extern int only_digits(const char *s);
 extern int dt_lock_drbd(int minor);
 extern void dt_unlock_drbd(int lock_fd);
