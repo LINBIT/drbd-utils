@@ -3,7 +3,7 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
-9.31.0-rc.1
+9.31.0
 -----------
  * VCS: drop integration
  * XEN block-drbd: drop. if you think you want that,
