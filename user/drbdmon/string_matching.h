@@ -4,6 +4,7 @@
 #include <string>
 #include <memory>
 #include <stdexcept>
+#include <default_types.h>
 
 namespace string_matching
 {
