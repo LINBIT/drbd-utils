@@ -4,6 +4,7 @@
 #include <string>
 #include <memory>
 #include <stdexcept>
+#include <cstdint>
 
 namespace string_matching
 {
