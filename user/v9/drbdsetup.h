@@ -95,6 +95,7 @@ struct devices_list {
 	struct drbd_cfg_context ctx;
 	struct nlattr *disk_conf_nl;
 	struct disk_conf disk_conf;
+	struct nlattr *device_conf_nl;
 	struct device_info info;
 	struct device_statistics statistics;
 };

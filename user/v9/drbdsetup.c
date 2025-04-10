@@ -1270,14 +1270,14 @@ static struct drbd_cmd *find_cmd_by_name(const char *name)
 	return NULL;
 }
 
-static void print_options(struct nlattr *attr, struct context_def *ctx, const char *sect_name)
+static bool __print_options(struct nlattr *attr, struct context_def *ctx, const char *sect_name,
+			    bool opened, bool close)
 {
 	struct nlattr *nested_attr_tb[128];
 	struct field_def *field;
-	int opened = 0;
 
 	if (!attr)
-		return;
+		return false;
 
 	if (drbd_nla_parse_nested(nested_attr_tb, ctx->nla_policy_size - 1,
 				  attr, ctx->nla_policy)) {
@@ -1298,7 +1298,7 @@ static void print_options(struct nlattr *attr, struct context_def *ctx, const ch
 		if (is_default && !show_defaults)
 			continue;
 		if (!opened) {
-			opened=1;
+			opened = true;
 			printI("%s {\n",sect_name);
 			++indent;
 		}
@@ -1316,10 +1316,17 @@ static void print_options(struct nlattr *attr, struct context_def *ctx, const ch
 		}
 		printf("\n");
 	}
-	if(opened) {
+	if (opened && close) {
 		--indent;
 		printI("}\n");
 	}
+
+	return opened;
+}
+
+static void print_options(struct nlattr *attr, struct context_def *ctx, const char *sect_name)
+{
+	__print_options(attr, ctx, sect_name, false, true);
 }
 
 static int nr_printed_opts(struct context_def *ctx, struct field_def *start,
@@ -2307,6 +2314,8 @@ static void show_volume_json(struct devices_list *device)
 
 static void show_volume(struct devices_list *device)
 {
+	bool opened;
+
 	printI("volume %d {\n", device->ctx.ctx_volume);
 	++indent;
 	printI("device\t\t\tminor %d;\n", device->minor);
@@ -2331,7 +2340,8 @@ static void show_volume(struct devices_list *device)
 		printI("disk\t\t\tnone;\n");
 	}
 
-	print_options(device->disk_conf_nl, &attach_cmd_ctx, "disk");
+	opened = __print_options(device->disk_conf_nl, &attach_cmd_ctx, "disk", false, false);
+	__print_options(device->device_conf_nl, &device_options_ctx, "disk", opened, true);
 	--indent;
 	printI("}\n"); /* close volume */
 }
@@ -3725,6 +3735,7 @@ struct devices_list *new_device_from_info(struct genl_info *info)
 {
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
 	struct nlattr *disk_conf_nl = info->attrs[DRBD_NLA_DISK_CONF];
+	struct nlattr *device_conf_nl = info->attrs[DRBD_NLA_DEVICE_CONF];
 	struct devices_list *d = NULL;
 
 	drbd_cfg_context_from_attrs(&ctx, info);
@@ -3741,6 +3752,13 @@ struct devices_list *new_device_from_info(struct genl_info *info)
 
 		d->disk_conf_nl = malloc(size);
 		memcpy(d->disk_conf_nl, disk_conf_nl, size);
+	}
+	if (device_conf_nl) {
+		int size = nla_total_size(nla_len(device_conf_nl));
+
+		d->device_conf_nl = malloc(size);
+		memcpy(d->device_conf_nl, device_conf_nl, size);
+
 	}
 	disk_conf_from_attrs(&d->disk_conf, info);
 	d->info.dev_disk_state = D_DISKLESS;
