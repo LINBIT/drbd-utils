@@ -73,6 +73,11 @@ std::string LinuxApi::get_config_file_path()
     return path;
 }
 
+void LinuxApi::prepare_save_config_file()
+{
+    // No-op on Linux
+}
+
 std::string LinuxApi::file_name_for_path(const std::string path) const
 {
     std::string file_name;

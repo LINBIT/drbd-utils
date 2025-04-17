@@ -1,7 +1,7 @@
 #include <configuration/CfgEntryStore.h>
 #include <configuration/CfgEntryBoolean.h>
 #include <configuration/CfgEntryIntegerTypes.h>
-#include <configuration/IoException.h>
+#include <platform/IoException.h>
 #include <comparators.h>
 #include <new>
 #include <memory>

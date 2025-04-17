@@ -1,6 +1,6 @@
 #include <default_types.h>
 #include <persistent_configuration.h>
-#include <configuration/IoException.h>
+#include <platform/IoException.h>
 #include <configuration/CfgEntryStore.h>
 #include <configuration/CfgEntryBoolean.h>
 #include <configuration/CfgEntryIntegerTypes.h>
@@ -10,6 +10,7 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
+#include <system_error>
 #include <dsaext.h>
 #include <integerparse.h>
 
@@ -50,6 +51,7 @@ namespace configuration
         SystemApi&          sys_api
     )
     {
+        sys_api.prepare_save_config_file();
         std::ofstream data_out(file_path);
         config.save_to(config_store);
         config_store.save_to(data_out);
@@ -281,6 +283,7 @@ namespace configuration
                     CfgEntry* const changed_entry = new_entry.release();
                     entry = nullptr;
 
+                    mon_env.sys_api->prepare_save_config_file();
                     std::ofstream data_out(mon_env.config_file_path);
                     config_store.save_to(data_out);
 

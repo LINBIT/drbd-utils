@@ -1,5 +1,5 @@
 #include <configuration/CfgEntry.h>
-#include <configuration/IoException.h>
+#include <platform/IoException.h>
 
 const size_t    CfgEntry::MAX_KEY_LENGTH    = 40;
 

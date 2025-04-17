@@ -1,4 +1,5 @@
 #include <configuration/CfgEntryBoolean.h>
+#include <platform/IoException.h>
 
 CfgEntryBoolean::CfgEntryBoolean()
 {

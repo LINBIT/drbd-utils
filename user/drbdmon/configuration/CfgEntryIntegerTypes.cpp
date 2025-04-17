@@ -1,4 +1,5 @@
 #include <configuration/CfgEntryIntegerTypes.h>
+#include <platform/IoException.h>
 
 CfgEntryUnsgInt8::CfgEntryUnsgInt8()
 {

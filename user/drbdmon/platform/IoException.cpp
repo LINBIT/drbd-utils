@@ -1,4 +1,4 @@
-#include <configuration/IoException.h>
+#include <platform/IoException.h>
 
 IoException::IoException():
     std::exception()

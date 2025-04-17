@@ -3,7 +3,7 @@
 #include <terminal/HelpText.h>
 #include <persistent_configuration.h>
 #include <configuration/CfgEntryStore.h>
-#include <configuration/IoException.h>
+#include <platform/IoException.h>
 #include <integerparse.h>
 #include <dsaext.h>
 

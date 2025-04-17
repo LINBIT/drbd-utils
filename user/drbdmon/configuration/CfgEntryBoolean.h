@@ -3,7 +3,6 @@
 
 #include <default_types.h>
 #include <configuration/CfgEntry.h>
-#include <configuration/IoException.h>
 #include <istream>
 #include <ostream>
 

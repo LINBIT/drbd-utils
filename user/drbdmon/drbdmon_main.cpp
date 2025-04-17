@@ -25,7 +25,7 @@ extern "C"
 #include <MessageLog.h>
 #include <configuration/Configuration.h>
 #include <configuration/CfgEntryStore.h>
-#include <configuration/IoException.h>
+#include <platform/IoException.h>
 #include <persistent_configuration.h>
 #include <exceptions.h>
 
