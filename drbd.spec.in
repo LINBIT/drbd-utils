@@ -121,6 +121,7 @@ BuildRequires: keyutils-devel
 %else
 BuildRequires: keyutils-libs-devel
 %endif
+Obsoletes: drbd-xen <= 9.30.0
 
 %description utils
 DRBD mirrors a block device over the network to another machine.
