@@ -78,7 +78,7 @@ drbd-utils-tests:
   stage: test
   rules:
     - if: $CI_MERGE_REQUEST_ID
-  image: fedora
+  image: fedora:42
   needs: []
   variables:
     CC: clang
@@ -88,7 +88,7 @@ drbd-utils-tests:
     ASAN_OPTIONS: log_path=sanitizer,log_exe_name=yes,log_suffix=.txt,detect_leaks=0
     UBSAN_OPTIONS: log_path=sanitizer,log_exe_name=yes,log_suffix=.txt
   before_script:
-    - dnf install -y clang llvm libubsan libasan keyutils-libs-devel flex git clitest automake
+    - dnf install --setopt=install_weak_deps=False -y clang compiler-rt libubsan libasan keyutils-libs-devel flex git clitest automake gawk
   script:
     - ./autogen.sh
     - ./configure --without-manual
