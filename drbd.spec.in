@@ -516,7 +516,6 @@ for f in drbd drbdadm drbdmeta drbdsetup; do
     rm -f %{_mandir}/man8/$f.8.gz
 done
 rm -f %{_mandir}/man5/drbd.conf.5.gz
-rm -f %{_mandir}/man8/drbdmon.8.gz
 fi
 %if "%{initscripttype}" == "systemd"
 %systemd_preun drbd.service
