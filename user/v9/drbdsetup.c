@@ -1024,7 +1024,7 @@ static void warn_print_excess_args(int argc, char **argv, int i)
 	fprintf(stderr, "Excess arguments:");
 	for (; i < argc; i++)
 		fprintf(stderr, " %s", argv[i]);
-	printf("\n");
+	fprintf(stderr, "\n");
 }
 
 int drbd_tla_parse(struct nlattr *tla[], struct nlmsghdr *nlh)
