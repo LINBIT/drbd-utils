@@ -5181,7 +5181,7 @@ static enum initialize_bitmap_mode check_ibm_arg(const char *arg)
 		if (0==strcmp(arg, initialize_bitmap_mode_names[i]))
 			return i;
 	}
-	fprintf(stderr, "invalid initialize-bitmap-mode \"%s\", should be one of", arg);
+	fprintf(stderr, "invalid initialize-bitmap mode \"%s\", should be one of", arg);
 	for (i = IBM_ZEROOUT; i <= IBM_SKIP; i++)
 		fprintf(stderr, "%c%s", sep[i != IBM_ZEROOUT], initialize_bitmap_mode_names[i]);
 	fprintf(stderr, "\n");
