@@ -460,7 +460,7 @@ struct drbd_cmd commands[] = {
 	 .drbd_args = (struct drbd_argument[]) {
 		 { "peer_node_id",	T_forget_peer_node_id,	conv_u32 },
 		 { } },
-	 .summary = "Completely remove any reference to a unconnected peer from meta-data." },
+	 .summary = "Completely remove any reference to an unconnected peer from meta-data." },
 	{"rename-resource", CTX_RESOURCE, DRBD_ADM_RENAME_RESOURCE, DRBD_NLA_RENAME_RESOURCE_PARMS, F_CONFIG_CMD,
 	.drbd_args = (struct drbd_argument[]) {
 		{ "new_name", T_new_resource_name, conv_str },
@@ -4442,7 +4442,7 @@ static void print_command_usage(struct drbd_cmd *cm, enum usage_type ut)
 				/*
 				 * The "string" options here really are
 				 * timeouts, but we can't describe them
-				 * in a resonable way here.
+				 * in a reasonable way here.
 				 */
 				printf("\t<option name=\"%s\" type=\"%s\">\n"
 				       "\t</option>\n",

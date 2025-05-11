@@ -11,7 +11,7 @@ resource example {
 	# The disk section is possible on resource level and in each
 	# volume section
 	disk {
-		# If you have a resonable RAID controller
+		# If you have a reasonable RAID controller
 		# with non volatile write cache (BBWC, flash)
 		disk-flushes no;
 		disk-barrier no;

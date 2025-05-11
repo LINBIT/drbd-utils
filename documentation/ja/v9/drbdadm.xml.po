@@ -1123,7 +1123,7 @@ msgstr "forget-peer"
 #. type: Content of: <refentry><refsect1><variablelist><varlistentry><listitem><para>
 msgid ""
 "<placeholder type=\"indexterm\" id=\"0\"/> Completely remove any reference "
-"to a unconnected peer from meta-data.  See <citerefentry> "
+"to an unconnected peer from meta-data.  See <citerefentry> "
 "<refentrytitle>drbdmeta</refentrytitle> <manvolnum>8</manvolnum> </"
 "citerefentry> for details."
 msgstr ""

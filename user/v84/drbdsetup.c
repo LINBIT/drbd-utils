@@ -3394,7 +3394,7 @@ static void print_command_usage(const struct drbd_cmd *cm, enum usage_type ut)
 				/*
 				 * The "string" options here really are
 				 * timeouts, but we can't describe them
-				 * in a resonable way here.
+				 * in a reasonable way here.
 				 */
 				printf("\t<option name=\"%s\" type=\"%s\">\n"
 				       "\t</option>\n",

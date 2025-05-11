@@ -2572,7 +2572,7 @@ msgstr ""
 #. type: Content of: <drbdsetup_options><drbdsetup_option><definition><para>
 msgid ""
 "In case you want to allow permanently diskless nodes to gain quorum it is "
-"recommendet to not use <option>majority</option> or <option>all</option>. It "
+"recommended to not use <option>majority</option> or <option>all</option>. It "
 "is recommended to specify an absolute number, since DBRD's heuristic to "
 "determine the complete number of diskfull nodes in the cluster is unreliable."
 msgstr ""

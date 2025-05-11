@@ -1888,7 +1888,7 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	  be smaller than the other, quorum is lost in this moment.</para>
 
 	  <para>In case you want to allow permanently diskless nodes to
-	  gain quorum it is recommendet to not use <option>majority</option> or
+	  gain quorum it is recommended to not use <option>majority</option> or
 	  <option>all</option>. It is recommended to specify an absolute number,
 	  since DBRD's heuristic to determine the complete number of diskfull
 	  nodes in the cluster is unreliable.</para>
@@ -1917,7 +1917,7 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	  of your number of nodes.</para>
 
 	  <para>In case you want to allow permanently diskless nodes to
-	  gain quorum it is recommendet to not use <option>majority</option> or
+	  gain quorum it is recommended to not use <option>majority</option> or
 	  <option>all</option>. It is recommended to specify an absolute number,
 	  since DBRD's heuristic to determine the complete number of diskfull
 	  nodes in the cluster is unreliable.</para>

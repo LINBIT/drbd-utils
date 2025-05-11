@@ -855,7 +855,7 @@
               <primary>drbdadm</primary>
 
 	      <secondary>forget-peer</secondary> </indexterm> Completely remove any
-	      reference to a unconnected peer from meta-data.
+	      reference to an unconnected peer from meta-data.
 	      See <citerefentry>
 	      <refentrytitle>drbdmeta</refentrytitle> <manvolnum>8</manvolnum>
 	    </citerefentry> for details.
