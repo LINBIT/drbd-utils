@@ -1376,7 +1376,7 @@ drbd0 node-id:1 role:Primary suspended:no
 
       <varlistentry>
 	<xi:include href="drbdsetup_forget-peer.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
-	<!-- Completely remove any reference to a unconnected peer from meta-data. -->
+	<!-- Completely remove any reference to an unconnected peer from meta-data. -->
 
 	<listitem>
 	  <indexterm significance="normal">
