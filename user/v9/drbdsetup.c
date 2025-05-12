@@ -1880,6 +1880,8 @@ static int generic_recv(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr,
 	}
 
 out:
+	if (err && desc)
+		fprintf(stderr, "error desciption: %s\n", desc);
 	if (!err)
 		err = check_error(rv, desc, tla, (struct nlmsghdr *)iov.iov_base);
 	free(iov.iov_base);
