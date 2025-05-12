@@ -204,7 +204,7 @@ int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int 
 	return verify_header(s, iov, size, err_desc);
 }
 
-struct genl_sock *genl_connect_to_family(struct genl_family *family)
+struct genl_sock *genl_connect_to_family(struct genl_family *family, struct genl_connect_options *opts)
 {
 	struct genl_sock *s = NULL;
 

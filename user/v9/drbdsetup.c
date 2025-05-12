@@ -4614,6 +4614,10 @@ static void maybe_exec_legacy_drbdsetup(char **argv)
 
 int drbdsetup_main(int argc, char **argv)
 {
+	struct genl_connect_options connect_options = {
+		.rcvbuf_size = 1024*1024,
+		.sndbuf_size =  128*1024,
+	};
 	const struct drbd_cmd *cmd;
 	struct option *options;
 	const char *opts;
@@ -4710,7 +4714,7 @@ int drbdsetup_main(int argc, char **argv)
 		/* maybe more specific: (1 << GENL_ID_CTRL)? */
 		drbd_genl_family.nl_groups = -1;
 	}
-	drbd_sock = genl_connect_to_family(&drbd_genl_family);
+	drbd_sock = genl_connect_to_family(&drbd_genl_family, &connect_options);
 	if (!drbd_sock) {
 		fprintf(stderr, "Could not connect to 'drbd' generic netlink family\n");
 		return 20;

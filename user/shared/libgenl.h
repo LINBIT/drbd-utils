@@ -1071,7 +1071,11 @@ struct genl_sock {
 	struct genl_family	*s_family;
 };
 
-extern struct genl_sock *genl_connect_to_family(struct genl_family *family);
+struct genl_connect_options {
+	int rcvbuf_size;
+	int sndbuf_size;
+};
+extern struct genl_sock *genl_connect_to_family(struct genl_family *family, struct genl_connect_options *opts);
 extern int genl_join_mc_group(struct genl_sock *s, const char *name);
 extern int genl_send(struct genl_sock *s, struct msg_buff *msg);
 enum {

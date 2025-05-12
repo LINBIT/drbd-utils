@@ -3611,9 +3611,14 @@ int main(int argc, char **argv)
 	}
 
 	if (try_genl) {
+		struct genl_connect_options connect_options = {
+			.rcvbuf_size = 1024*1024,
+			.sndbuf_size =  128*1024,
+		};
+
 		if (cmd->continuous_poll && kernel_older_than(2, 6, 23))
 			drbd_genl_family.nl_groups = -1;
-		drbd_sock = genl_connect_to_family(&drbd_genl_family);
+		drbd_sock = genl_connect_to_family(&drbd_genl_family, &connect_options);
 		if (!drbd_sock) {
 			fprintf(stderr, "Could not connect to 'drbd' generic netlink family\n");
 			return 20;
