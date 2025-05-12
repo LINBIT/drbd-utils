@@ -87,6 +87,15 @@ static struct genl_sock *genl_connect(__u32 nl_groups, struct genl_connect_optio
 	&&  (bsz/2) < opts->sndbuf_size)
 		dbg(1, "tried to set SO_SNDBUF %d, got %d; you may need to adjust sysctl net.core.wmem_max\n",
 			opts->sndbuf_size, (bsz/2));
+#ifdef SO_RCVBUFFORCE
+	sock_len = sizeof(bsz);
+	if (getsockopt(s->s_fd, SOL_SOCKET, SO_RCVBUF, &bsz, &sock_len) == 0) {
+		if ((bsz/2) < opts->rcvbuf_size) {
+			/* retry with FORCE */
+			setsockopt(s->s_fd, SOL_SOCKET, SO_RCVBUFFORCE, &opts->rcvbuf_size, sizeof(&opts->rcvbuf_size));
+		}
+	}
+#endif
 	sock_len = sizeof(bsz);
 	if (getsockopt(s->s_fd, SOL_SOCKET, SO_RCVBUF, &bsz, &sock_len) == 0
 	&&  (bsz/2) < opts->rcvbuf_size) {
