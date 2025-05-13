@@ -145,9 +145,40 @@ const char *hostname;
 int line = 1;
 int fline;
 
+/* for --config-to-test, used used with tsearch and twalk
+ */
+static int config_to_test_cmp(const void *a, const void *b)
+{
+	return strcmp(a, b);
+}
+static void config_to_test_include(const void *nodep, VISIT which, int depth)
+{
+	char *config_test;
+	FILE *f;
+
+	switch (which) {
+	case preorder:
+	case endorder:
+		break;
+	case postorder:
+	case leaf:
+		config_test = *(char **)nodep;
+		// fprintf(stderr, "config-to-test: %s\n", config_test);
+		f = fopen(config_test, "r");
+		if (!f) {
+			log_err("Can not open '%s'.\n", config_test);
+			exit(E_EXEC_ERROR);
+		}
+		include_file(f, config_test);
+		break;
+	};
+}
+void *config_to_test_tree = NULL;
+
+
 char *config_file = NULL;
 char *config_save = NULL;
-char *config_test = NULL;
+
 struct resources config = STAILQ_HEAD_INITIALIZER(config);
 struct d_resource *common = NULL;
 struct ifreq *ifreq_list = NULL;
@@ -3212,7 +3243,25 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 			}
 			break;
 		case 't':
-			config_test = optarg;
+			{
+			char *path;
+			char **entry;
+
+			path = realpath(optarg, NULL);
+			if (!path)
+				path = strdup(optarg);
+			if (!path) {
+				log_err("out of memory: %m\n");
+				return 20;
+			}
+			entry = tsearch(path, &config_to_test_tree, config_to_test_cmp);
+			if (entry == NULL) {
+				/* is there an other reason for failure? */
+				log_err("out of memory: %m\n");
+				return 20;
+			} else if (*entry != path) /* same thing was already listed */
+				free(path);
+			}
 			break;
 		case 'E':
 			/* Remember as absolute name */
@@ -3532,7 +3581,7 @@ int main(int argc, char **argv)
 	if (rv)
 		return rv;
 
-	if (config_test && !cmd->test_config) {
+	if (config_to_test_tree && !cmd->test_config) {
 		log_err("The --config-to-test (-t) option is only allowed "
 		    "with the dump and sh-nop commands\n");
 		exit(E_USAGE);
@@ -3577,14 +3626,8 @@ int main(int argc, char **argv)
 	my_parse();
 	fclose(yyin);
 
-	if (config_test) {
-		FILE *f = fopen(config_test, "r");
-		if (!f) {
-			log_err("Can not open '%s'.\n.", config_test);
-			exit(E_EXEC_ERROR);
-		}
-		include_file(f, config_test);
-	}
+	if (config_to_test_tree)
+		twalk(config_to_test_tree, config_to_test_include);
 
 	if (!config_valid)
 		exit(E_CONFIG_INVALID);
