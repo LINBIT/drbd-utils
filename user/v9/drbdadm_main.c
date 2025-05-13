@@ -146,9 +146,63 @@ const char *hostname;
 int line = 1;
 int fline;
 
+/* for --config-to-test
+ */
+struct ad_hoc_string_table {
+	const char **entries;
+	size_t N_used;
+	size_t N_allocated;
+} config_to_test_table;
+
+static void ad_hoc_string_table_add(struct ad_hoc_string_table *tab, const char *val)
+{
+	const unsigned int step = 64;
+	assert(tab);
+
+	if (tab->N_used >= tab->N_allocated) {
+		// reallocarray(); ... but we still want to build on rhel7 :-|
+		tab->entries = realloc(tab->entries,
+			(tab->N_allocated + step) * sizeof(*(tab->entries)));
+		if (!tab->entries) {
+			log_err("out of memory: %m\n");
+			exit(20);
+		}
+		tab->N_allocated += step;
+	}
+	tab->entries[tab->N_used++] = val;
+}
+
+static void config_to_test_add(const char *arg)
+{
+	char *path;
+
+	path = realpath(arg, NULL);
+	if (!path)
+		path = strdup(arg);
+	if (!path) {
+		log_err("out of memory: %m\n");
+		exit(20);
+	}
+	ad_hoc_string_table_add(&config_to_test_table, path);
+}
+
+static void config_to_test_include(const char *path)
+{
+	FILE *f;
+
+	// fprintf(stderr, "config-to-test: %s\n", path);
+	f = fopen(path, "r");
+	if (!f) {
+		log_err("Can not open '%s'.\n", path);
+		exit(E_EXEC_ERROR);
+	}
+	include_file(f, path);
+}
+
+
 const char *config_file = NULL;
 const char *config_save = NULL;
-const char *config_test = NULL;
+
 struct resources config = STAILQ_HEAD_INITIALIZER(config);
 struct d_resource *common = NULL;
 struct ifreq *ifreq_list = NULL;
@@ -3223,7 +3277,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 			config_file = tmp;
 			break;
 		case 't':
-			config_test = optarg;
+			config_to_test_add(optarg);
 			break;
 		case 'E':
 			/* Remember as absolute name */
@@ -3543,7 +3597,7 @@ int main(int argc, char **argv)
 	if (rv)
 		return rv;
 
-	if (config_test && !cmd->test_config) {
+	if (config_to_test_table.N_used && !cmd->test_config) {
 		log_err("The --config-to-test (-t) option is only allowed "
 		    "with the dump and sh-nop commands\n");
 		exit(E_USAGE);
@@ -3588,14 +3642,8 @@ int main(int argc, char **argv)
 	my_parse();
 	fclose(yyin);
 
-	if (config_test) {
-		FILE *f = fopen(config_test, "r");
-		if (!f) {
-			log_err("Can not open '%s'.\n", config_test);
-			exit(E_EXEC_ERROR);
-		}
-		include_file(f, config_test);
-	}
+	for (i = 0; i < config_to_test_table.N_used; i++)
+		config_to_test_include(config_to_test_table.entries[i]);
 
 	if (!config_valid)
 		exit(E_CONFIG_INVALID);
