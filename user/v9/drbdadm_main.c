@@ -175,6 +175,27 @@ static void config_to_test_include(const void *nodep, VISIT which, int depth)
 }
 void *config_to_test_tree = NULL;
 
+static void config_to_test_add(const char *arg)
+{
+	char *path;
+	char **entry;
+
+	path = realpath(arg, NULL);
+	if (!path)
+		path = strdup(arg);
+	if (!path) {
+		log_err("out of memory: %m\n");
+		exit(20);
+	}
+	entry = tsearch(path, &config_to_test_tree, config_to_test_cmp);
+	if (entry == NULL) {
+		/* is there an other reason for failure? */
+		log_err("out of memory: %m\n");
+		exit(20);
+	} else if (*entry != path) /* same thing was already listed */
+		free(path);
+}
+
 
 char *config_file = NULL;
 char *config_save = NULL;
@@ -3243,25 +3264,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 			}
 			break;
 		case 't':
-			{
-			char *path;
-			char **entry;
-
-			path = realpath(optarg, NULL);
-			if (!path)
-				path = strdup(optarg);
-			if (!path) {
-				log_err("out of memory: %m\n");
-				return 20;
-			}
-			entry = tsearch(path, &config_to_test_tree, config_to_test_cmp);
-			if (entry == NULL) {
-				/* is there an other reason for failure? */
-				log_err("out of memory: %m\n");
-				return 20;
-			} else if (*entry != path) /* same thing was already listed */
-				free(path);
-			}
+			config_to_test_add(optarg);
 			break;
 		case 'E':
 			/* Remember as absolute name */
@@ -3626,8 +3629,7 @@ int main(int argc, char **argv)
 	my_parse();
 	fclose(yyin);
 
-	if (config_to_test_tree)
-		twalk(config_to_test_tree, config_to_test_include);
+	twalk(config_to_test_tree, config_to_test_include);
 
 	if (!config_valid)
 		exit(E_CONFIG_INVALID);
