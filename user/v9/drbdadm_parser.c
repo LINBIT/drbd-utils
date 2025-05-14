@@ -38,6 +38,8 @@
 #include <unistd.h>
 #include <assert.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include "drbdadm.h"
 #include "linux/drbd.h"
@@ -2095,9 +2097,15 @@ static void validate_kmod(int token)
 
 void my_parse(void)
 {
+	struct stat sb;
+
 	/* Remember that we're reading that file. */
 	was_file_already_seen(config_file);
 
+	if (fstat(fileno(yyin), &sb) == 0 && (sb.st_mode & S_IFMT) == S_IFDIR) {
+		log_err("Cannot parse directory '%s' as config file.\n", config_file);
+		exit(20);
+	}
 
 	while (1) {
 		int token = yylex();
