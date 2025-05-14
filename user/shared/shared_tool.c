@@ -982,10 +982,11 @@ int log_err(const char *format, ...)
  * so any legal input do drbdadm "drbdadm dump" should result in output, which,
  * if fed into an additional "drbdadm dump" should give the same output again.
  */
-const char *esc(char *str)
+const char *esc(const char *str)
 {
 	static char buffer[1024];
-	char *ue = str, *e = buffer;
+	const char *ue = str;
+	char *e = buffer;
 
 	if (!str || !str[0]) {
 		return "\"\"";
@@ -1015,10 +1016,11 @@ const char *esc(char *str)
 
 /* escape a few things that are not legal in xml content; good enough for our
  * purposes, but likely not "academically correct" resp.  "complete". */
-const char *esc_xml(char *str)
+const char *esc_xml(const char *str)
 {
 	static char buffer[1024];
-	char *ue = str, *e = buffer;
+	const char *ue = str;
+	char *e = buffer;
 
 	if (!str || !str[0]) {
 		return "";

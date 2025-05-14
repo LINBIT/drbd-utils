@@ -1424,7 +1424,7 @@ static void sanity_check_cmd(char *cmd_name)
  * dopd cannot work.
  * NOTE: we assume that any gid != 0 will be the group dopd will run as,
  * typically haclient. */
-static void sanity_check_conf(char *c)
+static void sanity_check_conf(const char *c)
 {
 	struct stat sb;
 

@@ -115,8 +115,8 @@ extern void dt_pretty_print_gc(const uint32_t* gen_cnt);
 
 extern void initialize_logging(void);
 extern int log_err(const char *format, ...);
-extern const char *esc_xml(char *str);
-extern const char *esc(char *str);
+extern const char *esc_xml(const char *str);
+extern const char *esc(const char *str);
 
 bool ipv4_addresses_match(const char *addr_1st, const char *addr_2nd);
 

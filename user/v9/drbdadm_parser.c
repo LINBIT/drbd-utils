@@ -1879,7 +1879,7 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 }
 
 /* Returns the "previous" count, ie. 0 if this file wasn't seen before. */
-int was_file_already_seen(char *fn)
+int was_file_already_seen(const char *fn)
 {
 	ENTRY *e;
 	char *real_path;

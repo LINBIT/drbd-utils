@@ -26,12 +26,12 @@
 
 struct include_file_buffer {
 	int line;
-	char *config_file;
-	char *config_save;
+	const char *config_file;
+	const char *config_save;
 };
 
-void include_file(FILE *f, char *name);
-void save_parse_context(struct include_file_buffer *buffer, FILE *f, char *name);
+void include_file(FILE *f, const char *name);
+void save_parse_context(struct include_file_buffer *buffer, FILE *f, const char *name);
 void restore_parse_context(struct include_file_buffer *buffer);
 
 int check_uniq(const char *what, const char *fmt, ...);

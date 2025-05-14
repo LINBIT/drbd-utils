@@ -146,9 +146,9 @@ const char *hostname;
 int line = 1;
 int fline;
 
-char *config_file = NULL;
-char *config_save = NULL;
-char *config_test = NULL;
+const char *config_file = NULL;
+const char *config_save = NULL;
+const char *config_test = NULL;
 struct resources config = STAILQ_HEAD_INITIALIZER(config);
 struct d_resource *common = NULL;
 struct ifreq *ifreq_list = NULL;
@@ -3032,7 +3032,7 @@ void popd(int fd)
  * aborts if any allocation or syscall fails.
  * return value should be free()d, once no longer needed.
  */
-char *canonify_path(char *path)
+char *canonify_path(const char *path)
 {
 	int cwd_fd = -1;
 	char *last_slash;
@@ -3164,6 +3164,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 	const char *optstring = make_optstring(admopt);
 	struct names backend_options_check;
 	struct d_name *b_opt;
+	char *tmp;
 	int longindex, first_arg_index;
 
 	STAILQ_INIT(&backend_options_check);
@@ -3203,7 +3204,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 		case 'c':
 			if (!strcmp(optarg, "-")) {
 				yyin = stdin;
-				if (asprintf(&config_file, "STDIN") < 0) {
+				if (asprintf(&tmp, "STDIN") < 0) {
 					log_err("asprintf(config_file): %m\n");
 					return 20;
 				}
@@ -3214,11 +3215,12 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 					log_err("Can not open '%s'.\n.", optarg);
 					exit(E_EXEC_ERROR);
 				}
-				if (asprintf(&config_file, "%s", optarg) < 0) {
+				if (asprintf(&tmp, "%s", optarg) < 0) {
 					log_err("asprintf(config_file): %m\n");
 					return 20;
 				}
 			}
+			config_file = tmp;
 			break;
 		case 't':
 			config_test = optarg;

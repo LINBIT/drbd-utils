@@ -40,7 +40,7 @@
 extern void my_parse(void);
 
 
-void save_parse_context(struct include_file_buffer *buffer, FILE *f, char *name)
+void save_parse_context(struct include_file_buffer *buffer, FILE *f, const char *name)
 {
 	buffer->line = line;
 	buffer->config_file = config_file;
@@ -63,7 +63,7 @@ void restore_parse_context(struct include_file_buffer *buffer)
 	config_save = buffer->config_save;
 }
 
-void include_file(FILE *f, char *name)
+void include_file(FILE *f, const char *name)
 {
 	struct include_file_buffer buffer;
 

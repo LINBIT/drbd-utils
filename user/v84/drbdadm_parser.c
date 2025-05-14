@@ -2065,14 +2065,15 @@ void post_parse(struct d_resource *config, enum pp_flags flags)
 }
 
 /* Returns the "previous" count, ie. 0 if this file wasn't seen before. */
-int was_file_already_seen(char *fn)
+int was_file_already_seen(const char *fn)
 {
 	ENTRY e, *ep;
 	char *real_path;
 
 	real_path = realpath(fn, NULL);
 	if (!real_path)
-		real_path = fn;
+		real_path = strdup(fn);
+	assert(real_path);
 
 	ep = NULL;
 	e.key = real_path;

@@ -241,7 +241,7 @@ struct d_resource
 	struct options proxy_options;
 	struct options proxy_plugins;
 	STAILQ_ENTRY(d_resource) link;
-	char *config_file; /* The config file this resource is define in.*/
+	const char *config_file; /* The config file this resource is define in.*/
 	int start_line;
 	unsigned int stacked_timeouts:1;
 	unsigned int ignore:1;
@@ -314,7 +314,7 @@ struct cfg_ctx {
 };
 
 
-extern char *canonify_path(char *path);
+extern char *canonify_path(const char *path);
 extern int pushd(const char *path);
 extern void popd(int fd);
 
@@ -458,8 +458,8 @@ bool peer_diskless(struct peer_device *peer_device);
 
 const struct field_def *find_field(bool *no_prefix, const struct context_def *options_def, const char *name);
 
-extern char *config_file;
-extern char *config_save;
+extern const char *config_file;
+extern const char *config_save;
 extern int config_valid;
 extern struct resources config;
 extern struct d_resource* common;

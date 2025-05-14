@@ -109,7 +109,7 @@ struct d_resource
   struct d_option* proxy_plugins;
   struct d_resource* next;
   struct d_name *become_primary_on;
-  char *config_file; /* The config file this resource is define in.*/
+  const char *config_file; /* The config file this resource is define in.*/
   int start_line;
   unsigned int stacked_timeouts:1;
   unsigned int ignore:1;
@@ -135,7 +135,7 @@ struct cfg_ctx {
 };
 
 
-extern char *canonify_path(char *path);
+extern char *canonify_path(const char *path);
 
 extern int adm_adjust(struct cfg_ctx *);
 extern int adm_new_minor(struct cfg_ctx *ctx);
@@ -228,8 +228,8 @@ int do_proxy_conn_up(struct cfg_ctx *ctx);
 int do_proxy_conn_down(struct cfg_ctx *ctx);
 int do_proxy_conn_plugins(struct cfg_ctx *ctx);
 
-extern char *config_file;
-extern char *config_save;
+extern const char *config_file;
+extern const char *config_save;
 extern int config_valid;
 extern struct d_resource* config;
 extern struct d_resource* common;
