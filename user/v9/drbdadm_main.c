@@ -3212,7 +3212,7 @@ int parse_options(int argc, char **argv, struct adm_cmd **cmd, char ***resource_
 			} else {
 				yyin = fopen(optarg, "r");
 				if (!yyin) {
-					log_err("Can not open '%s'.\n.", optarg);
+					log_err("Can not open '%s'.\n", optarg);
 					exit(E_EXEC_ERROR);
 				}
 				if (asprintf(&tmp, "%s", optarg) < 0) {
@@ -3591,7 +3591,7 @@ int main(int argc, char **argv)
 	if (config_test) {
 		FILE *f = fopen(config_test, "r");
 		if (!f) {
-			log_err("Can not open '%s'.\n.", config_test);
+			log_err("Can not open '%s'.\n", config_test);
 			exit(E_EXEC_ERROR);
 		}
 		include_file(f, config_test);
