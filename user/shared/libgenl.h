@@ -97,17 +97,7 @@ static inline int msg_tailroom(struct msg_buff *msg)
 	return msg->end - msg->tail;
 }
 
-static inline struct msg_buff *msg_new(size_t size)
-{
-	struct msg_buff *m = calloc(1, sizeof(*m) + size);
-	if (!m)
-		return NULL;
-
-	m->tail = m->data;
-	m->end  = m->tail + size;
-
-	return m;
-}
+struct msg_buff *msg_new(size_t size);
 
 static inline void msg_free(struct msg_buff *m)
 {
@@ -411,34 +401,22 @@ static inline int nlmsg_len(const struct nlmsghdr *nlh)
  * @nlh: netlink message header
  * @hdrlen: length of family specific header
  */
-static inline struct nlattr *nlmsg_attrdata(const struct nlmsghdr *nlh,
-					    int hdrlen)
-{
-	unsigned char *data = nlmsg_data(nlh);
-	return (struct nlattr *) (data + NLMSG_ALIGN(hdrlen));
-}
+struct nlattr *nlmsg_attrdata(const struct nlmsghdr *nlh,
+					    int hdrlen);
 
 /**
  * nlmsg_attrlen - length of attributes data
  * @nlh: netlink message header
  * @hdrlen: length of family specific header
  */
-static inline int nlmsg_attrlen(const struct nlmsghdr *nlh, int hdrlen)
-{
-	return nlmsg_len(nlh) - NLMSG_ALIGN(hdrlen);
-}
+int nlmsg_attrlen(const struct nlmsghdr *nlh, int hdrlen);
 
 /**
  * nlmsg_ok - check if the netlink message fits into the remaining bytes
  * @nlh: netlink message header
  * @remaining: number of bytes remaining in message stream
  */
-static inline int nlmsg_ok(const struct nlmsghdr *nlh, int remaining)
-{
-	return (remaining >= (int) sizeof(struct nlmsghdr) &&
-		nlh->nlmsg_len >= sizeof(struct nlmsghdr) &&
-		nlh->nlmsg_len <= (__u32)remaining);
-}
+int nlmsg_ok(const struct nlmsghdr *nlh, int remaining);
 
 /**
  * nlmsg_next - next netlink message in message stream
@@ -448,14 +426,7 @@ static inline int nlmsg_ok(const struct nlmsghdr *nlh, int remaining)
  * Returns the next netlink message in the message stream and
  * decrements remaining by the size of the current message.
  */
-static inline struct nlmsghdr *nlmsg_next(struct nlmsghdr *nlh, int *remaining)
-{
-	int totlen = NLMSG_ALIGN(nlh->nlmsg_len);
-
-	*remaining -= totlen;
-
-	return (struct nlmsghdr *) ((unsigned char *) nlh + totlen);
-}
+struct nlmsghdr *nlmsg_next(struct nlmsghdr *nlh, int *remaining);
 
 /**
  * nlmsg_parse - parse attributes of a netlink message
@@ -990,31 +961,8 @@ struct genl_info
  *
  * Returns pointer to user specific header
  */
-static inline void *genlmsg_put(struct msg_buff *msg, struct genl_family *family,
-		int flags, __u8 cmd)
-{
-	const unsigned hdrsize = NLMSG_HDRLEN + GENL_HDRLEN + family->hdrsize;
-	struct nlmsghdr *nlh;
-	struct genlmsghdr *hdr;
-
-	if (unlikely(msg_tailroom(msg) < nlmsg_total_size(hdrsize)))
-		return NULL;
-
-	nlh = msg_put(msg, hdrsize);
-
-	nlh->nlmsg_type = family->id;
-	nlh->nlmsg_flags = flags;
-	/* pid and seq will be reassigned in genl_send() */
-	nlh->nlmsg_pid = 0;
-	nlh->nlmsg_seq = 0;
-
-	hdr = nlmsg_data(nlh);
-	hdr->cmd = cmd;
-	hdr->version = family->version; /* truncated to u8! */
-	hdr->reserved = 0;
-
-	return (char *) hdr + GENL_HDRLEN;
-}
+void *genlmsg_put(struct msg_buff *msg, struct genl_family *family,
+ 		int flags, __u8 cmd);
 
 /**
  * gennlmsg_data - head of message payload

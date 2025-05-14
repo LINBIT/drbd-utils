@@ -84,6 +84,11 @@ drbdsetup-core-obj = libnla.o registry.o drbdsetup.o drbdtool_common.o \
 		     wrap_printf.o drbdsetup_colors.o shared_tool.o \
 		     drbdsetup_events2.o
 
+libdrbdsetup-obj = libnla.o registry.o libdrbdsetup.o drbdtool_common.o \
+		 drbd_buildtag.o drbd_strings.o config_flags.o drbd_nla.o \
+		 wrap_printf.o drbdsetup_colors.o shared_tool.o \
+		 drbdsetup_events2.o
+
 drbdmeta-obj = drbdmeta.o drbdmeta_scanner.o drbdtool_common.o drbd_buildtag.o \
 	       drbd_strings.o shared_tool.o
 
@@ -108,7 +113,7 @@ all: tools
 ../shared_prereqs.mk: ;
 include ../shared_prereqs.mk
 
-tools: drbdadm drbdmeta drbdsetup
+tools: drbdadm drbdmeta drbdsetup libdrbdsetup.a
 
 drbdadm: $(drbdadm-obj)
 	$(LINK.c) $(LDFLAGS) -o $@ $^ $(LIBS)
@@ -173,6 +178,9 @@ spell:
 	for f in drbdadm_adjust.c drbdadm_main.c drbdadm_parser.c drbdadm_usage_cnt.c drbdmeta.c drbdsetup.c drbdtool_common.c; do \
 	 	aspell --save-repl --dont-backup --personal=./../documentation/aspell.en.per check $$f; \
 	done
+
+libdrbdsetup.a: $(libdrbdsetup-obj)
+	$(AR) $(ARFLAGS) $@ $^
 
 .PHONY: install uninstall clean distclean spell
 ../../configure:

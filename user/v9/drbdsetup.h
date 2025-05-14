@@ -24,6 +24,8 @@
 /* same for DEV_IS_OPEN */
 #define DEV_IS_OPEN_UNKNOWN 3
 
+int proxy_drbd_cfg_context_from_attrs(struct drbd_cfg_context *s, struct genl_info *info);
+
 struct drbd_argument {
 	const char* name;
 	__u16 nla_type;
@@ -54,14 +56,25 @@ enum cfg_ctx_key {
 	CTX_PEER_DEVICE = CTX_PEER_NODE | CTX_VOLUME,
 };
 
+struct cmd_context {
+	/*
+	 * In CTX_MINOR, CTX_RESOURCE, CTX_ALL, objname and minor refer to the object
+	 * the command operates on.
+	 */
+	char *objname;
+	unsigned minor;
+	struct drbd_cfg_context nl_ctx;
+	enum cfg_ctx_key context;
+};
+
 struct drbd_cmd {
 	const char* cmd;
 	enum cfg_ctx_key ctx_key;
 	int cmd_id;
 	int tla_id; /* top level attribute id */
-	int (*function)(struct drbd_cmd *, int, char **);
+	int (*function)(struct cmd_context *ctx, struct drbd_cmd *, int, char **);
 	struct drbd_argument *drbd_args;
-	int (*handle_reply)(struct drbd_cmd*, struct genl_info *, void *u_ptr);
+	int (*handle_reply)(struct cmd_context *ctx, struct drbd_cmd*, struct genl_info *, void *u_ptr);
 	struct option *options;
 	bool missing_ok;
 	bool warn_on_missing;
@@ -137,6 +150,19 @@ extern bool opt_timestamps;
 extern bool opt_diff;
 extern bool opt_fullch;
 
+void set_drbd_sock(struct genl_sock *s);
+struct genl_family *get_genl_family(void);
+void resource_status(struct resources_list *r);
+struct devices_list *list_devices(char *resource_name);
+struct connections_list *list_connections(char *resource_name);
+struct connections_list *sort_connections(struct connections_list *);
+struct resources_list *list_resources(void);
+struct peer_devices_list *list_peer_devices(char *resource_name);
+struct paths_list *list_paths(char *resource_name);
+void device_status(struct devices_list *d, bool sd, bool tty);
+int primary_cmd(int argc, char **argv);
+struct drbd_cmd *find_cmd_by_name(const char *name);
+int _generic_config_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv);
 bool kernel_older_than(int version, int patchlevel, int sublevel);
 int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 char *kernel_device_to_userland_device(char *kernel_dev);

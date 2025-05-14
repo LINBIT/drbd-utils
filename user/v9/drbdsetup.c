@@ -170,30 +170,30 @@ static void address_json(void *address, int addr_len, char *indent);
 static void address_json_indent(void *address, int addr_len);
 
 // command functions
-static int generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int down_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int generic_events_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int del_minor_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int del_resource_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int show_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int status_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int role_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int peer_role_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int cstate_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int dstate_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int check_resize_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int show_or_get_gi_cmd(struct drbd_cmd *cm, int argc, char **argv);
-static int udev_cmd(struct drbd_cmd *cm, int argc, char **argv);
+static int generic_config_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv);
+static int down_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv);
+static int generic_events_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv);
+static int del_minor_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv);
+static int del_resource_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv);
+static int show_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv);
+static int status_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv);
+static int role_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv);
+static int peer_role_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv);
+static int cstate_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv);
+static int dstate_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv);
+static int check_resize_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv);
+static int show_or_get_gi_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv);
+static int udev_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv);
 
 // sub commands for generic_get_cmd
-       int print_event(struct drbd_cmd *, struct genl_info *, void *); /* is in drbdsetup_events2.c */
+       int print_event(struct cmd_context *ctx, struct drbd_cmd *, struct genl_info *, void *); /* is in drbdsetup_events2.c */
        void events2_prepare_update(); /* is in drbdsetup_events2.c */
        void events2_reset(); /* is in drbdsetup_events2.c */
-static int wait_for_family(struct drbd_cmd *, struct genl_info *, void *);
-static int remember_resource(struct drbd_cmd *, struct genl_info *, void *);
-static int remember_device(struct drbd_cmd *, struct genl_info *, void *);
-static int remember_connection(struct drbd_cmd *, struct genl_info *, void *);
-static int remember_peer_device(struct drbd_cmd *, struct genl_info *, void *);
+static int wait_for_family(struct cmd_context *cmd_ctx, struct drbd_cmd *, struct genl_info *, void *);
+static int remember_resource(struct cmd_context *ctx, struct drbd_cmd *, struct genl_info *, void *);
+static int remember_device(struct cmd_context *ctx, struct drbd_cmd *, struct genl_info *, void *);
+static int remember_connection(struct cmd_context *ctx, struct drbd_cmd *, struct genl_info *, void *);
+static int remember_peer_device(struct cmd_context *ctx, struct drbd_cmd *, struct genl_info *, void *);
 
 
 // convert functions for arguments
@@ -202,13 +202,7 @@ static int conv_u32(struct drbd_argument *, struct msg_buff *, struct drbd_genlm
 static int conv_addr(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 static int conv_str(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 
-static struct resources_list *list_resources(void);
 static struct resources_list *sort_resources(struct resources_list *);
-static struct devices_list *list_devices(char *);
-static struct connections_list *sort_connections(struct connections_list *);
-static struct connections_list *list_connections(char *);
-static struct peer_devices_list *list_peer_devices(char *);
-static struct paths_list *list_paths(char *);
 
 struct option wait_cmds_options[] = {
 	{ "wfc-timeout", required_argument, 0, 't' },
@@ -574,17 +568,6 @@ const char * error_to_string(int err_no)
 #undef MAX_ERROR
 
 char *cmdname = NULL; /* "drbdsetup" for reporting in usage etc. */
-
-/*
- * In CTX_MINOR, CTX_RESOURCE, CTX_ALL, objname and minor refer to the object
- * the command operates on.
- */
-char *objname;
-unsigned minor = -1U;
-struct drbd_cfg_context global_ctx;
-enum cfg_ctx_key context;
-
-int lock_fd;
 
 struct genl_sock *drbd_sock = NULL;
 
@@ -955,7 +938,7 @@ void fprintf_all_cfg_reply_info_text(const char *hdr, struct nlmsghdr *nlh)
 }
 
 /* prepends global objname to output (if any) */
-static int check_error(int err_no, char *desc, struct nlattr **tla, struct nlmsghdr *nlh)
+static int check_error(int err_no, const char *objname, char *desc, struct nlattr **tla, struct nlmsghdr *nlh)
 {
 	int rv = 0;
 
@@ -1038,7 +1021,7 @@ int drbd_tla_parse(struct nlattr *tla[], struct nlmsghdr *nlh)
 #define ASSERT(exp) if (!(exp)) \
 		fprintf(stderr,"ASSERT( " #exp " ) in %s:%d\n", __FILE__,__LINE__);
 
-static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
+int _generic_config_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv)
 {
 	struct drbd_argument *ad;
 	struct nlattr *nla;
@@ -1074,17 +1057,17 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	dhdr->minor = -1;
 	dhdr->flags = 0;
 
-	if (context & CTX_MINOR)
-		dhdr->minor = minor;
+	if (ctx->context & CTX_MINOR)
+		dhdr->minor = ctx->minor;
 
-	if (context & ~CTX_MINOR) {
+	if (ctx->context & ~CTX_MINOR) {
 		nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
-		if (context & CTX_RESOURCE)
-			nla_put_string(smsg, T_ctx_resource_name, objname);
-		if (context & CTX_PEER_NODE_ID)
-			nla_put_u32(smsg, T_ctx_peer_node_id, global_ctx.ctx_peer_node_id);
-		if (context & CTX_VOLUME)
-			nla_put_u32(smsg, T_ctx_volume, global_ctx.ctx_volume);
+		if (ctx->context & CTX_RESOURCE)
+			nla_put_string(smsg, T_ctx_resource_name, ctx->objname);
+		if (ctx->context & CTX_PEER_NODE_ID)
+			nla_put_u32(smsg, T_ctx_peer_node_id, ctx->nl_ctx.ctx_peer_node_id);
+		if (ctx->context & CTX_VOLUME)
+			nla_put_u32(smsg, T_ctx_volume, ctx->nl_ctx.ctx_volume);
 		nla_nest_end(smsg, nla);
 	}
 
@@ -1142,7 +1125,7 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		ad++;
 	}
 	/* dhdr->minor may have been set by one of the convert functions. */
-	minor = dhdr->minor;
+	ctx->minor = dhdr->minor;
 
 	if (nla)
 		nla_nest_end(smsg, nla);
@@ -1164,15 +1147,15 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		int i;
 		int c = 0;
 		for (i = 0; i <= 2; i++) {
-			if (i == 0) c = snprintf(buf, PATH_MAX, "/sys/devices/virtual/block/drbd%u", minor);
-			if (i == 1) c = snprintf(buf, PATH_MAX, "/sys/devices/virtual/bdi/147:%u", minor);
-			if (i == 2) c = snprintf(buf, PATH_MAX, "/sys/block/drbd%u", minor);
+			if (i == 0) c = snprintf(buf, PATH_MAX, "/sys/devices/virtual/block/drbd%u", ctx->minor);
+			if (i == 1) c = snprintf(buf, PATH_MAX, "/sys/devices/virtual/bdi/147:%u", ctx->minor);
+			if (i == 2) c = snprintf(buf, PATH_MAX, "/sys/block/drbd%u", ctx->minor);
 			if (c < PATH_MAX) {
 				if (lstat(buf, &sb) == 0) {
 					syslog(LOG_ERR, "new-minor %s %u %u: sysfs node '%s' (already? still?) exists\n",
-							objname, minor, global_ctx.ctx_volume, buf);
+						   ctx->objname, ctx->minor, ctx->nl_ctx.ctx_volume, buf);
 					fprintf(stderr, "new-minor %s %u %u: sysfs node '%s' (already? still?) exists\n",
-							objname, minor, global_ctx.ctx_volume, buf);
+							ctx->objname, ctx->minor, ctx->nl_ctx.ctx_volume, buf);
 					rv = ERR_MINOR_OR_VOLUME_EXISTS;
 					desc = NULL;
 					goto error;
@@ -1201,7 +1184,7 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 				goto error;
 			}
 		} while (false);
-		ASSERT(dh->minor == minor);
+		ASSERT(dh->minor == ctx->minor);
 		rv = dh->ret_code;
 		if (rv != SS_IN_TRANSIENT_STATE)
 			break;
@@ -1228,37 +1211,37 @@ static int _generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
 error:
 	msg_free(smsg);
 
-	rv = check_error(rv, desc, tla, nlh);
+	rv = check_error(rv, ctx->objname, desc, tla, nlh);
 	free(iov.iov_base);
 	return rv;
 }
 
-static int generic_config_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int generic_config_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv)
 {
-	return _generic_config_cmd(cm, argc, argv);
+	return _generic_config_cmd(ctx, cm, argc, argv);
 }
 
-static int del_minor_cmd(struct drbd_cmd *cm, int argc, char **argv)
-{
-	int rv;
-
-	rv = generic_config_cmd(cm, argc, argv);
-	if (!rv)
-		unregister_minor(minor);
-	return rv;
-}
-
-static int del_resource_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int del_minor_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv)
 {
 	int rv;
 
-	rv = generic_config_cmd(cm, argc, argv);
+	rv = generic_config_cmd(ctx, cm, argc, argv);
 	if (!rv)
-		unregister_resource(objname);
+		unregister_minor(ctx->minor);
 	return rv;
 }
 
-static struct drbd_cmd *find_cmd_by_name(const char *name)
+static int del_resource_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv)
+{
+	int rv;
+
+	rv = generic_config_cmd(ctx, cm, argc, argv);
+	if (!rv)
+		unregister_resource(ctx->objname);
+	return rv;
+}
+
+struct drbd_cmd *find_cmd_by_name(const char *name)
 {
 	unsigned int i;
 
@@ -1577,7 +1560,7 @@ bool opt_timestamps;
 bool opt_diff;
 bool opt_fullch;
 
-static int generic_send(struct drbd_cmd *cm)
+static int generic_send(struct cmd_context *ctx, struct drbd_cmd *cm)
 {
 	struct drbd_genlmsghdr *dhdr;
 	struct msg_buff *smsg;
@@ -1586,23 +1569,23 @@ static int generic_send(struct drbd_cmd *cm)
 	/* preallocate request message */
 	smsg = msg_new(DEFAULT_MSG_SIZE);
 	if (!smsg) {
-		fprintf(stderr, "%s: could not allocate netlink message\n", objname);
+		fprintf(stderr, "%s: could not allocate netlink message\n", ctx->objname);
 		return 20;
 	}
 
 	dhdr = genlmsg_put(smsg, &drbd_genl_family, NLM_F_DUMP, cm->cmd_id);
 	dhdr->minor = -1;
 	dhdr->flags = 0;
-	if (strcmp(objname, "all")) {
+	if (strcmp(ctx->objname, "all")) {
 		/* Restrict the dump to a single resource. */
 		struct nlattr *nla;
 		nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
-		nla_put_string(smsg, T_ctx_resource_name, objname);
+		nla_put_string(smsg, T_ctx_resource_name, ctx->objname);
 		nla_nest_end(smsg, nla);
 	}
 
 	if (genl_send(drbd_sock, smsg)) {
-		fprintf(stderr, "%s: error sending config command\n", objname);
+		fprintf(stderr, "%s: error sending config command\n", ctx->objname);
 		err = 20;
 	}
 
@@ -1610,7 +1593,7 @@ static int generic_send(struct drbd_cmd *cm)
 	return err;
 }
 
-static int generic_recv(struct drbd_cmd *cm, int timeout_arg, void *u_ptr, int extra_poll_fd, bool expect_reply)
+static int generic_recv(struct cmd_context *cmd_ctx, struct drbd_cmd *cm, int timeout_arg, void *u_ptr, int extra_poll_fd, bool expect_reply)
 {
 	struct nlattr *tla[ARRAY_SIZE(drbd_tla_nl_policy)] = { 0, };
 	char *desc = NULL;
@@ -1682,7 +1665,7 @@ static int generic_recv(struct drbd_cmd *cm, int timeout_arg, void *u_ptr, int e
 				expect_reply = false;
 				if (cm->continuous_poll)
 					continue;
-				err = cm->handle_reply(cm, NULL, u_ptr);
+				err = cm->handle_reply(cmd_ctx, cm, NULL, u_ptr);
 				if (err)
 					goto out;
 				err = -*(int*)nlmsg_data(nlh);
@@ -1797,19 +1780,19 @@ static int generic_recv(struct drbd_cmd *cm, int timeout_arg, void *u_ptr, int e
 				if (!err) {
 					switch ((int)cm->ctx_key) {
 					case CTX_PEER_DEVICE:
-						if (ctx.ctx_volume != global_ctx.ctx_volume)
+						if (ctx.ctx_volume != cmd_ctx->nl_ctx.ctx_volume)
 							continue;
 						/* also needs to match the connection, of course */
 					case CTX_PEER_NODE:
-						if (ctx.ctx_peer_node_id != global_ctx.ctx_peer_node_id)
+						if (ctx.ctx_peer_node_id != cmd_ctx->nl_ctx.ctx_peer_node_id)
 							continue;
 						/* also needs to match the resource, of course */
 					case CTX_RESOURCE:
 					case CTX_RESOURCE | CTX_ALL:
-						if (!strcmp(objname, "all"))
+						if (!strcmp(cmd_ctx->objname, "all"))
 							break;
 
-						if (strcmp(objname, ctx.ctx_resource_name))
+						if (strcmp(cmd_ctx->objname, ctx.ctx_resource_name))
 							continue;
 
 						break;
@@ -1824,7 +1807,7 @@ static int generic_recv(struct drbd_cmd *cm, int timeout_arg, void *u_ptr, int e
 				rv = NO_ERROR;
 			if (rv != NO_ERROR)
 				goto out;
-			err = cm->handle_reply(cm, &info, u_ptr);
+			err = cm->handle_reply(cmd_ctx, cm, &info, u_ptr);
 			if (err) {
 				if (err < 0)
 					err = 0;
@@ -1835,23 +1818,23 @@ static int generic_recv(struct drbd_cmd *cm, int timeout_arg, void *u_ptr, int e
 
 out:
 	if (!err)
-		err = check_error(rv, desc, tla, (struct nlmsghdr *)iov.iov_base);
+		err = check_error(rv, cmd_ctx->objname, desc, tla, (struct nlmsghdr *)iov.iov_base);
 	free(iov.iov_base);
 	return err;
 }
 
-static int generic_get(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
+static int generic_get(struct cmd_context *ctx, struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 {
 	int err;
 
-	err = generic_send(cm);
+	err = generic_send(ctx, cm);
 	if (err != 0)
 		return err;
 
-	return generic_recv(cm, timeout_arg, u_ptr, -1, true);
+	return generic_recv(ctx, cm, timeout_arg, u_ptr, -1, true);
 }
 
-static int events2_poll(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
+static int events2_poll(struct cmd_context *ctx, struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 {
 	int err;
 	bool send_request = true;
@@ -1861,7 +1844,7 @@ static int events2_poll(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 		ssize_t bytes_read;
 
 		if (send_request) {
-			err = generic_send(cm);
+			err = generic_send(ctx, cm);
 			if (err != 0)
 				return err;
 		}
@@ -1873,12 +1856,12 @@ static int events2_poll(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				 * reply is done. This is important on Windows
 				 * because the extra_poll_fd parameter is not
 				 * supported on that platform. */
-				err = generic_recv(cm, timeout_arg, u_ptr, -1, send_request);
+				err = generic_recv(ctx, cm, timeout_arg, u_ptr, -1, send_request);
 				if (err != 0)
 					return err;
 			}
 		} else {
-			err = generic_recv(cm, timeout_arg, u_ptr, STDIN_FILENO, send_request);
+			err = generic_recv(ctx, cm, timeout_arg, u_ptr, STDIN_FILENO, send_request);
 			if (err != 0)
 				return err;
 		}
@@ -1910,7 +1893,7 @@ static int events2_poll(struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 	return 0;
 }
 
-static int generic_events_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int generic_events_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv)
 {
 	static struct option no_options[] = { { } };
 	struct choose_timeout_ctx timeo_ctx = {
@@ -2026,7 +2009,7 @@ static int generic_events_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		cm->continuous_poll = false;
 	} else {
 		if (genl_join_mc_group_and_ctrl(drbd_sock, "events")) {
-			fprintf(stderr,"%s: unable to join drbd events multicast group\n", objname);
+			fprintf(stderr,"%s: unable to join drbd events multicast group\n", ctx->objname);
 			err = 20;
 			goto out;
 		}
@@ -2038,7 +2021,7 @@ static int generic_events_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		struct msg_buff *smsg;
 		struct iovec iov;
 		int rr;
-		char *res_name = cm->ctx_key & CTX_RESOURCE ? objname : "all";
+		char *res_name = cm->ctx_key & CTX_RESOURCE ? ctx->objname : "all";
 
 		peer_devices = list_peer_devices(res_name);
 
@@ -2083,9 +2066,9 @@ static int generic_events_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	}
 
 	if (cm->handle_reply == &print_event && opt_poll)
-		err = events2_poll(cm, timeout_ms, peer_devices);
+		err = events2_poll(ctx, cm, timeout_ms, peer_devices);
 	else
-		err = generic_get(cm, timeout_ms, peer_devices);
+		err = generic_get(ctx, cm, timeout_ms, peer_devices);
 
 out:
 	free_peer_devices(peer_devices);
@@ -2346,7 +2329,7 @@ static void show_volume(struct devices_list *device)
 	printI("}\n"); /* close volume */
 }
 
-static void show_resource_list(struct resources_list *resources_list, char* old_objname)
+static void show_resource_list(struct cmd_context *ctx, struct resources_list *resources_list, char* old_objname)
 {
 	struct resources_list *resource;
 
@@ -2368,7 +2351,7 @@ static void show_resource_list(struct resources_list *resources_list, char* old_
 		if (devices && connections)
 			peer_devices = list_peer_devices(resource->name);
 
-		objname = resource->name;
+		ctx->objname = resource->name;
 
 		printI("resource \"%s\" {\n", resource->name);
 		++indent;
@@ -2411,7 +2394,7 @@ static bool will_resource_list_json(struct resources_list *resource, char* old_o
 	return true;
 }
 
-static void show_resource_list_json(struct resources_list *resources_list, char* old_objname)
+static void show_resource_list_json(struct cmd_context *ctx, struct resources_list *resources_list, char* old_objname)
 {
 	struct resources_list *resource;
 
@@ -2433,7 +2416,7 @@ static void show_resource_list_json(struct resources_list *resources_list, char*
 		if (devices && connections)
 			peer_devices = list_peer_devices(resource->name);
 
-		objname = resource->name;
+		ctx->objname = resource->name;
 
 		printI("{\n");
 		++indent;
@@ -2494,10 +2477,10 @@ static void show_resource_list_json(struct resources_list *resources_list, char*
 	printI("]\n");
 }
 
-static int show_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int show_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv)
 {
 	struct resources_list *resources_list;
-	char *old_objname = objname;
+	char *old_objname = ctx->objname;
 	int c;
 
 	optind = 0;  /* reset getopt_long() */
@@ -2521,12 +2504,12 @@ static int show_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	resources_list = sort_resources(list_resources());
 
 	if (json_output)
-		show_resource_list_json(resources_list, old_objname);
+		show_resource_list_json(ctx, resources_list, old_objname);
 	else
-		show_resource_list(resources_list, old_objname);
+		show_resource_list(ctx, resources_list, old_objname);
 
 	free(resources_list);
-	objname = old_objname;
+	ctx->objname = old_objname;
 	return 0;
 }
 
@@ -3118,7 +3101,7 @@ const char *no_yes_unknown_str(unsigned char almost_bool)
 	}
 }
 
-static void device_status(struct devices_list *device, bool single_device, bool is_a_tty)
+void device_status(struct devices_list *device, bool single_device, bool is_a_tty)
 {
 	enum drbd_disk_state disk_state = device->info.dev_disk_state;
 	bool intentional_diskless = device->info.is_intentional_diskless == 1;
@@ -3323,7 +3306,7 @@ static void link_peer_devices_to_devices(struct peer_devices_list *peer_devices,
 	}
 }
 
-static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int status_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv)
 {
 	struct resources_list *resources, *resource;
 	struct sigaction sa = {
@@ -3380,7 +3363,7 @@ static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		bool single_device;
 		static bool jsonisfirst = true;
 
-		if (strcmp(objname, "all") && strcmp(objname, resource->name))
+		if (strcmp(ctx->objname, "all") && strcmp(ctx->objname, resource->name))
 			continue;
 		if (json)
 			jsonisfirst ? jsonisfirst = false : puts(",");
@@ -3429,14 +3412,14 @@ static int status_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		puts("]\n");
 
 	free_resources(resources);
-	if (!found && strcmp(objname, "all")) {
-		fprintf(stderr, "%s: No such resource\n", objname);
+	if (!found && strcmp(ctx->objname, "all")) {
+		fprintf(stderr, "%s: No such resource\n", ctx->objname);
 		return 10;
 	}
 	return 0;
 }
 
-static int role_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int role_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv)
 {
 	struct resources_list *resources, *resource;
 	int ret = ERR_RES_NOT_KNOWN;
@@ -3444,7 +3427,7 @@ static int role_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	resources = list_resources();
 
 	for (resource = resources; resource; resource = resource->next) {
-		if (strcmp(objname, resource->name))
+		if (strcmp(ctx->objname, resource->name))
 			continue;
 
 		printf("%s\n", drbd_role_str(resource->info.res_role));
@@ -3455,20 +3438,20 @@ static int role_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	free_resources(resources);
 
 	if (ret != NO_ERROR) {
-		fprintf(stderr, "%s: %s\n", objname, error_to_string(ret));
+		fprintf(stderr, "%s: %s\n", ctx->objname, error_to_string(ret));
 		return 10;
 	}
 	return 0;
 }
 
-static int peer_role_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int peer_role_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv)
 {
 	struct connections_list *connections, *connection;
 	bool found = false;
 
-	connections = list_connections(objname);
+	connections = list_connections(ctx->objname);
 	for (connection = connections; connection; connection = connection->next) {
-		if (connection->ctx.ctx_peer_node_id != global_ctx.ctx_peer_node_id)
+		if (connection->ctx.ctx_peer_node_id != ctx->nl_ctx.ctx_peer_node_id)
 			continue;
 
 		printf("%s\n", drbd_role_str(connection->info.conn_role));
@@ -3478,20 +3461,20 @@ static int peer_role_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	free_connections(connections);
 
 	if (!found) {
-		fprintf(stderr, "%s: No such connection\n", objname);
+		fprintf(stderr, "%s: No such connection\n", ctx->objname);
 		return 10;
 	}
 	return 0;
 }
 
-static int cstate_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int cstate_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv)
 {
 	struct connections_list *connections, *connection;
 	bool found = false;
 
-	connections = list_connections(objname);
+	connections = list_connections(ctx->objname);
 	for (connection = connections; connection; connection = connection->next) {
-		if (connection->ctx.ctx_peer_node_id != global_ctx.ctx_peer_node_id)
+		if (connection->ctx.ctx_peer_node_id != ctx->nl_ctx.ctx_peer_node_id)
 			continue;
 
 		printf("%s\n", drbd_conn_str(connection->info.conn_connection_state));
@@ -3501,13 +3484,13 @@ static int cstate_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	free_connections(connections);
 
 	if (!found) {
-		fprintf(stderr, "%s: No such connection\n", objname);
+		fprintf(stderr, "%s: No such connection\n", ctx->objname);
 		return 10;
 	}
 	return 0;
 }
 
-static int dstate_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int dstate_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv)
 {
 	struct devices_list *devices, *device;
 	bool found = false;
@@ -3515,7 +3498,7 @@ static int dstate_cmd(struct drbd_cmd *cm, int argc, char **argv)
 
 	devices = list_devices(NULL);
 	for (device = devices; device; device = device->next) {
-		if (device->minor != minor)
+		if (device->minor != ctx->minor)
 			continue;
 
 		printf("%s", drbd_disk_str(device->info.dev_disk_state));
@@ -3536,20 +3519,20 @@ static int dstate_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	free_devices(devices);
 
 	if (!found) {
-		fprintf(stderr, "%s: No such device\n", objname);
+		fprintf(stderr, "%s: No such device\n", ctx->objname);
 		return 10;
 	}
 	return 0;
 }
 
-static int udev_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int udev_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv)
 {
 	struct devices_list *devices, *device;
 	bool found = false;
 
 	devices = list_devices(NULL);
 	for (device = devices; device; device = device->next) {
-		if (device->minor != minor)
+		if (device->minor != ctx->minor)
 			continue;
 
 		printf("DEVICE=drbd%u\n", device->minor);
@@ -3565,7 +3548,7 @@ static int udev_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	free_devices(devices);
 
 	if (!found) {
-		fprintf(stderr, "%s: No such device\n", objname);
+		fprintf(stderr, "%s: No such device\n", ctx->objname);
 		return 10;
 	}
 	return 0;
@@ -3647,7 +3630,7 @@ struct resources_list *new_resource_from_info(struct genl_info *info)
 	return r;
 }
 
-static int remember_resource(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
+static int remember_resource(struct cmd_context *ctx, struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
 {
 	struct resources_list ***tail = u_ptr;
 
@@ -3700,10 +3683,7 @@ static struct resources_list *sort_resources(struct resources_list *resources)
 	return resources;
 }
 
-/*
- * Expects objname to be set to the resource name or "all".
- */
-static struct resources_list *list_resources(void)
+struct resources_list *list_resources(void)
 {
 	struct drbd_cmd cmd = {
 		.cmd_id = DRBD_ADM_GET_RESOURCES,
@@ -3711,18 +3691,16 @@ static struct resources_list *list_resources(void)
 		.missing_ok = false,
 	};
 	struct resources_list *list = NULL, **tail = &list;
-	char *old_objname = objname;
-	int old_my_addr_len = global_ctx.ctx_my_addr_len;
-	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
 	int err;
+	struct cmd_context ctx = {
+		.objname = "all",
+		.nl_ctx = {
+			.ctx_my_addr_len = 0,
+			.ctx_peer_addr_len = 0,
+		}
+	};
 
-	objname = "all";
-	global_ctx.ctx_my_addr_len = 0;
-	global_ctx.ctx_peer_addr_len = 0;
-	err = generic_get(&cmd, 120000, &tail);
-	objname = old_objname;
-	global_ctx.ctx_my_addr_len = old_my_addr_len;
-	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
+	err = generic_get(&ctx, &cmd, 120000, &tail);
 	if (err) {
 		free_resources(list);
 		list = NULL;
@@ -3771,7 +3749,7 @@ struct devices_list *new_device_from_info(struct genl_info *info)
 	return d;
 }
 
-static int remember_device(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
+static int remember_device(struct cmd_context *ctx, struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 {
 	struct devices_list ***tail = u_ptr;
 
@@ -3784,10 +3762,7 @@ static int remember_device(struct drbd_cmd *cm, struct genl_info *info, void *u_
 	return 0;
 }
 
-/*
- * Expects objname to be set to the resource name or "all".
- */
-static struct devices_list *list_devices(char *resource_name)
+struct devices_list *list_devices(char *resource_name)
 {
 	struct drbd_cmd cmd = {
 		.cmd_id = DRBD_ADM_GET_DEVICES,
@@ -3795,18 +3770,16 @@ static struct devices_list *list_devices(char *resource_name)
 		.missing_ok = false,
 	};
 	struct devices_list *list = NULL, **tail = &list;
-	char *old_objname = objname;
-	int old_my_addr_len = global_ctx.ctx_my_addr_len;
-	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
 	int err;
+	struct cmd_context ctx = {
+		.objname = resource_name ? resource_name : "all",
+		.nl_ctx = {
+			.ctx_my_addr_len = 0,
+			.ctx_peer_addr_len = 0,
+		}
+	};
 
-	objname = resource_name ? resource_name : "all";
-	global_ctx.ctx_my_addr_len = 0;
-	global_ctx.ctx_peer_addr_len = 0;
-	err = generic_get(&cmd, 120000, &tail);
-	objname = old_objname;
-	global_ctx.ctx_my_addr_len = old_my_addr_len;
-	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
+	err = generic_get(&ctx, &cmd, 120000, &tail);
 	if (err) {
 		free_devices(list);
 		list = NULL;
@@ -3858,7 +3831,7 @@ struct connections_list *new_connection_from_info(struct genl_info *info)
 	return c;
 }
 
-static int remember_connection(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
+static int remember_connection(struct cmd_context *ctx, struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
 {
 	struct connections_list ***tail = u_ptr;
 
@@ -3878,7 +3851,7 @@ static int connection_name_cmp(const struct connections_list * const *a, const s
 	return strcmp((*a)->ctx.ctx_conn_name, (*b)->ctx.ctx_conn_name);
 }
 
-static struct connections_list *sort_connections(struct connections_list *connections)
+struct connections_list *sort_connections(struct connections_list *connections)
 {
 	struct connections_list *c;
 	int n;
@@ -3902,10 +3875,7 @@ static struct connections_list *sort_connections(struct connections_list *connec
 	return connections;
 }
 
-/*
- * Expects objname to be set to the resource name or "all".
- */
-static struct connections_list *list_connections(char *resource_name)
+struct connections_list *list_connections(char *resource_name)
 {
 	struct drbd_cmd cmd = {
 		.cmd_id = DRBD_ADM_GET_CONNECTIONS,
@@ -3913,18 +3883,16 @@ static struct connections_list *list_connections(char *resource_name)
 		.missing_ok = true,
 	};
 	struct connections_list *list = NULL, **tail = &list;
-	char *old_objname = objname;
-	int old_my_addr_len = global_ctx.ctx_my_addr_len;
-	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
 	int err;
+	struct cmd_context ctx = {
+		.objname = resource_name ? resource_name : "all",
+		.nl_ctx = {
+			.ctx_my_addr_len = 0,
+			.ctx_peer_addr_len = 0,
+		},
+	};
 
-	objname = resource_name ? resource_name : "all";
-	global_ctx.ctx_my_addr_len = 0;
-	global_ctx.ctx_peer_addr_len = 0;
-	err = generic_get(&cmd, 120000, &tail);
-	objname = old_objname;
-	global_ctx.ctx_my_addr_len = old_my_addr_len;
-	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
+	err = generic_get(&ctx, &cmd, 120000, &tail);
 	if (err) {
 		free_connections(list);
 		list = NULL;
@@ -3975,7 +3943,7 @@ struct peer_devices_list *new_peer_device_from_info(struct genl_info *info)
 	return p;
 
 }
-static int remember_peer_device(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
+static int remember_peer_device(struct cmd_context *ctx, struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
 {
 	struct peer_devices_list ***tail = u_ptr;
 
@@ -3988,10 +3956,7 @@ static int remember_peer_device(struct drbd_cmd *cmd, struct genl_info *info, vo
 	return 0;
 }
 
-/*
- * Expects objname to be set to the resource name or "all".
- */
-static struct peer_devices_list *list_peer_devices(char *resource_name)
+struct peer_devices_list *list_peer_devices(char *resource_name)
 {
 	struct drbd_cmd cmd = {
 		.cmd_id = DRBD_ADM_GET_PEER_DEVICES,
@@ -3999,18 +3964,16 @@ static struct peer_devices_list *list_peer_devices(char *resource_name)
 		.missing_ok = false,
 	};
 	struct peer_devices_list *list = NULL, **tail = &list;
-	char *old_objname = objname;
-	int old_my_addr_len = global_ctx.ctx_my_addr_len;
-	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
 	int err;
+	struct cmd_context ctx = {
+		.objname = resource_name ? resource_name : "all",
+		.nl_ctx = {
+			.ctx_my_addr_len = 0,
+			.ctx_peer_addr_len = 0,
+		},
+	};
 
-	objname = resource_name ? resource_name : "all";
-	global_ctx.ctx_my_addr_len = 0;
-	global_ctx.ctx_peer_addr_len = 0;
-	err = generic_get(&cmd, 120000, &tail);
-	objname = old_objname;
-	global_ctx.ctx_my_addr_len = old_my_addr_len;
-	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
+	err = generic_get(&ctx, &cmd, 120000, &tail);
 	if (err) {
 		free_peer_devices(list);
 		list = NULL;
@@ -4049,7 +4012,7 @@ struct paths_list *new_path_from_info(struct genl_info *info)
 	return p;
 }
 
-static int remember_path(struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
+static int remember_path(struct cmd_context *ctx, struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
 {
 	struct paths_list ***tail = u_ptr;
 
@@ -4062,10 +4025,7 @@ static int remember_path(struct drbd_cmd *cmd, struct genl_info *info, void *u_p
 	return 0;
 }
 
-/*
- * Expects objname to be set to the resource name or "all".
- */
-static struct paths_list *list_paths(char *resource_name)
+struct paths_list *list_paths(char *resource_name)
 {
 	struct drbd_cmd cmd = {
 		.cmd_id = DRBD_ADM_GET_PATHS,
@@ -4073,18 +4033,16 @@ static struct paths_list *list_paths(char *resource_name)
 		.missing_ok = false,
 	};
 	struct paths_list *list = NULL, **tail = &list;
-	char *old_objname = objname;
-	int old_my_addr_len = global_ctx.ctx_my_addr_len;
-	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
 	int err;
+	struct cmd_context ctx = {
+		.objname = resource_name ? resource_name : "all",
+		.nl_ctx = {
+			.ctx_my_addr_len = 0,
+			.ctx_peer_addr_len = 0,
+		},
+	};
 
-	objname = resource_name ? resource_name : "all";
-	global_ctx.ctx_my_addr_len = 0;
-	global_ctx.ctx_peer_addr_len = 0;
-	err = generic_get(&cmd, 120000, &tail);
-	objname = old_objname;
-	global_ctx.ctx_my_addr_len = old_my_addr_len;
-	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
+	err = generic_get(&ctx, &cmd, 120000, &tail);
 	if (err) {
 		free_paths(list);
 		list = NULL;
@@ -4101,7 +4059,7 @@ void free_paths(struct paths_list *paths)
 	}
 }
 
-static int check_resize_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int check_resize_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv)
 {
 	struct devices_list *devices, *device;
 	bool found = false;
@@ -4114,13 +4072,13 @@ static int check_resize_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		uint64_t bd_size;
 		int fd;
 
-		if (device->minor != minor)
+		if (device->minor != ctx->minor)
 			continue;
 		found = true;
 
 		if (device->disk_conf.meta_dev_idx >= 0 ||
 		    device->disk_conf.meta_dev_idx == DRBD_MD_INDEX_FLEX_EXT) {
-			lk_bdev_delete(minor);
+			lk_bdev_delete(ctx->minor);
 			break;
 		}
 
@@ -4134,20 +4092,20 @@ static int check_resize_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		bd_size = bdev_size(fd);
 		close(fd);
 
-		if (lk_bdev_load(minor, &bd) == 0 &&
+		if (lk_bdev_load(ctx->minor, &bd) == 0 &&
 		    bd.bd_size == bd_size &&
 		    bd.bd_name && !strcmp(bd.bd_name, device->disk_conf.backing_dev))
 			break;	/* nothing changed. */
 
 		bd.bd_size = bd_size;
 		bd.bd_name = device->disk_conf.backing_dev;
-		lk_bdev_save(minor, &bd);
+		lk_bdev_save(ctx->minor, &bd);
 		break;
 	}
 	free_devices(devices);
 
 	if (!found) {
-		fprintf(stderr, "%s: No such device\n", objname);
+		fprintf(stderr, "%s: No such device\n", ctx->objname);
 		return 10;
 	}
 	return ret;
@@ -4161,7 +4119,7 @@ static bool peer_device_ctx_match(struct drbd_cfg_context *a, struct drbd_cfg_co
 	&&	a->ctx_volume == b->ctx_volume;
 }
 
-static int show_or_get_gi_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int show_or_get_gi_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv)
 {
 	struct peer_devices_list *peer_devices, *peer_device;
 	struct devices_list *devices = NULL, *device;
@@ -4170,16 +4128,16 @@ static int show_or_get_gi_cmd(struct drbd_cmd *cm, int argc, char **argv)
 
 	peer_devices = list_peer_devices(NULL);
 	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next) {
-		if (!peer_device_ctx_match(&global_ctx, &peer_device->ctx))
+		if (!peer_device_ctx_match(&ctx->nl_ctx, &peer_device->ctx))
 			continue;
 
 		devices = list_devices(peer_device->ctx.ctx_resource_name);
 		for (device = devices; device; device = device->next) {
-			if (device->ctx.ctx_volume == global_ctx.ctx_volume)
+			if (device->ctx.ctx_volume == ctx->nl_ctx.ctx_volume)
 				goto found;
 		}
 	}
-	fprintf(stderr, "%s: No such peer device\n", objname);
+	fprintf(stderr, "%s: No such peer device\n", ctx->objname);
 	ret = 10;
 
 out:
@@ -4220,7 +4178,7 @@ found:
 	goto out;
 }
 
-static int down_cmd(struct drbd_cmd *cm, int argc, char **argv)
+static int down_cmd(struct cmd_context *ctx, struct drbd_cmd *cm, int argc, char **argv)
 {
 	struct resources_list *resources, *resource;
 	char *old_objname;
@@ -4231,8 +4189,8 @@ static int down_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		return OTHER_ERROR;
 	}
 
-	old_objname = objname;
-	context = CTX_RESOURCE;
+	old_objname = ctx->objname;
+	ctx->context = CTX_RESOURCE;
 
 	resources = list_resources();
 	for (resource = resources; resource; resource = resource->next) {
@@ -4242,15 +4200,15 @@ static int down_cmd(struct drbd_cmd *cm, int argc, char **argv)
 		if (strcmp(old_objname, "all") && strcmp(old_objname, resource->name))
 			continue;
 
-		objname = resource->name;
-		devices = list_devices(objname);
-		rv2 = _generic_config_cmd(cm, argc, argv);
+		ctx->objname = resource->name;
+		devices = list_devices(ctx->objname);
+		rv2 = _generic_config_cmd(ctx, cm, argc, argv);
 		if (!rv2) {
 			struct devices_list *device;
 
 			for (device = devices; device; device = device->next)
 				unregister_minor(device->minor);
-			unregister_resource(objname);
+			unregister_resource(ctx->objname);
 		}
 		if (!rv)
 			rv = rv2;
@@ -4258,6 +4216,22 @@ static int down_cmd(struct drbd_cmd *cm, int argc, char **argv)
 	}
 	free_resources(resources);
 	return rv;
+}
+
+int primary_cmd(int argc, char **argv)
+{
+	struct drbd_cmd *cm = find_cmd_by_name("primary");
+	struct cmd_context ctx = {
+		.objname = "all",
+		.nl_ctx = {
+			.ctx_my_addr_len = 0,
+			.ctx_peer_addr_len = 0,
+		},
+	};
+	if (!cm)
+		return OTHER_ERROR;
+
+	return _generic_config_cmd(&ctx, cm, argc, argv);
 }
 
 void peer_devices_remove(struct peer_devices_list **peer_devices, struct drbd_cfg_context *ctx)
@@ -4274,7 +4248,7 @@ void peer_devices_remove(struct peer_devices_list **peer_devices, struct drbd_cf
 	}
 }
 
-void peer_devices_append(struct peer_devices_list *peer_devices, struct genl_info *info)
+void peer_devices_append(struct cmd_context *ctx, struct peer_devices_list *peer_devices, struct genl_info *info)
 {
 	struct peer_devices_list *peer_device, **tail = NULL;
 
@@ -4284,11 +4258,11 @@ void peer_devices_append(struct peer_devices_list *peer_devices, struct genl_inf
 	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next)
 		tail = &peer_device->next;
 
-	remember_peer_device(NULL, info, &tail);
+	remember_peer_device(ctx, NULL, info, &tail);
 }
 
 /* Actually waits for all volumes of a connection... */
-static int wait_for_family(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
+static int wait_for_family(struct cmd_context *cmd_ctx, struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 {
 	struct peer_devices_list *peer_devices = u_ptr;
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
@@ -4355,7 +4329,7 @@ static int wait_for_family(struct drbd_cmd *cm, struct genl_info *info, void *u_
 			peer_devices_remove(&peer_devices, &ctx);
 
 		if ((nh.nh_type & ~NOTIFY_FLAGS) == NOTIFY_CREATE)
-			peer_devices_append(peer_devices, info);
+			peer_devices_append(cmd_ctx, peer_devices, info);
 
 		for (peer_device = peer_devices;
 		     peer_device;
@@ -4367,12 +4341,12 @@ static int wait_for_family(struct drbd_cmd *cm, struct genl_info *info, void *u_
 
 			/* wait-*-volume: filter out all but the specific peer device */
 			if (cm->ctx_key == CTX_PEER_DEVICE &&
-			    !peer_device_ctx_match(&global_ctx, &peer_device->ctx))
+			    !peer_device_ctx_match(&cmd_ctx->nl_ctx, &peer_device->ctx))
 				continue;
 
 			/* wait-*-connection: filter out other connections */
 			if (cm->ctx_key == CTX_PEER_NODE &&
-			    peer_device->ctx.ctx_peer_node_id != global_ctx.ctx_peer_node_id)
+				peer_device->ctx.ctx_peer_node_id != cmd_ctx->nl_ctx.ctx_peer_node_id)
 				continue;
 
 			/* wait-*-resource: no filter */
@@ -4580,6 +4554,8 @@ int drbdsetup_main(int argc, char **argv)
 	const char *opts;
 	int c, rv = 0;
 	int longindex, first_optind;
+	int lock_fd;
+	struct cmd_context ctx;
 
 	if (argv == NULL || argc < 1) {
 		fputs("drbdsetup: Nonexistent or empty arguments array, aborting.\n", stderr);
@@ -4688,15 +4664,15 @@ int drbdsetup_main(int argc, char **argv)
 		return 20;
 	}
 
-	context = 0;
+	ctx.context = 0;
 	enum cfg_ctx_key ctx_key = cmd->ctx_key, next_arg;
 	for (next_arg = ctx_next_arg(&ctx_key);
 	     next_arg;
 	     next_arg = ctx_next_arg(&ctx_key), optind++) {
 		if (argc == optind &&
 		    !(ctx_key & CTX_MULTIPLE_ARGUMENTS) && (next_arg & CTX_ALL)) {
-			context |= CTX_ALL;  /* assume "all" if no argument is given */
-			objname = "all";
+			ctx.context |= CTX_ALL;  /* assume "all" if no argument is given */
+			ctx.objname = "all";
 			break;
 		} else if (argc <= optind) {
 			fprintf(stderr, "Missing argument %d to command\n", optind);
@@ -4704,33 +4680,33 @@ int drbdsetup_main(int argc, char **argv)
 			exit(20);
 		} else if (next_arg & (CTX_RESOURCE | CTX_MINOR | CTX_ALL)) {
 			ensure_sanity_of_res_name(argv[optind]);
-			if (!objname)
-				objname = argv[optind];
+			if (!ctx.objname)
+				ctx.objname = argv[optind];
 			if (!strcmp(argv[optind], "all")) {
 				if (!(next_arg & CTX_ALL))
 					print_usage_and_exit("command does not accept argument 'all'");
-				context |= CTX_ALL;
+				ctx.context |= CTX_ALL;
 			} else if (next_arg & CTX_MINOR) {
-				minor = dt_minor_of_dev(argv[optind]);
-				if (minor == -1U && next_arg == CTX_MINOR) {
+				ctx.minor = dt_minor_of_dev(argv[optind]);
+				if (ctx.minor == -1U && next_arg == CTX_MINOR) {
 					fprintf(stderr, "Cannot determine minor device number of "
 							"device '%s'\n",
 						argv[optind]);
 					exit(20);
 				}
-				context |= CTX_MINOR;
+				ctx.context |= CTX_MINOR;
 			} else /* not "all", and not a minor number/device name */ {
 				if (!(next_arg & CTX_RESOURCE)) {
 					fprintf(stderr, "command does not accept argument '%s'\n",
-						objname);
+						ctx.objname);
 					print_command_usage(cmd, FULL);
 					exit(20);
 				}
-				context |= CTX_RESOURCE;
-				assert(strlen(objname) < sizeof(global_ctx.ctx_resource_name));
-				memset(global_ctx.ctx_resource_name, 0, sizeof(global_ctx.ctx_resource_name));
-				global_ctx.ctx_resource_name_len = strlen(objname);
-				strcpy(global_ctx.ctx_resource_name, objname);
+				ctx.context |= CTX_RESOURCE;
+				assert(strlen(ctx.objname) < sizeof(ctx.nl_ctx.ctx_resource_name));
+				memset(ctx.nl_ctx.ctx_resource_name, 0, sizeof(ctx.nl_ctx.ctx_resource_name));
+				ctx.nl_ctx.ctx_resource_name_len = strlen(ctx.objname);
+				strcpy(ctx.nl_ctx.ctx_resource_name, ctx.objname);
 			}
 		} else {
 			if (next_arg == CTX_MY_ADDR) {
@@ -4739,25 +4715,25 @@ int drbdsetup_main(int argc, char **argv)
 
 				if (strncmp(str, "local:", 6) == 0)
 					str += 6;
-				assert(sizeof(global_ctx.ctx_my_addr) >= sizeof(*x));
-				x = (struct sockaddr_storage *)&global_ctx.ctx_my_addr;
-				global_ctx.ctx_my_addr_len = sockaddr_from_str(x, str);
+				assert(sizeof(ctx.nl_ctx.ctx_my_addr) >= sizeof(*x));
+				x = (struct sockaddr_storage *)&ctx.nl_ctx.ctx_my_addr;
+				ctx.nl_ctx.ctx_my_addr_len = sockaddr_from_str(x, str);
 			} else if (next_arg == CTX_PEER_ADDR) {
 				const char *str = argv[optind];
 				struct sockaddr_storage *x;
 
 				if (strncmp(str, "peer:", 5) == 0)
 					str += 5;
-				assert(sizeof(global_ctx.ctx_peer_addr) >= sizeof(*x));
-				x = (struct sockaddr_storage *)&global_ctx.ctx_peer_addr;
-				global_ctx.ctx_peer_addr_len = sockaddr_from_str(x, str);
+				assert(sizeof(ctx.nl_ctx.ctx_peer_addr) >= sizeof(*x));
+				x = (struct sockaddr_storage *)&ctx.nl_ctx.ctx_peer_addr;
+				ctx.nl_ctx.ctx_peer_addr_len = sockaddr_from_str(x, str);
 			} else if (next_arg == CTX_VOLUME) {
-				global_ctx.ctx_volume = m_strtoll(argv[optind], 1);
+				ctx.nl_ctx.ctx_volume = m_strtoll(argv[optind], 1);
 			} else if (next_arg == CTX_PEER_NODE_ID) {
-				global_ctx.ctx_peer_node_id = m_strtoll(argv[optind], 1);
+				ctx.nl_ctx.ctx_peer_node_id = m_strtoll(argv[optind], 1);
 			} else
 				assert(0);
-			context |= next_arg;
+			ctx.context |= next_arg;
 		}
 	}
 
@@ -4770,15 +4746,25 @@ int drbdsetup_main(int argc, char **argv)
 		argc -= optind - first_optind;
 	}
 
-	if (!objname)
-		objname = "??";
+	if (!ctx.objname)
+		ctx.objname = "??";
 
-	if ((context & CTX_MINOR) && !cmd->lockless)
-		lock_fd = dt_lock_drbd(minor);
+	if ((ctx.context & CTX_MINOR) && !cmd->lockless)
+		lock_fd = dt_lock_drbd(ctx.minor);
 
-	rv = cmd->function(cmd, argc, argv);
+	rv = cmd->function(&ctx, cmd, argc, argv);
 
-	if ((context & CTX_MINOR) && !cmd->lockless)
+	if ((ctx.context & CTX_MINOR) && !cmd->lockless)
 		dt_unlock_drbd(lock_fd);
 	return rv;
+}
+
+void set_drbd_sock(struct genl_sock *sock)
+{
+	drbd_sock = sock;
+}
+
+struct genl_family *get_genl_family(void)
+{
+	return &drbd_genl_family;
 }

@@ -8,6 +8,72 @@
 
 #include "config.h"
 
+struct msg_buff *msg_new(size_t size)
+{
+	struct msg_buff *m = calloc(1, sizeof(*m) + size);
+	if (!m)
+		return NULL;
+
+	m->tail = m->data;
+	m->end  = m->tail + size;
+
+	return m;
+}
+
+void *genlmsg_put(struct msg_buff *msg, struct genl_family *family,
+ 		int flags, __u8 cmd)
+ {
+ 	const unsigned hdrsize = NLMSG_HDRLEN + GENL_HDRLEN + family->hdrsize;
+ 	struct nlmsghdr *nlh;
+ 	struct genlmsghdr *hdr;
+
+ 	if (unlikely(msg_tailroom(msg) < nlmsg_total_size(hdrsize)))
+ 		return NULL;
+
+ 	nlh = msg_put(msg, hdrsize);
+
+ 	nlh->nlmsg_type = family->id;
+ 	nlh->nlmsg_flags = flags;
+ 	/* pid and seq will be reassigned in genl_send() */
+ 	nlh->nlmsg_pid = 0;
+ 	nlh->nlmsg_seq = 0;
+
+ 	hdr = nlmsg_data(nlh);
+ 	hdr->cmd = cmd;
+ 	hdr->version = family->version; /* truncated to u8! */
+ 	hdr->reserved = 0;
+
+ 	return (char *) hdr + GENL_HDRLEN;
+ }
+
+int nlmsg_ok(const struct nlmsghdr *nlh, int remaining)
+{
+	return (remaining >= (int) sizeof(struct nlmsghdr) &&
+		nlh->nlmsg_len >= sizeof(struct nlmsghdr) &&
+		nlh->nlmsg_len <= (__u32)remaining);
+}
+
+struct nlmsghdr *nlmsg_next(struct nlmsghdr *nlh, int *remaining)
+{
+	int totlen = NLMSG_ALIGN(nlh->nlmsg_len);
+
+	*remaining -= totlen;
+
+	return (struct nlmsghdr *) ((unsigned char *) nlh + totlen);
+}
+
+struct nlattr *nlmsg_attrdata(const struct nlmsghdr *nlh,
+							  int hdrlen)
+{
+	unsigned char *data = nlmsg_data(nlh);
+	return (struct nlattr *) (data + NLMSG_ALIGN(hdrlen));
+}
+
+int nlmsg_attrlen(const struct nlmsghdr *nlh, int hdrlen)
+{
+	return nlmsg_len(nlh) - NLMSG_ALIGN(hdrlen);
+}
+
 int genl_join_mc_group(struct genl_sock *s, const char *name) {
 	int g_id;
 	int i;
@@ -207,6 +273,7 @@ int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int 
 {
 	struct nlmsghdr *nlh;
 	int c = genl_recv_timeout(s, iov, timeout_ms);
+	dbg(3, "genl_recv_msgs: recvmsg() returned %d\n", c);
 	if (c <= 0) {
 		if (err_desc)
 			*err_desc = (c == -E_RCV_TIMEDOUT)
@@ -220,11 +287,19 @@ int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int 
 	}
 
 	nlh = (struct nlmsghdr*)iov->iov_base;
-	if (!nlmsg_ok(nlh, c)) {
+	int ok = nlmsg_ok(nlh, c);
+	dbg(3, "genl_recv_msgs: nlmsg_ok() returned %d\n", ok);
+	if (!ok) {
 		if (err_desc)
 			*err_desc = "truncated message in netlink reply";
 		return -E_RCV_MSG_TRUNC;
 	}
+
+	dbg(3, "genl_recv_msgs: nlh->nlmsg_len = %d\n", nlh->nlmsg_len);
+	dbg(3, "genl_recv_msgs: nlh->nlmsg_type = %d\n", nlh->nlmsg_type);
+	dbg(3, "genl_recv_msgs: nlh->nlmsg_flags = %d\n", nlh->nlmsg_flags);
+	dbg(3, "genl_recv_msgs: nlh->nlmsg_seq = %d\n", nlh->nlmsg_seq);
+	dbg(3, "genl_recv_msgs: nlh->nlmsg_pid = %d\n", nlh->nlmsg_pid);
 
 	if (s->s_seq_expect && nlh->nlmsg_seq != s->s_seq_expect) {
 		dbg(2, "sequence mismatch: 0x%x != 0x%x, type:%x flags:%x sportid:%x\n",
@@ -240,8 +315,10 @@ int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int 
 			*err_desc = "unexpected message type in reply";
 		return -E_RCV_UNEXPECTED_TYPE;
 	}
-	if (nlh->nlmsg_type == NLMSG_DONE)
+	if (nlh->nlmsg_type == NLMSG_DONE) {
+		dbg(3, "received done message for seq:%u", s->s_seq_expect);
 		return -E_RCV_NLMSG_DONE;
+	}
 
 	if (nlh->nlmsg_type == NLMSG_ERROR) {
 		struct nlmsgerr *e = nlmsg_data(nlh);
