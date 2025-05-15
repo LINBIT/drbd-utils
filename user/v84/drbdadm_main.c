@@ -2335,9 +2335,7 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id)
 	char *vol_id = strchr(name, '/');
 	unsigned vol_nr = ~0U;
 
-	ctx->res = NULL;
-	ctx->vol = NULL;
-
+	*ctx = (struct cfg_ctx){ NULL, };
 	if (vol_id) {
 		*vol_id++ = '\0';
 		vol_nr = m_strtoll(vol_id, 0);

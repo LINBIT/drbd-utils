@@ -2390,6 +2390,7 @@ int ctx_by_minor(struct cfg_ctx *ctx, const char *id)
 	struct d_volume *vol;
 	unsigned int mm;
 
+	*ctx = (struct cfg_ctx){ NULL, };
 	mm = minor_by_id(id);
 	if (mm == -1U)
 		return -ENOENT;
@@ -2462,6 +2463,7 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check)
 	unsigned vol_nr = ~0U;
 	int connections_found = 0;
 
+	*ctx = (struct cfg_ctx){ NULL, };
 	res_name = input;
 	vol_id = strrchr(input, '/');
 	if (vol_id) {
@@ -3749,10 +3751,19 @@ int main(int argc, char **argv)
 				}
 				if (!ctx.res) {
 					log_err("'%s' not defined in your config (for this host).\n", resource_names[i]);
+					/* Maybe we have more luck with the next argument?
+					 * Record an "exit 1" if we still have 0. */
+					if (rv == 0)
+						rv = 1;
+					continue;
+				}
+				if (r) {
+					/* if ctx.res == NULL, we reported above already;
+					 * if ctx.res != NULL AND r != 0 ... that's unexpected. */
+					if (ctx.res != NULL)
+						log_err("'%s' unexpected ctx_by_* result r=%d\n", resource_names[i], r);
 					exit(E_USAGE);
 				}
-				if (r)
-					exit(E_USAGE);
 				if (!cmd->vol_id_required && !cmd->iterate_volumes && ctx.vol != NULL && !cmd->vol_id_optional) {
 					if (ctx.vol->implicit)
 						ctx.vol = NULL;
