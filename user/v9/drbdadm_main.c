@@ -115,6 +115,7 @@ static int sh_udev(const struct cfg_ctx *);
 static int sh_minor(const struct cfg_ctx *);
 static int sh_ip(const struct cfg_ctx *);
 static int sh_lres(const struct cfg_ctx *);
+static int sh_lcf(const struct cfg_ctx *);
 static int sh_ll_dev(const struct cfg_ctx *);
 static int sh_md_dev(const struct cfg_ctx *);
 static int sh_md_idx(const struct cfg_ctx *);
@@ -362,7 +363,7 @@ static struct adm_cmd dstate_cmd = {"dstate", adm_setup_and_meta, &forceable_ctx
 static struct adm_cmd status_cmd = {"status", adm_drbdsetup, &status_ctx, .show_in_usage = 1, .uc_dialog = 1, .backend_res_name=1};
 static struct adm_cmd peer_device_options_cmd = {"peer-device-options", adm_peer_device,
 						 &peer_device_options_ctx, ACF1_PEER_DEVICE};
-static struct adm_cmd dump_cmd = {"dump", adm_dump, ACF1_DUMP};
+static struct adm_cmd dump_cmd = {"dump", adm_dump, ACF1_DUMP .vol_id_optional = 1};
 static struct adm_cmd dump_xml_cmd = {"dump-xml", adm_dump_xml, ACF1_DUMP};
 
 static struct adm_cmd create_md_cmd = {"create-md", adm_create_md, &create_md_ctx, ACF1_MINOR_ONLY };
@@ -388,6 +389,7 @@ static struct adm_cmd sh_md_dev_cmd = {"sh-md-dev", sh_md_dev, ACF2_SHELL .disk_
 static struct adm_cmd sh_md_idx_cmd = {"sh-md-idx", sh_md_idx, ACF2_SHELL .disk_required = 1};
 static struct adm_cmd sh_ip_cmd = {"sh-ip", sh_ip, ACF2_SHELL .need_peer = 1, .iterate_paths = 1};
 static struct adm_cmd sh_lr_of_cmd = {"sh-lr-of", sh_lres, ACF2_SHELL};
+static struct adm_cmd sh_lcf_cmd = {"sh-list-config-file", sh_lcf, ACF2_SH_RESNAME .vol_id_optional = 1};
 
 static struct adm_cmd proxy_up_cmd = {"proxy-up", adm_proxy_up, ACF2_PROXY};
 static struct adm_cmd proxy_down_cmd = {"proxy-down", adm_proxy_down, ACF2_PROXY};
@@ -486,6 +488,7 @@ struct adm_cmd *cmds[] = {
 	&sh_md_idx_cmd,
 	&sh_ip_cmd,
 	&sh_lr_of_cmd,
+	&sh_lcf_cmd,
 
 	&proxy_up_cmd,
 	&proxy_down_cmd,
@@ -918,6 +921,12 @@ static int sh_resources(const struct cfg_ctx *ctx)
 static int sh_resource(const struct cfg_ctx *ctx)
 {
 	printf("%s\n", ctx->res->name);
+	return 0;
+}
+
+static int sh_lcf(const struct cfg_ctx *ctx)
+{
+	printf("%s:%d:%s\n", ctx->res->config_file, ctx->res->start_line, ctx->res->name);
 	return 0;
 }
 
