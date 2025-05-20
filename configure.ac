@@ -385,7 +385,6 @@ dnl Checks for system services
 
 BASH_COMPLETION_SUFFIX=""
 UDEV_RULE_SUFFIX=""
-RPM_SUBPACKAGE_NOARCH=""
 RPM_REQ_PACEMAKER=""
 RPM_REQ_HEARTBEAT=""
 RPM_REQ_BASH_COMPLETION=""
@@ -458,19 +457,12 @@ else
           AC_MSG_WARN([Obsolete or unknown udev version. Installing disabled udev rules.])
        fi
     fi
-
-    dnl Our sub-packages can be built for noarch, but RPM only supports
-    dnl this from version 4.6.0 forward
-    if test "$WITH_NOARCH_SUBPACKAGES" = "yes"; then
-        RPM_SUBPACKAGE_NOARCH="BuildArch: noarch"
-    fi
 fi
 
 AC_SUBST(DISTRO)
 AC_SUBST(INITDIR)
 AC_SUBST(BASH_COMPLETION_SUFFIX)
 AC_SUBST(UDEV_RULE_SUFFIX)
-AC_SUBST(RPM_SUBPACKAGE_NOARCH)
 AC_SUBST(RPM_REQ_PACEMAKER)
 AC_SUBST(RPM_REQ_HEARTBEAT)
 AC_SUBST(RPM_REQ_BASH_COMPLETION)
