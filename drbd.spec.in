@@ -43,11 +43,10 @@ License: GPLv2+
 ExclusiveOS: linux
 Group: System Environment/Kernel
 URL: http://www.drbd.org/
-BuildRequires: @RPM_BUILDREQ_DEFAULT@
+BuildRequires: gcc flex make automake
 Requires: drbd-utils = %{version}-%{release}
 %if %{with udev}
 Requires: drbd-udev = %{version}-%{release}
-BuildRequires: udev
 %endif
 %if %{with pacemaker}
 Requires: drbd-pacemaker = %{version}-%{release}
@@ -209,6 +208,7 @@ This packages includes the DRBD administration tools.
 Summary: udev integration scripts for DRBD
 Group: System Environment/Kernel
 Requires: drbd-utils = %{version}-%{release}, udev
+BuildRequires: udev
 @RPM_SUBPACKAGE_NOARCH@
 
 %description udev

@@ -385,7 +385,6 @@ dnl Checks for system services
 
 BASH_COMPLETION_SUFFIX=""
 UDEV_RULE_SUFFIX=""
-RPM_BUILDREQ_DEFAULT="gcc flex glibc-devel make"
 RPM_REQ_DRBDMON=""
 RPM_SUBPACKAGE_NOARCH=""
 RPM_REQ_PACEMAKER=""
@@ -409,7 +408,6 @@ else
 	    dnl Fedora/Red Hat packaging guidelines mandate that packages
 	    dnl belonging to the "minimal build system" should not be
 	    dnl listed in BuildRequires
-	    RPM_BUILDREQ_DEFAULT="flex"
 	    RPM_REQ_CHKCONFIG_POST="Requires(post): chkconfig"
 	    RPM_REQ_CHKCONFIG_PREUN="Requires(preun): chkconfig"
 	    AC_MSG_NOTICE([configured for Red Hat (includes Fedora, RHEL, CentOS).])
@@ -473,7 +471,6 @@ AC_SUBST(DISTRO)
 AC_SUBST(INITDIR)
 AC_SUBST(BASH_COMPLETION_SUFFIX)
 AC_SUBST(UDEV_RULE_SUFFIX)
-AC_SUBST(RPM_BUILDREQ_DEFAULT)
 AC_SUBST(RPM_SUBPACKAGE_NOARCH)
 AC_SUBST(RPM_REQ_PACEMAKER)
 AC_SUBST(RPM_REQ_HEARTBEAT)
