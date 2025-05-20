@@ -36,7 +36,6 @@ systemdpresetdir = @systemdpresetdir@
 tmpfilesdir = @tmpfilesdir@
 udevrulesdir = @udevrulesdir@
 initscripttype = @initscripttype@
-UDEV_RULE_SUFFIX = @UDEV_RULE_SUFFIX@
 INITDIR = @INITDIR@
 LIBDIR = @prefix@/lib/@PACKAGE_TARNAME@
 LN_S = @LN_S@
@@ -182,7 +181,7 @@ endif
 install-udev: $(UDEV_TEMPLATES)
 ifeq ($(WITH_UDEV),yes)
 	mkdir -p $(DESTDIR)$(udevrulesdir)
-	install -m 644 drbd.rules $(DESTDIR)$(udevrulesdir)/65-drbd.rules$(UDEV_RULE_SUFFIX)
+	install -m 644 drbd.rules $(DESTDIR)$(udevrulesdir)/65-drbd.rules
 endif
 
 install-bashcompletion:

@@ -383,7 +383,6 @@ fi
 
 dnl Checks for system services
 
-UDEV_RULE_SUFFIX=""
 RPM_REQ_PACEMAKER=""
 RPM_REQ_HEARTBEAT=""
 RPM_REQ_CHKCONFIG_POST=""
@@ -441,22 +440,10 @@ else
     dnl default.
     test -z $INITDIR && INITDIR="$sysconfdir/init.d"
 
-    dnl Our udev rules file is known to work only with udev >= 85
-    if test "x$enable_udevchecks" != "xno" && test "$WITH_UDEV" = "yes"; then
-       udev_version=$( set -- $($UDEVADM version); echo $1 )
-       if test -z "$udev_version"; then
-	    udev_version=$( set -- $($UDEVINFO -V); echo $3 )
-       fi
-       if test -z "$udev_version" || test "$udev_version" -lt 85; then
-          UDEV_RULE_SUFFIX=".disabled"
-          AC_MSG_WARN([Obsolete or unknown udev version. Installing disabled udev rules.])
-       fi
-    fi
 fi
 
 AC_SUBST(DISTRO)
 AC_SUBST(INITDIR)
-AC_SUBST(UDEV_RULE_SUFFIX)
 AC_SUBST(RPM_REQ_PACEMAKER)
 AC_SUBST(RPM_REQ_HEARTBEAT)
 AC_SUBST(RPM_REQ_CHKCONFIG_POST)
