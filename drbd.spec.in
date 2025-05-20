@@ -324,7 +324,7 @@ resource manager (in v1 compatibility mode).
 Summary: Programmable bash completion support for drbdadm
 Group: System Environment/Base
 Requires: drbd-utils = %{version}-%{release}
-@RPM_REQ_BASH_COMPLETION@
+Requires: bash-completion
 BuildArch: noarch
 
 %description bash-completion
@@ -333,7 +333,7 @@ management utility.
 
 %files bash-completion
 %defattr(-,root,root,-)
-%config %{_sysconfdir}/bash_completion.d/drbdadm*
+%config %{_datadir}/bash-completion/completions/drbdadm
 %endif # with bashcompletion
 
 %if %{with selinux}

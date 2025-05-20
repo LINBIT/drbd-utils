@@ -36,7 +36,6 @@ systemdpresetdir = @systemdpresetdir@
 tmpfilesdir = @tmpfilesdir@
 udevrulesdir = @udevrulesdir@
 initscripttype = @initscripttype@
-BASH_COMPLETION_SUFFIX = @BASH_COMPLETION_SUFFIX@
 UDEV_RULE_SUFFIX = @UDEV_RULE_SUFFIX@
 INITDIR = @INITDIR@
 LIBDIR = @prefix@/lib/@PACKAGE_TARNAME@
@@ -188,8 +187,8 @@ endif
 
 install-bashcompletion:
 ifeq ($(WITH_BASHCOMPLETION),yes)
-	mkdir -p $(DESTDIR)$(sysconfdir)/bash_completion.d
-	install -m 644 drbdadm.bash_completion $(DESTDIR)$(sysconfdir)/bash_completion.d/drbdadm$(BASH_COMPLETION_SUFFIX)
+	mkdir -p $(DESTDIR)$(datadir)/bash-completion/completions/
+	install -m 644 drbdadm.bash_completion $(DESTDIR)$(datadir)/bash-completion/completions/drbdadm
 endif
 
 clean:
@@ -209,7 +208,7 @@ ifeq ($(subst both,systemd,$(initscripttype)),systemd)
 endif
 	rm -f $(DESTDIR)$(sysconfdir)/ha.d/resource.d/drbddisk
 	rm -f $(DESTDIR)$(sysconfdir)/ha.d/resource.d/drbdupper
-	rm -f $(DESTDIR)$(sysconfdir)/bash_completion.d/drbdadm$(BASH_COMPLETION_SUFFIX)
+	rm -f $(DESTDIR)$(sysconfdir)/bash_completion.d/drbdadm
 	! test -L $(DESTDIR)/sbin/rcdrbd || rm $(DESTDIR)/sbin/rcdrbd
 
 .PHONY: install uninstall clean distclean

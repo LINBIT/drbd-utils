@@ -383,11 +383,9 @@ fi
 
 dnl Checks for system services
 
-BASH_COMPLETION_SUFFIX=""
 UDEV_RULE_SUFFIX=""
 RPM_REQ_PACEMAKER=""
 RPM_REQ_HEARTBEAT=""
-RPM_REQ_BASH_COMPLETION=""
 RPM_REQ_CHKCONFIG_POST=""
 RPM_REQ_CHKCONFIG_PREUN=""
 dnl figure out the distribution we're running on, and set some variables accordingly
@@ -415,19 +413,16 @@ else
 		    # pacemaker, heartbeat and bash-completion are not available in RHEL
 		    RPM_REQ_PACEMAKER="Requires: pacemaker"
 		    RPM_REQ_HEARTBEAT="Requires: heartbeat"
-		    RPM_REQ_BASH_COMPLETION="Requires: bash-completion"
 	    fi
 	    ;;
         debian)
 	    AC_MSG_NOTICE([configured for Debian (includes Ubuntu).])
             ;;
         suse)
-	    BASH_COMPLETION_SUFFIX=".sh"
 	    # RPM_REQ_CHKCONFIG_POST="" chkconfig is part of aaa_base on suse
 	    # RPM_REQ_CHKCONFIG_PREUN="" chkconfig is part of aaa_base on suse
 	    AC_MSG_NOTICE([configured for SUSE (includes openSUSE, SLES).])
 
-	    RPM_REQ_BASH_COMPLETION="Requires: bash"
 	    # The following are disabled for hassle free updates:
 	    # RPM_REQ_PACEMAKER="Requires: pacemaker"
 	    # RPM_REQ_HEARTBEAT="Requires: heartbeat"
@@ -461,11 +456,9 @@ fi
 
 AC_SUBST(DISTRO)
 AC_SUBST(INITDIR)
-AC_SUBST(BASH_COMPLETION_SUFFIX)
 AC_SUBST(UDEV_RULE_SUFFIX)
 AC_SUBST(RPM_REQ_PACEMAKER)
 AC_SUBST(RPM_REQ_HEARTBEAT)
-AC_SUBST(RPM_REQ_BASH_COMPLETION)
 AC_SUBST(RPM_REQ_CHKCONFIG_POST)
 AC_SUBST(RPM_REQ_CHKCONFIG_PREUN)
 AC_SUBST(WITH_CLITEST)

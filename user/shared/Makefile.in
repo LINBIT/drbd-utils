@@ -26,7 +26,6 @@ datarootdir = @datarootdir@
 datadir = @datadir@
 sbindir = @sbindir@
 sysconfdir = @sysconfdir@
-BASH_COMPLETION_SUFFIX = @BASH_COMPLETION_SUFFIX@
 UDEV_RULE_SUFFIX = @UDEV_RULE_SUFFIX@
 INITDIR = @INITDIR@
 LIBDIR = @prefix@/lib/@PACKAGE_TARNAME@
