@@ -385,7 +385,6 @@ dnl Checks for system services
 
 BASH_COMPLETION_SUFFIX=""
 UDEV_RULE_SUFFIX=""
-RPM_DIST_TAG=""
 RPM_BUILDREQ_DEFAULT="gcc flex glibc-devel make"
 RPM_REQ_DRBDMON=""
 RPM_SUBPACKAGE_NOARCH=""
@@ -407,7 +406,6 @@ else
    case "$DISTRO" in
         redhat)
 	    test -z $INITDIR && INITDIR="$sysconfdir/rc.d/init.d"
-	    RPM_DIST_TAG="%{?dist}"
 	    dnl Fedora/Red Hat packaging guidelines mandate that packages
 	    dnl belonging to the "minimal build system" should not be
 	    dnl listed in BuildRequires
@@ -475,7 +473,6 @@ AC_SUBST(DISTRO)
 AC_SUBST(INITDIR)
 AC_SUBST(BASH_COMPLETION_SUFFIX)
 AC_SUBST(UDEV_RULE_SUFFIX)
-AC_SUBST(RPM_DIST_TAG)
 AC_SUBST(RPM_BUILDREQ_DEFAULT)
 AC_SUBST(RPM_SUBPACKAGE_NOARCH)
 AC_SUBST(RPM_REQ_PACEMAKER)

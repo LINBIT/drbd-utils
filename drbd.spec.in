@@ -37,7 +37,7 @@ Summary: DRBD driver for Linux
 %global upstream_version @PACKAGE_VERSION@
 %global rpm_version %(echo "@PACKAGE_VERSION@" | sed -e 's/-rc/~rc/' -e 's/-alpha/~alpha/')
 Version: %{rpm_version}
-Release: 1@RPM_DIST_TAG@
+Release: 1%{?dist}
 Source: https://pkg.linbit.com/downloads/drbd/utils/drbd-utils-%{upstream_version}.tar.gz
 License: GPLv2+
 ExclusiveOS: linux
