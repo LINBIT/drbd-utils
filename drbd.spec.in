@@ -43,7 +43,6 @@ License: GPLv2+
 ExclusiveOS: linux
 Group: System Environment/Kernel
 URL: http://www.drbd.org/
-BuildRoot: %(mktemp -ud %{_tmppath}/drbd-utils-%{version}-%{release}-XXXXXX)
 BuildRequires: @RPM_BUILDREQ_DEFAULT@
 Requires: drbd-utils = %{version}-%{release}
 %if %{with udev}
