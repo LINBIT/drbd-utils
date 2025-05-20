@@ -12,10 +12,6 @@
 %global _with_selinux --with-selinux
 %endif
 
-%if %(test /sbin -ef /usr/sbin && echo 1 || echo 0)
-%global _without_sbinsymlinks --without-sbinsymlinks
-%endif
-
 # Conditionals
 # Invoke "rpmbuild --without <feature>" or "rpmbuild --with <feature>"
 # to disable or enable specific features
@@ -26,7 +22,6 @@
 %bcond_without heartbeat
 # conditionals may not contain "-" nor "_", hence "bashcompletion"
 %bcond_without bashcompletion
-%bcond_without sbinsymlinks
 %bcond_without 84support
 %bcond_without drbdmon
 %bcond_with prebuiltman
@@ -121,7 +116,7 @@ This packages includes the DRBD administration tools.
 
 %files utils
 %defattr(755,root,root,755)
-%if %{with sbinsymlinks}
+%if %{defined suse_version} && 0%{?suse_version} < 1550
 /sbin/drbdsetup
 /sbin/drbdadm
 /sbin/drbdmeta
@@ -461,11 +456,7 @@ install -d %{buildroot}%{_datadir}/selinux/packages
 install -m 0644 selinux/drbd.pp.bz2 %{buildroot}%{_datadir}/selinux/packages
 %endif
 
-%if %{with sbinsymlinks}
-# Don't do this if you are already on a /sbin -=> /usr/sbin distro
-# compat: we used to live in /sbin/
-# there may be many hardcoded /sbin/drbd* out there,
-# including variants of our own scripts.
+%if %{defined suse_version} && 0%{?suse_version} < 1550
 mkdir %{buildroot}/sbin/
 cd %{buildroot}/sbin/
 ln -sv ..%{_sbindir}/drbdadm .
