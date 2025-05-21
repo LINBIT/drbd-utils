@@ -220,7 +220,10 @@ DRBD devices in /dev/drbd/by-res and /dev/drbd/by-disk.
 Summary: Pacemaker resource agent for DRBD
 Group: System Environment/Base
 Requires: drbd-utils = %{version}-%{release}
-@RPM_REQ_PACEMAKER@
+# Recommended packages. Weak dependencies are available on all supported distros except for RHEL7.
+%if 0%{?rhel}%{!?rhel:8} > 7
+Recommends: pacemaker
+%endif
 License: GPLv2
 BuildArch: noarch
 
@@ -294,7 +297,10 @@ in the Cluster distribution.
 Summary: Heartbeat resource agent for DRBD
 Group: System Environment/Base
 Requires: %{name}-utils = %{version}-%{release}
-@RPM_REQ_HEARTBEAT@
+# Recommended packages. Weak dependencies are available on all supported distros except for RHEL7.
+%if 0%{?rhel}%{!?rhel:8} > 7
+Recommends: heartbeat
+%endif
 License: GPLv2
 BuildArch: noarch
 

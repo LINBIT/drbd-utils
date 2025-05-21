@@ -380,8 +380,6 @@ fi
 
 dnl Checks for system services
 
-RPM_REQ_PACEMAKER=""
-RPM_REQ_HEARTBEAT=""
 RPM_REQ_CHKCONFIG_POST=""
 RPM_REQ_CHKCONFIG_PREUN=""
 dnl figure out the distribution we're running on, and set some variables accordingly
@@ -404,12 +402,6 @@ else
 	    RPM_REQ_CHKCONFIG_PREUN="Requires(preun): chkconfig"
 	    AC_MSG_NOTICE([configured for Red Hat (includes Fedora, RHEL, CentOS).])
 
-	    AC_CHECK_FILE(/etc/fedora-release, [SUB_DISTRO="fedora"], [SUB_DISTRO="RHEL"])
-	    if test "$SUB_DISTRO" = "fedora"; then
-		    # pacemaker, heartbeat and bash-completion are not available in RHEL
-		    RPM_REQ_PACEMAKER="Requires: pacemaker"
-		    RPM_REQ_HEARTBEAT="Requires: heartbeat"
-	    fi
 	    ;;
         debian)
 	    AC_MSG_NOTICE([configured for Debian (includes Ubuntu).])
@@ -418,10 +410,6 @@ else
 	    # RPM_REQ_CHKCONFIG_POST="" chkconfig is part of aaa_base on suse
 	    # RPM_REQ_CHKCONFIG_PREUN="" chkconfig is part of aaa_base on suse
 	    AC_MSG_NOTICE([configured for SUSE (includes openSUSE, SLES).])
-
-	    # The following are disabled for hassle free updates:
-	    # RPM_REQ_PACEMAKER="Requires: pacemaker"
-	    # RPM_REQ_HEARTBEAT="Requires: heartbeat"
 
 	    # Unfortunately gcc on SLES9 is broken with -O2. Works with -O1
 	    if grep -q 'VERSION = 9' /etc/SuSE-release; then
@@ -441,8 +429,6 @@ fi
 
 AC_SUBST(DISTRO)
 AC_SUBST(INITDIR)
-AC_SUBST(RPM_REQ_PACEMAKER)
-AC_SUBST(RPM_REQ_HEARTBEAT)
 AC_SUBST(RPM_REQ_CHKCONFIG_POST)
 AC_SUBST(RPM_REQ_CHKCONFIG_PREUN)
 AC_SUBST(WITH_CLITEST)
