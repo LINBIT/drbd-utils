@@ -380,8 +380,6 @@ fi
 
 dnl Checks for system services
 
-RPM_REQ_CHKCONFIG_POST=""
-RPM_REQ_CHKCONFIG_PREUN=""
 dnl figure out the distribution we're running on, and set some variables accordingly
 
 if test x"$WITH_WINDRBD" = x"yes" ; then
@@ -394,31 +392,18 @@ else
    fi
    case "$DISTRO" in
         redhat)
-	    test -z $INITDIR && INITDIR="$sysconfdir/rc.d/init.d"
-	    dnl Fedora/Red Hat packaging guidelines mandate that packages
-	    dnl belonging to the "minimal build system" should not be
-	    dnl listed in BuildRequires
-	    RPM_REQ_CHKCONFIG_POST="Requires(post): chkconfig"
-	    RPM_REQ_CHKCONFIG_PREUN="Requires(preun): chkconfig"
-	    AC_MSG_NOTICE([configured for Red Hat (includes Fedora, RHEL, CentOS).])
-
-	    ;;
+            test -z $INITDIR && INITDIR="$sysconfdir/rc.d/init.d"
+            AC_MSG_NOTICE([configured for Red Hat (includes Fedora, RHEL, CentOS).])
+            ;;
         debian)
-	    AC_MSG_NOTICE([configured for Debian (includes Ubuntu).])
+            AC_MSG_NOTICE([configured for Debian (includes Ubuntu).])
             ;;
         suse)
-	    # RPM_REQ_CHKCONFIG_POST="" chkconfig is part of aaa_base on suse
-	    # RPM_REQ_CHKCONFIG_PREUN="" chkconfig is part of aaa_base on suse
-	    AC_MSG_NOTICE([configured for SUSE (includes openSUSE, SLES).])
-
-	    # Unfortunately gcc on SLES9 is broken with -O2. Works with -O1
-	    if grep -q 'VERSION = 9' /etc/SuSE-release; then
-		    CFLAGS="-g -O1"
-	    fi
-	    ;;
-         "")
-	    AC_MSG_WARN([Unable to determine what distribution we are running on. Distribution-specific features will be disabled.])
-	    ;;
+            AC_MSG_NOTICE([configured for SUSE (includes openSUSE, SLES).])
+            ;;
+        "")
+            AC_MSG_WARN([Unable to determine what distribution we are running on. Distribution-specific features will be disabled.])
+            ;;
     esac
     dnl INITDIR may be set with --with-initdir, or set in the distro
     dnl detection magic above. If unset down to here, use a sensible
@@ -429,8 +414,6 @@ fi
 
 AC_SUBST(DISTRO)
 AC_SUBST(INITDIR)
-AC_SUBST(RPM_REQ_CHKCONFIG_POST)
-AC_SUBST(RPM_REQ_CHKCONFIG_PREUN)
 AC_SUBST(WITH_CLITEST)
 
 AH_TEMPLATE(DRBD_LIB_DIR, [Local state directory. Commonly

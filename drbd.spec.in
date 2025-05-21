@@ -1,13 +1,3 @@
-%if 0%{!?initscripttype:1}
-# initscripttype not explicitly defined in some macro file or on commandline
-# use presence of systemd_post macro to determine the initscripttype
-%if %{?systemd_post:1}%{!?systemd_post:0}
-%global initscripttype systemd
-%else
-%global initscripttype sysv
-%endif
-%endif
-
 %if %{?rhel}%{!?rhel:0} >= 8
 %global _with_selinux --with-selinux
 %endif
@@ -93,10 +83,6 @@ Provides: drbd-utils = 8.4.0
 Conflicts: drbd < 8.3.6
 # These exist in centos extras:
 Conflicts: drbd82 drbd83
-%if "%{initscripttype}" == "sysv"
-@RPM_REQ_CHKCONFIG_POST@
-@RPM_REQ_CHKCONFIG_PREUN@
-%endif
 %if %{with selinux}
 Requires: (drbd-selinux if selinux-policy-targeted)
 %endif
@@ -132,9 +118,6 @@ This packages includes the DRBD administration tools.
 %{_sbindir}/drbdmon
 %{_sbindir}/drbd-events-log-supplier
 %endif
-%if "%{initscripttype}" == "sysv"
-%{_initddir}/drbd
-%endif
 %dir %{_prefix}/lib/drbd
 %{_prefix}/lib/drbd/outdate-peer.sh
 %{_prefix}/lib/drbd/snapshot-resync-target-lvm.sh
@@ -153,7 +136,6 @@ This packages includes the DRBD administration tools.
 %ghost %dir %{_var}/run/drbd/lock
 
 %defattr(-,root,root,-)
-%if "%{initscripttype}" == "systemd"
 %{_presetdir}/50-drbd.preset
 %{_unitdir}/drbd.service
 %{_unitdir}/drbd-graceful-shutdown.service
@@ -172,7 +154,6 @@ This packages includes the DRBD administration tools.
 %{_prefix}/lib/drbd/scripts/drbd-service-shim.sh
 %{_prefix}/lib/drbd/scripts/drbd-wait-promotable.sh
 %{_prefix}/lib/drbd/scripts/ocf.ra.wrapper.sh
-%endif
 %config(noreplace) %{_sysconfdir}/drbd.conf
 %dir %{_sysconfdir}/drbd.d
 %config(noreplace) %{_sysconfdir}/drbd.d/global_common.conf
@@ -444,9 +425,8 @@ autoconf
     %{?_without_84support} \
     %{?_without_manual} \
     %{?_with_prebuiltman} \
-    --with-initdir=%{_initddir} \
     %{?_tmpfilesdir:--with-tmpfilesdir=%{_tmpfilesdir}} \
-    --with-initscripttype=%{initscripttype} \
+    --with-initscripttype=systemd \
     %{?_without_drbdmon}
 make %{?_smp_mflags}
 %if %{with selinux}
@@ -478,12 +458,7 @@ mkdir -m 0700 -p %{buildroot}%{_var}/run/drbd/lock
 rm -rf %{buildroot}
 
 %post utils
-%if "%{initscripttype}" == "systemd"
 %systemd_post drbd.service
-%endif
-%if "%{initscripttype}" == "sysv"
-chkconfig --add drbd
-%endif
 %if %{with manual}
 _v=9.0
 for f in drbd drbdadm drbdmeta drbdsetup; do
@@ -505,20 +480,10 @@ for f in drbd drbdadm drbdmeta drbdsetup; do
 done
 rm -f %{_mandir}/man5/drbd.conf.5.gz
 fi
-%if "%{initscripttype}" == "systemd"
 %systemd_preun drbd.service
-%endif
-%if "%{initscripttype}" == "sysv"
-if [ $1 -eq 0 ]; then
-        %{_initrddir}/drbd stop >/dev/null 2>&1
-        /sbin/chkconfig --del drbd
-fi
-%endif
 
-%if "%{initscripttype}" == "systemd"
 %postun utils
 %systemd_postun drbd.service
-%endif
 
 
 %changelog
