@@ -194,7 +194,8 @@ DRBD devices in /dev/drbd/by-res and /dev/drbd/by-disk.
 %files udev
 %defattr(-,root,root,-)
 %config @udevrulesdir@/65-drbd.rules*
-%endif # with udev
+%endif
+# with udev
 
 %if %{with pacemaker}
 %package pacemaker
@@ -226,7 +227,8 @@ Pacemaker High Availability cluster manager.
 %{_mandir}/man7/ocf_linbit_drbd.*
 %{_mandir}/man7/ocf_linbit_drbd-attr.*
 %endif
-%endif # with pacemaker
+%endif
+# with pacemaker
 
 # Dependencies for drbd-rgmanager are particularly awful. On RHEL 5
 # and prior (and corresponding Fedora releases), {_datadir}/cluster
@@ -270,7 +272,8 @@ in the Cluster distribution.
 
 %defattr(-,root,root,-)
 %{_datadir}/cluster/drbd.metadata
-%endif # with rgmanager
+%endif
+# with rgmanager
 
 %if %{with 84support}
 %if %{with heartbeat}
@@ -298,8 +301,10 @@ resource manager (in v1 compatibility mode).
 %if %{with manual}
 %{_mandir}/man8/drbddisk-*
 %endif
-%endif # with heartbeat
-%endif # 84 support
+%endif
+# with heartbeat
+%endif
+# 84 support
 
 %if %{with bashcompletion}
 %package bash-completion
@@ -316,7 +321,8 @@ management utility.
 %files bash-completion
 %defattr(-,root,root,-)
 %config %{_datadir}/bash-completion/completions/drbdadm
-%endif # with bashcompletion
+%endif
+# with bashcompletion
 
 %if %{with selinux}
 %global selinuxtype		targeted
@@ -386,7 +392,8 @@ This package contains Japanese man pages for DRBD.
 %if %{with 84support}
 %{_mandir}/ja/man8/drbddisk-*
 %endif
-%endif # with heartbeat
+%endif
+# with heartbeat
 %if %{with drbdmon}
 %{_mandir}/ja/man8/drbdmon.*
 %endif
@@ -406,7 +413,8 @@ for f in drbd drbdadm drbdmeta drbdsetup; do
 done
 rm -f %{_mandir}/ja/man5/drbd.conf.5.gz
 fi
-%endif # with manual
+%endif
+# with manual
 
 %prep
 %setup -q -n drbd-utils-%{upstream_version}
@@ -470,7 +478,8 @@ ln -sf drbd.conf-${_v}.5.gz %{_mandir}/man5/drbd.conf.5.gz
 for i in `seq 0 15` ; do
     test -b /dev/drbd$i || mknod -m 0660 /dev/drbd$i b 147 $i;
 done
-%endif #without udev
+%endif
+#without udev
 
 %preun utils
 # don't run on upgrades:
