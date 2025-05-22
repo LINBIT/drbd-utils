@@ -2452,6 +2452,16 @@ static struct connection *find_conn_on_cmdline(struct connections *connections)
 	return NULL;
 }
 
+static void reset_cfg_ctx(struct cfg_ctx *ctx)
+{
+	ctx->res = NULL;
+	ctx->vol = NULL;
+	ctx->conn = NULL;
+	ctx->path = NULL;
+	/* Do not reset ctx->cmd, though,
+	 * it does not change while iterating several resources */
+}
+
 int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check)
 {
 	struct d_resource *res;
@@ -2463,7 +2473,8 @@ int ctx_by_name(struct cfg_ctx *ctx, const char *id, checks check)
 	unsigned vol_nr = ~0U;
 	int connections_found = 0;
 
-	*ctx = (struct cfg_ctx){ NULL, };
+	reset_cfg_ctx(ctx);
+
 	res_name = input;
 	vol_id = strrchr(input, '/');
 	if (vol_id) {
