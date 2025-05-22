@@ -153,6 +153,44 @@
     </definition>
   </drbdsetup_option>
 
+  <drbdsetup_option name="resync-without-replication">
+    <term xml:id="resync-without-replication"><option>resync-without-replication
+        <group choice="req" rep="norepeat">
+          <arg choice="plain" rep="norepeat">yes</arg>
+          <arg choice="plain" rep="norepeat">no</arg>
+        </group></option></term>
+
+    <definition>
+      <indexterm significance="normal">
+        <primary>drbd.conf</primary>
+        <secondary>resync-without-replication</secondary>
+      </indexterm>
+
+      <para>Control the replication of application writes during resyncs.</para>
+
+      <para>The default value of this option is <option>yes</option>, meaning
+      that application writes are not replicated for most of the resync. This
+      generally leads to lower bandwidth usage during resyncs. The benefit is
+      significant when there are repeated application writes to the same blocks.
+      DRBD will continue running the resync without replication while it makes
+      progress. When it no longer makes sufficient progress, the replication of
+      application writes will be enabled. This allows the disk on the SyncTarget
+      node to become UpToDate.</para>
+
+      <para>Under some circumstances, resyncs may finish quicker when this
+      behavior is disabled. In particular, when there are application writes to
+      distinct blocks and the resync rate is limited by
+      <option>c-max-rate</option> rather than by the available bandwidth. This
+      leaves the disk of the SyncTarget node in the Inconsistent state for
+      longer, reducing availability. Set this option to <option>no</option> to
+      maximize availability under these circumstances.</para>
+
+      <para>The value of this option affects the replication of writes to the
+      local node from the peer for which the option is set. This option is
+      available since DRBD 9.3.0.</para>
+    </definition>
+  </drbdsetup_option>
+
   <drbdsetup_option name="disk-barrier">
     <term xml:id="disk-barrier"><option>disk-barrier</option></term>
 

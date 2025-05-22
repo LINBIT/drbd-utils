@@ -134,6 +134,7 @@
 	    <pick_drbdsetup_option name="c-min-rate"/>
 	    <pick_drbdsetup_option name="c-plan-ahead"/>
 	    <pick_drbdsetup_option name="resync-rate"/>
+	    <pick_drbdsetup_option name="resync-without-replication"/>
 	 </variablelist>
 
 	</listitem>
