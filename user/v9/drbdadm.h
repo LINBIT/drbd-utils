@@ -349,6 +349,7 @@ extern struct adm_cmd proxy_conn_down_cmd;
 extern struct adm_cmd proxy_conn_up_cmd;
 extern struct adm_cmd proxy_conn_plugins_cmd;
 extern struct adm_cmd proxy_reconf_cmd;
+extern struct adm_cmd sh_list_adjustable;
 
 struct d_name *find_backend_option(const char *opt_name);
 extern int adm_create_md(const struct cfg_ctx *);
@@ -401,8 +402,9 @@ enum drbd_cfg_stage {
 	__CFG_LAST
 };
 
-#define SCHEDULE_ONCE       0x1000
-#define RETRY_AFTER_CONNECT 0x2000
+#define SCHEDULE_ONCE		0x1000
+#define SCHED_ONCE_P_RESOURCE	0x2000
+#define RETRY_AFTER_CONNECT	0x4000
 
 extern void schedule_deferred_cmd(const struct adm_cmd *, const struct cfg_ctx *,
 				  enum drbd_cfg_stage);

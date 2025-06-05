@@ -407,6 +407,7 @@ static struct adm_cmd pause_sync_cmd = {"pause-sync", adm_drbdsetup, ACF1_PEER_D
 static struct adm_cmd resume_sync_cmd = {"resume-sync", adm_drbdsetup, ACF1_PEER_DEVICE};
 static struct adm_cmd adjust_cmd = {"adjust", adm_adjust, &adjust_ctx, ACF1_RESNAME_VERIFY_IPS .vol_id_optional = 1};
 static struct adm_cmd adjust_wp_cmd = {"adjust-with-progress", adm_adjust_wp, ACF1_RESNAME_VERIFY_IPS};
+/*  */ struct adm_cmd sh_list_adjustable = { "sh-list-adjustable", adm_adjust, &adjust_ctx, ACF2_SH_RESNAME .vol_id_optional = 1 };
 static struct adm_cmd wait_c_cmd = {"wait-connect", adm_wait_c, ACF1_WAIT};
 static struct adm_cmd wait_sync_cmd = {"wait-sync", adm_wait_c, ACF1_WAIT};
 static struct adm_cmd wait_ci_cmd = {"wait-con-int", adm_wait_ci, .show_in_usage = 1,.verify_ips = 1,};
@@ -543,6 +544,7 @@ struct adm_cmd *cmds[] = {
 	&sh_ip_cmd,
 	&sh_lr_of_cmd,
 	&sh_lcf_cmd,
+	&sh_list_adjustable,
 
 	&proxy_up_cmd,
 	&proxy_down_cmd,
@@ -648,16 +650,19 @@ void schedule_deferred_cmd(const struct adm_cmd *cmd,
 			   const struct cfg_ctx *ctx,
 			   enum drbd_cfg_stage stage)
 {
+	bool once_per_res = stage & SCHED_ONCE_P_RESOURCE;
+	bool once = stage & SCHEDULE_ONCE;
 	struct deferred_cmd *d;
 
-	if (stage & SCHEDULE_ONCE) {
-		stage &= ~SCHEDULE_ONCE;
+	stage &= ~(SCHED_ONCE_P_RESOURCE | SCHEDULE_ONCE);
 
+	if (once || once_per_res) {
 		STAILQ_FOREACH(d, &deferred_cmds[stage], link) {
-			if (d->ctx.cmd == cmd &&
-			    d->ctx.res == ctx->res &&
-			    d->ctx.conn == ctx->conn &&
-			    d->ctx.vol->vnr == ctx->vol->vnr)
+			if (d->ctx.cmd != cmd || d->ctx.res != ctx->res)
+				continue;
+			if (once_per_res)
+				return;
+			if (d->ctx.conn == ctx->conn && d->ctx.vol->vnr == ctx->vol->vnr)
 				return;
 		}
 	}
