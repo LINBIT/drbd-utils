@@ -3,3 +3,5 @@
 /drbd_buildtag.c
 /drbdmeta_scanner.c
 /Makefile
+/config.h
+/config.h.in
