@@ -44,7 +44,6 @@ SYSTEMD_EXEC_CONDITION = @systemd_exec_condition@
 WITH_UDEV = @WITH_UDEV@
 WITH_PACEMAKER = @WITH_PACEMAKER@
 WITH_HEARTBEAT = @WITH_HEARTBEAT@
-WITH_RGMANAGER = @WITH_RGMANAGER@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 WITH_84_SUPPORT = @WITH_84_SUPPORT@
 WITH_WINDRBD = @WITH_WINDRBD@
@@ -89,7 +88,7 @@ endif
 
 all: $(TEMPLATES)
 
-install: install-utils install-udev install-heartbeat install-pacemaker install-rgmanager install-bashcompletion
+install: install-utils install-udev install-heartbeat install-pacemaker install-bashcompletion
 
 install-utils: $(SERVICE_TEMPLATES) $(SCRIPT_TEMPLATES)
 	install -d $(DESTDIR)$(LIBDIR)
@@ -161,15 +160,6 @@ ifeq ($(WITH_PACEMAKER),yes)
 	install -m 755 drbd.ocf $(DESTDIR)/usr/lib/ocf/resource.d/linbit/drbd
 	install -m 755 drbd-attr $(DESTDIR)/usr/lib/ocf/resource.d/linbit/drbd-attr
 	install -m 644 drbd.shellfuncs.sh $(DESTDIR)/usr/lib/ocf/resource.d/linbit/
-endif
-
-install-rgmanager:
-ifeq ($(WITH_RGMANAGER),yes)
-	mkdir -p $(DESTDIR)$(datadir)/cluster
-	install -m 755 drbd.sh.rhcs $(DESTDIR)$(datadir)/cluster/drbd.sh
-	install -m 644 drbd.metadata.rhcs $(DESTDIR)$(datadir)/cluster/drbd.metadata
-	install -d $(DESTDIR)$(LIBDIR)
-	install -m 755 rhcs_fence $(DESTDIR)$(LIBDIR)
 endif
 
 install-udev: $(UDEV_TEMPLATES)
