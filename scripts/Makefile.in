@@ -43,7 +43,6 @@ SYSTEMD_EXEC_CONDITION = @systemd_exec_condition@
 # features enabled or disabled by configure
 WITH_UDEV = @WITH_UDEV@
 WITH_PACEMAKER = @WITH_PACEMAKER@
-WITH_HEARTBEAT = @WITH_HEARTBEAT@
 WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 WITH_84_SUPPORT = @WITH_84_SUPPORT@
 WITH_WINDRBD = @WITH_WINDRBD@
@@ -88,7 +87,7 @@ endif
 
 all: $(TEMPLATES)
 
-install: install-utils install-udev install-heartbeat install-pacemaker install-bashcompletion
+install: install-utils install-udev install-pacemaker install-bashcompletion
 
 install-utils: $(SERVICE_TEMPLATES) $(SCRIPT_TEMPLATES)
 	install -d $(DESTDIR)$(LIBDIR)
@@ -135,15 +134,6 @@ endif
 	  $(LN_S) -f notify.sh notify-emergency-shutdown.sh ;\
 	  $(LN_S) -f notify.sh notify-out-of-sync.sh; )
 
-install-heartbeat:
-ifeq ($(or $(subst no,,$(WITH_84_SUPPORT))),yes)
-ifeq ($(WITH_HEARTBEAT),yes)
-	mkdir -p $(DESTDIR)$(sysconfdir)/ha.d/resource.d
-	install -m 755 drbddisk $(DESTDIR)$(sysconfdir)/ha.d/resource.d
-	install -m 755 drbdupper $(DESTDIR)$(sysconfdir)/ha.d/resource.d
-endif
-endif
-
 # Do not use $(prefix) for the resource agent. The OCF standard
 # explicitly mandates where resource agents must live,
 # no matter what prefix is configured to.
@@ -189,8 +179,6 @@ endif
 ifeq ($(subst both,systemd,$(initscripttype)),systemd)
 	rm -f $(DESTDIR)$(systemdunitdir)/drbd.service
 endif
-	rm -f $(DESTDIR)$(sysconfdir)/ha.d/resource.d/drbddisk
-	rm -f $(DESTDIR)$(sysconfdir)/ha.d/resource.d/drbdupper
 	rm -f $(DESTDIR)$(sysconfdir)/bash_completion.d/drbdadm
 	! test -L $(DESTDIR)/sbin/rcdrbd || rm $(DESTDIR)/sbin/rcdrbd
 

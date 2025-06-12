@@ -8,7 +8,6 @@
 %bcond_without manual
 %bcond_without udev
 %bcond_without pacemaker
-%bcond_without heartbeat
 # conditionals may not contain "-" nor "_", hence "bashcompletion"
 %bcond_without bashcompletion
 %bcond_without 84support
@@ -101,6 +100,7 @@ BuildRequires: keyutils-libs-devel
 %endif
 Obsoletes: drbd-xen <= 9.30.0
 Obsoletes: drbd-rgmanager <= 9.31.0
+Obsoletes: drbd-heartbeat <= 9.31.0
 
 %description utils
 DRBD mirrors a block device over the network to another machine.
@@ -239,37 +239,6 @@ Pacemaker High Availability cluster manager.
 %endif
 # with pacemaker
 
-%if %{with 84support}
-%if %{with heartbeat}
-%package heartbeat
-Summary: Heartbeat resource agent for DRBD
-Group: System Environment/Base
-Requires: %{name}-utils = %{version}-%{release}
-# Recommended packages. Weak dependencies are available on all supported distros except for RHEL7.
-%if 0%{?rhel}%{!?rhel:8} > 7
-Recommends: heartbeat
-%endif
-License: GPLv2
-BuildArch: noarch
-
-%description heartbeat
-This package contains the DRBD resource agents for the Heartbeat cluster
-resource manager (in v1 compatibility mode).
-
-%files heartbeat
-%defattr(755,root,root,-)
-%{_sysconfdir}/ha.d/resource.d/drbddisk
-%{_sysconfdir}/ha.d/resource.d/drbdupper
-
-%defattr(-,root,root,-)
-%if %{with manual}
-%{_mandir}/man8/drbddisk-*
-%endif
-%endif
-# with heartbeat
-%endif
-# 84 support
-
 %if %{with bashcompletion}
 %package bash-completion
 Summary: Programmable bash completion support for drbdadm
@@ -352,12 +321,6 @@ This package contains Japanese man pages for DRBD.
 %{_mandir}/ja/man8/drbdadm-*
 %{_mandir}/ja/man5/drbd.conf-*
 %{_mandir}/ja/man8/drbdmeta-*
-%if %{with heartbeat}
-%if %{with 84support}
-%{_mandir}/ja/man8/drbddisk-*
-%endif
-%endif
-# with heartbeat
 %if %{with drbdmon}
 %{_mandir}/ja/man8/drbdmon.*
 %endif
@@ -391,7 +354,6 @@ autoconf
 %configure \
     %{?_without_udev} \
     %{?_without_pacemaker} \
-    %{?_without_heartbeat} \
     %{?_without_bashcompletion} \
     %{?_without_84support} \
     %{?_without_manual} \

@@ -18,19 +18,11 @@
 
 include ../common/Makefile_v84_com
 
-#
-# WITH_HEARTBEAT is defined in Makefile_v84_com so need to be checked
-# after Makefile_v84_com is included. The others are referenced in
-# Makefile_v84_com_post.
-#
 TOPDIR = ../..
 
 MANPAGES	= drbdsetup.8 drbd.conf.5 drbd.8 drbdadm.8 drbdmeta.8
-ifeq ($(WITH_HEARTBEAT),yes)
-MANPAGES	+= drbddisk.8
-endif
 
-FILES_IN_GIT_ADD = drbd.conf.xml drbd.xml drbdadm.xml drbddisk.xml \
+FILES_IN_GIT_ADD = drbd.conf.xml drbd.xml drbdadm.xml \
 	drbdmeta.xml drbdsetup.xml
 
 FILES_POT = $(FILES_IN_GIT_ADD:=.pot)

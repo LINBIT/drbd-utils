@@ -46,7 +46,7 @@ dnl "--with-<foo>" options (all except rgm enabled by default, pass --without-<f
 WITH_84_SUPPORT=yes
 WITH_UDEV=yes
 WITH_PACEMAKER=yes
-WITH_HEARTBEAT=yes
+WITH_HEARTBEAT=no
 WITH_RGMANAGER=no
 WITH_BASHCOMPLETION=yes
 WITH_NOARCH_SUBPACKAGES=no
@@ -74,7 +74,7 @@ AC_ARG_WITH([pacemaker],
 	[WITH_PACEMAKER=$withval])
 AC_ARG_WITH([heartbeat],
 	[AS_HELP_STRING([--with-heartbeat],
-			[Enable Heartbeat v1 haresources integration scripts])],
+			[Enable Heartbeat v1 haresources integration scripts (deprecated!)])],
 	[WITH_HEARTBEAT=$withval])
 AC_ARG_WITH([rgmanager],
 	[AS_HELP_STRING([--with-rgmanager],
@@ -130,7 +130,6 @@ fi
 AC_SUBST(WITH_84_SUPPORT)
 AC_SUBST(WITH_UDEV)
 AC_SUBST(WITH_PACEMAKER)
-AC_SUBST(WITH_HEARTBEAT)
 AC_SUBST(WITH_BASHCOMPLETION)
 AC_SUBST(WITH_MANUAL)
 AC_SUBST(WITH_PREBUILTMAN)
@@ -384,6 +383,10 @@ fi
 
 if test "$WITH_RGMANAGER" = "yes"; then
    AC_MSG_WARN([--with-rgmanager is deprecated and ignored and will be removed in the future.])
+fi
+
+if test "$WITH_HEARTBEAT" = "yes"; then
+   AC_MSG_WARN([--with-heartbeat is deprecated and ignored and will be removed in the future.])
 fi
 
 test -z $INITDIR && INITDIR="$sysconfdir/init.d"
