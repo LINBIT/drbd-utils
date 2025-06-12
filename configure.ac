@@ -86,7 +86,7 @@ AC_ARG_WITH([bashcompletion],
 	[WITH_BASHCOMPLETION=$withval])
 AC_ARG_WITH([distro],
 	[AS_HELP_STRING([--with-distro],
-			[Configure for a specific distribution (supported values: generic, redhat, suse, debian; default is to autodetect)])],
+			[Configure for a specific distribution (deprecated!)])],
 	[DISTRO=$withval])
 AC_ARG_WITH([initdir],
 	[AS_HELP_STRING([--with-initdir],
@@ -378,41 +378,13 @@ AC_CHECK_HEADERS([linux/genetlink.h],
    [AC_MSG_ERROR([Could not find linux/genetlink.h])])
 fi
 
-dnl Checks for system services
-
-dnl figure out the distribution we're running on, and set some variables accordingly
-
-if test x"$WITH_WINDRBD" = x"yes" ; then
-   AC_MSG_RESULT([building for WinDRBD, not checking any Linux distros on this host])
-else
-   if test -z $DISTRO; then
-      AC_CHECK_FILE(/etc/redhat-release, [DISTRO="redhat"])
-      AC_CHECK_FILE(/etc/debian_version, [DISTRO="debian"])
-      AC_CHECK_FILE(/etc/SuSE-release, [DISTRO="suse"])
-   fi
-   case "$DISTRO" in
-        redhat)
-            test -z $INITDIR && INITDIR="$sysconfdir/rc.d/init.d"
-            AC_MSG_NOTICE([configured for Red Hat (includes Fedora, RHEL, CentOS).])
-            ;;
-        debian)
-            AC_MSG_NOTICE([configured for Debian (includes Ubuntu).])
-            ;;
-        suse)
-            AC_MSG_NOTICE([configured for SUSE (includes openSUSE, SLES).])
-            ;;
-        "")
-            AC_MSG_WARN([Unable to determine what distribution we are running on. Distribution-specific features will be disabled.])
-            ;;
-    esac
-    dnl INITDIR may be set with --with-initdir, or set in the distro
-    dnl detection magic above. If unset down to here, use a sensible
-    dnl default.
-    test -z $INITDIR && INITDIR="$sysconfdir/init.d"
-
+dnl deprecated options
+if test -n "$DISTRO"; then
+   AC_MSG_WARN([--with-distro is deprecated and ignored and will be removed in the future.])
 fi
 
-AC_SUBST(DISTRO)
+test -z $INITDIR && INITDIR="$sysconfdir/init.d"
+
 AC_SUBST(INITDIR)
 AC_SUBST(WITH_CLITEST)
 

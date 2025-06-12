@@ -24,7 +24,6 @@
 #
 
 # variables set by configure
-DISTRO = @DISTRO@
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 datarootdir = @datarootdir@
@@ -136,11 +135,6 @@ endif
 	  $(LN_S) -f notify.sh notify-emergency-reboot.sh ;\
 	  $(LN_S) -f notify.sh notify-emergency-shutdown.sh ;\
 	  $(LN_S) -f notify.sh notify-out-of-sync.sh; )
-ifeq ($(DISTRO),debian)
-	@ echo "Don't forget to run update-rc.d"
-else
-	@ echo "Don't forget to run chkconfig"
-endif
 
 install-heartbeat:
 ifeq ($(or $(subst no,,$(WITH_84_SUPPORT))),yes)

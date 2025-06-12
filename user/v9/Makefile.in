@@ -20,7 +20,6 @@
 VPATH = ../../drbd-headers:../shared
 
 # variables set by configure
-DISTRO = @DISTRO@
 prefix = @prefix@
 exec_prefix = @exec_prefix@
 localstatedir = @localstatedir@
