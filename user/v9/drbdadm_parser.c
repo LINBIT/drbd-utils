@@ -661,6 +661,30 @@ static void __parse_options(struct options *options,
 		if (token == '}')
 			return;
 
+		if (token == TK__UNKNOWN) {
+			struct d_option *no;
+
+			token = yylex();
+
+			/* Our drbdsetup reported an option as unknown by the kernel.
+			 * If we don't know that option either,
+			 * how can drbdsetup know to report it as unknown?
+			 * That really should not happen.
+			 */
+			field_def = find_field(&no_prefix, options_def, yytext);
+			if (!field_def) {
+				char *s = yytext;
+				log_err("%s:%u: Parse error(ignored): '_unknown %.40s%s', but I don't know about it either.\n",
+				    config_file, line, s, strlen(s) > 40 ? "..." : "");
+				continue;
+			}
+
+			no = new_opt((char*)field_def->name, NULL);
+			no->unknown = true;
+			insert_tail(options, no);
+			continue;
+		}
+
 		field_def = find_field(&no_prefix, options_def, yytext);
 		if (!field_def) {
 			if (delegate) {

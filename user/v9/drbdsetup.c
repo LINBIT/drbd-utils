@@ -1270,6 +1270,34 @@ static struct drbd_cmd *find_cmd_by_name(const char *name)
 	return NULL;
 }
 
+bool should_show_field_info_from_attr_tb(struct nlattr **nlattr_p, const char **str_p, bool *is_default_p,
+		struct nlattr **nlattr_tb, struct field_def *field, struct context_def *ctx)
+{
+	/* If not present (*nlattr == NULL), kernel does not know about this
+	 * field, so can not support it.  Unless kernel chose to not report
+	 * specific fields, even though it knows about them. We currently do
+	 * not have those.  Pretend it was NOT set to the default,
+	 * so it is shown even without "--show-defaults". */
+
+	bool is_default = false;
+	struct nlattr *nlattr;
+	const char *str = NULL;
+
+	nlattr = nlattr_tb[__nla_type(field->nla_type)];
+	if (nlattr) {
+		str = field->ops->get(ctx, field, nlattr);
+		is_default = field->ops->is_default(field, str);
+	}
+	if (is_default_p)
+		*is_default_p = is_default;
+	if (nlattr_p)
+		*nlattr_p = nlattr;
+	if (str_p)
+		*str_p = str;
+
+	return !is_default || show_defaults;
+}
+
 static bool __print_options(struct nlattr *attr, struct context_def *ctx, const char *sect_name,
 			    bool opened, bool close)
 {
@@ -1290,31 +1318,33 @@ static bool __print_options(struct nlattr *attr, struct context_def *ctx, const 
 		const char *str;
 		bool is_default;
 
-		nlattr = nested_attr_tb[__nla_type(field->nla_type)];
-		if (!nlattr)
+		if (!should_show_field_info_from_attr_tb(
+					&nlattr, &str, &is_default,
+					nested_attr_tb, field, ctx))
 			continue;
-		str = field->ops->get(ctx, field, nlattr);
-		is_default = field->ops->is_default(field, str);
-		if (is_default && !show_defaults)
-			continue;
+
 		if (!opened) {
 			opened = true;
 			printI("%s {\n",sect_name);
 			++indent;
 		}
-		if (field->needs_double_quoting)
-			str = double_quote_string(str);
-		printI("%-16s\t%s;",field->name, str);
-		if (field->unit || is_default) {
-				printf(" # ");
-			if (field->unit)
-				printf("%s", field->unit);
-			if (field->unit && is_default)
-				printf(", ");
-			if (is_default)
-				printf("default");
+		if (nlattr) {
+			if (field->needs_double_quoting)
+				str = double_quote_string(str);
+			printI("%-16s\t%s;",field->name, str);
+			if (field->unit || is_default) {
+					printf(" # ");
+				if (field->unit)
+					printf("%s", field->unit);
+				if (field->unit && is_default)
+					printf(", ");
+				if (is_default)
+					printf("default");
+			}
+			printf("\n");
+		} else {
+			printI("_unknown %-14s\t# not supported by kernel\n", field->name);
 		}
-		printf("\n");
 	}
 	if (opened && close) {
 		--indent;
@@ -1333,22 +1363,20 @@ static int nr_printed_opts(struct context_def *ctx, struct field_def *start,
 		struct nlattr **nested_attr_tb)
 {
 	struct field_def *field;
-	const char *str;
-	bool is_default;
+	struct nlattr *nlattr;
 
 	int nr = -1;
 	if (start == NULL)
 		return nr;
 
 	for (field = start; field->name; field++) {
-		struct nlattr *nlattr = nested_attr_tb[__nla_type(field->nla_type)];
+		if (!should_show_field_info_from_attr_tb(&nlattr, NULL, NULL, nested_attr_tb, field, ctx))
+			continue;
+		/* Json is data only, no "comments".
+		 * If _we_ know about it, AND kernel knows about it, we'd report it.
+		 * If we know it, but we don't report it, it is unsuported by kernel. */
 		if (!nlattr)
 			continue;
-		str = field->ops->get(ctx, field, nlattr);
-		is_default = field->ops->is_default(field, str);
-		if (is_default && !show_defaults)
-			continue;
-
 		nr++;
 	}
 
@@ -1384,12 +1412,11 @@ static bool print_options_json(
 		const char *str;
 		bool is_default;
 
-		nlattr = nested_attr_tb[__nla_type(field->nla_type)];
-		if (!nlattr)
+		if (!should_show_field_info_from_attr_tb(
+					&nlattr, &str, &is_default,
+					nested_attr_tb, field, ctx))
 			continue;
-		str = field->ops->get(ctx, field, nlattr);
-		is_default = field->ops->is_default(field, str);
-		if (is_default && !show_defaults)
+		if (!nlattr) /* unsupported by kernel */
 			continue;
 		if (!opened) {
 			opened=1;
@@ -2106,21 +2133,9 @@ static bool options_empty(struct nlattr *attr, struct context_def *ctx)
 		fprintf(stderr, "nla_policy violation\n");
 	}
 
-	for (field = ctx->fields; field->name; field++) {
-		struct nlattr *nlattr;
-		const char *str;
-		bool is_default;
-
-		nlattr = nested_attr_tb[__nla_type(field->nla_type)];
-		if (!nlattr)
-			continue;
-		str = field->ops->get(ctx, field, nlattr);
-		is_default = field->ops->is_default(field, str);
-		if (is_default && !show_defaults)
-			continue;
-		return false;
-	}
-
+	for (field = ctx->fields; field->name; field++)
+		if (should_show_field_info_from_attr_tb(NULL, NULL, NULL, nested_attr_tb, field, ctx))
+			return false;
 	return true;
 }
 

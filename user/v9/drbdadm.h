@@ -40,6 +40,7 @@ struct d_option
 	char* name;
 	char* value;
 	unsigned int mentioned  :1 ; // for the adjust command.
+	unsigned int unknown  :1 ; // for the adjust command.
 	unsigned int is_escaped :1 ;
 	unsigned int adj_skip :1;
 	unsigned int inherited :1;

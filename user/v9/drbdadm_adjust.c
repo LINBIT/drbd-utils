@@ -160,6 +160,11 @@ static int opts_equal(struct context_def *ctx, struct options *conf, struct opti
 	struct d_option *opt, *run_opt;
 
 	STAILQ_FOREACH(run_opt, run_base, link) {
+		if (run_opt->unknown) {
+			/* In case it was mentioned in config, pretend it was not. */
+			del_opt(conf, run_opt->name);
+			continue;
+		}
 		if (run_opt->adj_skip)
 			continue;
 
