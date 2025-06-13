@@ -785,7 +785,7 @@ static bool key_serial_is_equal(const struct field_def *field, const char *a, co
 
 static const char *get_key_serial(struct context_def *ctx, const struct field_def *field, struct nlattr *nla)
 {
-	static char description[] = "\"\"";
+	static char description[] = "";
 
 	return description;
 }
@@ -892,6 +892,7 @@ struct field_class fc_key_serial = {
 #define KEY_SERIAL(f, key_type)					\
 	.nla_type = T_ ## f,					\
 	.ops = &fc_key_serial,					\
+	.needs_double_quoting = true,				\
 	.u = { .k = {						\
 		.type = key_type, } }				\
 
