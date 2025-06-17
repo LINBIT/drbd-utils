@@ -203,6 +203,10 @@ static struct connections_list *list_connections(char *);
 static struct peer_devices_list *list_peer_devices(char *);
 static struct paths_list *list_paths(char *);
 
+enum long_opt_only {
+	OPT_GENL_RCVBUF_SZ = 0x101,
+};
+
 struct option wait_cmds_options[] = {
 	{ "wfc-timeout", required_argument, 0, 't' },
 	{ "degr-wfc-timeout", required_argument, 0, 'd'},
@@ -219,6 +223,7 @@ struct option events_cmd_options[] = {
 	{ "full", no_argument, 0, 'f' },
 	{ "color", optional_argument, 0, 'c' },
 	{ "diff", optional_argument, 0, 'i' },
+	{ "rcvbuf", required_argument, 0, OPT_GENL_RCVBUF_SZ },
 	{ }
 };
 
@@ -1981,6 +1986,9 @@ static int generic_events_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		default:
 		case '?':
 			return 20;
+		case OPT_GENL_RCVBUF_SZ:
+			/* already handled before genl_connect() */
+			break;
 		case 't':
 			timeo_ctx.wfc_timeout = m_strtoll(optarg, 1);
 			if(DRBD_WFC_TIMEOUT_MIN > timeo_ctx.wfc_timeout ||
@@ -4697,6 +4705,13 @@ int drbdsetup_main(int argc, char **argv)
 	argv++;
 	argc--;
 
+	/* Always? Or only for the "events2" subcommand? */
+	{
+		char *val = getenv("DRBD_GENL_RCVBUF_SZ");
+		if (val)
+			connect_options.rcvbuf_size = m_strtoll(val,1);
+	}
+
 	options = make_longoptions(cmd);
 	opts = make_optstring(options);
 	for (;;) {
@@ -4705,7 +4720,18 @@ int drbdsetup_main(int argc, char **argv)
 			break;
 		if (c == '?' || c == ':')
 			print_usage_and_exit(NULL);
+		/* Needs to be handled before genl_connect() */
+		if (c == OPT_GENL_RCVBUF_SZ) {
+			connect_options.rcvbuf_size = m_strtoll(optarg,1);
+			continue;
+		}
 	}
+	/* still clamp to "sensible" values */
+	if (connect_options.rcvbuf_size < 100*1024)
+		connect_options.rcvbuf_size = 100*1024;
+	if (connect_options.rcvbuf_size > 100*1024*1024)
+		connect_options.rcvbuf_size = 100*1024*1024;
+
 	/* All non-option arguments now are in argv[optind .. argc - 1]. */
 	first_optind = optind;
 
