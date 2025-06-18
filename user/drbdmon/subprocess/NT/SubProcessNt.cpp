@@ -255,6 +255,7 @@ void SubProcessNt::read_subproc_output()
                     events_read_buffer_ptr,
                     op_io_state,
                     &subproc_out,
+                    out_buffer_cap_idx,
                     bytes_read,
                     SUBPROC_OUT_MAX_SIZE
                 );
@@ -267,6 +268,7 @@ void SubProcessNt::read_subproc_output()
                     errors_read_buffer_ptr,
                     op_io_state,
                     &subproc_err,
+                    err_buffer_cap_idx,
                     bytes_read,
                     SUBPROC_ERR_MAX_SIZE
                 );
