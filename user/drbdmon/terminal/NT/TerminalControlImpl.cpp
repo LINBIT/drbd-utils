@@ -23,7 +23,7 @@ void TerminalControlImpl::adjust_terminal()
     mode_set = SetConsoleMode(
         console,
         ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT |
-        ENABLED_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING
+        ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING
     ) == 0);
     if (!mode_set)
     {
