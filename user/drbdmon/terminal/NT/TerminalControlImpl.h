@@ -23,6 +23,8 @@ class TerminalControlImpl : public TerminalControl
   private:
     bool    have_orig_mode  {false};
     DWORD   orig_mode       {0};
+
+    bool restore_terminal_impl() noexcept;
 };
 
 #endif /* NT_TERMINALCONTROLIMPL_H */
