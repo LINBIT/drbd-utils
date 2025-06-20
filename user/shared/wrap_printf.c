@@ -21,22 +21,33 @@ int wrap_printf(int indent, const char *format, ...)
 			columns = 80;
 	}
 
+	/* First, eat leading newlines */
+	for (; *format == '\n'; format++) {
+		putchar('\n');
+		col = 0;
+	}
+	/* Nothing left? Done.
+	 * Do not add indentation white space for an empty output, that would
+	 * skew the next output meant for a different indentation level.
+	 */
+	if (*format == '\0')
+		return 0;
+
 	va_start(ap1, format);
 	va_copy(ap2, ap1);
 	n = vsnprintf(NULL, 0, format, ap1);
 	va_end(ap1);
-	if (col + n > columns) {
+
+	if (col > 0 && col + n > columns) {
 		putchar('\n');
-		if (*format == '\n')
-			format++;
 		col = 0;
 	}
 	if (col == 0) {
 		while (*format == ' ')
 			format++;
-		col += indent;
 		while (indent--)
 			putchar(' ');
+		col = indent;
 	}
 	n = vprintf(format, ap2);
 	va_end(ap2);
