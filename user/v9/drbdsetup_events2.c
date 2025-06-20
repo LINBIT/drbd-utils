@@ -1109,7 +1109,7 @@ static bool seq_a_less_or_equal_b(uint32_t a, uint32_t b)
 	return (int32_t)a - (int32_t)b <= 0;
 }
 
-int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
+int print_event(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
 {
 	static uint32_t next_seq; /* nlmsg_seq of the next message to apply */
 	static bool next_seq_known;

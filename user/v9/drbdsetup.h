@@ -59,9 +59,9 @@ struct drbd_cmd {
 	enum cfg_ctx_key ctx_key;
 	int cmd_id;
 	int tla_id; /* top level attribute id */
-	int (*function)(struct drbd_cmd *, int, char **);
+	int (*function)(const struct drbd_cmd *, int, char **);
 	struct drbd_argument *drbd_args;
-	int (*handle_reply)(struct drbd_cmd*, struct genl_info *, void *u_ptr);
+	int (*handle_reply)(const struct drbd_cmd*, struct genl_info *, void *u_ptr);
 	struct option *options;
 	bool missing_ok;
 	bool warn_on_missing;
