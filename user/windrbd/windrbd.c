@@ -994,19 +994,19 @@ static int check_for_retvals(void)
 				else
 					rv.retval = retval;
 
+				if (!quiet) {
+					if (WIFSIGNALED(retval)) {
+						timestamp();
+						printf("handler was terminated by signal %d (id from kernel is %d)\n", WTERMSIG(retval), p->cmd->id);
+					} else {
+						timestamp();
+						printf("handler terminated and returned exit status %d (id from kernel is %d)\n", retval, p->cmd->id);
+					}
+				}
 				free(p->cmd);
 				LIST_REMOVE(p, list_entry);
 				free(p);
 
-				if (!quiet) {
-					if (WIFSIGNALED(retval)) {
-						timestamp();
-						printf("handler was terminated by signal %d\n", WTERMSIG(retval));
-					} else {
-						timestamp();
-						printf("handler terminated and returned exit status %d\n", retval);
-					}
-				}
 				ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_SEND_USERMODE_HELPER_RETURN_VALUE, &rv, sizeof(rv), NULL, 0, &unused, NULL);
 				if (!ret) {
 					err = GetLastError();
@@ -1073,7 +1073,7 @@ static int exec_command(struct windrbd_usermode_helper *next_cmd)
 
 	if (!quiet) {
 		timestamp();
-		printf("about to exec %s ...\n", cmd);
+		printf("about to exec %s ... (id from kernel is %d)\n", cmd, next_cmd->id);
 		timestamp();
 		for (i=0;argv[i]!=NULL;i++) {
 			printf("%s ", argv[i]);
