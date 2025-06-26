@@ -42,7 +42,7 @@
 #include <sys/stat.h>
 
 #include "drbdadm.h"
-#include "linux/drbd.h"
+#include "drbd_strings.h"
 #include "linux/drbd_limits.h"
 #include "drbdtool_common.h"
 #include "drbdadm_parser.h"
@@ -385,6 +385,18 @@ void pe_expected_got(const char *exp, int got)
 	log_err("%s:%u: Parse error: '%s' expected,\n\tbut got '%.20s%s' (TK %d)\n",
 	    config_file, line, tmp[0] ? tmp : exp, s, strlen(s) > 20 ? "..." : "", got);
 	exit(E_CONFIG_INVALID);
+}
+
+static int parse_drbd_state(struct state_names *names)
+{
+	int i;
+
+	EXP(TK_STRING);
+	for (i = 0; i < names->size; i++) {
+		if (strcmp(names->names[i], yylval.txt) == 0)
+			return i;
+	}
+	return -1;
 }
 
 static void parse_global(void)
@@ -1686,8 +1698,8 @@ static struct connection *parse_connection(enum pr_flags flags)
 			peer_device->connection = conn;
 			STAILQ_INSERT_TAIL(&conn->peer_devices, peer_device, connection_link);
 			break;
-		case TK__IS_STANDALONE:
-			conn->is_standalone = 1;
+		case TK__CSTATE:
+			conn->cstate = parse_drbd_state(&drbd_conn_state_names);
 			EXP(';');
 			break;
 		case TK_PATH:

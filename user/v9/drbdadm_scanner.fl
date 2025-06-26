@@ -104,7 +104,7 @@ usage-count 		{ DP; return TK_USAGE_COUNT;		}
 _this_host 		{ DP; return TK__THIS_HOST;		}
 _remote_host 		{ DP; return TK__REMOTE_HOST;		}
 _peer_node_id 		{ DP; return TK__PEER_NODE_ID;		}
-_is_standalone		{ DP; return TK__IS_STANDALONE;		}
+_cstate			{ DP; return TK__CSTATE;		}
 _unknown		{ DP; return TK__UNKNOWN;		}
 template-file		{ DP; return TK_TEMPLATE_FILE;		}
 path			{ DP; return TK_PATH;			}

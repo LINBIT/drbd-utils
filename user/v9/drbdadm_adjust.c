@@ -267,7 +267,7 @@ static bool adjust_paths(const struct cfg_ctx *ctx, struct connection *running_c
 
 	if (nr_running == 1 && del_path) {
 		/* Deleting the last path fails is the connection is C_CONNECTING */
-		if (!running_conn->is_standalone)
+		if (running_conn->cstate != C_STANDALONE)
 			adj_schedule_deferred_cmd(&disconnect_cmd, &tmp_ctx, CFG_NET_DISCONNECT);
 		return true;
 	}
@@ -795,7 +795,7 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running)
 			struct options *runn_o = &running_conn->net_options;
 			bool connect = false, new_path = false;
 
-			if (running_conn->is_standalone)
+			if (running_conn->cstate == C_STANDALONE)
 				connect = true;
 
 			if (!opts_equal(oc, conf_o, runn_o)) {

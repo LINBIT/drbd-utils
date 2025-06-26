@@ -2246,8 +2246,7 @@ static void show_connection(struct connections_list *connection, struct peer_dev
 	printI("_peer_node_id %d;\n", connection->ctx.ctx_peer_node_id);
 
 	print_paths(connection);
-	if (connection->info.conn_connection_state == C_STANDALONE)
-		printI("_is_standalone;\n");
+	printI("_cstate %s;\n", drbd_conn_str(connection->info.conn_connection_state));
 	print_options(connection->net_conf, &show_net_options_ctx, "net");
 
 	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next) {
@@ -2290,6 +2289,8 @@ static void show_connection_json(struct connections_list *connection, struct pee
 	print_paths(connection);
 	if (connection->info.conn_connection_state == C_STANDALONE)
 		printI(QUOTED("_is_standalone") ": true,\n");
+	printI(QUOTED("_cstate") ": %s,\n",
+	       double_quote_string(drbd_conn_str(connection->info.conn_connection_state)));
 	print_options_json(connection->net_conf, &show_net_options_ctx, "net", false, true);
 
 	if (has_disk_options)
