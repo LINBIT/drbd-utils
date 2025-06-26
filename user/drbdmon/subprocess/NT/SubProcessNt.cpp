@@ -281,17 +281,21 @@ void SubProcessNt::read_subproc_output()
                 // Failed I/O operation result dequeued
                 if (op_key == events_key)
                 {
+                    CancelIoEx(events_pipe, NULL);
                     safe_close_handle(&events_pipe);
                 }
                 else
                 if (op_key == errors_key)
                 {
+                    CancelIoEx(errors_pipe, NULL);
                     safe_close_handle(&errors_pipe);
                 }
             }
             else
             {
                 // I/O error on the completion port, nothing dequeued
+                CancelIoEx(events_pipe, NULL);
+                CancelIoEx(errors_pipe, NULL);
                 safe_close_handle(&events_pipe);
                 safe_close_handle(&errors_pipe);
             }
