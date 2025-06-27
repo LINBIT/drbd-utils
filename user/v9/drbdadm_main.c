@@ -382,25 +382,25 @@ int adm_adjust_wp(const struct cfg_ctx *ctx)
 	.res_name_required = 0,		\
 	.verify_ips = 0,		\
 
-/*  */ struct adm_cmd attach_cmd = {"attach", adm_attach, &attach_cmd_ctx, ACF1_MINOR_ONLY };
-/*  */ struct adm_cmd disk_options_cmd = {"disk-options", adm_attach, &attach_cmd_ctx, ACF1_MINOR_ONLY };
-/*  */ struct adm_cmd detach_cmd = {"detach", adm_drbdsetup, &detach_cmd_ctx, .takes_long = 1, ACF1_MINOR_ONLY };
-/*  */ struct adm_cmd new_peer_cmd = {"new-peer", adm_new_peer, &new_peer_cmd_ctx, ACF1_CONNECT};
-/*  */ struct adm_cmd del_peer_cmd = {"del-peer", adm_drbdsetup, &disconnect_cmd_ctx, ACF1_CONNECT};
-/*  */ struct adm_cmd new_path_cmd = {"new-path", adm_path, &path_cmd_ctx, ACF1_CONNECT .iterate_paths = 1};
-/*  */ struct adm_cmd del_path_cmd = {"del-path", adm_path, &path_cmd_ctx, ACF1_CONNECT .iterate_paths = 1};
-/*  */ struct adm_cmd connect_cmd = {"connect", adm_connect, &connect_cmd_ctx, ACF1_CONNECT};
-/*  */ struct adm_cmd net_options_cmd = {"net-options", adm_new_peer, &net_options_ctx, ACF1_CONNECT};
-/*  */ struct adm_cmd disconnect_cmd = {"disconnect", adm_drbdsetup, &disconnect_cmd_ctx, ACF1_DISCONNECT};
+/*  */ struct adm_cmd attach_cmd = {"attach", adm_attach, &attach_cmd_ctx, CFG_DISK, ACF1_MINOR_ONLY };
+/*  */ struct adm_cmd disk_options_cmd = {"disk-options", adm_attach, &attach_cmd_ctx, CFG_DISK, ACF1_MINOR_ONLY };
+/*  */ struct adm_cmd detach_cmd = {"detach", adm_drbdsetup, &detach_cmd_ctx, CFG_DISK_PREP_DOWN, .takes_long = 1, ACF1_MINOR_ONLY };
+/*  */ struct adm_cmd new_peer_cmd = {"new-peer", adm_new_peer, &new_peer_cmd_ctx, CFG_NET_PREP_UP, ACF1_CONNECT};
+/*  */ struct adm_cmd del_peer_cmd = {"del-peer", adm_drbdsetup, &disconnect_cmd_ctx, CFG_NET_PREP_DOWN, ACF1_CONNECT};
+/*  */ struct adm_cmd new_path_cmd = {"new-path", adm_path, &path_cmd_ctx, CFG_NET_PATH, ACF1_CONNECT .iterate_paths = 1};
+/*  */ struct adm_cmd del_path_cmd = {"del-path", adm_path, &path_cmd_ctx, CFG_NET_PREP_DOWN, ACF1_CONNECT .iterate_paths = 1};
+/*  */ struct adm_cmd connect_cmd = {"connect", adm_connect, &connect_cmd_ctx, CFG_NET_CONNECT, ACF1_CONNECT};
+/*  */ struct adm_cmd net_options_cmd = {"net-options", adm_new_peer, &net_options_ctx, CFG_NET_PREP_UP, ACF1_CONNECT};
+/*  */ struct adm_cmd disconnect_cmd = {"disconnect", adm_drbdsetup, &disconnect_cmd_ctx, CFG_NET_DISCONNECT, ACF1_DISCONNECT};
 static struct adm_cmd up_cmd = {"up", adm_up, ACF1_RESNAME_VERIFY_IPS };
-/*  */ struct adm_cmd res_options_cmd = {"resource-options", adm_resource, &resource_options_ctx, ACF1_RESNAME};
+/*  */ struct adm_cmd res_options_cmd = {"resource-options", adm_resource, &resource_options_ctx, CFG_RESOURCE, ACF1_RESNAME};
 static struct adm_cmd down_cmd = {"down", adm_drbdsetup, ACF1_RESNAME .takes_long = 1};
 static struct adm_cmd primary_cmd = {"primary", adm_drbdsetup, &primary_cmd_ctx, ACF1_RESNAME .takes_long = 1};
 static struct adm_cmd secondary_cmd = {"secondary", adm_drbdsetup, &secondary_cmd_ctx, ACF1_RESNAME .takes_long = 1};
 static struct adm_cmd invalidate_cmd = {"invalidate", adm_invalidate, &invalidate_adm_ctx, ACF1_MINOR_ONLY };
 static struct adm_cmd invalidate_remote_cmd = {"invalidate-remote", adm_drbdsetup, &invalidate_peer_ctx, ACF1_PEER_DEVICE .takes_long = 1};
 static struct adm_cmd outdate_cmd = {"outdate", adm_outdate, ACF1_DEFAULT};
-/*  */ struct adm_cmd resize_cmd = {"resize", adm_resize, &resize_cmd_ctx, ACF1_DEFAULT .disk_required = 1};
+/*  */ struct adm_cmd resize_cmd = {"resize", adm_resize, &resize_cmd_ctx, CFG_DISK, ACF1_DEFAULT .disk_required = 1};
 static struct adm_cmd verify_cmd = {"verify", adm_drbdsetup, &verify_cmd_ctx, ACF1_PEER_DEVICE};
 static struct adm_cmd pause_sync_cmd = {"pause-sync", adm_drbdsetup, ACF1_PEER_DEVICE};
 static struct adm_cmd resume_sync_cmd = {"resume-sync", adm_drbdsetup, ACF1_PEER_DEVICE};
@@ -416,7 +416,7 @@ static struct adm_cmd cstate_cmd = {"cstate", adm_drbdsetup, ACF1_DISCONNECT};
 static struct adm_cmd dstate_cmd = {"dstate", adm_setup_and_meta, &forceable_ctx, ACF1_MINOR_ONLY .disk_required = 0 };
 static struct adm_cmd status_cmd = {"status", adm_drbdsetup, &status_ctx, .show_in_usage = 1, .uc_dialog = 1, .backend_res_name=1};
 static struct adm_cmd peer_device_options_cmd = {"peer-device-options", adm_peer_device,
-						 &peer_device_options_ctx, ACF1_PEER_DEVICE};
+				&peer_device_options_ctx, CFG_PEER_DEVICE, ACF1_PEER_DEVICE};
 static struct adm_cmd dump_cmd = {"dump", adm_dump, ACF1_DUMP .vol_id_optional = 1};
 static struct adm_cmd dump_xml_cmd = {"dump-xml", adm_dump_xml, ACF1_DUMP};
 
@@ -448,9 +448,9 @@ static struct adm_cmd sh_lcf_cmd = {"sh-list-config-file", sh_lcf, ACF2_SH_RESNA
 static struct adm_cmd proxy_up_cmd = {"proxy-up", adm_proxy_up, ACF2_PROXY};
 static struct adm_cmd proxy_down_cmd = {"proxy-down", adm_proxy_down, ACF2_PROXY};
 
-/*  */ struct adm_cmd new_resource_cmd = {"new-resource", adm_resource, &resource_options_ctx, ACF2_SH_RESNAME};
-/*  */ struct adm_cmd new_minor_cmd = {"new-minor", adm_new_minor, &device_options_ctx, ACF4_ADVANCED};
-/*  */ struct adm_cmd del_minor_cmd = {"del-minor", adm_drbdsetup, ACF1_MINOR_ONLY .show_in_usage = 4, .disk_required = 0, };
+/*  */ struct adm_cmd new_resource_cmd = {"new-resource", adm_resource, &resource_options_ctx, CFG_PREREQ, ACF2_SH_RESNAME};
+/*  */ struct adm_cmd new_minor_cmd = {"new-minor", adm_new_minor, &device_options_ctx, CFG_DISK_PREP_UP, ACF4_ADVANCED};
+/*  */ struct adm_cmd del_minor_cmd = {"del-minor", adm_drbdsetup, NULL, CFG_DISK_PREP_DOWN, ACF1_MINOR_ONLY .show_in_usage = 4, .disk_required = 0, };
 
 static struct adm_cmd khelper01_cmd = {"before-resync-target", adm_khelper, ACF3_RES_HANDLER};
 static struct adm_cmd khelper02_cmd = {"after-resync-target", adm_khelper, ACF3_RES_HANDLER};
@@ -579,29 +579,34 @@ struct adm_cmd *cmds[] = {
 	"resource-options",
 	adm_resource,
 	&resource_options_ctx,
+	CFG_RESOURCE,
 	ACF1_RESNAME
 };
 /*  */ struct adm_cmd disk_options_defaults_cmd = {
 	"disk-options",
 	adm_attach,
 	&attach_cmd_ctx,
+	CFG_DISK,
 	ACF1_MINOR_ONLY
 };
 /*  */ struct adm_cmd net_options_defaults_cmd = {
 	"net-options",
 	adm_new_peer,
 	&net_options_ctx,
+	CFG_NET,
 	ACF1_CONNECT
 };
 /*  */ struct adm_cmd peer_device_options_defaults_cmd = {
 	"peer-device-options",
 	adm_peer_device,
 	&peer_device_options_ctx,
+	CFG_PEER_DEVICE,
 	ACF1_CONNECT
 };
-/*  */ struct adm_cmd proxy_conn_down_cmd = { "", do_proxy_conn_down, ACF2_PROXY };
-/*  */ struct adm_cmd proxy_conn_up_cmd = { "", do_proxy_conn_up, ACF2_PROXY };
-/*  */ struct adm_cmd proxy_conn_plugins_cmd = { "", do_proxy_conn_plugins, ACF2_PROXY };
+/*  */ struct adm_cmd proxy_conn_down_cmd = { "", do_proxy_conn_down, NULL, CFG_NET_PREP_DOWN, ACF2_PROXY };
+/*  */ struct adm_cmd proxy_conn_up_cmd = { "", do_proxy_conn_up, NULL, CFG_NET_PREP_UP, ACF2_PROXY };
+/*  */ struct adm_cmd proxy_conn_plugins_cmd = { "", do_proxy_conn_plugins, NULL, CFG_NET_PREP_UP, ACF2_PROXY };
+/*  */ struct adm_cmd wait_c_adj_cmd = {"wait-connect", adm_wait_c, NULL, CFG_NET_CONNECT, ACF1_WAIT};
 
 static const struct adm_cmd invalidate_setup_cmd = {
 	"invalidate",

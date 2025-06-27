@@ -260,10 +260,53 @@ STAILQ_HEAD(resources, d_resource);
 
 struct cfg_ctx;
 
+
+/* stages of configuration, as performed on "drbdadm up"
+ * or "drbdadm adjust":
+ */
+enum drbd_cfg_stage {
+	/* prerequisite stage: create objects, start daemons, ... */
+	CFG_PREREQ,
+
+	/* run time changeable settings of resources */
+	CFG_RESOURCE,
+
+	/* detach/attach local disks, */
+	/* detach, del-minor */
+	CFG_DISK_PREP_DOWN,
+	/* new-minor */
+	CFG_DISK_PREP_UP,
+
+	/* disconnect */
+	CFG_NET_DISCONNECT,
+	/* down,  del-peer, proxy down, del-path */
+	CFG_NET_PREP_DOWN,
+	/* add-peer, proxy up */
+	CFG_NET_PREP_UP,
+
+	/* add-path */
+	CFG_NET_PATH,
+
+	/* discard/set connection parameters */
+	CFG_NET,
+
+	/* peer device options */
+	CFG_PEER_DEVICE,
+
+	/* attach, disk-options, resize */
+	CFG_DISK,
+
+	/* actually start with connection attempts */
+	CFG_NET_CONNECT,
+
+	__CFG_LAST
+};
+
 struct adm_cmd {
 	const char *name;
 	int (*function) (const struct cfg_ctx *);
 	const struct context_def *drbdsetup_ctx;
+	enum drbd_cfg_stage stage;
 	/* which level this command is for.
 	 * 0: don't show this command, ever
 	 * 1: normal administrative commands, shown in normal help
@@ -358,47 +401,6 @@ extern int _adm_drbdmeta(const struct cfg_ctx *, int flags, char *argument);
 
 extern struct d_option *find_opt(struct options *base, const char *name);
 extern bool del_opt(struct options *base, const char * const name);
-
-/* stages of configuration, as performed on "drbdadm up"
- * or "drbdadm adjust":
- */
-enum drbd_cfg_stage {
-	/* prerequisite stage: create objects, start daemons, ... */
-	CFG_PREREQ,
-
-	/* run time changeable settings of resources */
-	CFG_RESOURCE,
-
-	/* detach/attach local disks, */
-	/* detach, del-minor */
-	CFG_DISK_PREP_DOWN,
-	/* new-minor */
-	CFG_DISK_PREP_UP,
-
-	/* disconnect */
-	CFG_NET_DISCONNECT,
-	/* down,  del-peer, proxy down, del-path */
-	CFG_NET_PREP_DOWN,
-	/* add-peer, proxy up */
-	CFG_NET_PREP_UP,
-
-	/* add-path */
-	CFG_NET_PATH,
-
-	/* discard/set connection parameters */
-	CFG_NET,
-
-	/* peer device options */
-	CFG_PEER_DEVICE,
-
-	/* attach, disk-options, resize */
-	CFG_DISK,
-
-	/* actually start with connection attempts */
-	CFG_NET_CONNECT,
-
-	__CFG_LAST
-};
 
 #define SCHEDULE_ONCE		0x1000
 #define SCHED_ONCE_P_RESOURCE	0x2000
