@@ -250,7 +250,6 @@ static bool adjust_paths(const struct cfg_ctx *ctx, struct connection *running_c
 		running_path = find_path_by_addrs(running_conn, configured_path);
 		if (!running_path) {
 			tmp_ctx.path = configured_path;
-			configured_path->adj_new = true;
 			adj_schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PATH);
 		} else {
 			running_path->adj_seen = 1;
@@ -261,8 +260,7 @@ static bool adjust_paths(const struct cfg_ctx *ctx, struct connection *running_c
 		nr_running++;
 		if (!running_path->adj_seen) {
 			tmp_ctx.path = running_path;
-			adj_schedule_deferred_cmd(&del_path_cmd, &tmp_ctx,
-					      CFG_NET_PREP_DOWN | RETRY_AFTER_CONNECT);
+			adj_schedule_deferred_cmd(&del_path_cmd, &tmp_ctx, CFG_NET_PREP_DOWN);
 			del_path = true;
 		}
 	}
@@ -771,7 +769,7 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running)
 			if (!configured_conn) {
 				struct cfg_ctx tmp_ctx = { .cmd = ctx->cmd, .res = running, .conn = conn };
 				adj_schedule_deferred_cmd(&del_peer_cmd, &tmp_ctx,
-						      CFG_NET_PREP_DOWN | RETRY_AFTER_CONNECT);
+						      CFG_NET_PREP_DOWN);
 			}
 		}
 	}
@@ -787,7 +785,6 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running)
 		if (running)
 			running_conn = matching_conn(conn, &running->connections, false);
 		if (!running_conn) {
-			conn->adj_new = true; /* making it as new for the retry case */
 			adj_schedule_deferred_cmd(&new_peer_cmd, &tmp_ctx, CFG_NET_PREP_UP);
 			adj_schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PATH);
 			adj_schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET_CONNECT);

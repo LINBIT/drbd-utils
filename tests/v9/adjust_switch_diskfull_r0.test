@@ -1,8 +1,0 @@
-$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_switch_diskfull_r0.txt INJECT_CMD_FAILURES=17 ./drbdadm -c ./adjust_switch_diskfull_r0.res adjust -d r0 2>/dev/null
-drbdsetup del-peer r0 2
-drbdsetup new-peer r0 3 --_name=i3 --load-balance-paths=yes
-drbdsetup new-path r0 3 ipv4:192.168.122.11:7000 ipv4:192.168.122.13:7000
-drbdsetup new-path r0 3 ipv4:192.168.122.11:7001 ipv4:192.168.122.13:7001
-drbdsetup connect r0 3
-drbdsetup wait-connect-connection r0 3
-drbdsetup del-peer r0 2

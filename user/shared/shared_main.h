@@ -134,6 +134,5 @@ static inline int m_system_ex(const char **argv, int flags, const char *res_name
 	m__system(argv, flags, res_name, NULL, NULL, &ex);
 	return ex;
 }
-extern int inject_cmd_failure(void);
 
 #endif
