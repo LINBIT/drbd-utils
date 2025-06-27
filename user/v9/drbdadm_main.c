@@ -32,11 +32,10 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <string.h>
-#include <ctype.h>
 #include <stdlib.h>
 #include <search.h>
 #include <assert.h>
-
+#include <sys/param.h>
 #include <sys/types.h>
 #include <linux/types.h>
 #include <sys/wait.h>
@@ -2355,7 +2354,11 @@ static int adm_wait_c(const struct cfg_ctx *ctx)
 	struct d_resource *res = ctx->res;
 	struct d_volume *vol = ctx->vol;
 	const char *argv[MAX_ARGS];
+	unsigned long timeout;
+	struct d_option *opt;
 	int argc = 0, rv;
+	bool adjust_run = ctx->cmd == &wait_c_adj_cmd;
+
 
 	argv[NA(argc)] = drbdsetup;
 	if (ctx->vol && ctx->conn) {
@@ -2372,22 +2375,38 @@ static int adm_wait_c(const struct cfg_ctx *ctx)
 		argv[NA(argc)] = res->name;
 	}
 
-	if (is_drbd_top && !res->stacked_timeouts) {
-		struct d_option *opt;
-		unsigned long timeout = 20;
+	if (adjust_run) {
+		opt = find_opt(&res->net_options, "socket-check-timeout");
+		if (!opt)
+			opt = find_opt(&res->net_options, "ping-timeout");
+		if (opt)
+			timeout = MAX(strtoul(opt->value, NULL, 10) * 2 / 10, 1);
+		else
+			timeout = 1;
+
+		argv[NA(argc)] = "--wfc-timeout";
+		argv[NA(argc)] = ssprintf("%lu", timeout);
+		argv[NA(argc)] = "--degr-wfc-timeout";
+		argv[NA(argc)] = ssprintf("%lu", timeout);
+		argv[NA(argc)] = "--outdated-wfc-timeout";
+		argv[NA(argc)] = ssprintf("%lu", timeout);
+	} else if (is_drbd_top && !res->stacked_timeouts) {
+		timeout = 20;
 		if ((opt = find_opt(&res->net_options, "connect-int"))) {
 			timeout = strtoul(opt->value, NULL, 10);
-			// one connect-interval? two?
 			timeout *= 2;
 		}
-		argv[argc++] = "--wfc-timeout";
-		argv[argc] = ssprintf("%lu", timeout);
-		argc++;
-	} else
+		argv[NA(argc)] = "--wfc-timeout";
+		argv[NA(argc)] = ssprintf("%lu", timeout);
+	} else {
 		make_options(argv[NA(argc)], &res->startup_options, ctx->cmd->drbdsetup_ctx);
+	}
 	argv[NA(argc)] = 0;
 
 	rv = m_system_ex(argv, SLEEPS_FOREVER, res->name);
+
+	if (adjust_run && rv == 5)
+		rv = 0;  /* do not abort adjust if the wait-cmd timed out */
 
 	return rv;
 }

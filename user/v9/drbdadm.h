@@ -383,6 +383,7 @@ extern struct adm_cmd del_peer_cmd;
 extern struct adm_cmd new_path_cmd;
 extern struct adm_cmd del_path_cmd;
 extern struct adm_cmd connect_cmd;
+extern struct adm_cmd wait_c_adj_cmd;
 extern struct adm_cmd net_options_cmd;
 extern struct adm_cmd net_options_defaults_cmd;
 extern struct adm_cmd peer_device_options_defaults_cmd;

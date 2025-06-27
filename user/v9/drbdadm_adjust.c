@@ -772,16 +772,16 @@ static void
 adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, const struct deferred_cmd *dcmd)
 {
 	struct connection *conn;
+	const struct deferred_cmd *added_a_peer = NULL;
+	bool disconnecting_an_established_peer = false;
 
 	if (running) {
 		for_each_connection(conn, &running->connections) {
 			struct connection *configured_conn;
 
 			configured_conn = matching_conn(conn, &ctx->res->connections, true);
-			if (!configured_conn) {
-				struct cfg_ctx tmp_ctx = { .cmd = ctx->cmd, .res = running, .conn = conn };
-				adj_schedule_deferred_cmd(&del_peer_cmd, &tmp_ctx, dcmd, 0);
-			}
+			if (!configured_conn && conn->cstate == C_CONNECTED)
+				disconnecting_an_established_peer = true;
 		}
 	}
 
@@ -789,6 +789,7 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, const struct d
 		struct connection *running_conn = NULL;
 		struct path *path;
 		const struct cfg_ctx tmp_ctx = { .cmd = ctx->cmd, .res = ctx->res, .conn = conn };
+		bool connect = false;
 
 		if (conn->ignore)
 			continue;
@@ -799,12 +800,12 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, const struct d
 			dcmd = adj_schedule_deferred_cmd(&new_peer_cmd, &tmp_ctx, dcmd, 0);
 			adj_schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, dcmd, 0);
 			schedule_peer_device_options(&tmp_ctx, dcmd);
-			adj_schedule_deferred_cmd(&connect_cmd, &tmp_ctx, dcmd, 0);
+			connect = true;
 		} else {
 			struct context_def *oc = &show_net_options_ctx;
 			struct options *conf_o = &conn->net_options;
 			struct options *runn_o = &running_conn->net_options;
-			bool connect = false, new_path = false;
+			bool new_path = false;
 
 			if (running_conn->cstate == C_STANDALONE)
 				connect = true;
@@ -834,14 +835,33 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, const struct d
 				dcmd = adj_schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, dcmd, 0);
 			else
 				connect |= adjust_paths(&tmp_ctx, running_conn, dcmd);
-
-			if (connect)
-				adj_schedule_deferred_cmd(&connect_cmd, &tmp_ctx, dcmd, 0);
 		}
+
+		if (connect)
+			dcmd = adj_schedule_deferred_cmd(&connect_cmd, &tmp_ctx, dcmd, 0);
+		if (connect && disconnecting_an_established_peer)
+			added_a_peer =
+				adj_schedule_deferred_cmd(&wait_c_adj_cmd, &tmp_ctx, dcmd, 0);
 
 		path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
 		if (path->my_proxy && hostname_in_list(hostname, &path->my_proxy->on_hosts))
 			proxy_reconf(&tmp_ctx, running_conn);
+	}
+
+	if (running) {
+		for_each_connection(conn, &running->connections) {
+			struct connection *configured_conn;
+
+			configured_conn = matching_conn(conn, &ctx->res->connections, true);
+			if (!configured_conn) {
+				struct cfg_ctx tmp_ctx = { .cmd = ctx->cmd, .res = running, .conn = conn };
+
+				if (added_a_peer)
+					dcmd = added_a_peer;
+
+				adj_schedule_deferred_cmd(&del_peer_cmd, &tmp_ctx, dcmd, 0);
+			}
+		}
 	}
 }
 
