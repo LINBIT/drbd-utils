@@ -69,6 +69,8 @@ char *progname;
 struct deferred_cmd {
 	struct cfg_ctx ctx;
 	STAILQ_ENTRY(deferred_cmd) link;
+	const struct deferred_cmd *depends_on;
+	bool done;
 };
 
 struct option general_admopt[] = {
@@ -231,6 +233,8 @@ char *sh_varname = NULL;
 struct names backend_options = STAILQ_HEAD_INITIALIZER(backend_options);
 
 STAILQ_HEAD(deferred_cmds, deferred_cmd) deferred_cmds[__CFG_LAST];
+int scheduled_deferred_cmds = 0;
+int executed_deferred_cmds = 0;
 
 int adm_adjust_wp(const struct cfg_ctx *ctx)
 {
@@ -650,15 +654,15 @@ static void initialize_deferred_cmds()
 		STAILQ_INIT(&deferred_cmds[stage]);
 }
 
-void schedule_deferred_cmd(const struct adm_cmd *cmd,
-			   const struct cfg_ctx *ctx,
-			   enum drbd_cfg_stage stage)
+struct deferred_cmd *schedule_deferred_cmd(const struct adm_cmd *cmd,
+					   const struct cfg_ctx *ctx,
+					   const struct deferred_cmd *depends_on,
+					   unsigned int flags)
 {
-	bool once_per_res = stage & SCHED_ONCE_P_RESOURCE;
-	bool once = stage & SCHEDULE_ONCE;
+	enum drbd_cfg_stage stage = cmd->stage;
+	bool once_per_res = flags & SCHED_ONCE_P_RESOURCE;
+	bool once = flags & SCHEDULE_ONCE;
 	struct deferred_cmd *d;
-
-	stage &= ~(SCHED_ONCE_P_RESOURCE | SCHEDULE_ONCE);
 
 	if (once || once_per_res) {
 		STAILQ_FOREACH(d, &deferred_cmds[stage], link) {
@@ -669,17 +673,30 @@ void schedule_deferred_cmd(const struct adm_cmd *cmd,
 			     * also have different names! */ )
 				continue;
 			if (once_per_res)
-				return;
+				return d;
 			if (d->ctx.conn == ctx->conn && d->ctx.vol->vnr == ctx->vol->vnr)
-				return;
+				return d;
 		}
 	}
+
 
 	d = checked_calloc(1, sizeof(struct deferred_cmd));
 	d->ctx = *ctx;
 	d->ctx.cmd = cmd;
+	d->depends_on = depends_on;
 
 	STAILQ_INSERT_TAIL(&deferred_cmds[stage], d, link);
+	scheduled_deferred_cmds++;
+
+	if (verbose >= 2) {
+		printf("scheduling %s(%s)", cmd->name, ctx->res->name);
+		if (depends_on)
+			printf(" depending on %s(%s)[%p]",
+			       depends_on->ctx.cmd->name, depends_on->ctx.res->name, depends_on);
+		printf(" as [%p]\n", d);
+	}
+
+	return d;
 }
 
 enum on_error { KEEP_RUNNING, EXIT_ON_FAIL };
@@ -811,11 +828,20 @@ static char *drbd_cfg_stage_string[] = {
 	[CFG_NET_CONNECT] = "attempt to connect",
 };
 
-int _run_deferred_cmds(enum drbd_cfg_stage stage)
+static bool has_unmet_dependency(const struct deferred_cmd *d)
+{
+	const struct deferred_cmd *dep = d->depends_on;
+
+	if (!dep)
+		return false;
+	else
+		return !dep->done;
+}
+
+static int _run_deferred_cmds(enum drbd_cfg_stage stage)
 {
 	struct d_resource *last_res = NULL;
 	struct deferred_cmd *d = STAILQ_FIRST(&deferred_cmds[stage]);
-	struct deferred_cmd *t;
 	int r;
 	int rv = 0;
 
@@ -825,6 +851,12 @@ int _run_deferred_cmds(enum drbd_cfg_stage stage)
 	}
 
 	while (d) {
+		while (has_unmet_dependency(d) || d->done) {
+			d = STAILQ_NEXT(d, link);
+			if (!d)
+				return rv;
+		}
+
 		if (d->ctx.res->skip_further_deferred_command) {
 			if (adjust_with_progress) {
 				if (d->ctx.res != last_res)
@@ -855,34 +887,55 @@ int _run_deferred_cmds(enum drbd_cfg_stage stage)
 				if (adjust_with_progress)
 					printf(":failed(%s:%u)", d->ctx.cmd->name, r);
 			}
+			d->done = true;
 		}
+		executed_deferred_cmds++;
 		last_res = d->ctx.res;
-		t = STAILQ_NEXT(d, link);
-		free(d);
-		d = t;
+		d = STAILQ_NEXT(d, link);
 		if (r > rv)
 			rv = r;
 	}
 	return rv;
 }
 
+static void free_deferred_cmds(void)
+{
+	enum drbd_cfg_stage stage;
+
+	for (stage = CFG_PREREQ; stage < __CFG_LAST; stage++) {
+		struct deferred_cmd *t, *d = STAILQ_FIRST(&deferred_cmds[stage]);
+
+		while (d) {
+			t = STAILQ_NEXT(d, link);
+			free(d);
+			d = t;
+		}
+	}
+}
+
 int run_deferred_cmds(void)
 {
 	enum drbd_cfg_stage stage;
-	int r;
-	int ret = 0;
+	int r, ret = 0;
+
 	if (adjust_with_progress)
 		printf("[");
-	for (stage = CFG_PREREQ; stage < __CFG_LAST; stage++) {
-		r = _run_deferred_cmds(stage);
-		if (r) {
-			if (!adjust_with_progress)
-				return 1; /* FIXME r? */
-			ret = 1;
+	do {
+		for (stage = CFG_PREREQ; stage < __CFG_LAST; stage++) {
+			r = _run_deferred_cmds(stage);
+			if (r) {
+				if (!adjust_with_progress)
+					return 1; /* FIXME r? */
+				ret = 1;
+			}
 		}
-	}
+	} while (executed_deferred_cmds < scheduled_deferred_cmds);
+
 	if (adjust_with_progress)
 		printf("\n]\n");
+
+	free_deferred_cmds();
+
 	return ret;
 }
 
@@ -2249,13 +2302,23 @@ static int adm_proxy_down(const struct cfg_ctx *ctx)
  * and then configure the network part */
 static int adm_up(const struct cfg_ctx *ctx)
 {
+	const struct deferred_cmd *dcmd_new_res, *dcmd;
 	struct cfg_ctx tmp_ctx = *ctx;
 	struct connection *conn;
 	struct d_volume *vol;
 
-	schedule_deferred_cmd(&new_resource_cmd, ctx, CFG_PREREQ);
+	dcmd_new_res = schedule_deferred_cmd(&new_resource_cmd, ctx, NULL, 0);
 
 	set_peer_in_resource(ctx->res, true);
+
+	tmp_ctx.conn = NULL;
+	for_each_volume(vol, &ctx->res->me->volumes) {
+		tmp_ctx.vol = vol;
+		dcmd = schedule_deferred_cmd(&new_minor_cmd, &tmp_ctx, dcmd_new_res, 0);
+		if (vol->disk)
+			schedule_deferred_cmd(&attach_cmd, &tmp_ctx, dcmd, 0);
+	}
+
 	for_each_connection(conn, &ctx->res->connections) {
 		struct peer_device *peer_device;
 
@@ -2264,9 +2327,9 @@ static int adm_up(const struct cfg_ctx *ctx)
 
 		tmp_ctx.conn = conn;
 
-		schedule_deferred_cmd(&new_peer_cmd, &tmp_ctx, CFG_NET_PREP_UP);
-		schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, CFG_NET_PATH);
-		schedule_deferred_cmd(&connect_cmd, &tmp_ctx, CFG_NET_CONNECT);
+		dcmd = schedule_deferred_cmd(&new_peer_cmd, &tmp_ctx, dcmd_new_res, 0);
+		schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, dcmd, 0);
+		schedule_deferred_cmd(&connect_cmd, &tmp_ctx, dcmd, 0);
 
 		STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
 			struct cfg_ctx tmp2_ctx;
@@ -2276,16 +2339,8 @@ static int adm_up(const struct cfg_ctx *ctx)
 
 			tmp2_ctx = tmp_ctx;
 			tmp2_ctx.vol = volume_by_vnr(&conn->peer->volumes, peer_device->vnr);
-			schedule_deferred_cmd(&peer_device_options_cmd, &tmp2_ctx, CFG_PEER_DEVICE);
+			schedule_deferred_cmd(&peer_device_options_cmd, &tmp2_ctx, dcmd, 0);
 		}
-	}
-	tmp_ctx.conn = NULL;
-
-	for_each_volume(vol, &ctx->res->me->volumes) {
-		tmp_ctx.vol = vol;
-		schedule_deferred_cmd(&new_minor_cmd, &tmp_ctx, CFG_DISK_PREP_UP);
-		if (vol->disk)
-			schedule_deferred_cmd(&attach_cmd, &tmp_ctx, CFG_DISK);
 	}
 
 	return 0;

@@ -405,8 +405,10 @@ extern bool del_opt(struct options *base, const char * const name);
 #define SCHEDULE_ONCE		0x1000
 #define SCHED_ONCE_P_RESOURCE	0x2000
 
-extern void schedule_deferred_cmd(const struct adm_cmd *, const struct cfg_ctx *,
-				  enum drbd_cfg_stage);
+struct deferred_cmd *schedule_deferred_cmd(const struct adm_cmd *, const struct cfg_ctx *,
+					   const struct deferred_cmd *depends_on,
+					   unsigned int flags);
+
 extern void maybe_exec_legacy_drbdadm(char **argv);
 extern void uc_node(enum usage_count_type type);
 extern int have_ip(const char *af, const char *ip);
