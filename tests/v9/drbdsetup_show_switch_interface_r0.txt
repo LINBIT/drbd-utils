@@ -1,0 +1,46 @@
+resource "r0" {
+    options {
+        on-no-data-accessible	suspend-io;
+        quorum          	majority;
+        on-suspended-primary-outdated	force-secondary;
+    }
+    _this_host {
+        node-id			2;
+        volume 0 {
+            device			minor 10;
+            disk			none;
+            disk {
+                diskless        	yes;
+                block-size      	4096;
+            }
+        }
+    }
+    connection {
+        _peer_node_id 0;
+        path {
+            _this_host ipv4 192.168.122.49:7000;
+            _remote_host ipv4 192.168.122.47:7000;
+        }
+        _cstate Connecting;
+        net {
+            after-sb-0pri   	discard-zero-changes;
+            rr-conflict     	retry-connect;
+            verify-alg      	"md5";
+            _name           	"n1.ryzen9.home";
+        }
+    }
+    connection {
+        _peer_node_id 1;
+        path {
+            _this_host ipv4 192.168.122.49:7000;
+            _remote_host ipv4 192.168.122.48:7000;
+        }
+        _cstate Connected;
+        net {
+            after-sb-0pri   	discard-zero-changes;
+            rr-conflict     	retry-connect;
+            verify-alg      	"md5";
+            _name           	"n2.ryzen9.home";
+        }
+    }
+}

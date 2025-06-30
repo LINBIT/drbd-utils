@@ -609,7 +609,7 @@ struct adm_cmd *cmds[] = {
 /*  */ struct adm_cmd proxy_conn_down_cmd = { "", do_proxy_conn_down, NULL, CFG_NET_PREP_DOWN, ACF2_PROXY };
 /*  */ struct adm_cmd proxy_conn_up_cmd = { "", do_proxy_conn_up, NULL, CFG_NET_PREP_UP, ACF2_PROXY };
 /*  */ struct adm_cmd proxy_conn_plugins_cmd = { "", do_proxy_conn_plugins, NULL, CFG_NET_PREP_UP, ACF2_PROXY };
-/*  */ struct adm_cmd wait_c_adj_cmd = {"wait-connect", adm_wait_c, NULL, CFG_NET_CONNECT, ACF1_WAIT};
+/*  */ struct adm_cmd wait_c_adj_cmd = {"wait-connect", adm_wait_c, NULL, CFG_WAIT_CONNECT, ACF1_WAIT};
 
 static const struct adm_cmd invalidate_setup_cmd = {
 	"invalidate",
@@ -696,6 +696,29 @@ struct deferred_cmd *schedule_deferred_cmd(const struct adm_cmd *cmd,
 	}
 
 	return d;
+}
+
+void cancel_deferred_cmd(struct deferred_cmd *dcmd)
+{
+	if (!dcmd->done) {
+		dcmd->done = true;
+		scheduled_deferred_cmds--;
+	}
+}
+
+void cancel_deferred_waits(const struct d_resource *res)
+{
+	struct deferred_cmd *d;
+
+	STAILQ_FOREACH(d, &deferred_cmds[CFG_WAIT_CONNECT], link) {
+		if (d->ctx.res == res)
+			cancel_deferred_cmd(d);
+	}
+}
+
+const struct adm_cmd *deferred_cmd(const struct deferred_cmd *dcmd)
+{
+	return dcmd ? dcmd->ctx.cmd : NULL;
 }
 
 enum on_error { KEEP_RUNNING, EXIT_ON_FAIL };

@@ -1,0 +1,17 @@
+$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_switch_interface_r0.txt ./drbdadm -c ./adjust_switch_interface_r0.res adjust -d r0 2>/dev/null
+drbdsetup disconnect r0 0
+drbdsetup del-path r0 0 ipv4:192.168.122.49:7000 ipv4:192.168.122.47:7000
+drbdsetup new-path r0 0 ipv4:192.168.123.3:7001 ipv4:192.168.123.1:7001
+drbdsetup connect r0 0
+drbdsetup wait-connect-connection r0 0 --wfc-timeout 1 --degr-wfc-timeout 1 --outdated-wfc-timeout 1
+drbdsetup disconnect r0 1
+drbdsetup del-path r0 1 ipv4:192.168.122.49:7000 ipv4:192.168.122.48:7000
+drbdsetup new-path r0 1 ipv4:192.168.123.3:7001 ipv4:192.168.123.2:7001
+drbdsetup connect r0 1
+$ FAKE_DRBDSETUP_SHOW=<(grep -v _cstate drbdsetup_show_switch_interface_r0.txt) ./drbdadm -c ./adjust_switch_interface_r0.res adjust -d r0 2>/dev/null
+drbdsetup del-path r0 0 ipv4:192.168.122.49:7000 ipv4:192.168.122.47:7000
+drbdsetup del-path r0 1 ipv4:192.168.122.49:7000 ipv4:192.168.122.48:7000
+drbdsetup new-path r0 0 ipv4:192.168.123.3:7001 ipv4:192.168.123.1:7001
+drbdsetup new-path r0 1 ipv4:192.168.123.3:7001 ipv4:192.168.123.2:7001
+drbdsetup connect r0 0
+drbdsetup connect r0 1

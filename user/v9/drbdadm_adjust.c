@@ -768,22 +768,12 @@ static struct d_volume *matching_volume(struct d_volume *conf_vol, struct volume
 }
 
 
-static void
-adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, const struct deferred_cmd *dcmd)
+
+static struct deferred_cmd *adjust_conn(const struct cfg_ctx *ctx, struct d_resource *running,
+					struct deferred_cmd *dcmd, enum drbd_conn_state max_cstate,
+					bool *disconnect)
 {
 	struct connection *conn;
-	const struct deferred_cmd *added_a_peer = NULL;
-	bool disconnecting_an_established_peer = false;
-
-	if (running) {
-		for_each_connection(conn, &running->connections) {
-			struct connection *configured_conn;
-
-			configured_conn = matching_conn(conn, &ctx->res->connections, true);
-			if (!configured_conn && conn->cstate == C_CONNECTED)
-				disconnecting_an_established_peer = true;
-		}
-	}
 
 	for_each_connection(conn, &ctx->res->connections) {
 		struct connection *running_conn = NULL;
@@ -791,7 +781,7 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, const struct d
 		const struct cfg_ctx tmp_ctx = { .cmd = ctx->cmd, .res = ctx->res, .conn = conn };
 		bool connect = false;
 
-		if (conn->ignore)
+		if (conn->ignore || conn->adj_seen)
 			continue;
 
 		if (running)
@@ -807,6 +797,9 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, const struct d
 			struct options *runn_o = &running_conn->net_options;
 			bool new_path = false;
 
+			if (running_conn->cstate > max_cstate)
+				continue;
+
 			if (running_conn->cstate == C_STANDALONE)
 				connect = true;
 
@@ -821,6 +814,7 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, const struct d
 					dcmd = adj_schedule_deferred_cmd(&new_peer_cmd, &tmp_ctx, dcmd, 0);
 					new_path = true;
 					connect = true;
+					*disconnect = true;
 					schedule_peer_device_options(&tmp_ctx, dcmd);
 				} else {
 					del_opt(&tmp_ctx.conn->net_options, "transport");
@@ -831,22 +825,47 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, const struct d
 
 			adjust_peer_devices(&tmp_ctx, running_conn, dcmd);
 
-			if (new_path)
+			if (new_path) {
 				dcmd = adj_schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, dcmd, 0);
-			else
-				connect |= adjust_paths(&tmp_ctx, running_conn, dcmd);
+			} else {
+				bool dc = adjust_paths(&tmp_ctx, running_conn, dcmd);
+				*disconnect |= dc;
+				connect |= dc;
+			}
 		}
+		conn->adj_seen = true;
 
-		if (connect)
+		if (connect) {
 			dcmd = adj_schedule_deferred_cmd(&connect_cmd, &tmp_ctx, dcmd, 0);
-		if (connect && disconnecting_an_established_peer)
-			added_a_peer =
-				adj_schedule_deferred_cmd(&wait_c_adj_cmd, &tmp_ctx, dcmd, 0);
+			dcmd = adj_schedule_deferred_cmd(&wait_c_adj_cmd, &tmp_ctx, dcmd, 0);
+		} else {
+			dcmd = NULL;
+		}
 
 		path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
 		if (path->my_proxy && hostname_in_list(hostname, &path->my_proxy->on_hosts))
 			proxy_reconf(&tmp_ctx, running_conn);
 	}
+
+	return dcmd;
+}
+
+
+static void
+adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, struct deferred_cmd *dcmd)
+{
+	bool one_was_connected = false, disconnect = false;
+	struct connection *conn;
+
+	if (running) {
+		for_each_connection(conn, &running->connections) {
+			if (conn->cstate == C_CONNECTED)
+				one_was_connected = true;
+		}
+	}
+
+	dcmd = adjust_conn(ctx, running, dcmd, C_CONNECTING, &disconnect);
+	dcmd = adjust_conn(ctx, running, dcmd, C_CONNECTED, &disconnect);
 
 	if (running) {
 		for_each_connection(conn, &running->connections) {
@@ -856,13 +875,16 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, const struct d
 			if (!configured_conn) {
 				struct cfg_ctx tmp_ctx = { .cmd = ctx->cmd, .res = running, .conn = conn };
 
-				if (added_a_peer)
-					dcmd = added_a_peer;
-
-				adj_schedule_deferred_cmd(&del_peer_cmd, &tmp_ctx, dcmd, 0);
+				dcmd = adj_schedule_deferred_cmd(&del_peer_cmd, &tmp_ctx, dcmd, 0);
+				disconnect = true;
 			}
 		}
 	}
+
+	if (!(disconnect && one_was_connected))
+		cancel_deferred_waits(ctx->res);
+	if (deferred_cmd(dcmd) == &wait_c_adj_cmd)	/* Remove a final wait-connect */
+		cancel_deferred_cmd(dcmd);
 }
 
 

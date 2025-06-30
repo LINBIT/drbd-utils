@@ -206,6 +206,7 @@ struct connection
 	/* on_cmdline is set it was explicity asked for on the command line.
 	   Not set if only found by iterating over all connextions in resource */
 	unsigned int on_cmdline:1;
+	unsigned int adj_seen:1;
 	enum drbd_conn_state cstate; /* from drbdsetup show for adjust */
 	STAILQ_ENTRY(connection) link;
 };
@@ -298,6 +299,9 @@ enum drbd_cfg_stage {
 
 	/* actually start with connection attempts */
 	CFG_NET_CONNECT,
+
+	/* Wait for connect to complete */
+	CFG_WAIT_CONNECT,
 
 	__CFG_LAST
 };
@@ -409,6 +413,9 @@ extern bool del_opt(struct options *base, const char * const name);
 struct deferred_cmd *schedule_deferred_cmd(const struct adm_cmd *, const struct cfg_ctx *,
 					   const struct deferred_cmd *depends_on,
 					   unsigned int flags);
+void cancel_deferred_cmd(struct deferred_cmd *d);
+void cancel_deferred_waits(const struct d_resource *res);
+const struct adm_cmd *deferred_cmd(const struct deferred_cmd *dcmd);
 
 extern void maybe_exec_legacy_drbdadm(char **argv);
 extern void uc_node(enum usage_count_type type);
