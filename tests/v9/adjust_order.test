@@ -1,0 +1,10 @@
+$ FAKE_DRBDSETUP_SHOW=<(echo) ./drbdadm -c ./adjust_order.res adjust -d r0 2>/dev/null
+drbdsetup new-resource r0 0
+drbdsetup new-minor r0 1 0
+drbdsetup new-peer r0 1 --_name=lbtest-vm-75.test
+drbdsetup new-path r0 1 ipv4:10.224.10.29:7789 ipv4:10.224.10.37:7789
+drbdsetup peer-device-options r0 1 0 --set-defaults --bitmap=no
+drbdmeta 1 v09 /dev/scratch/day0-add-disk-20250701-105205-disk0 internal repair-md
+drbdmeta 1 v09 /dev/scratch/day0-add-disk-20250701-105205-disk0 internal apply-al
+drbdsetup attach 1 /dev/scratch/day0-add-disk-20250701-105205-disk0 /dev/scratch/day0-add-disk-20250701-105205-disk0 internal --md-flushes=no --disk-flushes=no
+drbdsetup connect r0 1
