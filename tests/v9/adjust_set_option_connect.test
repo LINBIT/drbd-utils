@@ -1,0 +1,4 @@
+$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_set_option_connect.txt ./drbdadm -c ./adjust_set_option_connect.res adjust -d r0 2>/dev/null
+drbdsetup net-options r0 0 --set-defaults --_name=n1.ryzen9.home --verify-alg=crc32c
+drbdsetup net-options r0 1 --set-defaults --_name=n2.ryzen9.home --verify-alg=crc32c
+drbdsetup connect r0 0
