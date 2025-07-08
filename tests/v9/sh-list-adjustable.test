@@ -2,3 +2,7 @@ $ FAKE_DRBDSETUP_SHOW=empty.txt ./drbdadm -c ./sh-list-adjustable.res sh-list-ad
 r0
 r1
 r2
+$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_switch_diskfull_r0.txt ./drbdadm -c ./sh-list-adjustable.res sh-list-adjustable all 2>/dev/null
+r0
+r1
+r2

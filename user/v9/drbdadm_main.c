@@ -658,7 +658,11 @@ void schedule_deferred_cmd(const struct adm_cmd *cmd,
 
 	if (once || once_per_res) {
 		STAILQ_FOREACH(d, &deferred_cmds[stage], link) {
-			if (d->ctx.cmd != cmd || d->ctx.res != ctx->res)
+			if (d->ctx.cmd != cmd ||
+			    (d->ctx.res != ctx->res && strcmp(d->ctx.res->name, ctx->res->name))
+			    /* Configured and running resources are different resource objects
+			     * but have the same name. So, only accept them as different if they
+			     * also have different names! */ )
 				continue;
 			if (once_per_res)
 				return;
@@ -3623,7 +3627,7 @@ int main(int argc, char **argv)
 
 	is_dump_xml = (cmd == &dump_xml_cmd);
 	is_dump = (is_dump_xml || cmd == &dump_cmd);
-	is_adjust = (cmd == &adjust_cmd || cmd == &adjust_wp_cmd);
+	is_adjust = (cmd == &adjust_cmd || cmd == &adjust_wp_cmd || cmd == &sh_list_adjustable);
 
 	if (is_adjust && find_backend_option("--skip-net"))
 		do_verify_ips = 0;
