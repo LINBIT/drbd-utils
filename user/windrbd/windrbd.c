@@ -55,9 +55,9 @@ void usage_and_exit(void)
 	fprintf(stderr, "		(You cannot use it as backing device after doing that)\n");
 	fprintf(stderr, "	windrbd [opt] filesystem-state <drive-letter>\n");
 	fprintf(stderr, "		Shows the current filesystem state (windows, windrbd, other)\n");
-	fprintf(stderr, "	windrbd [opt] log-server [<log-file>]\n");
-	fprintf(stderr, "		Logs windrbd kernel messages to stdout (and optionally to\n");
-	fprintf(stderr, "		log-file)\n");
+	fprintf(stderr, "	windrbd [opt] log-server [<log-file>] [<enable-hourly-log-rotation>]\n");
+	fprintf(stderr, "		Logs windrbd kernel messages to stdout (and optionally instead to\n");
+	fprintf(stderr, "		log-file). To enable hourly log-file rotation, set it equal to a non-zero uint.\n");
 	fprintf(stderr, "	windrbd [opt] add-drive-in-explorer <drive-letter>\n");
 	fprintf(stderr, "		Tells Windows Explorer that drive has been created.\n");
 	fprintf(stderr, "	windrbd [opt] remove-drive-in-explorer <drive-letter>\n");
@@ -67,10 +67,11 @@ void usage_and_exit(void)
 	fprintf(stderr, "		fault injection if n is negative. Where is anything out of\n");
 	fprintf(stderr, "		[all|backing|meta]-[request|completion]. Drive must be\n");
 	fprintf(stderr, "		specified unless all is given.\n");
-	fprintf(stderr, "	windrbd [opt] user-mode-helper-daemon\n");
+	fprintf(stderr, "	windrbd [opt] user-mode-helper-daemon [<log-file>] [<enable-hourly-log-rotation>]\n");
 	fprintf(stderr, "		Run user mode helper daemon. Receives commands from\n");
 	fprintf(stderr, "		kernel driver if something interresting happens, runs\n");
 	fprintf(stderr, "		them and returns result to kernel.\n");
+	fprintf(stderr, "		Optionally can instead log to log-file and enable hourly log-file rotation by setting the flag to a non-zero uint.\n");
 	fprintf(stderr, "	windrbd [opt] set-mount-point-for-minor <minor> <mount-point>\n");
 	fprintf(stderr, "		Assign mountpoint (drive letter) to DRBD minor.\n");
 	fprintf(stderr, "	windrbd [opt] print-exe-path\n");
@@ -130,18 +131,29 @@ void usage_and_exit(void)
 	exit(1);
 }
 
-void timestamp(void)
-{
-	char the_time[80];
-	struct timeval tv;
+#define MAX_TIME_STR_SIZE 80
+
+void get_current_time_as_str(char* const the_time, unsigned int size, struct timeval* const tv, const char* const format) {
 	struct tm nowtm;
 	time_t nowtime;
 
-	gettimeofday(&tv, NULL);
-	nowtime = tv.tv_sec;
+	gettimeofday(tv, NULL);
+	nowtime = tv->tv_sec;
 	localtime_r(&nowtime, &nowtm);
-	strftime(the_time, sizeof(the_time), "%Y-%m-%d %H:%M:%S", &nowtm);
+	strftime(the_time, size, format, &nowtm);
+}
+
+void timestamp(void)
+{
+	char the_time[MAX_TIME_STR_SIZE];
+	struct timeval tv;
+	get_current_time_as_str(the_time, MAX_TIME_STR_SIZE, &tv, "%Y-%m-%d %H:%M:%S");
 	printf("%s.%06ld ", the_time, tv.tv_usec);
+}
+
+void get_current_log_file_suffix_time(char* const the_time, unsigned int size) {
+	struct timeval tv;
+	get_current_time_as_str(the_time, size, &tv, "%Y-%m-%d-%H");
 }
 
 	/* TODO: move those to user/shared/windrbd_helper.c */
@@ -730,7 +742,59 @@ static size_t unix_to_dos(
 	return dst_idx;
 }
 
-int log_server_op(const char *log_file)
+int open_log_file_ignore_error(const char* const log_file) {
+	int fd = -1;
+	if ((fd = open(log_file, O_WRONLY | O_CREAT | O_SYNC | O_APPEND, 0664)) < 0)
+		perror("open (ignored)");
+	return fd;
+}
+
+void redirect_outputs(int fd) {
+	if (dup2(fd, 1) < 0 || dup2(fd, 2) < 0) {
+		perror("dup2");
+		timestamp();
+		fprintf(stderr, "Error redirecting stderr and stdout to some file\n");
+	}
+}
+
+int open_file_and_redirect_outputs(const char* const log_file) {
+	int fd = open_log_file_ignore_error(log_file);
+	redirect_outputs(fd);
+	return fd;
+}
+
+#define MAX_LOG_FILE_SUFFIX_LENGTH 15 // enough bytes to represent hour level detail: .2025-12-12-10
+#define SUFFIXED_LOG_FILE_FORMAT "%s.%s"
+
+void prepare_log_file_suffixed(char* const the_time, char* const log_file_suffixed, size_t max_log_file_size, const char* log_file) {
+	get_current_log_file_suffix_time(the_time, MAX_TIME_STR_SIZE);
+	snprintf(log_file_suffixed, max_log_file_size, SUFFIXED_LOG_FILE_FORMAT, log_file, the_time);
+}
+
+#define REDIRECT_OUTPUT true
+#define NO_REDIRECT_OUTPUT false 
+
+static int check_and_rotate_log_file(int fd, char* const the_time, char* const new_time, char* const log_file_suffixed, size_t max_log_file_size, const char* const base_log_file, bool redirect_output) {
+	int new_fd = fd;
+	get_current_log_file_suffix_time(new_time, MAX_TIME_STR_SIZE);
+	if (strcmp(the_time, new_time) != 0) {
+		timestamp();
+		snprintf(log_file_suffixed, max_log_file_size, SUFFIXED_LOG_FILE_FORMAT, base_log_file, new_time);
+		int new_fd = open_log_file_ignore_error(log_file_suffixed);
+		if (new_fd != -1 && new_fd != fd) {
+			close(fd);
+			fd = new_fd;
+			if (redirect_output) {
+				redirect_outputs(fd);
+			}
+			timestamp();
+			snprintf(the_time, MAX_TIME_STR_SIZE, "%s", new_time);
+		} 
+	}
+	return new_fd;
+}
+
+int log_server_op(const char *log_file, bool hourly_log_rotation)
 {
 	int s = socket(AF_INET, SOCK_DGRAM, 0);
 	if (s < 0) {
@@ -746,10 +810,21 @@ int log_server_op(const char *log_file)
 		perror("bind");
 		return 1;
 	}
+
+	size_t max_log_file_size = strlen(log_file) + MAX_LOG_FILE_SUFFIX_LENGTH;
+	char log_file_suffixed[max_log_file_size];
+	char the_time[MAX_TIME_STR_SIZE];
+	char new_time[MAX_TIME_STR_SIZE];
+	const char* initial_log_file = log_file;
+	
+	if (initial_log_file != NULL && hourly_log_rotation) {
+		prepare_log_file_suffixed(the_time, log_file_suffixed, max_log_file_size, log_file);
+		initial_log_file = log_file_suffixed;
+	}
+
 	int fd = -1;
-	if (log_file != NULL) {
-		if ((fd = open(log_file, O_WRONLY | O_CREAT | O_SYNC | O_APPEND, 0664)) < 0)
-			perror("open (ignored)");
+	if (initial_log_file != NULL) {
+		fd = open_file_and_redirect_outputs(initial_log_file);
 	}
 
 		/* See printk routine. We split lines longer than that. */
@@ -760,6 +835,7 @@ int log_server_op(const char *log_file)
 
 	printf("Waiting for log messages from windrbd kernel driver.\r\n");
 	printf("Press Ctrl-C to stop.\r\n");
+	fflush(NULL);
 	while (1) {
 		len = recv(s, buf, sizeof(buf)-1, 0);
 		if (len < 0) {
@@ -773,11 +849,12 @@ int log_server_op(const char *log_file)
 
 		buf[len] = '\0';
 		doslen = unix_to_dos(buf, len, dosbuf, sizeof(dosbuf), NULL);
-		write(1, dosbuf, doslen);
-		if (fd >= 0) {
-			if (write(fd, dosbuf, doslen) < 0)
-				perror("write (ignored)");
+		if (fd >= 0 && hourly_log_rotation) {
+			fd = check_and_rotate_log_file(fd, the_time, new_time, log_file_suffixed, max_log_file_size, log_file, REDIRECT_OUTPUT);
 		}
+
+		if (write(1, dosbuf, doslen) < 0)
+			perror("write (ignored)");
 	}
 	fprintf(stderr, "We should never get here.");
 	return 1;
@@ -1222,7 +1299,7 @@ static int set_um_helper(void)
 
 #endif
 
-static int user_mode_helper_daemon(void)
+static int user_mode_helper_daemon(const char *log_file, bool hourly_log_rotation)
 {
 	struct windrbd_usermode_helper get_size;
 	struct windrbd_usermode_helper *next_cmd;
@@ -1230,20 +1307,36 @@ static int user_mode_helper_daemon(void)
 	int err;
 	BOOL ret;
 
+	int fd = -1;
+	size_t max_log_file_size = strlen(log_file) + MAX_LOG_FILE_SUFFIX_LENGTH;
+	char log_file_suffixed[max_log_file_size];
+	char the_time[MAX_TIME_STR_SIZE];
+	char new_time[MAX_TIME_STR_SIZE];
+	const char* initial_log_file = log_file;
+
+	if (initial_log_file != NULL && hourly_log_rotation) {
+		prepare_log_file_suffixed(the_time, log_file_suffixed, max_log_file_size, log_file);
+		initial_log_file = log_file_suffixed;
+	}
+
+	if (initial_log_file != NULL) {
+		fd = open_file_and_redirect_outputs(initial_log_file);
+	}
+
 	if (!quiet) {
 		timestamp();
-		printf("Starting WinDRBD user mode helper daemon\n");
+		printf("Starting WinDRBD user mode helper daemon\r\n");
 		timestamp();
-		printf("Press Ctrl-C to stop.\n");
+		printf("Press Ctrl-C to stop.\r\n");
 	}
 	if (dup2(1, 2) < 0) {
 		perror("dup2");
 		timestamp();
-		fprintf(stderr, "Error redirecting stderr to stdout\n");
+		fprintf(stderr, "Error redirecting stderr to stdout\r\n");
 	} else {
 		if (!quiet) {
 			timestamp();
-			printf("Redirected stderr to stdout\n");
+			printf("Redirected stderr to stdout\r\n");
 		}
 	}
 
@@ -1259,13 +1352,16 @@ static int user_mode_helper_daemon(void)
 	}
 	if (!quiet) {
 		timestamp();
-		printf("Connected to WinDRBD kernel driver\n");
+		printf("Connected to WinDRBD kernel driver\r\n");
 	}
 
 /* Later: */
 /*	set_um_helper(); */
 
 	while (1) {
+		if (hourly_log_rotation) {
+			fd = check_and_rotate_log_file(fd, the_time, new_time, log_file_suffixed, max_log_file_size, log_file, REDIRECT_OUTPUT);
+		}
 		ret = DeviceIoControl(um_root_dev_handle, IOCTL_WINDRBD_ROOT_RECEIVE_USERMODE_HELPER, NULL, 0, &get_size, sizeof(get_size), &size, NULL);
 		if (!ret) {
 			err = GetLastError();
@@ -1293,6 +1389,7 @@ static int user_mode_helper_daemon(void)
 				timestamp();
 				printf("Size mismatch from ioctl: expected %zd actual %d, omitting this request\n", req_size, size2);
 			} else {
+				fflush(NULL);
 				fork_and_exec_command(next_cmd);
 			}
 		} /* else nothing to do, wait a little and poll again */
@@ -1301,6 +1398,7 @@ static int user_mode_helper_daemon(void)
 			 * sends their return values to the windrbd driver.
 			 */
 		check_for_retvals();
+		fflush(NULL);
 
 		usleep(USER_MODE_HELPER_POLLING_INTERVAL_MS*1000);
 	}
@@ -1893,12 +1991,16 @@ int main(int argc, char ** argv)
 		return patch_bootsector_op(drive, FILESYSTEM_STATE);
 	}
 	if (strcmp(op, "log-server") == 0) {
-		if (argc < optind+1 || argc > optind+2) {
+		if (argc < optind+1 || argc > optind+3) {
 			usage_and_exit();
 		}
-		const char *log_file = argv[optind+1];
 
-		return log_server_op(log_file);
+		const char *log_file = argv[optind+1];
+		bool hourly_log_rotation = false;
+		if (argc == optind + 3) {
+			hourly_log_rotation = atoll_or_die(argv[optind+2]);
+		}
+		return log_server_op(log_file, hourly_log_rotation);
 	}
 	if (strcmp(op, "add-drive-in-explorer") == 0) {
 		if (argc != optind+2) {
@@ -1930,9 +2032,18 @@ int main(int argc, char ** argv)
 		}
 		return inject_faults(drive, where, after, where_str);
 	}
-	if (strcmp(op, "user-mode-helper-daemon") == 0)
-		return user_mode_helper_daemon();
+	if (strcmp(op, "user-mode-helper-daemon") == 0) {
+		if (argc < optind+1 || argc > optind+3) {
+			usage_and_exit();
+		}
 
+		const char *log_file = argv[optind+1];
+		bool hourly_log_rotation = false;
+		if (argc == optind + 3) {
+			hourly_log_rotation = atoll_or_die(argv[optind+2]);
+		}
+		return user_mode_helper_daemon(log_file, hourly_log_rotation);
+	}
 	if (strcmp(op, "set-mount-point-for-minor") == 0) {
 		if (argc != optind+2 && argc != optind+3) {
 			usage_and_exit();
