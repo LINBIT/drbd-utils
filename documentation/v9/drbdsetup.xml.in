@@ -572,6 +572,26 @@
 	      </varlistentry>
 
 	      <varlistentry>
+		<term><option>--rcvbuf</option></term>
+
+		<listitem>
+		  <para>On a "busy" system, you may need to increase the netlink receive buffer size,
+		  because "too much" activity causes many events to be multicast via netlink,
+		  which may overrun the receive buffer.</para>
+
+		  <para>You can adjust the receive buffer size
+		  by setting the environment variable <option>DRBD_GENL_RCVBUF_SZ</option>
+		  or by using this command line option. Command line wins if both are used.</para>
+
+		  <para>Value in bytes, accepts unit suffixes, defaults to 1MiB.
+		  Capped for sanity between 100k and 100M.</para>
+
+		  <para>You may need to adjust net.core.wmem_max to be effective without CAP_NET_ADMIN.
+		  </para>
+		</listitem>
+	      </varlistentry>
+
+	      <varlistentry>
 		<term>
 		  <option>--color=<group choice="req" rep="norepeat">
 		      <arg choice="plain" rep="norepeat">always</arg>
