@@ -157,12 +157,10 @@ This packages includes the DRBD administration tools.
 %{_unitdir}/drbd@.service
 %{_unitdir}/drbd@.target
 %{_unitdir}/drbd-configured.target
-%{_unitdir}/ocf.ra@.service
 %{_tmpfilesdir}/drbd.conf
 %{_prefix}/lib/drbd/scripts/drbd
 %{_prefix}/lib/drbd/scripts/drbd-service-shim.sh
 %{_prefix}/lib/drbd/scripts/drbd-wait-promotable.sh
-%{_prefix}/lib/drbd/scripts/ocf.ra.wrapper.sh
 %config(noreplace) %{_sysconfdir}/drbd.conf
 %dir %{_sysconfdir}/drbd.d
 %config(noreplace) %{_sysconfdir}/drbd.d/global_common.conf
@@ -176,7 +174,6 @@ This packages includes the DRBD administration tools.
 %{_mandir}/man7/drbd.service.*
 %{_mandir}/man7/drbd-graceful-shutdown.service.*
 %{_mandir}/man7/drbd-configured.target.*
-%{_mandir}/man7/ocf.ra@.service.*
 %{_mandir}/man5/drbd.conf-*
 %{_mandir}/man8/drbdmeta-*
 %if %{with drbdmon}

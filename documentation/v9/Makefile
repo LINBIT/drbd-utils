@@ -45,7 +45,6 @@ ADOC_MANPAGES += drbd.service.adoc
 ADOC_MANPAGES += drbd@.service.adoc
 ADOC_MANPAGES += drbd@.target.adoc
 ADOC_MANPAGES += drbd-configured.target.adoc
-ADOC_MANPAGES += ocf.ra@.service.adoc
 
 MANPAGES += $(patsubst %.adoc,%.7,$(ADOC_MANPAGES))
 

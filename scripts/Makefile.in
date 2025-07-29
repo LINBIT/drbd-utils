@@ -51,7 +51,6 @@ WITH_WINDRBD = @WITH_WINDRBD@
 SYSTEMD_TEMPLATES  = drbd-services@.target
 SYSTEMD_TEMPLATES += drbd-promote@.service
 SYSTEMD_TEMPLATES += drbd-demote-or-escalate@.service
-SYSTEMD_TEMPLATES += ocf.ra@.service
 SYSTEMD_TEMPLATES += drbd-reconfigure-suspend-or-error@.service
 
 SYSTEMD_TEMPLATES += drbd@.target
@@ -72,7 +71,6 @@ SERVICE_TEMPLATES += drbd-graceful-shutdown.service
 SERVICE_TEMPLATES += drbd-promote@.service
 SERVICE_TEMPLATES += drbd-reconfigure-suspend-or-error@.service
 SERVICE_TEMPLATES += drbd-wait-promotable@.service
-SERVICE_TEMPLATES += ocf.ra@.service
 
 SCRIPT_TEMPLATES = drbd-service-shim.sh
 
@@ -108,7 +106,6 @@ ifeq ($(subst both,systemd,$(initscripttype)),systemd)
 	install -m 755 drbd $(DESTDIR)$(LIBDIR)/scripts
 	install -m 755 drbd-service-shim.sh $(DESTDIR)$(LIBDIR)/scripts
 	install -m 755 drbd-wait-promotable.sh $(DESTDIR)$(LIBDIR)/scripts
-	install -m 755 ocf.ra.wrapper.sh $(DESTDIR)$(LIBDIR)/scripts
 	install -d $(DESTDIR)$(tmpfilesdir)/
 	install -m 444 drbd.tmpfiles.conf $(DESTDIR)$(tmpfilesdir)/drbd.conf
 endif
