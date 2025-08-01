@@ -89,8 +89,11 @@ Requires: (drbd-selinux if selinux-policy-targeted)
 %if %{with udev}
 Recommends: drbd-udev
 %endif
+# Conditional dependencies are available on all supported distros except for SLES12SP5.
+%if 0%{?sle_version}%{!?sle_version:150000} >= 0150000
 %if %{with bashcompletion}
 Recommends: (drbd-bash-completion if bash-completion)
+%endif
 %endif
 %endif
 %if %{defined suse_version}
