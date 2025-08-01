@@ -1367,7 +1367,7 @@ static bool __print_options(struct nlattr *attr, struct context_def *ctx, const 
 			}
 			printf("\n");
 		} else {
-			printI("_unknown %-14s\t# not supported by kernel\n", field->name);
+			printI("_unknown %-14s;\t# not supported by kernel\n", field->name);
 		}
 	}
 	if (opened && close) {

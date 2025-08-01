@@ -688,12 +688,14 @@ static void __parse_options(struct options *options,
 				char *s = yytext;
 				log_err("%s:%u: Parse error(ignored): '_unknown %.40s%s', but I don't know about it either.\n",
 				    config_file, line, s, strlen(s) > 40 ? "..." : "");
+				EXP(';');
 				continue;
 			}
 
 			no = new_opt((char*)field_def->name, NULL);
 			no->unknown = true;
 			insert_tail(options, no);
+			EXP(';');
 			continue;
 		}
 
