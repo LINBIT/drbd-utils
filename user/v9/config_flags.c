@@ -665,6 +665,9 @@ const char *double_quote_string(const char *str)
 	char *b;
 	int len = 0;
 
+	if (!str)
+		return "\"\"";
+
 	for (s = str; *s; s++) {
 		if (*s == '\\' || *s == '"')
 			len++;
