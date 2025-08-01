@@ -3,6 +3,24 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.32.0-rc.1
+-----------
+ * drbdsetup,show: show device config
+ * spec: obsolute drbd-xen; major cleanups
+ * doc: various fixes and improvements
+ * drbdadm: allow "dump minor-N" plus sh-list-config-file
+ * drbdadm: aggregate multiple --config-to-test
+ * drbdadm: introduce drbdadm sh-list-adjust
+ * build: deprecate --with-{distro,rg-manager,heartbeat}
+ * drbdadm,adjust: detect and drop options unsupported by kernel
+ * se-linux: fix policy
+ * drbdsetup: add compat mode for DRBD8
+ * drbdmon: various fixes and improvements
+ * drbdsetup: allow to override genl rcvbuf size
+ * drbdadm,adjust: improve adjust for diskless primaries
+ * drbdadm,adjust: adjust unconnected connections first
+ * scripts: rm ocf ra shell wrapper
+
 9.31.0
 -----------
  * VCS: drop integration
