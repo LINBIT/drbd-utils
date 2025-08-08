@@ -10,7 +10,8 @@ Build-Depends: bash-completion,
                flex,
                udev,
                xsltproc,
-               libkeyutils-dev
+               libkeyutils-dev,
+               pkg-config
 Standards-Version: 3.9.5
 Homepage: http://www.drbd.org/
 Vcs-Browser: https://github.com/LINBIT/drbd-utils
