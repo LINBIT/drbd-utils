@@ -3,7 +3,7 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
-9.32.0-rc.1
+9.32.0
 -----------
  * drbdsetup,show: show device config
  * spec: obsolute drbd-xen; major cleanups

@@ -10,7 +10,7 @@ dnl Include cpp feature testing macro
 AC_CONFIG_MACRO_DIR([m4])
 
 dnl What we are, our version, who to bug in case of problems
-AC_INIT(DRBD, 9.32.0-rc.1, [drbd-dev@lists.linbit.com])
+AC_INIT(DRBD, 9.32.0, [drbd-dev@lists.linbit.com])
 
 dnl Sanitize $prefix. Autoconf does this by itself, but so late in the
 dnl generated configure script that the expansion does not occur until
