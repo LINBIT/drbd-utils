@@ -143,6 +143,9 @@ This packages includes the DRBD administration tools.
 %{_prefix}/lib/drbd/notify-pri-lost.sh
 %{_prefix}/lib/drbd/notify-pri-on-incon-degr.sh
 %{_prefix}/lib/drbd/notify.sh
+%{_prefix}/lib/drbd/tnf-drbd-fence.py
+%ghost %{_prefix}/lib/drbd/tnf-drbd-fence.pyc
+%ghost %{_prefix}/lib/drbd/tnf-drbd-fence.pyo
 %dir %{_var}/lib/drbd
 %ghost %dir %{_var}/run/drbd
 %ghost %dir %{_var}/run/drbd/lock
