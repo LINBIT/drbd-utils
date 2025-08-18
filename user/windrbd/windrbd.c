@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <windows.h>
+#include <winreg.h>
 #include <wchar.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -1635,6 +1636,17 @@ next:
 	return num_deleted;
 }
 
+int flush_registry_key(void)
+{
+	int err;
+
+	err = RegFlushKey(HKEY_LOCAL_MACHINE);
+	if (err != ERROR_SUCCESS) {
+		fprintf(stderr, "Couldn't flush key HKEY_LOCAL_MACHINE, err is %d\n", err);
+		return 1;
+	}
+	return 0;
+}
 
 	/* This installs or removes the WinDRBD bus device object.
 	 * This code has been adapted from WinAoE (www.winaoe.org)
@@ -1726,6 +1738,9 @@ static int install_windrbd_bus_device(int remove, const char *inf_file)
 		}
 		printf("Installed 1 WinDRBD bus device\n");
 	}
+
+	flush_registry_key();
+
 	if (RebootRequired || num_deleted > 0) {
 		printf("Your system has to rebooted for changes to take effect.\n");
 		return 1;   /* can check with if errorlevel 1 from cmd script */
