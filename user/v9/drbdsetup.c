@@ -1383,41 +1383,18 @@ static void print_options(struct nlattr *attr, struct context_def *ctx, const ch
 	__print_options(attr, ctx, sect_name, false, true);
 }
 
-static int nr_printed_opts(struct context_def *ctx, struct field_def *start,
-		struct nlattr **nested_attr_tb)
-{
-	struct field_def *field;
-	struct nlattr *nlattr;
-
-	int nr = -1;
-	if (start == NULL)
-		return nr;
-
-	for (field = start; field->name; field++) {
-		if (!should_show_field_info_from_attr_tb(&nlattr, NULL, NULL, nested_attr_tb, field, ctx))
-			continue;
-		/* Json is data only, no "comments".
-		 * If _we_ know about it, AND kernel knows about it, we'd report it.
-		 * If we know it, but we don't report it, it is unsuported by kernel. */
-		if (!nlattr)
-			continue;
-		nr++;
-	}
-
-	return nr;
-}
-
-static bool print_options_json(
+static bool __print_options_json(
 	struct nlattr *attr,
 	struct context_def *ctx,
 	const char *sect_name,
-	bool comma_before
+	bool comma_before,
+	bool opened,
+	bool close
 )
 {
 	struct nlattr *nested_attr_tb[128];
 	struct field_def *field;
-	int opened = 0;
-	int will_print, printed;
+	bool first = true;
 
 	if (!attr)
 		return false;
@@ -1428,8 +1405,6 @@ static bool print_options_json(
 		/* still, print those that validated ok */
 	}
 
-	will_print = nr_printed_opts(ctx, ctx->fields, nested_attr_tb);
-	printed = 0;
 	for (field = ctx->fields; field->name; field++) {
 		struct nlattr *nlattr;
 		const char *str;
@@ -1441,13 +1416,16 @@ static bool print_options_json(
 			continue;
 		if (!nlattr) /* unsupported by kernel */
 			continue;
+		if (first && comma_before)
+			printf(",\n");
 		if (!opened) {
-			opened=1;
-			if (comma_before)
-				printf(",\n");
+			opened = true;
 			printI(QUOTED("%s") ": {\n", sect_name);
 			++indent;
 		}
+		if (!first)
+			printf(",\n");
+		first = false;
 
 		printI(QUOTED("%s") ": ", field->name);
 		if (field->ops == &fc_boolean)
@@ -1459,18 +1437,24 @@ static bool print_options_json(
 		}
 		else
 			printf(QUOTED("%s"), str);
-		if (printed < will_print)
-			printf(",");
-		printf("\n");
-
-		printed++;
 	}
-	if (opened) {
+	if (opened && close) {
+		printf("\n");
 		--indent;
 		printI("}");
 	}
 
-	return opened > 0;
+	return opened;
+}
+
+static bool print_options_json(
+	struct nlattr *attr,
+	struct context_def *ctx,
+	const char *sect_name,
+	bool comma_before
+)
+{
+	return __print_options_json(attr, ctx, sect_name, comma_before, false, true);
 }
 
 struct choose_timeout_ctx {
@@ -2325,6 +2309,8 @@ static void show_connection_json(struct connections_list *connection, struct pee
 
 static void show_volume_json(struct devices_list *device)
 {
+	bool opened;
+
 	printI("{\n");
 	++indent;
 	printI(QUOTED("volume_nr") ": %d,\n", device->ctx.ctx_volume);
@@ -2352,7 +2338,8 @@ static void show_volume_json(struct devices_list *device)
 		printI(QUOTED("disk") ": " QUOTED("none"));
 	}
 
-	print_options_json(device->disk_conf_nl, &attach_cmd_ctx, "disk", true);
+	opened = __print_options_json(device->disk_conf_nl, &attach_cmd_ctx, "disk", true, false, false);
+	__print_options_json(device->device_conf_nl, &device_options_ctx, "disk", true, opened, true);
 	printf("\n");
 	--indent;
 	printI("}%s\n", device->next ? "," : ""); /* close volume */
