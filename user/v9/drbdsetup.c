@@ -1411,8 +1411,7 @@ static bool print_options_json(
 	struct nlattr *attr,
 	struct context_def *ctx,
 	const char *sect_name,
-	bool comma_before,
-	bool comma_after
+	bool comma_before
 )
 {
 	struct nlattr *nested_attr_tb[128];
@@ -1466,12 +1465,9 @@ static bool print_options_json(
 
 		printed++;
 	}
-	if(opened) {
+	if (opened) {
 		--indent;
-		if (comma_after)
-			printI("},\n");
-		else
-			printI("}\n");
+		printI("}");
 	}
 
 	return opened > 0;
@@ -2291,7 +2287,8 @@ static void show_connection_json(struct connections_list *connection, struct pee
 		printI(QUOTED("_is_standalone") ": true,\n");
 	printI(QUOTED("_cstate") ": %s,\n",
 	       double_quote_string(drbd_conn_str(connection->info.conn_connection_state)));
-	print_options_json(connection->net_conf, &show_net_options_ctx, "net", false, true);
+	if (print_options_json(connection->net_conf, &show_net_options_ctx, "net", false))
+		printf(",\n");
 
 	if (has_disk_options)
 	{
@@ -2312,7 +2309,8 @@ static void show_connection_json(struct connections_list *connection, struct pee
 				printI("{\n");
 				++indent;
 				printI(QUOTED("volume_nr") ": %d,\n", peer_device->ctx.ctx_volume);
-				print_options_json(peer_device->peer_device_conf, &peer_device_options_ctx, "disk", false, false);
+				if (print_options_json(peer_device->peer_device_conf, &peer_device_options_ctx, "disk", false))
+					printf("\n");
 				--indent;
 				printI("}%s\n", printed < will_print - 1 ? "," : "");
 				--indent;
@@ -2354,8 +2352,8 @@ static void show_volume_json(struct devices_list *device)
 		printI(QUOTED("disk") ": " QUOTED("none"));
 	}
 
-	if (!print_options_json(device->disk_conf_nl, &attach_cmd_ctx, "disk", true, false))
-		printf("\n");
+	print_options_json(device->disk_conf_nl, &attach_cmd_ctx, "disk", true);
+	printf("\n");
 	--indent;
 	printI("}%s\n", device->next ? "," : ""); /* close volume */
 }
@@ -2487,7 +2485,8 @@ static void show_resource_list_json(struct resources_list *resources_list, char*
 		++indent;
 		printI(QUOTED("resource") ": " QUOTED("%s") ",\n", resource->name);
 
-		print_options_json(resource->res_opts, &resource_options_ctx, "options", false, true);
+		if (print_options_json(resource->res_opts, &resource_options_ctx, "options", false))
+			printf(",\n");
 
 		printI("\"_this_host\": {\n");
 		++indent;
