@@ -1,0 +1,12 @@
+$ cat show-resource.msgs | drbdsetup_instrumented show --json ; echo $?
+[
+    {
+        "resource": "some-resource",
+        "_this_host": {
+            "node-id": 4,
+            "volumes": [
+            ]
+        }
+    }
+]
+0

@@ -88,6 +88,8 @@
 
 char *progname;
 
+fake_generic_get_t fake_generic_get = NULL;
+
 #ifndef AF_INET_SDP
 #define AF_INET_SDP 27
 #define PF_INET_SDP AF_INET_SDP
@@ -1876,6 +1878,9 @@ out:
 static int generic_get(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 {
 	int err;
+
+	if (fake_generic_get)
+		return fake_generic_get(cm, timeout_arg, u_ptr);
 
 	err = generic_send(cm);
 	if (err != 0)
@@ -4672,13 +4677,16 @@ int drbdsetup_main(int argc, char **argv)
 	if (argc < 2)
 		print_usage_and_exit(NULL);
 
-	if (!modprobe_drbd()) {
-		if (!strcmp(argv[1], "down") ||
-		    !strcmp(argv[1], "secondary") ||
-		    !strcmp(argv[1], "disconnect") ||
-		    !strcmp(argv[1], "detach"))
-			return 0; /* "down" succeeds even if drbd is missing */
-		return 20;
+	/* Do not use DRBD if generic_get() is faked */
+	if (!fake_generic_get) {
+		if (!modprobe_drbd()) {
+			if (!strcmp(argv[1], "down") ||
+					!strcmp(argv[1], "secondary") ||
+					!strcmp(argv[1], "disconnect") ||
+					!strcmp(argv[1], "detach"))
+				return 0; /* "down" succeeds even if drbd is missing */
+			return 20;
+		}
 	}
 
 	maybe_exec_legacy_drbdsetup(argv);
@@ -4727,10 +4735,13 @@ int drbdsetup_main(int argc, char **argv)
 		/* maybe more specific: (1 << GENL_ID_CTRL)? */
 		drbd_genl_family.nl_groups = -1;
 	}
-	drbd_sock = genl_connect_to_family(&drbd_genl_family, &connect_options);
-	if (!drbd_sock) {
-		fprintf(stderr, "Could not connect to 'drbd' generic netlink family\n");
-		return 20;
+	/* Do not use DRBD if generic_get() is faked */
+	if (!fake_generic_get) {
+		drbd_sock = genl_connect_to_family(&drbd_genl_family, &connect_options);
+		if (!drbd_sock) {
+			fprintf(stderr, "Could not connect to 'drbd' generic netlink family\n");
+			return 20;
+		}
 	}
 
 	if (drbd_genl_family.version != GENL_MAGIC_VERSION ||

@@ -41,6 +41,7 @@ int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
 extern struct genl_family drbd_genl_family;
 
 static char *test_resource_name = "some-resource";
+static __u32 test_node_id = 4;
 static __u32 test_minor = 1000;
 static __u32 test_minor_b = 1001;
 static __u32 test_volume_number = 0;
@@ -50,6 +51,10 @@ static char *test_peer_name = "some-peer";
 static char *test_backing_dev_path = "/dev/sda";
 
 typedef void (*test_msg)(struct msg_buff *smsg);
+
+/*
+ * ################# Helper functions #################
+ */
 
 static char *backing_dev(__u32 disk_state)
 {
@@ -79,6 +84,13 @@ void test_resource_context(struct msg_buff *smsg)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
 	nla_put_string(smsg, T_ctx_resource_name, test_resource_name);
+	nla_nest_end(smsg, nla);
+}
+
+void test_resource_opts(struct msg_buff *smsg)
+{
+	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_RESOURCE_OPTS);
+	nla_put_u32(smsg,  __nla_type(T_node_id), test_node_id);
 	nla_nest_end(smsg, nla);
 }
 
@@ -247,6 +259,10 @@ void test_helper(struct msg_buff *smsg, __u32 status)
 	nla_put_u32(smsg, T_helper_status, status);
 	nla_nest_end(smsg, nla);
 }
+
+/*
+ * ################# events2 messages #################
+ */
 
 void test_initial_state_done(struct msg_buff *smsg)
 {
@@ -472,12 +488,26 @@ void test_helper_response(struct msg_buff *smsg)
 	test_helper(smsg, 1);
 }
 
-int test_print_event(struct nlmsghdr *nlh)
+/*
+ * ################# "get" messages #################
+ */
+
+static void test_get_resource(struct msg_buff *smsg)
 {
-	struct nlattr *tla[128];
-	struct drbd_cmd cm;
+	test_msg_put(smsg, DRBD_ADM_GET_RESOURCES, -1U);
+	test_resource_context(smsg);
+	test_resource_opts(smsg);
+	test_resource_info(smsg, R_SECONDARY);
+	test_resource_statistics(smsg);
+}
+
+/*
+ * ################# main() #################
+ */
+
+static struct genl_info nlmsghdr_to_genl_info(struct nlmsghdr *nlh, struct nlattr **tla)
+{
 	int err;
-	/* read message as if receiving */
 	struct genl_info info = {
 		.seq = nlh->nlmsg_seq,
 		.nlhdr = nlh,
@@ -488,11 +518,10 @@ int test_print_event(struct nlmsghdr *nlh)
 	err = drbd_tla_parse(tla, nlh);
 	if (err) {
 		fprintf(stderr, "drbd_tla_parse() failed");
-		return 1;
+		exit(1);
 	}
 
-	print_event(&cm, &info, NULL);
-	return 0;
+	return info;
 }
 
 #define TEST_MSG(name) do { \
@@ -531,6 +560,7 @@ int test_build_msg(struct msg_buff *smsg, char *msg_name)
 	TEST_MSG(path_destroy);
 	TEST_MSG(helper_call);
 	TEST_MSG(helper_response);
+	TEST_MSG(get_resource);
 	fprintf(stderr, "unknown message '%s'\n", msg_name);
 	return 1;
 }
@@ -549,6 +579,9 @@ int test_events2()
 		struct msg_buff *smsg;
 		struct nlmsghdr *nlh;
 		int err;
+		struct drbd_cmd cm;
+		struct nlattr *tla[128];
+		struct genl_info info;
 
 		argument_count = sscanf(input, "%s %d", msg_name, &index);
 
@@ -569,7 +602,10 @@ int test_events2()
 		nlh->nlmsg_flags |= NLM_F_REQUEST;
 		nlh->nlmsg_seq = msg_index;
 
-		err = test_print_event(nlh);
+		/* read message as if receiving */
+		info = nlmsghdr_to_genl_info(nlh, tla);
+
+		err = print_event(&cm, &info, NULL);
 		if (err) {
 			msg_free(smsg);
 			return err;
@@ -577,6 +613,74 @@ int test_events2()
 
 		msg_free(smsg);
 		msg_index++;
+	}
+
+	return 0;
+}
+
+int generic_get_instrumented(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
+{
+	char input[MAX_INPUT_LENGTH];
+	char *cmd_id_name;
+
+	if (!fgets(input, MAX_INPUT_LENGTH, stdin)) {
+		fprintf(stderr, "Unexpected generic_get() cmd_id=%d\n", cm->cmd_id);
+		exit(1);
+	}
+	input[strcspn(input, "\n")] = 0;
+
+	switch (cm->cmd_id) {
+		case DRBD_ADM_GET_RESOURCES:
+			cmd_id_name = "DRBD_ADM_GET_RESOURCES";
+			break;
+		case DRBD_ADM_GET_DEVICES:
+			cmd_id_name = "DRBD_ADM_GET_DEVICES";
+			break;
+		case DRBD_ADM_GET_CONNECTIONS:
+			cmd_id_name = "DRBD_ADM_GET_CONNECTIONS";
+			break;
+		case DRBD_ADM_GET_PEER_DEVICES:
+			cmd_id_name = "DRBD_ADM_GET_PEER_DEVICES";
+			break;
+		default:
+			fprintf(stderr, "Unknown cmd_id=%d\n", cm->cmd_id);
+			exit(1);
+	}
+
+	if (strcmp(cmd_id_name, input)) {
+		fprintf(stderr, "Command '%s' does not match expected '%s'\n",
+				cmd_id_name, input);
+		exit(1);
+	}
+
+	while (fgets(input, MAX_INPUT_LENGTH, stdin)) {
+		struct msg_buff *smsg;
+		struct nlmsghdr *nlh;
+		struct nlattr *tla[128];
+		struct genl_info info;
+		int err;
+
+		input[strcspn(input, "\n")] = 0;
+
+		if (!strcmp(input, "-"))
+			return 0;
+
+		/* build msg as if sending */
+		smsg = msg_new(DEFAULT_MSG_SIZE);
+		if (test_build_msg(smsg, input))
+			exit(1);
+
+		/* convert to transfer format */
+		nlh = (struct nlmsghdr *)smsg->data;
+		nlh->nlmsg_len = smsg->tail - smsg->data;
+		nlh->nlmsg_flags |= NLM_F_MULTI;
+
+		/* read message as if receiving */
+		info = nlmsghdr_to_genl_info(nlh, tla);
+
+		err = cm->handle_reply(cm, &info, u_ptr);
+		if (err)
+			return err;
 	}
 
 	return 0;
@@ -643,6 +747,17 @@ int main_events2(int argc, char **argv)
 	return test_events2();
 }
 
+int main_generic_instrumented(int argc, char **argv)
+{
+	/* Prevent reading of version from /proc/drbd */
+	setenv("DRBD_DRIVER_VERSION_OVERRIDE", "9.2.14", 1);
+
+	/* Redirect calls to generic_get() */
+	fake_generic_get = generic_get_instrumented;
+
+	return drbdsetup_main(argc, argv);
+}
+
 /*
  * "main" for the instrumented drbdsetup test program.
  *
@@ -651,14 +766,17 @@ int main_events2(int argc, char **argv)
 int main(int argc, char **argv)
 {
 	if (argc < 2) {
-		fprintf(stderr, "USAGE: drbdsetup_instrumented events2 [options]\n");
+		fprintf(stderr, "USAGE: drbdsetup_instrumented {events2|show} [options]\n");
 		return 1;
 	}
 
 	if (strcmp(argv[1], "events2") == 0)
 		return main_events2(argc - 1, argv + 1);
 
+	if (strcmp(argv[1], "show") == 0)
+		return main_generic_instrumented(argc, argv);
+
 	fprintf(stderr, "Unknown command '%s'\n", argv[1]);
-	fprintf(stderr, "USAGE: drbdsetup_instrumented events2 [options]\n");
+	fprintf(stderr, "USAGE: drbdsetup_instrumented {events2|show} [options]\n");
 	return 1;
 }

@@ -134,6 +134,10 @@ __attribute__((format(printf, 2, 3)))
 int (*wrap_printf_fn_t)(int indent, const char *format, ...);
 
 extern char *progname;
+typedef int (*fake_generic_get_t)(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr);
+/* Used by drbdsetup_instrumented to redirect calls to generic_get() */
+extern fake_generic_get_t fake_generic_get;
+extern char *objname;
 extern bool opt_now;
 extern bool opt_poll;
 extern int opt_verbose;
