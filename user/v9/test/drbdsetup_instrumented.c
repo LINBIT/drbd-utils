@@ -582,12 +582,7 @@ int test_events2()
 	return 0;
 }
 
-/*
- * "main" for the instrumented drbdsetup test program.
- *
- * Messages to fake are read from stdin.
- */
-int main(int argc, char **argv)
+int main_events2(int argc, char **argv)
 {
 	struct option options[] = {
 		{ "help", no_argument, 0, 'h' },
@@ -613,7 +608,7 @@ int main(int argc, char **argv)
 			fprintf(stderr, "drbdsetup_instrumented events2 - Fake drbdsetup events2 from messages on stdin\n\n");
 			fprintf(stderr, "Input line format:\n");
 			fprintf(stderr, "message_name [sequence_number]\n\n");
-			fprintf(stderr, "USAGE: %s [options]\n", argv[0]);
+			fprintf(stderr, "USAGE: drbdsetup_instrumented %s [options]\n", argv[0]);
 			fprintf(stderr, "    [--timestamps] [--statistics] [--now] [--diff] [--full] [--color]\n");
 			return 1;
 
@@ -646,4 +641,24 @@ int main(int argc, char **argv)
 		}
 	}
 	return test_events2();
+}
+
+/*
+ * "main" for the instrumented drbdsetup test program.
+ *
+ * Messages to fake are read from stdin.
+ */
+int main(int argc, char **argv)
+{
+	if (argc < 2) {
+		fprintf(stderr, "USAGE: drbdsetup_instrumented events2 [options]\n");
+		return 1;
+	}
+
+	if (strcmp(argv[1], "events2") == 0)
+		return main_events2(argc - 1, argv + 1);
+
+	fprintf(stderr, "Unknown command '%s'\n", argv[1]);
+	fprintf(stderr, "USAGE: drbdsetup_instrumented events2 [options]\n");
+	return 1;
 }
