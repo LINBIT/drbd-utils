@@ -88,7 +88,7 @@ drbd-utils-tests:
     ASAN_OPTIONS: log_path=sanitizer,log_exe_name=yes,log_suffix=.txt,detect_leaks=0
     UBSAN_OPTIONS: log_path=sanitizer,log_exe_name=yes,log_suffix=.txt
   before_script:
-    - dnf install --setopt=install_weak_deps=False -y clang compiler-rt libubsan libasan keyutils-libs-devel flex git clitest automake gawk
+    - dnf install --setopt=install_weak_deps=False -y clang compiler-rt libubsan libasan keyutils-libs-devel flex git clitest automake gawk jq
   script:
     - ./autogen.sh
     - ./configure --without-manual

@@ -1,4 +1,5 @@
-$ cat show-resource.msgs | drbdsetup_instrumented show --json ; echo $?
+$ out=$(cat show-resource.msgs | drbdsetup_instrumented show --json) ; echo $? ; echo "$out" ; echo "$out" | jq > /dev/null
+0
 [
     {
         "resource": "some-resource",
@@ -9,4 +10,3 @@ $ cat show-resource.msgs | drbdsetup_instrumented show --json ; echo $?
         }
     }
 ]
-0
