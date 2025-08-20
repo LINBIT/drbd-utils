@@ -1,0 +1,86 @@
+$ out=$(cat show-2-device.msgs | drbdsetup_instrumented show --json) ; echo $? ; echo "$out" ; echo "$out" | jq > /dev/null
+0
+[
+    {
+        "resource": "some-resource",
+        "_this_host": {
+            "node-id": 4,
+            "volumes": [
+                {
+                    "volume_nr": 0,
+                    "device_minor": 1000,
+                    "backing-disk": "/dev/sda",
+                    "meta-disk": "internal"
+                },
+                {
+                    "volume_nr": 1,
+                    "device_minor": 1001,
+                    "backing-disk": "/dev/sda",
+                    "meta-disk": "internal"
+                }
+            ]
+        },
+        "connections": [
+            {
+                "paths": [
+                ],
+                "_cstate": "Connected",
+                "volumes": [
+                    {
+                        "volume_nr": 0
+                    },
+                    {
+                        "volume_nr": 1
+                    }
+                ],
+                "_peer_node_id": 1
+            }
+        ]
+    }
+]
+$ out=$(cat show-2-device.msgs | drbdsetup_instrumented show --json --show-defaults) ; echo $? ; echo "$out" ; echo "$out" | jq > /dev/null
+0
+[
+    {
+        "resource": "some-resource",
+        "_this_host": {
+            "node-id": 4,
+            "volumes": [
+                {
+                    "volume_nr": 0,
+                    "device_minor": 1000,
+                    "backing-disk": "/dev/sda",
+                    "meta-disk": "internal",
+                    "disk": {
+                        "max-bio-size": "1048576"
+                    }
+                },
+                {
+                    "volume_nr": 1,
+                    "device_minor": 1001,
+                    "backing-disk": "/dev/sda",
+                    "meta-disk": "internal",
+                    "disk": {
+                        "max-bio-size": "1048576"
+                    }
+                }
+            ]
+        },
+        "connections": [
+            {
+                "paths": [
+                ],
+                "_cstate": "Connected",
+                "volumes": [
+                    {
+                        "volume_nr": 0
+                    },
+                    {
+                        "volume_nr": 1
+                    }
+                ],
+                "_peer_node_id": 1
+            }
+        ]
+    }
+]

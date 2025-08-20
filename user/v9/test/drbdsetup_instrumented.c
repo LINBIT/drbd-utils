@@ -196,13 +196,13 @@ void test_connection_statistics(struct msg_buff *smsg)
 	nla_nest_end(smsg, nla);
 }
 
-void test_peer_device_context(struct msg_buff *smsg)
+void test_peer_device_context(struct msg_buff *smsg, __u32 volume_number)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
 	nla_put_string(smsg, T_ctx_resource_name, test_resource_name);
 	nla_put_string(smsg, T_ctx_conn_name, test_peer_name);
 	nla_put_u32(smsg, T_ctx_peer_node_id, test_peer_node_id);
-	nla_put_u32(smsg, T_ctx_volume, test_volume_number);
+	nla_put_u32(smsg, T_ctx_volume, volume_number);
 	nla_nest_end(smsg, nla);
 }
 
@@ -446,7 +446,7 @@ void test_connection_destroy(struct msg_buff *smsg)
 void test_peer_device_create(struct msg_buff *smsg)
 {
 	test_msg_put(smsg, DRBD_PEER_DEVICE_STATE, -1U);
-	test_peer_device_context(smsg);
+	test_peer_device_context(smsg, test_volume_number);
 	test_notification_header(smsg, NOTIFY_CREATE);
 	test_peer_device_info(smsg, L_OFF, D_UNKNOWN);
 	test_peer_device_statistics(smsg, false);
@@ -455,7 +455,7 @@ void test_peer_device_create(struct msg_buff *smsg)
 void test_peer_device_change_replication(struct msg_buff *smsg)
 {
 	test_msg_put(smsg, DRBD_PEER_DEVICE_STATE, -1U);
-	test_peer_device_context(smsg);
+	test_peer_device_context(smsg, test_volume_number);
 	test_notification_header(smsg, NOTIFY_CHANGE);
 	test_peer_device_info(smsg, L_ESTABLISHED, D_UP_TO_DATE);
 	test_peer_device_statistics(smsg, false);
@@ -464,7 +464,7 @@ void test_peer_device_change_replication(struct msg_buff *smsg)
 void test_peer_device_change_sync(struct msg_buff *smsg)
 {
 	test_msg_put(smsg, DRBD_PEER_DEVICE_STATE, -1U);
-	test_peer_device_context(smsg);
+	test_peer_device_context(smsg, test_volume_number);
 	test_notification_header(smsg, NOTIFY_CHANGE);
 	test_peer_device_info(smsg, L_SYNC_SOURCE, D_INCONSISTENT);
 	test_peer_device_statistics(smsg, true);
@@ -473,7 +473,7 @@ void test_peer_device_change_sync(struct msg_buff *smsg)
 void test_peer_device_destroy(struct msg_buff *smsg)
 {
 	test_msg_put(smsg, DRBD_PEER_DEVICE_STATE, -1U);
-	test_peer_device_context(smsg);
+	test_peer_device_context(smsg, test_volume_number);
 	test_notification_header(smsg, NOTIFY_DESTROY);
 }
 
@@ -503,7 +503,7 @@ void test_path_destroy(struct msg_buff *smsg)
 void test_helper_call(struct msg_buff *smsg)
 {
 	test_msg_put(smsg, DRBD_HELPER, -1U);
-	test_peer_device_context(smsg);
+	test_peer_device_context(smsg, test_volume_number);
 	test_notification_header(smsg, NOTIFY_CALL);
 	test_helper(smsg, 0);
 }
@@ -511,7 +511,7 @@ void test_helper_call(struct msg_buff *smsg)
 void test_helper_response(struct msg_buff *smsg)
 {
 	test_msg_put(smsg, DRBD_HELPER, -1U);
-	test_peer_device_context(smsg);
+	test_peer_device_context(smsg, test_volume_number);
 	test_notification_header(smsg, NOTIFY_RESPONSE);
 	test_helper(smsg, 1);
 }
@@ -539,6 +539,16 @@ static void test_get_device(struct msg_buff *smsg)
 	test_device_statistics(smsg);
 }
 
+static void test_get_device_b(struct msg_buff *smsg)
+{
+	test_msg_put(smsg, DRBD_ADM_GET_DEVICES, test_minor_b);
+	test_device_context(smsg, test_volume_number_b);
+	test_disk_conf(smsg, D_UP_TO_DATE);
+	test_device_conf(smsg);
+	test_device_info(smsg, D_UP_TO_DATE, true);
+	test_device_statistics(smsg);
+}
+
 static void test_get_connection(struct msg_buff *smsg)
 {
 	test_msg_put(smsg, DRBD_ADM_GET_CONNECTIONS, -1U);
@@ -551,7 +561,16 @@ static void test_get_connection(struct msg_buff *smsg)
 static void test_get_peer_device(struct msg_buff *smsg)
 {
 	test_msg_put(smsg, DRBD_ADM_GET_PEER_DEVICES, test_minor);
-	test_peer_device_context(smsg);
+	test_peer_device_context(smsg, test_volume_number);
+	test_peer_device_info(smsg, L_ESTABLISHED, D_UP_TO_DATE);
+	test_peer_device_statistics(smsg, false);
+	test_peer_device_opts(smsg);
+}
+
+static void test_get_peer_device_b(struct msg_buff *smsg)
+{
+	test_msg_put(smsg, DRBD_ADM_GET_PEER_DEVICES, test_minor_b);
+	test_peer_device_context(smsg, test_volume_number_b);
 	test_peer_device_info(smsg, L_ESTABLISHED, D_UP_TO_DATE);
 	test_peer_device_statistics(smsg, false);
 	test_peer_device_opts(smsg);
@@ -618,8 +637,10 @@ int test_build_msg(struct msg_buff *smsg, char *msg_name)
 	TEST_MSG(helper_response);
 	TEST_MSG(get_resource);
 	TEST_MSG(get_device);
+	TEST_MSG(get_device_b);
 	TEST_MSG(get_connection);
 	TEST_MSG(get_peer_device);
+	TEST_MSG(get_peer_device_b);
 	fprintf(stderr, "unknown message '%s'\n", msg_name);
 	return 1;
 }
