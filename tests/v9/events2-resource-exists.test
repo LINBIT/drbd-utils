@@ -1,3 +1,3 @@
-$ echo resource_exists | drbdsetup_events2_instrumented; echo $?
+$ echo resource_exists | drbdsetup_instrumented events2; echo $?
 exists resource name:some-resource role:Secondary suspended:no force-io-failures:no may_promote:no promotion_score:0
 0

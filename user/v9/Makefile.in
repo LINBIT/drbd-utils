@@ -103,9 +103,9 @@ endif
 
 drbdsetup-obj = $(drbdsetup-core-obj) drbdsetup_main.o
 
-drbdsetup-instrumented-test-obj = $(drbdsetup-core-obj) test/drbdsetup_events2_instrumented.o
+drbdsetup-instrumented-test-obj = $(drbdsetup-core-obj) test/drbdsetup_instrumented.o
 
-all-obj := $(drbdadm-obj) $(drbdsetup-obj) $(drbdmeta-obj) test/drbdsetup_events2_instrumented.o
+all-obj := $(drbdadm-obj) $(drbdsetup-obj) $(drbdmeta-obj) test/drbdsetup_instrumented.o
 
 all: tools
 
@@ -126,13 +126,13 @@ drbdsetup: $(drbdsetup-obj)
 drbdmeta: $(drbdmeta-obj)
 	$(LINK.c) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-test/drbdsetup_events2_instrumented: $(drbdsetup-instrumented-test-obj)
+test/drbdsetup_instrumented: $(drbdsetup-instrumented-test-obj)
 	$(LINK.c) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 .PHONY: test
 ifeq ($(WITH_CLITEST),yes)
-test: drbdadm test/drbdsetup_events2_instrumented
-	cd ../../tests/v9 && ln -sf ../../user/v9/drbdadm . && ln -sf ../../user/v9/test/drbdsetup_events2_instrumented .
+test: drbdadm test/drbdsetup_instrumented
+	cd ../../tests/v9 && ln -sf ../../user/v9/drbdadm . && ln -sf ../../user/v9/test/drbdsetup_instrumented .
 	../../tests/run.sh ../../tests/v9/*.test
 else
 test:
@@ -140,7 +140,7 @@ endif
 
 clean:
 	rm -f drbdadm_scanner.c
-	rm -f drbdsetup drbdadm drbdmeta test/drbdsetup_events2_instrumented $(all-obj)
+	rm -f drbdsetup drbdadm drbdmeta test/drbdsetup_instrumented $(all-obj)
 	rm -f drbd_strings.c drbd_strings.h
 	rm -f *~
 

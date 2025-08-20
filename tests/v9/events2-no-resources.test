@@ -1,3 +1,3 @@
-$ echo initial_state_done | drbdsetup_events2_instrumented; echo $?
+$ echo initial_state_done | drbdsetup_instrumented events2; echo $?
 exists -
 0

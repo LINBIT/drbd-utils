@@ -1,4 +1,4 @@
-$ cat events2-change-before-exists.msgs | drbdsetup_events2_instrumented; echo $?
+$ cat events2-change-before-exists.msgs | drbdsetup_instrumented events2; echo $?
 exists resource name:some-resource role:Secondary suspended:no force-io-failures:no may_promote:no promotion_score:0
 exists device name:some-resource volume:0 minor:1000 backing_dev:none disk:Diskless client:no open:no quorum:yes
 exists -

@@ -1,4 +1,4 @@
-$ cat events2-sync.msgs | drbdsetup_events2_instrumented; echo $?
+$ cat events2-sync.msgs | drbdsetup_instrumented events2; echo $?
 exists -
 create resource name:some-resource role:Secondary suspended:no force-io-failures:no may_promote:no promotion_score:0
 create device name:some-resource volume:0 minor:1000 backing_dev:none disk:Diskless client:no open:no quorum:yes
@@ -11,7 +11,7 @@ change path name:some-resource peer-node-id:1 conn-name:some-peer local:ipv4:1.2
 change connection name:some-resource peer-node-id:1 conn-name:some-peer connection:Connected role:Secondary
 change peer-device name:some-resource peer-node-id:1 conn-name:some-peer volume:0 replication:SyncSource peer-disk:Inconsistent peer-client:no done:37.50
 0
-$ cat events2-sync.msgs | drbdsetup_events2_instrumented --statistics; echo $?
+$ cat events2-sync.msgs | drbdsetup_instrumented events2 --statistics; echo $?
 exists -
 create resource name:some-resource role:Secondary suspended:no force-io-failures:no write-ordering:none may_promote:no promotion_score:0
 create device name:some-resource volume:0 minor:1000 backing_dev:none disk:Diskless client:no open:no quorum:yes size:5 read:10 written:15 al-writes:40 bm-writes:50 upper-pending:60 lower-pending:70 al-suspended:no blocked:no

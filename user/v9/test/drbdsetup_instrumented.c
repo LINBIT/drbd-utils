@@ -583,7 +583,7 @@ int test_events2()
 }
 
 /*
- * "main" for the instrumented events2 test program.
+ * "main" for the instrumented drbdsetup test program.
  *
  * Messages to fake are read from stdin.
  */
@@ -610,7 +610,7 @@ int main(int argc, char **argv)
 		default:
 		case 'h':
 		case '?':
-			fprintf(stderr, "drbdsetup_events2_instrumented - Fake drbdsetup events2 from messages on stdin\n\n");
+			fprintf(stderr, "drbdsetup_instrumented events2 - Fake drbdsetup events2 from messages on stdin\n\n");
 			fprintf(stderr, "Input line format:\n");
 			fprintf(stderr, "message_name [sequence_number]\n\n");
 			fprintf(stderr, "USAGE: %s [options]\n", argv[0]);

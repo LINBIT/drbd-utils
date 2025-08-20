@@ -1,4 +1,4 @@
-$ cat events2-all-create-change.msgs | drbdsetup_events2_instrumented; echo $?
+$ cat events2-all-create-change.msgs | drbdsetup_instrumented events2; echo $?
 exists -
 create resource name:some-resource role:Secondary suspended:no force-io-failures:no may_promote:no promotion_score:0
 create device name:some-resource volume:0 minor:1000 backing_dev:none disk:Diskless client:no open:no quorum:yes
@@ -13,7 +13,7 @@ change resource name:some-resource may_promote:yes promotion_score:10102
 change peer-device name:some-resource peer-node-id:1 conn-name:some-peer volume:0 replication:Established peer-disk:UpToDate peer-client:no
 change resource name:some-resource role:Primary may_promote:no promotion_score:10102
 0
-$ cat events2-all-create-change.msgs | drbdsetup_events2_instrumented --diff; echo $?
+$ cat events2-all-create-change.msgs | drbdsetup_instrumented events2 --diff; echo $?
 exists -
 create resource name:some-resource role:UNKNOWN->Secondary suspended:UNKNOWN->no force-io-failures:UNKNOWN->no may_promote:UNKNOWN->no promotion_score:0->0
 create device name:some-resource volume:0 minor:1000 backing_dev:UNKNOWN->none disk:UNKNOWN->Diskless client:UNKNOWN->no open:UNKNOWN->no
@@ -28,7 +28,7 @@ change resource name:some-resource may_promote:yes->yes promotion_score:10101->1
 change peer-device name:some-resource peer-node-id:1 conn-name:some-peer volume:0 replication:Off->Established peer-disk:DUnknown->UpToDate peer-client:no
 change resource name:some-resource role:Secondary->Primary may_promote:yes->no promotion_score:10102->10102
 0
-$ cat events2-all-create-change.msgs | drbdsetup_events2_instrumented --statistics; echo $?
+$ cat events2-all-create-change.msgs | drbdsetup_instrumented events2 --statistics; echo $?
 exists -
 create resource name:some-resource role:Secondary suspended:no force-io-failures:no write-ordering:none may_promote:no promotion_score:0
 create device name:some-resource volume:0 minor:1000 backing_dev:none disk:Diskless client:no open:no quorum:yes size:5 read:10 written:15 al-writes:40 bm-writes:50 upper-pending:60 lower-pending:70 al-suspended:no blocked:no
@@ -43,7 +43,7 @@ change resource name:some-resource may_promote:yes promotion_score:10102
 change peer-device name:some-resource peer-node-id:1 conn-name:some-peer volume:0 replication:Established peer-disk:UpToDate peer-client:no
 change resource name:some-resource role:Primary may_promote:no promotion_score:10102
 0
-$ cat events2-all-create-change.msgs | drbdsetup_events2_instrumented --full; echo $?
+$ cat events2-all-create-change.msgs | drbdsetup_instrumented events2 --full; echo $?
 exists -
 create resource name:some-resource role:Secondary suspended:no force-io-failures:no write-ordering:none may_promote:no promotion_score:0
 create device name:some-resource volume:0 minor:1000 backing_dev:none disk:Diskless client:no open:no quorum:yes size:5 read:10 written:15 al-writes:40 bm-writes:50 upper-pending:60 lower-pending:70 al-suspended:no blocked:no
@@ -58,7 +58,7 @@ change resource name:some-resource role:Secondary suspended:no force-io-failures
 change peer-device name:some-resource peer-node-id:1 conn-name:some-peer volume:0 replication:Established peer-disk:UpToDate peer-client:no resync-suspended:no received:5 sent:10 out-of-sync:0 pending:30 unacked:40
 change resource name:some-resource role:Primary suspended:no force-io-failures:no write-ordering:none may_promote:no promotion_score:10102
 0
-$ cat events2-all-create-change.msgs | drbdsetup_events2_instrumented --color | cat -v; echo $?
+$ cat events2-all-create-change.msgs | drbdsetup_instrumented events2 --color | cat -v; echo $?
 exists -
 create resource name:some-resource role:Secondary suspended:no force-io-failures:no may_promote:no promotion_score:0
 create device name:some-resource volume:0 minor:1000 backing_dev:none disk:^[[1;31mDiskless^[[0m client:no open:no quorum:yes
@@ -73,7 +73,7 @@ change resource name:some-resource may_promote:yes promotion_score:10102
 change peer-device name:some-resource peer-node-id:1 conn-name:some-peer volume:0 replication:Established peer-disk:^[[32mUpToDate^[[0m peer-client:no
 change resource name:some-resource role:^[[1;36mPrimary^[[0m may_promote:no promotion_score:10102
 0
-$ cat events2-all-create-change.msgs | drbdsetup_events2_instrumented --timestamps | sed 's/....-..-..T..:..:.........+..:../TIME/'; echo $?
+$ cat events2-all-create-change.msgs | drbdsetup_instrumented events2 --timestamps | sed 's/....-..-..T..:..:.........+..:../TIME/'; echo $?
 TIME exists -
 TIME create resource name:some-resource role:Secondary suspended:no force-io-failures:no may_promote:no promotion_score:0
 TIME create device name:some-resource volume:0 minor:1000 backing_dev:none disk:Diskless client:no open:no quorum:yes
