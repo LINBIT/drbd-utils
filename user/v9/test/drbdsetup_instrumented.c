@@ -120,6 +120,22 @@ void test_device_context(struct msg_buff *smsg, __u32 volume_number)
 	nla_nest_end(smsg, nla);
 }
 
+void test_disk_conf(struct msg_buff *smsg, __u32 dev_disk_state)
+{
+	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_DISK_CONF);
+	nla_put_string(smsg, T_backing_dev, backing_dev(dev_disk_state));
+	nla_put_string(smsg, T_meta_dev, backing_dev(dev_disk_state));
+	nla_put_u32(smsg, T_meta_dev_idx, DRBD_MD_INDEX_FLEX_INT);
+	nla_nest_end(smsg, nla);
+}
+
+void test_device_conf(struct msg_buff *smsg)
+{
+	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_DEVICE_CONF);
+	nla_put_u32(smsg, T_max_bio_size, DRBD_MAX_BIO_SIZE);
+	nla_nest_end(smsg, nla);
+}
+
 void test_device_info(struct msg_buff *smsg, __u32 dev_disk_state, __u8 dev_has_quorum)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_DEVICE_INFO);
@@ -157,6 +173,12 @@ void test_connection_context(struct msg_buff *smsg)
 	nla_nest_end(smsg, nla);
 }
 
+void test_net_conf(struct msg_buff *smsg)
+{
+	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_NET_CONF);
+	nla_nest_end(smsg, nla);
+}
+
 void test_connection_info(struct msg_buff *smsg, __u32 conn_connection_state, __u32 conn_role)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_CONNECTION_INFO);
@@ -181,6 +203,12 @@ void test_peer_device_context(struct msg_buff *smsg)
 	nla_put_string(smsg, T_ctx_conn_name, test_peer_name);
 	nla_put_u32(smsg, T_ctx_peer_node_id, test_peer_node_id);
 	nla_put_u32(smsg, T_ctx_volume, test_volume_number);
+	nla_nest_end(smsg, nla);
+}
+
+void test_peer_device_opts(struct msg_buff *smsg)
+{
+	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_PEER_DEVICE_OPTS);
 	nla_nest_end(smsg, nla);
 }
 
@@ -501,6 +529,34 @@ static void test_get_resource(struct msg_buff *smsg)
 	test_resource_statistics(smsg);
 }
 
+static void test_get_device(struct msg_buff *smsg)
+{
+	test_msg_put(smsg, DRBD_ADM_GET_DEVICES, test_minor);
+	test_device_context(smsg, test_volume_number);
+	test_disk_conf(smsg, D_UP_TO_DATE);
+	test_device_conf(smsg);
+	test_device_info(smsg, D_UP_TO_DATE, true);
+	test_device_statistics(smsg);
+}
+
+static void test_get_connection(struct msg_buff *smsg)
+{
+	test_msg_put(smsg, DRBD_ADM_GET_CONNECTIONS, -1U);
+	test_connection_context(smsg);
+	test_net_conf(smsg);
+	test_connection_info(smsg, C_CONNECTED, R_PRIMARY);
+	test_connection_statistics(smsg);
+}
+
+static void test_get_peer_device(struct msg_buff *smsg)
+{
+	test_msg_put(smsg, DRBD_ADM_GET_PEER_DEVICES, test_minor);
+	test_peer_device_context(smsg);
+	test_peer_device_info(smsg, L_ESTABLISHED, D_UP_TO_DATE);
+	test_peer_device_statistics(smsg, false);
+	test_peer_device_opts(smsg);
+}
+
 /*
  * ################# main() #################
  */
@@ -561,6 +617,9 @@ int test_build_msg(struct msg_buff *smsg, char *msg_name)
 	TEST_MSG(helper_call);
 	TEST_MSG(helper_response);
 	TEST_MSG(get_resource);
+	TEST_MSG(get_device);
+	TEST_MSG(get_connection);
+	TEST_MSG(get_peer_device);
 	fprintf(stderr, "unknown message '%s'\n", msg_name);
 	return 1;
 }

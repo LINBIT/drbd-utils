@@ -2297,9 +2297,9 @@ static void show_connection_json(struct connections_list *connection, struct pee
 				++indent;
 				printI("{\n");
 				++indent;
-				printI(QUOTED("volume_nr") ": %d,\n", peer_device->ctx.ctx_volume);
-				if (print_options_json(peer_device->peer_device_conf, &peer_device_options_ctx, "disk", false))
-					printf("\n");
+				printI(QUOTED("volume_nr") ": %d", peer_device->ctx.ctx_volume);
+				print_options_json(peer_device->peer_device_conf, &peer_device_options_ctx, "disk", true);
+				printf("\n");
 				--indent;
 				printI("}%s\n", printed < will_print - 1 ? "," : "");
 				--indent;

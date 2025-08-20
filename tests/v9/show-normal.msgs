@@ -1,0 +1,12 @@
+DRBD_ADM_GET_RESOURCES
+get_resource
+-
+DRBD_ADM_GET_DEVICES
+get_device
+-
+DRBD_ADM_GET_CONNECTIONS
+get_connection
+-
+DRBD_ADM_GET_PEER_DEVICES
+get_peer_device
+-
