@@ -1,19 +1,19 @@
 initial_state_done
 resource_create
-device_create
-device_create minor 1001 volume_number 1
+device_create diskless 1
+device_create diskless 1 minor 1001 volume_number 1
 device_destroy minor 1001 volume_number 1
 device_destroy
-device_create
-device_create minor 1001 volume_number 1
+device_create diskless 1
+device_create diskless 1 minor 1001 volume_number 1
 device_destroy
 device_destroy minor 1001 volume_number 1
-device_create minor 1001 volume_number 1
-device_create
+device_create diskless 1 minor 1001 volume_number 1
+device_create diskless 1
 device_destroy minor 1001 volume_number 1
 device_destroy
-device_create minor 1001 volume_number 1
-device_create
+device_create diskless 1 minor 1001 volume_number 1
+device_create diskless 1
 device_destroy
 device_destroy minor 1001 volume_number 1
 resource_destroy

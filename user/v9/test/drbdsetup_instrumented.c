@@ -52,6 +52,9 @@ struct test_vars {
 	int msg_seq;
 	unsigned int minor;
 	unsigned int volume_number;
+	int diskless;
+	int inconsistent;
+	int has_quorum;
 };
 
 /*
@@ -122,9 +125,12 @@ void test_device_context(struct msg_buff *smsg, struct test_vars *vars)
 	nla_nest_end(smsg, nla);
 }
 
-void test_disk_conf(struct msg_buff *smsg, struct test_vars *vars, __u32 dev_disk_state)
+void test_disk_conf(struct msg_buff *smsg, struct test_vars *vars)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_DISK_CONF);
+	__u32 dev_disk_state = vars->diskless ? D_DISKLESS :
+		vars->inconsistent ? D_INCONSISTENT : D_UP_TO_DATE;
+
 	nla_put_string(smsg, T_backing_dev, backing_dev(dev_disk_state));
 	nla_put_string(smsg, T_meta_dev, backing_dev(dev_disk_state));
 	nla_put_u32(smsg, T_meta_dev_idx, DRBD_MD_INDEX_FLEX_INT);
@@ -138,13 +144,16 @@ void test_device_conf(struct msg_buff *smsg, struct test_vars *vars)
 	nla_nest_end(smsg, nla);
 }
 
-void test_device_info(struct msg_buff *smsg, struct test_vars *vars, __u32 dev_disk_state, __u8 dev_has_quorum)
+void test_device_info(struct msg_buff *smsg, struct test_vars *vars)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_DEVICE_INFO);
+	__u32 dev_disk_state = vars->diskless ? D_DISKLESS :
+		vars->inconsistent ? D_INCONSISTENT : D_UP_TO_DATE;
+
 	nla_put_u32(smsg, T_dev_disk_state, dev_disk_state);
 	nla_put_u8(smsg, T_is_intentional_diskless, false);
 	nla_put_u8(smsg, T_dev_is_open, false);
-	nla_put_u8(smsg, T_dev_has_quorum, dev_has_quorum);
+	nla_put_u8(smsg, T_dev_has_quorum, vars->has_quorum);
 	nla_put_string(smsg, T_backing_dev_path, backing_dev(dev_disk_state));
 	nla_nest_end(smsg, nla);
 }
@@ -339,7 +348,7 @@ void test_device_exists(struct msg_buff *smsg, struct test_vars *vars)
 	test_msg_put(smsg, DRBD_DEVICE_STATE, vars->minor);
 	test_device_context(smsg, vars);
 	test_notification_header(smsg, NOTIFY_EXISTS);
-	test_device_info(smsg, vars, D_DISKLESS, true);
+	test_device_info(smsg, vars);
 	test_device_statistics(smsg, vars);
 }
 
@@ -348,34 +357,16 @@ void test_device_create(struct msg_buff *smsg, struct test_vars *vars)
 	test_msg_put(smsg, DRBD_DEVICE_STATE, vars->minor);
 	test_device_context(smsg, vars);
 	test_notification_header(smsg, NOTIFY_CREATE);
-	test_device_info(smsg, vars, D_DISKLESS, true);
+	test_device_info(smsg, vars);
 	test_device_statistics(smsg, vars);
 }
 
-void test_device_change_disk(struct msg_buff *smsg, struct test_vars *vars)
+void test_device_change(struct msg_buff *smsg, struct test_vars *vars)
 {
 	test_msg_put(smsg, DRBD_DEVICE_STATE, vars->minor);
 	test_device_context(smsg, vars);
 	test_notification_header(smsg, NOTIFY_CHANGE);
-	test_device_info(smsg, vars, D_UP_TO_DATE, true);
-	test_device_statistics(smsg, vars);
-}
-
-void test_device_change_disk_inconsistent(struct msg_buff *smsg, struct test_vars *vars)
-{
-	test_msg_put(smsg, DRBD_DEVICE_STATE, vars->minor);
-	test_device_context(smsg, vars);
-	test_notification_header(smsg, NOTIFY_CHANGE);
-	test_device_info(smsg, vars, D_INCONSISTENT, true);
-	test_device_statistics(smsg, vars);
-}
-
-void test_device_change_quorum(struct msg_buff *smsg, struct test_vars *vars)
-{
-	test_msg_put(smsg, DRBD_DEVICE_STATE, vars->minor);
-	test_device_context(smsg, vars);
-	test_notification_header(smsg, NOTIFY_CHANGE);
-	test_device_info(smsg, vars, D_UP_TO_DATE, false);
+	test_device_info(smsg, vars);
 	test_device_statistics(smsg, vars);
 }
 
@@ -510,9 +501,9 @@ static void test_get_device(struct msg_buff *smsg, struct test_vars *vars)
 {
 	test_msg_put(smsg, DRBD_ADM_GET_DEVICES, vars->minor);
 	test_device_context(smsg, vars);
-	test_disk_conf(smsg, vars, D_UP_TO_DATE);
+	test_disk_conf(smsg, vars);
 	test_device_conf(smsg, vars);
-	test_device_info(smsg, vars, D_UP_TO_DATE, true);
+	test_device_info(smsg, vars);
 	test_device_statistics(smsg, vars);
 }
 
@@ -573,9 +564,7 @@ int test_build_msg(struct msg_buff *smsg, char *msg_name, struct test_vars *vars
 	TEST_MSG(resource_destroy);
 	TEST_MSG(device_exists);
 	TEST_MSG(device_create);
-	TEST_MSG(device_change_disk);
-	TEST_MSG(device_change_disk_inconsistent);
-	TEST_MSG(device_change_quorum);
+	TEST_MSG(device_change);
 	TEST_MSG(device_destroy);
 	TEST_MSG(connection_create);
 	TEST_MSG(connection_change_connection);
@@ -606,6 +595,9 @@ struct test_vars test_init_vars()
 		.msg_seq = -1,
 		.minor = test_minor,
 		.volume_number = test_volume_number,
+		.diskless = 0,
+		.inconsistent = 0,
+		.has_quorum = 1,
 	};
 
 	return vars;
@@ -639,6 +631,9 @@ int test_parse_vars(char *input, char *msg_name, struct test_vars *vars)
 		TEST_VAR(var_name, consumed, input, msg_seq, "%d")
 		TEST_VAR(var_name, consumed, input, minor, "%u")
 		TEST_VAR(var_name, consumed, input, volume_number, "%u")
+		TEST_VAR(var_name, consumed, input, diskless, "%d")
+		TEST_VAR(var_name, consumed, input, inconsistent, "%d")
+		TEST_VAR(var_name, consumed, input, has_quorum, "%d")
 
 		fprintf(stderr, "Unknown var: '%s'\n", var_name);
 		return 1;

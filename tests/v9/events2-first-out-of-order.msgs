@@ -1,5 +1,5 @@
 resource_exists
 initial_state_done
-device_create minor 1001 volume_number 1 msg_seq 100
-device_create msg_seq 99
+device_create diskless 1 minor 1001 volume_number 1 msg_seq 100
+device_create diskless 1 msg_seq 99
 connection_create msg_seq 101

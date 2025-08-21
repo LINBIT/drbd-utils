@@ -1,5 +1,5 @@
 initial_state_done
 resource_create
-device_create
-device_change_disk
-device_change_quorum
+device_create diskless 1
+device_change
+device_change has_quorum 0

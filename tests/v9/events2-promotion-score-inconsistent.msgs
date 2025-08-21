@@ -1,8 +1,8 @@
 initial_state_done
 resource_create
-device_create
-device_change_disk_inconsistent
+device_create diskless 1
+device_change inconsistent 1
 connection_create
-peer_device_create
+peer_device_create diskless 1
 connection_change_connection
 peer_device_change_replication

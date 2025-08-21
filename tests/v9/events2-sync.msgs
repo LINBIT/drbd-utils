@@ -1,10 +1,10 @@
 initial_state_done
 resource_create
-device_create
+device_create diskless 1
 connection_create
-peer_device_create
+peer_device_create diskless 1
 path_create
-device_change_disk
+device_change
 path_change_established
 connection_change_connection
 peer_device_change_sync

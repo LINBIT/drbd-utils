@@ -1,5 +1,5 @@
 resource_exists
-device_exists
+device_exists diskless 1
 initial_state_done
 resource_create
-device_create
+device_create diskless 1
