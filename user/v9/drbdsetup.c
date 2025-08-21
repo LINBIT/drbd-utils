@@ -2557,6 +2557,10 @@ static int show_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		}
 	}
 
+	/* Machine-readable output should always be complete */
+	if (json_output)
+		show_defaults = true;
+
 	resources_list = sort_resources(list_resources());
 
 	if (json_output)

@@ -3,6 +3,10 @@ $ out=$(cat show-resource.msgs | drbdsetup_instrumented show --json) ; echo $? ;
 [
     {
         "resource": "some-resource",
+        "options": {
+            "auto-promote": true,
+            "on-no-quorum": "suspend-io"
+        },
         "_this_host": {
             "node-id": 4,
             "volumes": [

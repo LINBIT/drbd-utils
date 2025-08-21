@@ -1,14 +1,14 @@
 DRBD_ADM_GET_RESOURCES
-get_resource
+get_resource auto_promote 0
 -
 DRBD_ADM_GET_DEVICES
-get_device
+get_device al_extents 9876 read_balancing 5 max_bio_size 4096
 get_device minor 1001 volume_number 1
 -
 DRBD_ADM_GET_CONNECTIONS
-get_connection
+get_connection ping_int 14 two_primaries 1
 -
 DRBD_ADM_GET_PEER_DEVICES
-get_peer_device
+get_peer_device c_max_rate 5120 c_min_rate 0
 get_peer_device minor 1001 volume_number 1
 -

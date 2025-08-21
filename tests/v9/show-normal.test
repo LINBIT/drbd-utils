@@ -3,37 +3,6 @@ $ out=$(cat show-normal.msgs | drbdsetup_instrumented show --json) ; echo $? ; e
 [
     {
         "resource": "some-resource",
-        "_this_host": {
-            "node-id": 4,
-            "volumes": [
-                {
-                    "volume_nr": 0,
-                    "device_minor": 1000,
-                    "backing-disk": "/dev/sda",
-                    "meta-disk": "internal"
-                }
-            ]
-        },
-        "connections": [
-            {
-                "paths": [
-                ],
-                "_cstate": "Connected",
-                "volumes": [
-                    {
-                        "volume_nr": 0
-                    }
-                ],
-                "_peer_node_id": 1
-            }
-        ]
-    }
-]
-$ out=$(cat show-normal.msgs | drbdsetup_instrumented show --json --show-defaults) ; echo $? ; echo "$out" ; echo "$out" | jq > /dev/null
-0
-[
-    {
-        "resource": "some-resource",
         "options": {
             "auto-promote": true,
             "on-no-quorum": "suspend-io"

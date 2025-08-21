@@ -3,48 +3,8 @@ $ out=$(cat show-2-device.msgs | drbdsetup_instrumented show --json) ; echo $? ;
 [
     {
         "resource": "some-resource",
-        "_this_host": {
-            "node-id": 4,
-            "volumes": [
-                {
-                    "volume_nr": 0,
-                    "device_minor": 1000,
-                    "backing-disk": "/dev/sda",
-                    "meta-disk": "internal"
-                },
-                {
-                    "volume_nr": 1,
-                    "device_minor": 1001,
-                    "backing-disk": "/dev/sda",
-                    "meta-disk": "internal"
-                }
-            ]
-        },
-        "connections": [
-            {
-                "paths": [
-                ],
-                "_cstate": "Connected",
-                "volumes": [
-                    {
-                        "volume_nr": 0
-                    },
-                    {
-                        "volume_nr": 1
-                    }
-                ],
-                "_peer_node_id": 1
-            }
-        ]
-    }
-]
-$ out=$(cat show-2-device.msgs | drbdsetup_instrumented show --json --show-defaults) ; echo $? ; echo "$out" ; echo "$out" | jq > /dev/null
-0
-[
-    {
-        "resource": "some-resource",
         "options": {
-            "auto-promote": true,
+            "auto-promote": false,
             "on-no-quorum": "suspend-io"
         },
         "_this_host": {
@@ -56,9 +16,9 @@ $ out=$(cat show-2-device.msgs | drbdsetup_instrumented show --json --show-defau
                     "backing-disk": "/dev/sda",
                     "meta-disk": "internal",
                     "disk": {
-                        "al-extents": "1237",
-                        "read-balancing": "prefer-local",
-                        "max-bio-size": "1048576"
+                        "al-extents": "9876",
+                        "read-balancing": "32K-striping",
+                        "max-bio-size": "4096"
                     }
                 },
                 {
@@ -80,15 +40,15 @@ $ out=$(cat show-2-device.msgs | drbdsetup_instrumented show --json --show-defau
                 ],
                 "_cstate": "Connected",
                 "net": {
-                    "ping-int": "10",
-                    "allow-two-primaries": false
+                    "ping-int": "14",
+                    "allow-two-primaries": true
                 },
                 "volumes": [
                     {
                         "volume_nr": 0,
                         "disk": {
-                            "c-max-rate": "102400k",
-                            "c-min-rate": "250k"
+                            "c-max-rate": "5120k",
+                            "c-min-rate": "0k"
                         }
                     },
                     {
