@@ -1,5 +1,5 @@
 resource_exists
 initial_state_done
-device_create_b 100
-device_create 99
-connection_create 101
+device_create_b msg_seq 100
+device_create msg_seq 99
+connection_create msg_seq 101
