@@ -551,7 +551,8 @@ int adm_create_md(const struct cfg_ctx *ctx)
 	uint64_t device_uuid=0;
 	uint64_t device_size=0;
 	char *uri;
-	int send=0;
+	bool send = false;
+	bool have_uuid = false;
 	char *tb;
 	int rv, fd, verbose_tmp;
 	char *r, *max_peers_str = NULL;
@@ -586,15 +587,6 @@ int adm_create_md(const struct cfg_ctx *ctx)
 	if (b_opt_max_peers)
 		STAILQ_REMOVE(&backend_options, b_opt_max_peers, d_name, link);
 
-	verbose_tmp = verbose;
-	verbose = 0;
-	tb = run_adm_drbdmeta(ctx, "read-dev-uuid");
-	verbose = verbose_tmp;
-	if (tb) {
-		device_uuid = strto_u64(tb, NULL, 16);
-		free(tb);
-	}
-
 	/* This is "drbdmeta ... create-md".
 	 * It implicitly adds all backend_options to the command line. */
 	rv = _adm_drbdmeta(ctx, SLEEPS_VERY_LONG, max_peers_str);
@@ -611,10 +603,24 @@ int adm_create_md(const struct cfg_ctx *ctx)
 		close(fd);
 	}
 
+	/* create-md may have converted the meta data format.
+	 * read-dev-uuid would have failed before that conversion,
+	 * but should succeed after. */
+	verbose_tmp = verbose;
+	verbose = 0;
+	tb = run_adm_drbdmeta(ctx, "read-dev-uuid");
+	verbose = verbose_tmp;
+	if (tb) {
+		device_uuid = strto_u64(tb, NULL, 16);
+		free(tb);
+		if (device_uuid)
+			have_uuid = true;
+	}
+
 	if( read_node_id(&ni) && device_size && !device_uuid) {
 		get_random_bytes(&device_uuid, sizeof(uint64_t));
 
-		if( global_options.usage_count == UC_YES ) send = 1;
+		if( global_options.usage_count == UC_YES ) send = true;
 		if( global_options.usage_count == UC_ASK ) {
 			log_err("\n"
 			    "\t\t--== Creating metadata ==--\n"
@@ -628,7 +634,7 @@ int adm_create_md(const struct cfg_ctx *ctx)
 			    "* To continue, just press [RETURN]\n",
 			    ni.node_uuid, device_uuid, device_size);
 			r = fgets(answer, ANSWER_SIZE, stdin);
-			if(r && strcmp(answer,"no\n")) send = 1;
+			if(r && strcmp(answer,"no\n")) send = true;
 		}
 	}
 
@@ -643,8 +649,8 @@ int adm_create_md(const struct cfg_ctx *ctx)
 		make_get_request(uri);
 	}
 
-	/* HACK */
-	{
+	if (!have_uuid) {
+		/* HACK */
 		struct adm_cmd local_cmd = *ctx->cmd;
 		struct cfg_ctx local_ctx = *ctx;
 		struct names old_backend_options;

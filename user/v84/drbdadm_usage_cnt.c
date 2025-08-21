@@ -716,17 +716,11 @@ int adm_create_md(struct cfg_ctx *ctx)
 	uint64_t device_uuid=0;
 	uint64_t device_size=0;
 	char *uri;
-	int send=0;
+	bool send = false;
+	bool have_uuid = false;
 	char *tb;
 	int rv, fd, verbose_tmp;
 	char *r;
-
-	verbose_tmp = verbose;
-	verbose = 0;
-	tb = run_admm_generic(ctx, "read-dev-uuid");
-	verbose = verbose_tmp;
-	device_uuid = strto_u64(tb,NULL,16);
-	free(tb);
 
 	/* this is "drbdmeta ... create-md" */
 	rv = _admm_generic(ctx, SLEEPS_VERY_LONG);
@@ -739,10 +733,24 @@ int adm_create_md(struct cfg_ctx *ctx)
 		close(fd);
 	}
 
+	/* create-md may have converted the meta data format.
+	 * read-dev-uuid would have failed before that conversion,
+	 * but should succeed after. */
+	verbose_tmp = verbose;
+	verbose = 0;
+	tb = run_admm_generic(ctx, "read-dev-uuid");
+	verbose = verbose_tmp;
+	if (tb) {
+		device_uuid = strto_u64(tb, NULL, 16);
+		free(tb);
+		if (device_uuid)
+			have_uuid = true;
+	}
+
 	if( read_node_id(&ni) && device_size && !device_uuid) {
 		get_random_bytes(&device_uuid, sizeof(uint64_t));
 
-		if( global_options.usage_count == UC_YES ) send = 1;
+		if( global_options.usage_count == UC_YES ) send = true;
 		if( global_options.usage_count == UC_ASK ) {
 			fprintf(stderr,
 "\n"
@@ -758,7 +766,7 @@ int adm_create_md(struct cfg_ctx *ctx)
 				ni.node_uuid,device_uuid,device_size
 				);
 			r = fgets(answer, ANSWER_SIZE, stdin);
-			if(r && strcmp(answer,"no\n")) send = 1;
+			if(r && strcmp(answer,"no\n")) send = true;
 		}
 	}
 
@@ -773,8 +781,8 @@ int adm_create_md(struct cfg_ctx *ctx)
 		make_get_request(uri);
 	}
 
-	/* HACK */
-	{
+	if (!have_uuid) {
+		/* HACK */
 		struct cfg_ctx local_ctx = *ctx;
 		struct setup_option *old_setup_options;
 		char *opt;
