@@ -1,0 +1,21 @@
+$ out=$(cat show-device-conf-no-disk-conf.msgs | drbdsetup_instrumented show --json) ; echo $? ; echo "$out" ; echo "$out" | jq > /dev/null
+0
+[
+    {
+        "resource": "some-resource",
+        "_this_host": {
+            "node-id": 4,
+            "volumes": [
+                {
+                    "volume_nr": 0,
+                    "device_minor": 1000,
+                    "backing-disk": "/dev/sda",
+                    "meta-disk": "internal",
+                    "disk": {
+                        "max-bio-size": "4096"
+                    }
+                }
+            ]
+        }
+    }
+]

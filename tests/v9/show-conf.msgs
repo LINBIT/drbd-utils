@@ -1,0 +1,12 @@
+DRBD_ADM_GET_RESOURCES
+get_resource auto_promote 0
+-
+DRBD_ADM_GET_DEVICES
+get_device al_extents 9876
+-
+DRBD_ADM_GET_CONNECTIONS
+get_connection ping_int 14
+-
+DRBD_ADM_GET_PEER_DEVICES
+get_peer_device
+-

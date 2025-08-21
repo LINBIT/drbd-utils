@@ -50,11 +50,20 @@ static char *test_backing_dev_path = "/dev/sda";
 
 struct test_vars {
 	int msg_seq;
+	int auto_promote;
+	unsigned int on_no_quorum;
 	unsigned int minor;
 	unsigned int volume_number;
 	int diskless;
 	int inconsistent;
 	int has_quorum;
+	unsigned int al_extents;
+	unsigned int read_balancing;
+	unsigned int max_bio_size;
+	unsigned int ping_int;
+	int two_primaries;
+	unsigned int c_max_rate;
+	unsigned int c_min_rate;
 };
 
 /*
@@ -96,6 +105,8 @@ void test_resource_opts(struct msg_buff *smsg, struct test_vars *vars)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_RESOURCE_OPTS);
 	nla_put_u32(smsg,  __nla_type(T_node_id), test_node_id);
+	nla_put_u8(smsg, T_auto_promote, vars->auto_promote);
+	nla_put_u32(smsg, T_on_no_quorum, vars->on_no_quorum);
 	nla_nest_end(smsg, nla);
 }
 
@@ -134,13 +145,15 @@ void test_disk_conf(struct msg_buff *smsg, struct test_vars *vars)
 	nla_put_string(smsg, T_backing_dev, backing_dev(dev_disk_state));
 	nla_put_string(smsg, T_meta_dev, backing_dev(dev_disk_state));
 	nla_put_u32(smsg, T_meta_dev_idx, DRBD_MD_INDEX_FLEX_INT);
+	nla_put_u32(smsg, T_al_extents, vars->al_extents);
+	nla_put_u32(smsg, T_read_balancing, vars->read_balancing);
 	nla_nest_end(smsg, nla);
 }
 
 void test_device_conf(struct msg_buff *smsg, struct test_vars *vars)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_DEVICE_CONF);
-	nla_put_u32(smsg, T_max_bio_size, DRBD_MAX_BIO_SIZE);
+	nla_put_u32(smsg, T_max_bio_size, vars->max_bio_size);
 	nla_nest_end(smsg, nla);
 }
 
@@ -187,6 +200,8 @@ void test_connection_context(struct msg_buff *smsg, struct test_vars *vars)
 void test_net_conf(struct msg_buff *smsg, struct test_vars *vars)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_NET_CONF);
+	nla_put_u32(smsg, T_ping_int, vars->ping_int);
+	nla_put_u8(smsg, T_two_primaries, vars->two_primaries);
 	nla_nest_end(smsg, nla);
 }
 
@@ -220,6 +235,8 @@ void test_peer_device_context(struct msg_buff *smsg, struct test_vars *vars)
 void test_peer_device_opts(struct msg_buff *smsg, struct test_vars *vars)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_PEER_DEVICE_OPTS);
+	nla_put_u32(smsg, T_c_max_rate, vars->c_max_rate);
+	nla_put_u32(smsg, T_c_min_rate, vars->c_min_rate);
 	nla_nest_end(smsg, nla);
 }
 
@@ -593,11 +610,20 @@ struct test_vars test_init_vars()
 {
 	struct test_vars vars = {
 		.msg_seq = -1,
+		.auto_promote = 1,
+		.on_no_quorum = 1,
 		.minor = test_minor,
 		.volume_number = test_volume_number,
 		.diskless = 0,
 		.inconsistent = 0,
 		.has_quorum = 1,
+		.al_extents = 1237,
+		.read_balancing = 0,
+		.max_bio_size = DRBD_MAX_BIO_SIZE,
+		.ping_int = 10,
+		.two_primaries = 0,
+		.c_max_rate = 102400,
+		.c_min_rate = 250,
 	};
 
 	return vars;
@@ -629,11 +655,20 @@ int test_parse_vars(char *input, char *msg_name, struct test_vars *vars)
 		input += consumed;
 
 		TEST_VAR(var_name, consumed, input, msg_seq, "%d")
+		TEST_VAR(var_name, consumed, input, auto_promote, "%d")
+		TEST_VAR(var_name, consumed, input, on_no_quorum, "%u")
 		TEST_VAR(var_name, consumed, input, minor, "%u")
 		TEST_VAR(var_name, consumed, input, volume_number, "%u")
 		TEST_VAR(var_name, consumed, input, diskless, "%d")
 		TEST_VAR(var_name, consumed, input, inconsistent, "%d")
 		TEST_VAR(var_name, consumed, input, has_quorum, "%d")
+		TEST_VAR(var_name, consumed, input, al_extents, "%u")
+		TEST_VAR(var_name, consumed, input, read_balancing, "%u")
+		TEST_VAR(var_name, consumed, input, max_bio_size, "%u")
+		TEST_VAR(var_name, consumed, input, ping_int, "%u")
+		TEST_VAR(var_name, consumed, input, two_primaries, "%d")
+		TEST_VAR(var_name, consumed, input, c_max_rate, "%u")
+		TEST_VAR(var_name, consumed, input, c_min_rate, "%u")
 
 		fprintf(stderr, "Unknown var: '%s'\n", var_name);
 		return 1;

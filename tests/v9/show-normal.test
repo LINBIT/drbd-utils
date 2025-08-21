@@ -34,6 +34,10 @@ $ out=$(cat show-normal.msgs | drbdsetup_instrumented show --json --show-default
 [
     {
         "resource": "some-resource",
+        "options": {
+            "auto-promote": true,
+            "on-no-quorum": "suspend-io"
+        },
         "_this_host": {
             "node-id": 4,
             "volumes": [
@@ -43,6 +47,8 @@ $ out=$(cat show-normal.msgs | drbdsetup_instrumented show --json --show-default
                     "backing-disk": "/dev/sda",
                     "meta-disk": "internal",
                     "disk": {
+                        "al-extents": "1237",
+                        "read-balancing": "prefer-local",
                         "max-bio-size": "1048576"
                     }
                 }
@@ -53,9 +59,17 @@ $ out=$(cat show-normal.msgs | drbdsetup_instrumented show --json --show-default
                 "paths": [
                 ],
                 "_cstate": "Connected",
+                "net": {
+                    "ping-int": "10",
+                    "allow-two-primaries": false
+                },
                 "volumes": [
                     {
-                        "volume_nr": 0
+                        "volume_nr": 0,
+                        "disk": {
+                            "c-max-rate": "102400k",
+                            "c-min-rate": "250k"
+                        }
                     }
                 ],
                 "_peer_node_id": 1

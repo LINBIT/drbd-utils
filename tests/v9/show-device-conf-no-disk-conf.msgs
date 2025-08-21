@@ -1,0 +1,8 @@
+DRBD_ADM_GET_RESOURCES
+get_resource
+-
+DRBD_ADM_GET_DEVICES
+get_device max_bio_size 4096
+-
+DRBD_ADM_GET_CONNECTIONS
+-
