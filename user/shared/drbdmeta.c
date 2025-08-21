@@ -4631,6 +4631,7 @@ int meta_create_md(struct format *cfg, char **argv, int argc)
 	int err = 0;
 	int max_peers = 1;
 	int i;
+	bool converted = false;
 
 	if (is_v09(cfg)) {
 		if (argc < 1) {
@@ -4703,14 +4704,19 @@ int meta_create_md(struct format *cfg, char **argv, int argc)
 		if (format_version(cfg) >= DRBD_V09 && max_peers != 1)
 			printf("Warning: setting max_peers to 1 instead of %d\n\n",
 			       max_peers);
+		converted = true;
 		err = 0; /* we have successfully converted something */
 
 		check_for_existing_data(cfg);
 	}
 
-	cfg->md.la_peer_max_bio_size = option_peer_max_bio_size;
+	/* When converting, keep what we know; still, explicit command line flags win. */
+	if (!converted || option_peer_max_bio_size)
+		cfg->md.la_peer_max_bio_size = option_peer_max_bio_size;
 
-	cfg->md.effective_size = option_effective_size;
+	if (!converted || option_effective_size)
+		cfg->md.effective_size = option_effective_size;
+
 	for (i = 0; i < DRBD_PEERS_MAX; i++) {
 		if (option_diskful_peer_mask & (1<<i))
 			cfg->md.peers[i].flags |= MDF_PEER_DEVICE_SEEN;
