@@ -554,7 +554,7 @@ int adm_create_md(const struct cfg_ctx *ctx)
 	bool send = false;
 	bool have_uuid = false;
 	char *tb;
-	int rv, fd, verbose_tmp;
+	int rv, fd;
 	char *r, *max_peers_str = NULL;
 	struct d_name *b_opt_max_peers;
 	const char *opt_max_peers = "--max-peers=";
@@ -606,10 +606,18 @@ int adm_create_md(const struct cfg_ctx *ctx)
 	/* create-md may have converted the meta data format.
 	 * read-dev-uuid would have failed before that conversion,
 	 * but should succeed after. */
-	verbose_tmp = verbose;
+	{
+	struct names old_backend_options = backend_options;
+	int old_verbose = verbose;
+
+	STAILQ_INIT(&backend_options);
 	verbose = 0;
+
 	tb = run_adm_drbdmeta(ctx, "read-dev-uuid");
-	verbose = verbose_tmp;
+
+	verbose = old_verbose;
+	backend_options = old_backend_options;
+	}
 	if (tb) {
 		device_uuid = strto_u64(tb, NULL, 16);
 		free(tb);
