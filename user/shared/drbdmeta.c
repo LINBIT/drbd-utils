@@ -798,23 +798,23 @@ struct format_ops f_ops[] = {
 		     },
 };
 
-enum md_format format_version(struct format *cfg)
+enum md_format format_version(const struct format *cfg)
 {
 	return (cfg->ops - f_ops);
 }
-static inline int is_v06(struct format *cfg)
+static inline int is_v06(const struct format *cfg)
 {
 	return format_version(cfg) == DRBD_V06;
 }
-static inline int is_v07(struct format *cfg)
+static inline int is_v07(const struct format *cfg)
 {
 	return format_version(cfg) == DRBD_V07;
 }
-static inline int is_v08(struct format *cfg)
+static inline int is_v08(const struct format *cfg)
 {
 	return format_version(cfg) == DRBD_V08;
 }
-static inline int is_v09(struct format *cfg)
+static inline int is_v09(const struct format *cfg)
 {
 	return format_version(cfg) == DRBD_V09;
 }

@@ -197,7 +197,7 @@ void validate_offsets_or_die(struct format *cfg, size_t count, off_t offset, con
 int is_apply_al_cmd(void);
 bool confirmed(const char *text);
 unsigned long bm_bytes(const struct md_cpu * const md, uint64_t sectors);
-enum md_format format_version(struct format *cfg);
+enum md_format format_version(const struct format *cfg);
 
 extern int opened_odirect;
 extern int verbose;
