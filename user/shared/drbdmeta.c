@@ -67,7 +67,7 @@
 
 typedef void (*dump_func)(
 		const struct format *const cfg,
-		const char *const buffer, const size_t length, const off_t offset);
+		const char *const buffer, const size_t length, const off_t offset, enum md_open_rc rc);
 
 extern FILE* yyin;
 YYSTYPE yylval;
@@ -3085,7 +3085,7 @@ int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc
  */
 void hex_dump_buffer(
 	const struct format *const cfg,
-	const char *const buffer, const size_t length, const off_t offset)
+	const char *const buffer, const size_t length, const off_t offset, enum md_open_rc rc)
 {
 	fprintf_hex(stdout, offset, buffer, length);
 }
@@ -3095,7 +3095,7 @@ void hex_dump_buffer(
  */
 void binary_dump_buffer(
 	const struct format *const cfg,
-	const char *const buffer, const size_t length, const off_t offset)
+	const char *const buffer, const size_t length, const off_t offset, enum md_open_rc rc)
 {
 	fwrite(buffer, length, 1, stdout);
 }
@@ -3105,12 +3105,14 @@ void binary_dump_buffer(
  */
 void json_dump_buffer(
 	const struct format *const cfg,
-	const char *const buffer, const size_t length, const off_t offset)
+	const char *const buffer, const size_t length, const off_t offset, enum md_open_rc rc)
 {
-	struct meta_data_on_disk_9 *md_on_disk = (struct meta_data_on_disk_9 *)buffer;
+	struct md_on_disk_08 *md_on_disk_8 = (struct md_on_disk_08 *)buffer;
+	struct meta_data_on_disk_9 *md_on_disk_9 = (struct meta_data_on_disk_9 *)buffer;
 	struct md_cpu md;
 	int i;
 
+	const char *looks_like = NULL;
 	char *nodename = "?";
 	struct utsname utsname;
 	time_t tmp;
@@ -3125,31 +3127,35 @@ void json_dump_buffer(
 	if (uname(&utsname) >= 0)
 		nodename = utsname.nodename;
 
-	md_disk_09_to_cpu(&md, md_on_disk);
-	printf("{\n");
-	printf( "  \"#meta\": {\n"
-		"    \"dump_time_utc\": \"%sZ\",\n"
-		"    \"dump_host\": \"%s\",\n"
-		"    \"md_device_name\": \"%s\",\n"
-		"    \"dump_offset\": "U64",\n"
-		"    \"bd_size\": "U64"\n"
-		"  },\n",
-		dump_time,
-		nodename,
-		cfg->md_device_name,
-		offset,
-		cfg->bd_size
-		);
+	if (is_v08(cfg)) {
+		md_disk_08_to_cpu(&md, md_on_disk_8);
+		if (rc == NO_VALID_MD_FOUND) {
+			struct md_cpu md_test;
 
+			md_disk_09_to_cpu(&md_test, md_on_disk_9);
+			if (is_valid_md(DRBD_V09, &md_test, cfg->md_index, cfg->bd_size))
+				looks_like = f_ops[DRBD_V09].name;
+		}
+	} else if (is_v09(cfg)) {
+		md_disk_09_to_cpu(&md, md_on_disk_9);
+		if (rc == NO_VALID_MD_FOUND) {
+			struct md_cpu md_test;
+
+			md_disk_08_to_cpu(&md_test, md_on_disk_8);
+			if (is_valid_md(DRBD_V08, &md_test, cfg->md_index, cfg->bd_size))
+				looks_like = f_ops[DRBD_V08].name;
+		}
+	} else {
+		fprintf(stderr, "json dump of superblock not implemented for %s\n", cfg->ops->name);
+		exit(4);
+	}
+
+	printf("{\n");
+
+	/* common to 8 and 9 */
 	printf(
 		"  \"effective_size\": "U64",\n"
 		"  \"current_uuid\": \"0x"X64(016)"\",\n"
-		"  \"members\": \"0x"X64(016)"\",\n"
-		"  \"reserved_u64\": [ "
-		    "\"0x"X64(016)"\", "
-		    "\"0x"X64(016)"\", "
-		    "\"0x"X64(016)"\" "
-		  "],\n"
 		"  \"device_uuid\": \"0x"X64(016)"\",\n"
 		"  \"flags\": \"0x"X32(08)"\",\n"
 		"  \"magic\": \"0x"X32(08)"\",\n"
@@ -3159,18 +3165,11 @@ void json_dump_buffer(
 		"  \"bm_offset\": "D32",\n"
 		"  \"bm_bytes_per_bit\": "U32",\n"
 		"  \"la_peer_max_bio_size\": "U32",\n"
-		"  \"bm_max_peers\": "U32",\n"
-		"  \"node_id\": "D32",\n"
 		"  \"al_stripes\": "U32",\n"
-		"  \"al_stripe_size_4k\": "U32",\n"
-		"  \"reserved_u32\": [ \"0x"X32(08)"\", \"0x"X32(08)"\" ],\n",
+		"  \"al_stripe_size_4k\": "U32",\n",
 
 		md.effective_size,
 		md.current_uuid,
-		md.members,
-		be64_to_cpu(md_on_disk->reserved_u64[0].be),
-		be64_to_cpu(md_on_disk->reserved_u64[1].be),
-		be64_to_cpu(md_on_disk->reserved_u64[2].be),
 		md.device_uuid,
 		md.flags,
 		md.magic,
@@ -3180,62 +3179,98 @@ void json_dump_buffer(
 		md.bm_offset,
 		md.bm_bytes_per_bit,
 		md.la_peer_max_bio_size,
-		md.max_peers,
-		md.node_id,
 		md.al_stripes,
-		md.al_stripe_size_4k,
-		be32_to_cpu(md_on_disk->reserved_u32[0].be),
-		be32_to_cpu(md_on_disk->reserved_u32[1].be));
+		md.al_stripe_size_4k);
 
-	printf("  \"peers\": [");
-	for (i = 0; i < DRBD_PEERS_MAX; i++) {
-		printf(",\n    {"
-			" \"bitmap_uuid\": \"0x"X64(016)"\", "
-			" \"bitmap_dagtag\": "U64", "
-			" \"flags\": \"0x"X32(08)"\", "
-			" \"bitmap_index\": "D32", "
-			" \"reserved_u32\": [ \"0x"X32(08)"\", \"0x"X32(08)"\" ] }"
-			+ (i==0),
-			md.peers[i].bitmap_uuid,
-			md.peers[i].bitmap_dagtag,
-			md.peers[i].flags,
-			md.peers[i].bitmap_index,
-			be32_to_cpu(md_on_disk->peers[i].reserved_u32[0].be),
-			be32_to_cpu(md_on_disk->peers[i].reserved_u32[1].be)
-		);
+	if (is_v08(cfg)) {
+		printf( "  \"peers\": [ { \"bitmap_uuid\": \"0x"X64(016)"\" } ],\n",
+			md.peers[0].bitmap_uuid);
+	} else {
+		printf("  \"peers\": [");
+		for (i = 0; i < DRBD_PEERS_MAX; i++) {
+			printf(",\n    {"
+				" \"bitmap_uuid\": \"0x"X64(016)"\", "
+				" \"bitmap_dagtag\": "U64", "
+				" \"flags\": \"0x"X32(08)"\", "
+				" \"bitmap_index\": "D32", "
+				" \"reserved_u32\": [ \"0x"X32(08)"\", \"0x"X32(08)"\" ] }"
+				+ (i==0),
+				md.peers[i].bitmap_uuid,
+				md.peers[i].bitmap_dagtag,
+				md.peers[i].flags,
+				md.peers[i].bitmap_index,
+				be32_to_cpu(md_on_disk_9->peers[i].reserved_u32[0].be),
+				be32_to_cpu(md_on_disk_9->peers[i].reserved_u32[1].be)
+			);
+		}
+		printf("\n  ],\n");
+
+		/* Not in on disk order; so what. */
+		printf( "  \"bm_max_peers\": "U32",\n"
+			"  \"node_id\": "D32",\n"
+			"  \"members\": \"0x"X64(016)"\",\n"
+			"  \"reserved_u64\": [ "
+			    "\"0x"X64(016)"\", "
+			    "\"0x"X64(016)"\", "
+			    "\"0x"X64(016)"\" "
+			  "],\n"
+			"  \"reserved_u32\": [ \"0x"X32(08)"\", \"0x"X32(08)"\" ],\n",
+
+			md.max_peers,
+			md.node_id,
+			md.members,
+			be64_to_cpu(md_on_disk_9->reserved_u64[0].be),
+			be64_to_cpu(md_on_disk_9->reserved_u64[1].be),
+			be64_to_cpu(md_on_disk_9->reserved_u64[2].be),
+			be32_to_cpu(md_on_disk_9->reserved_u32[0].be),
+			be32_to_cpu(md_on_disk_9->reserved_u32[1].be));
 	}
-	printf("\n  ],\n");
 
-	BUILD_BUG_ON(HISTORY_UUIDS != 32);
-	printf( "  \"history_uuids\": [\n"
-		"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
-		"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
-		"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
-		"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
-		"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
-		"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
-		"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
-		"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\"\n"
-		"  ],\n",
-		md.history_uuids[0], md.history_uuids[1], md.history_uuids[2], md.history_uuids[3],
-		md.history_uuids[4], md.history_uuids[5], md.history_uuids[6], md.history_uuids[7],
-		md.history_uuids[8], md.history_uuids[9], md.history_uuids[10], md.history_uuids[11],
-		md.history_uuids[12], md.history_uuids[13], md.history_uuids[14], md.history_uuids[15],
-		md.history_uuids[16], md.history_uuids[17], md.history_uuids[18], md.history_uuids[19],
-		md.history_uuids[20], md.history_uuids[21], md.history_uuids[22], md.history_uuids[23],
-		md.history_uuids[24], md.history_uuids[25], md.history_uuids[26], md.history_uuids[27],
-		md.history_uuids[28], md.history_uuids[29], md.history_uuids[30], md.history_uuids[31]);
+	if (is_v08(cfg)) {
+		BUILD_BUG_ON(HISTORY_UUIDS_V08 != 2);
+		printf( "  \"history_uuids\": [\n"
+			"    \"0x"X64(016)"\", " "\"0x"X64(016)"\"\n"
+			"  ],\n",
+			md.history_uuids[0], md.history_uuids[1]);
+	} else {
+		BUILD_BUG_ON(HISTORY_UUIDS != 32);
+		printf( "  \"history_uuids\": [\n"
+			"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
+			"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
+			"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
+			"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
+			"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
+			"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
+			"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\",\n"
+			"    \"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\", " "\"0x"X64(016)"\"\n"
+			"  ],\n",
+			md.history_uuids[0], md.history_uuids[1], md.history_uuids[2], md.history_uuids[3],
+			md.history_uuids[4], md.history_uuids[5], md.history_uuids[6], md.history_uuids[7],
+			md.history_uuids[8], md.history_uuids[9], md.history_uuids[10], md.history_uuids[11],
+			md.history_uuids[12], md.history_uuids[13], md.history_uuids[14], md.history_uuids[15],
+			md.history_uuids[16], md.history_uuids[17], md.history_uuids[18], md.history_uuids[19],
+			md.history_uuids[20], md.history_uuids[21], md.history_uuids[22], md.history_uuids[23],
+			md.history_uuids[24], md.history_uuids[25], md.history_uuids[26], md.history_uuids[27],
+			md.history_uuids[28], md.history_uuids[29], md.history_uuids[30], md.history_uuids[31]);
+	}
 
 	/* just double check that padding is all zero, if it is not, spit it out */
-	BUILD_BUG_ON(offsetof(typeof(*md_on_disk),padding_start) != offsetof(typeof(*md_on_disk),history_uuids[HISTORY_UUIDS]));
-	printf("  \"padding\": {");
-	size_t start = offsetof(typeof(*md_on_disk),padding_start);
-	size_t end = offsetof(typeof(*md_on_disk),padding_end);
+	size_t start, end;
 	int non_zero = 0;
+	if (is_v08(cfg)) {
+		/* It is defined as it is :shrug: */
+		start = offsetof(typeof(*md_on_disk_8),reserved);
+		end = start + sizeof(md_on_disk_8->reserved);
+	} else {
+		BUILD_BUG_ON(offsetof(typeof(*md_on_disk_9),padding_start) != offsetof(typeof(*md_on_disk_9),history_uuids[HISTORY_UUIDS]));
+		start = offsetof(typeof(*md_on_disk_9),padding_start);
+		end = offsetof(typeof(*md_on_disk_9),padding_end);
+	}
+	printf("  \"padding\": {");
 	for (i = start; i < end; i++)
 		non_zero += !!buffer[i];
 	if (non_zero == 0) {
-		printf(" \"start\": %zu, \"end\": %zu, \"non-zero\": { } }\n",
+		printf(" \"start\": %zu, \"end\": %zu, \"non-zero\": { } },\n",
 			start, end);
 	} else {
 		int skip_comma = 1;
@@ -3252,8 +3287,29 @@ void json_dump_buffer(
 				i, c);
 			skip_comma = 0;
 		}
-		printf("\n    }\n  }\n");
+		printf("\n    }\n  },\n");
 	}
+	printf( "  \"#meta\": {\n"
+		"    \"dump_time_utc\": \"%sZ\",\n"
+		"    \"dump_host\": \"%s\",\n"
+		"    \"md_device_name\": \"%s\",\n"
+		"    \"dump_offset\": "U64",\n"
+		"    \"bd_size\": "U64",\n"
+		"    \"dumped_as\": \"%s\",\n"
+		"    \"looks_like\": \"%s\",\n"
+		"    \"valid\": \"%s\"\n"
+		"  }\n",
+		dump_time,
+		nodename,
+		cfg->md_device_name,
+		offset,
+		cfg->bd_size,
+		cfg->ops->name,
+		looks_like ? looks_like : rc == NO_VALID_MD_FOUND ? "UNKNOWN" : cfg->ops->name,
+		rc == VALID_MD_FOUND ? "VALID_MD_FOUND" :
+		rc == VALID_MD_FOUND_AT_LAST_KNOWN_LOCATION ? "VALID_MD_FOUND_AT_LAST_KNOWN_LOCATION" :
+		"NO_VALID_MD_FOUND"
+		);
 	printf("}\n");
 }
 
@@ -3283,7 +3339,7 @@ int meta_generic_dump_superblock(struct format *cfg, dump_func dump_impl)
 		md_buffer = &md_buffer[4096];
 	}
 
-	dump_impl(cfg, md_buffer, 4096, offset);
+	dump_impl(cfg, md_buffer, 4096, offset, open_rc);
 
 	/* ignore problems during "close" */
 	cfg->ops->close(cfg);

@@ -19,7 +19,7 @@ enum md_format {
 };
 
 /* return codes for md_open */
-enum {
+enum md_open_rc {
 	VALID_MD_FOUND = 0,
 	NO_VALID_MD_FOUND = -1,
 	VALID_MD_FOUND_AT_LAST_KNOWN_LOCATION = -2,
