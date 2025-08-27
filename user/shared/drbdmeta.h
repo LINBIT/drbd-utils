@@ -47,9 +47,6 @@ struct peer_md_cpu {
 };
 
 struct md_cpu {
-	uint64_t current_uuid;
-	uint64_t history_uuids[HISTORY_UUIDS];
-	uint64_t members;
 	/* present since drbd 0.6 */
 	uint32_t gc[GEN_CNT_SIZE];	/* generation counter */
 	uint32_t magic;
@@ -62,6 +59,8 @@ struct md_cpu {
 	uint32_t al_nr_extents;	/* important for restoring the AL */
 	int32_t bm_offset;		/* signed sector offset to the bitmap, from here */
 	/* Since DRBD 0.8 we have uuid instead of gc */
+	uint64_t current_uuid;
+	uint64_t history_uuids[HISTORY_UUIDS];
 	uint32_t flags;
 	uint64_t device_uuid;
 	uint32_t bm_bytes_per_bit;
@@ -72,6 +71,7 @@ struct md_cpu {
 	struct peer_md_cpu peers[DRBD_PEERS_MAX];
 	uint32_t al_stripes;
 	uint32_t al_stripe_size_4k;
+	uint64_t members;
 };
 
 /*
