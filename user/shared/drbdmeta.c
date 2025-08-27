@@ -3013,7 +3013,7 @@ int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc
 		       cfg->md.peers[0].bitmap_uuid,
 		       cfg->md.history_uuids[0],
 		       cfg->md.history_uuids[1]);
-		printf("    flags 0x"X32(08)";\n", cfg->md.peers[0].flags);
+		printf("    flags 0x"X32(08)";\n", cfg->md.flags);
 		printf("}\n");
 		break;
 	case DRBD_V09:
