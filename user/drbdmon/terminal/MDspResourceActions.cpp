@@ -74,6 +74,11 @@ MDspResourceActions::MDspResourceActions(const ComponentsHub& comp_hub):
         {
             selection_action(&MDspResourceActions::action_force_primary);
         };
+    cmd_fn_force_secondary =
+        [this]() -> void
+        {
+            selection_action(&MDspResourceActions::action_force_secondary);
+        };
     cmd_fn_invalidate =
         [this]() -> void
         {
@@ -180,9 +185,17 @@ MDspResourceActions::MDspResourceActions(const ComponentsHub& comp_hub):
     );
     ++opt_line;
 
-    cmd_connect_discard = std::unique_ptr<ClickableCommand>(
+    cmd_force_secondary = std::unique_ptr<ClickableCommand>(
         new ClickableCommand(
             "12", 1, opt_line, start_col, end_col,
+            cmd_fn_force_secondary
+        )
+    );
+    ++opt_line;
+
+    cmd_connect_discard = std::unique_ptr<ClickableCommand>(
+        new ClickableCommand(
+            "13", 1, opt_line, start_col, end_col,
             cmd_fn_connect_discard
         )
     );
@@ -190,7 +203,7 @@ MDspResourceActions::MDspResourceActions(const ComponentsHub& comp_hub):
 
     cmd_invalidate = std::unique_ptr<ClickableCommand>(
         new ClickableCommand(
-            "13", 1, opt_line, start_col, end_col,
+            "14", 1, opt_line, start_col, end_col,
             cmd_fn_invalidate
         )
     );
@@ -202,6 +215,7 @@ MDspResourceActions::MDspResourceActions(const ComponentsHub& comp_hub):
     add_option(*cmd_primary);
     add_option(*cmd_force_primary);
     add_option(*cmd_secondary);
+    add_option(*cmd_force_secondary);
     add_option(*cmd_connect);
     add_option(*cmd_disconnect);
     add_option(*cmd_verify);
@@ -278,8 +292,9 @@ void MDspResourceActions::show_actions()
     display_option(" 9   ", "Pause resynchronization", *cmd_pause_sync, std_color);
     display_option("10   ", "Resume resynchronization", *cmd_resume_sync, std_color);
     display_option("11   ", "Force make primary", *cmd_force_primary, caution_color);
-    display_option("12   ", "Discard & resolve split-brain", *cmd_connect_discard, caution_color);
-    display_option("13   ", "Invalidate & resynchronize", *cmd_invalidate, caution_color);
+    display_option("12   ", "Force make secondary", *cmd_force_secondary, caution_color);
+    display_option("13   ", "Discard & resolve split-brain", *cmd_connect_discard, caution_color);
+    display_option("14   ", "Invalidate & resynchronize", *cmd_invalidate, caution_color);
 
     display_option_query(5, 16);
 }
@@ -409,6 +424,24 @@ void MDspResourceActions::action_secondary(const std::string& rsc_name)
     std::string text;
     text.reserve(DisplayConsts::ACTION_DESC_PREALLOC);
     text.append("Switch to secondary, resource ");
+    text.append(rsc_name);
+
+    command->set_description(text);
+
+    dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+}
+
+void MDspResourceActions::action_force_secondary(const std::string& rsc_name)
+{
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::ARG_SECONDARY);
+    command->add_argument(drbdcmd::ARG_FORCE);
+    command->add_argument(rsc_name);
+
+    std::string text;
+    text.reserve(DisplayConsts::ACTION_DESC_PREALLOC);
+    text.append("Force switch to secondary, resource ");
     text.append(rsc_name);
 
     command->set_description(text);

@@ -32,6 +32,7 @@ class MDspResourceActions: public MDspMenuBase
     std::function<void()>   cmd_fn_resume_sync;
     std::function<void()>   cmd_fn_connect_discard;
     std::function<void()>   cmd_fn_force_primary;
+    std::function<void()>   cmd_fn_force_secondary;
     std::function<void()>   cmd_fn_invalidate;
 
     std::unique_ptr<ClickableCommand>   cmd_start;
@@ -40,6 +41,7 @@ class MDspResourceActions: public MDspMenuBase
     std::unique_ptr<ClickableCommand>   cmd_primary;
     std::unique_ptr<ClickableCommand>   cmd_force_primary;
     std::unique_ptr<ClickableCommand>   cmd_secondary;
+    std::unique_ptr<ClickableCommand>   cmd_force_secondary;
     std::unique_ptr<ClickableCommand>   cmd_connect;
     std::unique_ptr<ClickableCommand>   cmd_disconnect;
     std::unique_ptr<ClickableCommand>   cmd_verify;
@@ -57,6 +59,7 @@ class MDspResourceActions: public MDspMenuBase
     void action_primary(const std::string& rsc_name);
     void action_force_primary(const std::string& rsc_name);
     void action_secondary(const std::string& rsc_name);
+    void action_force_secondary(const std::string& rsc_name);
     void action_adjust(const std::string& rsc_name);
     void action_verify(const std::string& rsc_name);
     void action_pause_sync(const std::string& rsc_name);
