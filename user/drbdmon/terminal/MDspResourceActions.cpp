@@ -382,7 +382,7 @@ void MDspResourceActions::action_stop(const std::string& rsc_name)
 void MDspResourceActions::action_primary(const std::string& rsc_name)
 {
     std::unique_ptr<CmdLine> command(new CmdLine());
-    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::DRBDSETUP_CMD);
     command->add_argument(drbdcmd::ARG_PRIMARY);
     command->add_argument(rsc_name);
 
@@ -399,7 +399,7 @@ void MDspResourceActions::action_primary(const std::string& rsc_name)
 void MDspResourceActions::action_force_primary(const std::string& rsc_name)
 {
     std::unique_ptr<CmdLine> command(new CmdLine());
-    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::DRBDSETUP_CMD);
     command->add_argument(drbdcmd::ARG_PRIMARY);
     command->add_argument(drbdcmd::ARG_FORCE);
     command->add_argument(rsc_name);
@@ -417,7 +417,7 @@ void MDspResourceActions::action_force_primary(const std::string& rsc_name)
 void MDspResourceActions::action_secondary(const std::string& rsc_name)
 {
     std::unique_ptr<CmdLine> command(new CmdLine());
-    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::DRBDSETUP_CMD);
     command->add_argument(drbdcmd::ARG_SECONDARY);
     command->add_argument(rsc_name);
 
@@ -434,7 +434,7 @@ void MDspResourceActions::action_secondary(const std::string& rsc_name)
 void MDspResourceActions::action_force_secondary(const std::string& rsc_name)
 {
     std::unique_ptr<CmdLine> command(new CmdLine());
-    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::DRBDSETUP_CMD);
     command->add_argument(drbdcmd::ARG_SECONDARY);
     command->add_argument(drbdcmd::ARG_FORCE);
     command->add_argument(rsc_name);
