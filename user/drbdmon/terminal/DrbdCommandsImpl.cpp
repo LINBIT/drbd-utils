@@ -567,7 +567,7 @@ void DrbdCommandsImpl::exec_primary(const std::string& rsc_name)
     std::string description;
     description.reserve(STRING_PREALLOC_LENGTH);
 
-    description.append("Make primary: Resource ");
+    description.append("Switch to primary, resource ");
     description.append(rsc_name);
 
     std::unique_ptr<CmdLine> command(new CmdLine());
@@ -584,7 +584,7 @@ void DrbdCommandsImpl::exec_force_primary(const std::string& rsc_name)
     std::string description;
     description.reserve(STRING_PREALLOC_LENGTH);
 
-    description.append("Force make primary: Resource ");
+    description.append("Force switch to primary, resource ");
     description.append(rsc_name);
 
     std::unique_ptr<CmdLine> command(new CmdLine());
@@ -602,7 +602,7 @@ void DrbdCommandsImpl::exec_secondary(const std::string& rsc_name)
     std::string description;
     description.reserve(STRING_PREALLOC_LENGTH);
 
-    description.append("Make secondary: Resource ");
+    description.append("Switch to secondary, resource ");
     description.append(rsc_name);
 
     std::unique_ptr<CmdLine> command(new CmdLine());
@@ -619,7 +619,7 @@ void DrbdCommandsImpl::exec_force_secondary(const std::string& rsc_name)
     std::string description;
     description.reserve(STRING_PREALLOC_LENGTH);
 
-    description.append("Force secondary: Resource ");
+    description.append("Force switch to secondary, resource ");
     description.append(rsc_name);
 
     std::unique_ptr<CmdLine> command(new CmdLine());
