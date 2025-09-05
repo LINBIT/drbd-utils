@@ -1,0 +1,63 @@
+{
+    "$schema": "https://lnav.org/schemas/format-v1.schema.json",
+    "drbd_log": {
+        "description": "drbd log",
+        "regex": {
+            "syslog": {
+		"pattern": "(?<timestamp>\\w{3}\\s+\\d{1,2} \\d{2}:\\d{2}:\\d{2}) (?<log_hostname>[^ ]+) (?<log_procname>[^: []+)(?:\\[(?<log_pid>\\d+)\\])?: (?:\\[\\s*\\d+\\.\\d+\\] )?(?<body>(?:drbd (?:\\/unregistered\\/)?(?<resource>[^ :\\/]+)(?:\\/(?<volume>\\d+) drbd(?<minor>\\d+))?(?: (?<peer>[^:]+))?: (?:(?:Preparing cluster-wide state change|Preparing remote state change|Duplicate prepare for remote state change|State change|Committing remote state change|Committing cluster-wide state change) (?<tid>[0-9]+)|.*(?:UUID:|uuid:|peer|self|UUID) (?<uuid>[0-9A-F]{15}).*|).*)|.*)"
+            },
+            "dmesg_with_datetime": {
+                "pattern": "(?<timestamp>\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2},\\d+[+-]\\d{2}:\\d{2}) (?<body>(?:drbd (?:\\/unregistered\\/)?(?<resource>[^ :\\/]+)(?:\\/(?<volume>\\d+) drbd(?<minor>\\d+))?(?: (?<peer>[^:]+))?: (?:(?:Preparing cluster-wide state change|Preparing remote state change|Duplicate prepare for remote state change|State change|Committing remote state change|Committing cluster-wide state change) (?<tid>[0-9]+)|.*(?:UUID:|uuid:|peer|self|UUID) (?<uuid>[0-9A-F]{16}).*|).*)|.*)"
+            }
+        },
+	"opid-field": "tid",
+	"module-field": "log_procname",
+        "value": {
+            "log_hostname": {
+                "kind": "string", "identifier": true
+            },
+            "log_pid": {
+                "kind": "integer"
+            },
+            "log_procname": {
+                "kind": "string"
+            },
+            "minor": {
+                "kind": "integer", "identifier": true
+            },
+            "peer": {
+                "kind": "string", "identifier": true
+            },
+            "resource": {
+                "kind": "string", "identifier": true
+            },
+            "tid": {
+                "kind": "integer", "identifier": true
+            },
+            "timestamp": {
+                "kind": "string"
+            },
+            "volume": {
+                "kind": "integer", "identifier": true
+            },
+	    "uuid": {
+                "kind": "string", "identifier": true
+            }
+
+        },
+        "sample": [
+            {
+                "line": "Jul  5 20:04:52 bbxl0454 kernel: [17399360.343631] drbd xcp-volume-ac4462a0-33a2-4280-a90c-c7463203d5c7: Preparing cluster-wide state change 2062958361 (2->-1 3/2)\n"
+            },
+	    {
+		"line": "2025-09-02T08:26:16,672958-04:00 drbd allow-remote-read-20250902-122615 lbtest-vm-50.test: Starting sender thread (peer-node-id 1)"
+	    }
+        ],
+	"highlights": {
+	    "state_changes": {
+		"pattern": "(?:role|disk|conn|pdsk|peer|repl)\\( .* \\)",
+		"underline": true
+	    }
+	}
+    }
+}
