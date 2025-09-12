@@ -2,6 +2,11 @@
 %global _with_selinux --with-selinux
 %endif
 
+# Do not precompile any .py files!
+# Necessary because tnf-drbd-fence.py is a pyhton3 file
+# precompiling on rhel7 fails (with pyhthon2).
+%undefine __python
+
 # Conditionals
 # Invoke "rpmbuild --without <feature>" or "rpmbuild --with <feature>"
 # to disable or enable specific features
