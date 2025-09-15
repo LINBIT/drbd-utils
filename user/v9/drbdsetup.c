@@ -248,6 +248,21 @@ static struct option status_cmd_options[] = {
 #define F_NEW_EVENTS_CMD(scmd)	DRBD_ADM_GET_INITIAL_STATE, NO_PAYLOAD, generic_events_cmd, \
 			.handle_reply = scmd
 
+const struct drbd_cmd primary_cmd = {
+	"primary", CTX_RESOURCE, DRBD_ADM_PRIMARY, DRBD_NLA_SET_ROLE_PARMS, F_CONFIG_CMD,
+	.ctx = &primary_cmd_ctx,
+	.summary = "Change the role of a node in a resource to primary." };
+
+const struct drbd_cmd attach_cmd = {
+	"attach", CTX_MINOR, DRBD_ADM_ATTACH, DRBD_NLA_DISK_CONF, F_CONFIG_CMD,
+	.drbd_args = (struct drbd_argument[]) {
+		{ "lower_dev", T_backing_dev, conv_block_dev },
+		{ "meta_data_dev", T_meta_dev, conv_block_dev },
+		{ "meta_data_index", T_meta_dev_idx, conv_md_idx },
+		{ } },
+	.ctx = &attach_cmd_ctx,
+	.summary = "Attach a lower-level device to an existing replicated device." };
+
 const struct drbd_cmd connect_cmd = {"connect", CTX_PEER_NODE,
 				     DRBD_ADM_CONNECT, DRBD_NLA_CONNECT_PARMS,
 				     F_CONFIG_CMD,
@@ -292,26 +307,42 @@ const struct drbd_cmd disconnect_cmd = {"disconnect", CTX_PEER_NODE,
 	.ctx = &disconnect_cmd_ctx,
 	.summary = "Unconnect from a peer host."};
 
+const struct drbd_cmd new_resource_cmd = {
+	"new-resource", CTX_RESOURCE, DRBD_ADM_NEW_RESOURCE, DRBD_NLA_RESOURCE_OPTS, F_CONFIG_CMD,
+	.drbd_args = (struct drbd_argument[]) {
+		{ "node_id", T_node_id, conv_u32 },
+		{ } },
+	.ctx = &resource_options_ctx,
+	.summary = "Create a new resource." };
+
+const struct drbd_cmd new_minor_cmd = {
+	"new-minor", CTX_RESOURCE | CTX_MINOR | CTX_VOLUME | CTX_MULTIPLE_ARGUMENTS,
+	DRBD_ADM_NEW_MINOR, DRBD_NLA_DEVICE_CONF,
+	F_CONFIG_CMD,
+	.ctx = &device_options_ctx,
+	.summary = "Create a new replicated device within a resource." };
+
+const struct drbd_cmd peer_device_options_cmd = {
+	"peer-device-options", CTX_PEER_DEVICE,
+	DRBD_ADM_CHG_PEER_DEVICE_OPTS, DRBD_NLA_PEER_DEVICE_OPTS, F_CONFIG_CMD,
+	.set_defaults = true,
+	.ctx = &peer_device_options_ctx,
+	.summary = "Change peer-device options." };
+
+const struct drbd_cmd show_gi_cmd = {
+	"show-gi", CTX_PEER_DEVICE, 0, NO_PAYLOAD, show_or_get_gi_cmd,
+	.lockless = true,
+	.summary = "Show the data generation identifiers for a device on a particular connection, with explanations." };
+
 const struct drbd_cmd *commands[] = {
-	&(struct drbd_cmd){"primary", CTX_RESOURCE, DRBD_ADM_PRIMARY, DRBD_NLA_SET_ROLE_PARMS,
-		F_CONFIG_CMD,
-	 .ctx = &primary_cmd_ctx,
-	 .summary = "Change the role of a node in a resource to primary." },
+	&primary_cmd,
 
 	&(struct drbd_cmd){"secondary", CTX_RESOURCE, DRBD_ADM_SECONDARY, DRBD_NLA_SET_ROLE_PARMS,
 		F_CONFIG_CMD,
 	 .ctx = &secondary_cmd_ctx,
 	 .summary = "Change the role of a node in a resource to secondary." },
 
-	&(struct drbd_cmd){"attach", CTX_MINOR, DRBD_ADM_ATTACH, DRBD_NLA_DISK_CONF,
-		F_CONFIG_CMD,
-	 .drbd_args = (struct drbd_argument[]) {
-		 { "lower_dev",		T_backing_dev,	conv_block_dev },
-		 { "meta_data_dev",	T_meta_dev,	conv_block_dev },
-		 { "meta_data_index",	T_meta_dev_idx,	conv_md_idx },
-		 { } },
-	 .ctx = &attach_cmd_ctx,
-	 .summary = "Attach a lower-level device to an existing replicated device." },
+	&attach_cmd,
 
 	&(struct drbd_cmd){"disk-options", CTX_MINOR, DRBD_ADM_CHG_DISK_OPTS, DRBD_NLA_DISK_CONF,
 		F_CONFIG_CMD,
@@ -348,11 +379,7 @@ const struct drbd_cmd *commands[] = {
 	 .ctx = &resource_options_ctx,
 	 .summary = "Change the resource options of an existing resource." },
 
-	&(struct drbd_cmd){"peer-device-options", CTX_PEER_DEVICE, DRBD_ADM_CHG_PEER_DEVICE_OPTS,
-		DRBD_NLA_PEER_DEVICE_OPTS, F_CONFIG_CMD,
-	 .set_defaults = true,
-	 .ctx = &peer_device_options_ctx,
-	 .summary = "Change peer-device options." },
+	&peer_device_options_cmd,
 
 	&(struct drbd_cmd){"new-current-uuid", CTX_MINOR, DRBD_ADM_NEW_C_UUID, DRBD_NLA_NEW_C_UUID_PARMS,
 		F_CONFIG_CMD,
@@ -394,9 +421,7 @@ const struct drbd_cmd *commands[] = {
 	&(struct drbd_cmd){"dstate", CTX_MINOR, 0, NO_PAYLOAD, dstate_cmd,
 	 .lockless = true,
 	 .summary = "Show the current disk state of a lower-level device." },
-	&(struct drbd_cmd){"show-gi", CTX_PEER_DEVICE, 0, NO_PAYLOAD, show_or_get_gi_cmd,
-	 .lockless = true,
-	 .summary = "Show the data generation identifiers for a device on a particular connection, with explanations." },
+	&show_gi_cmd,
 	&(struct drbd_cmd){"get-gi", CTX_PEER_DEVICE, 0, NO_PAYLOAD, show_or_get_gi_cmd,
 	 .lockless = true,
 	 .summary = "Show the data generation identifiers for a device on a particular connection." },
@@ -448,18 +473,8 @@ const struct drbd_cmd *commands[] = {
 	 .lockless = true,
 	 .summary = "Wait until all connections are establised." },
 
-	&(struct drbd_cmd){"new-resource", CTX_RESOURCE, DRBD_ADM_NEW_RESOURCE, DRBD_NLA_RESOURCE_OPTS, F_CONFIG_CMD,
-	 .drbd_args = (struct drbd_argument[]) {
-		 { "node_id",		T_node_id,	conv_u32 },
-		 { } },
-	 .ctx = &resource_options_ctx,
-	 .summary = "Create a new resource." },
-
-	&(struct drbd_cmd){"new-minor", CTX_RESOURCE | CTX_MINOR | CTX_VOLUME | CTX_MULTIPLE_ARGUMENTS,
-		DRBD_ADM_NEW_MINOR, DRBD_NLA_DEVICE_CONF,
-		F_CONFIG_CMD,
-	 .ctx = &device_options_ctx,
-	 .summary = "Create a new replicated device within a resource." },
+	&new_resource_cmd,
+	&new_minor_cmd,
 
 	&(struct drbd_cmd){"del-minor", CTX_MINOR, DRBD_ADM_DEL_MINOR, NO_PAYLOAD, del_minor_cmd,
 	 .summary = "Remove a replicated device." },
@@ -877,9 +892,9 @@ struct option *make_longoptions(const struct drbd_cmd *cm)
 				optional_argument : required_argument;
 			buffer[i].flag = NULL;
 			buffer[i].val = 0;
-			if (!strcmp(cm->cmd, "primary") && !strcmp(field->name, "force"))
+			if (cm == &primary_cmd && !strcmp(field->name, "force"))
 				primary_force_index = i;
-			if (!strcmp(cm->cmd, "connect") && !strcmp(field->name, "tentative"))
+			if (cm == &connect_cmd && !strcmp(field->name, "tentative"))
 				connect_tentative_index = i;
 			i++;
 		}
@@ -1137,7 +1152,7 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	for (i = optind, ad = cm->drbd_args; ad && ad->name; i++) {
 		if (argc < i + 1) {
 #ifdef WITH_84_SUPPORT
-			if (strcmp(cm->cmd, "new-resource") == 0 && strcmp(ad->name, "node_id") == 0) {
+			if (cm == &new_resource_cmd && strcmp(ad->name, "node_id") == 0) {
 				/* This is the "new-resource" command, and we are missing the node_id argument.
 				 * This might be the user trying to use the old drbd8-style command line syntax.
 				 * Set the node ID to the magic value (u32)-1 for now and tell the kernel that
@@ -1181,7 +1196,7 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		goto error;
 	}
 
-	if (strcmp(cm->cmd, "new-minor") == 0) {
+	if (cm == &new_minor_cmd) {
 /* HACK */
 /* hack around "sysfs: cannot create duplicate filename '/devices/virtual/bdi/147:0'"
  * and subsequent NULL deref in kernel below add_disk(). */
@@ -4254,7 +4269,7 @@ found:
 	for (; i >= 0; i--)
 		uuids[UI_HISTORY_START + i] =
 			((uint64_t *)device->statistics.history_uuids)[i];
-	if(!strcmp(cm->cmd, "show-gi"))
+	if (cm == &show_gi_cmd)
 		dt_pretty_print_v9_uuids(uuids, device->statistics.dev_disk_flags,
 					 peer_device->statistics.peer_dev_flags);
 	else
