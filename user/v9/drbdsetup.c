@@ -261,7 +261,11 @@ const struct drbd_cmd attach_cmd = {
 		{ "meta_data_index", T_meta_dev_idx, conv_md_idx },
 		{ } },
 	.ctx = &attach_cmd_ctx,
-	.summary = "Attach a lower-level device to an existing replicated device." };
+	.summary = "Attach a lower-level device to an existing replicated device.",
+#ifdef WITH_84_SUPPORT
+	.compat_84_fields = attach_compat_84_fields,
+#endif
+	};
 
 const struct drbd_cmd connect_cmd = {"connect", CTX_PEER_NODE,
 				     DRBD_ADM_CONNECT, DRBD_NLA_CONNECT_PARMS,
@@ -871,7 +875,7 @@ static int get_af_ssocks(int warn_and_use_default)
 	return af;
 }
 
-struct option *make_longoptions(const struct drbd_cmd *cm)
+struct option *make_longoptions(const struct drbd_cmd *cm, bool accept_84_compat)
 {
 	static struct option buffer[47];
 	int i = 0;
@@ -900,6 +904,22 @@ struct option *make_longoptions(const struct drbd_cmd *cm)
 		}
 		assert(field - cm->ctx->fields == i);
 	}
+
+#ifdef WITH_84_SUPPORT
+	if (accept_84_compat && cm->compat_84_fields) {
+		struct field_def *field;
+
+		for (field = cm->compat_84_fields; field->name; field++) {
+			assert(i < ARRAY_SIZE(buffer));
+			buffer[i].name = field->name;
+			buffer[i].has_arg = field->argument_is_optional ?
+				optional_argument : required_argument;
+			buffer[i].flag = NULL;
+			buffer[i].val = 0;
+			i++;
+		}
+	}
+#endif
 
 	if (cm->options) {
 		struct option *option;
@@ -1114,7 +1134,15 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 
 	nla = NULL;
 
-	options = make_longoptions(cm);
+#ifdef WITH_84_SUPPORT
+	if (cm == &attach_cmd) {
+		msg_free(smsg);
+		free(iov.iov_base);
+		return drbd8_compat_attach(argc, argv);
+	}
+#endif
+
+	options = make_longoptions(cm, false);
 	optind = 0;  /* reset getopt_long() */
 	for (;;) {
 		int idx;
@@ -1148,6 +1176,11 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 			goto error;
 		}
 	}
+
+#ifdef WITH_84_SUPPORT
+	if (cm == &new_minor_cmd)
+		drbd8_compat_new_minor(argv[optind + 0], argv[optind + 1], argv[optind + 2]);
+#endif
 
 	for (i = optind, ad = cm->drbd_args; ad && ad->name; i++) {
 		if (argc < i + 1) {
@@ -4726,7 +4759,8 @@ int drbdsetup_main(int argc, char **argv)
 			connect_options.rcvbuf_size = m_strtoll(val,1);
 	}
 
-	options = make_longoptions(cmd);
+	opterr = 0; /* omit messages on stderr by getopt_long() */
+	options = make_longoptions(cmd, true);
 	opts = make_optstring(options);
 	for (;;) {
 		c = getopt_long(argc, argv, opts, options, &longindex);

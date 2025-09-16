@@ -70,6 +70,9 @@ struct drbd_cmd {
 	bool lockless;
 	struct context_def *ctx;
 	const char *summary;
+#ifdef WITH_84_SUPPORT
+	struct field_def *compat_84_fields;
+#endif
 };
 
 enum {
@@ -147,6 +150,7 @@ extern bool opt_diff;
 extern bool opt_fullch;
 extern struct drbd_cfg_context global_ctx;
 extern enum cfg_ctx_key context;
+extern unsigned int minor;
 extern const struct drbd_cmd new_resource_cmd;
 extern const struct drbd_cmd new_minor_cmd;
 extern const struct drbd_cmd attach_cmd;
@@ -158,7 +162,7 @@ extern const struct drbd_cmd del_path_cmd;
 extern const struct drbd_cmd disconnect_cmd;
 extern const struct drbd_cmd peer_device_options_cmd;
 
-struct option *make_longoptions(const struct drbd_cmd *cm);
+struct option *make_longoptions(const struct drbd_cmd *cm, bool accept_84_compat);
 int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv);
 void print_command_usage(const struct drbd_cmd *cm, enum usage_type);
 int sockaddr_from_str(struct sockaddr_storage *storage, const char *str);
