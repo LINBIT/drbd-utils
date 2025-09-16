@@ -271,7 +271,11 @@ const struct drbd_cmd connect_cmd = {"connect", CTX_PEER_NODE,
 				     DRBD_ADM_CONNECT, DRBD_NLA_CONNECT_PARMS,
 				     F_CONFIG_CMD,
 	.ctx = &connect_cmd_ctx,
-	.summary = "Attempt to (re)establish a replication link to a peer host."};
+	.summary = "Attempt to (re)establish a replication link to a peer host.",
+#ifdef WITH_84_SUPPORT
+	.compat_84_fields = connect_compat_84_fields,
+#endif
+};
 
 const struct drbd_cmd new_peer_cmd = {"new-peer", CTX_PEER_NODE,
 				      DRBD_ADM_NEW_PEER, DRBD_NLA_NET_CONF,

@@ -1380,4 +1380,37 @@ struct field_def attach_compat_84_fields[] = {
 	{ "c-min-rate", NUMERIC(c_min_rate, C_MIN_RATE), .unit = "bytes/second" },
 	{ },
 };
+
+struct field_def connect_compat_84_fields[] = {
+	{ "protocol", ENUM_NOCASE(wire_protocol, PROTOCOL) },
+	{ "timeout", NUMERIC(timeout, TIMEOUT),.unit = "1/10 seconds" },
+	{ "max-epoch-size", NUMERIC(max_epoch_size, MAX_EPOCH_SIZE) },
+	{ "max-buffers", NUMERIC(max_buffers, MAX_BUFFERS) },
+	{ "connect-int", NUMERIC(connect_int, CONNECT_INT), .unit = "seconds" },
+	{ "ping-int", NUMERIC(ping_int, PING_INT), .unit = "seconds" },
+	{ "sndbuf-size", NUMERIC(sndbuf_size, SNDBUF_SIZE), .unit = "bytes" },
+	{ "rcvbuf-size", NUMERIC(rcvbuf_size, RCVBUF_SIZE), .unit = "bytes" },
+	{ "ko-count", NUMERIC(ko_count, KO_COUNT) },
+	{ "allow-two-primaries", BOOLEAN(two_primaries, ALLOW_TWO_PRIMARIES) },
+	{ "cram-hmac-alg", STRING(cram_hmac_alg) },
+	{ "shared-secret", STRING(shared_secret) },
+	{ "after-sb-0pri", ENUM(after_sb_0p, AFTER_SB_0P) },
+	{ "after-sb-1pri", ENUM(after_sb_1p, AFTER_SB_1P) },
+	{ "after-sb-2pri", ENUM(after_sb_2p, AFTER_SB_2P) },
+	{ "always-asbp", BOOLEAN(always_asbp, ALWAYS_ASBP) },
+	{ "rr-conflict", ENUM(rr_conflict, RR_CONFLICT) },
+	{ "ping-timeout", NUMERIC(ping_timeo, PING_TIMEO), .unit = "1/10 seconds" },
+	{ "data-integrity-alg", STRING(integrity_alg) },
+	{ "tcp-cork", BOOLEAN(tcp_cork, TCP_CORK) },
+	{ "on-congestion", ENUM(on_congestion, ON_CONGESTION) },
+	{ "congestion-fill", NUMERIC(cong_fill, CONG_FILL), .unit = "bytes" },
+	{ "congestion-extents", NUMERIC(cong_extents, CONG_EXTENTS) },
+	{ "csums-alg", STRING(csums_alg) },
+	{ "csums-after-crash-only", BOOLEAN(csums_after_crash_only, CSUMS_AFTER_CRASH_ONLY) },
+	{ "verify-alg", STRING(verify_alg) },
+	{ "use-rle", BOOLEAN(use_rle, USE_RLE) },
+	{ "socket-check-timeout", NUMERIC(sock_check_timeo, SOCKET_CHECK_TIMEO) },
+	{ },
+};
+
 #endif
