@@ -140,6 +140,7 @@ static struct d_host_info *find_host_info_by_address(struct d_resource* res, str
 	return NULL;
 }
 
+/* This should be in sync with drbdsetup_compat84.c: compare_addr() */
 static bool generate_implicit_node_id(int *addr_hash, struct d_host_info **host_info_array)
 {
 	if (addr_hash[0] > addr_hash[1]) {

@@ -30,6 +30,7 @@
 #include <sys/types.h>
 #include <dirent.h>
 
+#include "drbdtool_common.h"
 #include "drbdsetup.h"
 #include "path.h"
 
@@ -43,42 +44,23 @@ enum c84_ctx_key {
 static bool load_opts(int *argc, char **argv, const struct drbd_cmd *cmd, enum c84_ctx_key key);
 
 /*
- * Compare two sockaddr_storage structures.
- * Returns -1 if a_sockaddr < b_sockaddr, 0 if equal, 1 if a_sockaddr > b_sockaddr.
- * Compares the address family first, then the address, and finally the port.
+ * This heuristic needs to be in sync with generate_implicit_node_id()
+ * in drbdadm_postparse.c.
+ * The side with the greater hash value gets node id 0.
  */
-static int compare_sockaddr(struct sockaddr_storage *a_sockaddr,
-							struct sockaddr_storage *b_sockaddr)
+static int compare_addr(const char *my_addr, const char *peer_addr)
 {
-	if (a_sockaddr->ss_family < b_sockaddr->ss_family)
-		return -1;
-	if (a_sockaddr->ss_family > b_sockaddr->ss_family)
-		return 1;
-	if (a_sockaddr->ss_family == AF_INET) {
-		struct sockaddr_in *a4_sockaddr = (struct sockaddr_in *)a_sockaddr;
-		struct sockaddr_in *b4_sockaddr = (struct sockaddr_in *)b_sockaddr;
-		int cmp = memcmp(&a4_sockaddr->sin_addr, &b4_sockaddr->sin_addr, sizeof(struct in_addr));
-		if (cmp)
-			return cmp;
-		if (a4_sockaddr->sin_port < b4_sockaddr->sin_port)
-			return -1;
-		if (a4_sockaddr->sin_port > b4_sockaddr->sin_port)
-			return 1;
-		return 0;
-	} else if (a_sockaddr->ss_family == AF_INET6) {
-		struct sockaddr_in6 *a6_sockaddr = (struct sockaddr_in6 *)a_sockaddr;
-		struct sockaddr_in6 *b6_sockaddr = (struct sockaddr_in6 *)b_sockaddr;
-		int cmp = memcmp(&a6_sockaddr->sin6_addr, &b6_sockaddr->sin6_addr, sizeof(struct in6_addr));
-		if (!cmp)
-			return cmp;
-		if (a6_sockaddr->sin6_port < b6_sockaddr->sin6_port)
-			return -1;
-		if (a6_sockaddr->sin6_port > b6_sockaddr->sin6_port)
-			return 1;
-		return 0;
+	int my_hash, peer_hash;
+
+	my_hash = crc32c(0x1a656f21, (void *)my_addr, strlen(my_addr));
+	peer_hash = crc32c(0x1a656f21, (void *)peer_addr, strlen(peer_addr));
+
+	if (my_hash == peer_hash) {
+		fprintf(stderr, "my and peer addr produce the same hash!\n");
+		exit(20);
 	}
 
-	exit(20);
+	return my_hash > peer_hash;
 }
 
 static void drbd8_compat_relevant_opts(const struct drbd_cmd *cm, char **argv_in,
@@ -250,13 +232,7 @@ static int drbd8_compat_get_my_node_id(int argc, char **argv, const char **my_ad
 	x = (struct sockaddr_storage *) &global_ctx.ctx_peer_addr;
 	global_ctx.ctx_peer_addr_len = sockaddr_from_str(x, *peer_addr);
 
-	/* compare */
-	int cmp = compare_sockaddr((struct sockaddr_storage *) &global_ctx.ctx_my_addr,
-							   (struct sockaddr_storage *) &global_ctx.ctx_peer_addr);
-	assert(cmp != 0); /* addresses cannot be equal */
-
-	/* the lower address gets ID 0 */
-	return cmp == -1 ? 0 : 1;
+	return compare_addr(*my_addr, *peer_addr);
 }
 
 /*
