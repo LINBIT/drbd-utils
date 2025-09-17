@@ -2436,6 +2436,35 @@ static void show_volume(struct devices_list *device)
 	printI("}\n"); /* close volume */
 }
 
+#ifdef WITH_84_SUPPORT
+static struct context_def *resource_options_compat_84()
+{
+	static struct context_def *res_opt_84_ctx = NULL;
+	struct field_def *field;
+	size_t size;
+	int nr = 1;
+
+	if (res_opt_84_ctx)
+		return res_opt_84_ctx;
+
+	for (field = resource_options_ctx.fields; field->name; field++)
+		nr++;
+
+	size = sizeof(struct context_def) + sizeof(struct field_def) * nr;
+	res_opt_84_ctx = malloc(size);
+	memcpy(res_opt_84_ctx, &resource_options_ctx, size);
+	for (field = res_opt_84_ctx->fields; field->name; field++) {
+		if (field->nla_type == T_auto_promote) {
+			field->u.b.def = 0;
+			break;
+		}
+	}
+
+	return res_opt_84_ctx;
+}
+#endif
+
+
 static void show_resource_list(struct resources_list *resources_list, char* old_objname)
 {
 	struct resources_list *resource;
@@ -2447,7 +2476,7 @@ static void show_resource_list(struct resources_list *resources_list, char* old_
 		struct devices_list *devices, *device;
 		struct connections_list *connections, *connection;
 		struct peer_devices_list *peer_devices = NULL;
-
+		struct context_def *res_opts_def = &resource_options_ctx;
 		struct nlattr *nla;
 
 		if (strcmp(old_objname, "all") && strcmp(old_objname, resource->name))
@@ -2463,7 +2492,17 @@ static void show_resource_list(struct resources_list *resources_list, char* old_
 		printI("resource \"%s\" {\n", resource->name);
 		++indent;
 
-		print_options(resource->res_opts, &resource_options_ctx, "options");
+#ifdef WITH_84_SUPPORT
+		nla = nla_find_nested(resource->res_opts, __nla_type(T_drbd8_compat_mode));
+		if (nla && *(uint8_t *)nla_data(nla)) {
+			printI("# This resource is in drbd-8.4 compatibility mode!\n");
+
+			/* hiding that the kernel driver disabled autopromote,
+			 * by setting the default value to no/0. */
+			res_opts_def = resource_options_compat_84();
+		}
+#endif
+		print_options(resource->res_opts, res_opts_def, "options");
 
 		printI("_this_host {\n");
 		++indent;
