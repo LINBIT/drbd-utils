@@ -3156,6 +3156,48 @@ char *canonify_path(const char *path)
 	return abs_path;
 }
 
+static char *slurp_proc_drbd()
+{
+	const int SLURP_SIZE = 4096;
+	char *buffer;
+	int rr, fd;
+
+	fd = open("/proc/drbd",O_RDONLY);
+	if (fd == -1)
+		return NULL;
+
+	buffer = malloc(SLURP_SIZE);
+	if(!buffer)
+		goto fail;
+
+	rr = read(fd, buffer, SLURP_SIZE-1);
+	if (rr == -1) {
+		free(buffer);
+		buffer = NULL;
+		goto fail;
+	}
+
+	buffer[rr]=0;
+fail:
+	close(fd);
+
+	return buffer;
+}
+
+const bool drbd9_with_84_compat(void)
+{
+	char *version_txt;
+	bool rv;
+
+	version_txt = slurp_proc_drbd();
+	if (!version_txt)
+		return false;
+	rv = strstr(version_txt, "version: 9") &&
+		strstr(version_txt, "(compat 8.4)");
+	free(version_txt);
+	return rv;
+}
+
 void assign_command_names_from_argv0(char **argv)
 {
 	struct cmd_helper {
@@ -3169,6 +3211,9 @@ void assign_command_names_from_argv0(char **argv)
 		{NULL, NULL}
 	};
 	struct cmd_helper *c;
+
+	if (drbd9_with_84_compat())
+		helpers[0].name = "drbdsetup";
 
 	/* in case drbdadm is called with an absolute or relative pathname
 	 * look for the drbdsetup binary in the same location,
