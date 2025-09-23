@@ -361,6 +361,11 @@ struct cfg_ctx {
 	const struct adm_cmd *cmd;
 };
 
+enum cfg_version {
+	CV_IS_V9,
+	CV_IS_V8,
+	CV_AMBIGOUS
+};
 
 extern char *canonify_path(const char *path);
 extern int pushd(const char *path);
@@ -417,7 +422,7 @@ void cancel_deferred_cmd(struct deferred_cmd *d);
 void cancel_deferred_waits(const struct d_resource *res);
 const struct adm_cmd *deferred_cmd(const struct deferred_cmd *dcmd);
 
-extern void maybe_exec_legacy_drbdadm(char **argv);
+extern void exec_legacy_drbdadm(char **argv);
 extern void uc_node(enum usage_count_type type);
 extern int have_ip(const char *af, const char *ip);
 extern void free_opt(struct d_option *item);
@@ -488,6 +493,7 @@ extern char* drbdadm_84;
 extern char ss_buffer[1024];
 extern const char *hostname;
 extern struct names backend_options;
+extern enum cfg_version config_version;
 
 /* ssprintf() places the result of the printf in the current stack
    frame and sets ptr to the resulting string. If the current stack

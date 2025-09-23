@@ -61,24 +61,18 @@ struct node_info_od {
 } __packed;
 
 
-
-void maybe_exec_legacy_drbdadm(char **argv)
+void exec_legacy_drbdadm(char **argv)
 {
-	const struct version *driver_version = drbd_driver_version(FALLBACK_TO_UTILS);
-
-	if (driver_version->version.major == 8 &&
-	    driver_version->version.minor == 4) {
 #ifdef DRBD_LEGACY_84
-		/* This drbdadm warned already... */
-		setenv("DRBD_DONT_WARN_ON_VERSION_MISMATCH", "1", 0);
-		add_lib_drbd_to_path();
-		execvp(drbdadm_84, argv);
-		log_err("execvp() failed to exec %s: %m\n", drbdadm_84);
+	/* This drbdadm warned already... */
+	setenv("DRBD_DONT_WARN_ON_VERSION_MISMATCH", "1", 0);
+	add_lib_drbd_to_path();
+	execvp(drbdadm_84, argv);
+	log_err("execvp() failed to exec %s: %m\n", drbdadm_84);
 #else
-		config_help_legacy("drbdadm", driver_version);
+	config_help_legacy("drbdadm", driver_version);
 #endif
-		exit(E_EXEC_ERROR);
-	}
+	exit(E_EXEC_ERROR);
 }
 
 static char *vcs_to_str(struct version *rev)

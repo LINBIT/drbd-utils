@@ -82,6 +82,7 @@ struct version {
 		unsigned major, minor, sublvl;
 	} version;
 	unsigned version_code;
+	bool compat_84_present;
 };
 
 /* Windows km/miniport.h has a #define STRICT */

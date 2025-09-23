@@ -220,6 +220,7 @@ int adjust_with_progress = 0;
 bool help;
 int do_verify_ips = 0;
 int do_register = 1;
+enum cfg_version config_version = CV_AMBIGOUS;
 /* if we want to adjust more than one resource,
  * instead of iteratively calling "drbdsetup show" for each of them,
  * call "drbdsetup show" once for all of them. */
@@ -3614,6 +3615,7 @@ void die_if_no_resources(void)
 
 int main(int argc, char **argv)
 {
+	const struct version *driver_version = drbd_driver_version(STRICT);
 	size_t i;
 	int rv = 0, r;
 	struct adm_cmd *cmd = NULL;
@@ -3653,7 +3655,9 @@ int main(int argc, char **argv)
 		exit(E_EXEC_ERROR);
 	}
 
-	maybe_exec_legacy_drbdadm(argv);
+	if (driver_version &&
+	    driver_version->version.major == 8 && driver_version->version.minor == 4)
+		exec_legacy_drbdadm(argv);
 
 	recognize_all_drbdsetup_options();
 	rv = parse_options(argc, argv, &cmd, &resource_names);
@@ -3712,6 +3716,9 @@ int main(int argc, char **argv)
 		exit(E_CONFIG_INVALID);
 
 	post_parse(&config, cmd->is_proxy_cmd ? MATCH_ON_PROXY : 0);
+
+	if (config_version == CV_IS_V8 && driver_version && driver_version->compat_84_present)
+		exec_legacy_drbdadm(argv);
 
 	if (!is_dump || dry_run || verbose)
 		expand_common();

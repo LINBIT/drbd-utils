@@ -1209,6 +1209,8 @@ static void parse_host_section(struct d_resource *res,
 				check_upr("node-id statement", "%s:%s:node-id", res->name, h->name);
 			check_upr("node-id", "%s:%s", res->name, host->node_id);
 			EXP(';');
+			if (config_version == CV_AMBIGOUS)
+				config_version = CV_IS_V9;
 			break;
 		case TK_OPTIONS:
 			EXP('{');
@@ -1303,6 +1305,8 @@ void parse_stacked_section(struct d_resource* res)
 				check_upr("node-id statement", "%s:%s:node-id", res->name, h->name);
 			check_upr("node-id", "%s:%s", res->name, host->node_id);
 			EXP(';');
+			if (config_version == CV_AMBIGOUS)
+				config_version = CV_IS_V9;
 			break;
 		case '}':
 			goto break_loop;
@@ -1883,12 +1887,18 @@ struct d_resource* parse_resource(char* res_name, enum pr_flags flags)
 			break;
 		case TK_CONNECTION:
 			insert_tail(&res->connections, parse_connection(flags));
+			if (config_version == CV_AMBIGOUS)
+				config_version = CV_IS_V9;
 			break;
 		case TK_CONNECTION_MESH:
 			parse_connection_mesh(res, flags);
+			if (config_version == CV_AMBIGOUS)
+				config_version = CV_IS_V9;
 			break;
 		case TK_TEMPLATE_FILE:
 			res->template = template_file(res_name);
+			if (config_version == CV_AMBIGOUS)
+				config_version = CV_IS_V9;
 			break;
 		case TK_SKIP:
 			parse_skip();
@@ -2184,6 +2194,8 @@ void my_parse(void)
 			EXP(TK_KMODVERS);
 			EXP(';');
 			validate_kmod(token);
+			if (config_version == CV_AMBIGOUS)
+				config_version = CV_IS_V9;
 			break;
 		case 0:
 			return;
