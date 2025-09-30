@@ -919,7 +919,7 @@ struct option *make_longoptions(const struct drbd_cmd *cm, bool accept_84_compat
 			buffer[i].has_arg = field->argument_is_optional ?
 				optional_argument : required_argument;
 			buffer[i].flag = NULL;
-			buffer[i].val = 0;
+			buffer[i].val = OPT_COMPAT84;
 			i++;
 		}
 	}
@@ -1154,7 +1154,7 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		c = getopt_long(argc, argv, "(", options, &idx);
 		if (c == -1)
 			break;
-		if (c >= OPT_ALT_BASE) {
+		if (c >= OPT_ALT_BASE && c != OPT_COMPAT84) {
 			/* This is a field alias. */
 			idx = c - OPT_ALT_BASE;
 			c = 0;

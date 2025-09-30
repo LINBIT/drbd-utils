@@ -70,7 +70,7 @@ static void drbd8_compat_relevant_opts(const struct drbd_cmd *cm, char **argv_in
 	char *arg;
 	int c;
 
-	options = make_longoptions(cm, false);
+	options = make_longoptions(cm, true);
 	optind = 0;
 	for (;;) {
 		int idx;
@@ -78,7 +78,13 @@ static void drbd8_compat_relevant_opts(const struct drbd_cmd *cm, char **argv_in
 		c = getopt_long(argc_in, argv_in, "(", options, &idx);
 		if (c == -1)
 			break;
-		if (c >= OPT_ALT_BASE || c == 0) {
+		if ((c >= OPT_ALT_BASE && c != OPT_COMPAT84) || c == 0) {
+			if (optarg == argv_in[optind - 1]) {
+				/* If it is "--opt val", copy the "--opt" first */
+				arg = argv_in[optind - 2];
+				args_out[(*argc)++] = arg;
+			}
+			/* This is the "val" or "--opt=val" */
 			arg = argv_in[optind - 1];
 			args_out[(*argc)++] = arg;
 		}
@@ -416,7 +422,7 @@ int drbd8_compat_attach(int argc_in, char **argv_in)
 	static struct drbd_cmd attach_cmd_no_recursion;
 	static bool initialized = false;
 	char *attach_args[20];
-	int argc = 0;
+	int argc = 4; /* placing the options behind the fixed position args */
 
 	if (!initialized) {
 		attach_cmd_no_recursion = attach_cmd;
@@ -426,12 +432,12 @@ int drbd8_compat_attach(int argc_in, char **argv_in)
 	store_opts(argc_in, argv_in, &peer_device_options_cmd, CCTX_MINOR);
 	store_opts(argc_in, argv_in, &new_peer_cmd, CCTX_RES_VIA_MINOR);
 
-	attach_args[argc++] = (char *)attach_cmd.cmd;
-	attach_args[argc++] = (char *)argv_in[optind + 0]; /* lower_dev */
-	attach_args[argc++] = (char *)argv_in[optind + 1]; /* meta_data_dev */
-	attach_args[argc++] = (char *)argv_in[optind + 2]; /* meta_data_index */
-
 	drbd8_compat_relevant_opts(&attach_cmd, argv_in, argc_in, attach_args, &argc);
+
+	attach_args[0] = (char *)attach_cmd.cmd;
+	attach_args[1] = (char *)argv_in[optind + 0]; /* lower_dev */
+	attach_args[2] = (char *)argv_in[optind + 1]; /* meta_data_dev */
+	attach_args[3] = (char *)argv_in[optind + 2]; /* meta_data_index */
 
 	return _generic_config_cmd(&attach_cmd_no_recursion, argc, attach_args);
 }

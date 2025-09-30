@@ -30,6 +30,9 @@
  */
 #define OPT_ALT_BASE 1000
 
+/* In the 8.4 time the command understood this option. */
+#define OPT_COMPAT84 2000
+
 
 struct drbd_argument {
 	const char* name;
