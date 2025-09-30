@@ -59,6 +59,7 @@ struct vcs_rel {
 	struct {
 		unsigned major, minor, sublvl;
 	} version;
+	bool compat_84_present;
 	unsigned version_code;
 };
 
@@ -133,6 +134,9 @@ void vcs_ver_from_str(struct vcs_rel *rel, const char *token)
 	if (*dot != 0)
 		return;
 	*/
+
+	if (strstr(dot, "(compat 8.4)"))
+		rel->compat_84_present = true;
 
 	rel->version.major = maj;
 	rel->version.minor = min;
@@ -237,15 +241,14 @@ static int vcs_eq(struct vcs_rel *rev1, struct vcs_rel *rev2)
 	}
 }
 
-static int vcs_ver_cmp(struct vcs_rel *rev1, struct vcs_rel *rev2)
+bool drbd_compat_84_present(void)
 {
-	return rev1->version_code - rev2->version_code;
+	return version_code_kernel() && current_vcs_rel.compat_84_present;
 }
 
 void warn_on_version_mismatch(void)
 {
 	char *msg;
-	int cmp;
 
 	/* get the kernel module version from /proc/drbd */
 	vcs_get_current();
@@ -253,24 +256,32 @@ void warn_on_version_mismatch(void)
 	/* get the userland version from PACKAGE_VERSION */
 	vcs_get_userland();
 
-	cmp = vcs_ver_cmp(&userland_version, &current_vcs_rel);
-	/* no message if equal */
-	if (cmp == 0)
+	if (getenv("DRBD_DONT_WARN_ON_VERSION_MISMATCH"))
 		return;
-	if (cmp > 0xffff || cmp < -0xffff)	 /* major version differs! */
-		msg = "mixing different major numbers will not work!";
-	else if (cmp < 0)		/* userland is older. always warn. */
-		msg = "you should upgrade your drbd tools!";
-	else if (cmp & 0xff00)		/* userland is newer minor version */
-		msg = "please don't mix different DRBD series.";
-	else		/* userland is newer, but only differ in sublevel. */
-		msg = "preferably kernel and userland versions should match.";
 
-	fprintf(stderr, "DRBD module version: %u.%u.%u\n"
+	/* This binary is the compat "drbdadm 8.4",
+	 * even if the utils version is >= 9.
+	 */
+	if (!current_vcs_rel.version_code) {
+		msg = "Maybe load the DRBD driver first.\n";
+	} else if (current_vcs_rel.version.major > 8) {
+		if (!current_vcs_rel.compat_84_present) {
+			msg = "Compat 8.4 not enabled in kernel, this will not work.";
+		} else {
+			msg = "Using compat 8.4 mode.";
+		}
+	} else if (current_vcs_rel.version.major < 8) {
+		msg = "Kernel version too old for these utils!";
+	} else if (current_vcs_rel.version.minor != 4) {
+		msg = "Unexpected kernel version.";
+	}
+
+	fprintf(stderr, "DRBD module version: %u.%u.%u%s\n"
 			"   userland version: %u.%u.%u\n%s\n",
 			current_vcs_rel.version.major,
 			current_vcs_rel.version.minor,
 			current_vcs_rel.version.sublvl,
+			current_vcs_rel.compat_84_present ? " (compat 8.4)" : "",
 			userland_version.version.major,
 			userland_version.version.minor,
 			userland_version.version.sublvl,

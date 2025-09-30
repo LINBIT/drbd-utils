@@ -43,8 +43,6 @@ const struct version *get_drbd_driver_version(void)
 	version_txt = slurp_proc_drbd();
 	if (version_txt) {
 		parse_version(&__drbd_driver_version, version_txt);
-		if (strstr(version_txt, "(compat 8.4)"))
-			__drbd_driver_version.compat_84_present = true;
 		free(version_txt);
 		return &__drbd_driver_version;
 	} else {

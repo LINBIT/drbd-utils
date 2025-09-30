@@ -3156,48 +3156,6 @@ char *canonify_path(const char *path)
 	return abs_path;
 }
 
-static char *slurp_proc_drbd()
-{
-	const int SLURP_SIZE = 4096;
-	char *buffer;
-	int rr, fd;
-
-	fd = open("/proc/drbd",O_RDONLY);
-	if (fd == -1)
-		return NULL;
-
-	buffer = malloc(SLURP_SIZE);
-	if(!buffer)
-		goto fail;
-
-	rr = read(fd, buffer, SLURP_SIZE-1);
-	if (rr == -1) {
-		free(buffer);
-		buffer = NULL;
-		goto fail;
-	}
-
-	buffer[rr]=0;
-fail:
-	close(fd);
-
-	return buffer;
-}
-
-const bool drbd9_with_84_compat(void)
-{
-	char *version_txt;
-	bool rv;
-
-	version_txt = slurp_proc_drbd();
-	if (!version_txt)
-		return false;
-	rv = strstr(version_txt, "version: 9") &&
-		strstr(version_txt, "(compat 8.4)");
-	free(version_txt);
-	return rv;
-}
-
 void assign_command_names_from_argv0(char **argv)
 {
 	struct cmd_helper {
@@ -3212,7 +3170,7 @@ void assign_command_names_from_argv0(char **argv)
 	};
 	struct cmd_helper *c;
 
-	if (drbd9_with_84_compat())
+	if (drbd_compat_84_present())
 		helpers[0].name = "drbdsetup";
 
 	/* in case drbdadm is called with an absolute or relative pathname
@@ -3678,15 +3636,13 @@ int main(int argc, char **argv)
 		    nodeinfo.nodename);
 	}
 
+	warn_on_version_mismatch();
 	assign_command_names_from_argv0(argv);
 
 	if (drbdsetup == NULL || drbdmeta == NULL || drbd_proxy_ctl == NULL) {
 		log_err("could not strdup argv[0].\n");
 		exit(E_EXEC_ERROR);
 	}
-
-	if (!getenv("DRBD_DONT_WARN_ON_VERSION_MISMATCH"))
-		warn_on_version_mismatch();
 
 	recognize_all_drbdsetup_options();
 	rv = parse_options(argc, argv, &cmd, &resource_names);

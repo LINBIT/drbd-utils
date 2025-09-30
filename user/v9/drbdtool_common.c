@@ -171,6 +171,9 @@ void version_from_str(struct version *rel, const char *token)
 		return;
 	*/
 
+	if (strstr(dot, "(compat 8.4)"))
+		rel->compat_84_present = true;
+
 	rel->version.major = maj;
 	rel->version.minor = min;
 	rel->version.sublvl = sub;
