@@ -477,8 +477,11 @@ void drbd8_compat_new_minor(const char *resname, const char *minor_str, const ch
 	snprintf(link, 50, "%s/compat-84/minor-%d", drbd_run_dir(), minor);
 	snprintf(path, 200, "res-%s/vol-%d", resname, vol);
 	r = readlink(link, existing_link_target, 50);
-	if (r > 0 && strncmp(path, existing_link_target, r) == 0)
-		return;
+	if (r > 0) {
+		if (strncmp(path, existing_link_target, r) == 0)
+			return;
+		unlink(link);
+	}
 	err = symlink(path, link);
 	if (err) {
 		fprintf(stderr, "Failed to create symlink '%s' with %s (%d)\n",
