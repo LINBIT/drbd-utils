@@ -943,7 +943,7 @@ struct option *make_longoptions(const struct drbd_cmd *cm, bool accept_84_compat
 		assert(i < ARRAY_SIZE(buffer));
 		buffer[i] = buffer[primary_force_index];
 		buffer[i].name = "overwrite-data-of-peer";
-		buffer[i].val = 1000 + primary_force_index;
+		buffer[i].val = OPT_ALT_BASE + primary_force_index;
 		i++;
 	}
 
@@ -955,7 +955,7 @@ struct option *make_longoptions(const struct drbd_cmd *cm, bool accept_84_compat
 		assert(i < ARRAY_SIZE(buffer));
 		buffer[i] = buffer[connect_tentative_index];
 		buffer[i].name = "dry-run";
-		buffer[i].val = 1000 + connect_tentative_index;
+		buffer[i].val = OPT_ALT_BASE + connect_tentative_index;
 		i++;
 	}
 
@@ -1154,9 +1154,9 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		c = getopt_long(argc, argv, "(", options, &idx);
 		if (c == -1)
 			break;
-		if (c >= 1000) {
+		if (c >= OPT_ALT_BASE) {
 			/* This is a field alias. */
-			idx = c - 1000;
+			idx = c - OPT_ALT_BASE;
 			c = 0;
 		}
 		if (c == 0) {

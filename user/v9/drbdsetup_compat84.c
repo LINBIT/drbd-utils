@@ -78,7 +78,7 @@ static void drbd8_compat_relevant_opts(const struct drbd_cmd *cm, char **argv_in
 		c = getopt_long(argc_in, argv_in, "(", options, &idx);
 		if (c == -1)
 			break;
-		if (c >= 1000 || c == 0) {
+		if (c >= OPT_ALT_BASE || c == 0) {
 			arg = argv_in[optind - 1];
 			args_out[(*argc)++] = arg;
 		}

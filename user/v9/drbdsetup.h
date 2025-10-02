@@ -24,6 +24,13 @@
 /* same for DEV_IS_OPEN */
 #define DEV_IS_OPEN_UNKNOWN 3
 
+
+/* Used as base value, for getopt_long()'s options to express
+ * old, alternate names for options.
+ */
+#define OPT_ALT_BASE 1000
+
+
 struct drbd_argument {
 	const char* name;
 	__u16 nla_type;
