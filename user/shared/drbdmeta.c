@@ -895,13 +895,9 @@ struct meta_cmd cmds[] = {
 #define PREAD(cfg,b,c,d) pread_or_die((cfg),(b),(c),(d), __func__ )
 #define PWRITE(cfg,b,c,d) pwrite_or_die((cfg),(b),(c),(d), __func__ )
 
-	/* Defined somewhere in Windows headers. */
-#ifdef min
-#undef min
-#endif
-
-#define min(x,y) ((x) < (y) ? (x) : (y))
-#define min3(x,y,z) (min(min(x,y),z))
+/* min may be defined already */
+#define min_(x,y) ((x) < (y) ? (x) : (y))
+#define min3(x,y,z) (min_(min_(x,y),z))
 
 void validate_offsets_or_die(struct format *cfg, size_t count, off_t offset, const char* tag)
 {
@@ -1328,8 +1324,9 @@ static uint64_t max_usable_sectors(struct format *cfg)
 			* cfg->md.bm_bytes_per_bit
 			/ 512;	/* and back to sectors */;
 	}
-#undef min
 }
+#undef min3
+#undef min_
 
 void re_initialize_md_offsets(struct format *cfg)
 {
