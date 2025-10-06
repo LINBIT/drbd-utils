@@ -39,13 +39,18 @@ doc-clean: distclean
 .SUFFIXES: .sgml .5 .8 .html .pdf .ps
 
 ifeq ($(WITH_PREBUILTMAN),yes)
-%.5 %.7 %.8:
-	test -f $@
+%.5:; test -f $@
+%.7:; test -f $@
+%.8:; test -f $@
 else
-%.5 %.7 %.8: %.xml
+define xml_to_man
 	$(XSLTPROC) \
 	$(XSLTPROC_MANPAGES_OPTIONS) \
 	$(MANPAGES_STYLESHEET) $<
+endef
+%.5: %.xml; $(xml_to_man)
+%.7: %.xml; $(xml_to_man)
+%.8: %.xml; $(xml_to_man)
 
 ASCIIDOCTOR  = asciidoctor -I. -rasciidoctor-extensions.rb
 ASCIIDOC_ARGS = -d manpage -b docbook
