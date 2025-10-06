@@ -82,6 +82,8 @@ int     option_node_id = -1;
 unsigned option_al_stripes = 1;
 unsigned option_al_stripe_size_4k = 8;
 unsigned option_al_stripes_used = 0;
+unsigned option_bm_block_size = 0;
+const char *option_bm_block_size_str = NULL;
 uint64_t option_effective_size = 0;
 uint64_t option_diskful_peer_mask = 0;
 
@@ -120,6 +122,7 @@ struct option metaopt[] = {
     { "diskful-peers",  required_argument, NULL, 'D' },
     { "al-stripes",  required_argument, NULL, 's' },
     { "al-stripe-size-kB",  required_argument, NULL, 'z' },
+    { "bitmap-block-size",  required_argument, NULL, 'B' },
     { "initialize-bitmap",  required_argument, NULL, 'b' },
     { "output-format",  required_argument, NULL, 'o' },
     { NULL,     0,              0, 0 },
@@ -219,7 +222,7 @@ bool confirmed(const char *text)
 #define MD_BM_MAX_BYTE_FLEX    ( (uint64_t)(1ULL << (38-3)) )
 #endif
 
-#define DEFAULT_BM_BLOCK_SIZE  (1<<12)
+#define DEFAULT_BM_BLOCK_SIZE  BM_BLOCK_SIZE_4k
 
 #define DRBD_MD_MAGIC_06   (DRBD_MAGIC+2)
 #define DRBD_MD_MAGIC_07   (DRBD_MAGIC+3)
@@ -320,7 +323,7 @@ void md_disk_07_to_cpu(struct md_cpu *cpu, const struct md_on_disk_07 *disk)
 	cpu->al_offset = be32_to_cpu(disk->al_offset.be);
 	cpu->al_nr_extents = be32_to_cpu(disk->al_nr_extents.be);
 	cpu->bm_offset = be32_to_cpu(disk->bm_offset.be);
-	cpu->bm_bytes_per_bit = DEFAULT_BM_BLOCK_SIZE;
+	cpu->bm_bytes_per_bit = BM_BLOCK_SIZE_4k;
 	cpu->max_peers = 1;
 	cpu->al_stripes = 1;
 	cpu->al_stripe_size_4k = 8;
@@ -417,7 +420,8 @@ int is_valid_md(enum md_format f,
 		if (md->md_size_sect != md_size_sect) {
 			fprintf(stderr, "strange md_size_sect %u (expected: "U64")\n",
 					md->md_size_sect, md_size_sect);
-			if (f == DRBD_V08) return 0;
+			if (f != DRBD_V07)
+				return 0;
 			/* else not an error,
 			 * was inconsistently implemented in v07 */
 		}
@@ -1315,7 +1319,14 @@ static uint64_t max_usable_sectors(struct format *cfg)
 		 * we are limited by available on-disk bitmap space.
 		 * Ok, and by the lower level storage device;
 		 * which we don't know about here :-( */
-		ASSERT(cfg->md.bm_bytes_per_bit == 4096);
+		if (format_version(cfg) < DRBD_V09
+		|| cfg->md_index >= 0) {
+			ASSERT(cfg->md.bm_bytes_per_bit == BM_BLOCK_SIZE_4k);
+		} else {
+			ASSERT(is_power_of_2(cfg->md.bm_bytes_per_bit));
+			ASSERT(cfg->md.bm_bytes_per_bit >= BM_BLOCK_SIZE_MIN);
+			ASSERT(cfg->md.bm_bytes_per_bit <= BM_BLOCK_SIZE_MAX);
+		}
 
 		return
 			/* bitmap sectors */
@@ -1341,7 +1352,7 @@ void re_initialize_md_offsets(struct format *cfg)
 
 	/* These two are needed for bm_bytes()... Ensure sane defaults... */
 	if (cfg->md.bm_bytes_per_bit == 0)
-		cfg->md.bm_bytes_per_bit = DEFAULT_BM_BLOCK_SIZE;
+		cfg->md.bm_bytes_per_bit = option_bm_block_size ?: DEFAULT_BM_BLOCK_SIZE;
 	if (cfg->md.max_peers == 0)
 		cfg->md.max_peers = 1;
 
@@ -1398,6 +1409,7 @@ void re_initialize_md_offsets(struct format *cfg)
 		fprintf(stderr,"md_size_sect: "U32"\n", cfg->md.md_size_sect);
 		fprintf(stderr,"max_usable_sect: "U64"\n", cfg->max_usable_sect);
 		fprintf(stderr,"bm_bytes: "U64"\n", cfg->bm_bytes);
+		fprintf(stderr,"bm_block_size: "U32"\n", cfg->md.bm_bytes_per_bit);
 	}
 }
 
@@ -1503,7 +1515,7 @@ static void initialize_bitmap(struct format *cfg)
 int md_initialize_common(struct format *cfg, int do_disk_writes)
 {
 	cfg->md.al_nr_extents = 257;	/* arbitrary. */
-	cfg->md.bm_bytes_per_bit = DEFAULT_BM_BLOCK_SIZE;
+	cfg->md.bm_bytes_per_bit = 0;   /* re_init below will override with default */
 
 	re_initialize_md_offsets(cfg);
 
@@ -2404,8 +2416,9 @@ unsigned long bm_bytes(const struct md_cpu * const md, uint64_t sectors)
 	 * and not bytes_per_bit.
 	 * To keep sanity, we limit ourselves to tracking only power-of-two
 	 * multiples of 4k */
-	ASSERT(md->bm_bytes_per_bit >= 4096);
-	ASSERT((md->bm_bytes_per_bit & (md->bm_bytes_per_bit - 1)) == 0);
+	ASSERT(md->bm_bytes_per_bit >= BM_BLOCK_SIZE_MIN);
+	ASSERT(md->bm_bytes_per_bit <= BM_BLOCK_SIZE_MAX);
+	ASSERT(is_power_of_2(md->bm_bytes_per_bit));
 
 	/* round up storage sectors to full "bitmap sectors per bit", then
 	 * convert to number of bits needed, and round that up to 64bit words
@@ -3944,9 +3957,11 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 		cfg->md.bm_bytes_per_bit = yylval.u64;
 		/* Check whether the value of bm_bytes_per_bit is
 		 * a power-of-two multiple of 4k. */
-		if (yylval.u64 < 4096 || (yylval.u64 & (yylval.u64 -1)) != 0) {
+		if (!is_power_of_2(yylval.u64)
+		|| yylval.u64 < BM_BLOCK_SIZE_MIN
+		|| yylval.u64 > BM_BLOCK_SIZE_MAX) {
 			fprintf(stderr, "Invalid value for bm-byte-per-bit: "
-				"value must be a power-of-two multiple of 4096\n");
+				"value must be a power-of-two in [4k .. 1M]\n");
 			exit(10);
 		}
 		EXP(TK_DEVICE_UUID); EXP(TK_U64); EXP(';');
@@ -3959,7 +3974,7 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 		EXP(TK_AL_STRIPE_SIZE_4K); EXP(TK_NUM); EXP(';');
 		cfg->md.al_stripe_size_4k = yylval.u64;
 	} else {
-		cfg->md.bm_bytes_per_bit = DEFAULT_BM_BLOCK_SIZE;
+		cfg->md.bm_bytes_per_bit = BM_BLOCK_SIZE_4k;
 	}
 
 	if (option_al_stripes != cfg->md.al_stripes ||
@@ -5563,8 +5578,12 @@ int main(int argc, char **argv)
 		    option_diskful_peer_mask = node_mask_from_arg(optarg);
 		    break;
 	    case 'b':
-		option_initialize_bitmap_mode = check_ibm_arg(optarg);
-	    	break;
+		    option_initialize_bitmap_mode = check_ibm_arg(optarg);
+		    break;
+	    case 'B':
+		    option_bm_block_size_str = optarg;
+		    option_bm_block_size = m_strtoll(optarg, '1') ?: DEFAULT_BM_BLOCK_SIZE;
+		    break;
 	    default:
 		print_usage_and_exit();
 		break;
@@ -5642,6 +5661,28 @@ int main(int argc, char **argv)
 	    command->function != &meta_create_md) {
 		fprintf(stderr, "The --peer-max-bio-size option is only allowed with create-md\n");
 		exit(10);
+	}
+
+	if (option_bm_block_size) {
+		if (command->function != &meta_create_md) {
+			/* TODO: restore-md */
+			fprintf(stderr, "The --bitmap-block-size option is only allowed with create-md\n");
+			exit(10);
+		}
+		if (!is_v09(cfg)) {
+			fprintf(stderr,
+			    "bitmap-block-size not supported with '%s'\n",
+			    cfg->ops->name);
+			exit(10);
+		}
+		if (!is_power_of_2(option_bm_block_size)
+		||  option_bm_block_size < BM_BLOCK_SHIFT_MIN
+		||  option_bm_block_size > BM_BLOCK_SHIFT_MAX) {
+			fprintf(stderr,
+			    "bitmap-block-size must be a power of 2 within [4k .. 1M], not '%s'\n",
+			    option_bm_block_size_str);
+			exit(10);
+		}
 	}
 
 	if (option_al_stripes_used &&
