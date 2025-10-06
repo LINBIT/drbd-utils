@@ -159,19 +159,28 @@ struct format_ops {
  * {
  */
 
+#define __ALIGN(x, a)		__ALIGN_MASK(x, (__typeof__(x))(a) - 1)
+#define __ALIGN_MASK(x, mask)	(((x) + (mask)) & ~(mask))
+#define __ALIGN_DOWN(x, a)	((x)  & ~((__typeof__(x))(a) - 1))
 #ifndef ALIGN
-# define ALIGN(x,a) ( ((x) + (a)-1) &~ ((a)-1) )
+# define ALIGN(x, a) __ALIGN((x), (a))
+#endif
+#ifndef ALIGN_DOWN
+# define ALIGN_DOWN(x, a) __ALIGN_DOWN((x), (a))
 #endif
 
 #if 0
 #define ASSERT(x) ((void)(0))
 #define d_expect(x) (x)
+#define ASSERT_MSG(x, msg, ...)
 #else
-#define ASSERT(x) do { if (!(x)) {				\
-	fprintf(stderr, "%s:%u:%s: ASSERT(%s) failed.\n",	\
-		__FILE__ , __LINE__ , __func__ , #x );		\
+#define ASSERT_MSG(x, fmt, ...) do { if (!(x)) {		\
+	fprintf(stderr, "%s:%u:%s: ASSERT(%s) failed." fmt "\n",\
+		__FILE__ , __LINE__ , __func__ , #x ,		\
+		##__VA_ARGS__);					\
 	abort(); }						\
 	} while (0)
+#define ASSERT(x) ASSERT_MSG((x), "");
 #define d_expect(x) ({						\
 	int _x = (x);						\
 	if (!_x)						\

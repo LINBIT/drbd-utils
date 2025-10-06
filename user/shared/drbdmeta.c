@@ -41,6 +41,7 @@
 
 #include <stddef.h>
 #include <stdlib.h>
+#include <stdbit.h>
 #include <stdio.h>
 #include <errno.h>
 #include <getopt.h>
@@ -892,6 +893,11 @@ struct meta_cmd cmds[] = {
  * generic helpers
  */
 
+static inline bool is_power_of_2(unsigned long n)
+{
+	return (n != 0 && ((n & (n-1)) == 0));
+}
+
 #define PREAD(cfg,b,c,d) pread_or_die((cfg),(b),(c),(d), __func__ )
 #define PWRITE(cfg,b,c,d) pwrite_or_die((cfg),(b),(c),(d), __func__ )
 
@@ -1709,9 +1715,14 @@ void printf_al(struct format *cfg)
 }
 
 /* One activity log extent represents 4M of storage,
- * one bit corresponds to 4k.
- *                       4M / 4k / 8bit per byte */
-#define BM_BYTES_PER_AL_EXT	(1UL << (22 - 12 - 3))
+ * FIXME this should go into drbd-headers as well.
+ * if one bit corresponds to 4k:
+ *                       4M / 4k / 8bit per byte
+ * BM_BYTES_PER_AL_EXT_4k	(1UL << (22 - 12 - 3)) = 128 Byte.
+ * Once we allow bytes_per_bit aka bm_block_size to be 1M,
+ * we only have half a byte left, though!
+ */
+#define AL_EXTENT_SHIFT 22
 
 struct al_cursor {
 	unsigned i;
@@ -1969,6 +1980,7 @@ static int replay_al_pmem(struct format *cfg, uint32_t *hot_extent)
 	return 1;
 }
 
+/* for qsort below */
 int cmp_u32(const void *p1, const void *p2)
 {
 	const unsigned a = *(unsigned *)p1;
@@ -1978,21 +1990,115 @@ int cmp_u32(const void *p1, const void *p2)
 	return a < b ? -1 : a == b ? 0 : 1;
 }
 
+/* apparently we don't have that on linux? */
+static int ilog2(unsigned long word)
+{
+	return word < 2 ? 0 : (BITS_PER_LONG - 1) - stdc_leading_zeros(word);
+}
+
+/* bitmap layout
+ *
+ * bit numbers start at 0.
+ * we have max_peers "slots".
+ * we have a slot_index.
+ *
+ * classic max_peers = 1, single slot bitmap: just a simple bitstream.
+ *
+ * max_peers > 1: interleaved 32 bit words per peer slot.
+ * on_disk_bit = (bit & ~31) * max_peers + slot_index * 32 + (bit & 31).
+ * "on disk" BYTE offset is on_disk_bit / 8.
+ *
+ * set bits [36..43] for all slots with max_peers = 3 looks like:
+ *
+ * 0        8       16       24     31
+ * 00000000 00000000 00000000 00000000
+ * 00000000 00000000 00000000 00000000
+ * 00000000 00000000 00000000 00000000
+ *
+ * 00001111 11110000 00000000 00000000
+ * 00001111 11110000 00000000 00000000
+ * 00001111 11110000 00000000 00000000
+ *
+ * 00000000 00000000 00000000 00000000
+ * ...
+ *
+ * We want to do IO aligned to 4k (for direct IO).
+ * If we do IO aligned to 4k * max_peers,
+ * we will always have the same bit numbers for all slots.
+ *
+ * One activity log extent represens aligned 4 MiB.
+ * Our bitmap granularity is a power of two multiple of 4k,
+ * 4k to 1M, [4, 8, 16, 32, 64, 128, 256, 512, 1024]k.
+ *
+ * As long as our bitmap granularity is <= 128k,
+ * we can set multiples of 32bit, which makes this much easier:
+ * we could just calculate the byte offset and length,
+ * multiply with max_peers, then memset().
+ *
+ * At 4k, we set 128 bytes * max_peers for each extent.
+ * At 128k, we set 4 bytes * max_peers for each extent.
+ *
+ * For 256k and above, we only set partial 32bit words.
+ * Now we have to calculate a 32bit mask,
+ * and apply it to max_peers 32bit words.
+ *
+ */
+
+struct extent_bit_range {
+	// logical bit numbers [start, end[ within slot
+	size_t bit_s; // inclusive start of range
+	size_t bit_e; // exclusive end of range
+
+	// byte offset relative to start of bitmap
+	// to the first byte of the respective 32bit word of slot 0
+	size_t on_disk_word32_pos_s;
+
+	// *beyond* last byte of last 32bit word of last slot
+	size_t on_disk_word32_pos_e;
+
+	// aligned down to (4k * max_peers)
+	size_t aligned_4k_x_max_peers_on_disk_pos;
+};
+
+static unsigned int round_down(size_t i, size_t  g)
+{
+	return i / g * g;
+}
+
+static void enr_to_bit_range(struct extent_bit_range *br, const uint64_t enr,
+		const size_t bits_per_extent, const unsigned int max_peers)
+{
+	br->bit_s = enr * bits_per_extent;
+	br->bit_e = br->bit_s + bits_per_extent;
+
+	br->on_disk_word32_pos_s = br->bit_s / 32 * max_peers * 4;
+	br->on_disk_word32_pos_e = (br->bit_e  + 31)/ 32 * max_peers * 4;
+
+	br->aligned_4k_x_max_peers_on_disk_pos =
+		round_down(br->on_disk_word32_pos_s, 4096 * max_peers);
+}
+
 void apply_al(struct format *cfg, uint32_t *hot_extent)
 {
-	const size_t extents_size = BM_BYTES_PER_AL_EXT * cfg->md.max_peers;
 	const size_t bm_bytes = ALIGN(cfg->bm_bytes, cfg->md_hard_sect_size);
 	off_t bm_on_disk_off = cfg->bm_offset;
 	size_t bm_on_disk_pos = 0;
 	size_t chunk = 0;
-	int i, j;
+	int i, j, k;
 
 	/* can only be AL_EXTENTS_MAX * BM_BYTES_PER_AL_EXT * 8,
 	 * which currently is 65534 * 128 * 8 == 67106816
 	 * fits easily into 32bit. */
 	unsigned additional_bits_set = 0;
-	uint64_t *w;
 	char ppb[10];
+
+	/* how may bits will be affected by applying one extent */
+	size_t bits_per_extent = 1UL << (AL_EXTENT_SHIFT - ilog2(cfg->md.bm_bytes_per_bit));
+	unsigned int max_peers = cfg->md.max_peers;
+
+	ASSERT_MSG(4 <= bits_per_extent && bits_per_extent <= 1024 && is_power_of_2(bits_per_extent),
+		" bits_per_extent: %zd", bits_per_extent);
+	ASSERT_MSG(1 <= max_peers && max_peers <= DRBD_PEERS_MAX, " max_peers: %u", max_peers);
 
 	/* Now, actually apply this stuff to the on-disk bitmap.
 	 * Since one AL extent corresponds to 128 bytes of bitmap,
@@ -2000,80 +2106,136 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 	 *
 	 * Note that this can be slow due to the use of O_DIRECT,
 	 * worst case it does 65534 (AL_EXTENTS_MAX) cycles of
-	 *  - read 128 kByte (buffer_size)
-	 *  - memset 128 Bytes (BM_BYTES_PER_AL_EXT) to 0xff
-	 *  - write 128 kByte
+	 *  - read buffer_size
+	 *  - set a few bits (equivalent to one activity log extent),
+	 *  - write buffer size
 	 * This implementation could optimized in various ways:
 	 *  - don't use direct IO; has other drawbacks
-	 *  - first scan hot_extents for extent ranges,
-	 *    and optimize the IO size.
 	 *  - use aio with multiple buffers
 	 *  - ...
 	 */
 	for (i = 0; i < AL_EXTENTS_MAX; i++) {
-		size_t bm_pos;
-		size_t this_extent_size; /* bitmap bytes for this extent */
+		struct extent_bit_range first_ex, last_ex, tmp_ex;
 		unsigned bits_set = 0;
+
+
+		/* hot_extent is sorted.
+		 * If we reached "max uint32", we reached the end.
+		 */
 		if (hot_extent[i] == ~0U)
 			break;
 
-		ASSERT(cfg->md.bm_bytes_per_bit == 4096);
-		ASSERT(BM_BYTES_PER_AL_EXT % 4 == 0);
+		/* find range of hot extents we can cover with one "buffer_size" bitmap IO */
+		enr_to_bit_range(&first_ex, hot_extent[i], bits_per_extent, max_peers);
+		if (verbose >= 3)
+			fprintf(stderr, "apply-al: %4d: %5d: [%zd..[%zd; [%zd..[%zd; %zd; peers %d; bits pe: %zd; bm_bytes: %zd\n",
+				i, hot_extent[i],
+				first_ex.bit_s,
+				first_ex.bit_e,
+				first_ex.on_disk_word32_pos_s,
+				first_ex.on_disk_word32_pos_e,
+				first_ex.aligned_4k_x_max_peers_on_disk_pos,
+				max_peers, bits_per_extent, bm_bytes);
 
-		bm_pos = hot_extent[i] * extents_size;
-		if (bm_pos >= bm_bytes) {
-			fprintf(stderr, "extent %u beyond end of bitmap! (%zd >= %zd)\n", hot_extent[i], bm_pos, bm_bytes);
-			/* could break or return error here,
+		if (first_ex.on_disk_word32_pos_e >= bm_bytes) {
+			fprintf(stderr, "extent %u beyond end of bitmap! (%zd >= %zd)\n",
+				hot_extent[i], first_ex.on_disk_word32_pos_e, bm_bytes);
+			/* They are sorted. It won't get better.
+			 * Could break or return error here,
 			 * but I'll just print a warning, and skip, each of them. */
 			continue;
 		}
 
-		this_extent_size = extents_size;
-		/* The final extent may be smaller than the standard extent size. */
-		if (this_extent_size > bm_bytes - bm_pos)
-			this_extent_size = bm_bytes - bm_pos;
-
-		/* On first iteration, or when the current position in the bitmap
-		 * exceeds the current buffer, write out the current buffer, if any,
-		 * and read in the next (at most buffer_size) chunk of bitmap,
-		 * containing the currently processed bitmap region.
-		 */
-
-		if (i == 0 ||
-		    bm_pos + this_extent_size > bm_on_disk_pos + chunk) {
-			if (i != 0)
-				pwrite_or_die(cfg, on_disk_buffer, chunk,
-						bm_on_disk_off + bm_on_disk_pos,
-						"apply_al");
-
-			/* don't special case logical sector size != 512,
-			 * operate in 4k always. */
-			bm_on_disk_pos = bm_pos & ~(off_t)(4095);
-			chunk = bm_bytes - bm_on_disk_pos;
-			if (chunk > buffer_size)
-				chunk = buffer_size;
-			pread_or_die(cfg, on_disk_buffer, chunk,
-					bm_on_disk_off + bm_on_disk_pos,
-					"apply_al");
+		j = i;
+		while (hot_extent[j+1] != ~0U) {
+			enr_to_bit_range(&tmp_ex, hot_extent[j+1], bits_per_extent, max_peers);
+			if (verbose >= 3)
+				fprintf(stderr, "       ?: %4d: %5d: [%zd..[%zd; [%zd..[%zd; %zd; peers %d; bits pe: %zd; bm_bytes: %zd\n",
+					j+1, hot_extent[j+1],
+					tmp_ex.bit_s,
+					tmp_ex.bit_e,
+					tmp_ex.on_disk_word32_pos_s,
+					tmp_ex.on_disk_word32_pos_e,
+					tmp_ex.aligned_4k_x_max_peers_on_disk_pos,
+					max_peers, bits_per_extent, bm_bytes);
+			if (tmp_ex.on_disk_word32_pos_e >= bm_bytes) {
+				fprintf(stderr, "extent %u beyond end of bitmap! (%zd >= %zd)\n",
+					hot_extent[j], tmp_ex.on_disk_word32_pos_e, bm_bytes);
+				break;
+			}
+			if (tmp_ex.on_disk_word32_pos_e >= first_ex.aligned_4k_x_max_peers_on_disk_pos + buffer_size)
+				break;
+			++j;
 		}
-		ASSERT(bm_pos - bm_on_disk_pos <= chunk - this_extent_size);
-		ASSERT((bm_pos - bm_on_disk_pos) % sizeof(uint64_t) == 0);
-		w = (uint64_t *)on_disk_buffer
-			+ (bm_pos - bm_on_disk_pos)/sizeof(uint64_t);
-		for (j = 0; j < this_extent_size/sizeof(uint64_t); j++)
-			bits_set += generic_hweight64(w[j]);
+		enr_to_bit_range(&last_ex, hot_extent[j], bits_per_extent, max_peers);
 
-		additional_bits_set += this_extent_size * 8 - bits_set;
-		memset((char*)on_disk_buffer + (bm_pos - bm_on_disk_pos),
-			0xff, this_extent_size);
+		/* aligning end of buffer to 4k is good enough. */
+		chunk =   ALIGN(last_ex.on_disk_word32_pos_e, 4096)
+			- first_ex.aligned_4k_x_max_peers_on_disk_pos;
+
+		/* read the bitmap for this range */
+		bm_on_disk_pos = first_ex.aligned_4k_x_max_peers_on_disk_pos;
+		pread_or_die(cfg, on_disk_buffer, chunk, bm_on_disk_off + bm_on_disk_pos, "apply_al read bitmap chunk");
+
+		/* change the bits */
+		for (k = i; k <= j; k++) {
+			enr_to_bit_range(&tmp_ex, hot_extent[k], bits_per_extent, max_peers);
+
+			ASSERT(tmp_ex.on_disk_word32_pos_s - bm_on_disk_pos < chunk);
+			ASSERT(tmp_ex.on_disk_word32_pos_e - bm_on_disk_pos <= chunk);
+
+			if (bits_per_extent >= 32) {
+				size_t num_bytes = tmp_ex.on_disk_word32_pos_e - tmp_ex.on_disk_word32_pos_s;
+
+				if (verbose >= 3)
+					fprintf(stderr, "       !: %4d: %5d: memset(((char*)bm)+%zd, 0xff, %zd)\n",
+						k, hot_extent[k], tmp_ex.on_disk_word32_pos_s, num_bytes);
+
+				/* we set full words, endianness does not make a difference */
+				memset((char*)on_disk_buffer + (tmp_ex.on_disk_word32_pos_s - bm_on_disk_pos),
+					0xff, num_bytes);
+				continue;
+			}
+
+			/* only 16, 8, or 4 bits to be set,
+			 * once for each 32bit word of each slot */
+
+			uint32_t *word32;
+			uint32_t mask;
+			int l;
+
+			word32 = (uint32_t*)on_disk_buffer;
+			word32 += (tmp_ex.on_disk_word32_pos_s - bm_on_disk_pos)/sizeof(*word32);
+
+			mask = ~(uint32_t)0 << (tmp_ex.bit_s & 31);
+			mask &= ~(uint32_t)0 >> ((32 - (tmp_ex.bit_e & 31)) & 31);
+
+			/* On disk buffer is is little endian.
+			 * *word32 = cpu_to_le32(le32_to_cpu(*word32)|mask) is equivalent to
+			 * *word32 |= cpu_to_le32(mask).
+			 */
+			mask = cpu_to_le32(mask);
+
+			for (l = 0; l < max_peers; l++) {
+				if (verbose >= 3)
+					fprintf(stderr, "       !: %4d: %5d: (uint32_t*)bm+%zd |= %08x\n",
+						k, hot_extent[k],
+						word32 - (uint32_t*)on_disk_buffer,
+						mask);
+				bits_set = generic_hweight32(*word32);
+				*word32 |= mask;
+				additional_bits_set += generic_hweight32(*word32) - bits_set;
+				++word32;
+			}
+		}
+
+		/* write changes for this range */
+		pwrite_or_die(cfg, on_disk_buffer, chunk, bm_on_disk_off + bm_on_disk_pos, "apply_al write bitmap chunk");
+		i = j;
 	}
-	/* we still need to write out the buffer of the last iteration */
 	if (i != 0) {
-		pwrite_or_die(cfg, on_disk_buffer, chunk,
-				bm_on_disk_off + bm_on_disk_pos,
-				"apply_al");
 		fprintf(stderr, "Marked additional %s as out-of-sync based on AL.\n",
-		     ppsize(ppb, additional_bits_set * 4));
+		     ppsize(ppb, additional_bits_set * (cfg->md.bm_bytes_per_bit / 1024)));
 	} else
 		fprintf(stderr, "Nothing to do.\n");
 }
@@ -2265,12 +2427,6 @@ static void fprintf_bm_eol(FILE *f, unsigned int i, int peer_nr, const char* ind
 		fprintf(f, "\n%s   # at %llukB\n%s   ", indent, (128LLU * (i - peer_nr)), indent);
 	else
 		fprintf(f, "\n%s   ", indent);
-}
-
-static unsigned int round_down(unsigned int i, unsigned int g)
-{
-	return i / g * g;
-	/* return i - i % g; */
 }
 
 /* le_u64, because we want to be able to hexdump it reliably
