@@ -3,10 +3,9 @@
 
 SharedData::SharedData()
 {
-    selected_resources = std::unique_ptr<ResourcesMap>(new ResourcesMap(&comparators::compare_string));
-    selected_connections = std::unique_ptr<ConnectionsMap>(new ConnectionsMap(&comparators::compare_string));
-    selected_volumes = std::unique_ptr<VolumesMap>(new VolumesMap(&comparators::compare<uint16_t>));
-    selected_peer_volumes = std::unique_ptr<VolumesMap>(new VolumesMap(&comparators::compare<uint16_t>));
+    selected_resources = std::unique_ptr<ResourceSelectionMap>(
+        new ResourceSelectionMap(&comparators::compare_string)
+    );
 
     selected_actq_entries = std::unique_ptr<TaskEntryMap>(new TaskEntryMap(&comparators::compare<uint64_t>));
     selected_pndq_entries = std::unique_ptr<TaskEntryMap>(new TaskEntryMap(&comparators::compare<uint64_t>));
@@ -20,9 +19,6 @@ SharedData::SharedData()
 SharedData::~SharedData() noexcept
 {
     clear_resources_selection_impl();
-    clear_connections_selection_impl();
-    clear_volumes_selection_impl();
-    clear_peer_volumes_selection_impl();
 
     generic_id_clear_selection(*selected_actq_entries);
     generic_id_clear_selection(*selected_pndq_entries);
@@ -41,10 +37,6 @@ void SharedData::update_monitor_rsc(const std::string& rsc_name)
         monitor_con.clear();
         monitor_vlm = DisplayConsts::VLM_NONE;
         monitor_peer_vlm = DisplayConsts::VLM_NONE;
-
-        clear_connections_selection_impl();
-        clear_volumes_selection_impl();
-        clear_peer_volumes_selection_impl();
     }
 }
 
@@ -74,10 +66,6 @@ void SharedData::clear_monitor_rsc()
     monitor_con.clear();
     monitor_vlm = DisplayConsts::VLM_NONE;
     monitor_peer_vlm = DisplayConsts::VLM_NONE;
-
-    clear_connections_selection_impl();
-    clear_volumes_selection_impl();
-    clear_peer_volumes_selection_impl();
 }
 
 void SharedData::clear_monitor_con()
@@ -102,219 +90,516 @@ void SharedData::clear_resources_selection()
     clear_resources_selection_impl();
 }
 
-void SharedData::clear_connections_selection()
+void SharedData::clear_connections_selection(const std::string& resource_name)
 {
-    clear_connections_selection_impl();
+    ResourceSubSelections* const sub_selections = selected_resources->get(&resource_name);
+    if (sub_selections != nullptr)
+    {
+        clear_connections_selection_impl(*sub_selections);
+    }
 }
 
-void SharedData::clear_volumes_selection()
+void SharedData::clear_connections_selection(ResourceSubSelections& sub_selections)
 {
-    clear_volumes_selection_impl();
+    clear_connections_selection_impl(sub_selections);
 }
 
-void SharedData::clear_peer_volumes_selection()
+void SharedData::clear_volumes_selection(const std::string& resource_name)
 {
-    clear_peer_volumes_selection_impl();
+    ResourceSubSelections* const sub_selections = selected_resources->get(&resource_name);
+    if (sub_selections != nullptr)
+    {
+        clear_volumes_selection_impl(*sub_selections);
+    }
+}
+
+void SharedData::clear_volumes_selection(ResourceSubSelections& sub_selections)
+{
+    clear_volumes_selection_impl(sub_selections);
+}
+
+void SharedData::clear_peer_volumes_selection(const std::string& resource_name, const std::string& connection_name)
+{
+    ResourceSubSelections* const sub_selections = selected_resources->get(&resource_name);
+    if (sub_selections != nullptr)
+    {
+        ConnectionSelectionMap* const selected_connections = sub_selections->connection_selection.get();
+        if (selected_connections != nullptr)
+        {
+            ConnectionSelectionMap::Node* const connection_node = selected_connections->get_node(&connection_name);
+            if (connection_node != nullptr)
+            {
+                clear_peer_volumes_selection_impl(*connection_node);
+            }
+        }
+    }
+}
+
+void SharedData::clear_peer_volumes_selection(ConnectionSelectionMap::Node& connection_node)
+{
+    clear_peer_volumes_selection_impl(connection_node);
 }
 
 void SharedData::clear_resources_selection_impl() noexcept
 {
-    ResourcesMap::KeysIterator iter(*selected_resources);
+    ResourceSelectionMap::NodesIterator iter(*selected_resources);
     while (iter.has_next())
     {
-        const std::string* const key = iter.next();
+        ResourceSelectionMap::Node* const selected_resource = iter.next();
+
+        const std::string* const key = selected_resource->get_key();
+        ResourceSubSelections* const sub_selections = selected_resource->get_value();
+
+        clear_connections_selection_impl(*sub_selections);
+        clear_volumes_selection_impl(*sub_selections);
+
         delete key;
+        delete sub_selections;
     }
     selected_resources->clear();
+    selection_stats.rsc_count = 0;
+    selection_stats.vlm_count = 0;
+    selection_stats.con_count = 0;
+    selection_stats.peer_vlm_count = 0;
 }
 
-void SharedData::clear_connections_selection_impl() noexcept
+void SharedData::clear_connections_selection_impl(ResourceSubSelections& sub_selections) noexcept
 {
-    ConnectionsMap::KeysIterator iter(*selected_connections);
-    while (iter.has_next())
+    ConnectionSelectionMap* const selected_connections = sub_selections.connection_selection.get();
+    if (selected_connections != nullptr)
     {
-        const std::string* const key = iter.next();
-        delete key;
+        ConnectionSelectionMap::NodesIterator iter(*selected_connections);
+        while (iter.has_next())
+        {
+            ConnectionSelectionMap::Node* const selected_connection = iter.next();
+            clear_peer_volumes_selection_impl(*selected_connection);
+            const std::string* const key = selected_connection->get_key();
+            delete key;
+        }
+        stats_subtract(selection_stats.con_count, static_cast<uint64_t> (selected_connections->get_size()));
+        selected_connections->clear();
+        sub_selections.connection_selection = nullptr;
     }
-    selected_connections->clear();
 }
 
-void SharedData::clear_volumes_selection_impl() noexcept
+void SharedData::clear_volumes_selection_impl(ResourceSubSelections& sub_selections) noexcept
 {
-    VolumesMap::KeysIterator iter(*selected_volumes);
-    while (iter.has_next())
+    VolumeSelectionMap* const selected_volumes = sub_selections.volume_selection.get();
+    if (selected_volumes != nullptr)
     {
-        const uint16_t* const key = iter.next();
-        delete key;
+        VolumeSelectionMap::KeysIterator iter(*selected_volumes);
+        while (iter.has_next())
+        {
+            const uint16_t* const key = iter.next();
+            delete key;
+        }
+        stats_subtract(selection_stats.vlm_count, static_cast<uint64_t> (selected_volumes->get_size()));
+        selected_volumes->clear();
+        sub_selections.volume_selection = nullptr;
     }
-    selected_volumes->clear();
 }
 
-void SharedData::clear_peer_volumes_selection_impl() noexcept
+void SharedData::clear_peer_volumes_selection_impl(ConnectionSelectionMap::Node& connection_node) noexcept
 {
-    VolumesMap::KeysIterator iter(*selected_peer_volumes);
-    while (iter.has_next())
+    VolumeSelectionMap* const selected_peer_volumes = connection_node.get_value();
+    if (selected_peer_volumes != nullptr)
     {
-        const uint16_t* const key = iter.next();
-        delete key;
+        VolumeSelectionMap::KeysIterator iter(*selected_peer_volumes);
+        while (iter.has_next())
+        {
+            const uint16_t* const key = iter.next();
+            delete key;
+        }
+        stats_subtract(selection_stats.peer_vlm_count, static_cast<uint64_t> (selected_peer_volumes->get_size()));
+        selected_peer_volumes->clear();
+        connection_node.set_value(nullptr);
+        delete selected_peer_volumes;
     }
-    selected_peer_volumes->clear();
 }
 
-void SharedData::select_resource(const std::string& name)
+ResourceSelectionMap::Node* SharedData::select_resource(const std::string& name)
 {
-    const ResourcesMap::Node* const existing_entry = selected_resources->get_node(&name);
-    if (existing_entry == nullptr)
+    ResourceSelectionMap::Node* entry = selected_resources->get_node(&name);
+    if (entry == nullptr)
     {
         std::unique_ptr<std::string> key_mgr(new std::string(name));
+        std::unique_ptr<ResourceSubSelections> value_mgr(new ResourceSubSelections());
+        std::unique_ptr<ResourceSelectionMap::Node> node_mgr(
+            new ResourceSelectionMap::Node(key_mgr.get(), value_mgr.get())
+        );
 
-        selected_resources->insert(key_mgr.get(), nullptr);
-        key_mgr.release();
+        entry = node_mgr.get();
+        try
+        {
+            selected_resources->insert_node(entry);
+
+            key_mgr.release();
+            value_mgr.release();
+            node_mgr.release();
+
+            stats_add(selection_stats.rsc_count, 1);
+        }
+        catch (dsaext::DuplicateInsertException&)
+        {
+            // TODO: Logging to the debug log may be useful here
+        }
     }
+    return entry;
 }
 
 void SharedData::deselect_resource(const std::string& name)
 {
-    ResourcesMap::Node* const existing_entry = selected_resources->get_node(&name);
+    ResourceSelectionMap::Node* const existing_entry = selected_resources->get_node(&name);
     if (existing_entry != nullptr)
     {
-        delete existing_entry->get_key();
+        const std::string* const key = existing_entry->get_key();
+        ResourceSubSelections* const sub_selections = existing_entry->get_value();
+        clear_connections_selection(*sub_selections);
+        clear_volumes_selection(*sub_selections);
+
+        delete key;
+        delete sub_selections;
+
         selected_resources->remove_node(existing_entry);
+
+        stats_subtract(selection_stats.rsc_count, 1);
     }
 }
 
-void SharedData::select_connection(const std::string& name)
+ConnectionSelectionMap::Node* SharedData::select_connection(
+    const std::string& resource_name,
+    const std::string& connection_name
+)
 {
-    const ConnectionsMap::Node* const existing_entry = selected_connections->get_node(&name);
-    if (existing_entry == nullptr)
+    ResourceSelectionMap::Node* resource_node = select_resource(resource_name);
+    ResourceSubSelections* const sub_selections = resource_node->get_value();
+
+    return select_connection(*sub_selections, connection_name);
+}
+
+ConnectionSelectionMap::Node* SharedData::select_connection(
+    ResourceSubSelections& sub_selections,
+    const std::string& connection_name
+)
+{
+    ConnectionSelectionMap::Node* entry = nullptr;
+    if (!sub_selections.connection_selection)
     {
-        std::unique_ptr<std::string> key_mgr(new std::string(name));
-
-        selected_connections->insert(key_mgr.get(), nullptr);
-        key_mgr.release();
+        sub_selections.connection_selection = std::unique_ptr<ConnectionSelectionMap>(
+            new ConnectionSelectionMap(&comparators::compare_string)
+        );
     }
-}
-
-void SharedData::deselect_connection(const std::string& name)
-{
-    ConnectionsMap::Node* const existing_entry = selected_connections->get_node(&name);
-    if (existing_entry != nullptr)
+    else
     {
-        delete existing_entry->get_key();
-        selected_connections->remove_node(existing_entry);
+        entry = sub_selections.connection_selection->get_node(&connection_name);
+    }
+
+    if (entry == nullptr)
+    {
+        std::unique_ptr<std::string> key_mgr(new std::string(connection_name));
+        std::unique_ptr<ConnectionSelectionMap::Node> node_mgr(
+            new ConnectionSelectionMap::Node(key_mgr.get(), nullptr)
+        );
+
+        entry = node_mgr.get();
+
+        try
+        {
+            sub_selections.connection_selection->insert_node(entry);
+
+            key_mgr.release();
+            node_mgr.release();
+
+            stats_add(selection_stats.con_count, 1);
+        }
+        catch (dsaext::DuplicateInsertException&)
+        {
+            // TODO: Logging to the debug log may be useful here
+        }
+    }
+
+    return entry;
+}
+
+void SharedData::deselect_connection(const std::string& resource_name, const std::string& connection_name)
+{
+    ResourceSubSelections* const sub_selections = selected_resources->get(&resource_name);
+    if (sub_selections != nullptr)
+    {
+        deselect_connection(*sub_selections, connection_name);
     }
 }
 
-
-void SharedData::select_volume(const uint16_t vlm_nr)
+void SharedData::deselect_connection(ResourceSubSelections& sub_selections, const std::string& connection_name)
 {
-    const VolumesMap::Node* const existing_entry = selected_volumes->get_node(&vlm_nr);
-    if (existing_entry == nullptr)
+    ConnectionSelectionMap* const selected_connections = sub_selections.connection_selection.get();
+    if (selected_connections != nullptr)
+    {
+        ConnectionSelectionMap::Node* const connection_node = selected_connections->get_node(&connection_name);
+        if (connection_node != nullptr)
+        {
+            clear_peer_volumes_selection_impl(*connection_node);
+
+            const std::string* const key = connection_node->get_key();
+            delete key;
+
+            selected_connections->remove_node(connection_node);
+
+            stats_subtract(selection_stats.con_count, 1);
+        }
+        if (selected_connections->get_size() == 0)
+        {
+            sub_selections.connection_selection = nullptr;
+        }
+    }
+}
+
+VolumeSelectionMap::Node* SharedData::select_volume(const std::string& resource_name, const uint16_t vlm_nr)
+{
+    ResourceSelectionMap::Node* resource_node = select_resource(resource_name);
+    ResourceSubSelections* const sub_selections = resource_node->get_value();
+
+    return select_volume(*sub_selections, vlm_nr);
+}
+
+VolumeSelectionMap::Node* SharedData::select_volume(ResourceSubSelections& sub_selections, const uint16_t vlm_nr)
+{
+    VolumeSelectionMap::Node* entry = nullptr;
+    if (!sub_selections.volume_selection)
+    {
+        sub_selections.volume_selection = std::unique_ptr<VolumeSelectionMap>(
+            new VolumeSelectionMap(&comparators::compare<uint16_t>)
+        );
+    }
+    else
+    {
+        entry = sub_selections.volume_selection->get_node(&vlm_nr);
+    }
+
+    if (entry == nullptr)
     {
         std::unique_ptr<uint16_t> key_mgr(new uint16_t);
         uint16_t* const key = key_mgr.get();
         *key = vlm_nr;
+        std::unique_ptr<VolumeSelectionMap::Node> node_mgr(
+            new VolumeSelectionMap::Node(key, nullptr)
+        );
 
-        selected_volumes->insert(key, nullptr);
-        key_mgr.release();
+        entry = node_mgr.get();
+        try
+        {
+            sub_selections.volume_selection->insert_node(entry);
+
+            key_mgr.release();
+            node_mgr.release();
+
+            stats_add(selection_stats.vlm_count, 1);
+        }
+        catch (dsaext::DuplicateInsertException&)
+        {
+            // TODO: Logging to the debug log may be useful here
+        }
     }
+
+    return entry;
 }
 
-void SharedData::deselect_volume(const uint16_t vlm_nr)
+void SharedData::deselect_volume(const std::string& resource_name, const uint16_t vlm_nr)
 {
-    VolumesMap::Node* const existing_entry = selected_volumes->get_node(&vlm_nr);
-    if (existing_entry != nullptr)
+    ResourceSubSelections* const sub_selections = selected_resources->get(&resource_name);
+    if (sub_selections != nullptr)
     {
-        delete existing_entry->get_key();
-        selected_volumes->remove_node(existing_entry);
+        deselect_volume(*sub_selections, vlm_nr);
     }
 }
 
-void SharedData::select_peer_volume(const uint16_t vlm_nr)
+void SharedData::deselect_volume(ResourceSubSelections& sub_selections, const uint16_t vlm_nr)
 {
-    const VolumesMap::Node* const existing_entry = selected_peer_volumes->get_node(&vlm_nr);
-    if (existing_entry == nullptr)
+    VolumeSelectionMap* const selected_volumes = sub_selections.volume_selection.get();
+    if (selected_volumes != nullptr)
+    {
+        VolumeSelectionMap::Node* const volume_node = selected_volumes->get_node(&vlm_nr);
+        if (volume_node != nullptr)
+        {
+            const uint16_t* const key = volume_node->get_key();
+            delete key;
+
+            selected_volumes->remove_node(volume_node);
+
+            stats_subtract(selection_stats.vlm_count, 1);
+        }
+        if (selected_volumes->get_size() == 0)
+        {
+            sub_selections.volume_selection = nullptr;
+        }
+    }
+}
+
+VolumeSelectionMap::Node* SharedData::select_peer_volume(
+    const std::string& resource_name,
+    const std::string& connection_name,
+    const uint16_t vlm_nr
+)
+{
+    ConnectionSelectionMap::Node* const connection_node = select_connection(resource_name, connection_name);
+    return select_peer_volume(*connection_node, vlm_nr);
+}
+
+VolumeSelectionMap::Node* SharedData::select_peer_volume(
+    ConnectionSelectionMap::Node& connection_node,
+    const uint16_t vlm_nr
+)
+{
+    VolumeSelectionMap::Node* entry = nullptr;
+    VolumeSelectionMap* selected_peer_volumes = connection_node.get_value();
+    if (selected_peer_volumes == nullptr)
+    {
+        std::unique_ptr<VolumeSelectionMap> selected_peer_volumes_mgr(
+            new VolumeSelectionMap(&comparators::compare<uint16_t>)
+        );
+        selected_peer_volumes = selected_peer_volumes_mgr.get();
+        connection_node.set_value(selected_peer_volumes);
+
+        selected_peer_volumes_mgr.release();
+    }
+    else
+    {
+        entry = selected_peer_volumes->get_node(&vlm_nr);
+    }
+
+    if (entry == nullptr)
     {
         std::unique_ptr<uint16_t> key_mgr(new uint16_t);
         uint16_t* const key = key_mgr.get();
         *key = vlm_nr;
+        std::unique_ptr<VolumeSelectionMap::Node> node_mgr(
+            new VolumeSelectionMap::Node(key, nullptr)
+        );
 
-        selected_peer_volumes->insert(key, nullptr);
-        key_mgr.release();
+        entry = node_mgr.get();
+        try
+        {
+            selected_peer_volumes->insert_node(entry);
+
+            key_mgr.release();
+            node_mgr.release();
+
+            stats_add(selection_stats.peer_vlm_count, 1);
+        }
+        catch (dsaext::DuplicateInsertException&)
+        {
+            // TODO: Logging to the debug log may be useful here
+        }
     }
+
+    return entry;
 }
 
-void SharedData::deselect_peer_volume(const uint16_t vlm_nr)
+void SharedData::deselect_peer_volume(
+    const std::string& resource_name,
+    const std::string& connection_name,
+    const uint16_t vlm_nr
+)
 {
-    VolumesMap::Node* const existing_entry = selected_peer_volumes->get_node(&vlm_nr);
-    if (existing_entry != nullptr)
+    ResourceSubSelections* const sub_selections = selected_resources->get(&resource_name);
+    if (sub_selections != nullptr && sub_selections->connection_selection)
     {
-        delete existing_entry->get_key();
-        selected_peer_volumes->remove_node(existing_entry);
+        ConnectionSelectionMap::Node* const connection_node =
+            sub_selections->connection_selection->get_node(&connection_name);
+        if (connection_node != nullptr)
+        {
+            deselect_peer_volume(*connection_node, vlm_nr);
+        }
     }
 }
 
-bool SharedData::toggle_resource_selection(const std::string& name)
+void SharedData::deselect_peer_volume(
+    ConnectionSelectionMap::Node& connection_node,
+    const uint16_t vlm_nr
+)
+{
+    VolumeSelectionMap* const selected_peer_volumes = connection_node.get_value();
+    if (selected_peer_volumes != nullptr)
+    {
+        VolumeSelectionMap::Node* const peer_volume_node = selected_peer_volumes->get_node(&vlm_nr);
+        if (peer_volume_node != nullptr)
+        {
+            uint16_t* const key = peer_volume_node->get_key();
+
+            delete key;
+            selected_peer_volumes->remove_node(peer_volume_node);
+
+            stats_subtract(selection_stats.peer_vlm_count, 1);
+        }
+
+        if (selected_peer_volumes->get_size() == 0)
+        {
+            connection_node.set_value(nullptr);
+            delete selected_peer_volumes;
+        }
+    }
+}
+
+bool SharedData::toggle_resource_selection(const std::string& resource_name)
 {
     bool selected = false;
-    ResourcesMap::Node* const existing_entry = selected_resources->get_node(&name);
-    if (existing_entry == nullptr)
+    if (is_resource_selected(resource_name))
     {
-        select_resource(name);
-        selected = true;
+        deselect_resource(resource_name);
     }
     else
     {
-        deselect_resource(name);
+        select_resource(resource_name);
+        selected = true;
     }
     return selected;
 }
 
-bool SharedData::toggle_connection_selection(const std::string& name)
+bool SharedData::toggle_connection_selection(const std::string& resource_name, const std::string& connection_name)
 {
     bool selected = false;
-    ConnectionsMap::Node* const existing_entry = selected_connections->get_node(&name);
-    if (existing_entry == nullptr)
+    if (is_connection_selected(resource_name, connection_name))
     {
-        select_connection(name);
-        selected = true;
+        deselect_connection(resource_name, connection_name);
     }
     else
     {
-        deselect_connection(name);
+        select_connection(resource_name, connection_name);
+        selected = true;
     }
     return selected;
 }
 
-
-bool SharedData::toggle_volume_selection(const uint16_t vlm_nr)
+bool SharedData::toggle_volume_selection(const std::string& resource_name, const uint16_t vlm_nr)
 {
     bool selected = false;
-    VolumesMap::Node* const existing_entry = selected_volumes->get_node(&vlm_nr);
-    if (existing_entry == nullptr)
+    if (is_volume_selected(resource_name, vlm_nr))
     {
-        select_volume(vlm_nr);
-        selected = true;
+        deselect_volume(resource_name, vlm_nr);
     }
     else
     {
-        deselect_volume(vlm_nr);
+        select_volume(resource_name, vlm_nr);
+        selected = true;
     }
     return selected;
 }
 
-bool SharedData::toggle_peer_volume_selection(const uint16_t vlm_nr)
+bool SharedData::toggle_peer_volume_selection(
+    const std::string& resource_name,
+    const std::string& connection_name,
+    const uint16_t vlm_nr
+)
 {
     bool selected = false;
-    VolumesMap::Node* const existing_entry = selected_peer_volumes->get_node(&vlm_nr);
-    if (existing_entry == nullptr)
+    if (is_peer_volume_selected(resource_name, connection_name, vlm_nr))
     {
-        select_peer_volume(vlm_nr);
-        selected = true;
+        deselect_peer_volume(resource_name, connection_name, vlm_nr);
     }
     else
     {
-        deselect_peer_volume(vlm_nr);
+        select_peer_volume(resource_name, connection_name, vlm_nr);
+        selected = true;
     }
     return selected;
 }
@@ -324,59 +609,181 @@ bool SharedData::have_resources_selection()
     return selected_resources->get_size() > 0;
 }
 
-bool SharedData::have_connections_selection()
+bool SharedData::have_connections_selection(const std::string& resource_name)
 {
-    return selected_connections->get_size() > 0;
+    bool have_selection = false;
+    ResourceSubSelections* const sub_selections = selected_resources->get(&resource_name);
+    if (sub_selections != nullptr)
+    {
+        have_selection = have_connections_selection(*sub_selections);
+    }
+    return have_selection;
 }
 
-bool SharedData::have_volumes_selection()
+bool SharedData::have_connections_selection(const ResourceSubSelections& sub_selections)
 {
-    return selected_volumes->get_size() > 0;
+    return sub_selections.connection_selection && sub_selections.connection_selection->get_size() > 0;
 }
 
-bool SharedData::have_peer_volumes_selection()
+bool SharedData::have_volumes_selection(const std::string& resource_name)
 {
-    return selected_peer_volumes->get_size() > 0;
+    bool have_selection = false;
+    ResourceSubSelections* const sub_selections = selected_resources->get(&resource_name);
+    if (sub_selections != nullptr)
+    {
+        have_selection = have_volumes_selection(*sub_selections);
+    }
+    return have_selection;
 }
 
-bool SharedData::is_resource_selected(const std::string& name)
+bool SharedData::have_volumes_selection(const ResourceSubSelections& sub_selections)
 {
-    return selected_resources->get_node(&name) != nullptr;
+    return sub_selections.volume_selection && sub_selections.volume_selection->get_size() > 0;
 }
 
-bool SharedData::is_connection_selected(const std::string& name)
+bool SharedData::have_peer_volumes_selection(const std::string& resource_name, const std::string& connection_name)
 {
-    return selected_connections->get_node(&name) != nullptr;
+    bool have_selection = false;
+    ResourceSubSelections* const sub_selections = selected_resources->get(&resource_name);
+    if (sub_selections != nullptr)
+    {
+        if (sub_selections->connection_selection)
+        {
+            ConnectionSelectionMap::Node* const connection_node =
+                sub_selections->connection_selection->get_node(&connection_name);
+            if (connection_node != nullptr)
+            {
+                have_selection = have_peer_volumes_selection(*connection_node);
+            }
+        }
+    }
+    return have_selection;
 }
 
-bool SharedData::is_volume_selected(const uint16_t vlm_nr)
+bool SharedData::have_peer_volumes_selection(const ConnectionSelectionMap::Node& connection_node)
 {
-    return selected_volumes->get_node(&vlm_nr) != nullptr;
+    VolumeSelectionMap* const selected_peer_volumes = connection_node.get_value();
+    return selected_peer_volumes != nullptr && selected_peer_volumes->get_size() > 0;
 }
 
-bool SharedData::is_peer_volume_selected(const uint16_t vlm_nr)
+bool SharedData::is_resource_selected(const std::string& resource_name)
 {
-    return selected_peer_volumes->get_node(&vlm_nr) != nullptr;
+    return selected_resources->get_node(&resource_name) != nullptr;
 }
 
-ResourcesMap& SharedData::get_selected_resources_map()
+bool SharedData::is_connection_selected(const std::string& resource_name, const std::string& connection_name)
+{
+    bool have_selection = false;
+    ResourceSubSelections* const sub_selections = selected_resources->get(&resource_name);
+    if (sub_selections != nullptr)
+    {
+        have_selection = is_connection_selected(*sub_selections, connection_name);
+    }
+    return have_selection;
+}
+
+bool SharedData::is_connection_selected(
+    const ResourceSubSelections& sub_selections,
+    const std::string& connection_name
+)
+{
+    return sub_selections.connection_selection &&
+        sub_selections.connection_selection->get_node(&connection_name) != nullptr;
+}
+
+bool SharedData::is_volume_selected(const std::string& resource_name, const uint16_t vlm_nr)
+{
+    bool have_selection = false;
+    ResourceSubSelections* const sub_selections = selected_resources->get(&resource_name);
+    if (sub_selections != nullptr)
+    {
+        have_selection = is_volume_selected(*sub_selections, vlm_nr);
+    }
+    return have_selection;
+}
+
+bool SharedData::is_volume_selected(
+    const ResourceSubSelections& sub_selections,
+    const uint16_t vlm_nr
+)
+{
+    return sub_selections.volume_selection && sub_selections.volume_selection->get_node(&vlm_nr) != nullptr;
+}
+
+bool SharedData::is_peer_volume_selected(
+    const std::string& resource_name,
+    const std::string& connection_name,
+    const uint16_t vlm_nr
+)
+{
+    bool have_selection = false;
+    ResourceSubSelections* const sub_selections = selected_resources->get(&resource_name);
+    if (sub_selections != nullptr && sub_selections->connection_selection)
+    {
+        ConnectionSelectionMap::Node* const connection_node =
+            sub_selections->connection_selection->get_node(&connection_name);
+        if (connection_node != nullptr)
+        {
+            have_selection = is_peer_volume_selected(*connection_node, vlm_nr);
+        }
+    }
+    return have_selection;
+}
+
+bool SharedData::is_peer_volume_selected(
+    ConnectionSelectionMap::Node& connection_node,
+    const uint16_t vlm_nr
+)
+{
+    bool have_selection = false;
+    VolumeSelectionMap* const selected_peer_volumes = connection_node.get_value();
+    if (selected_peer_volumes != nullptr)
+    {
+        have_selection = selected_peer_volumes->get_node(&vlm_nr) != nullptr;
+    }
+    return have_selection;
+}
+
+
+ResourceSelectionMap& SharedData::get_selected_resources_map()
 {
     return *selected_resources;
 }
 
-ConnectionsMap& SharedData::get_selected_connections_map()
+ConnectionSelectionMap* SharedData::get_selected_connections_map(const std::string& rsc_name)
 {
-    return *selected_connections;
+    ConnectionSelectionMap* selected_connections = nullptr;
+    ResourceSubSelections* const sub_selections = selected_resources->get(&rsc_name);
+    if (sub_selections != nullptr)
+    {
+        selected_connections = sub_selections->connection_selection.get();
+    }
+    return selected_connections;
 }
 
-VolumesMap& SharedData::get_selected_volumes_map()
+VolumeSelectionMap* SharedData::get_selected_volumes_map(const std::string& rsc_name)
 {
-    return *selected_volumes;
+    VolumeSelectionMap* selected_volumes = nullptr;
+    ResourceSubSelections* const sub_selections = selected_resources->get(&rsc_name);
+    if (sub_selections != nullptr)
+    {
+        selected_volumes = sub_selections->volume_selection.get();
+    }
+    return selected_volumes;
 }
 
-VolumesMap& SharedData::get_selected_peer_volumes_map()
+VolumeSelectionMap* SharedData::get_selected_peer_volumes_map(
+    const std::string& rsc_name,
+    const std::string& con_name
+)
 {
-    return *selected_peer_volumes;
+    VolumeSelectionMap* selected_peer_volumes = nullptr;
+    ResourceSubSelections* const sub_selections = selected_resources->get(&rsc_name);
+    if (sub_selections != nullptr && sub_selections->connection_selection)
+    {
+        selected_peer_volumes = sub_selections->connection_selection->get(&con_name);
+    }
+    return selected_peer_volumes;
 }
 
 void SharedData::select_task(TaskEntryMap& selection_map, const uint64_t entry_id)
@@ -498,4 +905,28 @@ void SharedData::generic_id_clear_selection(TaskEntryMap& selection_map) noexcep
         delete entry_id;
     }
     selection_map.clear();
+}
+
+SharedData::SelectionStatistics::SelectionStatistics()
+{
+}
+
+SharedData::SelectionStatistics::~SelectionStatistics() noexcept
+{
+}
+
+void SharedData::stats_add(uint64_t& counter, const uint64_t value)
+{
+    counter += value;
+}
+
+void SharedData::stats_subtract(uint64_t& counter, const uint64_t value)
+{
+    counter = (counter >= value ? counter - value : 0);
+}
+
+SharedData::SelectionStatistics SharedData::get_selection_statistics()
+{
+    SelectionStatistics current_stats(selection_stats);
+    return current_stats;
 }
