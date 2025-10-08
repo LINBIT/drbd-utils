@@ -41,7 +41,6 @@
 
 #include <stddef.h>
 #include <stdlib.h>
-#include <stdbit.h>
 #include <stdio.h>
 #include <errno.h>
 #include <getopt.h>
@@ -2005,7 +2004,7 @@ int cmp_u32(const void *p1, const void *p2)
 /* apparently we don't have that on linux? */
 static int ilog2(unsigned long word)
 {
-	return word < 2 ? 0 : (BITS_PER_LONG - 1) - stdc_leading_zeros(word);
+	return BITS_PER_LONG - 1 - __builtin_clzl(word); /* C23: stdc_leading_zeros(word); */
 }
 
 /* bitmap layout
