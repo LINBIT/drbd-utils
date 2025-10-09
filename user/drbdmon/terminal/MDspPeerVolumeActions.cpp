@@ -109,6 +109,7 @@ void MDspPeerVolumeActions::show_actions()
         DrbdResource* const rsc = dsp_comp_hub.get_monitor_resource();
         if (rsc != nullptr)
         {
+            const std::string& rsc_name = rsc->get_name();
             dsp_comp_hub.dsp_io->write_text("Resource ");
             dsp_comp_hub.dsp_io->write_string_field(
                 dsp_comp_hub.dsp_shared->monitor_rsc,
@@ -121,6 +122,7 @@ void MDspPeerVolumeActions::show_actions()
                 DrbdConnection* const con = dsp_comp_hub.get_monitor_connection();
                 if (con != nullptr)
                 {
+                    const std::string& con_name = con->get_name();
                     dsp_comp_hub.dsp_io->cursor_xy(22, DisplayConsts::PAGE_NAV_Y + 2);
                     dsp_comp_hub.dsp_io->write_text("Connection ");
                     dsp_comp_hub.dsp_io->write_string_field(
@@ -131,17 +133,26 @@ void MDspPeerVolumeActions::show_actions()
 
                     dsp_comp_hub.dsp_io->cursor_xy(22, DisplayConsts::PAGE_NAV_Y + 3);
                     if (!dsp_comp_hub.dsp_shared->ovrd_peer_volume_selection &&
-                        dsp_comp_hub.dsp_shared->have_peer_volumes_selection())
+                        dsp_comp_hub.dsp_shared->have_peer_volumes_selection(rsc_name, con_name))
                     {
-                        VolumesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_peer_volumes_map();
-                        const size_t count = selection_map.get_size();
-                        if (count > 1)
+                        VolumeSelectionMap* const selection_map =
+                            dsp_comp_hub.dsp_shared->get_selected_peer_volumes_map(rsc_name, con_name);
+                        // Should always be non-null, because have_peer_volumes_selection returned true
+                        if (selection_map != nullptr)
                         {
-                            dsp_comp_hub.dsp_io->write_fmt("%lu selected volumes", static_cast<unsigned long> (count));
-                        }
-                        else
-                        {
-                            dsp_comp_hub.dsp_io->write_fmt("%lu selected volume", static_cast<unsigned long> (count));
+                            const size_t count = selection_map->get_size();
+                            if (count > 1)
+                            {
+                                dsp_comp_hub.dsp_io->write_fmt(
+                                    "%lu selected volumes", static_cast<unsigned long> (count)
+                                );
+                            }
+                            else
+                            {
+                                dsp_comp_hub.dsp_io->write_fmt(
+                                    "%lu selected volume", static_cast<unsigned long> (count)
+                                );
+                            }
                         }
                     }
                     else
@@ -229,17 +240,21 @@ void MDspPeerVolumeActions::selection_action(const action_func_type action_func)
             const std::string& con_name = con->get_name();
 
             if (!dsp_comp_hub.dsp_shared->ovrd_peer_volume_selection &&
-                dsp_comp_hub.dsp_shared->have_peer_volumes_selection())
+                dsp_comp_hub.dsp_shared->have_peer_volumes_selection(rsc_name, con_name))
             {
-                VolumesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_peer_volumes_map();
-                VolumesMap::KeysIterator iter(selection_map);
-
-                while (iter.has_next())
+                VolumeSelectionMap* const selection_map =
+                    dsp_comp_hub.dsp_shared->get_selected_peer_volumes_map(rsc_name, con_name);
+                // Should always be non-null, because have_peer_volumes_selection returned true
+                if (selection_map != nullptr)
                 {
-                    const uint16_t vlm_nr = *(iter.next());
-                    (this->*action_func)(rsc_name, con_name, vlm_nr);
+                    VolumeSelectionMap::KeysIterator iter(*selection_map);
+                    while (iter.has_next())
+                    {
+                        const uint16_t vlm_nr = *(iter.next());
+                        (this->*action_func)(rsc_name, con_name, vlm_nr);
+                    }
+                    dsp_comp_hub.dsp_selector->leave_display();
                 }
-                dsp_comp_hub.dsp_selector->leave_display();
             }
             else
             {
