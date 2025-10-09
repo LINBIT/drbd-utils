@@ -162,8 +162,8 @@ bool DrbdCommandsImpl::exec_for_resources(
 
             cmd_valid = true;
 
-            ResourcesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
-            ResourcesMap::KeysIterator rsc_iter(selection_map);
+            ResourceSelectionMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
+            ResourceSelectionMap::KeysIterator rsc_iter(selection_map);
 
             while (rsc_iter.has_next())
             {
@@ -219,8 +219,8 @@ bool DrbdCommandsImpl::exec_for_connections(
 
             cmd_valid = true;
 
-            ResourcesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
-            ResourcesMap::KeysIterator rsc_iter(selection_map);
+            ResourceSelectionMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
+            ResourceSelectionMap::KeysIterator rsc_iter(selection_map);
 
             std::string empty_con_name;
             while (rsc_iter.has_next())
@@ -241,19 +241,24 @@ bool DrbdCommandsImpl::exec_for_connections(
                 if (!dsp_comp_hub.dsp_shared->ovrd_connection_selection &&
                     (active_page == DisplayId::display_page::CON_LIST ||
                     active_page == DisplayId::display_page::CON_ACTIONS) &&
-                    dsp_comp_hub.dsp_shared->have_connections_selection())
+                    dsp_comp_hub.dsp_shared->have_connections_selection(rsc_name))
                 {
                     // On connection list or connection details with a selection of multiple connections
 
                     dsp_comp_hub.dsp_common->application_working();
 
-                    ConnectionsMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_connections_map();
-                    ConnectionsMap::KeysIterator con_iter(selection_map);
-
-                    while (con_iter.has_next())
+                    ConnectionSelectionMap* const selection_map =
+                        dsp_comp_hub.dsp_shared->get_selected_connections_map(rsc_name);
+                    // selection_map should always be non-null, because have_connections_selection returned true
+                    if (selection_map != nullptr)
                     {
-                        const std::string& cur_con_name = *(con_iter.next());
-                        (this->*exec_func)(rsc_name, cur_con_name);
+                        ConnectionSelectionMap::KeysIterator con_iter(*selection_map);
+
+                        while (con_iter.has_next())
+                        {
+                            const std::string& cur_con_name = *(con_iter.next());
+                            (this->*exec_func)(rsc_name, cur_con_name);
+                        }
                     }
                 }
                 else
@@ -317,19 +322,23 @@ bool DrbdCommandsImpl::exec_for_volumes(
             if (!dsp_comp_hub.dsp_shared->ovrd_volume_selection &&
                 (active_page == DisplayId::display_page::VLM_LIST ||
                 active_page == DisplayId::display_page::VLM_ACTIONS) &&
-                dsp_comp_hub.dsp_shared->have_volumes_selection())
+                dsp_comp_hub.dsp_shared->have_volumes_selection(rsc_name))
             {
                 dsp_comp_hub.dsp_common->application_working();
 
                 cmd_valid = true;
 
-                VolumesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_volumes_map();
-                VolumesMap::KeysIterator vlm_iter(selection_map);
-
-                while (vlm_iter.has_next())
+                VolumeSelectionMap* const selection_map = dsp_comp_hub.dsp_shared->get_selected_volumes_map(rsc_name);
+                // selection_map should always be non-null, because have_volumes_selection returned true
+                if (selection_map != nullptr)
                 {
-                    const uint16_t cur_vlm_nr = *(vlm_iter.next());
-                    (this->*exec_func)(rsc_name, cur_vlm_nr);
+                    VolumeSelectionMap::KeysIterator vlm_iter(*selection_map);
+
+                    while (vlm_iter.has_next())
+                    {
+                        const uint16_t cur_vlm_nr = *(vlm_iter.next());
+                        (this->*exec_func)(rsc_name, cur_vlm_nr);
+                    }
                 }
             }
             else
@@ -388,19 +397,24 @@ bool DrbdCommandsImpl::exec_for_peer_volumes(
             if (!dsp_comp_hub.dsp_shared->ovrd_peer_volume_selection &&
                 (active_page == DisplayId::display_page::PEER_VLM_LIST ||
                 active_page == DisplayId::display_page::PEER_VLM_ACTIONS) &&
-                dsp_comp_hub.dsp_shared->have_peer_volumes_selection())
+                dsp_comp_hub.dsp_shared->have_peer_volumes_selection(rsc_name, con_name))
             {
                 dsp_comp_hub.dsp_common->application_working();
 
                 cmd_valid = true;
 
-                VolumesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_peer_volumes_map();
-                VolumesMap::KeysIterator vlm_iter(selection_map);
-
-                while (vlm_iter.has_next())
+                VolumeSelectionMap* const selection_map =
+                    dsp_comp_hub.dsp_shared->get_selected_peer_volumes_map(rsc_name, con_name);
+                // selection_map should always be non-null, because have_peer_volumes_selection returned true
+                if (selection_map != nullptr)
                 {
-                    const uint16_t cur_vlm_nr = *(vlm_iter.next());
-                    (this->*exec_func)(rsc_name, con_name, cur_vlm_nr);
+                    VolumeSelectionMap::KeysIterator vlm_iter(*selection_map);
+
+                    while (vlm_iter.has_next())
+                    {
+                        const uint16_t cur_vlm_nr = *(vlm_iter.next());
+                        (this->*exec_func)(rsc_name, con_name, cur_vlm_nr);
+                    }
                 }
             }
             else
