@@ -60,10 +60,10 @@ class MDspVolumes : public MDspStdListBase
     void display_at_page();
     void list_item_clicked(MouseEvent& mouse);
     void write_volume_line(
-        DrbdResource* const rsc,
-        DrbdVolume* const   vlm,
-        uint32_t&           current_line,
-        const bool          selecting
+        DrbdResource* const                 rsc,
+        DrbdVolume* const                   vlm,
+        uint32_t&                           current_line,
+        const VolumeSelectionMap* const     selected_volumes
     );
     void write_no_volumes_line(const bool problem_mode_flag);
     bool is_problem_mode(DrbdResource* const rsc);
