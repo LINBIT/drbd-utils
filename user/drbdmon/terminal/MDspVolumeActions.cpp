@@ -113,26 +113,32 @@ void MDspVolumeActions::show_actions()
         DrbdResource* const rsc = dsp_comp_hub.get_monitor_resource();
         if (rsc != nullptr)
         {
+            const std::string& rsc_name = rsc->get_name();
             dsp_comp_hub.dsp_io->write_text("Resource ");
             dsp_comp_hub.dsp_io->write_string_field(
-                dsp_comp_hub.dsp_shared->monitor_rsc,
+                rsc_name,
                 dsp_comp_hub.term_cols - 26,
                 false
             );
 
             dsp_comp_hub.dsp_io->cursor_xy(17, DisplayConsts::PAGE_NAV_Y + 2);
             if (!dsp_comp_hub.dsp_shared->ovrd_volume_selection &&
-                dsp_comp_hub.dsp_shared->have_volumes_selection())
+                dsp_comp_hub.dsp_shared->have_volumes_selection(rsc_name))
             {
-                VolumesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_volumes_map();
-                const size_t count = selection_map.get_size();
-                if (count > 1)
+                VolumeSelectionMap* const selection_map =
+                    dsp_comp_hub.dsp_shared->get_selected_volumes_map(rsc_name);
+                // Should always be non-null, because have_volumes_selection returned true
+                if (selection_map != nullptr)
                 {
-                    dsp_comp_hub.dsp_io->write_fmt("%lu selected volumes", static_cast<unsigned long> (count));
-                }
-                else
-                {
-                    dsp_comp_hub.dsp_io->write_fmt("%lu selected volume", static_cast<unsigned long> (count));
+                    const size_t count = selection_map->get_size();
+                    if (count > 1)
+                    {
+                        dsp_comp_hub.dsp_io->write_fmt("%lu selected volumes", static_cast<unsigned long> (count));
+                    }
+                    else
+                    {
+                        dsp_comp_hub.dsp_io->write_fmt("%lu selected volume", static_cast<unsigned long> (count));
+                    }
                 }
             }
             else
@@ -174,26 +180,29 @@ void MDspVolumeActions::selection_action(const action_func_type action_func)
     try
     {
         dsp_comp_hub.dsp_common->application_working();
+        const std::string& rsc_name = dsp_comp_hub.dsp_shared->monitor_rsc;
         if (!dsp_comp_hub.dsp_shared->ovrd_volume_selection &&
-            dsp_comp_hub.dsp_shared->have_volumes_selection())
+            dsp_comp_hub.dsp_shared->have_volumes_selection(rsc_name))
         {
-            VolumesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_volumes_map();
-            VolumesMap::KeysIterator iter(selection_map);
-
-            const std::string& rsc_name = dsp_comp_hub.dsp_shared->monitor_rsc;
-            if (!rsc_name.empty())
+            VolumeSelectionMap* const selection_map =
+                dsp_comp_hub.dsp_shared->get_selected_volumes_map(rsc_name);
+            // Should always be non-null, because have_volumes_selection returned true
+            if (selection_map != nullptr)
             {
-                while (iter.has_next())
+                if (!rsc_name.empty())
                 {
-                    const uint16_t vlm_nr = *(iter.next());
-                    (this->*action_func)(rsc_name, vlm_nr);
+                    VolumeSelectionMap::KeysIterator iter(*selection_map);
+                    while (iter.has_next())
+                    {
+                        const uint16_t vlm_nr = *(iter.next());
+                        (this->*action_func)(rsc_name, vlm_nr);
+                    }
+                    dsp_comp_hub.dsp_selector->leave_display();
                 }
-                dsp_comp_hub.dsp_selector->leave_display();
             }
         }
         else
         {
-            const std::string& rsc_name = dsp_comp_hub.dsp_shared->monitor_rsc;
             const uint16_t vlm_nr = dsp_comp_hub.dsp_shared->monitor_vlm;
 
             if (!rsc_name.empty() && vlm_nr != DisplayConsts::VLM_NONE)
