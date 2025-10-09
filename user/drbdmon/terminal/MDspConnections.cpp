@@ -798,17 +798,20 @@ bool MDspConnections::execute_custom_command(const std::string& command, StringT
         DrbdResource* const rsc = dsp_comp_hub.get_monitor_resource();
         if (rsc != nullptr)
         {
+            const std::string& rsc_name = rsc->get_name();
+            ResourceSelectionMap::Node* const slct_rsc_node = dsp_comp_hub.dsp_shared->select_resource(rsc_name);
+            ResourceSubSelections& sub_selections = *(slct_rsc_node->get_value());
+
             dsp_comp_hub.dsp_common->application_working();
             const bool prb_mode = is_problem_mode(rsc);
             DrbdResource::ConnectionsIterator con_iter = rsc->connections_iterator();
-            const std::string& rsc_name = dsp_comp_hub.dsp_shared->monitor_rsc;
             while (con_iter.has_next())
             {
                 DrbdConnection* const con = con_iter.next();
                 if (!prb_mode || problem_filter(con))
                 {
                     const std::string& con_name = con->get_name();
-                    dsp_comp_hub.dsp_shared->select_connection(rsc_name, con_name);
+                    dsp_comp_hub.dsp_shared->select_connection(sub_selections, con_name);
                 }
             }
         }
