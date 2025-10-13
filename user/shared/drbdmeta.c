@@ -886,6 +886,7 @@ struct meta_cmd cmds[] = {
 		"[--peer-max-bio-size {val}] "
 		"[--al-stripes {val}] "
 		"[--al-stripe-size-kB {val}] "
+		"[--bitmap-block-size {val}] "
 		"{max_peers}",
 		meta_create_md, 1, 0, 1},
 	{"forget-peer", 0, meta_forget_peer, 1, 1, 1},

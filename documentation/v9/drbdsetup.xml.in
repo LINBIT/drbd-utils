@@ -108,7 +108,8 @@
 	    <pick_drbdsetup_option name="discard-zeroes-if-aligned"/>
 	    <pick_drbdsetup_option name="disable-write-same"/>
 	    <pick_drbdsetup_option name="rs-discard-granularity"/>
-          </variablelist>
+	    <pick_drbdsetup_option name="bitmap"/>
+	  </variablelist>
         </listitem>
       </varlistentry>
 

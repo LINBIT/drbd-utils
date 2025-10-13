@@ -575,6 +575,34 @@
     </definition>
   </drbdsetup_option>
 
+  <drbdsetup_option name="bitmap">
+    <term xml:id="bitmap"><option>bitmap
+	<group choice="req" rep="norepeat">
+	  <arg choice="plain" rep="norepeat">yes</arg>
+	  <arg choice="plain" rep="norepeat">no</arg>
+        </group>
+    </option></term>
+    <definition>
+      <para>
+        <indexterm significance="normal">
+          <primary>drbd.conf</primary>
+          <secondary>bitmap</secondary>
+        </indexterm>
+        By default, the drbd kernel driver allocates the change-tracking bitmap
+        at the moment the virtual drbd block device gets attached to a local
+        backing block device. Setting the bitmap option to <option>no</option>
+        suppresses bitmap allocation. The benefit is the reduced memory
+        footprint. As a consequence, it is not possible to add a peer to the
+        resource until the bitmap is allocated by changing this value to
+        <option>yes</option>.
+      </para>
+      <para>The default value of <option>bitmap</option> is <option>yes</option>.
+        This option is available since drbd-utils 9.33 and
+	the drbd kernel driver 9.3.0.
+      </para>
+    </definition>
+  </drbdsetup_option>
+
   <drbdsetup_option name="rs-discard-granularity">
     <term>
       <option>rs-discard-granularity <replaceable>byte</replaceable></option>

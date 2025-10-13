@@ -108,7 +108,8 @@
 	  <arg choice="opt" rep="norepeat"><option>--peer-max-bio-size=</option><replaceable>val</replaceable></arg>
 	  <arg choice="opt" rep="norepeat"><option>--initialize-bitmap=</option><replaceable>{automatic|zeroout|pwrite|skip}</replaceable></arg>
 	  <arg choice="opt" rep="norepeat"><option>--al-stripes=</option><replaceable>val</replaceable></arg>
-	  <arg choice="opt" rep="norepeat"><option>--al-stripe-size-kB=</option><replaceable>val</replaceable></arg> (metadata version v09)</term>
+	  <arg choice="opt" rep="norepeat"><option>--al-stripe-size-kB=</option><replaceable>val</replaceable></arg> (metadata version v09)
+	  <arg choice="opt" rep="norepeat"><option>--bitmap-block-size=</option><replaceable>val</replaceable></arg></term>
         <listitem>
 	  <para><indexterm
 	      significance="normal"><primary>drbdmeta</primary><secondary>create-md</secondary></indexterm>
@@ -161,6 +162,17 @@
 	    "spindle".
 	    <?linebreak?>
 	    <command>drbdmeta 0 v08 /dev/vg23/lv42 internal create-md --al-stripes 7 --al-stripe-size 64</command>
+	  </para>
+	  <para>
+	    With the <option>--bitmap-block-size</option> option you can change the
+	    change-tracking bitmap's granularity from 4KiB to another
+	    value. Allowed values are: 4k, 8k, 16k, 32k, 64k, 128k, 256k, 512k,
+	    1M. The benefit of a larger block size is a reduced bitmap
+	    size and a smaller memory footprint for the DRBD volume.
+	    The disadvantage is a higher resync volume if the workload writes to
+	    the DRBD devices at a finer granularity, since drbd rounds each
+	    modified block up to a complete bitmap block for change tracking,
+	    and later resync.
 	  </para>
         </listitem>
       </varlistentry>
