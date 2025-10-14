@@ -899,7 +899,7 @@ struct meta_cmd cmds[] = {
 
 static inline bool is_power_of_2(unsigned long n)
 {
-	return (n != 0 && ((n & (n-1)) == 0));
+	return n != 0 && (n & (n-1)) == 0;
 }
 
 #define PREAD(cfg,b,c,d) pread_or_die((cfg),(b),(c),(d), __func__ )
@@ -5675,9 +5675,9 @@ int main(int argc, char **argv)
 			    cfg->ops->name);
 			exit(10);
 		}
-		if (!is_power_of_2(option_bm_block_size)
-		||  option_bm_block_size < BM_BLOCK_SHIFT_MIN
-		||  option_bm_block_size > BM_BLOCK_SHIFT_MAX) {
+		if (!is_power_of_2(option_bm_block_size) ||
+		    option_bm_block_size < BM_BLOCK_SIZE_MIN ||
+		    option_bm_block_size > BM_BLOCK_SIZE_MAX) {
 			fprintf(stderr,
 			    "bitmap-block-size must be a power of 2 within [4k .. 1M], not '%s'\n",
 			    option_bm_block_size_str);
