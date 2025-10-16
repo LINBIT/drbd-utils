@@ -3,6 +3,17 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.33.0-rc.1
+-----------
+ * drbdsetup,show: show device options in json output
+ * drbdsetup,show: always show defaults in json output
+ * drbdadm,create-md: avoid device UUID regeneration
+ * drbdadm,create-md: do not reset effective-size
+   on format conversion.
+ * drbdmon: secondary --force and various improvements
+ * all: various v8 v9 compatibility improvements
+ * drbdmeta: allow bitmap granularity
+
 9.32.0
 -----------
  * drbdsetup,show: show device config
