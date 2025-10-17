@@ -328,6 +328,11 @@ const char* DrbdVolume::get_replication_state_label() const
     return label;
 }
 
+DrbdVolume::client_state DrbdVolume::get_client_state() const
+{
+    return vol_client_state;
+}
+
 void DrbdVolume::set_connection(DrbdConnection* conn)
 {
     connection = conn;
