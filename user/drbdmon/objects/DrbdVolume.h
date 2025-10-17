@@ -141,6 +141,7 @@ class DrbdVolume : private StateFlags
     virtual const char* get_disk_state_label() const;
     virtual repl_state get_replication_state() const;
     virtual const char* get_replication_state_label() const;
+    virtual client_state get_client_state() const;
     virtual void set_connection(DrbdConnection* conn);
 
     using StateFlags::has_mark_state;
