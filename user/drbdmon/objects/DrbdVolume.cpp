@@ -338,22 +338,22 @@ void DrbdVolume::set_connection(DrbdConnection* conn)
     connection = conn;
 }
 
-bool DrbdVolume::has_disk_alert()
+bool DrbdVolume::has_disk_alert() const
 {
     return disk_alert;
 }
 
-bool DrbdVolume::has_replication_warning()
+bool DrbdVolume::has_replication_warning() const
 {
     return repl_warn || repl_alert;
 }
 
-bool DrbdVolume::has_replication_alert()
+bool DrbdVolume::has_replication_alert() const
 {
     return repl_alert;
 }
 
-bool DrbdVolume::has_quorum_alert()
+bool DrbdVolume::has_quorum_alert() const
 {
     return quorum_alert;
 }
