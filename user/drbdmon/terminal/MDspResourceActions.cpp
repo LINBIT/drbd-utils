@@ -252,7 +252,7 @@ void MDspResourceActions::show_actions()
     dsp_comp_hub.dsp_io->write_text("Resource actions: ");
     if (!dsp_comp_hub.dsp_shared->ovrd_resource_selection && dsp_comp_hub.dsp_shared->have_resources_selection())
     {
-        ResourcesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
+        ResourceSelectionMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
         const size_t count = selection_map.get_size();
         if (count > 1)
         {
@@ -306,8 +306,8 @@ void MDspResourceActions::selection_action(const action_func_type action_func)
         dsp_comp_hub.dsp_common->application_working();
         if (!dsp_comp_hub.dsp_shared->ovrd_resource_selection && dsp_comp_hub.dsp_shared->have_resources_selection())
         {
-            ResourcesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
-            ResourcesMap::KeysIterator iter(selection_map);
+            ResourceSelectionMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
+            ResourceSelectionMap::KeysIterator iter(selection_map);
             while (iter.has_next())
             {
                 const std::string* const rsc_name_ptr = iter.next();
