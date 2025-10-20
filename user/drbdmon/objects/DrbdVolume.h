@@ -154,10 +154,10 @@ class DrbdVolume : private StateFlags
     virtual void clear_state_flags() override;
     virtual StateFlags::state update_state_flags() override;
     virtual StateFlags::state child_state_flags_changed() override;
-    virtual bool has_disk_alert();
-    virtual bool has_replication_warning();
-    virtual bool has_replication_alert();
-    virtual bool has_quorum_alert();
+    virtual bool has_disk_alert() const;
+    virtual bool has_replication_warning() const;
+    virtual bool has_replication_alert() const;
+    virtual bool has_quorum_alert() const;
 
     // Creates (allocates and initializes) a new DrbdVolume object from a map of properties
     //
