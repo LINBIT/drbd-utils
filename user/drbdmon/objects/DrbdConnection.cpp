@@ -119,12 +119,12 @@ DrbdConnection::sync_state_type DrbdConnection::get_sync_state() const
     return sync_state;
 }
 
-bool DrbdConnection::has_connection_alert()
+bool DrbdConnection::has_connection_alert() const
 {
     return conn_alert;
 }
 
-bool DrbdConnection::has_role_alert()
+bool DrbdConnection::has_role_alert() const
 {
     return role_alert;
 }

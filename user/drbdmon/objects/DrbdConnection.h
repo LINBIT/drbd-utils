@@ -90,8 +90,8 @@ class DrbdConnection : public VolumesContainer, public DrbdRole, private StateFl
     virtual void clear_state_flags() override;
     virtual StateFlags::state update_state_flags() override;
     virtual StateFlags::state child_state_flags_changed() override;
-    virtual bool has_connection_alert();
-    virtual bool has_role_alert();
+    virtual bool has_connection_alert() const;
+    virtual bool has_role_alert() const;
 
     // Creates (allocates and initializes) a new DrbdConnection object from a map of properties
     //
