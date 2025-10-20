@@ -1198,6 +1198,7 @@ struct context_def resource_options_ctx = {
 		{ "on-no-quorum", ENUM(on_no_quorum, ON_NO_QUORUM) },
 		{ "quorum-minimum-redundancy", ENUM_NUM(quorum_min_redundancy, QUORUM, 1, DRBD_PEERS_MAX) },
 		{ "on-suspended-primary-outdated", ENUM(on_susp_primary_outdated, ON_SUSP_PRI_OUTD) },
+		{ "drbd8-api-compatibility", BOOLEAN(explicit_drbd8_compat, DRBD8_COMPAT_MODE) },
 		{ } },
 };
 
