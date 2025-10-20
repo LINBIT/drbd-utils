@@ -70,6 +70,8 @@ void exec_legacy_drbdadm(char **argv)
 	execvp(drbdadm_84, argv);
 	log_err("execvp() failed to exec %s: %m\n", drbdadm_84);
 #else
+	const struct version *driver_version = drbd_driver_version(FALLBACK_TO_UTILS);
+
 	config_help_legacy("drbdadm", driver_version);
 #endif
 	exit(E_EXEC_ERROR);
