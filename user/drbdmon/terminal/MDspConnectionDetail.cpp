@@ -3,7 +3,6 @@
 #include <terminal/DisplayConsts.h>
 #include <terminal/KeyCodes.h>
 #include <terminal/HelpText.h>
-#include <terminal/HelpText.h>
 #include <objects/DrbdResource.h>
 #include <string>
 
