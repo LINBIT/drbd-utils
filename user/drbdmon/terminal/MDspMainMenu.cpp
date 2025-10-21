@@ -55,6 +55,11 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
         {
             opt_configuration();
         };
+    cmd_fn_selection_filter =
+        [this]() -> void
+        {
+            opt_selection_filter();
+        };
     cmd_fn_start_all_rsc =
         [this]() -> void
         {
@@ -125,6 +130,12 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
             cmd_fn_configuration
         )
     );
+    cmd_selection_filter = std::unique_ptr<ClickableCommand>(
+        new ClickableCommand(
+            "50", 1, 10, 50, 90,
+            cmd_fn_selection_filter
+        )
+    );
     cmd_start_all_rsc = std::unique_ptr<ClickableCommand>(
         new ClickableCommand(
             "90", 1, 13, 5, 45,
@@ -153,6 +164,7 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
     add_option(*cmd_help_idx);
     add_option(*cmd_about);
     add_option(*cmd_configuration);
+    add_option(*cmd_selection_filter);
 
     add_option(*cmd_start_all_rsc);
     add_option(*cmd_stop_all_rsc);
@@ -187,6 +199,7 @@ void MDspMainMenu::display_content()
     display_option(" 7   ", "Help index", *cmd_help_idx, std_color);
     display_option(" 8   ", "About DRBDmon", *cmd_about, std_color);
     display_option(" 9   ", "DRBDmon configuration", *cmd_configuration, std_color);
+    display_option("50   ", "Selection filter", *cmd_selection_filter, std_color);
 
     if (dsp_comp_hub.enable_drbd_actions)
     {
@@ -280,6 +293,11 @@ void MDspMainMenu::opt_about_drbdmon()
 void MDspMainMenu::opt_configuration()
 {
     dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::CONFIGURATION);
+}
+
+void MDspMainMenu::opt_selection_filter()
+{
+    dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::SLCT_FILTER);
 }
 
 void MDspMainMenu::opt_start_all_resources()
