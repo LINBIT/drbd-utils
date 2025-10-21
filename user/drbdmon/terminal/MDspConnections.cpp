@@ -56,7 +56,6 @@ void MDspConnections::reset_display()
 {
     MDspStdListBase::reset_display();
     cursor_con.clear();
-    clear_selection();
     set_page_nr(1);
 }
 
