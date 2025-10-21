@@ -411,7 +411,6 @@ void MDspPeerVolumes::reset_display()
 {
     MDspStdListBase::reset_display();
     cursor_vlm = DisplayConsts::VLM_NONE;
-    clear_selection();
     set_page_nr(1);
 }
 
