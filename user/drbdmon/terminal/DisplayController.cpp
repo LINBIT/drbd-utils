@@ -23,6 +23,7 @@
 #include <terminal/MDspMessage.h>
 #include <terminal/MDspPgmInfo.h>
 #include <terminal/MDspConfiguration.h>
+#include <terminal/MDspSelectionFilter.h>
 #include <terminal/InputField.h>
 #include <terminal/DisplayConsts.h>
 #include <terminal/DisplayUpdateEvent.h>
@@ -247,6 +248,9 @@ DisplayController::DisplayController(
         // Pass a mutable components hub to the configuration display
         config_mgr = std::unique_ptr<ModularDisplay>(
             dynamic_cast<ModularDisplay*> (new MDspConfiguration(*dsp_comp_hub_mgr, *(mon_env.config)))
+        );
+        slct_filter_mgr = std::unique_ptr<ModularDisplay>(
+            dynamic_cast<ModularDisplay*> (new MDspSelectionFilter(*dsp_comp_hub_mgr))
         );
 
         wait_msg_mgr = std::unique_ptr<MDspWaitMsg>(new MDspWaitMsg(dsp_comp_hub));
@@ -772,6 +776,9 @@ void DisplayController::get_display(
             break;
         case DisplayId::display_page::CONFIGURATION:
             dsp_obj = config_mgr.get();
+            break;
+        case DisplayId::display_page::SLCT_FILTER:
+            dsp_obj = slct_filter_mgr.get();
             break;
         default:
             break;
