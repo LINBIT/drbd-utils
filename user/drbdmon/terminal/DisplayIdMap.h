@@ -34,6 +34,7 @@ namespace dspid
     extern const DisplayId ID_PEER_VLM_ACT;
     extern const DisplayId ID_TASK_DETAIL;
     extern const DisplayId ID_CONFIGURATION;
+    extern const DisplayId ID_SLCT_FILTER;
 
     // @throws std::bad_alloc
     void initialize_display_ids(DisplayMap& map);

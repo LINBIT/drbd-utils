@@ -26,6 +26,7 @@ const std::string   DisplayId::MDSP_PEER_VLM_ACT    = {"PVLMA"};
 const std::string   DisplayId::MDSP_PGM_INFO        = {"INFO"};
 const std::string   DisplayId::MDSP_TASK_DETAIL     = {"TASK"};
 const std::string   DisplayId::MDSP_CONFIGURATION   = {"CONF"};
+const std::string   DisplayId::MDSP_SLCT_FILTER     = {"SFLT"};
 
 DisplayId::DisplayId(const std::string* const name_ptr, const display_page id):
     name(name_ptr),
