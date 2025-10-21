@@ -35,7 +35,8 @@ class DisplayId
         PEER_VLM_ACTIONS,
         PGM_INFO,
         TASK_DETAIL,
-        CONFIGURATION
+        CONFIGURATION,
+        SLCT_FILTER
     };
 
     static const std::string    MDSP_RSC_LIST;
@@ -64,6 +65,7 @@ class DisplayId
     static const std::string    MDSP_PGM_INFO;
     static const std::string    MDSP_TASK_DETAIL;
     static const std::string    MDSP_CONFIGURATION;
+    static const std::string    MDSP_SLCT_FILTER;
 
     const std::string* const    name;
     const display_page          page_id;
