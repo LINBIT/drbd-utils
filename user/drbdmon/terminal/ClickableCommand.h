@@ -71,6 +71,7 @@ class ClickableCommand
         virtual ~Builder() noexcept;
 
         virtual ClickableCommand* create_with_auto_nr(std::function<void()>& handler_ref);
+        virtual ClickableCommand* create_with_page_dot_auto_nr(std::function<void()>& handler_ref);
         virtual ClickableCommand* create_with_id(const std::string& id, std::function<void()>& handler_ref);
     };
 };
