@@ -3,7 +3,7 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
-9.33.0-rc.1
+9.33.0
 -----------
  * drbdsetup,show: show device options in json output
  * drbdsetup,show: always show defaults in json output
@@ -13,6 +13,7 @@ Latest:
  * drbdmon: secondary --force and various improvements
  * all: various v8 v9 compatibility improvements
  * drbdmeta: allow bitmap granularity
+ * drbdadm,drbdsetup,v9: add drbd8-compatibility option
 
 9.32.0
 -----------
