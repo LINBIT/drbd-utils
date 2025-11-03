@@ -235,6 +235,7 @@ struct names backend_options = STAILQ_HEAD_INITIALIZER(backend_options);
 STAILQ_HEAD(deferred_cmds, deferred_cmd) deferred_cmds[__CFG_LAST];
 int scheduled_deferred_cmds = 0;
 int executed_deferred_cmds = 0;
+const struct version *driver_version;
 
 int adm_adjust_wp(const struct cfg_ctx *ctx)
 {
@@ -1429,12 +1430,20 @@ static int adm_resource(const struct cfg_ctx *ctx)
 	const char *argv[MAX_ARGS];
 	int argc = 0, ex;
 	bool do_new_resource = (ctx->cmd == &new_resource_cmd);
+	bool node_id_on_cmdline = do_new_resource;
 	bool reset = (ctx->cmd == &res_options_defaults_cmd);
 
+#ifdef DRBD_LEGACY_84
+	if (config_version == CV_IS_V8 && driver_version && driver_version->compat_84_present)
+		node_id_on_cmdline = false;
+	/* By omitting the node-id from the command line, the drbd kernel driver
+	 * will activate the implicit drbd-84 api compatibility mode.
+	 */
+#endif
 	argv[NA(argc)] = drbdsetup;
 	argv[NA(argc)] = ctx->cmd->name; /* "new-resource" or "resource-options" */
 	argv[NA(argc)] = res->name;
-	if (do_new_resource)
+	if (node_id_on_cmdline)
 		argv[NA(argc)] = ctx->res->me->node_id;
 	if (reset)
 		argv[NA(argc)] = "--set-defaults";
@@ -3615,7 +3624,6 @@ void die_if_no_resources(void)
 
 int main(int argc, char **argv)
 {
-	const struct version *driver_version = drbd_driver_version(STRICT);
 	size_t i;
 	int rv = 0, r;
 	struct adm_cmd *cmd = NULL;
@@ -3626,6 +3634,8 @@ int main(int argc, char **argv)
 	int is_dump;
 	int is_adjust;
 	struct cfg_ctx ctx = { };
+
+	driver_version = drbd_driver_version(STRICT);
 
 	if (argv == NULL || argc < 1) {
 		fputs("drbdadm: Nonexistent or empty arguments array, aborting.\n", stderr);
@@ -3716,9 +3726,6 @@ int main(int argc, char **argv)
 		exit(E_CONFIG_INVALID);
 
 	post_parse(&config, cmd->is_proxy_cmd ? MATCH_ON_PROXY : 0);
-
-	if (config_version == CV_IS_V8 && driver_version && driver_version->compat_84_present)
-		exec_legacy_drbdadm(argv);
 
 	if (!is_dump || dry_run || verbose)
 		expand_common();
