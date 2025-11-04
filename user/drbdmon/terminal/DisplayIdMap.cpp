@@ -32,6 +32,7 @@ namespace dspid
     const DisplayId ID_TASK_DETAIL(&DisplayId::MDSP_TASK_DETAIL, DisplayId::display_page::TASK_DETAIL);
     const DisplayId ID_CONFIGURATION(&DisplayId::MDSP_CONFIGURATION, DisplayId::display_page::CONFIGURATION);
     const DisplayId ID_SLCT_FILTER(&DisplayId::MDSP_SLCT_FILTER, DisplayId::display_page::SLCT_FILTER);
+    const DisplayId ID_BULK_ACT(&DisplayId::MDSP_BULK_ACT, DisplayId::display_page::BULK_ACT);
 
     // @throws std::bad_alloc
     void initialize_display_ids(DisplayMap& map)
@@ -65,6 +66,7 @@ namespace dspid
             map.insert(&DisplayId::MDSP_TASK_DETAIL,        &ID_TASK_DETAIL);
             map.insert(&DisplayId::MDSP_CONFIGURATION,      &ID_CONFIGURATION);
             map.insert(&DisplayId::MDSP_SLCT_FILTER,        &ID_SLCT_FILTER);
+            map.insert(&DisplayId::MDSP_BULK_ACT,           &ID_BULK_ACT);
         }
         catch (dsaext::DuplicateInsertException&)
         {

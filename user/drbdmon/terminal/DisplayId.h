@@ -36,7 +36,8 @@ class DisplayId
         PGM_INFO,
         TASK_DETAIL,
         CONFIGURATION,
-        SLCT_FILTER
+        SLCT_FILTER,
+        BULK_ACT
     };
 
     static const std::string    MDSP_RSC_LIST;
@@ -66,6 +67,7 @@ class DisplayId
     static const std::string    MDSP_TASK_DETAIL;
     static const std::string    MDSP_CONFIGURATION;
     static const std::string    MDSP_SLCT_FILTER;
+    static const std::string    MDSP_BULK_ACT;
 
     const std::string* const    name;
     const display_page          page_id;
