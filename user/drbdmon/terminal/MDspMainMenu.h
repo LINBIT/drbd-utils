@@ -20,15 +20,18 @@ class MDspMainMenu : public MDspMenuBase
     std::unique_ptr<ClickableCommand>   cmd_help_idx;
     std::unique_ptr<ClickableCommand>   cmd_about;
     std::unique_ptr<ClickableCommand>   cmd_configuration;
-    std::unique_ptr<ClickableCommand>   cmd_selection_filter;
     std::unique_ptr<ClickableCommand>   cmd_start_all_rsc;
     std::unique_ptr<ClickableCommand>   cmd_stop_all_rsc;
     std::unique_ptr<ClickableCommand>   cmd_exit;
+
+    std::unique_ptr<ClickableCommand>   cmd_selection_filter;
+    std::unique_ptr<ClickableCommand>   cmd_bulk_actions;
 
     MDspMainMenu(const ComponentsHub& comp_hub);
     virtual ~MDspMainMenu() noexcept;
 
     virtual void display_content() override;
+    virtual void display_activated() override;
 
     virtual bool key_pressed(const uint32_t key) override;
     virtual bool mouse_action(MouseEvent& mouse) override;
@@ -45,10 +48,12 @@ class MDspMainMenu : public MDspMenuBase
     std::function<void()>   cmd_fn_help_idx;
     std::function<void()>   cmd_fn_about;
     std::function<void()>   cmd_fn_configuration;
-    std::function<void()>   cmd_fn_selection_filter;
     std::function<void()>   cmd_fn_start_all_rsc;
     std::function<void()>   cmd_fn_stop_all_rsc;
     std::function<void()>   cmd_fn_exit;
+
+    std::function<void()>   cmd_fn_selection_filter;
+    std::function<void()>   cmd_fn_bulk_actions;
 
     void opt_resource_overview();
     void opt_log();
@@ -59,10 +64,12 @@ class MDspMainMenu : public MDspMenuBase
     void opt_help_index();
     void opt_about_drbdmon();
     void opt_configuration();
-    void opt_selection_filter();
     void opt_start_all_resources();
     void opt_stop_all_resources();
     void opt_exit();
+
+    void opt_selection_filter();
+    void opt_bulk_actions();
 };
 
 #endif /* MDSPMAINMENU_H */
