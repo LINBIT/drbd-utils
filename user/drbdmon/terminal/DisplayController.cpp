@@ -780,6 +780,9 @@ void DisplayController::get_display(
         case DisplayId::display_page::SLCT_FILTER:
             dsp_obj = slct_filter_mgr.get();
             break;
+        case DisplayId::display_page::BULK_ACT:
+            dsp_obj = bulk_actions_mgr.get();
+            break;
         default:
             break;
     }
