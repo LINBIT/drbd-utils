@@ -24,6 +24,7 @@
 #include <terminal/MDspPgmInfo.h>
 #include <terminal/MDspConfiguration.h>
 #include <terminal/MDspSelectionFilter.h>
+#include <terminal/MDspBulkActions.h>
 #include <terminal/InputField.h>
 #include <terminal/DisplayConsts.h>
 #include <terminal/DisplayUpdateEvent.h>
@@ -251,6 +252,9 @@ DisplayController::DisplayController(
         );
         slct_filter_mgr = std::unique_ptr<ModularDisplay>(
             dynamic_cast<ModularDisplay*> (new MDspSelectionFilter(*dsp_comp_hub_mgr))
+        );
+        bulk_actions_mgr = std::unique_ptr<ModularDisplay>(
+            dynamic_cast<ModularDisplay*> (new MDspBulkActions(*dsp_comp_hub_mgr))
         );
 
         wait_msg_mgr = std::unique_ptr<MDspWaitMsg>(new MDspWaitMsg(dsp_comp_hub));
