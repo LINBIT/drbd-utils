@@ -55,11 +55,6 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
         {
             opt_configuration();
         };
-    cmd_fn_selection_filter =
-        [this]() -> void
-        {
-            opt_selection_filter();
-        };
     cmd_fn_start_all_rsc =
         [this]() -> void
         {
@@ -75,6 +70,18 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
         {
             opt_exit();
         };
+
+    cmd_fn_selection_filter =
+        [this]() -> void
+        {
+            opt_selection_filter();
+        };
+    cmd_fn_bulk_actions =
+        [this]() -> void
+        {
+            opt_bulk_actions();
+        };
+
 
     cmd_rsc_ovw = std::unique_ptr<ClickableCommand>(
         new ClickableCommand(
@@ -130,12 +137,6 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
             cmd_fn_configuration
         )
     );
-    cmd_selection_filter = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "50", 1, 10, 50, 90,
-            cmd_fn_selection_filter
-        )
-    );
     cmd_start_all_rsc = std::unique_ptr<ClickableCommand>(
         new ClickableCommand(
             "90", 1, 13, 5, 45,
@@ -155,6 +156,19 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
         )
     );
 
+    cmd_selection_filter = std::unique_ptr<ClickableCommand>(
+        new ClickableCommand(
+            "50", 2, 6, 5, 45,
+            cmd_fn_selection_filter
+        )
+    );
+    cmd_bulk_actions = std::unique_ptr<ClickableCommand>(
+        new ClickableCommand(
+            "51", 2, 7, 5, 45,
+            cmd_fn_bulk_actions
+        )
+    );
+
     add_option(*cmd_rsc_ovw);
     add_option(*cmd_log);
     add_option(*cmd_act_tsk);
@@ -164,15 +178,18 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
     add_option(*cmd_help_idx);
     add_option(*cmd_about);
     add_option(*cmd_configuration);
-    add_option(*cmd_selection_filter);
-
     add_option(*cmd_start_all_rsc);
     add_option(*cmd_stop_all_rsc);
 
     add_option(*cmd_exit);
 
+    add_option(*cmd_selection_filter);
+    add_option(*cmd_bulk_actions);
+
     InputField& option_field = get_option_field();
     option_field.set_position(17, 17);
+
+    set_page_count(2);
 }
 
 MDspMainMenu::~MDspMainMenu() noexcept
@@ -190,26 +207,41 @@ void MDspMainMenu::display_content()
     const std::string& std_color = dsp_comp_hub.active_color_table->option_text;
     const std::string& caution_color = dsp_comp_hub.active_color_table->caution_text;
 
-    display_option(" 1   ", "Resource overview", *cmd_rsc_ovw, std_color);
-    display_option(" 2   ", "Message log", *cmd_log, std_color);
-    display_option(" 3   ", "Active tasks queue", *cmd_act_tsk, std_color);
-    display_option(" 4   ", "Pending tasks queue", *cmd_pnd_tsk, std_color);
-    display_option(" 5   ", "Suspended tasks queue", *cmd_ssp_tsk, std_color);
-    display_option(" 6   ", "Finished tasks queue", *cmd_fin_tsk, std_color);
-    display_option(" 7   ", "Help index", *cmd_help_idx, std_color);
-    display_option(" 8   ", "About DRBDmon", *cmd_about, std_color);
-    display_option(" 9   ", "DRBDmon configuration", *cmd_configuration, std_color);
-    display_option("50   ", "Selection filter", *cmd_selection_filter, std_color);
-
-    if (dsp_comp_hub.enable_drbd_actions)
+    const uint32_t page = get_page_nr();
+    if (page == 1)
     {
-        display_option("90   ", "Start/adjust all resources", *cmd_start_all_rsc, std_color);
-        display_option("99   ", "Stop all resources", *cmd_stop_all_rsc, caution_color);
+        display_option(" 1   ", "Resource overview", *cmd_rsc_ovw, std_color);
+        display_option(" 2   ", "Message log", *cmd_log, std_color);
+        display_option(" 3   ", "Active tasks queue", *cmd_act_tsk, std_color);
+        display_option(" 4   ", "Pending tasks queue", *cmd_pnd_tsk, std_color);
+        display_option(" 5   ", "Suspended tasks queue", *cmd_ssp_tsk, std_color);
+        display_option(" 6   ", "Finished tasks queue", *cmd_fin_tsk, std_color);
+        display_option(" 7   ", "Help index", *cmd_help_idx, std_color);
+        display_option(" 8   ", "About DRBDmon", *cmd_about, std_color);
+        display_option(" 9   ", "DRBDmon configuration", *cmd_configuration, std_color);
+
+        if (dsp_comp_hub.enable_drbd_actions)
+        {
+            display_option("90   ", "Start/adjust all resources", *cmd_start_all_rsc, std_color);
+            display_option("99   ", "Stop all resources", *cmd_stop_all_rsc, caution_color);
+        }
+
+        display_option(" X   ", "Exit DRBDmon", *cmd_exit, std_color);
+    }
+    else
+    if (page == 2)
+    {
+        display_option("50   ", "Selection filter", *cmd_selection_filter, std_color);
+        display_option("51   ", "Bulk actions", *cmd_bulk_actions, std_color);
     }
 
-    display_option(" X   ", "Exit DRBDmon", *cmd_exit, std_color);
-
     display_option_query(5, 17);
+}
+
+void MDspMainMenu::display_activated()
+{
+    MDspMenuBase::display_activated();
+    set_page_nr(1);
 }
 
 bool MDspMainMenu::key_pressed(const uint32_t key)
@@ -298,6 +330,11 @@ void MDspMainMenu::opt_configuration()
 void MDspMainMenu::opt_selection_filter()
 {
     dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::SLCT_FILTER);
+}
+
+void MDspMainMenu::opt_bulk_actions()
+{
+    dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::BULK_ACT);
 }
 
 void MDspMainMenu::opt_start_all_resources()
