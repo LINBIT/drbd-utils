@@ -38,6 +38,20 @@ void MDspMenuBase::display_option(
     dsp_comp_hub.dsp_io->write_text(text);
 }
 
+void MDspMenuBase::display_option(
+    uint8_t                 key_text_width,
+    const char* const       text,
+    const ClickableCommand& cmd,
+    const std::string&      text_color
+)
+{
+    dsp_comp_hub.dsp_io->cursor_xy(cmd.clickable_area.start_col, cmd.clickable_area.row);
+    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->option_key.c_str());
+    dsp_comp_hub.dsp_io->write_string_field(cmd.command, key_text_width, true);
+    dsp_comp_hub.dsp_io->write_text(text_color.c_str());
+    dsp_comp_hub.dsp_io->write_text(text);
+}
+
 void MDspMenuBase::display_option_query(const uint16_t coord_x, const uint16_t coord_y)
 {
     dsp_comp_hub.dsp_io->cursor_xy(coord_x, coord_y);
