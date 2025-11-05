@@ -44,6 +44,41 @@ class DrbdCommandsImpl : public DrbdCommands, public CommandsBase<DrbdCommandsIm
     virtual bool execute_command(const std::string& command, StringTokenizer& tokenizer) override;
     virtual bool complete_command(const std::string& prefix, std::string& completion) override;
 
+    virtual void exec_start(const std::string& rsc_name) override;
+    virtual void exec_stop(const std::string& rsc_name) override;
+    virtual void exec_adjust(const std::string& rsc_name) override;
+    virtual void exec_primary(const std::string& rsc_name) override;
+    virtual void exec_force_primary(const std::string& rsc_name) override;
+    virtual void exec_secondary(const std::string& rsc_name) override;
+    virtual void exec_force_secondary(const std::string& rsc_name) override;
+
+    virtual void exec_connect(const std::string& rsc_name, const std::string& con_name) override;
+    virtual void exec_disconnect(const std::string& rsc_name, const std::string& con_name) override;
+    virtual void exec_force_disconnect(const std::string& rsc_name, const std::string& con_name) override;
+
+    virtual void exec_attach(const std::string& rsc_name, const uint16_t vlm_nr) override;
+    virtual void exec_detach(const std::string& rsc_name, const uint16_t vlm_nr) override;
+
+    virtual void exec_discard_connect(const std::string& rsc_name, const std::string& con_name) override;
+    virtual void exec_verify(const std::string& rsc_name, const std::string& con_name, const uint16_t vlm_nr) override;
+    virtual void exec_invalidate(const std::string& rsc_name, const uint16_t vlm_nr) override;
+    virtual void exec_invalidate_remote(
+        const std::string&  rsc_name,
+        const std::string&  con_name,
+        const uint16_t      vlm_nr
+    ) override;
+
+    virtual void exec_pause_sync(
+        const std::string& rsc_name,
+        const std::string& con_name,
+        const uint16_t vlm_nr
+    ) override;
+    virtual void exec_resume_sync(
+        const std::string& rsc_name,
+        const std::string& con_name,
+        const uint16_t vlm_nr
+    ) override;
+
   private:
     typedef void (DrbdCommandsImpl::*exec_rsc_type)(const std::string& rsc_name);
     typedef void (DrbdCommandsImpl::*exec_con_type)(const std::string& rsc_name, const std::string& con_name);
@@ -104,29 +139,6 @@ class DrbdCommandsImpl : public DrbdCommands, public CommandsBase<DrbdCommandsIm
     bool exec_for_connections(const std::string& command, StringTokenizer& tokenizer, exec_con_type exec_func);
     bool exec_for_volumes(const std::string& command, StringTokenizer& tokenizer, exec_vlm_type exec_func);
     bool exec_for_peer_volumes(const std::string& command, StringTokenizer& tokenizer, exec_peer_vlm_type exec_func);
-
-    void exec_start(const std::string& rsc_name);
-    void exec_stop(const std::string& rsc_name);
-    void exec_adjust(const std::string& rsc_name);
-    void exec_primary(const std::string& rsc_name);
-    void exec_force_primary(const std::string& rsc_name);
-    void exec_secondary(const std::string& rsc_name);
-    void exec_force_secondary(const std::string& rsc_name);
-
-    void exec_connect(const std::string& rsc_name, const std::string& con_name);
-    void exec_disconnect(const std::string& rsc_name, const std::string& con_name);
-    void exec_force_disconnect(const std::string& rsc_name, const std::string& con_name);
-
-    void exec_attach(const std::string& rsc_name, const uint16_t vlm_nr);
-    void exec_detach(const std::string& rsc_name, const uint16_t vlm_nr);
-
-    void exec_discard_connect(const std::string& rsc_name, const std::string& con_name);
-    void exec_verify(const std::string& rsc_name, const std::string& con_name, const uint16_t vlm_nr);
-    void exec_invalidate(const std::string& rsc_name, const uint16_t vlm_nr);
-    void exec_invalidate_remote(const std::string& rsc_name, const std::string& con_name, const uint16_t vlm_nr);
-
-    void exec_pause_sync(const std::string& rsc_name, const std::string& con_name, const uint16_t vlm_nr);
-    void exec_resume_sync(const std::string& rsc_name, const std::string& con_name, const uint16_t vlm_nr);
 
     void get_resource_name(const std::string& argument, std::string& rsc_name);
     void get_connection_name(const std::string& argument, std::string& con_name);
