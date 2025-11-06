@@ -25,6 +25,12 @@ class MDspMenuBase : public MDspBase
         const ClickableCommand& cmd,
         const std::string&      text_color
     );
+    virtual void display_selectable(
+        const uint8_t       key_text_width,
+        const char* const   text,
+        ClickableCommand&   cmd,
+        const bool&         selected
+    );
     virtual void display_option_query(const uint16_t coord_x, const uint16_t coord_y);
 
     virtual void display_activated() override;
