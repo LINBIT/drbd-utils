@@ -220,6 +220,7 @@ bool MDspMenuBase::key_pressed(const uint32_t key)
                     {
                         (*(cmd->handler_func))();
                     }
+                    mb_option_field->clear_text();
                 }
                 mb_option_field->display();
                 mb_option_field->cursor();
