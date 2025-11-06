@@ -52,6 +52,31 @@ void MDspMenuBase::display_option(
     dsp_comp_hub.dsp_io->write_text(text);
 }
 
+void MDspMenuBase::display_selectable(
+    const uint8_t       key_text_width,
+    const char* const   text,
+    ClickableCommand&   cmd,
+    const bool&         selected
+)
+{
+    dsp_comp_hub.dsp_io->cursor_xy(cmd.clickable_area.start_col, cmd.clickable_area.row);
+    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->option_key.c_str());
+    dsp_comp_hub.dsp_io->write_string_field(cmd.command, key_text_width, true);
+    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
+    if (selected)
+    {
+        dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_character_table->checked_box.c_str());
+    }
+    else
+    {
+        dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_character_table->unchecked_box.c_str());
+    }
+    dsp_comp_hub.dsp_io->write_text(" ");
+    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->option_text.c_str());
+    dsp_comp_hub.dsp_io->write_text(text);
+    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
+}
+
 void MDspMenuBase::display_option_query(const uint16_t coord_x, const uint16_t coord_y)
 {
     dsp_comp_hub.dsp_io->cursor_xy(coord_x, coord_y);
