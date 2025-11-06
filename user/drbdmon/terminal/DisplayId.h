@@ -37,7 +37,8 @@ class DisplayId
         TASK_DETAIL,
         CONFIGURATION,
         SLCT_FILTER,
-        BULK_ACT
+        BULK_ACT,
+        EXPORT_SLCT
     };
 
     static const std::string    MDSP_RSC_LIST;
@@ -68,6 +69,7 @@ class DisplayId
     static const std::string    MDSP_CONFIGURATION;
     static const std::string    MDSP_SLCT_FILTER;
     static const std::string    MDSP_BULK_ACT;
+    static const std::string    MDSP_EXPORT_SLCT;
 
     const std::string* const    name;
     const display_page          page_id;
