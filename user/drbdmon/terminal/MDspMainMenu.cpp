@@ -81,6 +81,11 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
         {
             opt_bulk_actions();
         };
+    cmd_fn_export_selection =
+        [this]() -> void
+        {
+            opt_export_selection();
+        };
 
 
     cmd_rsc_ovw = std::unique_ptr<ClickableCommand>(
@@ -168,6 +173,12 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
             cmd_fn_bulk_actions
         )
     );
+    cmd_export_selection = std::unique_ptr<ClickableCommand>(
+        new ClickableCommand(
+            "52", 2, 8, 5, 45,
+            cmd_fn_export_selection
+        )
+    );
 
     add_option(*cmd_rsc_ovw);
     add_option(*cmd_log);
@@ -185,6 +196,7 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
 
     add_option(*cmd_selection_filter);
     add_option(*cmd_bulk_actions);
+    add_option(*cmd_export_selection);
 
     InputField& option_field = get_option_field();
     option_field.set_position(17, 17);
@@ -233,6 +245,7 @@ void MDspMainMenu::display_content()
     {
         display_option("50   ", "Selection filter", *cmd_selection_filter, std_color);
         display_option("51   ", "Bulk actions", *cmd_bulk_actions, std_color);
+        display_option("52   ", "Export selection", *cmd_export_selection, std_color);
     }
 
     display_option_query(5, 17);
@@ -326,6 +339,11 @@ void MDspMainMenu::opt_selection_filter()
 void MDspMainMenu::opt_bulk_actions()
 {
     dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::BULK_ACT);
+}
+
+void MDspMainMenu::opt_export_selection()
+{
+    dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::EXPORT_SLCT);
 }
 
 void MDspMainMenu::opt_start_all_resources()
