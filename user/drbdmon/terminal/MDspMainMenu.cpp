@@ -246,23 +246,14 @@ void MDspMainMenu::display_activated()
 
 bool MDspMainMenu::key_pressed(const uint32_t key)
 {
-    bool intercepted = false;
-    // Intercept keys that don't make any sense on the main menu
-    if (key != KeyCodes::PG_UP && key != KeyCodes::PG_DOWN && key != KeyCodes::FUNC_06)
+    bool intercepted = MDspMenuBase::key_pressed(key);
+    if (!intercepted)
     {
-        intercepted = MDspMenuBase::key_pressed(key);
-        if (!intercepted)
+        if (key == KeyCodes::FUNC_01)
         {
-            if (key == KeyCodes::FUNC_01)
-            {
-                helptext::open_help_page(helptext::id_type::MAIN_MENU, dsp_comp_hub);
-                intercepted = true;
-            }
+            helptext::open_help_page(helptext::id_type::MAIN_MENU, dsp_comp_hub);
+            intercepted = true;
         }
-    }
-    else
-    {
-        intercepted = true;
     }
     return intercepted;
 }
