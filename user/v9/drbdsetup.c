@@ -51,6 +51,7 @@
 #include <time.h>
 #include <syslog.h>
 #include <math.h> /* for NAN */
+#include <grp.h>
 
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
@@ -3676,6 +3677,53 @@ static int dstate_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	return 0;
 }
 
+/* Using the global "minor",
+ * check if the expected block device node exists,
+ * and try to mknod it if it is missing.
+ * Usually, these nodes are created by the kernel and/or udev
+ * when the block device is registered with the kernel.
+ * But people managed to "acceidentally" remove these.
+ * We can help udev to re-create them with
+ * `udevadm trigger --symname-match "drbd*"`
+ */
+static void mknod_if_missing()
+{
+	char devname[32];
+	struct stat sb;
+	struct group *gr;
+	gid_t prev_gid;
+	mode_t prev_um;
+	bool need_restore_gid = false;
+
+	if (access("/dev", W_OK) != 0)
+		return;
+
+	snprintf(devname, sizeof(devname), "/dev/drbd%u", minor);
+	if (stat(devname, &sb) == 0 &&
+	    (sb.st_mode & S_IFMT) == S_IFBLK &&
+	     major(sb.st_rdev) == DRBD_MAJOR &&
+	     minor(sb.st_rdev) == minor)
+		return;
+
+	/* Ignore errors. At least we tried. */
+	prev_um = umask(0007);
+	prev_gid = getgid();
+	if ((gr = getgrnam("disk"))) {
+		if (setgid(gr->gr_gid) != 0)
+			fprintf(stderr, "while trying to mknod %s: chgrp disk: %m\n", devname);
+		else
+			need_restore_gid = true;
+	}
+	if (mknod(devname, S_IFBLK|0660, makedev(DRBD_MAJOR, minor)) != 0 && errno != EEXIST)
+			fprintf(stderr, "mknod %s b 147 %u: %m\n", devname, minor);
+	if (need_restore_gid && setgid(prev_gid) != 0) {
+			fprintf(stderr, "restore gid: setgid(%u): %m\n", prev_gid);
+			/* Called only from "udev" sub command.
+			 * Job already done, about to exit 0 anyways. */
+	}
+	umask(prev_um);
+}
+
 static int udev_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 {
 	struct devices_list *devices, *device;
@@ -3693,6 +3741,7 @@ static int udev_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		else if (device->disk_conf.backing_dev[0])
 			printf("SYMLINK_BY_DISK=drbd/by-disk/%s\n", device->disk_conf.backing_dev);
 
+		mknod_if_missing();
 		found = true;
 		break;
 	}
