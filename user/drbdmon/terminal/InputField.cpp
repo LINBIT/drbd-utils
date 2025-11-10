@@ -250,6 +250,21 @@ void InputField::set_field_length(const uint16_t field_length)
     dsp_length = bounds(static_cast<uint16_t> (1), field_length, max_length);
 }
 
+void InputField::set_max_length(const uint16_t length)
+{
+    const bool shorten = length < max_length;
+    max_length = std::max(length, static_cast<uint16_t> (1));
+    dsp_length = bounds(static_cast<uint16_t> (1), dsp_length, max_length);
+    if (shorten)
+    {
+        if (text.length() > max_length)
+        {
+            text = text.substr(0, max_length);
+            update_positions();
+        }
+    }
+}
+
 void InputField::update_positions()
 {
     const size_t text_length = text.length();
