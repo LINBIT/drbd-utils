@@ -5,6 +5,8 @@
 
 namespace string_transformations
 {
+    const char* const DIGIT_CHARS = "0123456789";
+
     // @throws std::bad_alloc
     std::string uppercase_copy_of(const std::string& text)
     {
@@ -50,5 +52,54 @@ namespace string_transformations
             idx = in_text.find(static_cast<char> (0x1B), offset);
         }
         out_text.append(in_text.substr(offset, std::string::npos));
+    }
+
+    void format_uint64(const uint64_t value, std::string& output, const bool align_right)
+    {
+        output.clear();
+        output.reserve(26);
+        uint64_t divisor = static_cast<uint64_t> (10000000000000000000ULL);
+        unsigned int counter = 2;
+        unsigned int digit = 0;
+        while (digit == 0 && divisor >= 10)
+        {
+            digit = static_cast<unsigned int> (value / divisor % 10);
+            if (digit == 0)
+            {
+                if (align_right)
+                {
+                    output += ' ';
+                }
+                --counter;
+                if (counter == 0)
+                {
+                    if (align_right)
+                    {
+                        output += ' ';
+                    }
+                    counter = 3;
+                }
+                divisor /= 10;
+            }
+        }
+        if (divisor < 10)
+        {
+            digit = static_cast<unsigned int> (value % 10);
+        }
+        while (divisor > 0)
+        {
+            output += DIGIT_CHARS[digit];
+            --counter;
+            if (counter == 0 && divisor >= 10)
+            {
+                output += ',';
+                counter = 3;
+            }
+            divisor /= 10;
+            if (divisor > 0)
+            {
+                digit = static_cast<unsigned int> (value / divisor % 10);
+            }
+        }
     }
 }
