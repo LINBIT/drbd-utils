@@ -2027,6 +2027,12 @@ int adm_peer_device(const struct cfg_ctx *ctx)
 	const char *argv[MAX_ARGS];
 	int argc = 0;
 
+	if (!vol) {
+		log_err("No volume?!\n");
+		if (dry_run)
+			return 0;
+		exit(E_THINKO);
+	}
 	peer_device = find_peer_device(conn, vol->vnr);
 	if (!peer_device) {
 		log_err("Could not find peer_device object!\n");
@@ -2371,7 +2377,9 @@ static int adm_up(const struct cfg_ctx *ctx)
 
 			tmp2_ctx = tmp_ctx;
 			tmp2_ctx.vol = volume_by_vnr(&conn->peer->volumes, peer_device->vnr);
-			schedule_deferred_cmd(&peer_device_options_cmd, &tmp2_ctx, dcmd, 0);
+			if (tmp2_ctx.vol)
+				schedule_deferred_cmd(&peer_device_options_cmd, &tmp2_ctx, dcmd, 0);
+			/* else: oops? incomplete config file? */
 		}
 	}
 

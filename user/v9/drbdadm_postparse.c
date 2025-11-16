@@ -482,7 +482,8 @@ bool peer_diskless(struct peer_device *peer_device)
 	struct d_volume *vol;
 
 	vol = volume_by_vnr(&peer_device->connection->peer->volumes, peer_device->vnr);
-	return vol->disk == NULL;
+	/* Do we even know? Maybe we have an incomplete config file. */
+	return vol ? vol->disk == NULL : false;
 }
 
 
