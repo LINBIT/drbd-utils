@@ -1,0 +1,10 @@
+$ ./drbdadm -c ./restore_show.res -d up all 2>/dev/null
+drbdsetup new-resource lb-tcp-20251117-171820 0
+drbdsetup new-minor lb-tcp-20251117-171820 1 0
+drbdsetup new-peer lb-tcp-20251117-171820 1 --load-balance-paths=yes --_name=f43-2
+drbdsetup new-path lb-tcp-20251117-171820 1 ipv4:192.168.122.35:7789 ipv4:192.168.122.36:7789
+drbdsetup new-path lb-tcp-20251117-171820 1 ipv4:10.255.0.254:7789 ipv4:10.255.0.162:7789
+drbdmeta 1 v09 /dev/scratch/lb-tcp-20251117-171820-disk0 internal repair-md
+drbdmeta 1 v09 /dev/scratch/lb-tcp-20251117-171820-disk0 internal apply-al
+drbdsetup attach 1 /dev/scratch/lb-tcp-20251117-171820-disk0 /dev/scratch/lb-tcp-20251117-171820-disk0 internal --disk-flushes=no --md-flushes=no
+drbdsetup connect lb-tcp-20251117-171820 1
