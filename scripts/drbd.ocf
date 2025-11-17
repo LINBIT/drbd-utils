@@ -229,15 +229,32 @@ fi
 # end of debugging aid
 #######################################################################
 
+# OCF 1.1 supports new role "promoted" and "unpromoted" instead of "Master" and "Slave"
+#
+OCF_1_1_SUPPORT=false
+ocf_version_cmp "$OCF_RESKEY_crm_feature_set" "3.10.0"
+res=$?
+if [ $res -eq 2  ] || [ $res -eq 1  ]; then
+	    OCF_1_1_SUPPORT=true
+fi
+
 meta_data() {
+	if $OCF_1_1_SUPPORT ; then
+		actions='<action name="monitor"  timeout="20" interval="20" role="Unpromoted" />
+<action name="monitor"  timeout="20" interval="10" role="Promoted" />'
+	else
+		actions='<action name="monitor"  timeout="20" interval="20" role="Slave" />
+<action name="monitor"  timeout="20" interval="10" role="Master" />'
+	fi
+
 	cat <<END
 <?xml version="1.0"?>
 <!DOCTYPE resource-agent SYSTEM "ra-api-1.dtd">
 <!-- version attribute is version of this resource agent -->
-<resource-agent name="drbd" version="LINBIT 1.4">
+<resource-agent name="drbd" version="LINBIT 1.5">
 
 <!-- Version number of the standard this agent complies with -->
-<version>1.0</version>
+<version>1.1</version>
 
 <longdesc lang="en">
 This resource agent manages a DRBD resource as a master/slave resource.
@@ -484,8 +501,7 @@ to be generated after the failover of a "healthy" DRBD.
 <action name="demote"	timeout="90" />
 <action name="notify"	timeout="90" />
 <action name="stop"    timeout="100" />
-<action name="monitor"  timeout="20" interval="20" role="Slave" />
-<action name="monitor"  timeout="20" interval="10" role="Master" />
+$actions
 <action name="meta-data"  timeout="5" />
 <action name="validate-all" />
 </actions>
