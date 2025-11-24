@@ -1261,6 +1261,14 @@ struct context_def invalidate_peer_ctx = {
 		{ } },
 };
 
+struct context_def suspend_io_ctx = {
+	NLA_POLICY(suspend_io_parms),
+	.nla_type = DRBD_NLA_SUSPEND_IO_PARAMS,
+	.fields = {
+		{ "bdev-freeze", BOOLEAN(bdev_freeze, SUSPEND_IO_BDEV_FREEZE) },
+		{ } },
+};
+
 struct context_def peer_device_options_ctx = {
 	NLA_POLICY(peer_device_conf),
 	.nla_type = DRBD_NLA_PEER_DEVICE_OPTS,

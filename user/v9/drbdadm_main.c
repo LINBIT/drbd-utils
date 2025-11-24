@@ -473,7 +473,7 @@ static struct adm_cmd khelper13_cmd = {"quorum-lost", adm_khelper, ACF3_RES_HAND
 static struct adm_cmd khelper14_cmd = {"disconnected", adm_khelper, ACF3_RES_HANDLER};
 
 
-static struct adm_cmd suspend_io_cmd = {"suspend-io", adm_drbdsetup, ACF4_ADVANCED  .backend_res_name = 0 };
+static struct adm_cmd suspend_io_cmd = {"suspend-io", adm_drbdsetup, &suspend_io_ctx, ACF4_ADVANCED  .backend_res_name = 0 };
 static struct adm_cmd resume_io_cmd = {"resume-io", adm_drbdsetup, ACF4_ADVANCED  .backend_res_name = 0 };
 static struct adm_cmd set_gi_cmd = {"set-gi", adm_drbdmeta, &wildcard_ctx, .disk_required = 1, .need_peer = 1, ACF4_ADVANCED_NEED_VOL};
 static struct adm_cmd new_current_uuid_cmd = {"new-current-uuid", adm_drbdsetup, &new_current_uuid_cmd_ctx, ACF4_ADVANCED_NEED_VOL .backend_res_name = 0};
