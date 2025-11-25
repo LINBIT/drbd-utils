@@ -1281,8 +1281,31 @@ drbd0 node-id:1 role:Primary suspended:no
 	    <secondary>suspend-io</secondary>
 	  </indexterm>
 
-	  <para>Suspend I/O on a replicated device.  It is not usually
-	  necessary to use this command.</para>
+	  <para>Suspend I/O on a replicated device. The primary purpose of this
+	  command is to enable the user to take snapshots of the backing device
+	  across multiple nodes consistently.</para>
+
+	  <variablelist>
+	    <varlistentry>
+	      <term>
+		<option>--bdev-freeze=<group choice="req" rep="norepeat">
+		  <arg choice="plain" rep="norepeat">yes</arg>
+		  <arg choice="plain" rep="norepeat">no</arg>
+		  </group>
+		</option>
+	      </term>
+
+	      <listitem>
+		<para>
+		  By default, DRBD tries to bring the filesystem mounted on the
+		  DRBD device into a consistent state using the kernel function
+		  bdev_freeze(). Passing <option>--bdev-freeze=no</option>
+		  suppresses that.
+		</para>
+	      </listitem>
+	    </varlistentry>
+	  </variablelist>
+
 	</listitem>
       </varlistentry>
 
