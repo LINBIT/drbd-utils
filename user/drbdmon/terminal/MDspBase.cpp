@@ -402,8 +402,15 @@ void MDspBase::next_page()
 
 void MDspBase::previous_page()
 {
-    set_page_nr(std::min(base_page_nr - 1, base_page_count));
-    base_line_offset = 0;
+    if (base_line_offset == 0)
+    {
+        set_page_nr(std::min(base_page_nr - 1, base_page_count));
+    }
+    else
+    {
+        base_line_offset = 0;
+    }
+
     dsp_comp_hub.dsp_selector->refresh_display();
 }
 
