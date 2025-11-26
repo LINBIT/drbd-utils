@@ -61,6 +61,12 @@ void MDspHelp::display_content()
             ++page_ctr;
         }
     }
+    uint32_t line_ctr = 0;
+    const uint32_t offset = get_line_offset();
+    while (line_ctr < offset && format_text.skip_line())
+    {
+        ++line_ctr;
+    }
 
     std::string line;
     page_line_ctr = 0;
