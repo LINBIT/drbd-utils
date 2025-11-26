@@ -131,12 +131,43 @@ uint32_t MDspHelp::get_lines_per_page() noexcept
 
 void MDspHelp::cursor_to_next_item()
 {
-    // no-op
+    const uint32_t last_page = get_page_count();
+    const uint32_t page = get_page_nr();
+    const uint32_t lines = get_lines_per_page();
+    uint32_t offset = get_line_offset();
+
+    if (page < last_page)
+    {
+        ++offset;
+        if (offset < lines)
+        {
+            set_line_offset(offset);
+        }
+        else
+        {
+            next_page();
+        }
+    }
 }
 
 void MDspHelp::cursor_to_previous_item()
 {
-    // no-op
+    const uint32_t page = get_page_nr();
+    const uint32_t lines = get_lines_per_page();
+    uint32_t offset = get_line_offset();
+
+    if (offset > 0)
+    {
+        set_line_offset(offset - 1);
+    }
+    else
+    {
+        if (page > 1)
+        {
+            previous_page();
+            set_line_offset(lines - 1);
+        }
+    }
 }
 
 bool MDspHelp::key_pressed(const uint32_t key)
