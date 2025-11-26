@@ -154,6 +154,7 @@ void MDspHelp::cursor_to_next_item()
             next_page();
         }
     }
+    dsp_comp_hub.dsp_selector->refresh_display();
 }
 
 void MDspHelp::cursor_to_previous_item()
@@ -174,6 +175,7 @@ void MDspHelp::cursor_to_previous_item()
             set_line_offset(lines - 1);
         }
     }
+    dsp_comp_hub.dsp_selector->refresh_display();
 }
 
 bool MDspHelp::key_pressed(const uint32_t key)
