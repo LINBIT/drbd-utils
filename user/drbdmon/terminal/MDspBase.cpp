@@ -373,6 +373,7 @@ void MDspBase::set_page_nr(const uint32_t new_page_nr)
         new_page_nr,
         (autoscroll ? DisplayConsts::MAX_PAGE_NR : base_page_count)
     );
+    base_line_offset = 0;
 }
 
 void MDspBase::set_line_offset(const uint32_t new_line_offset)
@@ -388,24 +389,28 @@ void MDspBase::set_page_count(const uint32_t new_page_count)
 void MDspBase::first_page()
 {
     set_page_nr(1);
+    base_line_offset = 0;
     dsp_comp_hub.dsp_selector->refresh_display();
 }
 
 void MDspBase::next_page()
 {
     set_page_nr(base_page_nr >= base_page_count ? DisplayConsts::MAX_PAGE_NR : base_page_nr + 1);
+    base_line_offset = 0;
     dsp_comp_hub.dsp_selector->refresh_display();
 }
 
 void MDspBase::previous_page()
 {
     set_page_nr(std::min(base_page_nr - 1, base_page_count));
+    base_line_offset = 0;
     dsp_comp_hub.dsp_selector->refresh_display();
 }
 
 void MDspBase::last_page()
 {
     set_page_nr(autoscroll ? DisplayConsts::MAX_PAGE_NR : base_page_count);
+    base_line_offset = 0;
     dsp_comp_hub.dsp_selector->refresh_display();
 }
 
