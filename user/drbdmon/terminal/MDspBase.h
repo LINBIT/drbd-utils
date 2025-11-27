@@ -62,6 +62,8 @@ class MDspBase : public ModularDisplay
     virtual uint32_t get_page_count() noexcept;
     virtual void set_page_nr(const uint32_t new_page_nr);
     virtual void set_line_offset(const uint32_t new_line_offset);
+    virtual void line_offset_increment(const uint32_t lines_this_page);
+    virtual void line_offset_decrement(const uint32_t lines_previous_page);
     virtual void set_page_count(const uint32_t new_page_count);
 
     virtual ClickableCommand* get_command_by_name(
