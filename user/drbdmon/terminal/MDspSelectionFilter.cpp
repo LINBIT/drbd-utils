@@ -1613,6 +1613,7 @@ void MDspSelectionFilter::cursor_to_next_item()
 void MDspSelectionFilter::execute_select()
 {
     bool config_good = true;
+    // TODO: Add configuration consistency checks here
     if (config_good)
     {
         try
@@ -1634,8 +1635,8 @@ void MDspSelectionFilter::execute_select()
 
 void MDspSelectionFilter::execute_deselect()
 {
-    bool config_good = true;
-    if (!(op_slct_rsc || op_slct_vlm || op_slct_con || op_slct_peer_vlm))
+    bool config_good = op_slct_rsc || op_slct_vlm || op_slct_con || op_slct_peer_vlm;
+    if (!config_good)
     {
         error_msg = "Choose object types to deselect";
     }
@@ -1666,341 +1667,14 @@ void MDspSelectionFilter::filter_select()
 
     previous_stats = dsp_comp_hub.dsp_shared->get_selection_statistics();
 
-    selection_filter::FilterChain<DrbdResource>     rsc_op_chain;
-    selection_filter::FilterChain<DrbdResource>     rsc_quorum_chain;
-    selection_filter::FilterChain<DrbdResource>     rsc_role_chain;
+    std::unique_ptr<selection_filter::FilterSettings> settings_mgr(new selection_filter::FilterSettings());
+    selection_filter::FilterSettings& settings = *settings_mgr;
+    configure_filter_settings(settings);
 
-    selection_filter::FilterChain<DrbdVolume>       vlm_op_chain;
-    selection_filter::FilterChain<DrbdVolume>       vlm_quorum_chain;
-    selection_filter::FilterChain<DrbdVolume>       vlm_state_chain;
-
-    selection_filter::FilterChain<DrbdConnection>   con_op_chain;
-    selection_filter::FilterChain<DrbdConnection>   con_role_chain;
-    selection_filter::FilterChain<DrbdConnection>   con_state_chain;
-
-    selection_filter::FilterChain<DrbdVolume>       peer_vlm_op_chain;
-    selection_filter::FilterChain<DrbdVolume>       peer_vlm_quorum_chain;
-    selection_filter::FilterChain<DrbdVolume>       peer_vlm_state_chain;
-    selection_filter::FilterChain<DrbdVolume>       peer_vlm_repl_state_chain;
-
-    setup_filter_chains(
-        rsc_op_chain,
-        rsc_quorum_chain,
-        rsc_role_chain,
-        vlm_op_chain,
-        vlm_quorum_chain,
-        vlm_state_chain,
-        con_op_chain,
-        con_role_chain,
-        con_state_chain,
-        peer_vlm_op_chain,
-        peer_vlm_quorum_chain,
-        peer_vlm_state_chain,
-        peer_vlm_repl_state_chain
-    );
-
-    // Setup name pattern restrictions
-    selection_filter::FilterChain<DrbdResource> rsc_name_chain;
-    if (!rsc_name_pattern_input->is_empty())
-    {
-        const std::string& rsc_name_pattern_text = rsc_name_pattern_input->get_text();
-        selection_filter::make_object_name_selector(rsc_name_chain, rsc_name_pattern_text);
-    }
-
-    selection_filter::FilterChain<DrbdConnection> con_name_chain;
-    if (!con_name_pattern_input->is_empty())
-    {
-        const std::string& con_name_pattern_text = con_name_pattern_input->get_text();
-        selection_filter::make_object_name_selector(con_name_chain, con_name_pattern_text);
-    }
-
-    uint16_t vlm_nr_to_match = 0;
-    const bool filter_vlm_nr = !vlm_number_input->is_empty();
-    if (filter_vlm_nr)
-    {
-        const std::string& vlm_nr_text = vlm_number_input->get_text();
-        // throws dsaext::NumberFormatException
-        vlm_nr_to_match = dsaext::parse_unsigned_int16(vlm_nr_text);
-    }
-
-    // Filtering is effectively restricted to already selected resources
-    const bool eff_rstr_to_slct_rsc =
-        rstr_to_slct_rsc || rstr_to_slct_vlm ||
-        rstr_to_slct_con || rstr_to_slct_peer_vlm;
-    // Filtering is effectively restricted to already selected connections
-    const bool eff_rstr_to_slct_con = rstr_to_slct_con || rstr_to_slct_peer_vlm;
-
-    // Volumes that match the volume filters and are to be selected if the resource as a whole matches
-    std::unique_ptr<VolumeSelectionMap>     vlm_to_slct;
-    if (op_slct_vlm && !rstr_to_slct_vlm)
-    {
-        vlm_to_slct = std::unique_ptr<VolumeSelectionMap>(new VolumeSelectionMap(&comparators::compare<uint16_t>));
-    }
-    // Connections and peer volumes are the last objects required to match, so they can be selected immediately
-
-    // Filter resources or selected resources
-    std::unique_ptr<ResourcesMap::ValuesIterator>           rsc_iter;
-    std::unique_ptr<ResourceSelectionMap::KeysIterator>     slct_rsc_iter;
-    if (eff_rstr_to_slct_rsc)
-    {
-        slct_rsc_iter = std::unique_ptr<ResourceSelectionMap::KeysIterator>(
-            new ResourceSelectionMap::KeysIterator(*(dsp_comp_hub.dsp_shared->selected_resources))
-        );
-    }
-    else
-    {
-        rsc_iter = std::unique_ptr<ResourcesMap::ValuesIterator>(
-            new ResourcesMap::ValuesIterator(*(dsp_comp_hub.rsc_map))
-        );
-    }
-    for (
-        DrbdResource* rsc = next_resource(rsc_iter, slct_rsc_iter);
-        rsc != nullptr;
-        rsc = next_resource(rsc_iter, slct_rsc_iter)
-    )
-    {
-        const std::string& rsc_name = rsc->get_name();
-        ResourceSubSelections* cur_rsc_sub_selections = nullptr;
-
-        // Apply resource filters
-        bool rsc_match = rsc_name_chain.match(*rsc) != inv_rsc_name;
-        rsc_match = rsc_match && rsc_op_chain.match(*rsc);
-        rsc_match = rsc_match && rsc_quorum_chain.match(*rsc);
-        rsc_match = rsc_match && rsc_role_chain.match(*rsc);
-
-        if (rsc_match)
-        {
-            // Filter volumes or selected volumes
-            std::unique_ptr<VolumesMap::ValuesIterator>         vlm_iter;
-            std::unique_ptr<VolumeSelectionMap::KeysIterator>   slct_vlm_iter;
-            if (rstr_to_slct_vlm)
-            {
-                ResourceSubSelections* const sub_selections =
-                    dsp_comp_hub.dsp_shared->selected_resources->get(&rsc_name);
-                if (sub_selections != nullptr && sub_selections->volume_selection)
-                {
-                    slct_vlm_iter = std::unique_ptr<VolumeSelectionMap::KeysIterator>(
-                        new VolumeSelectionMap::KeysIterator(*(sub_selections->volume_selection))
-                    );
-                }
-            }
-            else
-            {
-                vlm_iter = std::unique_ptr<VolumesMap::ValuesIterator>(
-                    new VolumesMap::ValuesIterator(std::move(rsc->volumes_iterator()))
-                );
-            }
-            bool vlm_match = false;
-            for (
-                DrbdVolume* vlm = next_volume(rsc, vlm_iter, slct_vlm_iter);
-                vlm != nullptr;
-                vlm = next_volume(rsc, vlm_iter, slct_vlm_iter)
-            )
-            {
-                // Apply volume filters
-                bool single_vlm_match = !filter_vlm_nr || vlm->get_volume_nr() == vlm_nr_to_match;
-                single_vlm_match = single_vlm_match && vlm_op_chain.match(*vlm);
-                single_vlm_match = single_vlm_match && vlm_quorum_chain.match(*vlm);
-                if (single_vlm_match)
-                {
-                    single_vlm_match = vlm_state_chain.match(*vlm) != inv_vlm_state;
-                }
-
-                if (single_vlm_match && vlm_to_slct)
-                {
-                    // Remember to select the volume if the resource matches
-                    const uint16_t* const vlm_nr = &vlm->get_volume_nr_ref();
-                    try
-                    {
-                        vlm_to_slct->insert(vlm_nr, nullptr);
-                    }
-                    catch (dsaext::DuplicateInsertException&)
-                    {
-                        std::string debug_msg("DuplicateInsertException in filter_select, "
-                                              "remembered volumes for selection");
-                        dsp_comp_hub.debug_log->add_entry(MessageLog::log_level::WARN, debug_msg);
-                    }
-                }
-
-                vlm_match = vlm_match || single_vlm_match;
-            }
-
-            // Resource no longer matches if none of its volumes match
-            rsc_match = vlm_match;
-        }
-
-        if (rsc_match)
-        {
-            // Filter connections or selected connections
-            std::unique_ptr<ConnectionsMap::ValuesIterator>         con_iter;
-            std::unique_ptr<ConnectionSelectionMap::KeysIterator>   slct_con_iter;
-            if (eff_rstr_to_slct_con)
-            {
-                ResourceSubSelections* const sub_selections =
-                    dsp_comp_hub.dsp_shared->selected_resources->get(&rsc_name);
-                if (sub_selections != nullptr && sub_selections->connection_selection)
-                {
-                    slct_con_iter = std::unique_ptr<ConnectionSelectionMap::KeysIterator>(
-                        new ConnectionSelectionMap::KeysIterator(*(sub_selections->connection_selection))
-                    );
-                }
-            }
-            else
-            {
-                con_iter = std::unique_ptr<ConnectionsMap::ValuesIterator>(
-                    new ConnectionsMap::ValuesIterator(std::move(rsc->connections_iterator()))
-                );
-            }
-            bool con_match = false;
-            for (
-                DrbdConnection* con = next_connection(rsc, con_iter, slct_con_iter);
-                con != nullptr;
-                con = next_connection(rsc, con_iter, slct_con_iter)
-            )
-            {
-                const std::string* cur_con_name = nullptr;
-                ConnectionSelectionMap::Node* cur_con_slct_node = nullptr;
-
-                // Apply connection filters
-                bool single_con_match = con_name_chain.match(*con) != inv_con_name;
-                single_con_match = single_con_match && con_op_chain.match(*con);
-                single_con_match = single_con_match && con_role_chain.match(*con);
-                if (single_con_match)
-                {
-                    single_con_match = con_state_chain.match(*con) != inv_con_state;
-                }
-
-                if (single_con_match)
-                {
-                    // Filter peer volumes or selected peer volumes
-                    const std::string& con_name = con->get_name();
-                    std::unique_ptr<VolumesMap::ValuesIterator>         peer_vlm_iter;
-                    std::unique_ptr<VolumeSelectionMap::KeysIterator>   slct_peer_vlm_iter;
-                    if (rstr_to_slct_peer_vlm)
-                    {
-                        ResourceSubSelections* const sub_selections =
-                            dsp_comp_hub.dsp_shared->selected_resources->get(&rsc_name);
-                        if (sub_selections != nullptr && sub_selections->connection_selection)
-                        {
-                            VolumeSelectionMap* const selected_peer_volumes =
-                                sub_selections->connection_selection->get(&con_name);
-                            if (selected_peer_volumes != nullptr)
-                            {
-                                slct_peer_vlm_iter = std::unique_ptr<VolumeSelectionMap::KeysIterator>(
-                                    new VolumeSelectionMap::KeysIterator(*selected_peer_volumes)
-                                );
-                            }
-                        }
-                    }
-                    else
-                    {
-                        peer_vlm_iter = std::unique_ptr<VolumesMap::ValuesIterator>(
-                            new VolumesMap::ValuesIterator(std::move(con->volumes_iterator()))
-                        );
-                    }
-                    bool peer_vlm_match = false;
-                    for (
-                        DrbdVolume* peer_vlm = next_peer_volume(con, peer_vlm_iter, slct_peer_vlm_iter);
-                        peer_vlm != nullptr;
-                        peer_vlm = next_peer_volume(con, peer_vlm_iter, slct_peer_vlm_iter)
-                    )
-                    {
-                        // Apply peer volume filters
-                        bool single_peer_vlm_match = !filter_vlm_nr || peer_vlm->get_volume_nr() == vlm_nr_to_match;
-                        single_peer_vlm_match = single_peer_vlm_match && peer_vlm_op_chain.match(*peer_vlm);
-                        single_peer_vlm_match = single_peer_vlm_match && peer_vlm_quorum_chain.match(*peer_vlm);
-                        if (single_peer_vlm_match)
-                        {
-                            single_peer_vlm_match =
-                                peer_vlm_state_chain.match(*peer_vlm) != inv_peer_vlm_disk_state;
-                        }
-                        if (single_peer_vlm_match)
-                        {
-                            single_peer_vlm_match =
-                                peer_vlm_repl_state_chain.match(*peer_vlm) != inv_peer_vlm_repl_state;
-                        }
-
-                        if (single_peer_vlm_match && op_slct_peer_vlm && !rstr_to_slct_peer_vlm)
-                        {
-                            if (cur_con_slct_node == nullptr)
-                            {
-                                if (cur_rsc_sub_selections == nullptr)
-                                {
-                                    // Select resource
-                                    ResourceSelectionMap::Node* const cur_slct_rsc_node =
-                                        dsp_comp_hub.dsp_shared->select_resource(rsc_name);
-                                    cur_rsc_sub_selections = cur_slct_rsc_node->get_value();
-                                }
-                                // Select parent connection
-                                if (cur_con_name == nullptr)
-                                {
-                                    cur_con_name = &(con->get_name());
-                                }
-                                cur_con_slct_node = dsp_comp_hub.dsp_shared->select_connection(
-                                    *cur_rsc_sub_selections, *cur_con_name
-                                );
-                            }
-                            const uint16_t peer_vlm_nr = peer_vlm->get_volume_nr();
-                            dsp_comp_hub.dsp_shared->select_peer_volume(*cur_con_slct_node, peer_vlm_nr);
-                        }
-
-                        peer_vlm_match = peer_vlm_match || single_peer_vlm_match;
-                    }
-
-                    // Connection no longer matches if none of its peer volumes match
-                    single_con_match = peer_vlm_match;
-                }
-
-                if (single_con_match && op_slct_con && !eff_rstr_to_slct_con &&
-                    (!op_slct_peer_vlm || cur_con_slct_node == nullptr))
-                {
-                    if (cur_rsc_sub_selections == nullptr)
-                    {
-                        // Select resource
-                        ResourceSelectionMap::Node* const cur_slct_rsc_node =
-                            dsp_comp_hub.dsp_shared->select_resource(rsc_name);
-                        cur_rsc_sub_selections = cur_slct_rsc_node->get_value();
-                    }
-                    cur_con_name = &(con->get_name());
-                    dsp_comp_hub.dsp_shared->select_connection(
-                        *cur_rsc_sub_selections, *cur_con_name
-                    );
-                }
-
-                con_match = con_match || single_con_match;
-            }
-
-            // Resource no longer matches if none of its connections match
-            rsc_match = con_match;
-        }
-
-        if (rsc_match)
-        {
-            if (cur_rsc_sub_selections == nullptr)
-            {
-                // Select resource
-                ResourceSelectionMap::Node* const cur_slct_rsc_node =
-                    dsp_comp_hub.dsp_shared->select_resource(rsc_name);
-                cur_rsc_sub_selections = cur_slct_rsc_node->get_value();
-            }
-            // Select remembered volumes
-            if (vlm_to_slct && vlm_to_slct->get_size() > 0)
-            {
-                VolumeSelectionMap::KeysIterator iter(*vlm_to_slct);
-                while (iter.has_next())
-                {
-                    const uint16_t* const vlm_nr = iter.next();
-                    dsp_comp_hub.dsp_shared->select_volume(*cur_rsc_sub_selections, *vlm_nr);
-                }
-            }
-        }
-
-        // Clean up volumes remembered for select
-        if (vlm_to_slct)
-        {
-            vlm_to_slct->clear();
-        }
-    }
+    SharedData& dsp_shared = *(dsp_comp_hub.dsp_shared);
+    ResourcesMap& rsc_map = *(dsp_comp_hub.rsc_map);
+    MessageLog& debug_log = *(dsp_comp_hub.debug_log);
+    selection_filter::filter_select(settings, rsc_map, dsp_shared, debug_log);
 }
 
 // @throws dsaext::NumberFormatException
@@ -2010,400 +1684,14 @@ void MDspSelectionFilter::filter_deselect()
 
     previous_stats = dsp_comp_hub.dsp_shared->get_selection_statistics();
 
-    selection_filter::FilterChain<DrbdResource>     rsc_op_chain;
-    selection_filter::FilterChain<DrbdResource>     rsc_quorum_chain;
-    selection_filter::FilterChain<DrbdResource>     rsc_role_chain;
+    std::unique_ptr<selection_filter::FilterSettings> settings_mgr(new selection_filter::FilterSettings());
+    selection_filter::FilterSettings& settings = *settings_mgr;
+    configure_filter_settings(settings);
 
-    selection_filter::FilterChain<DrbdVolume>       vlm_op_chain;
-    selection_filter::FilterChain<DrbdVolume>       vlm_quorum_chain;
-    selection_filter::FilterChain<DrbdVolume>       vlm_diskless_chain;
-    selection_filter::FilterChain<DrbdVolume>       vlm_state_chain;
-
-    selection_filter::FilterChain<DrbdConnection>   con_op_chain;
-    selection_filter::FilterChain<DrbdConnection>   con_role_chain;
-    selection_filter::FilterChain<DrbdConnection>   con_state_chain;
-
-    selection_filter::FilterChain<DrbdVolume>       peer_vlm_op_chain;
-    selection_filter::FilterChain<DrbdVolume>       peer_vlm_quorum_chain;
-    selection_filter::FilterChain<DrbdVolume>       peer_vlm_diskless_chain;
-    selection_filter::FilterChain<DrbdVolume>       peer_vlm_state_chain;
-    selection_filter::FilterChain<DrbdVolume>       peer_vlm_repl_state_chain;
-
-    setup_filter_chains(
-        rsc_op_chain,
-        rsc_quorum_chain,
-        rsc_role_chain,
-        vlm_op_chain,
-        vlm_quorum_chain,
-        vlm_state_chain,
-        con_op_chain,
-        con_role_chain,
-        con_state_chain,
-        peer_vlm_op_chain,
-        peer_vlm_quorum_chain,
-        peer_vlm_state_chain,
-        peer_vlm_repl_state_chain
-    );
-
-    // Setup name pattern restrictions
-    std::unique_ptr<string_matching::PatternItem> rsc_name_pattern;
-    const std::string& rsc_name_pattern_text = rsc_name_pattern_input->get_text();
-    if (!rsc_name_pattern_text.empty())
-    {
-        string_matching::process_pattern(rsc_name_pattern_text, rsc_name_pattern);
-    }
-
-    std::unique_ptr<string_matching::PatternItem> con_name_pattern;
-    const std::string& con_name_pattern_text = con_name_pattern_input->get_text();
-    if (!con_name_pattern_text.empty())
-    {
-        string_matching::process_pattern(con_name_pattern_text, con_name_pattern);
-    }
-
-    uint16_t vlm_nr_to_match = 0;
-    const bool filter_vlm_nr = !vlm_number_input->is_empty();
-    if (filter_vlm_nr)
-    {
-        const std::string& vlm_nr_text = vlm_number_input->get_text();
-        // throws dsaext::NumberFormatException
-        vlm_nr_to_match = dsaext::parse_unsigned_int16(vlm_nr_text);
-    }
-
-    // Volumes that match the volume filters and are to be deselected if the resource as a whole matches
-    std::unique_ptr<VolumeSelectionMap>     vlm_to_deslct;
-    if (op_slct_vlm)
-    {
-        vlm_to_deslct = std::unique_ptr<VolumeSelectionMap>(new VolumeSelectionMap(&comparators::compare<uint16_t>));
-    }
-    // Connections and peer volumes are the last objects required to match, so they can be deselected immediately
-
-    const bool need_rsc_run_state_match =
-        (!(rsc_op_chain.is_empty() && rsc_quorum_chain.is_empty() && rsc_role_chain.is_empty()));
-    const bool need_vlm_run_state_match =
-        (!(vlm_op_chain.is_empty() && vlm_quorum_chain.is_empty() && vlm_diskless_chain.is_empty() &&
-           vlm_state_chain.is_empty()));
-    const bool need_con_run_state_match =
-        (!(con_op_chain.is_empty() && con_role_chain.is_empty() && con_state_chain.is_empty()));
-    const bool need_peer_vlm_run_state_match =
-        (!(peer_vlm_op_chain.is_empty() && peer_vlm_quorum_chain.is_empty() && peer_vlm_diskless_chain.is_empty() &&
-           peer_vlm_state_chain.is_empty() && peer_vlm_repl_state_chain.is_empty()));
-
-    const bool load_rsc_run_state =
-        (!(rstr_to_slct_vlm && rstr_to_slct_con && rstr_to_slct_peer_vlm)) ||
-        need_rsc_run_state_match;
-    const bool load_con_run_state = !rstr_to_slct_peer_vlm || need_con_run_state_match;
-
-    ResourceSelectionMap::NodesIterator slct_rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
-    while (slct_rsc_iter.has_next())
-    {
-        ResourceSelectionMap::Node* slct_rsc_node = slct_rsc_iter.next();
-        const std::string* const rsc_name = slct_rsc_node->get_key();
-        ResourceSubSelections& sub_selections = *(slct_rsc_node->get_value());
-
-        DrbdResource* rsc = nullptr;
-        // If any sub-resource-objects iterations are required, point rsc to the resource
-        // (will be nullptr if the resource is not online)
-        if (load_rsc_run_state)
-        {
-            rsc = dsp_comp_hub.rsc_map->get(rsc_name);
-        }
-
-        bool rsc_match = true;
-        if (rsc_name_pattern)
-        {
-            rsc_match = string_matching::match_text(*rsc_name, rsc_name_pattern.get()) != inv_rsc_name;
-        }
-
-        if (rsc_match)
-        {
-            if (need_rsc_run_state_match)
-            {
-                // Resource run state is required to apply some of the filters
-                if (rsc != nullptr)
-                {
-                    rsc_match = rsc_op_chain.match(*rsc);
-                    rsc_match = rsc_match && rsc_quorum_chain.match(*rsc);
-                    rsc_match = rsc_match && rsc_role_chain.match(*rsc);
-                }
-            }
-
-            if (rsc_match)
-            {
-                // Filter volumes or selected volumes
-                std::unique_ptr<VolumesMap::ValuesIterator>         vlm_iter;
-                std::unique_ptr<VolumeSelectionMap::KeysIterator>   slct_vlm_iter;
-                if (rstr_to_slct_vlm || rsc == nullptr)
-                {
-                    if (sub_selections.volume_selection)
-                    {
-                        slct_vlm_iter = std::unique_ptr<VolumeSelectionMap::KeysIterator>(
-                            new VolumeSelectionMap::KeysIterator(*(sub_selections.volume_selection))
-                        );
-                    }
-                }
-                else
-                {
-                    vlm_iter = std::unique_ptr<VolumesMap::ValuesIterator>(
-                        new VolumesMap::ValuesIterator(std::move(rsc->volumes_iterator()))
-                    );
-                }
-                bool vlm_match = false;
-                const uint16_t* vlm_nr = nullptr;
-                DrbdVolume* vlm = nullptr;
-                for (
-                    next_volume_for_deselect(rsc, vlm_iter, slct_vlm_iter, vlm_nr, vlm);
-                    vlm_nr != nullptr;
-                    next_volume_for_deselect(rsc, vlm_iter, slct_vlm_iter, vlm_nr, vlm)
-                )
-                {
-                    bool single_vlm_match = !filter_vlm_nr || *vlm_nr == vlm_nr_to_match;
-                    if (single_vlm_match)
-                    {
-                        if (need_vlm_run_state_match)
-                        {
-                            // Volume run state is required to apply some of the filters
-                            if (vlm == nullptr)
-                            {
-                                if (rsc == nullptr)
-                                {
-                                    rsc = dsp_comp_hub.rsc_map->get(rsc_name);
-                                }
-
-                                if (rsc != nullptr)
-                                {
-                                    vlm = rsc->get_volume(*vlm_nr);
-                                }
-                            }
-
-                            if (vlm != nullptr)
-                            {
-                                single_vlm_match = vlm_op_chain.match(*vlm);
-                                single_vlm_match = single_vlm_match && vlm_quorum_chain.match(*vlm);
-                                single_vlm_match = single_vlm_match && vlm_diskless_chain.match(*vlm);
-                                single_vlm_match = single_vlm_match && vlm_state_chain.match(*vlm);
-                            }
-                        }
-
-                        if (single_vlm_match)
-                        {
-                            // Remember the volume for deselection if the resource as a whole matches
-                            if (vlm_to_deslct)
-                            {
-                                try
-                                {
-                                    vlm_to_deslct->insert(vlm_nr, nullptr);
-                                }
-                                catch (dsaext::DuplicateInsertException&)
-                                {
-                                    std::string debug_msg("DuplicateInsertException in filter_deselect, "
-                                                          "remembered volumes for deselection");
-                                    dsp_comp_hub.debug_log->add_entry(MessageLog::log_level::WARN, debug_msg);
-                                }
-                            }
-                        }
-
-                        vlm_match = vlm_match || single_vlm_match;
-                    }
-
-                    rsc_match = vlm_match;
-                }
-            }
-
-            if (rsc_match)
-            {
-                // Filter connections or selected connections
-                std::unique_ptr<ConnectionsMap::ValuesIterator>         con_iter;
-                std::unique_ptr<ConnectionSelectionMap::KeysIterator>   slct_con_iter;
-                if (rstr_to_slct_con || rsc == nullptr)
-                {
-                    if (sub_selections.connection_selection)
-                    {
-                        slct_con_iter = std::unique_ptr<ConnectionSelectionMap::KeysIterator>(
-                            new ConnectionSelectionMap::KeysIterator(*(sub_selections.connection_selection))
-                        );
-                    }
-                }
-                else
-                {
-                    con_iter = std::unique_ptr<ConnectionsMap::ValuesIterator>(
-                        new ConnectionsMap::ValuesIterator(std::move(rsc->connections_iterator()))
-                    );
-                }
-                bool con_match = false;
-                const std::string* con_name = nullptr;
-                DrbdConnection* con = nullptr;
-                for (
-                    next_connection_for_deselect(rsc, con_iter, slct_con_iter, con_name, con);
-                    con_name != nullptr;
-                    next_connection_for_deselect(rsc, con_iter, slct_con_iter, con_name, con)
-                )
-                {
-                    if (load_con_run_state)
-                    {
-                        if (con == nullptr)
-                        {
-                            if (rsc == nullptr)
-                            {
-                                rsc = dsp_comp_hub.rsc_map->get(rsc_name);
-                            }
-
-                            if (rsc != nullptr)
-                            {
-                                con = rsc->get_connection(*con_name);
-                            }
-                        }
-                    }
-
-                    bool single_con_match = true;
-                    if (con_name_pattern)
-                    {
-                        single_con_match = string_matching::match_text(*con_name, con_name_pattern.get());
-                    }
-
-                    if (single_con_match)
-                    {
-                        if (need_con_run_state_match)
-                        {
-                            // Connection run state is required to apply some of the filters
-                            if (con != nullptr)
-                            {
-                                single_con_match = con_op_chain.match(*con);
-                                single_con_match = single_con_match && con_role_chain.match(*con);
-                                single_con_match = single_con_match && con_state_chain.match(*con);
-                            }
-                        }
-                    }
-
-                    if (single_con_match)
-                    {
-                        // Begin peer volume filterting
-
-                        // Filter peer volumes or selected peer volumes
-                        std::unique_ptr<VolumesMap::ValuesIterator>         peer_vlm_iter;
-                        std::unique_ptr<VolumeSelectionMap::KeysIterator>   slct_peer_vlm_iter;
-                        if (rstr_to_slct_peer_vlm || con == nullptr)
-                        {
-                            if (sub_selections.connection_selection)
-                            {
-                                VolumeSelectionMap* const selected_peer_volumes =
-                                    sub_selections.connection_selection->get(con_name);
-                                if (selected_peer_volumes != nullptr)
-                                {
-                                    slct_peer_vlm_iter = std::unique_ptr<VolumeSelectionMap::KeysIterator>(
-                                        new VolumeSelectionMap::KeysIterator(*selected_peer_volumes)
-                                    );
-                                }
-                            }
-                        }
-                        else
-                        {
-                            peer_vlm_iter = std::unique_ptr<VolumesMap::ValuesIterator>(
-                                new VolumesMap::ValuesIterator(std::move(con->volumes_iterator()))
-                            );
-                        }
-                        bool peer_vlm_match = false;
-                        const uint16_t* peer_vlm_nr = nullptr;
-                        DrbdVolume* peer_vlm = nullptr;
-                        for (
-                            next_peer_volume_for_deselect(
-                                con, peer_vlm_iter, slct_peer_vlm_iter, peer_vlm_nr, peer_vlm
-                            );
-                            peer_vlm_nr != nullptr;
-                            next_peer_volume_for_deselect(
-                                con, peer_vlm_iter, slct_peer_vlm_iter, peer_vlm_nr, peer_vlm
-                            )
-                        )
-                        {
-                            bool single_peer_vlm_match = !filter_vlm_nr || *peer_vlm_nr == vlm_nr_to_match;
-                            if (single_peer_vlm_match)
-                            {
-                                if (need_peer_vlm_run_state_match)
-                                {
-                                    // Peer volume run state is required to apply some of the filters
-                                    if (peer_vlm == nullptr)
-                                    {
-                                        if (con == nullptr)
-                                        {
-                                            if (rsc == nullptr)
-                                            {
-                                                rsc = dsp_comp_hub.rsc_map->get(rsc_name);
-                                            }
-
-                                            if (rsc != nullptr)
-                                            {
-                                                con = rsc->get_connection(*con_name);
-                                            }
-                                        }
-
-                                        if (con != nullptr)
-                                        {
-                                            peer_vlm = con->get_volume(*peer_vlm_nr);
-                                        }
-                                    }
-
-                                    if (peer_vlm != nullptr)
-                                    {
-                                        single_peer_vlm_match = peer_vlm_op_chain.match(*peer_vlm);
-                                        single_peer_vlm_match = single_peer_vlm_match &&
-                                            peer_vlm_quorum_chain.match(*peer_vlm);
-                                        single_peer_vlm_match = single_peer_vlm_match &&
-                                            peer_vlm_diskless_chain.match(*peer_vlm);
-                                        single_peer_vlm_match = single_peer_vlm_match &&
-                                            peer_vlm_state_chain.match(*peer_vlm);
-                                        single_peer_vlm_match = single_peer_vlm_match &&
-                                            peer_vlm_repl_state_chain.match(*peer_vlm);
-                                    }
-                                }
-                            }
-
-                            if (!op_slct_con && single_peer_vlm_match && op_slct_peer_vlm)
-                            {
-                                dsp_comp_hub.dsp_shared->deselect_peer_volume(*rsc_name, *con_name, *peer_vlm_nr);
-                            }
-
-                            peer_vlm_match = peer_vlm_match || single_peer_vlm_match;
-                        }
-
-                        single_con_match = single_con_match && peer_vlm_match;
-
-                        if (!op_slct_rsc && single_con_match && op_slct_con)
-                        {
-                            dsp_comp_hub.dsp_shared->deselect_connection(sub_selections, *con_name);
-                        }
-                        // End peer volume filterting
-                    }
-
-                    con_match = con_match || single_con_match;
-                }
-
-                rsc_match = con_match;
-            }
-
-            if (rsc_match)
-            {
-                if (!op_slct_rsc && vlm_to_deslct && vlm_to_deslct->get_size() > 0)
-                {
-                    VolumeSelectionMap::KeysIterator iter(*vlm_to_deslct);
-                    while (iter.has_next())
-                    {
-                        const uint16_t* const vlm_nr = iter.next();
-                        dsp_comp_hub.dsp_shared->deselect_volume(sub_selections, *vlm_nr);
-                    }
-                }
-
-                if (op_slct_rsc)
-                {
-                    dsp_comp_hub.dsp_shared->deselect_resource(*rsc_name);
-                }
-            }
-        }
-
-        // Clean up volumes remembered for deselect
-        if (vlm_to_deslct)
-        {
-            vlm_to_deslct->clear();
-        }
-    }
+    SharedData& dsp_shared = *(dsp_comp_hub.dsp_shared);
+    ResourcesMap& rsc_map = *(dsp_comp_hub.rsc_map);
+    MessageLog& debug_log = *(dsp_comp_hub.debug_log);
+    selection_filter::filter_deselect(settings, rsc_map, dsp_shared, debug_log);
 }
 
 void MDspSelectionFilter::discard_inactive_objects_selection()
@@ -2469,49 +1757,51 @@ void MDspSelectionFilter::discard_inactive_objects_selection()
     dsp_comp_hub.dsp_selector->refresh_display();
 }
 
-void MDspSelectionFilter::setup_filter_chains(
-    selection_filter::FilterChain<DrbdResource>&    rsc_op_chain,
-    selection_filter::FilterChain<DrbdResource>&    rsc_quorum_chain,
-    selection_filter::FilterChain<DrbdResource>&    rsc_role_chain,
-    selection_filter::FilterChain<DrbdVolume>&      vlm_op_chain,
-    selection_filter::FilterChain<DrbdVolume>&      vlm_quorum_chain,
-    selection_filter::FilterChain<DrbdVolume>&      vlm_state_chain,
-    selection_filter::FilterChain<DrbdConnection>&  con_op_chain,
-    selection_filter::FilterChain<DrbdConnection>&  con_role_chain,
-    selection_filter::FilterChain<DrbdConnection>&  con_state_chain,
-    selection_filter::FilterChain<DrbdVolume>&      peer_vlm_op_chain,
-    selection_filter::FilterChain<DrbdVolume>&      peer_vlm_quorum_chain,
-    selection_filter::FilterChain<DrbdVolume>&      peer_vlm_state_chain,
-    selection_filter::FilterChain<DrbdVolume>&      peer_vlm_repl_state_chain
-)
+void MDspSelectionFilter::configure_filter_settings(selection_filter::FilterSettings& settings)
 {
+    if (!rsc_name_pattern_input->is_empty())
+    {
+        settings.rsc_name_pattern = rsc_name_pattern_input->get_text();
+    }
+    if (!con_name_pattern_input->is_empty())
+    {
+        settings.con_name_pattern = con_name_pattern_input->get_text();
+    }
+    if (!vlm_number_input->is_empty())
+    {
+        const std::string& vlm_nr_text = vlm_number_input->get_text();
+        // throws dsaext::NumberFormatException
+        settings.vlm_number = dsaext::parse_unsigned_int16(vlm_nr_text);
+        settings.filter_vlm_number = true;
+    }
+
     SelectorToChain<VList<StateSelector<bool>>, bool, DrbdResource>::transform(
         filter_options.resource_op_state,
-        rsc_op_chain,
+        settings.rsc_op_chain,
         &selection_filter::make_object_degraded_selector
     );
 
     SelectorToChain<VList<StateSelector<bool>>, bool, DrbdResource>::transform(
         filter_options.resource_quorum,
-        rsc_quorum_chain,
+        settings.rsc_quorum_chain,
         &selection_filter::make_resource_quorum_selector
     );
 
     SelectorToChain<VList<ResourceRoleSelector>, DrbdResource::resource_role, DrbdResource>::transform(
         filter_options.resource_role,
-        rsc_role_chain,
+        settings.rsc_role_chain,
         &selection_filter::make_resource_role_selector
     );
 
     SelectorToChain<VList<StateSelector<bool>>, bool, DrbdVolume>::transform(
         filter_options.volume_op_state,
-        vlm_op_chain,
+        settings.vlm_op_chain,
         &selection_filter::make_object_degraded_selector
     );
 
     SelectorToChain<VList<StateSelector<bool>>, bool, DrbdVolume>::transform(
         filter_options.volume_quorum,
-        vlm_quorum_chain,
+        settings.vlm_quorum_chain,
         &selection_filter::make_volume_quorum_selector
     );
 
@@ -2519,7 +1809,7 @@ void MDspSelectionFilter::setup_filter_chains(
     selection_filter::FilterNode<DrbdVolume>* vlm_state_chain_end =
         SelectorToChain<VList<StateSelector<bool>>, bool, DrbdVolume>::transform(
             filter_options.volume_diskless_state,
-            vlm_state_chain,
+            settings.vlm_state_chain,
             &selection_filter::make_volume_client_state_selector
         );
 
@@ -2532,31 +1822,31 @@ void MDspSelectionFilter::setup_filter_chains(
 
     SelectorToChain<VList<StateSelector<bool>>, bool, DrbdConnection>::transform(
         filter_options.connection_op_state,
-        con_op_chain,
+        settings.con_op_chain,
         &selection_filter::make_object_degraded_selector
     );
 
     SelectorToChain<VList<ResourceRoleSelector>, DrbdResource::resource_role, DrbdConnection>::transform(
         filter_options.connection_role,
-        con_role_chain,
+        settings.con_role_chain,
         &selection_filter::make_connection_role_selector
     );
 
     SelectorToChain<VList<ConnectionStateSelector>, DrbdConnection::state, DrbdConnection>::transform(
         filter_options.connection_state,
-        con_state_chain,
+        settings.con_state_chain,
         &selection_filter::make_connection_state_selector
     );
 
     SelectorToChain<VList<StateSelector<bool>>, bool, DrbdVolume>::transform(
         filter_options.peer_volume_op_state,
-        peer_vlm_op_chain,
+        settings.peer_vlm_op_chain,
         &selection_filter::make_object_degraded_selector
     );
 
     SelectorToChain<VList<StateSelector<bool>>, bool, DrbdVolume>::transform(
         filter_options.peer_volume_quorum,
-        peer_vlm_quorum_chain,
+        settings.peer_vlm_quorum_chain,
         &selection_filter::make_volume_quorum_selector
     );
 
@@ -2564,7 +1854,7 @@ void MDspSelectionFilter::setup_filter_chains(
     selection_filter::FilterNode<DrbdVolume>* peer_vlm_state_chain_end =
         SelectorToChain<VList<StateSelector<bool>>, bool, DrbdVolume>::transform(
             filter_options.peer_volume_diskless_state,
-            peer_vlm_state_chain,
+            settings.peer_vlm_state_chain,
             &selection_filter::make_volume_client_state_selector
         );
 
@@ -2577,230 +1867,25 @@ void MDspSelectionFilter::setup_filter_chains(
 
     SelectorToChain<VList<VolumeReplStateSelector>, DrbdVolume::repl_state, DrbdVolume>::transform(
         filter_options.peer_volume_repl_state,
-        peer_vlm_repl_state_chain,
+        settings.peer_vlm_repl_state_chain,
         &selection_filter::make_volume_repl_state_selector
     );
-}
 
-DrbdResource* MDspSelectionFilter::next_resource(
-    const std::unique_ptr<ResourcesMap::ValuesIterator>&        rsc_iter,
-    const std::unique_ptr<ResourceSelectionMap::KeysIterator>&  slct_rsc_iter
-)
-{
-    DrbdResource* rsc = nullptr;
-    if (slct_rsc_iter)
-    {
-        const std::string* rsc_name = nullptr;
-        do
-        {
-            rsc_name = slct_rsc_iter->next();
-            if (rsc_name != nullptr)
-            {
-                rsc = dsp_comp_hub.rsc_map->get(rsc_name);
-            }
-        }
-        while (rsc_name != nullptr && rsc == nullptr);
-    }
-    else
-    if (rsc_iter)
-    {
-        rsc = rsc_iter->next();
-    }
-    return rsc;
-}
+    settings.restrictions.selected_resources = rstr_to_slct_rsc;
+    settings.restrictions.selected_volumes = rstr_to_slct_vlm;
+    settings.restrictions.selected_connections = rstr_to_slct_con;
+    settings.restrictions.selected_peer_volumes = rstr_to_slct_peer_vlm;
 
-DrbdVolume* MDspSelectionFilter::next_volume(
-    DrbdResource* const rsc,
-    const std::unique_ptr<VolumesMap::ValuesIterator>&          vlm_iter,
-    const std::unique_ptr<VolumeSelectionMap::KeysIterator>&    slct_vlm_iter
-)
-{
-    DrbdVolume* vlm = nullptr;
-    if (slct_vlm_iter)
-    {
-        const uint16_t* vlm_nr = nullptr;
-        do
-        {
-            vlm_nr = slct_vlm_iter->next();
-            if (vlm_nr != nullptr)
-            {
-                vlm = rsc->get_volume(*vlm_nr);
-            }
-        }
-        while (vlm_nr != nullptr && vlm == nullptr);
-    }
-    else
-    if (vlm_iter)
-    {
-        vlm = vlm_iter->next();
-    }
-    return vlm;
-}
+    settings.targets.select_resources = op_slct_rsc;
+    settings.targets.select_volumes = op_slct_vlm;
+    settings.targets.select_connections = op_slct_con;
+    settings.targets.select_peer_volumes = op_slct_peer_vlm;
 
-DrbdConnection* MDspSelectionFilter::next_connection(
-    DrbdResource* const rsc,
-    const std::unique_ptr<ConnectionsMap::ValuesIterator>&          con_iter,
-    const std::unique_ptr<ConnectionSelectionMap::KeysIterator>&    slct_con_iter
-)
-{
-    DrbdConnection* con = nullptr;
-    if (slct_con_iter)
-    {
-        const std::string* con_name = nullptr;
-        do
-        {
-            con_name = slct_con_iter->next();
-            if (con_name != nullptr)
-            {
-                con = rsc->get_connection(*con_name);
-            }
-        }
-        while (con_name != nullptr && con == nullptr);
-    }
-    else
-    {
-        con = con_iter->next();
-    }
-    return con;
-}
-
-DrbdVolume* MDspSelectionFilter::next_peer_volume(
-    DrbdConnection* const con,
-    const std::unique_ptr<VolumesMap::ValuesIterator>&          peer_vlm_iter,
-    const std::unique_ptr<VolumeSelectionMap::KeysIterator>&    slct_peer_vlm_iter
-)
-{
-    DrbdVolume* peer_vlm = nullptr;
-    if (slct_peer_vlm_iter)
-    {
-        const uint16_t* peer_vlm_nr = nullptr;
-        do
-        {
-            peer_vlm_nr = slct_peer_vlm_iter->next();
-            if (peer_vlm_nr != nullptr)
-            {
-                peer_vlm = con->get_volume(*peer_vlm_nr);
-            }
-        }
-        while (peer_vlm_nr != nullptr && peer_vlm == nullptr);
-    }
-    else
-    {
-        peer_vlm = peer_vlm_iter->next();
-    }
-    return peer_vlm;
-}
-
-// If iterating selected volumes, sets vlm_nr to point to the volume number of the next selected volume,
-// and sets vlm to nullptr, otherwise, if iterating all volumes, sets vlm_nr to point to the volume number
-// of the next volume, and sets vlm to point to the next volume object.
-// If given no iterators, or if no more elements are available for iteration, both, vlm and vlm_nr, are
-// set to nullptr.
-void MDspSelectionFilter::next_volume_for_deselect(
-    DrbdResource* const rsc,
-    const std::unique_ptr<VolumesMap::ValuesIterator>&          vlm_iter,
-    const std::unique_ptr<VolumeSelectionMap::KeysIterator>&    slct_vlm_iter,
-    const uint16_t*&                                            vlm_nr,
-    DrbdVolume*&                                                vlm
-)
-{
-    if (slct_vlm_iter)
-    {
-        vlm = nullptr;
-        vlm_nr = slct_vlm_iter->next();
-    }
-    else
-    if (vlm_iter)
-    {
-        vlm = vlm_iter->next();
-        if (vlm != nullptr)
-        {
-            vlm_nr = &(vlm->get_volume_nr_ref());
-        }
-        else
-        {
-            vlm_nr = nullptr;
-        }
-    }
-    else
-    {
-        vlm = nullptr;
-        vlm_nr = nullptr;
-    }
-}
-
-// If iterating selected connections, sets con_name to point to the connection name of the next selected connection,
-// and sets con to nullptr, otherwise, if iterating all connections, sets con_name to point to the connection name
-// of the next connection, and sets con to point to the next connection object.
-// If given no iterators, or if no more elements are available for iteration, both, con and con_name, are
-// set to nullptr.
-void MDspSelectionFilter::next_connection_for_deselect(
-    DrbdResource* const rsc,
-    const std::unique_ptr<ConnectionsMap::ValuesIterator>&          con_iter,
-    const std::unique_ptr<ConnectionSelectionMap::KeysIterator>&    slct_con_iter,
-    const std::string*&                                             con_name,
-    DrbdConnection*&                                                con
-)
-{
-    if (slct_con_iter)
-    {
-        con = nullptr;
-        con_name = slct_con_iter->next();
-    }
-    else
-    if (con_iter)
-    {
-        con = con_iter->next();
-        if (con != nullptr)
-        {
-            con_name = &(con->get_name());
-        }
-        else
-        {
-            con_name = nullptr;
-        }
-    }
-    else
-    {
-        con = nullptr;
-        con_name = nullptr;
-    }
-}
-
-// If iterating selected peer volumes, sets peer_vlm_nr to point to the volume number of the next selected
-// peer volume, and sets peer_vlm to nullptr, otherwise, if iterating all peer volumes, sets peer_vlm_nr to
-// point to the volume number of the next peer volume, and sets peer_vlm to point to the next peer volume object.
-// If given no iterators, or if no more elements are available for iteration, both, peer_vlm and peer_vlm_nr, are
-// set to nullptr.
-void MDspSelectionFilter::next_peer_volume_for_deselect(
-    DrbdConnection* const con,
-    const std::unique_ptr<VolumesMap::ValuesIterator>&          peer_vlm_iter,
-    const std::unique_ptr<VolumeSelectionMap::KeysIterator>&    slct_peer_vlm_iter,
-    const uint16_t*&                                            peer_vlm_nr,
-    DrbdVolume*&                                                peer_vlm
-)
-{
-    if (slct_peer_vlm_iter)
-    {
-        peer_vlm = nullptr;
-        peer_vlm_nr = slct_peer_vlm_iter->next();
-    }
-    else
-    if (peer_vlm_iter)
-    {
-        peer_vlm = peer_vlm_iter->next();
-        if (peer_vlm != nullptr)
-        {
-            peer_vlm_nr = &(peer_vlm->get_volume_nr_ref());
-        }
-        else
-        {
-            peer_vlm_nr = nullptr;
-        }
-    }
-    else
-    {
-        peer_vlm = nullptr;
-        peer_vlm_nr = nullptr;
-    }
+    settings.invert.resource_name = inv_rsc_name;
+    settings.invert.connection_name = inv_con_name;
+    settings.invert.volume_number = inv_vlm_number;
+    settings.invert.volume_state = inv_vlm_state;
+    settings.invert.connection_state = inv_con_state;
+    settings.invert.peer_volume_disk_state = inv_peer_vlm_disk_state;
+    settings.invert.peer_volume_repl_state = inv_peer_vlm_repl_state;
 }
