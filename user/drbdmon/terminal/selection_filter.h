@@ -6,7 +6,10 @@
 #include <objects/DrbdResource.h>
 #include <objects/DrbdConnection.h>
 #include <objects/DrbdVolume.h>
+#include <terminal/SharedData.h>
+#include <MessageLog.h>
 #include <string_matching.h>
+#include <map_types.h>
 
 namespace selection_filter
 {
@@ -157,6 +160,72 @@ namespace selection_filter
         return *(chain_end.next_node);
     }
 
+    class SelectionTargets
+    {
+      public:
+        bool    select_resources        {false};
+        bool    select_volumes          {false};
+        bool    select_connections      {false};
+        bool    select_peer_volumes     {false};
+    };
+
+    class FilterRestrictions
+    {
+      public:
+        bool    selected_resources      {false};
+        bool    selected_volumes        {false};
+        bool    selected_connections    {false};
+        bool    selected_peer_volumes   {false};
+    };
+
+    class MatchInversions
+    {
+      public:
+        bool    resource_name           {false};
+        bool    volume_number           {false};
+        bool    connection_name         {false};
+        bool    connection_state        {false};
+        bool    volume_state            {false};
+        bool    peer_volume_disk_state  {false};
+        bool    peer_volume_repl_state  {false};
+    };
+
+    class FilterSettings
+    {
+      public:
+        std::string                     rsc_name_pattern;
+        std::string                     con_name_pattern;
+        uint16_t                        vlm_number          {0};
+        bool                            filter_vlm_number   {false};
+
+        SelectionTargets                targets;
+        FilterRestrictions              restrictions;
+        MatchInversions                 invert;
+
+        // Resource operational state (normal/degraded) chain
+        FilterChain<DrbdResource>       rsc_op_chain;
+        // Resource quorum state chain
+        FilterChain<DrbdResource>       rsc_quorum_chain;
+        // Resource role chain
+        FilterChain<DrbdResource>       rsc_role_chain;
+
+        // Volume operational state (normal/degraded) chain
+        FilterChain<DrbdVolume>         vlm_op_chain;
+        FilterChain<DrbdVolume>         vlm_quorum_chain;
+        FilterChain<DrbdVolume>         vlm_state_chain;
+
+        // Connection operational state (normal/degraded) chain
+        FilterChain<DrbdConnection>     con_op_chain;
+        FilterChain<DrbdConnection>     con_role_chain;
+        FilterChain<DrbdConnection>     con_state_chain;
+
+        // Peer volume operational state (normal/degraded) chain
+        FilterChain<DrbdVolume>         peer_vlm_op_chain;
+        FilterChain<DrbdVolume>         peer_vlm_quorum_chain;
+        FilterChain<DrbdVolume>         peer_vlm_state_chain;
+        FilterChain<DrbdVolume>         peer_vlm_repl_state_chain;
+    };
+
     FilterNode<DrbdResource>& make_resource_quorum_selector(
         FilterNode<DrbdResource>& chain_end,
         bool state
@@ -200,6 +269,68 @@ namespace selection_filter
     FilterNode<DrbdConnection>& make_connection_sync_state_selector(
         FilterNode<DrbdConnection>& chain_end,
         DrbdConnection::sync_state_type state
+    );
+
+    void filter_select(
+        FilterSettings&     settings,
+        ResourcesMap&       rsc_map,
+        SharedData&         dsp_shared,
+        MessageLog&         debug_log
+    );
+
+    void filter_deselect(
+        FilterSettings&     settings,
+        ResourcesMap&       rsc_map,
+        SharedData&         dsp_shared,
+        MessageLog&         debug_log
+    );
+
+    DrbdResource* next_resource(
+        ResourcesMap&                                               rsc_map,
+        const std::unique_ptr<ResourcesMap::ValuesIterator>&        rsc_iter,
+        const std::unique_ptr<ResourceSelectionMap::KeysIterator>&  slct_rsc_iter
+    );
+
+    DrbdVolume* next_volume(
+        DrbdResource* const rsc,
+        const std::unique_ptr<VolumesMap::ValuesIterator>&          vlm_iter,
+        const std::unique_ptr<VolumeSelectionMap::KeysIterator>&    slct_vlm_iter
+    );
+
+    DrbdConnection* next_connection(
+        DrbdResource* const rsc,
+        const std::unique_ptr<ConnectionsMap::ValuesIterator>&          con_iter,
+        const std::unique_ptr<ConnectionSelectionMap::KeysIterator>&    slct_con_iter
+    );
+
+    DrbdVolume* next_peer_volume(
+        DrbdConnection* const con,
+        const std::unique_ptr<VolumesMap::ValuesIterator>&          peer_vlm_iter,
+        const std::unique_ptr<VolumeSelectionMap::KeysIterator>&    slct_peer_vlm_iter
+    );
+
+    void next_volume_for_deselect(
+        DrbdResource* const rsc,
+        const std::unique_ptr<VolumesMap::ValuesIterator>&          vlm_iter,
+        const std::unique_ptr<VolumeSelectionMap::KeysIterator>&    slct_vlm_iter,
+        const uint16_t*&                                            vlm_nr,
+        DrbdVolume*&                                                vlm
+    );
+
+    void next_connection_for_deselect(
+        DrbdResource* const rsc,
+        const std::unique_ptr<ConnectionsMap::ValuesIterator>&          con_iter,
+        const std::unique_ptr<ConnectionSelectionMap::KeysIterator>&    slct_con_iter,
+        const std::string*&                                             con_name,
+        DrbdConnection*&                                                con
+    );
+
+    void next_peer_volume_for_deselect(
+        DrbdConnection* const con,
+        const std::unique_ptr<VolumesMap::ValuesIterator>&          peer_vlm_iter,
+        const std::unique_ptr<VolumeSelectionMap::KeysIterator>&    slct_peer_vlm_iter,
+        const uint16_t*&                                            peer_vlm_nr,
+        DrbdVolume*&                                                peer_vlm
     );
 }
 
