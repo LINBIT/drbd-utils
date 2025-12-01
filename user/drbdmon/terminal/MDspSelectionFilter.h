@@ -439,68 +439,12 @@ class MDspSelectionFilter : public MDspMenuBase
     void filter_deselect();
     void discard_inactive_objects_selection();
 
-    void setup_filter_chains(
-        selection_filter::FilterChain<DrbdResource>&    rsc_op_chain,
-        selection_filter::FilterChain<DrbdResource>&    rsc_quorum_chain,
-        selection_filter::FilterChain<DrbdResource>&    rsc_role_chain,
-        selection_filter::FilterChain<DrbdVolume>&      vlm_op_chain,
-        selection_filter::FilterChain<DrbdVolume>&      vlm_quorum_chain,
-        selection_filter::FilterChain<DrbdVolume>&      vlm_state_chain,
-        selection_filter::FilterChain<DrbdConnection>&  con_op_chain,
-        selection_filter::FilterChain<DrbdConnection>&  con_role_chain,
-        selection_filter::FilterChain<DrbdConnection>&  con_state_chain,
-        selection_filter::FilterChain<DrbdVolume>&      peer_vlm_op_chain,
-        selection_filter::FilterChain<DrbdVolume>&      peer_vlm_quorum_chain,
-        selection_filter::FilterChain<DrbdVolume>&      peer_vlm_state_chain,
-        selection_filter::FilterChain<DrbdVolume>&      peer_vlm_repl_state_chain
-    );
+    void configure_filter_settings(selection_filter::FilterSettings& settings);
 
     void generate_filter_options_collection();
     void reset_filter_options_selection();
     void setup_cmd_functions();
     void setup_pages();
-
-    DrbdResource* next_resource(
-        const std::unique_ptr<ResourcesMap::ValuesIterator>&        rsc_iter,
-        const std::unique_ptr<ResourceSelectionMap::KeysIterator>&  slct_rsc_iter
-    );
-    DrbdVolume* next_volume(
-        DrbdResource* const rsc,
-        const std::unique_ptr<VolumesMap::ValuesIterator>&          vlm_iter,
-        const std::unique_ptr<VolumeSelectionMap::KeysIterator>&    slct_vlm_iter
-    );
-    DrbdConnection* next_connection(
-        DrbdResource* const rsc,
-        const std::unique_ptr<ConnectionsMap::ValuesIterator>&          con_iter,
-        const std::unique_ptr<ConnectionSelectionMap::KeysIterator>&    slct_con_iter
-    );
-    DrbdVolume* next_peer_volume(
-        DrbdConnection* const con,
-        const std::unique_ptr<VolumesMap::ValuesIterator>&          peer_vlm_iter,
-        const std::unique_ptr<VolumeSelectionMap::KeysIterator>&    slct_peer_vlm_iter
-    );
-
-    void next_volume_for_deselect(
-        DrbdResource* const rsc,
-        const std::unique_ptr<VolumesMap::ValuesIterator>&          vlm_iter,
-        const std::unique_ptr<VolumeSelectionMap::KeysIterator>&    slct_vlm_iter,
-        const uint16_t*&                                            vlm_nr,
-        DrbdVolume*&                                                vlm
-    );
-    void next_connection_for_deselect(
-        DrbdResource* const rsc,
-        const std::unique_ptr<ConnectionsMap::ValuesIterator>&          con_iter,
-        const std::unique_ptr<ConnectionSelectionMap::KeysIterator>&    slct_con_iter,
-        const std::string*&                                             con_name,
-        DrbdConnection*&                                                con
-    );
-    void next_peer_volume_for_deselect(
-        DrbdConnection* const con,
-        const std::unique_ptr<VolumesMap::ValuesIterator>&          peer_vlm_iter,
-        const std::unique_ptr<VolumeSelectionMap::KeysIterator>&    slct_peer_vlm_iter,
-        const uint16_t*&                                            peer_vlm_nr,
-        DrbdVolume*&                                                peer_vlm
-    );
 
     template<class T>
     void reset_filter_options_list(VList<T>& opt_list)
