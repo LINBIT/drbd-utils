@@ -72,7 +72,10 @@ def cib_peer_state():
 def last_fencing_datetime(peer_name):
     with subprocess.Popen(['stonith_admin', '--last=' + peer_name, '--output-as=xml'], stdout=subprocess.PIPE) as p:
         xml_root = objectify.parse(p.stdout).getroot()
-    when = parser.parse(getattr(xml_root, 'last-fenced').attrib['when'])
+    try:
+        when = parser.parse(getattr(xml_root, 'last-fenced').attrib['when'])
+    except AttributeError:
+        return (None, None, None)
     status_code = xml_root.status.attrib['code']
     status_msg = xml_root.status.attrib['message']
     return (when, status_code, status_msg)
@@ -137,12 +140,13 @@ def fence_peer(res):
         pcmk_will_fence, pcmk_clean_down = interpret_pcmk_node_status(**pcmk_peer_state)
         if pcmk_clean_down:
             fencing_time, fencing_code, fencing_msg = last_fencing_datetime(pcmk_peer_state['uname'])
-            fencing_window = datetime.timedelta(minutes=FENCING_WINDOW_MINUTES)
-            recently_fenced = \
-                fencing_time > datetime.datetime.now(datetime.timezone.utc) - fencing_window \
-                and int(fencing_code) == 0
-            if recently_fenced:
-                return ('Pacemaker fenced peer at {}'.format(fencing_time), 7)
+            if fencing_time is not None:
+                fencing_window = datetime.timedelta(minutes=FENCING_WINDOW_MINUTES)
+                recently_fenced = \
+                    fencing_time > datetime.datetime.now(datetime.timezone.utc) - fencing_window \
+                    and int(fencing_code) == 0
+                if recently_fenced:
+                    return ('Pacemaker fenced peer at {}'.format(fencing_time), 7)
             return ('Pacemaker considers peer down', 7)
 
         if not pcmk_will_fence:
@@ -161,7 +165,7 @@ def show_events(res_name):
         fencing_time, fencing_code, fencing_msg = last_fencing_datetime(pcmk_peer_state['uname'])
         join = pcmk_peer_state['join']
         if join == prev_join and prev_fencing_time == fencing_time:
-            time.sleep(0.5)
+            time.sleep(POLL_INTERVAL_SECONDS)
             continue
 
         cstate = drbdsetup_status_cstate(res_name, drbd_peer_node_id)
@@ -181,19 +185,25 @@ def fence_peer_exclusive(res):
         try:
             with open(LOCK_FILE, 'x') as fw:
                 fcntl.flock(fw.fileno(), fcntl.LOCK_EX)
-                msg, code = fence_peer(res)
-                print('{}§{}'.format(code, msg), file=fw)
-                os.remove(LOCK_FILE)
-                fcntl.flock(fw.fileno(), fcntl.LOCK_UN)
+                try:
+                    msg, code = fence_peer(res)
+                    print('{}§{}'.format(code, msg), file=fw)
+                finally:
+                    os.remove(LOCK_FILE)
+                    fcntl.flock(fw.fileno(), fcntl.LOCK_UN)
             break
         except FileExistsError:
             try:
                 with open(LOCK_FILE, 'r') as fr:
                     time.sleep(0.2)
                     fcntl.flock(fr.fileno(), fcntl.LOCK_SH)
-                    code_str, msg = fr.readline().strip().split('§')
-                    code = int(code_str)
-                    fcntl.flock(fr.fileno(), fcntl.LOCK_UN)
+                    try:
+                        code_str, msg = fr.readline().strip().split('§')
+                        code = int(code_str)
+                    except ValueError:
+                        continue
+                    finally:
+                        fcntl.flock(fr.fileno(), fcntl.LOCK_UN)
                 break
             except FileNotFoundError:
                 pass
