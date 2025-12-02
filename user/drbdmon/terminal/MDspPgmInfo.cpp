@@ -6,8 +6,8 @@ const char* const MDspPgmInfo::PGM_INFO_TEXT =
     "\n"
     "This program is free open source software licensed under the GNU Public License, version 2 (GPLv2).\n"
     "\n"
-    "Copyright (C) 2022, 2023 LINBIT HA-Solutions GmbH\n"
-    "Copyright (C) 2022, 2023 LINBIT USA LLC\n";
+    "Copyright (C) 2022, 2026 LINBIT HA-Solutions GmbH\n"
+    "Copyright (C) 2022, 2026 LINBIT USA LLC\n";
 
 const size_t MDspPgmInfo::RESERVE_CAPACITY  = 2000;
 
