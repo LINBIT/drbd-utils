@@ -242,6 +242,7 @@ namespace selection_filter
                 // Filter volumes or selected volumes
                 std::unique_ptr<VolumesMap::ValuesIterator>         vlm_iter;
                 std::unique_ptr<VolumeSelectionMap::KeysIterator>   slct_vlm_iter;
+                bool vlm_match = false;
                 if (settings.restrictions.selected_volumes)
                 {
                     ResourceSubSelections* const sub_selections =
@@ -258,8 +259,15 @@ namespace selection_filter
                     vlm_iter = std::unique_ptr<VolumesMap::ValuesIterator>(
                         new VolumesMap::ValuesIterator(std::move(rsc->volumes_iterator()))
                     );
+                    if (!vlm_iter->has_next())
+                    {
+                        // If there are no volumes, but also no effective filters, the volume filter matches
+                        vlm_match = !settings.filter_vlm_number &&
+                                    settings.vlm_op_chain.is_empty() &&
+                                    settings.vlm_quorum_chain.is_empty() &&
+                                    settings.vlm_state_chain.is_empty();
+                    }
                 }
-                bool vlm_match = false;
                 for (
                     DrbdVolume* vlm = next_volume(rsc, vlm_iter, slct_vlm_iter);
                     vlm != nullptr;
@@ -268,7 +276,8 @@ namespace selection_filter
                 {
                     // Apply volume filters
                     bool single_vlm_match = !settings.filter_vlm_number ||
-                                            vlm->get_volume_nr() == settings.vlm_number;
+                                            ((vlm->get_volume_nr() == settings.vlm_number) !=
+                                            settings.invert.volume_number);
                     single_vlm_match = single_vlm_match && settings.vlm_op_chain.match(*vlm);
                     single_vlm_match = single_vlm_match && settings.vlm_quorum_chain.match(*vlm);
                     if (single_vlm_match)
@@ -304,6 +313,7 @@ namespace selection_filter
                 // Filter connections or selected connections
                 std::unique_ptr<ConnectionsMap::ValuesIterator>         con_iter;
                 std::unique_ptr<ConnectionSelectionMap::KeysIterator>   slct_con_iter;
+                bool con_match = false;
                 if (eff_rstr_to_slct_con)
                 {
                     ResourceSubSelections* const sub_selections =
@@ -320,8 +330,14 @@ namespace selection_filter
                     con_iter = std::unique_ptr<ConnectionsMap::ValuesIterator>(
                         new ConnectionsMap::ValuesIterator(std::move(rsc->connections_iterator()))
                     );
+                    if (!con_iter->has_next())
+                    {
+                        // If there are no connections but also no effective filters,
+                        // the connection filter matches
+                        con_match = con_name_chain.is_empty() && settings.con_op_chain.is_empty() &&
+                                    settings.con_role_chain.is_empty();
+                    }
                 }
-                bool con_match = false;
                 for (
                     DrbdConnection* con = next_connection(rsc, con_iter, slct_con_iter);
                     con != nullptr;
@@ -346,6 +362,7 @@ namespace selection_filter
                         const std::string& con_name = con->get_name();
                         std::unique_ptr<VolumesMap::ValuesIterator>         peer_vlm_iter;
                         std::unique_ptr<VolumeSelectionMap::KeysIterator>   slct_peer_vlm_iter;
+                        bool peer_vlm_match = false;
                         if (settings.restrictions.selected_peer_volumes)
                         {
                             ResourceSubSelections* const sub_selections =
@@ -367,8 +384,15 @@ namespace selection_filter
                             peer_vlm_iter = std::unique_ptr<VolumesMap::ValuesIterator>(
                                 new VolumesMap::ValuesIterator(std::move(con->volumes_iterator()))
                             );
+                            if (!peer_vlm_iter->has_next())
+                            {
+                                peer_vlm_match = !settings.filter_vlm_number &&
+                                                 settings.peer_vlm_op_chain.is_empty() &&
+                                                 settings.peer_vlm_quorum_chain.is_empty() &&
+                                                 settings.peer_vlm_repl_state_chain.is_empty() &&
+                                                 settings.peer_vlm_state_chain.is_empty();
+                            }
                         }
-                        bool peer_vlm_match = false;
                         for (
                             DrbdVolume* peer_vlm = next_peer_volume(con, peer_vlm_iter, slct_peer_vlm_iter);
                             peer_vlm != nullptr;
