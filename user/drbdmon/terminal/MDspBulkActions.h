@@ -80,6 +80,9 @@ class MDspBulkActions : public MDspMenuBase
     void execute_volume_actions(DrbdCommands::volume_action_fn action);
     void execute_connection_actions(DrbdCommands::connection_action_fn action);
     void execute_peer_volume_actions(DrbdCommands::peer_volume_action_fn action);
+
+    void log_subprocess_error(const std::string& rsc_name);
+    void log_insufficient_qcap_error();
 };
 
 #endif /* MDSPBULKACTIONS_H */
