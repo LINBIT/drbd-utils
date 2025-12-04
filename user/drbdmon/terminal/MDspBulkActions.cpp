@@ -344,11 +344,25 @@ void MDspBulkActions::execute_resource_actions(DrbdCommands::resource_action_fn 
     dsp_comp_hub.dsp_common->application_working();
 
     ResourceSelectionMap::KeysIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
-    for (const std::string* rsc_name = rsc_iter.next();
-         rsc_name != nullptr;
-         rsc_name = rsc_iter.next())
+    try
     {
-        (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name);
+        for (const std::string* rsc_name = rsc_iter.next();
+             rsc_name != nullptr;
+             rsc_name = rsc_iter.next())
+        {
+            try
+            {
+                (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name);
+            }
+            catch (SubProcess::Exception&)
+            {
+                log_subprocess_error(*rsc_name);
+            }
+        }
+    }
+    catch (SubProcessQueue::QueueCapacityException&)
+    {
+        log_insufficient_qcap_error();
     }
 
     dsp_comp_hub.dsp_selector->leave_display();
@@ -359,22 +373,36 @@ void MDspBulkActions::execute_volume_actions(DrbdCommands::volume_action_fn acti
     dsp_comp_hub.dsp_common->application_working();
 
     ResourceSelectionMap::NodesIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
-    for (ResourceSelectionMap::Node* rsc_node = rsc_iter.next();
-         rsc_node != nullptr;
-         rsc_node = rsc_iter.next())
+    try
     {
-        const std::string* const rsc_name = rsc_node->get_key();
-        ResourceSubSelections& sub_selections = *(rsc_node->get_value());
-        if (sub_selections.volume_selection)
+        for (ResourceSelectionMap::Node* rsc_node = rsc_iter.next();
+             rsc_node != nullptr;
+             rsc_node = rsc_iter.next())
         {
-            VolumeSelectionMap::KeysIterator vlm_iter(*(sub_selections.volume_selection));
-            for (const uint16_t* vlm_nr = vlm_iter.next();
-                 vlm_nr != nullptr;
-                 vlm_nr = vlm_iter.next())
+            const std::string* const rsc_name = rsc_node->get_key();
+            ResourceSubSelections& sub_selections = *(rsc_node->get_value());
+            if (sub_selections.volume_selection)
             {
-                (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name, *vlm_nr);
+                VolumeSelectionMap::KeysIterator vlm_iter(*(sub_selections.volume_selection));
+                for (const uint16_t* vlm_nr = vlm_iter.next();
+                     vlm_nr != nullptr;
+                     vlm_nr = vlm_iter.next())
+                {
+                    try
+                    {
+                        (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name, *vlm_nr);
+                    }
+                    catch (SubProcess::Exception&)
+                    {
+                        log_subprocess_error(*rsc_name);
+                    }
+                }
             }
         }
+    }
+    catch (SubProcessQueue::QueueCapacityException&)
+    {
+        log_insufficient_qcap_error();
     }
 
     dsp_comp_hub.dsp_selector->leave_display();
@@ -385,22 +413,36 @@ void MDspBulkActions::execute_connection_actions(DrbdCommands::connection_action
     dsp_comp_hub.dsp_common->application_working();
 
     ResourceSelectionMap::NodesIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
-    for (ResourceSelectionMap::Node* rsc_node = rsc_iter.next();
-         rsc_node != nullptr;
-         rsc_node = rsc_iter.next())
+    try
     {
-        const std::string* const rsc_name = rsc_node->get_key();
-        ResourceSubSelections& sub_selections = *(rsc_node->get_value());
-        if (sub_selections.connection_selection)
+        for (ResourceSelectionMap::Node* rsc_node = rsc_iter.next();
+             rsc_node != nullptr;
+             rsc_node = rsc_iter.next())
         {
-            ConnectionSelectionMap::KeysIterator con_iter(*(sub_selections.connection_selection));
-            for (const std::string* con_name = con_iter.next();
-                 con_name != nullptr;
-                 con_name = con_iter.next())
+            const std::string* const rsc_name = rsc_node->get_key();
+            ResourceSubSelections& sub_selections = *(rsc_node->get_value());
+            if (sub_selections.connection_selection)
             {
-                (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name, *con_name);
+                ConnectionSelectionMap::KeysIterator con_iter(*(sub_selections.connection_selection));
+                for (const std::string* con_name = con_iter.next();
+                     con_name != nullptr;
+                     con_name = con_iter.next())
+                {
+                    try
+                    {
+                        (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name, *con_name);
+                    }
+                    catch (SubProcess::Exception&)
+                    {
+                        log_subprocess_error(*rsc_name);
+                    }
+                }
             }
         }
+    }
+    catch (SubProcessQueue::QueueCapacityException&)
+    {
+        log_insufficient_qcap_error();
     }
 
     dsp_comp_hub.dsp_selector->leave_display();
@@ -411,34 +453,67 @@ void MDspBulkActions::execute_peer_volume_actions(DrbdCommands::peer_volume_acti
     dsp_comp_hub.dsp_common->application_working();
 
     ResourceSelectionMap::NodesIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
-    for (ResourceSelectionMap::Node* rsc_node = rsc_iter.next();
-         rsc_node != nullptr;
-         rsc_node = rsc_iter.next())
+    try
     {
-        const std::string* const rsc_name = rsc_node->get_key();
-        ResourceSubSelections& sub_selections = *(rsc_node->get_value());
-        if (sub_selections.connection_selection)
+        for (ResourceSelectionMap::Node* rsc_node = rsc_iter.next();
+             rsc_node != nullptr;
+             rsc_node = rsc_iter.next())
         {
-            ConnectionSelectionMap::NodesIterator con_iter(*(sub_selections.connection_selection));
-            for (ConnectionSelectionMap::Node* con_node = con_iter.next();
-                 con_node != nullptr;
-                 con_node = con_iter.next())
+            const std::string* const rsc_name = rsc_node->get_key();
+            ResourceSubSelections& sub_selections = *(rsc_node->get_value());
+            if (sub_selections.connection_selection)
             {
-                const std::string* const con_name = con_node->get_key();
-                VolumeSelectionMap* const selected_peer_volumes = con_node->get_value();
-                if (selected_peer_volumes != nullptr)
+                ConnectionSelectionMap::NodesIterator con_iter(*(sub_selections.connection_selection));
+                for (ConnectionSelectionMap::Node* con_node = con_iter.next();
+                     con_node != nullptr;
+                     con_node = con_iter.next())
                 {
-                    VolumeSelectionMap::KeysIterator peer_vlm_iter(*selected_peer_volumes);
-                    for (const uint16_t* peer_vlm_nr = peer_vlm_iter.next();
-                         peer_vlm_nr != nullptr;
-                         peer_vlm_nr = peer_vlm_iter.next())
+                    const std::string* const con_name = con_node->get_key();
+                    VolumeSelectionMap* const selected_peer_volumes = con_node->get_value();
+                    if (selected_peer_volumes != nullptr)
                     {
-                        (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name, *con_name, *peer_vlm_nr);
+                        VolumeSelectionMap::KeysIterator peer_vlm_iter(*selected_peer_volumes);
+                        for (const uint16_t* peer_vlm_nr = peer_vlm_iter.next();
+                             peer_vlm_nr != nullptr;
+                             peer_vlm_nr = peer_vlm_iter.next())
+                        {
+                            try
+                            {
+                                (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name, *con_name, *peer_vlm_nr);
+                            }
+                            catch (SubProcess::Exception&)
+                            {
+                                log_subprocess_error(*rsc_name);
+                            }
+                        }
                     }
                 }
             }
         }
     }
+    catch (SubProcessQueue::QueueCapacityException&)
+    {
+        log_insufficient_qcap_error();
+    }
 
     dsp_comp_hub.dsp_selector->leave_display();
+}
+
+void MDspBulkActions::log_subprocess_error(const std::string& rsc_name)
+{
+    std::string error_msg("Bulk actions: Resource ");
+    error_msg += rsc_name;
+    error_msg += ": Command failed: Sub-process execution error";
+    dsp_comp_hub.log->add_entry(
+        MessageLog::log_level::ALERT,
+        error_msg
+    );
+}
+
+void MDspBulkActions::log_insufficient_qcap_error()
+{
+    dsp_comp_hub.log->add_entry(
+        MessageLog::log_level::ALERT,
+        "Bulk actions: Cannot execute command, insufficient queue capacity"
+    );
 }
