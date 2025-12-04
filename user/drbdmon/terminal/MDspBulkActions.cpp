@@ -354,6 +354,12 @@ void MDspBulkActions::execute_resource_actions(DrbdCommands::resource_action_fn 
             {
                 (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name);
             }
+            catch (SubProcessQueue::QueueCapacityException&)
+            {
+                // rethrow to outer try block to avoid catching the superclass
+                // in the next catch statement
+                throw;
+            }
             catch (SubProcess::Exception&)
             {
                 log_subprocess_error(*rsc_name);
@@ -391,6 +397,12 @@ void MDspBulkActions::execute_volume_actions(DrbdCommands::volume_action_fn acti
                     try
                     {
                         (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name, *vlm_nr);
+                    }
+                    catch (SubProcessQueue::QueueCapacityException&)
+                    {
+                        // rethrow to outer try block to avoid catching the superclass
+                        // in the next catch statement
+                        throw;
                     }
                     catch (SubProcess::Exception&)
                     {
@@ -431,6 +443,12 @@ void MDspBulkActions::execute_connection_actions(DrbdCommands::connection_action
                     try
                     {
                         (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name, *con_name);
+                    }
+                    catch (SubProcessQueue::QueueCapacityException&)
+                    {
+                        // rethrow to outer try block to avoid catching the superclass
+                        // in the next catch statement
+                        throw;
                     }
                     catch (SubProcess::Exception&)
                     {
@@ -480,6 +498,12 @@ void MDspBulkActions::execute_peer_volume_actions(DrbdCommands::peer_volume_acti
                             try
                             {
                                 (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name, *con_name, *peer_vlm_nr);
+                            }
+                            catch (SubProcessQueue::QueueCapacityException&)
+                            {
+                                // rethrow to outer try block to avoid catching the superclass
+                                // in the next catch statement
+                                throw;
                             }
                             catch (SubProcess::Exception&)
                             {
