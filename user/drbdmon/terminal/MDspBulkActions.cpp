@@ -5,6 +5,9 @@
 MDspBulkActions::MDspBulkActions(const ComponentsHub& comp_hub):
     MDspMenuBase::MDspMenuBase(comp_hub)
 {
+    skip_count_input = std::unique_ptr<InputField>(new InputField(dsp_comp_hub, 5, 4, 8, 8));
+    apply_count_input = std::unique_ptr<InputField>(new InputField(dsp_comp_hub, 5, 7, 8, 8));
+
     setup_cmd_functions();
     setup_pages();
 }
@@ -137,6 +140,21 @@ void MDspBulkActions::display_peer_volume_actions()
 
 void MDspBulkActions::display_range_options()
 {
+    dsp_comp_hub.dsp_io->cursor_xy(3, 4);
+    dsp_comp_hub.dsp_io->write_text("Number of objects to skip:");
+    skip_count_input->display();
+
+    dsp_comp_hub.dsp_io->cursor_xy(3, 6);
+    dsp_comp_hub.dsp_io->write_text("Number of objects to process:");
+    apply_count_input->display();
+
+    if (!range_error_msg.empty())
+    {
+        dsp_comp_hub.dsp_io->cursor_xy(5, 8);
+        dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->alert.c_str());
+        dsp_comp_hub.dsp_io->write_text(range_error_msg.c_str());
+        dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
+    }
 }
 
 uint64_t MDspBulkActions::get_update_mask() noexcept
@@ -146,7 +164,64 @@ uint64_t MDspBulkActions::get_update_mask() noexcept
 
 bool MDspBulkActions::key_pressed(const uint32_t key)
 {
-    return MDspMenuBase::key_pressed(key);
+    bool intercepted = false;
+    const uint32_t page = get_page_nr();
+    if (page != range_page)
+    {
+        intercepted = MDspMenuBase::key_pressed(key);
+        if (!intercepted && is_focus_delegated() && active_input != nullptr)
+        {
+            active_input->key_pressed(key);
+            intercepted = true;
+        }
+    }
+    else
+    {
+        // The counts page does not have any option entry
+        intercepted = MDspBase::key_pressed(key);
+    }
+    return intercepted;
+}
+
+bool MDspBulkActions::mouse_action(MouseEvent& mouse)
+{
+    bool intercepted = MDspMenuBase::mouse_action(mouse);
+    if (!intercepted)
+    {
+        const uint32_t page = get_page_nr();
+        if (page == range_page)
+        {
+            if (skip_count_input->mouse_action(mouse))
+            {
+                intercepted = true;
+            }
+            else
+            if (apply_count_input->mouse_action(mouse))
+            {
+                intercepted = true;
+            }
+
+            if (intercepted)
+            {
+                delegate_focus(true);
+            }
+            else
+            {
+                InputField& option_field = get_option_field();
+                if (option_field.mouse_action(mouse))
+                {
+                    delegate_focus(false);
+                    intercepted = true;
+                }
+            }
+
+            if (intercepted)
+            {
+                dsp_comp_hub.dsp_selector->refresh_display();
+            }
+        }
+    }
+    return intercepted;
 }
 
 void MDspBulkActions::setup_cmd_functions()
@@ -336,42 +411,27 @@ void MDspBulkActions::setup_pages()
     );
     add_option(*cmd_peer_vlm_invalidate_remote);
 
-    set_page_count(4);
+    // Range page
+    ++bld.coords.page;
+    range_page = bld.coords.page;
+
+    set_page_count(bld.coords.page);
 }
 
 void MDspBulkActions::execute_resource_actions(DrbdCommands::resource_action_fn action)
 {
     dsp_comp_hub.dsp_common->application_working();
 
-    ResourceSelectionMap::KeysIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
-    try
-    {
-        for (const std::string* rsc_name = rsc_iter.next();
-             rsc_name != nullptr;
-             rsc_name = rsc_iter.next())
+    std::function<void(DrbdCommands::resource_action_fn, bool&, MDspBulkActions::RangeSpec&,
+                       uint32_t&, uint32_t&)> action_loop =
+        [this](
+            DrbdCommands::resource_action_fn action_ref,
+            bool& range_completed, RangeSpec& range, uint32_t& skip_ctr, uint32_t& apply_ctr
+        ) -> void
         {
-            try
-            {
-                (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name);
-            }
-            catch (SubProcessQueue::QueueCapacityException&)
-            {
-                // rethrow to outer try block to avoid catching the superclass
-                // in the next catch statement
-                throw;
-            }
-            catch (SubProcess::Exception&)
-            {
-                log_subprocess_error(*rsc_name);
-            }
-        }
-    }
-    catch (SubProcessQueue::QueueCapacityException&)
-    {
-        log_insufficient_qcap_error();
-    }
-
-    dsp_comp_hub.dsp_selector->leave_display();
+            action_loop_for_resources(action_ref, range_completed, range, skip_ctr, apply_ctr);
+        };
+    execute_for_range(action_loop, action);
 }
 
 void MDspBulkActions::execute_volume_actions(DrbdCommands::volume_action_fn action)
@@ -521,6 +581,113 @@ void MDspBulkActions::execute_peer_volume_actions(DrbdCommands::peer_volume_acti
     }
 
     dsp_comp_hub.dsp_selector->leave_display();
+}
+
+void MDspBulkActions::action_loop_for_resources(
+    DrbdCommands::resource_action_fn    action,
+    bool&                               range_completed,
+    RangeSpec&                          range,
+    uint32_t&                           skip_ctr,
+    uint32_t&                           apply_ctr
+)
+{
+    try
+    {
+        RangeSpec range = get_exec_range();
+
+        ResourceSelectionMap::KeysIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
+        uint32_t skip_ctr = 0;
+        uint32_t apply_ctr = 0;
+        try
+        {
+            for (const std::string* rsc_name = rsc_iter.next();
+                 rsc_name != nullptr && (range.apply_count == 0 || apply_ctr < range.apply_count);
+                 rsc_name = rsc_iter.next())
+            {
+                try
+                {
+                    if (skip_ctr >= range.skip_count)
+                    {
+                        (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name);
+                        ++apply_ctr;
+                    }
+                    else
+                    {
+                        ++skip_ctr;
+                    }
+                }
+                catch (SubProcessQueue::QueueCapacityException&)
+                {
+                    // rethrow to outer try block to avoid catching the superclass
+                    // in the next catch statement
+                    throw;
+                }
+                catch (SubProcess::Exception&)
+                {
+                    log_subprocess_error(*rsc_name);
+                }
+            }
+            range_completed = true;
+        }
+        catch (SubProcessQueue::QueueCapacityException&)
+        {
+            log_insufficient_qcap_error();
+        }
+
+        if (!range_completed && apply_ctr > 0)
+        {
+            const uint32_t updated_skip_count = range.skip_count + apply_ctr;
+            const std::string skip_count_text = std::to_string(updated_skip_count);
+            skip_count_input->set_text(skip_count_text);
+        }
+    }
+    catch (dsaext::NumberFormatException&)
+    {
+    }
+
+    if (range_completed)
+    {
+        dsp_comp_hub.dsp_selector->leave_display();
+    }
+    else
+    {
+        set_page_nr(range_page);
+        dsp_comp_hub.dsp_selector->refresh_display();
+    }
+}
+
+// @throws NumberFormatExecption
+MDspBulkActions::RangeSpec MDspBulkActions::get_exec_range()
+{
+    RangeSpec range;
+    try
+    {
+        const std::string& skip_count_text = skip_count_input->get_text();
+        if (!skip_count_text.empty())
+        {
+            range.skip_count = dsaext::parse_unsigned_int32(skip_count_text);
+        }
+    }
+    catch (dsaext::NumberFormatException&)
+    {
+        range_error_msg = "Unparsable skip count";
+        throw;
+    }
+
+    try
+    {
+        const std::string& apply_count_text = apply_count_input->get_text();
+        if (!apply_count_text.empty())
+        {
+            range.apply_count = dsaext::parse_unsigned_int32(apply_count_text);
+        }
+    }
+    catch (dsaext::NumberFormatException&)
+    {
+        range_error_msg = "Unparsable process count";
+        throw;
+    }
+    return range;
 }
 
 void MDspBulkActions::log_subprocess_error(const std::string& rsc_name)
