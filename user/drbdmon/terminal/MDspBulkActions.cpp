@@ -20,12 +20,20 @@ MDspBulkActions::~MDspBulkActions() noexcept
 void MDspBulkActions::display_closed()
 {
     reset_display();
+    active_input = nullptr;
     set_page_nr(1);
     MDspMenuBase::display_closed();
 }
 
 void MDspBulkActions::display_content()
 {
+    const uint32_t page = get_page_nr();
+    if (page != range_page)
+    {
+        delegate_focus(false);
+        active_input = nullptr;
+    }
+
     if (dsp_comp_hub.enable_drbd_actions)
     {
         display_actions();
@@ -158,6 +166,18 @@ void MDspBulkActions::display_range_options()
     }
 }
 
+void MDspBulkActions::text_cursor_ops()
+{
+    if (is_focus_delegated() && active_input != nullptr)
+    {
+        active_input->cursor();
+    }
+    else
+    {
+        MDspMenuBase::text_cursor_ops();
+    }
+}
+
 uint64_t MDspBulkActions::get_update_mask() noexcept
 {
     return 0;
@@ -223,6 +243,56 @@ bool MDspBulkActions::mouse_action(MouseEvent& mouse)
         }
     }
     return intercepted;
+}
+
+void MDspBulkActions::cursor_to_next_item()
+{
+    const uint32_t page = get_page_nr();
+    if (page == range_page)
+    {
+        if (is_focus_delegated())
+        {
+            if (active_input == skip_count_input.get())
+            {
+                active_input = apply_count_input.get();
+            }
+            else
+            {
+                delegate_focus(false);
+                active_input = nullptr;
+            }
+        }
+        else
+        {
+            active_input = skip_count_input.get();
+            delegate_focus(true);
+        }
+    }
+}
+
+void MDspBulkActions::cursor_to_previous_item()
+{
+    const uint32_t page = get_page_nr();
+    if (page == range_page)
+    {
+        if (is_focus_delegated())
+        {
+            if (active_input == apply_count_input.get())
+            {
+                active_input = skip_count_input.get();
+            }
+            else
+            {
+                delegate_focus(false);
+                active_input = nullptr;
+            }
+        }
+        else
+        {
+            active_input = apply_count_input.get();
+            delegate_focus(true);
+        }
+    }
 }
 
 void MDspBulkActions::setup_cmd_functions()

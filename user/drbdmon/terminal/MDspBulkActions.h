@@ -13,8 +13,11 @@ class MDspBulkActions : public MDspMenuBase
 
     virtual void display_content() override;
     virtual void display_closed() override;
+    virtual void text_cursor_ops() override;
     virtual bool key_pressed(const uint32_t key) override;
     virtual bool mouse_action(MouseEvent& mouse) override;
+    virtual void cursor_to_next_item() override;
+    virtual void cursor_to_previous_item() override;
     virtual uint64_t get_update_mask() noexcept override;
 
   private:
