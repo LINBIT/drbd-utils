@@ -93,8 +93,33 @@ class MDspBulkActions : public MDspMenuBase
     void execute_connection_actions(DrbdCommands::connection_action_fn action);
     void execute_peer_volume_actions(DrbdCommands::peer_volume_action_fn action);
 
+    // @throws SubProcessQueue::QueueCapacityException
     void action_loop_for_resources(
         DrbdCommands::resource_action_fn    action,
+        bool&                               range_completed,
+        RangeSpec&                          range,
+        uint32_t&                           skip_ctr,
+        uint32_t&                           apply_ctr
+    );
+    // @throws SubProcessQueue::QueueCapacityException
+    void action_loop_for_volumes(
+        DrbdCommands::volume_action_fn      action,
+        bool&                               range_completed,
+        RangeSpec&                          range,
+        uint32_t&                           skip_ctr,
+        uint32_t&                           apply_ctr
+    );
+    // @throws SubProcessQueue::QueueCapacityException
+    void action_loop_for_connections(
+        DrbdCommands::connection_action_fn  action,
+        bool&                               range_completed,
+        RangeSpec&                          range,
+        uint32_t&                           skip_ctr,
+        uint32_t&                           apply_ctr
+    );
+    // @throws SubProcessQueue::QueueCapacityException
+    void action_loop_for_peer_volumes(
+        DrbdCommands::peer_volume_action_fn action,
         bool&                               range_completed,
         RangeSpec&                          range,
         uint32_t&                           skip_ctr,
@@ -104,7 +129,7 @@ class MDspBulkActions : public MDspMenuBase
     template<typename A>
     void execute_for_range(std::function<void(A, bool&, RangeSpec&, uint32_t&, uint32_t&)> action_loop, A action)
     {
-        bool range_completed = false;
+        bool updated_range = false;
         try
         {
             RangeSpec range = get_exec_range();
@@ -113,13 +138,23 @@ class MDspBulkActions : public MDspMenuBase
             uint32_t skip_ctr = 0;
             uint32_t apply_ctr = 0;
 
-            action_loop(action, range_completed, range, skip_ctr, apply_ctr);
+            bool range_completed = false;
+            try
+            {
+                action_loop(action, range_completed, range, skip_ctr, apply_ctr);
+                range_completed = true;
+            }
+            catch (SubProcessQueue::QueueCapacityException&)
+            {
+                log_insufficient_qcap_error();
+            }
 
-            if (!range_completed && apply_ctr > 0)
+            if ((!range_completed || range.apply_count != 0) && apply_ctr > 0)
             {
                 const uint32_t updated_skip_count = range.skip_count + apply_ctr;
                 const std::string skip_count_text = std::to_string(updated_skip_count);
                 skip_count_input->set_text(skip_count_text);
+                updated_range = true;
             }
         }
         catch (dsaext::NumberFormatException&)
@@ -127,14 +162,14 @@ class MDspBulkActions : public MDspMenuBase
             // Error message set by get_exec_range
         }
 
-        if (range_completed)
-        {
-            dsp_comp_hub.dsp_selector->leave_display();
-        }
-        else
+        if (updated_range)
         {
             set_page_nr(range_page);
             dsp_comp_hub.dsp_selector->refresh_display();
+        }
+        else
+        {
+            dsp_comp_hub.dsp_selector->leave_display();
         }
     }
 

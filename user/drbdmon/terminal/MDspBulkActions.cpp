@@ -439,151 +439,51 @@ void MDspBulkActions::execute_volume_actions(DrbdCommands::volume_action_fn acti
 {
     dsp_comp_hub.dsp_common->application_working();
 
-    ResourceSelectionMap::NodesIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
-    try
-    {
-        for (ResourceSelectionMap::Node* rsc_node = rsc_iter.next();
-             rsc_node != nullptr;
-             rsc_node = rsc_iter.next())
+    std::function<void(DrbdCommands::volume_action_fn, bool&, MDspBulkActions::RangeSpec&,
+                       uint32_t&, uint32_t&)> action_loop =
+        [this](
+            DrbdCommands::volume_action_fn action_ref,
+            bool& range_completed, RangeSpec& range, uint32_t& skip_ctr, uint32_t& apply_ctr
+        ) -> void
         {
-            const std::string* const rsc_name = rsc_node->get_key();
-            ResourceSubSelections& sub_selections = *(rsc_node->get_value());
-            if (sub_selections.volume_selection)
-            {
-                VolumeSelectionMap::KeysIterator vlm_iter(*(sub_selections.volume_selection));
-                for (const uint16_t* vlm_nr = vlm_iter.next();
-                     vlm_nr != nullptr;
-                     vlm_nr = vlm_iter.next())
-                {
-                    try
-                    {
-                        (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name, *vlm_nr);
-                    }
-                    catch (SubProcessQueue::QueueCapacityException&)
-                    {
-                        // rethrow to outer try block to avoid catching the superclass
-                        // in the next catch statement
-                        throw;
-                    }
-                    catch (SubProcess::Exception&)
-                    {
-                        log_subprocess_error(*rsc_name);
-                    }
-                }
-            }
-        }
-    }
-    catch (SubProcessQueue::QueueCapacityException&)
-    {
-        log_insufficient_qcap_error();
-    }
-
-    dsp_comp_hub.dsp_selector->leave_display();
+            action_loop_for_volumes(action_ref, range_completed, range, skip_ctr, apply_ctr);
+        };
+    execute_for_range(action_loop, action);
 }
 
 void MDspBulkActions::execute_connection_actions(DrbdCommands::connection_action_fn action)
 {
     dsp_comp_hub.dsp_common->application_working();
 
-    ResourceSelectionMap::NodesIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
-    try
-    {
-        for (ResourceSelectionMap::Node* rsc_node = rsc_iter.next();
-             rsc_node != nullptr;
-             rsc_node = rsc_iter.next())
+    std::function<void(DrbdCommands::connection_action_fn, bool&, MDspBulkActions::RangeSpec&,
+                       uint32_t&, uint32_t&)> action_loop =
+        [this](
+            DrbdCommands::connection_action_fn action_ref,
+            bool& range_completed, RangeSpec& range, uint32_t& skip_ctr, uint32_t& apply_ctr
+        ) -> void
         {
-            const std::string* const rsc_name = rsc_node->get_key();
-            ResourceSubSelections& sub_selections = *(rsc_node->get_value());
-            if (sub_selections.connection_selection)
-            {
-                ConnectionSelectionMap::KeysIterator con_iter(*(sub_selections.connection_selection));
-                for (const std::string* con_name = con_iter.next();
-                     con_name != nullptr;
-                     con_name = con_iter.next())
-                {
-                    try
-                    {
-                        (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name, *con_name);
-                    }
-                    catch (SubProcessQueue::QueueCapacityException&)
-                    {
-                        // rethrow to outer try block to avoid catching the superclass
-                        // in the next catch statement
-                        throw;
-                    }
-                    catch (SubProcess::Exception&)
-                    {
-                        log_subprocess_error(*rsc_name);
-                    }
-                }
-            }
-        }
-    }
-    catch (SubProcessQueue::QueueCapacityException&)
-    {
-        log_insufficient_qcap_error();
-    }
-
-    dsp_comp_hub.dsp_selector->leave_display();
+            action_loop_for_connections(action_ref, range_completed, range, skip_ctr, apply_ctr);
+        };
+    execute_for_range(action_loop, action);
 }
 
 void MDspBulkActions::execute_peer_volume_actions(DrbdCommands::peer_volume_action_fn action)
 {
     dsp_comp_hub.dsp_common->application_working();
 
-    ResourceSelectionMap::NodesIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
-    try
-    {
-        for (ResourceSelectionMap::Node* rsc_node = rsc_iter.next();
-             rsc_node != nullptr;
-             rsc_node = rsc_iter.next())
+    std::function<void(DrbdCommands::peer_volume_action_fn, bool&, MDspBulkActions::RangeSpec&,
+                       uint32_t&, uint32_t&)> action_loop =
+        [this](
+            DrbdCommands::peer_volume_action_fn action_ref,
+            bool& range_completed, RangeSpec& range, uint32_t& skip_ctr, uint32_t& apply_ctr
+        ) -> void
         {
-            const std::string* const rsc_name = rsc_node->get_key();
-            ResourceSubSelections& sub_selections = *(rsc_node->get_value());
-            if (sub_selections.connection_selection)
-            {
-                ConnectionSelectionMap::NodesIterator con_iter(*(sub_selections.connection_selection));
-                for (ConnectionSelectionMap::Node* con_node = con_iter.next();
-                     con_node != nullptr;
-                     con_node = con_iter.next())
-                {
-                    const std::string* const con_name = con_node->get_key();
-                    VolumeSelectionMap* const selected_peer_volumes = con_node->get_value();
-                    if (selected_peer_volumes != nullptr)
-                    {
-                        VolumeSelectionMap::KeysIterator peer_vlm_iter(*selected_peer_volumes);
-                        for (const uint16_t* peer_vlm_nr = peer_vlm_iter.next();
-                             peer_vlm_nr != nullptr;
-                             peer_vlm_nr = peer_vlm_iter.next())
-                        {
-                            try
-                            {
-                                (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name, *con_name, *peer_vlm_nr);
-                            }
-                            catch (SubProcessQueue::QueueCapacityException&)
-                            {
-                                // rethrow to outer try block to avoid catching the superclass
-                                // in the next catch statement
-                                throw;
-                            }
-                            catch (SubProcess::Exception&)
-                            {
-                                log_subprocess_error(*rsc_name);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    catch (SubProcessQueue::QueueCapacityException&)
-    {
-        log_insufficient_qcap_error();
-    }
-
-    dsp_comp_hub.dsp_selector->leave_display();
+            action_loop_for_peer_volumes(action_ref, range_completed, range, skip_ctr, apply_ctr);
+        };
+    execute_for_range(action_loop, action);
 }
 
+// @throws SubProcessQueue::QueueCapacityException
 void MDspBulkActions::action_loop_for_resources(
     DrbdCommands::resource_action_fn    action,
     bool&                               range_completed,
@@ -592,20 +492,64 @@ void MDspBulkActions::action_loop_for_resources(
     uint32_t&                           apply_ctr
 )
 {
-    try
+    ResourceSelectionMap::KeysIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
+    for (const std::string* rsc_name = rsc_iter.next();
+         rsc_name != nullptr && (range.apply_count == 0 || apply_ctr < range.apply_count);
+         rsc_name = rsc_iter.next())
     {
-        ResourceSelectionMap::KeysIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
         try
         {
-            for (const std::string* rsc_name = rsc_iter.next();
-                 rsc_name != nullptr && (range.apply_count == 0 || apply_ctr < range.apply_count);
-                 rsc_name = rsc_iter.next())
+            if (skip_ctr >= range.skip_count)
+            {
+                (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name);
+                ++apply_ctr;
+            }
+            else
+            {
+                ++skip_ctr;
+            }
+        }
+        catch (SubProcessQueue::QueueCapacityException&)
+        {
+            // rethrow to outer try block to avoid catching the superclass
+            // in the next catch statement
+            throw;
+        }
+        catch (SubProcess::Exception&)
+        {
+            log_subprocess_error(*rsc_name);
+        }
+    }
+}
+
+// @throws SubProcessQueue::QueueCapacityException
+void MDspBulkActions::action_loop_for_volumes(
+    DrbdCommands::volume_action_fn      action,
+    bool&                               range_completed,
+    RangeSpec&                          range,
+    uint32_t&                           skip_ctr,
+    uint32_t&                           apply_ctr
+)
+{
+    ResourceSelectionMap::NodesIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
+    for (ResourceSelectionMap::Node* rsc_node = rsc_iter.next();
+         rsc_node != nullptr && (range.apply_count == 0 || apply_ctr < range.apply_count);
+         rsc_node = rsc_iter.next())
+    {
+        const std::string* const rsc_name = rsc_node->get_key();
+        ResourceSubSelections& sub_selections = *(rsc_node->get_value());
+        if (sub_selections.volume_selection)
+        {
+            VolumeSelectionMap::KeysIterator vlm_iter(*(sub_selections.volume_selection));
+            for (const uint16_t* vlm_nr = vlm_iter.next();
+                 vlm_nr != nullptr && (range.apply_count == 0 || apply_ctr < range.apply_count);
+                 vlm_nr = vlm_iter.next())
             {
                 try
                 {
                     if (skip_ctr >= range.skip_count)
                     {
-                        (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name);
+                        (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name, *vlm_nr);
                         ++apply_ctr;
                     }
                     else
@@ -624,15 +568,118 @@ void MDspBulkActions::action_loop_for_resources(
                     log_subprocess_error(*rsc_name);
                 }
             }
-            range_completed = true;
-        }
-        catch (SubProcessQueue::QueueCapacityException&)
-        {
-            log_insufficient_qcap_error();
         }
     }
-    catch (dsaext::NumberFormatException&)
+}
+
+// @throws SubProcessQueue::QueueCapacityException
+void MDspBulkActions::action_loop_for_connections(
+    DrbdCommands::connection_action_fn  action,
+    bool&                               range_completed,
+    RangeSpec&                          range,
+    uint32_t&                           skip_ctr,
+    uint32_t&                           apply_ctr
+)
+{
+    ResourceSelectionMap::NodesIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
+    for (ResourceSelectionMap::Node* rsc_node = rsc_iter.next();
+         rsc_node != nullptr && (range.apply_count == 0 || apply_ctr < range.apply_count);
+         rsc_node = rsc_iter.next())
     {
+        const std::string* const rsc_name = rsc_node->get_key();
+        ResourceSubSelections& sub_selections = *(rsc_node->get_value());
+        if (sub_selections.connection_selection)
+        {
+            ConnectionSelectionMap::KeysIterator con_iter(*(sub_selections.connection_selection));
+            for (const std::string* con_name = con_iter.next();
+                 con_name != nullptr && (range.apply_count == 0 || apply_ctr < range.apply_count);
+                 con_name = con_iter.next())
+            {
+                try
+                {
+                    if (skip_ctr >= range.skip_count)
+                    {
+                        (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name, *con_name);
+                        ++apply_ctr;
+                    }
+                    else
+                    {
+                        ++skip_ctr;
+                    }
+                }
+                catch (SubProcessQueue::QueueCapacityException&)
+                {
+                    // rethrow to outer try block to avoid catching the superclass
+                    // in the next catch statement
+                    throw;
+                }
+                catch (SubProcess::Exception&)
+                {
+                    log_subprocess_error(*rsc_name);
+                }
+            }
+        }
+    }
+}
+
+// @throws SubProcessQueue::QueueCapacityException
+void MDspBulkActions::action_loop_for_peer_volumes(
+    DrbdCommands::peer_volume_action_fn action,
+    bool&                               range_completed,
+    RangeSpec&                          range,
+    uint32_t&                           skip_ctr,
+    uint32_t&                           apply_ctr
+)
+{
+    ResourceSelectionMap::NodesIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
+    for (ResourceSelectionMap::Node* rsc_node = rsc_iter.next();
+         rsc_node != nullptr;
+         rsc_node = rsc_iter.next())
+    {
+        const std::string* const rsc_name = rsc_node->get_key();
+        ResourceSubSelections& sub_selections = *(rsc_node->get_value());
+        if (sub_selections.connection_selection)
+        {
+            ConnectionSelectionMap::NodesIterator con_iter(*(sub_selections.connection_selection));
+            for (ConnectionSelectionMap::Node* con_node = con_iter.next();
+                 con_node != nullptr;
+                 con_node = con_iter.next())
+            {
+                const std::string* const con_name = con_node->get_key();
+                VolumeSelectionMap* const selected_peer_volumes = con_node->get_value();
+                if (selected_peer_volumes != nullptr)
+                {
+                    VolumeSelectionMap::KeysIterator peer_vlm_iter(*selected_peer_volumes);
+                    for (const uint16_t* peer_vlm_nr = peer_vlm_iter.next();
+                         peer_vlm_nr != nullptr;
+                         peer_vlm_nr = peer_vlm_iter.next())
+                    {
+                        try
+                        {
+                            if (skip_ctr >= range.skip_count)
+                            {
+                                (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name, *con_name, *peer_vlm_nr);
+                                ++apply_ctr;
+                            }
+                            else
+                            {
+                                ++skip_ctr;
+                            }
+                        }
+                        catch (SubProcessQueue::QueueCapacityException&)
+                        {
+                            // rethrow to outer try block to avoid catching the superclass
+                            // in the next catch statement
+                            throw;
+                        }
+                        catch (SubProcess::Exception&)
+                        {
+                            log_subprocess_error(*rsc_name);
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
