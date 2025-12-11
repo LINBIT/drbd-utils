@@ -1,6 +1,7 @@
 #include <terminal/MDspBulkActions.h>
 #include <terminal/SharedData.h>
 #include <terminal/DrbdCommandsImpl.h>
+#include <cppdsaext/src/integerparse.h>
 
 MDspBulkActions::MDspBulkActions(const ComponentsHub& comp_hub):
     MDspMenuBase::MDspMenuBase(comp_hub)
@@ -593,11 +594,7 @@ void MDspBulkActions::action_loop_for_resources(
 {
     try
     {
-        RangeSpec range = get_exec_range();
-
         ResourceSelectionMap::KeysIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
-        uint32_t skip_ctr = 0;
-        uint32_t apply_ctr = 0;
         try
         {
             for (const std::string* rsc_name = rsc_iter.next();
@@ -633,26 +630,9 @@ void MDspBulkActions::action_loop_for_resources(
         {
             log_insufficient_qcap_error();
         }
-
-        if (!range_completed && apply_ctr > 0)
-        {
-            const uint32_t updated_skip_count = range.skip_count + apply_ctr;
-            const std::string skip_count_text = std::to_string(updated_skip_count);
-            skip_count_input->set_text(skip_count_text);
-        }
     }
     catch (dsaext::NumberFormatException&)
     {
-    }
-
-    if (range_completed)
-    {
-        dsp_comp_hub.dsp_selector->leave_display();
-    }
-    else
-    {
-        set_page_nr(range_page);
-        dsp_comp_hub.dsp_selector->refresh_display();
     }
 }
 
