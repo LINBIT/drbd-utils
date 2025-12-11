@@ -185,22 +185,20 @@ uint64_t MDspBulkActions::get_update_mask() noexcept
 
 bool MDspBulkActions::key_pressed(const uint32_t key)
 {
-    bool intercepted = false;
-    const uint32_t page = get_page_nr();
-    if (page != range_page)
+    bool intercepted = MDspMenuBase::key_pressed(key);
+    if (!intercepted)
     {
-        intercepted = MDspMenuBase::key_pressed(key);
-        if (!intercepted && is_focus_delegated() && active_input != nullptr)
+        const uint32_t page = get_page_nr();
+        if (page == range_page)
         {
-            active_input->key_pressed(key);
-            intercepted = true;
+            if (is_focus_delegated() && active_input != nullptr)
+            {
+                active_input->key_pressed(key);
+                intercepted = true;
+            }
         }
     }
-    else
-    {
-        // The counts page does not have any option entry
-        intercepted = MDspBase::key_pressed(key);
-    }
+
     return intercepted;
 }
 
