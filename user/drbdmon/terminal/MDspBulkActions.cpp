@@ -6,8 +6,8 @@
 MDspBulkActions::MDspBulkActions(const ComponentsHub& comp_hub):
     MDspMenuBase::MDspMenuBase(comp_hub)
 {
-    skip_count_input = std::unique_ptr<InputField>(new InputField(dsp_comp_hub, 5, 4, 8, 8));
-    apply_count_input = std::unique_ptr<InputField>(new InputField(dsp_comp_hub, 5, 7, 8, 8));
+    skip_count_input = std::unique_ptr<InputField>(new InputField(dsp_comp_hub, 5, 5, 8, 8));
+    apply_count_input = std::unique_ptr<InputField>(new InputField(dsp_comp_hub, 5, 8, 8, 8));
 
     setup_cmd_functions();
     setup_pages();
@@ -153,7 +153,7 @@ void MDspBulkActions::display_range_options()
     dsp_comp_hub.dsp_io->write_text("Number of objects to skip:");
     skip_count_input->display();
 
-    dsp_comp_hub.dsp_io->cursor_xy(3, 6);
+    dsp_comp_hub.dsp_io->cursor_xy(3, 7);
     dsp_comp_hub.dsp_io->write_text("Number of objects to process:");
     apply_count_input->display();
 
@@ -214,11 +214,13 @@ bool MDspBulkActions::mouse_action(MouseEvent& mouse)
         {
             if (skip_count_input->mouse_action(mouse))
             {
+                active_input = skip_count_input.get();
                 intercepted = true;
             }
             else
             if (apply_count_input->mouse_action(mouse))
             {
+                active_input = apply_count_input.get();
                 intercepted = true;
             }
 
@@ -231,6 +233,7 @@ bool MDspBulkActions::mouse_action(MouseEvent& mouse)
                 InputField& option_field = get_option_field();
                 if (option_field.mouse_action(mouse))
                 {
+                    active_input = nullptr;
                     delegate_focus(false);
                     intercepted = true;
                 }
@@ -267,6 +270,7 @@ void MDspBulkActions::cursor_to_next_item()
             active_input = skip_count_input.get();
             delegate_focus(true);
         }
+        dsp_comp_hub.dsp_selector->refresh_display();
     }
 }
 
@@ -292,6 +296,7 @@ void MDspBulkActions::cursor_to_previous_item()
             active_input = apply_count_input.get();
             delegate_focus(true);
         }
+        dsp_comp_hub.dsp_selector->refresh_display();
     }
 }
 
