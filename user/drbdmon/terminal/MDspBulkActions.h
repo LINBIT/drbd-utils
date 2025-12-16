@@ -30,7 +30,9 @@ class MDspBulkActions : public MDspMenuBase
 
     std::unique_ptr<InputField> skip_count_input;
     std::unique_ptr<InputField> apply_count_input;
+    std::string                 range_info_msg;
     std::string                 range_error_msg;
+    bool                        keep_range      {false};
 
     uint32_t                    range_page      {0};
     InputField*                 active_input    {nullptr};
@@ -58,6 +60,8 @@ class MDspBulkActions : public MDspMenuBase
     std::function<void()>   cmd_fn_peer_vlm_verify;
     std::function<void()>   cmd_fn_peer_vlm_invalidate_remote;
 
+    std::function<void()>   cmd_fn_toggle_keep_range;
+
     std::unique_ptr<ClickableCommand>   cmd_rsc_start;
     std::unique_ptr<ClickableCommand>   cmd_rsc_stop;
     std::unique_ptr<ClickableCommand>   cmd_rsc_adjust;
@@ -81,12 +85,16 @@ class MDspBulkActions : public MDspMenuBase
     std::unique_ptr<ClickableCommand>   cmd_peer_vlm_verify;
     std::unique_ptr<ClickableCommand>   cmd_peer_vlm_invalidate_remote;
 
+    std::unique_ptr<ClickableCommand>   cmd_toggle_keep_range;
+
     void display_actions();
     void display_resource_actions();
     void display_volume_actions();
     void display_connection_actions();
     void display_peer_volume_actions();
     void display_range_options();
+
+    void toggle_keep_range();
 
     void setup_cmd_functions();
     void setup_pages();
@@ -135,8 +143,8 @@ class MDspBulkActions : public MDspMenuBase
         bool updated_range = false;
         try
         {
-            RangeSpec range = get_exec_range();
             range_error_msg.clear();
+            RangeSpec range = get_exec_range();
 
             uint32_t skip_ctr = 0;
             uint32_t apply_ctr = 0;
@@ -165,7 +173,7 @@ class MDspBulkActions : public MDspMenuBase
             // Error message set by get_exec_range
         }
 
-        if (updated_range)
+        if (updated_range || !range_error_msg.empty())
         {
             set_page_nr(range_page);
             dsp_comp_hub.dsp_selector->refresh_display();

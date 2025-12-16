@@ -11,6 +11,8 @@ MDspBulkActions::MDspBulkActions(const ComponentsHub& comp_hub):
 
     setup_cmd_functions();
     setup_pages();
+
+    range_info_msg.reserve(90);
 }
 
 MDspBulkActions::~MDspBulkActions() noexcept
@@ -22,6 +24,11 @@ void MDspBulkActions::display_closed()
     reset_display();
     active_input = nullptr;
     set_page_nr(1);
+    if (!keep_range)
+    {
+        skip_count_input->clear_text();
+        apply_count_input->clear_text();
+    }
     MDspMenuBase::display_closed();
 }
 
@@ -32,6 +39,28 @@ void MDspBulkActions::display_content()
     {
         delegate_focus(false);
         active_input = nullptr;
+
+        if (range_info_msg.empty() && (!skip_count_input->is_empty() || !apply_count_input->is_empty()))
+        {
+            try
+            {
+                RangeSpec range = get_exec_range();
+                if (range.skip_count != 0)
+                {
+                    range_info_msg = "Skip ";
+                    range_info_msg += std::to_string(static_cast<unsigned long> (range.skip_count));
+                }
+                if (range.apply_count != 0)
+                {
+                    range_info_msg += (range_info_msg.empty() ? "Process " : ", process");
+                    range_info_msg += std::to_string(static_cast<unsigned long> (range.apply_count));
+                }
+            }
+            catch (dsaext::NumberFormatException&)
+            {
+                // no-op
+            }
+        }
     }
 
     if (dsp_comp_hub.enable_drbd_actions)
@@ -72,9 +101,17 @@ void MDspBulkActions::display_actions()
         display_peer_volume_actions();
     }
     else
-    if (page == 5)
+    if (page == range_page)
     {
         display_range_options();
+    }
+
+    if (page != range_page && !range_info_msg.empty() && range_error_msg.empty())
+    {
+        dsp_comp_hub.dsp_io->cursor_xy(5, 10);
+        dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->emphasis_text.c_str());
+        dsp_comp_hub.dsp_io->write_text(range_error_msg.c_str());
+        dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
     }
 
     display_option_query(5, 17);
@@ -149,6 +186,8 @@ void MDspBulkActions::display_peer_volume_actions()
 
 void MDspBulkActions::display_range_options()
 {
+    const std::string& std_color = dsp_comp_hub.active_color_table->option_text;
+
     dsp_comp_hub.dsp_io->cursor_xy(3, 4);
     dsp_comp_hub.dsp_io->write_text("Number of objects to skip:");
     skip_count_input->display();
@@ -157,13 +196,23 @@ void MDspBulkActions::display_range_options()
     dsp_comp_hub.dsp_io->write_text("Number of objects to process:");
     apply_count_input->display();
 
+    display_option(5, "Keep range when display is closed", *cmd_toggle_keep_range, std_color);
+
     if (!range_error_msg.empty())
     {
-        dsp_comp_hub.dsp_io->cursor_xy(5, 8);
+        dsp_comp_hub.dsp_io->cursor_xy(5, 12);
         dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->alert.c_str());
         dsp_comp_hub.dsp_io->write_text(range_error_msg.c_str());
         dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
     }
+
+    range_info_msg.clear();
+}
+
+void MDspBulkActions::toggle_keep_range()
+{
+    keep_range = !keep_range;
+    dsp_comp_hub.dsp_selector->refresh_display();
 }
 
 void MDspBulkActions::text_cursor_ops()
@@ -388,6 +437,12 @@ void MDspBulkActions::setup_cmd_functions()
         {
             execute_peer_volume_actions(&DrbdCommands::exec_invalidate_remote);
         };
+
+    cmd_fn_toggle_keep_range =
+        [this]() -> void
+        {
+            toggle_keep_range();
+        };
 }
 
 void MDspBulkActions::setup_pages()
@@ -488,6 +543,10 @@ void MDspBulkActions::setup_pages()
     // Range page
     ++bld.coords.page;
     range_page = bld.coords.page;
+
+    cmd_toggle_keep_range = std::unique_ptr<ClickableCommand>(
+        bld.create_with_page_dot_auto_nr(cmd_fn_toggle_keep_range)
+    );
 
     set_page_count(bld.coords.page);
 }
