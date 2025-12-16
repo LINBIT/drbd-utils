@@ -552,6 +552,7 @@ void MDspBulkActions::setup_pages()
     cmd_toggle_keep_range = std::unique_ptr<ClickableCommand>(
         bld.create_with_page_dot_auto_nr(cmd_fn_toggle_keep_range)
     );
+    add_option(*cmd_toggle_keep_range);
 
     set_page_count(bld.coords.page);
 }
