@@ -108,9 +108,9 @@ void MDspBulkActions::display_actions()
 
     if (page != range_page && !range_info_msg.empty() && range_error_msg.empty())
     {
-        dsp_comp_hub.dsp_io->cursor_xy(5, 10);
+        dsp_comp_hub.dsp_io->cursor_xy(5, 16);
         dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->emphasis_text.c_str());
-        dsp_comp_hub.dsp_io->write_text(range_error_msg.c_str());
+        dsp_comp_hub.dsp_io->write_text(range_info_msg.c_str());
         dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
     }
 
@@ -196,7 +196,12 @@ void MDspBulkActions::display_range_options()
     dsp_comp_hub.dsp_io->write_text("Number of objects to process:");
     apply_count_input->display();
 
-    display_option(5, "Keep range when display is closed", *cmd_toggle_keep_range, std_color);
+    std::string keep_range_label;
+    keep_range_label.reserve(50);
+    keep_range_label = keep_range ?
+        dsp_comp_hub.active_character_table->checked_box : dsp_comp_hub.active_character_table->unchecked_box;
+    keep_range_label += " Keep range when display is closed";
+    display_option(5, keep_range_label.c_str(), *cmd_toggle_keep_range, std_color);
 
     if (!range_error_msg.empty())
     {
