@@ -143,6 +143,7 @@ class MDspBulkActions : public MDspMenuBase
         bool updated_range = false;
         try
         {
+            range_info_msg.clear();
             range_error_msg.clear();
             RangeSpec range = get_exec_range();
 
