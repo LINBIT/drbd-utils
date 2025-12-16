@@ -52,7 +52,7 @@ void MDspBulkActions::display_content()
                 }
                 if (range.apply_count != 0)
                 {
-                    range_info_msg += (range_info_msg.empty() ? "Process " : ", process");
+                    range_info_msg += (range_info_msg.empty() ? "Process " : ", process ");
                     range_info_msg += std::to_string(static_cast<unsigned long> (range.apply_count));
                 }
             }

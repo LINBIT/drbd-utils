@@ -173,9 +173,14 @@ class MDspBulkActions : public MDspMenuBase
             // Error message set by get_exec_range
         }
 
-        if (updated_range || !range_error_msg.empty())
+        if (!range_error_msg.empty())
         {
             set_page_nr(range_page);
+            dsp_comp_hub.dsp_selector->refresh_display();
+        }
+        else
+        if (updated_range)
+        {
             dsp_comp_hub.dsp_selector->refresh_display();
         }
         else
