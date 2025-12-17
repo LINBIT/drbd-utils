@@ -547,6 +547,7 @@ void MDspBulkActions::setup_pages()
 
     // Range page
     ++bld.coords.page;
+    bld.auto_nr = 1;
     range_page = bld.coords.page;
 
     cmd_toggle_keep_range = std::unique_ptr<ClickableCommand>(
