@@ -184,7 +184,7 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
             cmd_fn_export_selection
         )
     );
-    cmd_export_selection = std::unique_ptr<ClickableCommand>(
+    cmd_import_selection = std::unique_ptr<ClickableCommand>(
         new ClickableCommand(
             "53", 2, 9, 5, 45,
             cmd_fn_import_selection
