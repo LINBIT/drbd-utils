@@ -84,7 +84,7 @@ MDspImportSelection::~MDspImportSelection() noexcept
 
 void MDspImportSelection::display_content()
 {
-    dsp_comp_hub.dsp_common->display_page_id(DisplayId::MDSP_EXPORT_SLCT);
+    dsp_comp_hub.dsp_common->display_page_id(DisplayId::MDSP_IMPORT_SLCT);
 
     dsp_comp_hub.dsp_io->cursor_xy(3, 4);
     dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->emphasis_text.c_str());
