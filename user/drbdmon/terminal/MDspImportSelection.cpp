@@ -241,7 +241,7 @@ void MDspImportSelection::import_selection()
                                     if (MAX_LINE_LENGTH - in_line.length() >= length)
                                     {
                                         in_line.append(&buffer[line_start], length);
-                                        process_line(in_line);
+                                        process_line(in_line, line_nr);
                                         in_line.clear();
                                     }
                                     else
