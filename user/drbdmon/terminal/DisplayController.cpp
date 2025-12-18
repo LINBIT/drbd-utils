@@ -26,6 +26,7 @@
 #include <terminal/MDspSelectionFilter.h>
 #include <terminal/MDspBulkActions.h>
 #include <terminal/MDspExportSelection.h>
+#include <terminal/MDspImportSelection.h>
 #include <terminal/InputField.h>
 #include <terminal/DisplayConsts.h>
 #include <terminal/DisplayUpdateEvent.h>
@@ -259,6 +260,9 @@ DisplayController::DisplayController(
         );
         export_slct_mgr = std::unique_ptr<ModularDisplay>(
             dynamic_cast<ModularDisplay*> (new MDspExportSelection(*dsp_comp_hub_mgr))
+        );
+        import_slct_mgr = std::unique_ptr<ModularDisplay>(
+            dynamic_cast<ModularDisplay*> (new MDspImportSelection(*dsp_comp_hub_mgr))
         );
 
         wait_msg_mgr = std::unique_ptr<MDspWaitMsg>(new MDspWaitMsg(dsp_comp_hub));
@@ -793,6 +797,9 @@ void DisplayController::get_display(
             break;
         case DisplayId::display_page::EXPORT_SLCT:
             dsp_obj = export_slct_mgr.get();
+            break;
+        case DisplayId::display_page::IMPORT_SLCT:
+            dsp_obj = import_slct_mgr.get();
             break;
         default:
             break;
