@@ -359,6 +359,11 @@ void MDspMainMenu::opt_export_selection()
     dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::EXPORT_SLCT);
 }
 
+void MDspMainMenu::opt_import_selection()
+{
+    dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::IMPORT_SLCT);
+}
+
 void MDspMainMenu::opt_start_all_resources()
 {
     if (dsp_comp_hub.enable_drbd_actions)
