@@ -198,6 +198,20 @@ void MDspImportSelection::display_closed()
     imp_peer_vlm = false;
 }
 
+void MDspImportSelection::cursor_to_previous_item()
+{
+    const bool state = is_focus_delegated();
+    delegate_focus(!state);
+    dsp_comp_hub.dsp_selector->refresh_display();
+}
+
+void MDspImportSelection::cursor_to_next_item()
+{
+    const bool state = is_focus_delegated();
+    delegate_focus(!state);
+    dsp_comp_hub.dsp_selector->refresh_display();
+}
+
 void MDspImportSelection::import_selection()
 {
     dsp_comp_hub.dsp_common->application_working();
