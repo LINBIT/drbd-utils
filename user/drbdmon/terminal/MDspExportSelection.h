@@ -2,6 +2,7 @@
 #define MDSPEXPORTSELECTION_H
 
 #include <default_types.h>
+#include <memory>
 #include <string>
 #include <functional>
 #include <terminal/MDspMenuBase.h>
