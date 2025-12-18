@@ -28,6 +28,8 @@ void MDspBulkActions::display_closed()
     {
         skip_count_input->clear_text();
         apply_count_input->clear_text();
+        range_info_msg.clear();
+        range_error_msg.clear();
     }
     MDspMenuBase::display_closed();
 }
