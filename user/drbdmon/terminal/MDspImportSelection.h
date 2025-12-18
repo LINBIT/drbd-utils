@@ -30,16 +30,16 @@ class MDspImportSelection : public MDspMenuBase
     virtual void cursor_to_previous_item() override;
     virtual void cursor_to_next_item() override;
 
-    extern const std::streamsize    IN_BUFFER_SIZE;
-    extern const size_t             MAX_LINE_LENGTH;
+    static const std::streamsize    IN_BUFFER_SIZE;
+    static const size_t             MAX_LINE_LENGTH;
 
   private:
     class ImportException : public std::exception
     {
     };
 
-    extern static const std::string     IMPORT_VALID_CHARS;
-    extern static const char* const     IMPORT_ERROR_MSG;
+    static const std::string    IMPORT_VALID_CHARS;
+    static const char* const    IMPORT_ERROR_MSG;
 
     std::unique_ptr<InputField>     path_input;
     std::string                     message;
