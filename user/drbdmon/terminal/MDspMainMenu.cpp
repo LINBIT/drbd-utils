@@ -86,7 +86,7 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
         {
             opt_export_selection();
         };
-    cmd_fn_export_selection =
+    cmd_fn_import_selection =
         [this]() -> void
         {
             opt_import_selection();
