@@ -40,6 +40,9 @@ class MDspBulkActions : public MDspMenuBase
     std::function<void()>   cmd_fn_rsc_start;
     std::function<void()>   cmd_fn_rsc_stop;
     std::function<void()>   cmd_fn_rsc_adjust;
+    std::function<void()>   cmd_fn_rsc_adjust_skip_disk;
+    std::function<void()>   cmd_fn_rsc_adjust_skip_net;
+    std::function<void()>   cmd_fn_rsc_adjust_skip_disk_net;
     std::function<void()>   cmd_fn_rsc_primary;
     std::function<void()>   cmd_fn_rsc_secondary;
     std::function<void()>   cmd_fn_rsc_force_primary;
@@ -65,6 +68,9 @@ class MDspBulkActions : public MDspMenuBase
     std::unique_ptr<ClickableCommand>   cmd_rsc_start;
     std::unique_ptr<ClickableCommand>   cmd_rsc_stop;
     std::unique_ptr<ClickableCommand>   cmd_rsc_adjust;
+    std::unique_ptr<ClickableCommand>   cmd_rsc_adjust_skip_disk;
+    std::unique_ptr<ClickableCommand>   cmd_rsc_adjust_skip_net;
+    std::unique_ptr<ClickableCommand>   cmd_rsc_adjust_skip_disk_net;
     std::unique_ptr<ClickableCommand>   cmd_rsc_primary;
     std::unique_ptr<ClickableCommand>   cmd_rsc_secondary;
     std::unique_ptr<ClickableCommand>   cmd_rsc_force_primary;
