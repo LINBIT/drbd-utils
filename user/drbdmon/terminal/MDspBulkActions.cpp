@@ -133,11 +133,13 @@ void MDspBulkActions::display_resource_actions()
     display_option(5, "Stop (down)", *cmd_rsc_stop, std_color);
 
     display_option(5, "Adjust", *cmd_rsc_adjust, std_color);
+    display_option(5, "Adjust, skip disk actions", *cmd_rsc_adjust_skip_disk, std_color);
+    display_option(5, "Adjust, skip network actions", *cmd_rsc_adjust_skip_net, std_color);
+    display_option(5, "Adjust, skip disk & network actions", *cmd_rsc_adjust_skip_disk_net, std_color);
     display_option(5, "Set primary role", *cmd_rsc_primary, std_color);
     display_option(5, "Set secondary role", *cmd_rsc_secondary, std_color);
     display_option(5, "Force primary role", *cmd_rsc_force_primary, caution_color);
     display_option(5, "Force secondary role", *cmd_rsc_force_secondary, caution_color);
-
 }
 
 void MDspBulkActions::display_volume_actions()
@@ -371,6 +373,21 @@ void MDspBulkActions::setup_cmd_functions()
         {
             execute_resource_actions(&DrbdCommands::exec_adjust);
         };
+    cmd_fn_rsc_adjust_skip_disk =
+        [this]() -> void
+        {
+            execute_resource_actions(&DrbdCommands::exec_adjust_skip_disk);
+        };
+    cmd_fn_rsc_adjust_skip_net =
+        [this]() -> void
+        {
+            execute_resource_actions(&DrbdCommands::exec_adjust_skip_net);
+        };
+    cmd_fn_rsc_adjust_skip_disk_net =
+        [this]() -> void
+        {
+            execute_resource_actions(&DrbdCommands::exec_adjust_skip_disk_net);
+        };
     cmd_fn_rsc_primary =
         [this]() -> void
         {
@@ -475,6 +492,18 @@ void MDspBulkActions::setup_pages()
         bld.create_with_page_dot_auto_nr(cmd_fn_rsc_adjust)
     );
     add_option(*cmd_rsc_adjust);
+    cmd_rsc_adjust_skip_disk = std::unique_ptr<ClickableCommand>(
+        bld.create_with_page_dot_auto_nr(cmd_fn_rsc_adjust_skip_disk)
+    );
+    add_option(*cmd_rsc_adjust_skip_disk);
+    cmd_rsc_adjust_skip_net = std::unique_ptr<ClickableCommand>(
+        bld.create_with_page_dot_auto_nr(cmd_fn_rsc_adjust_skip_net)
+    );
+    add_option(*cmd_rsc_adjust_skip_net);
+    cmd_rsc_adjust_skip_disk_net = std::unique_ptr<ClickableCommand>(
+        bld.create_with_page_dot_auto_nr(cmd_fn_rsc_adjust_skip_disk_net)
+    );
+    add_option(*cmd_rsc_adjust_skip_disk_net);
     cmd_rsc_primary = std::unique_ptr<ClickableCommand>(
         bld.create_with_page_dot_auto_nr(cmd_fn_rsc_primary)
     );
