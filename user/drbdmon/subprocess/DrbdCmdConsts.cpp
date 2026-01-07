@@ -8,6 +8,8 @@ namespace drbdcmd
     const std::string   ARG_START("up");
     const std::string   ARG_STOP("down");
     const std::string   ARG_ADJUST("adjust");
+    const std::string   ARG_SKIP_DISK("--skip-disk");
+    const std::string   ARG_SKIP_NET("--skip-net");
     const std::string   ARG_PRIMARY("primary");
     const std::string   ARG_SECONDARY("secondary");
     const std::string   ARG_CONNECT("connect");
