@@ -25,6 +25,9 @@ class DrbdCommands
     virtual void exec_start(const std::string& rsc_name) = 0;
     virtual void exec_stop(const std::string& rsc_name) = 0;
     virtual void exec_adjust(const std::string& rsc_name) = 0;
+    virtual void exec_adjust_skip_disk(const std::string& rsc_name) = 0;
+    virtual void exec_adjust_skip_net(const std::string& rsc_name) = 0;
+    virtual void exec_adjust_skip_disk_net(const std::string& rsc_name) = 0;
     virtual void exec_primary(const std::string& rsc_name) = 0;
     virtual void exec_force_primary(const std::string& rsc_name) = 0;
     virtual void exec_secondary(const std::string& rsc_name) = 0;

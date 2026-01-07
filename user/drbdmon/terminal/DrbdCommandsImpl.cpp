@@ -576,6 +576,61 @@ void DrbdCommandsImpl::exec_adjust(const std::string& rsc_name)
     queue_command(command);
 }
 
+void DrbdCommandsImpl::exec_adjust_skip_disk(const std::string& rsc_name)
+{
+    std::string description;
+    description.reserve(STRING_PREALLOC_LENGTH);
+
+    description.append("Adjust resource ");
+    description.append(rsc_name);
+
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->set_description(description);
+    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::ARG_ADJUST);
+    command->add_argument(drbdcmd::ARG_SKIP_DISK);
+    command->add_argument(rsc_name);
+
+    queue_command(command);
+}
+
+void DrbdCommandsImpl::exec_adjust_skip_net(const std::string& rsc_name)
+{
+    std::string description;
+    description.reserve(STRING_PREALLOC_LENGTH);
+
+    description.append("Adjust resource ");
+    description.append(rsc_name);
+
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->set_description(description);
+    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::ARG_ADJUST);
+    command->add_argument(drbdcmd::ARG_SKIP_NET);
+    command->add_argument(rsc_name);
+
+    queue_command(command);
+}
+
+void DrbdCommandsImpl::exec_adjust_skip_disk_net(const std::string& rsc_name)
+{
+    std::string description;
+    description.reserve(STRING_PREALLOC_LENGTH);
+
+    description.append("Adjust resource ");
+    description.append(rsc_name);
+
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->set_description(description);
+    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::ARG_ADJUST);
+    command->add_argument(drbdcmd::ARG_SKIP_DISK);
+    command->add_argument(drbdcmd::ARG_SKIP_NET);
+    command->add_argument(rsc_name);
+
+    queue_command(command);
+}
+
 void DrbdCommandsImpl::exec_primary(const std::string& rsc_name)
 {
     std::string description;
