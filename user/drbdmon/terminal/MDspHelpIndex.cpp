@@ -290,10 +290,10 @@ void MDspHelpIndex::display_content()
     else
     if (page == 2)
     {
-        display_option("21   ", "Selection filters", *cmd_conf, std_color);
-        display_option("22   ", "Bulk actions", *cmd_conf, std_color);
-        display_option("23   ", "Export selection", *cmd_conf, std_color);
-        display_option("24   ", "Import selection", *cmd_conf, std_color);
+        display_option("21   ", "Selection filters", *cmd_sflt, std_color);
+        display_option("22   ", "Bulk actions", *cmd_bulka, std_color);
+        display_option("23   ", "Export selection", *cmd_exps, std_color);
+        display_option("24   ", "Import selection", *cmd_imps, std_color);
     }
 
     display_option_query(5, 17);
