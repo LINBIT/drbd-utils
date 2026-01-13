@@ -1,4 +1,6 @@
 #include <terminal/MDspImportSelection.h>
+#include <terminal/HelpText.h>
+#include <terminal/KeyCodes.h>
 #include <iostream>
 #include <fstream>
 #include <bounds.h>
@@ -119,20 +121,28 @@ uint64_t MDspImportSelection::get_update_mask() noexcept
 bool MDspImportSelection::key_pressed(const uint32_t key)
 {
     bool intercepted = false;
-    const bool delegated = is_focus_delegated();
-    if (delegated && key == static_cast<uint32_t> ('/'))
+    if (key == KeyCodes::FUNC_01)
     {
-        path_input->key_pressed(key);
+        helptext::open_help_page(helptext::id_type::IMPS_HELP, dsp_comp_hub);
         intercepted = true;
     }
     else
     {
-        intercepted = MDspMenuBase::key_pressed(key);
-    }
-    if (delegated && !intercepted)
-    {
-        path_input->key_pressed(key);
-        intercepted = true;
+        const bool delegated = is_focus_delegated();
+        if (delegated && key == static_cast<uint32_t> ('/'))
+        {
+            path_input->key_pressed(key);
+            intercepted = true;
+        }
+        else
+        {
+            intercepted = MDspMenuBase::key_pressed(key);
+        }
+        if (delegated && !intercepted)
+        {
+            path_input->key_pressed(key);
+            intercepted = true;
+        }
     }
     return intercepted;
 }
