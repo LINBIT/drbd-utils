@@ -1,6 +1,8 @@
 #include <terminal/MDspBulkActions.h>
 #include <terminal/SharedData.h>
 #include <terminal/DrbdCommandsImpl.h>
+#include <terminal/HelpText.h>
+#include <terminal/KeyCodes.h>
 #include <cppdsaext/src/integerparse.h>
 
 MDspBulkActions::MDspBulkActions(const ComponentsHub& comp_hub):
@@ -246,13 +248,21 @@ bool MDspBulkActions::key_pressed(const uint32_t key)
     bool intercepted = MDspMenuBase::key_pressed(key);
     if (!intercepted)
     {
-        const uint32_t page = get_page_nr();
-        if (page == range_page)
+        if (key == KeyCodes::FUNC_01)
         {
-            if (is_focus_delegated() && active_input != nullptr)
+            helptext::open_help_page(helptext::id_type::BULKA_HELP, dsp_comp_hub);
+            intercepted = true;
+        }
+        else
+        {
+            const uint32_t page = get_page_nr();
+            if (page == range_page)
             {
-                active_input->key_pressed(key);
-                intercepted = true;
+                if (is_focus_delegated() && active_input != nullptr)
+                {
+                    active_input->key_pressed(key);
+                    intercepted = true;
+                }
             }
         }
     }
