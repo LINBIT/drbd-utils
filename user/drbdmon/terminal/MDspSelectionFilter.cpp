@@ -946,20 +946,28 @@ bool MDspSelectionFilter::key_pressed(const uint32_t key)
 {
     bool intercepted = false;
     // Option pages
-    const uint32_t page = get_page_nr();
-    if (page < stats_page)
+    if (key == KeyCodes::FUNC_01)
     {
-        intercepted = MDspMenuBase::key_pressed(key);
-        if (!intercepted && is_focus_delegated() && active_input != nullptr)
-        {
-            active_input->key_pressed(key);
-            intercepted = true;
-        }
+        helptext::open_help_page(helptext::id_type::SFLT_HELP, dsp_comp_hub);
+        intercepted = true;
     }
     else
     {
-        // No option entry on the statistics page
-        intercepted = MDspBase::key_pressed(key);
+        const uint32_t page = get_page_nr();
+        if (page < stats_page)
+        {
+            intercepted = MDspMenuBase::key_pressed(key);
+            if (!intercepted && is_focus_delegated() && active_input != nullptr)
+            {
+                active_input->key_pressed(key);
+                intercepted = true;
+            }
+        }
+        else
+        {
+            // No option entry on the statistics page
+            intercepted = MDspBase::key_pressed(key);
+        }
     }
     return intercepted;
 }
