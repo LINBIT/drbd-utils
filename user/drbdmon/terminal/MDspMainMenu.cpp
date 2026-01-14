@@ -131,6 +131,8 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
     cmd_configuration = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_configuration));
 
     bld.coords.row = 15;
+    bld.coords.start_col = 5;
+    bld.coords.end_col = 45;
     cmd_exit = std::unique_ptr<ClickableCommand>(bld.create_with_id("X", cmd_fn_exit));
 
     bld.coords.page = 2;
