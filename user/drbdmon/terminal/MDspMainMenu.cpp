@@ -60,6 +60,21 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
         {
             opt_start_all_resources();
         };
+    cmd_fn_adjust_all_rsc_skip_disk =
+        [this]() -> void
+        {
+            opt_adjust_all_skip_disk();
+        };
+    cmd_fn_adjust_all_rsc_skip_net =
+        [this]() -> void
+        {
+            opt_adjust_all_skip_net();
+        };
+    cmd_fn_adjust_all_rsc_skip_disk_net =
+        [this]() -> void
+        {
+            opt_adjust_all_skip_disk_net();
+        };
     cmd_fn_stop_all_rsc =
         [this]() -> void
         {
@@ -92,104 +107,66 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
             opt_import_selection();
         };
 
+    ClickableCommand::Builder bld;
+    bld.coords.page = 1;
+    bld.coords.start_col = 5;
+    bld.coords.end_col = 45;
+    bld.coords.row = 6;
+    bld.auto_nr = 1;
 
-    cmd_rsc_ovw = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "1", 1, 6, 5, 45,
-            cmd_fn_rsc_ovw
-        )
+    cmd_rsc_ovw = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_rsc_ovw));
+    cmd_log = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_log));
+    cmd_act_tsk = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_act_tsk));
+    cmd_pnd_tsk = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_pnd_tsk));
+    cmd_ssp_tsk = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_ssp_tsk));
+    cmd_fin_tsk = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_fin_tsk));
+
+
+    bld.coords.start_col = 50;
+    bld.coords.end_col = 90;
+    bld.coords.row = 6;
+
+    cmd_help_idx = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_help_idx));
+    cmd_about = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_about));
+    cmd_configuration = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_configuration));
+
+    bld.coords.row = 15;
+    bld.coords.start_col = 5;
+    bld.coords.end_col = 45;
+    cmd_exit = std::unique_ptr<ClickableCommand>(bld.create_with_id("X", cmd_fn_exit));
+
+    bld.coords.page = 2;
+
+    bld.auto_nr = 50;
+    bld.coords.start_col = 5;
+    bld.coords.end_col = 45;
+    bld.coords.row = 6;
+
+    cmd_selection_filter = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_selection_filter));
+    cmd_bulk_actions = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_bulk_actions));
+    cmd_export_selection = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_export_selection));
+    cmd_import_selection = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_import_selection));
+
+    bld.auto_nr = 90;
+    // Long lines for the start/adjust options
+    bld.coords.start_col = 5;
+    bld.coords.end_col = 90;
+    bld.coords.row = 11;
+
+    cmd_start_all_rsc = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_start_all_rsc));
+    cmd_adjust_all_rsc_skip_disk = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_adjust_all_rsc_skip_disk)
     );
-    cmd_log = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "2", 1, 7, 5, 45,
-            cmd_fn_log
-        )
+    cmd_adjust_all_rsc_skip_net = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_adjust_all_rsc_skip_net)
     );
-    cmd_act_tsk = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "3", 1, 8, 5, 45,
-            cmd_fn_act_tsk
-        )
-    );
-    cmd_pnd_tsk = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "4", 1, 9, 5, 45,
-            cmd_fn_pnd_tsk
-        )
-    );
-    cmd_ssp_tsk = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "5", 1, 10, 5, 45,
-            cmd_fn_ssp_tsk
-        )
-    );
-    cmd_fin_tsk = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "6", 1, 11, 5, 45,
-            cmd_fn_fin_tsk
-        )
-    );
-    cmd_help_idx = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "7", 1, 6, 50, 90,
-            cmd_fn_help_idx
-        )
-    );
-    cmd_about = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "8", 1, 7, 50, 90,
-            cmd_fn_about
-        )
-    );
-    cmd_configuration = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "9", 1, 8, 50, 90,
-            cmd_fn_configuration
-        )
-    );
-    cmd_start_all_rsc = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "90", 1, 13, 5, 45,
-            cmd_fn_start_all_rsc
-        )
-    );
-    cmd_stop_all_rsc = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "99", 1, 13, 50, 90,
-            cmd_fn_stop_all_rsc
-        )
-    );
-    cmd_exit = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "X", 1, 15, 5, 45,
-            cmd_fn_exit
-        )
+    cmd_adjust_all_rsc_skip_disk_net = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_adjust_all_rsc_skip_disk_net)
     );
 
-    cmd_selection_filter = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "50", 2, 6, 5, 45,
-            cmd_fn_selection_filter
-        )
-    );
-    cmd_bulk_actions = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "51", 2, 7, 5, 45,
-            cmd_fn_bulk_actions
-        )
-    );
-    cmd_export_selection = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "52", 2, 8, 5, 45,
-            cmd_fn_export_selection
-        )
-    );
-    cmd_import_selection = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "53", 2, 9, 5, 45,
-            cmd_fn_import_selection
-        )
-    );
+    bld.auto_nr = 99;
+
+    cmd_stop_all_rsc = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_stop_all_rsc));
 
     add_option(*cmd_rsc_ovw);
     add_option(*cmd_log);
@@ -200,8 +177,6 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
     add_option(*cmd_help_idx);
     add_option(*cmd_about);
     add_option(*cmd_configuration);
-    add_option(*cmd_start_all_rsc);
-    add_option(*cmd_stop_all_rsc);
 
     add_option(*cmd_exit);
 
@@ -209,6 +184,12 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
     add_option(*cmd_bulk_actions);
     add_option(*cmd_export_selection);
     add_option(*cmd_import_selection);
+
+    add_option(*cmd_start_all_rsc);
+    add_option(*cmd_adjust_all_rsc_skip_disk);
+    add_option(*cmd_adjust_all_rsc_skip_net);
+    add_option(*cmd_adjust_all_rsc_skip_disk_net);
+    add_option(*cmd_stop_all_rsc);
 
     InputField& option_field = get_option_field();
     option_field.set_position(17, 17);
@@ -234,31 +215,43 @@ void MDspMainMenu::display_content()
     const uint32_t page = get_page_nr();
     if (page == 1)
     {
-        display_option(" 1   ", "Resource overview", *cmd_rsc_ovw, std_color);
-        display_option(" 2   ", "Message log", *cmd_log, std_color);
-        display_option(" 3   ", "Active tasks queue", *cmd_act_tsk, std_color);
-        display_option(" 4   ", "Pending tasks queue", *cmd_pnd_tsk, std_color);
-        display_option(" 5   ", "Suspended tasks queue", *cmd_ssp_tsk, std_color);
-        display_option(" 6   ", "Finished tasks queue", *cmd_fin_tsk, std_color);
-        display_option(" 7   ", "Help index", *cmd_help_idx, std_color);
-        display_option(" 8   ", "About DRBDmon", *cmd_about, std_color);
-        display_option(" 9   ", "DRBDmon configuration", *cmd_configuration, std_color);
+        display_option(5, "Resource overview", *cmd_rsc_ovw, std_color);
+        display_option(5, "Message log", *cmd_log, std_color);
+        display_option(5, "Active tasks queue", *cmd_act_tsk, std_color);
+        display_option(5, "Pending tasks queue", *cmd_pnd_tsk, std_color);
+        display_option(5, "Suspended tasks queue", *cmd_ssp_tsk, std_color);
+        display_option(5, "Finished tasks queue", *cmd_fin_tsk, std_color);
+        display_option(5, "Help index", *cmd_help_idx, std_color);
+        display_option(5, "About DRBDmon", *cmd_about, std_color);
+        display_option(5, "DRBDmon configuration", *cmd_configuration, std_color);
 
-        if (dsp_comp_hub.enable_drbd_actions)
-        {
-            display_option("90   ", "Start/adjust all resources", *cmd_start_all_rsc, std_color);
-            display_option("99   ", "Stop all resources", *cmd_stop_all_rsc, caution_color);
-        }
-
-        display_option(" X   ", "Exit DRBDmon", *cmd_exit, std_color);
+        display_option(5, "Exit DRBDmon", *cmd_exit, std_color);
     }
     else
     if (page == 2)
     {
-        display_option("50   ", "Selection filter", *cmd_selection_filter, std_color);
-        display_option("51   ", "Bulk actions", *cmd_bulk_actions, std_color);
-        display_option("52   ", "Export selection", *cmd_export_selection, std_color);
-        display_option("53   ", "Import selection", *cmd_import_selection, std_color);
+        display_option(5, "Selection filter", *cmd_selection_filter, std_color);
+        display_option(5, "Bulk actions", *cmd_bulk_actions, std_color);
+        display_option(5, "Export selection", *cmd_export_selection, std_color);
+        display_option(5, "Import selection", *cmd_import_selection, std_color);
+
+        if (dsp_comp_hub.enable_drbd_actions)
+        {
+            display_option(5, "Start/adjust all resources", *cmd_start_all_rsc, std_color);
+            display_option(
+                5, "Start/adjust all resources, skip disk actions",
+                *cmd_adjust_all_rsc_skip_disk, std_color
+            );
+            display_option(
+                5, "Start/adjust all resources, skip network actions",
+                *cmd_adjust_all_rsc_skip_net, std_color
+            );
+            display_option(
+                5, "Start/adjust all resources, skip disk & network actions",
+                *cmd_adjust_all_rsc_skip_disk_net, std_color
+            );
+            display_option(5, "Stop all resources", *cmd_stop_all_rsc, caution_color);
+        }
     }
 
     display_option_query(5, 17);
@@ -393,6 +386,119 @@ void MDspMainMenu::opt_start_all_resources()
             dsp_comp_hub.log->add_entry(
                 MessageLog::log_level::ALERT,
                 "Command start all resources: Sub-process execution failed"
+            );
+        }
+
+        dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::RSC_LIST);
+    }
+}
+
+void MDspMainMenu::opt_adjust_all_skip_disk()
+{
+    if (dsp_comp_hub.enable_drbd_actions)
+    {
+        try
+        {
+            std::unique_ptr<CmdLine> command(new CmdLine());
+            command->add_argument(drbdcmd::DRBDADM_CMD);
+            command->add_argument(drbdcmd::ARG_ADJUST);
+            command->add_argument(drbdcmd::ARG_SKIP_DISK);
+            command->add_argument(drbdcmd::ARG_ALL);
+
+            std::string text("Adjust all resources, skip disk actions");
+
+            command->set_description(text);
+
+            dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+        }
+        catch (SubProcessQueue::QueueCapacityException&)
+        {
+            dsp_comp_hub.log->add_entry(
+                MessageLog::log_level::ALERT,
+                "Command adjust all resources (skip disk actions): Cannot execute, insufficient queue capacity"
+            );
+        }
+        catch (SubProcess::Exception&)
+        {
+            dsp_comp_hub.log->add_entry(
+                MessageLog::log_level::ALERT,
+                "Command adjust all resources (skip disk actions): Sub-process execution failed"
+            );
+        }
+
+        dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::RSC_LIST);
+    }
+}
+
+void MDspMainMenu::opt_adjust_all_skip_net()
+{
+    if (dsp_comp_hub.enable_drbd_actions)
+    {
+        try
+        {
+            std::unique_ptr<CmdLine> command(new CmdLine());
+            command->add_argument(drbdcmd::DRBDADM_CMD);
+            command->add_argument(drbdcmd::ARG_ADJUST);
+            command->add_argument(drbdcmd::ARG_SKIP_NET);
+            command->add_argument(drbdcmd::ARG_ALL);
+
+            std::string text("Adjust all resources, skip network actions");
+
+            command->set_description(text);
+
+            dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+        }
+        catch (SubProcessQueue::QueueCapacityException&)
+        {
+            dsp_comp_hub.log->add_entry(
+                MessageLog::log_level::ALERT,
+                "Command adjust all resources (skip network actions): Cannot execute, insufficient queue capacity"
+            );
+        }
+        catch (SubProcess::Exception&)
+        {
+            dsp_comp_hub.log->add_entry(
+                MessageLog::log_level::ALERT,
+                "Command adjust all resources (skip network actions): Sub-process execution failed"
+            );
+        }
+
+        dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::RSC_LIST);
+    }
+}
+
+void MDspMainMenu::opt_adjust_all_skip_disk_net()
+{
+    if (dsp_comp_hub.enable_drbd_actions)
+    {
+        try
+        {
+            std::unique_ptr<CmdLine> command(new CmdLine());
+            command->add_argument(drbdcmd::DRBDADM_CMD);
+            command->add_argument(drbdcmd::ARG_ADJUST);
+            command->add_argument(drbdcmd::ARG_SKIP_DISK);
+            command->add_argument(drbdcmd::ARG_SKIP_NET);
+            command->add_argument(drbdcmd::ARG_ALL);
+
+            std::string text("Adjust all resources, skip disk & network actions");
+
+            command->set_description(text);
+
+            dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+        }
+        catch (SubProcessQueue::QueueCapacityException&)
+        {
+            dsp_comp_hub.log->add_entry(
+                MessageLog::log_level::ALERT,
+                "Command adjust all resources (skip disk & network actions): Cannot execute, "
+                "insufficient queue capacity"
+            );
+        }
+        catch (SubProcess::Exception&)
+        {
+            dsp_comp_hub.log->add_entry(
+                MessageLog::log_level::ALERT,
+                "Command adjust all resources (skip disk & network actions): Sub-process execution failed"
             );
         }
 
