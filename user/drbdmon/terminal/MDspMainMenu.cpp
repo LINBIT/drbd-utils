@@ -130,6 +130,9 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
     cmd_about = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_about));
     cmd_configuration = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_configuration));
 
+    bld.coords.row = 15;
+    cmd_exit = std::unique_ptr<ClickableCommand>(bld.create_with_id("X", cmd_fn_exit));
+
     bld.coords.page = 2;
 
     bld.auto_nr = 50;
@@ -159,9 +162,6 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
         bld.create_with_auto_nr(cmd_fn_adjust_all_rsc_skip_disk_net)
     );
     cmd_stop_all_rsc = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_stop_all_rsc));
-
-    bld.coords.row = 17;
-    cmd_exit = std::unique_ptr<ClickableCommand>(bld.create_with_id("X", cmd_fn_exit));
 
     add_option(*cmd_rsc_ovw);
     add_option(*cmd_log);
