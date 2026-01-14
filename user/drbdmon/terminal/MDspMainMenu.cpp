@@ -114,21 +114,21 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
     bld.coords.row = 6;
     bld.auto_nr = 1;
 
-    cmd_rsc_ovw = bld.create_with_auto_nr(cmd_fn_rsc_ovw);
-    cmd_rsc_ovw = bld.create_with_auto_nr(cmd_fn_log);
-    cmd_rsc_ovw = bld.create_with_auto_nr(cmd_fn_act_tsk);
-    cmd_rsc_ovw = bld.create_with_auto_nr(cmd_fn_pnd_tsk);
-    cmd_rsc_ovw = bld.create_with_auto_nr(cmd_fn_ssp_tsk);
+    cmd_rsc_ovw = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_rsc_ovw));
+    cmd_log = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_log));
+    cmd_act_tsk = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_act_tsk));
+    cmd_pnd_tsk = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_pnd_tsk));
+    cmd_ssp_tsk = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_ssp_tsk));
+    cmd_fin_tsk = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_fin_tsk));
 
 
     bld.coords.start_col = 50;
     bld.coords.end_col = 90;
     bld.coords.row = 6;
 
-    cmd_rsc_ovw = bld.create_with_auto_nr(cmd_fn_fin_tsk);
-    cmd_rsc_ovw = bld.create_with_auto_nr(cmd_fn_help_idx);
-    cmd_rsc_ovw = bld.create_with_auto_nr(cmd_fn_about);
-    cmd_rsc_ovw = bld.create_with_auto_nr(cmd_fn_configuration);
+    cmd_help_idx = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_help_idx));
+    cmd_about = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_about));
+    cmd_configuration = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_configuration));
 
     bld.coords.page = 2;
 
@@ -137,10 +137,10 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
     bld.coords.end_col = 45;
     bld.coords.row = 6;
 
-    bld.create_with_auto_nr(cmd_fn_selection_filter);
-    bld.create_with_auto_nr(cmd_fn_bulk_actions);
-    bld.create_with_auto_nr(cmd_fn_export_selection);
-    bld.create_with_auto_nr(cmd_fn_import_selection);
+    cmd_selection_filter = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_selection_filter));
+    cmd_bulk_actions = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_bulk_actions));
+    cmd_export_selection = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_export_selection));
+    cmd_import_selection = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_import_selection));
 
     bld.auto_nr = 90;
     // Long lines for the start/adjust options
@@ -148,11 +148,17 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
     bld.coords.end_col = 90;
     bld.coords.row = 11;
 
-    cmd_rsc_ovw = bld.create_with_auto_nr(cmd_fn_start_all_rsc);
-    cmd_rsc_ovw = bld.create_with_auto_nr(cmd_fn_adjust_all_rsc_skip_disk);
-    cmd_rsc_ovw = bld.create_with_auto_nr(cmd_fn_adjust_all_rsc_skip_net);
-    cmd_rsc_ovw = bld.create_with_auto_nr(cmd_fn_adjust_all_rsc_skip_disk_net);
-    cmd_rsc_ovw = bld.create_with_auto_nr(cmd_fn_stop_all_rsc);
+    cmd_start_all_rsc = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_start_all_rsc));
+    cmd_adjust_all_rsc_skip_disk = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_adjust_all_rsc_skip_disk)
+    );
+    cmd_adjust_all_rsc_skip_net = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_adjust_all_rsc_skip_net)
+    );
+    cmd_adjust_all_rsc_skip_disk_net = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_adjust_all_rsc_skip_disk_net)
+    );
+    cmd_stop_all_rsc = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_stop_all_rsc));
 
     bld.coords.row = 17;
     cmd_exit = bld.create_with_id("X", cmd_fn_exit);
