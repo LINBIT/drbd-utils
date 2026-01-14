@@ -161,7 +161,7 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
     cmd_stop_all_rsc = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_stop_all_rsc));
 
     bld.coords.row = 17;
-    cmd_exit = bld.create_with_id("X", cmd_fn_exit);
+    cmd_exit = std::unique_ptr<ClickableCommand>(bld.create_with_id("X", cmd_fn_exit));
 
     add_option(*cmd_rsc_ovw);
     add_option(*cmd_log);
