@@ -30,36 +30,30 @@ MDspConnectionActions::MDspConnectionActions(const ComponentsHub& comp_hub):
             selection_action(&MDspConnectionActions::action_connect_discard);
         };
 
-    uint16_t opt_line   = OPT_LIST_Y;
-    uint16_t start_col  = 5;
-    uint16_t end_col    = 45;
+    ClickableCommand::Builder bld;
+
+    bld.auto_nr = 1;
+    bld.coords.page = 1;
+    bld.coords.row = OPT_LIST_Y;
+    bld.coords.start_col = 5;
+    bld.coords.end_col = 45;
 
     cmd_connect = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "1", 1, opt_line, start_col, end_col,
-            cmd_fn_connect
-        )
+        bld.create_with_auto_nr(cmd_fn_connect)
     );
-    ++opt_line;
-
+    add_option(*cmd_connect);
     cmd_disconnect = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "2", 1, opt_line, start_col, end_col,
-            cmd_fn_disconnect
-        )
+        bld.create_with_auto_nr(cmd_fn_disconnect)
     );
-    ++opt_line;
+    add_option(*cmd_disconnect);
+
+    bld.coords.row = OPT_LIST_Y;
+    bld.coords.start_col = 50;
+    bld.coords.end_col = 90;
 
     cmd_discard = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "3", 1, opt_line, start_col, end_col,
-            cmd_fn_discard
-        )
+        bld.create_with_auto_nr(cmd_fn_discard)
     );
-    ++opt_line;
-
-    add_option(*cmd_connect);
-    add_option(*cmd_disconnect);
     add_option(*cmd_discard);
 }
 
@@ -145,9 +139,9 @@ void MDspConnectionActions::show_actions()
     const std::string& std_color = dsp_comp_hub.active_color_table->option_text;
     const std::string& caution_color = dsp_comp_hub.active_color_table->caution_text;
 
-    display_option(" 1   ", "Connect", *cmd_connect, std_color);
-    display_option(" 2   ", "Disconnect", *cmd_disconnect, std_color);
-    display_option(" 3   ", "Connect & resolve split-brain", *cmd_discard, caution_color);
+    display_option(5, "Connect", *cmd_connect, std_color);
+    display_option(5, "Disconnect", *cmd_disconnect, std_color);
+    display_option(5, "Connect & resolve split-brain", *cmd_discard, caution_color);
 
     display_option_query(5, 10);
 }
