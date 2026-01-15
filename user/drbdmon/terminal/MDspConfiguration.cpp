@@ -293,11 +293,11 @@ void MDspConfiguration::display_page_01()
     option_text = (config->enable_mouse_nav ? checked : unchecked);
     option_text += " ";
     option_text += "Mouse navigation";
-    display_option(" 1   ", option_text.c_str(), *cmd_mouse_nav, option_color);
+    display_option(5, option_text.c_str(), *cmd_mouse_nav, option_color);
 
-    display_option(" S   ", "Save configuration", *cmd_save_config, option_color);
-    display_option(" L   ", "Load configuration", *cmd_load_config, option_color);
-    display_option(" R   ", "Reset to defaults", *cmd_default_config, option_color);
+    display_option(5, "Save configuration", *cmd_save_config, option_color);
+    display_option(5, "Load configuration", *cmd_load_config, option_color);
+    display_option(5, "Reset to defaults", *cmd_default_config, option_color);
 
     dsp_comp_hub.dsp_io->cursor_xy(6, DSP_INTERVAL_FIELD_ROW);
     dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->option_text.c_str());
@@ -323,17 +323,17 @@ void MDspConfiguration::display_page_02()
     option_text = (config->discard_succ_tasks ? checked : unchecked);
     option_text += " ";
     option_text += "Discard successfully completed tasks";
-    display_option(" 2   ", option_text.c_str(), *cmd_discard_ok_tasks, option_color);
+    display_option(5, option_text.c_str(), *cmd_discard_ok_tasks, option_color);
 
     option_text = (config->discard_fail_tasks ? checked : unchecked);
     option_text += " ";
     option_text += "Discard all completed tasks";
-    display_option(" 3   ", option_text.c_str(), *cmd_discard_failed_tasks, option_color);
+    display_option(5, option_text.c_str(), *cmd_discard_failed_tasks, option_color);
 
     option_text = (config->suspend_new_tasks ? checked : unchecked);
     option_text += " ";
     option_text += "Suspend new tasks";
-    display_option(" 4   ", option_text.c_str(), *cmd_suspend_new_tasks, option_color);
+    display_option(5, option_text.c_str(), *cmd_suspend_new_tasks, option_color);
 }
 
 void MDspConfiguration::display_page_03()
@@ -368,11 +368,11 @@ void MDspConfiguration::display_page_03()
            dsp_comp_hub.dsp_io->write_text("Default");
     }
 
-    display_option(" 5   ", "Default", *cmd_colors_dflt, option_color);
-    display_option(" 6   ", "256 colors on dark background", *cmd_colors_dark256, option_color);
-    display_option(" 7   ", "16 colors on dark background", *cmd_colors_dark16, option_color);
-    display_option(" 8   ", "256 colors on light background", *cmd_colors_light256, option_color);
-    display_option(" 9   ", "16 colors on light background", *cmd_colors_light16, option_color);
+    display_option(5, "Default", *cmd_colors_dflt, option_color);
+    display_option(5, "256 colors on dark background", *cmd_colors_dark256, option_color);
+    display_option(5, "16 colors on dark background", *cmd_colors_dark16, option_color);
+    display_option(5, "256 colors on light background", *cmd_colors_light256, option_color);
+    display_option(5, "16 colors on light background", *cmd_colors_light16, option_color);
 }
 
 void MDspConfiguration::display_page_04()
@@ -401,9 +401,9 @@ void MDspConfiguration::display_page_04()
            dsp_comp_hub.dsp_io->write_text("Default");
     }
 
-    display_option("10   ", "Default", *cmd_charset_dflt, option_color);
-    display_option("11   ", "Unicode (UTF-8)", *cmd_charset_unicode, option_color);
-    display_option("12   ", "ASCII (extended)", *cmd_charset_ascii, option_color);
+    display_option(5, "Default", *cmd_charset_dflt, option_color);
+    display_option(5, "Unicode (UTF-8)", *cmd_charset_unicode, option_color);
+    display_option(5, "ASCII (extended)", *cmd_charset_ascii, option_color);
 }
 
 uint64_t MDspConfiguration::get_update_mask() noexcept
