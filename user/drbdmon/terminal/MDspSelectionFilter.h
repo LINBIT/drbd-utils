@@ -412,7 +412,6 @@ class MDspSelectionFilter : public MDspMenuBase
     std::string                     error_msg;
 
     void display_selectable(const char* const text, ClickableCommand& cmd, const bool& selected);
-    void display_option(const char* const text, ClickableCommand& cmd);
 
     void display_restrict_selection();
     void display_resource_criteria();
