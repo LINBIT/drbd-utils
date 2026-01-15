@@ -163,6 +163,9 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
     cmd_adjust_all_rsc_skip_disk_net = std::unique_ptr<ClickableCommand>(
         bld.create_with_auto_nr(cmd_fn_adjust_all_rsc_skip_disk_net)
     );
+
+    bld.auto_nr = 99;
+
     cmd_stop_all_rsc = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_stop_all_rsc));
 
     add_option(*cmd_rsc_ovw);
