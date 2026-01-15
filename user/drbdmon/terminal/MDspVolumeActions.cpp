@@ -36,49 +36,34 @@ MDspVolumeActions::MDspVolumeActions(const ComponentsHub& comp_hub):
             selection_action(&MDspVolumeActions::action_invalidate);
         };
 
-    uint16_t opt_line   = OPT_LIST_Y;
-    uint16_t start_col  = 5;
-    uint16_t end_col    = 45;
+    ClickableCommand::Builder bld;
+
+    bld.coords.row = OPT_LIST_Y;
+    bld.coords.start_col = 5;
+    bld.coords.end_col = 45;
+    bld.coords.page = 1;
+    bld.auto_nr = 1;
 
     cmd_attach = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "1", 1, opt_line, start_col, end_col,
-            cmd_fn_attach
-        )
+        bld.create_with_auto_nr(cmd_fn_attach)
     );
-    ++opt_line;
-
+    add_option(*cmd_attach);
     cmd_detach = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "2", 1, opt_line, start_col, end_col,
-            cmd_fn_detach
-        )
+        bld.create_with_auto_nr(cmd_fn_detach)
     );
-    ++opt_line;
-
+    add_option(*cmd_detach);
     cmd_resize = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "3", 1, opt_line, start_col, end_col,
-            cmd_fn_resize
-        )
+        bld.create_with_auto_nr(cmd_fn_resize)
     );
-    ++opt_line;
+    add_option(*cmd_resize);
 
-    opt_line = OPT_LIST_Y;
-    start_col = 50;
-    end_col = 90;
+    bld.coords.row = OPT_LIST_Y;
+    bld.coords.start_col = 50;
+    bld.coords.end_col = 90;
 
     cmd_invalidate = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "4", 1, opt_line, start_col, end_col,
-            cmd_fn_invalidate
-        )
+        bld.create_with_auto_nr(cmd_fn_invalidate)
     );
-    ++opt_line;
-
-    add_option(*cmd_attach);
-    add_option(*cmd_detach);
-    add_option(*cmd_resize);
     add_option(*cmd_invalidate);
 }
 
@@ -167,10 +152,10 @@ void MDspVolumeActions::show_actions()
     const std::string& std_color = dsp_comp_hub.active_color_table->option_text;
     const std::string& caution_color = dsp_comp_hub.active_color_table->caution_text;
 
-    display_option(" 1   ", "Attach", *cmd_attach, std_color);
-    display_option(" 2   ", "Detach", *cmd_detach, std_color);
-    display_option(" 3   ", "Resize", *cmd_resize, std_color);
-    display_option(" 4   ", "Invalidate", *cmd_invalidate, caution_color);
+    display_option(5, "Attach", *cmd_attach, std_color);
+    display_option(5, "Detach", *cmd_detach, std_color);
+    display_option(5, "Resize", *cmd_resize, std_color);
+    display_option(5, "Invalidate", *cmd_invalidate, caution_color);
 
     display_option_query(5, 10);
 }
