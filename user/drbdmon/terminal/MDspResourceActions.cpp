@@ -433,6 +433,64 @@ void MDspResourceActions::action_adjust(const std::string& rsc_name)
     dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
 }
 
+void MDspResourceActions::action_adjust_skip_disk(const std::string& rsc_name)
+{
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::ARG_ADJUST);
+    command->add_argument(drbdcmd::ARG_SKIP_DISK);
+    command->add_argument(rsc_name);
+
+    std::string text;
+    text.reserve(DisplayConsts::ACTION_DESC_PREALLOC);
+    text.append("Adjust resource ");
+    text.append(rsc_name);
+    text.append(", skip disk actions");
+
+    command->set_description(text);
+
+    dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+}
+
+void MDspResourceActions::action_adjust_skip_net(const std::string& rsc_name)
+{
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::ARG_ADJUST);
+    command->add_argument(drbdcmd::ARG_SKIP_NET);
+    command->add_argument(rsc_name);
+
+    std::string text;
+    text.reserve(DisplayConsts::ACTION_DESC_PREALLOC);
+    text.append("Adjust resource ");
+    text.append(rsc_name);
+    text.append(", skip network actions");
+
+    command->set_description(text);
+
+    dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+}
+
+void MDspResourceActions::action_adjust_skip_disk_net(const std::string& rsc_name)
+{
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::ARG_ADJUST);
+    command->add_argument(drbdcmd::ARG_SKIP_DISK);
+    command->add_argument(drbdcmd::ARG_SKIP_NET);
+    command->add_argument(rsc_name);
+
+    std::string text;
+    text.reserve(DisplayConsts::ACTION_DESC_PREALLOC);
+    text.append("Adjust resource ");
+    text.append(rsc_name);
+    text.append(", skip disk & network actions");
+
+    command->set_description(text);
+
+    dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+}
+
 void MDspResourceActions::action_verify(const std::string& rsc_name)
 {
     std::unique_ptr<CmdLine> command(new CmdLine());
