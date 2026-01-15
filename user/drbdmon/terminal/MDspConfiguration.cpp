@@ -97,122 +97,98 @@ MDspConfiguration::MDspConfiguration(ComponentsHub& comp_hub, Configuration& con
             opt_default_config();
         };
 
+    ClickableCommand::Builder bld;
+
+    bld.auto_nr = 1;
+
+    bld.coords.start_col = 5;
+    bld.coords.end_col = 45;
+
     // Page 1
+
+    bld.coords.page = 1;
+    bld.coords.row = 6;
+
     cmd_mouse_nav = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "1", 1, 6, 5, 45,
-            cmd_fn_mouse_nav
-        )
+        bld.create_with_auto_nr(cmd_fn_mouse_nav)
     );
+    add_option(*cmd_mouse_nav);
+
     input_display_interval.set_field_length(5);
     input_display_interval.set_position(30, DSP_INTERVAL_FIELD_ROW);
 
     // Page 2
+
+    bld.coords.page = 2;
+    bld.coords.row = 6;
+
     cmd_discard_ok_tasks = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "2", 2, 6, 5, 45,
-            cmd_fn_discard_ok_tasks
-        )
+        bld.create_with_auto_nr(cmd_fn_discard_ok_tasks)
     );
+    add_option(*cmd_discard_ok_tasks);
     cmd_discard_failed_tasks = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "3", 2, 7, 5, 45,
-            cmd_fn_discard_failed_tasks
-        )
+        bld.create_with_auto_nr(cmd_fn_discard_failed_tasks)
     );
+    add_option(*cmd_discard_failed_tasks);
     cmd_suspend_new_tasks = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "4", 2, 8, 5, 45,
-            cmd_fn_suspend_new_tasks
-        )
+        bld.create_with_auto_nr(cmd_fn_suspend_new_tasks)
     );
+    add_option(*cmd_suspend_new_tasks);
 
     // Page 3
+
+    bld.coords.page = 3;
+    bld.coords.row = 6;
+
     cmd_colors_dflt = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "5", 3, 8, 5, 45,
-            cmd_fn_colors_dflt
-        )
+        bld.create_with_auto_nr(cmd_fn_colors_dflt)
     );
+    add_option(*cmd_colors_dflt);
     cmd_colors_dark256 = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "6", 3, 9, 5, 45,
-            cmd_fn_colors_dark256
-        )
+        bld.create_with_auto_nr(cmd_fn_colors_dark256)
     );
+    add_option(*cmd_colors_dark256);
     cmd_colors_dark16 = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "7", 3, 10, 5, 45,
-            cmd_fn_colors_dark16
-        )
+        bld.create_with_auto_nr(cmd_fn_colors_dark16)
     );
+    add_option(*cmd_colors_dark16);
     cmd_colors_light256 = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "8", 3, 11, 5, 45,
-            cmd_fn_colors_light256
-        )
+        bld.create_with_auto_nr(cmd_fn_colors_light256)
     );
+    add_option(*cmd_colors_light256);
     cmd_colors_light16 = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "9", 3, 12, 5, 45,
-            cmd_fn_colors_light16
-        )
+        bld.create_with_auto_nr(cmd_fn_colors_light16)
     );
+    add_option(*cmd_colors_light16);
 
     // Page 4
+
+    bld.coords.page = 4;
+    bld.coords.row = 6;
+
     cmd_charset_dflt = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "10", 4, 8, 5, 45,
-            cmd_fn_charset_dflt
-        )
+        bld.create_with_auto_nr(cmd_fn_charset_dflt)
     );
-    cmd_charset_unicode = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "11", 4, 9, 5, 45,
-            cmd_fn_charset_unicode
-        )
-    );
-    cmd_charset_ascii = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "12", 4, 10, 5, 45,
-            cmd_fn_charset_ascii
-        )
-    );
-
-    cmd_save_config = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "S", 1, 14, 5, 45,
-            cmd_fn_save_config
-        )
-    );
-    cmd_load_config = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "L", 1, 14, 45, 90,
-            cmd_fn_load_config
-        )
-    );
-    cmd_default_config = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "R", 1, 15, 5, 45,
-            cmd_fn_default_config
-        )
-    );
-
-
-    add_option(*cmd_mouse_nav);
-    add_option(*cmd_discard_ok_tasks);
-    add_option(*cmd_discard_failed_tasks);
-    add_option(*cmd_suspend_new_tasks);
-    add_option(*cmd_colors_dflt);
-    add_option(*cmd_colors_dark256);
-    add_option(*cmd_colors_dark16);
-    add_option(*cmd_colors_light256);
-    add_option(*cmd_colors_light16);
     add_option(*cmd_charset_dflt);
+    cmd_charset_unicode = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_charset_unicode)
+    );
     add_option(*cmd_charset_unicode);
+    cmd_charset_ascii = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_charset_ascii)
+    );
     add_option(*cmd_charset_ascii);
+    cmd_save_config = std::unique_ptr<ClickableCommand>(
+        bld.create_with_id("S", cmd_fn_save_config)
+    );
     add_option(*cmd_save_config);
+    cmd_load_config = std::unique_ptr<ClickableCommand>(
+        bld.create_with_id("L", cmd_fn_load_config)
+    );
     add_option(*cmd_load_config);
+    cmd_default_config = std::unique_ptr<ClickableCommand>(
+        bld.create_with_id("R", cmd_fn_default_config)
+    );
     add_option(*cmd_default_config);
 
     InputField& option_field = get_option_field();
