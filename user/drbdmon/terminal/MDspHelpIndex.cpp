@@ -265,35 +265,35 @@ void MDspHelpIndex::display_content()
 
     if (page == 1)
     {
-        display_option(" 1   ", "General help", *cmd_general_help, std_color);
-        display_option(" 2   ", "Resource list", *cmd_rsc_list, std_color);
-        display_option(" 3   ", "Resource details", *cmd_rsc_detail, std_color);
-        display_option(" 4   ", "Resource actions", *cmd_rsc_actions, std_color);
-        display_option(" 5   ", "Volume list", *cmd_vlm_list, std_color);
-        display_option(" 6   ", "Volume details", *cmd_vlm_detail, std_color);
-        display_option(" 7   ", "Volume actions", *cmd_vlm_actions, std_color);
-        display_option(" 8   ", "Connection list", *cmd_con_list, std_color);
-        display_option(" 9   ", "Connection details", *cmd_con_detail, std_color);
-        display_option("10   ", "Connection actions", *cmd_con_actions, std_color);
+        display_option(5, "General help", *cmd_general_help, std_color);
+        display_option(5, "Resource list", *cmd_rsc_list, std_color);
+        display_option(5, "Resource details", *cmd_rsc_detail, std_color);
+        display_option(5, "Resource actions", *cmd_rsc_actions, std_color);
+        display_option(5, "Volume list", *cmd_vlm_list, std_color);
+        display_option(5, "Volume details", *cmd_vlm_detail, std_color);
+        display_option(5, "Volume actions", *cmd_vlm_actions, std_color);
+        display_option(5, "Connection list", *cmd_con_list, std_color);
+        display_option(5, "Connection details", *cmd_con_detail, std_color);
+        display_option(5, "Connection actions", *cmd_con_actions, std_color);
 
-        display_option("11   ", "Peer volume list", *cmd_pvlm_list, std_color);
-        display_option("12   ", "Peer volume details", *cmd_pvlm_detail, std_color);
-        display_option("13   ", "Peer volume actions", *cmd_pvlm_actions, std_color);
-        display_option("14   ", "Message log", *cmd_msg_log, std_color);
-        display_option("15   ", "Message details", *cmd_msg_detail, std_color);
-        display_option("16   ", "Task queues", *cmd_taskq, std_color);
-        display_option("17   ", "Task details", *cmd_task_detail, std_color);
-        display_option("18   ", "DRBDmon commands", *cmd_global_cmd, std_color);
-        display_option("19   ", "DRBD commands", *cmd_drbd_cmd, std_color);
-        display_option("20   ", "DRBDmon configuration", *cmd_conf, std_color);
+        display_option(5, "Peer volume list", *cmd_pvlm_list, std_color);
+        display_option(5, "Peer volume details", *cmd_pvlm_detail, std_color);
+        display_option(5, "Peer volume actions", *cmd_pvlm_actions, std_color);
+        display_option(5, "Message log", *cmd_msg_log, std_color);
+        display_option(5, "Message details", *cmd_msg_detail, std_color);
+        display_option(5, "Task queues", *cmd_taskq, std_color);
+        display_option(5, "Task details", *cmd_task_detail, std_color);
+        display_option(5, "DRBDmon commands", *cmd_global_cmd, std_color);
+        display_option(5, "DRBD commands", *cmd_drbd_cmd, std_color);
+        display_option(5, "DRBDmon configuration", *cmd_conf, std_color);
     }
     else
     if (page == 2)
     {
-        display_option("21   ", "Selection filters", *cmd_sflt, std_color);
-        display_option("22   ", "Bulk actions", *cmd_bulka, std_color);
-        display_option("23   ", "Export selection", *cmd_exps, std_color);
-        display_option("24   ", "Import selection", *cmd_imps, std_color);
+        display_option(5, "Selection filters", *cmd_sflt, std_color);
+        display_option(5, "Bulk actions", *cmd_bulka, std_color);
+        display_option(5, "Export selection", *cmd_exps, std_color);
+        display_option(5, "Import selection", *cmd_imps, std_color);
     }
 
     display_option_query(5, 17);
