@@ -1136,18 +1136,6 @@ void MDspSelectionFilter::display_selectable(
     dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
 }
 
-void MDspSelectionFilter::display_option(const char* const text, ClickableCommand& cmd)
-{
-    dsp_comp_hub.dsp_io->cursor_xy(cmd.clickable_area.start_col, cmd.clickable_area.row);
-    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->option_key.c_str());
-    dsp_comp_hub.dsp_io->write_string_field(cmd.command, 5, true);
-    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
-    dsp_comp_hub.dsp_io->write_text(" ");
-    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->option_text.c_str());
-    dsp_comp_hub.dsp_io->write_text(text);
-    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
-}
-
 void MDspSelectionFilter::display_restrict_selection()
 {
     const uint32_t page = get_page_nr();
@@ -1394,11 +1382,13 @@ void MDspSelectionFilter::display_execute()
     dsp_comp_hub.dsp_io->write_text("Execute:");
     dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
 
+    const std::string& std_color = dsp_comp_hub.active_color_table->option_text;
+
     dsp_comp_hub.dsp_io->cursor_xy(3, 6);
-    display_option("Select matching objects", *cmd_exec_select);
-    display_option("Deselect matching objects", *cmd_exec_deselect);
-    display_option("Deselect inactive objects", *cmd_discard_inactive_obj);
-    display_option("Reset filter settings", *cmd_reset_flt_opt_slct);
+    display_option(5, "Select matching objects", *cmd_exec_select, std_color);
+    display_option(5, "Deselect matching objects", *cmd_exec_deselect, std_color);
+    display_option(5, "Deselect inactive objects", *cmd_discard_inactive_obj, std_color);
+    display_option(5, "Reset filter settings", *cmd_reset_flt_opt_slct, std_color);
 
     display_option_query(5, 17);
 }
