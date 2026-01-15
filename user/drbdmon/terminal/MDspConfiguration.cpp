@@ -138,7 +138,7 @@ MDspConfiguration::MDspConfiguration(ComponentsHub& comp_hub, Configuration& con
     // Page 3
 
     bld.coords.page = 3;
-    bld.coords.row = 6;
+    bld.coords.row = 8;
 
     cmd_colors_dflt = std::unique_ptr<ClickableCommand>(
         bld.create_with_auto_nr(cmd_fn_colors_dflt)
@@ -164,7 +164,7 @@ MDspConfiguration::MDspConfiguration(ComponentsHub& comp_hub, Configuration& con
     // Page 4
 
     bld.coords.page = 4;
-    bld.coords.row = 6;
+    bld.coords.row = 8;
 
     cmd_charset_dflt = std::unique_ptr<ClickableCommand>(
         bld.create_with_auto_nr(cmd_fn_charset_dflt)
