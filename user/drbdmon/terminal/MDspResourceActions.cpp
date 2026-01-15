@@ -84,6 +84,21 @@ MDspResourceActions::MDspResourceActions(const ComponentsHub& comp_hub):
         {
             selection_action(&MDspResourceActions::action_invalidate);
         };
+    cmd_fn_adjust_skip_disk =
+        [this]() -> void
+        {
+            selection_action(&MDspResourceActions::action_adjust_skip_disk);
+        };
+    cmd_fn_adjust_skip_net =
+        [this]() -> void
+        {
+            selection_action(&MDspResourceActions::action_adjust_skip_net);
+        };
+    cmd_fn_adjust_skip_disk_net =
+        [this]() -> void
+        {
+            selection_action(&MDspResourceActions::action_adjust_skip_disk_net);
+        };
 
     // Left column
 
@@ -139,7 +154,7 @@ MDspResourceActions::MDspResourceActions(const ComponentsHub& comp_hub):
 
     bld.coords.row = OPT_LIST_Y;
     bld.coords.start_col = 50;
-    bld.coords.end_col = 90;
+    bld.coords.end_col = 95;
 
     cmd_force_primary = std::unique_ptr<ClickableCommand>(
         bld.create_with_auto_nr(cmd_fn_force_primary)
@@ -157,6 +172,21 @@ MDspResourceActions::MDspResourceActions(const ComponentsHub& comp_hub):
         bld.create_with_auto_nr(cmd_fn_invalidate)
     );
     add_option(*cmd_invalidate);
+
+    ++bld.coords.row;
+
+    cmd_adjust_skip_disk = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_adjust_skip_disk)
+    );
+    add_option(*cmd_adjust_skip_disk);
+    cmd_adjust_skip_net = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_adjust_skip_net)
+    );
+    add_option(*cmd_adjust_skip_net);
+    cmd_adjust_skip_disk_net = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_adjust_skip_disk_net)
+    );
+    add_option(*cmd_adjust_skip_disk_net);
 }
 
 MDspResourceActions::~MDspResourceActions() noexcept
@@ -229,6 +259,9 @@ void MDspResourceActions::show_actions()
     display_option(5, "Force make secondary", *cmd_force_secondary, caution_color);
     display_option(5, "Discard & resolve split-brain", *cmd_connect_discard, caution_color);
     display_option(5, "Invalidate & resynchronize", *cmd_invalidate, caution_color);
+    display_option(5, "Adjust resource, skip disk actions", *cmd_adjust_skip_disk, std_color);
+    display_option(5, "Adjust resource, skip network actions", *cmd_adjust_skip_net, std_color);
+    display_option(5, "Adjust resource, skip disk & network actions", *cmd_adjust_skip_disk_net, std_color);
 
     display_option_query(5, 16);
 }
@@ -394,6 +427,64 @@ void MDspResourceActions::action_adjust(const std::string& rsc_name)
     text.reserve(DisplayConsts::ACTION_DESC_PREALLOC);
     text.append("Adjust resource ");
     text.append(rsc_name);
+
+    command->set_description(text);
+
+    dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+}
+
+void MDspResourceActions::action_adjust_skip_disk(const std::string& rsc_name)
+{
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::ARG_ADJUST);
+    command->add_argument(drbdcmd::ARG_SKIP_DISK);
+    command->add_argument(rsc_name);
+
+    std::string text;
+    text.reserve(DisplayConsts::ACTION_DESC_PREALLOC);
+    text.append("Adjust resource ");
+    text.append(rsc_name);
+    text.append(", skip disk actions");
+
+    command->set_description(text);
+
+    dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+}
+
+void MDspResourceActions::action_adjust_skip_net(const std::string& rsc_name)
+{
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::ARG_ADJUST);
+    command->add_argument(drbdcmd::ARG_SKIP_NET);
+    command->add_argument(rsc_name);
+
+    std::string text;
+    text.reserve(DisplayConsts::ACTION_DESC_PREALLOC);
+    text.append("Adjust resource ");
+    text.append(rsc_name);
+    text.append(", skip network actions");
+
+    command->set_description(text);
+
+    dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+}
+
+void MDspResourceActions::action_adjust_skip_disk_net(const std::string& rsc_name)
+{
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::ARG_ADJUST);
+    command->add_argument(drbdcmd::ARG_SKIP_DISK);
+    command->add_argument(drbdcmd::ARG_SKIP_NET);
+    command->add_argument(rsc_name);
+
+    std::string text;
+    text.reserve(DisplayConsts::ACTION_DESC_PREALLOC);
+    text.append("Adjust resource ");
+    text.append(rsc_name);
+    text.append(", skip disk & network actions");
 
     command->set_description(text);
 

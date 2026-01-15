@@ -34,6 +34,9 @@ class MDspResourceActions: public MDspMenuBase
     std::function<void()>   cmd_fn_force_primary;
     std::function<void()>   cmd_fn_force_secondary;
     std::function<void()>   cmd_fn_invalidate;
+    std::function<void()>   cmd_fn_adjust_skip_disk;
+    std::function<void()>   cmd_fn_adjust_skip_net;
+    std::function<void()>   cmd_fn_adjust_skip_disk_net;
 
     std::unique_ptr<ClickableCommand>   cmd_start;
     std::unique_ptr<ClickableCommand>   cmd_stop;
@@ -49,6 +52,9 @@ class MDspResourceActions: public MDspMenuBase
     std::unique_ptr<ClickableCommand>   cmd_resume_sync;
     std::unique_ptr<ClickableCommand>   cmd_connect_discard;
     std::unique_ptr<ClickableCommand>   cmd_invalidate;
+    std::unique_ptr<ClickableCommand>   cmd_adjust_skip_disk;
+    std::unique_ptr<ClickableCommand>   cmd_adjust_skip_net;
+    std::unique_ptr<ClickableCommand>   cmd_adjust_skip_disk_net;
 
     void show_actions();
 
@@ -68,6 +74,9 @@ class MDspResourceActions: public MDspMenuBase
     void action_disconnect(const std::string& rsc_name);
     void action_connect_discard(const std::string& rsc_name);
     void action_invalidate(const std::string& rsc_name);
+    void action_adjust_skip_disk(const std::string& rsc_name);
+    void action_adjust_skip_net(const std::string& rsc_name);
+    void action_adjust_skip_disk_net(const std::string& rsc_name);
 };
 
 #endif /* MDSPRESOURCEACTIONS_H */
