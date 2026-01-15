@@ -36,45 +36,34 @@ MDspPeerVolumeActions::MDspPeerVolumeActions(const ComponentsHub& comp_hub):
             selection_action(&MDspPeerVolumeActions::action_invalidate_remote);
         };
 
-    uint16_t opt_line   = OPT_LIST_Y;
-    uint16_t start_col  = 5;
-    uint16_t end_col    = 45;
+    ClickableCommand::Builder bld;
+
+    bld.auto_nr = 1;
+    bld.coords.page = 1;
+    bld.coords.row = OPT_LIST_Y;
+    bld.coords.start_col = 5;
+    bld.coords.end_col = 45;
 
     cmd_pause_sync = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "1", 1, opt_line, start_col, end_col,
-            cmd_fn_pause_sync
-        )
+        bld.create_with_auto_nr(cmd_fn_pause_sync)
     );
-    ++opt_line;
-
+    add_option(*cmd_pause_sync);
     cmd_resume_sync = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "2", 1, opt_line, start_col, end_col,
-            cmd_fn_resume_sync
-        )
+        bld.create_with_auto_nr(cmd_fn_resume_sync)
     );
-    ++opt_line;
-
+    add_option(*cmd_resume_sync);
     cmd_verify = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "3", 1, opt_line, start_col, end_col,
-            cmd_fn_verify
-        )
+        bld.create_with_auto_nr(cmd_fn_verify)
     );
-    ++opt_line;
+    add_option(*cmd_verify);
+
+    bld.coords.row = OPT_LIST_Y;
+    bld.coords.start_col = 50;
+    bld.coords.end_col = 90;
 
     cmd_invalidate_remote = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "4", 1, opt_line, start_col, end_col,
-            cmd_fn_invalidate_remote
-        )
+        bld.create_with_auto_nr(cmd_fn_invalidate_remote)
     );
-    ++opt_line;
-
-    add_option(*cmd_pause_sync);
-    add_option(*cmd_resume_sync);
-    add_option(*cmd_verify);
     add_option(*cmd_invalidate_remote);
 }
 
@@ -217,10 +206,10 @@ void MDspPeerVolumeActions::show_actions()
     const std::string& std_color = dsp_comp_hub.active_color_table->option_text;
     const std::string& caution_color = dsp_comp_hub.active_color_table->caution_text;
 
-    display_option(" 1   ", "Pause resynchronization", *cmd_pause_sync, std_color);
-    display_option(" 2   ", "Resume resynchronization", *cmd_resume_sync, std_color);
-    display_option(" 3   ", "Verify data", *cmd_verify, std_color);
-    display_option(" 4   ", "Invalidate peer volume", *cmd_invalidate_remote, caution_color);
+    display_option(5, "Pause resynchronization", *cmd_pause_sync, std_color);
+    display_option(5, "Resume resynchronization", *cmd_resume_sync, std_color);
+    display_option(5, "Verify data", *cmd_verify, std_color);
+    display_option(5, "Invalidate peer volume", *cmd_invalidate_remote, caution_color);
 
     display_option_query(5, 12);
 }
