@@ -1182,7 +1182,7 @@ void MDspSelectionFilter::display_resource_criteria()
 {
     dsp_comp_hub.dsp_io->cursor_xy(3, 4);
     dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->emphasis_text.c_str());
-    dsp_comp_hub.dsp_io->write_text("Resource state criteria:");
+    dsp_comp_hub.dsp_io->write_text("Resource filter criteria:");
     dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
 
     display_selectable("Deselect resources", *cmd_op_slct_rsc, op_slct_rsc);
@@ -1200,7 +1200,7 @@ void MDspSelectionFilter::display_volume_criteria()
 {
     dsp_comp_hub.dsp_io->cursor_xy(3, 4);
     dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->emphasis_text.c_str());
-    dsp_comp_hub.dsp_io->write_text("Volume state criteria:");
+    dsp_comp_hub.dsp_io->write_text("Volume filter criteria:");
     dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
 
     dsp_comp_hub.dsp_io->cursor_xy(3, 7);
@@ -1230,7 +1230,7 @@ void MDspSelectionFilter::display_connection_criteria()
 {
     dsp_comp_hub.dsp_io->cursor_xy(3, 4);
     dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->emphasis_text.c_str());
-    dsp_comp_hub.dsp_io->write_text("Connection state criteria:");
+    dsp_comp_hub.dsp_io->write_text("Connection filter criteria:");
     dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
 
     display_selectable("(De)select connections", *cmd_op_slct_con, op_slct_con);
@@ -1269,7 +1269,7 @@ void MDspSelectionFilter::display_peer_volume_criteria()
     {
         dsp_comp_hub.dsp_io->cursor_xy(3, 4);
         dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->emphasis_text.c_str());
-        dsp_comp_hub.dsp_io->write_text("Peer volume state criteria - Disk state:");
+        dsp_comp_hub.dsp_io->write_text("Peer volume filter criteria");
         dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
 
         display_selectable("(De)select peer volumes", *cmd_op_slct_peer_vlm, op_slct_peer_vlm);
@@ -1302,7 +1302,7 @@ void MDspSelectionFilter::display_peer_volume_criteria()
     {
         dsp_comp_hub.dsp_io->cursor_xy(3, 4);
         dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->emphasis_text.c_str());
-        dsp_comp_hub.dsp_io->write_text("Peer volume state criteria - Replication state:");
+        dsp_comp_hub.dsp_io->write_text("Peer volume filter criteria - any of the selected replication states:");
         dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
 
         display_selectable(
