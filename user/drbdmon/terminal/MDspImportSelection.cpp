@@ -229,7 +229,7 @@ void MDspImportSelection::import_selection()
     message.clear();
 
     const std::string& filename = path_input->get_text();
-    if (!filename.empty())
+    if (!filename.empty() && (imp_rsc || imp_vlm || imp_con || imp_peer_vlm))
     {
         std::fstream file_in(filename.c_str(), std::ios_base::in);
         if (file_in.is_open())
@@ -338,6 +338,18 @@ void MDspImportSelection::import_selection()
         else
         {
             message = "Import failed: Cannot open input file";
+        }
+    }
+    else
+    {
+        if (filename.empty())
+        {
+            message = "Enter import file path";
+        }
+        else
+        if (!(imp_rsc || imp_vlm || imp_con || imp_peer_vlm))
+        {
+            message = "Select objects to import";
         }
     }
 
