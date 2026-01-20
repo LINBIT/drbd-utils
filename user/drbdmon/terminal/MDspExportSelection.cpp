@@ -219,7 +219,7 @@ void MDspExportSelection::export_selection()
     dsp_comp_hub.dsp_common->application_working();
 
     const std::string& filename = path_input->get_text();
-    if (!filename.empty())
+    if (!filename.empty() && (exp_rsc || exp_vlm || exp_con || exp_peer_vlm))
     {
         std::fstream file_out(filename.c_str(), std::ios_base::out);
         if (file_out.is_open())
@@ -297,6 +297,18 @@ void MDspExportSelection::export_selection()
         else
         {
             message = "Export failed: Cannot open output file";
+        }
+    }
+    else
+    {
+        if (filename.empty())
+        {
+            message = "Enter export file path";
+        }
+        else
+        if (!(exp_rsc || exp_vlm || exp_con || exp_peer_vlm))
+        {
+            message = "Select objects to export";
         }
     }
 
