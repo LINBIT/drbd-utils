@@ -260,10 +260,8 @@ void MDspTaskDetail::display_content()
             uint32_t page_ctr = 1;
             uint32_t page_line_ctr = first_page_lines;
             format_text.restart();
-            uint32_t skip_ctr = 0;
             while (page_ctr < page_nr && format_text.skip_line())
             {
-                ++skip_ctr;
                 ++page_line_ctr;
                 if (page_line_ctr >= lines_per_page)
                 {
@@ -274,10 +272,8 @@ void MDspTaskDetail::display_content()
 
             std::string line;
             uint32_t line_ctr = page_nr == 1 ? line_offset : 0;
-            uint32_t print_ctr = 0;
             while (format_text.next_line(line, dsp_comp_hub.active_color_table->rst) && line_ctr < lines_per_page)
             {
-                ++print_ctr;
                 dsp_comp_hub.dsp_io->cursor_xy(1, current_line);
                 dsp_comp_hub.dsp_io->write_text(line.c_str());
                 ++current_line;
