@@ -1,0 +1,6 @@
+## Disabling bitmap (running=default yes, config=no) schedules disk-options
+## at CFG_DISK, which runs AFTER del-peer (CFG_NET_PREP_DOWN).
+
+$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_bitmap_disable.txt ./drbdadm -c ./adjust_bitmap_disable.res adjust -d r0 2>/dev/null
+drbdsetup del-peer r0 1
+drbdsetup disk-options 1 --set-defaults --bitmap=no

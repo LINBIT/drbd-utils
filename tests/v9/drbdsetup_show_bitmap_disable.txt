@@ -1,0 +1,21 @@
+resource "r0" {
+    _this_host {
+        node-id			0;
+        volume 0 {
+            device			minor 1;
+            disk			"/dev/sda1";
+            meta-disk			internal;
+        }
+    }
+    connection {
+        _peer_node_id 1;
+        path {
+            _this_host ipv4 10.0.0.1:7789;
+            _remote_host ipv4 10.0.0.2:7789;
+        }
+        _cstate Connected;
+        net {
+            _name           	"peer1";
+        }
+    }
+}

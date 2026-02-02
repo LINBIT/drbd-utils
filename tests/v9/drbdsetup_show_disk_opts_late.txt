@@ -1,0 +1,13 @@
+resource "r0" {
+    _this_host {
+        node-id			0;
+        volume 0 {
+            device			minor 1;
+            disk			"/dev/sda1";
+            meta-disk			internal;
+            disk {
+                disk-flushes    	no;
+            }
+        }
+    }
+}

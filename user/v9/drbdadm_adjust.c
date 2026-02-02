@@ -888,6 +888,16 @@ adjust_net(const struct cfg_ctx *ctx, struct d_resource* running, struct deferre
 }
 
 
+static bool bitmap_will_be_enabled(struct d_volume *conf, struct d_volume *kern)
+{
+	struct d_option *kern_bm = find_opt(&kern->disk_options, "bitmap");
+	struct d_option *conf_bm = find_opt(&conf->disk_options, "bitmap");
+
+	/* Running has bitmap disabled, config has it enabled (or default=yes) */
+	return kern_bm && !strcmp(kern_bm->value, "no")
+		&& (!conf_bm || !strcmp(conf_bm->value, "yes"));
+}
+
 static void adjust_disk(const struct cfg_ctx *ctx, struct d_resource *running,
 			const struct deferred_cmd *depends_on)
 {
@@ -914,8 +924,13 @@ static void adjust_disk(const struct cfg_ctx *ctx, struct d_resource *running,
 		}
 		if (vol->adj_attach)
 			adj_schedule_deferred_cmd(&attach_cmd, &tmp_ctx, depends_on, 0);
-		if (vol->adj_disk_opts)
-			adj_schedule_deferred_cmd(&disk_options_defaults_cmd, &tmp_ctx, depends_on, 0);
+		if (vol->adj_disk_opts) {
+			struct d_volume *kern_vol = matching_volume(vol, &running->me->volumes);
+			if (kern_vol && bitmap_will_be_enabled(vol, kern_vol))
+				adj_schedule_deferred_cmd(&disk_options_early_defaults_cmd, &tmp_ctx, depends_on, 0);
+			else
+				adj_schedule_deferred_cmd(&disk_options_defaults_cmd, &tmp_ctx, depends_on, 0);
+		}
 		if (vol->adj_resize)
 			adj_schedule_deferred_cmd(&resize_cmd, &tmp_ctx, depends_on, 0);
 	}

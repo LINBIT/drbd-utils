@@ -275,7 +275,7 @@ enum drbd_cfg_stage {
 	/* detach/attach local disks, */
 	/* detach, del-minor */
 	CFG_DISK_PREP_DOWN,
-	/* new-minor */
+	/* new-minor, disk-options (bitmap enable) */
 	CFG_DISK_PREP_UP,
 
 	/* disconnect */
@@ -386,6 +386,7 @@ extern struct adm_cmd res_options_defaults_cmd;
 extern struct adm_cmd attach_cmd;
 extern struct adm_cmd disk_options_cmd;
 extern struct adm_cmd disk_options_defaults_cmd;
+extern struct adm_cmd disk_options_early_defaults_cmd;
 extern struct adm_cmd resize_cmd;
 extern struct adm_cmd new_peer_cmd;
 extern struct adm_cmd del_peer_cmd;

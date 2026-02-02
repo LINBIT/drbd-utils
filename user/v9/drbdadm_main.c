@@ -594,6 +594,13 @@ struct adm_cmd *cmds[] = {
 	CFG_DISK,
 	ACF1_MINOR_ONLY
 };
+/*  */ struct adm_cmd disk_options_early_defaults_cmd = {
+	"disk-options",
+	adm_attach,
+	&attach_cmd_ctx,
+	CFG_DISK_PREP_UP,
+	ACF1_MINOR_ONLY
+};
 /*  */ struct adm_cmd net_options_defaults_cmd = {
 	"net-options",
 	adm_new_peer,
@@ -1326,7 +1333,8 @@ static int adm_attach(const struct cfg_ctx *ctx)
 	const char *argv[MAX_ARGS];
 	int argc = 0;
 	bool do_attach = (ctx->cmd == &attach_cmd);
-	bool reset = (ctx->cmd == &disk_options_defaults_cmd);
+	bool reset = (ctx->cmd == &disk_options_defaults_cmd
+		   || ctx->cmd == &disk_options_early_defaults_cmd);
 
 	if (do_attach) {
 		int rv;

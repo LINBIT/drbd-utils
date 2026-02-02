@@ -1,0 +1,8 @@
+## Non-bitmap disk option change (disk-flushes) with peer addition schedules
+## disk-options at CFG_DISK, which runs AFTER new-peer (CFG_NET_PREP_UP).
+
+$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_disk_opts_late.txt ./drbdadm -c ./adjust_disk_opts_late.res adjust -d r0 2>/dev/null
+drbdsetup new-peer r0 1 --_name=peer1
+drbdsetup new-path r0 1 ipv4:10.0.0.1:7789 ipv4:10.0.0.2:7789
+drbdsetup disk-options 1 --set-defaults
+drbdsetup connect r0 1
