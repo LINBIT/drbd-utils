@@ -416,7 +416,6 @@ const struct drbd_cmd *commands[] = {
 	 .summary = "Verify the data on a lower-level device against a peer device." },
 	&(struct drbd_cmd){"down", CTX_RESOURCE | CTX_ALL, DRBD_ADM_DOWN, NO_PAYLOAD, down_cmd,
 	 .missing_ok = true,
-	 .warn_on_missing = true,
 	 .summary = "Take a resource down." },
 	&(struct drbd_cmd){"role", CTX_RESOURCE, 0, NO_PAYLOAD, role_cmd,
 	 .lockless = true,
@@ -1296,9 +1295,6 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		}
 	}
 	if (rv == ERR_RES_NOT_KNOWN) {
-		if (cm->warn_on_missing && isatty(STDERR_FILENO))
-			fprintf(stderr, "Resource unknown\n");
-
 		if (cm->missing_ok)
 			rv = NO_ERROR;
 	}

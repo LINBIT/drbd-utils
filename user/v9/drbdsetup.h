@@ -74,7 +74,6 @@ struct drbd_cmd {
 	int (*handle_reply)(const struct drbd_cmd*, struct genl_info *, void *u_ptr);
 	struct option *options;
 	bool missing_ok;
-	bool warn_on_missing;
 	bool continuous_poll;
 	bool set_defaults;
 	bool lockless;
