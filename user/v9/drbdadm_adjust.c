@@ -893,9 +893,10 @@ static bool bitmap_will_be_enabled(struct d_volume *conf, struct d_volume *kern)
 	struct d_option *kern_bm = find_opt(&kern->disk_options, "bitmap");
 	struct d_option *conf_bm = find_opt(&conf->disk_options, "bitmap");
 
-	/* Running has bitmap disabled, config has it enabled (or default=yes) */
-	return kern_bm && !strcmp(kern_bm->value, "no")
-		&& (!conf_bm || !strcmp(conf_bm->value, "yes"));
+	/* Running has bitmap disabled, config has it enabled (or default=yes).
+	 * value may be NULL for options reported as _unknown by the kernel. */
+	return kern_bm && kern_bm->value && !strcmp(kern_bm->value, "no")
+		&& (!conf_bm || (conf_bm->value && !strcmp(conf_bm->value, "yes")));
 }
 
 static void adjust_disk(const struct cfg_ctx *ctx, struct d_resource *running,
