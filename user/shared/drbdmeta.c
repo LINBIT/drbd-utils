@@ -104,6 +104,7 @@ enum initialize_bitmap_mode {
 
 	/* MAYBE: allow to select BLKDISCARD, BLKDISCARDZEROES */
 
+	IBM_SET_ALL, /* set (instead of clear) the whole bitmap area */
 	IBM_SKIP, /* do not initialize bitmap area, leave as is */
 };
 
@@ -1448,7 +1449,7 @@ void initialize_al(struct format *cfg)
 
 void check_for_existing_data(struct format *cfg);
 
-static void zeroout_bitmap_pwrite(struct format *cfg)
+static void init_bitmap_pwrite(struct format *cfg, const char clear_or_set)
 {
 	const size_t bitmap_bytes = ALIGN(cfg->bm_bytes, cfg->md_hard_sect_size);
 
@@ -1464,7 +1465,8 @@ static void zeroout_bitmap_pwrite(struct format *cfg)
 	unsigned int percent_last_report = 0;
 	size_t chunk;
 
-	memset(on_disk_buffer, 0x00, buffer_size);
+	/* clear_or_set is 0 or 0xff */
+	memset(on_disk_buffer, clear_or_set, buffer_size);
 	for (;;) {
 		chunk = buffer_size < bytes_left ? buffer_size : bytes_left;
 		pwrite_or_die(cfg, on_disk_buffer,
@@ -1482,6 +1484,16 @@ static void zeroout_bitmap_pwrite(struct format *cfg)
 	}
 	if (percent_last_report)
 		fprintf(stderr,"\r100%%\n");
+}
+
+static void zeroout_bitmap_pwrite(struct format *cfg)
+{
+	init_bitmap_pwrite(cfg, 0x00);
+}
+
+static void set_all_bitmap_pwrite(struct format *cfg)
+{
+	init_bitmap_pwrite(cfg, 0xff);
 }
 
 static void initialize_bitmap(struct format *cfg)
@@ -1507,6 +1519,10 @@ static void initialize_bitmap(struct format *cfg)
 	case IBM_ZEROOUT_PWRITE:
 		fprintf(stderr, "initializing bitmap (%s) to all zero using pwrite\n", ppb);
 		zeroout_bitmap_pwrite(cfg);
+		break;
+	case IBM_SET_ALL:
+		fprintf(stderr, "initializing bitmap (%s) to all set using pwrite\n", ppb);
+		set_all_bitmap_pwrite(cfg);
 		break;
 	}
 }
@@ -5402,6 +5418,7 @@ static enum initialize_bitmap_mode check_ibm_arg(const char *arg)
 		[IBM_ZEROOUT] = "automatic",
 		[IBM_ZEROOUT_IOCTL_ONLY] = "zeroout",
 		[IBM_ZEROOUT_PWRITE] = "pwrite",
+		[IBM_SET_ALL] = "set-all",
 		[IBM_SKIP] = "skip",
 	};
 	enum initialize_bitmap_mode i;
