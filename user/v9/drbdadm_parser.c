@@ -951,6 +951,8 @@ struct d_volume *alloc_volume(void)
 	STAILQ_INIT(&vol->pd_options);
 	STAILQ_INIT(&vol->peer_devices);
 
+	vol->tiebreaker = 1;
+
 	return vol;
 }
 
@@ -1024,6 +1026,17 @@ int parse_volume_stmt(struct d_volume *vol, struct names* on_hosts, int token)
 		break;
 	case TK_SKIP:
 		parse_skip();
+		break;
+	case TK_TIEBREAKER:
+		token = yylex();
+		if (token == TK_YES)
+			vol->tiebreaker = 1;
+		else if (token == TK_NO)
+			vol->tiebreaker = 0;
+		else
+			pe_expected("yes | no");
+		vol->parsed_tiebreaker = 1;
+		EXP(';');
 		break;
 	default:
 		return 0;

@@ -122,6 +122,8 @@ struct d_volume
 	unsigned int parsed_device :1;
 	unsigned int parsed_disk :1;
 	unsigned int parsed_meta_disk :1;
+	unsigned int parsed_tiebreaker :1; /* was "tiebreaker" explicitly set? */
+	unsigned int tiebreaker :1;        /* 1 = yes (default), 0 = no */
 };
 
 STAILQ_HEAD(volumes, d_volume);

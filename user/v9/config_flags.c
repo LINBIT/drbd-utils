@@ -1281,6 +1281,7 @@ struct context_def peer_device_options_ctx = {
 		{ "c-min-rate", NUMERIC(c_min_rate, C_MIN_RATE), .unit = "bytes/second" },
 		{ "bitmap", BOOLEAN(bitmap, BITMAP) },
 		{ "resync-without-replication", BOOLEAN(resync_without_replication, RESYNC_WITHOUT_REPLICATION) },
+		{ "peer-tiebreaker", BOOLEAN(peer_tiebreaker, PEER_TIEBREAKER) },
 		{ } },
 };
 

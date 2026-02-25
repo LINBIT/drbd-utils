@@ -108,6 +108,7 @@ _cstate			{ DP; return TK__CSTATE;		}
 _unknown		{ DP; return TK__UNKNOWN;		}
 template-file		{ DP; return TK_TEMPLATE_FILE;		}
 path			{ DP; return TK_PATH;			}
+tiebreaker		{ DP; return TK_TIEBREAKER;		}
 sci			{ DP; CP; return TK_SCI;		}
 ssocks			{ DP; CP; return TK_SSOCKS;		}
 sdp			{ DP; CP; return TK_SDP;		}

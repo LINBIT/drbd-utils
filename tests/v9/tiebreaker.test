@@ -1,0 +1,8 @@
+## tiebreaker: volume-level "tiebreaker no;" propagates to peer-device-options
+
+$ ./drbdadm -d -c ./tiebreaker.res peer-device-options tiebreaker-test 2>/dev/null
+drbdsetup peer-device-options tiebreaker-test 1 0
+drbdsetup peer-device-options tiebreaker-test 2 0 --bitmap=no
+drbdsetup peer-device-options tiebreaker-test 3 0 --bitmap=no --peer-tiebreaker=no
+$ ./drbdadm -c ./tiebreaker.res dump tiebreaker-test 2>/dev/null | grep -c '^ *tiebreaker.*no'
+1

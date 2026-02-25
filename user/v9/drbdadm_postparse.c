@@ -508,6 +508,30 @@ static void add_no_bitmap_opt(struct d_resource *res)
 	res->no_bitmap_done = 1;
 }
 
+static void apply_tiebreaker_flags(struct d_resource *res)
+{
+	struct connection *conn;
+
+	for_each_connection(conn, &res->connections) {
+		struct peer_device *peer_device;
+
+		if (conn->ignore || !conn->peer)
+			continue;
+
+		STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
+			struct d_volume *peer_vol;
+
+			peer_vol = volume_by_vnr(&conn->peer->volumes, peer_device->vnr);
+			if (!peer_vol || peer_vol->tiebreaker)
+				continue;
+
+			if (!find_opt(&peer_device->pd_options, "peer-tiebreaker"))
+				insert_tail(&peer_device->pd_options,
+					    new_opt(strdup("peer-tiebreaker"), strdup("no")));
+		}
+	}
+}
+
 void set_peer_in_resource(struct d_resource* res, int peer_required)
 {
 	struct connection *conn;
@@ -525,8 +549,10 @@ void set_peer_in_resource(struct d_resource* res, int peer_required)
 	}
 	res->peers_addrs_set = peers_addrs_set;
 
-	if (!(peer_required & DRBDSETUP_SHOW))
+	if (!(peer_required & DRBDSETUP_SHOW)) {
 		add_no_bitmap_opt(res);
+		apply_tiebreaker_flags(res);
+	}
 }
 
 void set_stacked_disk_in_res(struct d_resource *res)

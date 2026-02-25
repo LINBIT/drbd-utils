@@ -203,6 +203,9 @@ static void dump_volume(int has_lower, struct d_volume *vol)
 			       vol->meta_index);
 	}
 
+	if (vol->parsed_tiebreaker)
+		printA("tiebreaker", vol->tiebreaker ? "yes" : "no");
+
 	if (!vol->implicit) {
 	out:
 		--indent;

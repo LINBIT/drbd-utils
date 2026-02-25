@@ -1084,6 +1084,27 @@ resource
 	      <option>disk</option> parameter is not allowed.</para>
           </listitem>
         </varlistentry>
+
+        <varlistentry>
+          <term><option>tiebreaker</option>
+            <group choice="req" rep="norepeat">
+              <arg choice="plain" rep="norepeat"><option>yes</option></arg>
+              <arg choice="plain" rep="norepeat"><option>no</option></arg>
+            </group>
+          </term>
+
+          <listitem>
+            <para><indexterm significance="normal">
+                <primary>drbd.conf</primary>
+
+                <secondary>tiebreaker</secondary>
+              </indexterm> Declare whether this volume participates as a
+              tiebreaker in quorum decisions.  The default is
+              <option>yes</option>. Internally, drbdadm maps this
+              to setting <option>peer-tiebreaker</option> on this device's
+              peers.</para>
+          </listitem>
+        </varlistentry>
       </variablelist>
     </refsect2>
   </refsect1>

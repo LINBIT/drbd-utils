@@ -321,6 +321,7 @@ resource dless {
 		node-id 1;
 		volume 0 {
 			disk none;
+			tiebreaker no;
 		}
 	}
 	connection {

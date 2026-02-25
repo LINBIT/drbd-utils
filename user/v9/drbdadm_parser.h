@@ -106,6 +106,7 @@ enum yytokentype {
 	TK_MODULE_LT,
 	TK_MODULE_LE,
 	TK_KMODVERS,
+	TK_TIEBREAKER,
 };
 
 typedef struct YYSTYPE {

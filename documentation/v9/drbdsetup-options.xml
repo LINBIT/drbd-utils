@@ -191,6 +191,33 @@
     </definition>
   </drbdsetup_option>
 
+  <drbdsetup_option name="peer-tiebreaker">
+    <term xml:id="peer-tiebreaker"><option>peer-tiebreaker
+        <group choice="req" rep="norepeat">
+          <arg choice="plain" rep="norepeat">yes</arg>
+          <arg choice="plain" rep="norepeat">no</arg>
+        </group></option></term>
+
+    <definition>
+      <indexterm significance="normal">
+        <primary>drbd.conf</primary>
+        <secondary>peer-tiebreaker</secondary>
+      </indexterm>
+
+      <para>Declare whether the peer volume participates as a tiebreaker
+      in quorum decisions.  The default is <option>yes</option>.  Setting
+      this to <option>no</option> excludes the peer from quorum
+      tiebreaking for this volume.</para>
+
+      <para>Rather than setting this option directly in
+      <option>peer-device-options</option> on each connection, consider
+      using the <option>tiebreaker</option> volume-level shorthand in
+      <citerefentry><refentrytitle>drbd.conf</refentrytitle>
+      <manvolnum>5</manvolnum></citerefentry>, which automatically
+      propagates to all connections pointing at that host.</para>
+    </definition>
+  </drbdsetup_option>
+
   <drbdsetup_option name="disk-barrier">
     <term xml:id="disk-barrier"><option>disk-barrier</option></term>
 
