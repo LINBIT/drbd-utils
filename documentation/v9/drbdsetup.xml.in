@@ -852,6 +852,7 @@
 
 	    <variablelist>
 	      <pick_drbdsetup_option name="block-size"/>
+	      <pick_drbdsetup_option name="discard-granularity"/>
 	    </variablelist>
 	  </para>
 	</listitem>

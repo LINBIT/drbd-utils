@@ -602,6 +602,40 @@
     </definition>
   </drbdsetup_option>
 
+  <drbdsetup_option name="discard-granularity">
+    <term xml:id="discard-granularity"><option>discard-granularity <replaceable>size</replaceable></option></term>
+    <definition>
+      <para>
+        <indexterm significance="normal">
+          <primary>drbd.conf</primary>
+          <secondary>discard-granularity</secondary>
+        </indexterm>
+        Sets the discard granularity advertised by the DRBD block device.
+        Discard requests (TRIM/UNMAP) must be aligned to and be a multiple
+        of this value.</para>
+
+      <para>The primary use case is a diskless primary node, where DRBD
+        would otherwise hardcode a granularity of 512 bytes regardless of
+        the actual storage topology on peers.  Tools like LINSTOR know the
+        real granularity from storage pool metadata and can set this option
+        to advertise the correct value.  The option is equally valid on
+        diskful nodes when a larger granularity than the backing device
+        strictly requires should be exposed (restrictions on other peers?).</para>
+
+      <para>A value of <literal>0</literal> disables discard support on
+        the DRBD device entirely, even when the backing storage and all
+        peers support discards.  Any non-zero value enables discards
+        and must be a multiple of
+        <option>block-size</option>.  When not set (the default), DRBD
+        uses its previous behaviour: discard support is enabled at 512-byte
+        granularity on diskless clients or inherited from the backing device.</para>
+
+      <para>This option is available since drbd-utils 9.34 and
+        drbd kernel driver 9.3.1
+      </para>
+    </definition>
+  </drbdsetup_option>
+
   <drbdsetup_option name="bitmap">
     <term xml:id="bitmap"><option>bitmap
 	<group choice="req" rep="norepeat">
