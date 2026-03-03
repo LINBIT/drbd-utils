@@ -101,6 +101,20 @@ AC_ARG_ENABLE([spec],
 			[Rather than creating Makefiles, create an RPM spec file only])],
 	[SPECMODE=$enableval],
 	[SPECMODE=""])
+AC_ARG_ENABLE([coverage],
+	[AS_HELP_STRING([--enable-coverage],
+			[Build with gcov code coverage instrumentation.
+			 no: disabled (default),
+			 local or yes: coverage data next to source,
+			 package: coverage data in DRBD_LIB_DIR/coverage])],
+	[ENABLE_COVERAGE=$enableval],
+	[ENABLE_COVERAGE=no])
+AS_CASE([$ENABLE_COVERAGE],
+	[no], [],
+	[yes|local], [ENABLE_COVERAGE=local],
+	[package], [],
+	[AC_MSG_ERROR([bad value '$ENABLE_COVERAGE' for --enable-coverage (expected no, local, or package)])])
+AC_SUBST(ENABLE_COVERAGE)
 AC_ARG_WITH([manual],
 	[AS_HELP_STRING([--without-manual],
 			[Do not include manual pages])],

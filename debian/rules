@@ -29,6 +29,10 @@ ifeq (,$(filter noprebuiltman,$(DEB_BUILD_OPTIONS)))
 configure_with += --with-prebuiltman
 endif
 
+ifneq (,$(filter coverage,$(DEB_BUILD_OPTIONS)))
+configure_with += --enable-coverage=package
+endif
+
 override_dh_auto_configure:
 	./configure $(configure_with)
 

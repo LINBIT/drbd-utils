@@ -18,6 +18,7 @@
 %bcond_without 84support
 %bcond_without drbdmon
 %bcond_with prebuiltman
+%bcond_with coverage
 %bcond_with selinux
 
 Name: drbd
@@ -199,6 +200,10 @@ This packages includes the DRBD administration tools.
 %doc COPYING
 %doc ChangeLog
 %doc README.md
+%if %{with coverage}
+%dir @DRBD_LIB_DIR@/coverage
+@DRBD_LIB_DIR@/coverage/*.gcno
+%endif
 
 %if %{with udev}
 %package udev
@@ -372,7 +377,8 @@ autoconf
     %{?_with_prebuiltman} \
     %{?_tmpfilesdir:--with-tmpfilesdir=%{_tmpfilesdir}} \
     --with-initscripttype=systemd \
-    %{?_without_drbdmon}
+    %{?_without_drbdmon} \
+    %{?with_coverage:--enable-coverage=package}
 make %{?_smp_mflags}
 %if %{with selinux}
 make selinux

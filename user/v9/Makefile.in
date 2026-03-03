@@ -49,6 +49,7 @@ WITH_BASHCOMPLETION = @WITH_BASHCOMPLETION@
 WITH_WINDRBD = @WITH_WINDRBD@
 WITH_CLITEST = @WITH_CLITEST@
 WITH_KEYUTILS = @WITH_KEYUTILS@
+ENABLE_COVERAGE = @ENABLE_COVERAGE@
 
 # for some reason some of the commands below only work correctly in bash,
 # and not in e.g. dash. I'm too lazy to fix it to be compatible.
@@ -70,6 +71,14 @@ CFLAGS += -DKEYUTILS
 endif
 ifeq ($(WITH_84_SUPPORT),yes)
 CFLAGS += -DWITH_84_SUPPORT
+endif
+ifneq ($(filter local package,$(ENABLE_COVERAGE)),)
+CFLAGS += --coverage
+LDFLAGS += --coverage
+ifeq ($(ENABLE_COVERAGE),package)
+DRBD_COVERAGE_DIR = $(DRBD_LIB_DIR)/coverage
+CFLAGS += -fprofile-dir=$(DRBD_COVERAGE_DIR)
+endif
 endif
 CFLAGS += $(EXTRA_CFLAGS)
 
@@ -138,11 +147,20 @@ else
 test:
 endif
 
+coverage:
+	lcov --capture --directory . --output-file coverage.info
+	lcov --extract coverage.info '$(CURDIR)/*' --output-file coverage.info
+	genhtml coverage.info --output-directory coverage-html
+	@echo "Coverage report generated: coverage-html/index.html"
+
 clean:
 	rm -f drbdadm_scanner.c
 	rm -f drbdsetup drbdadm drbdmeta test/drbdsetup_instrumented $(all-obj)
 	rm -f drbd_strings.c drbd_strings.h
 	rm -f *~
+	rm -f *.gcno *.gcda *.gcov
+	rm -f coverage.info
+	rm -rf coverage-html
 
 distclean: clean
 	rm -f $(all-dep)
@@ -168,6 +186,10 @@ install:
 		ln -sf $(sbindir)/drbdadm $(DESTDIR)/sbin ;		\
 	fi
 	install -d $(DESTDIR)$(DRBD_LIB_DIR)
+ifeq ($(ENABLE_COVERAGE),package)
+	install -d $(DESTDIR)$(DRBD_COVERAGE_DIR)
+	install -m 644 *.gcno $(DESTDIR)$(DRBD_COVERAGE_DIR)/
+endif
 
 uninstall:
 	rm -f $(DESTDIR)$(sbindir)/{drbdsetup,drbdadm,drbdmeta}
@@ -178,7 +200,7 @@ spell:
 	 	aspell --save-repl --dont-backup --personal=./../documentation/aspell.en.per check $$f; \
 	done
 
-.PHONY: install uninstall clean distclean spell
+.PHONY: install uninstall clean distclean spell coverage
 ../../configure:
 	@echo "please (re-)run ./autogen.sh with appropriate arguments"; exit 1
 ../../config.status: ../../configure
