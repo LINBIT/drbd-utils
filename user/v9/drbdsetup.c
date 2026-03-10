@@ -4756,6 +4756,7 @@ int drbdsetup_main(int argc, char **argv)
 			print_usage_and_exit(NULL);
 	}
 
+#ifdef WITH_84_SUPPORT
 	/*
 	 * drbdsetup previously took the object to operate on as its first argument,
 	 * followed by the command.  For backwards compatibility, still support his.
@@ -4765,6 +4766,7 @@ int drbdsetup_main(int argc, char **argv)
 		argv[1] = argv[2];
 		argv[2] = swap;
 	}
+#endif
 
 	if (argc < 2)
 		print_usage_and_exit(NULL);

@@ -5187,7 +5187,7 @@ static enum drbd_disk_state drbd_str_disk(const char *str)
 int is_attached(int minor)
 {
 	char minor_string[7], result[40];
-	char *argv[] = { "drbdsetup", minor_string, "dstate", NULL };
+	char *argv[] = { "drbdsetup", "dstate", minor_string, NULL };
 	int pipes[2];
 	pid_t pid;
 	int rr, exitcode;
