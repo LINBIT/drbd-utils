@@ -2088,7 +2088,7 @@ struct extent_bit_range {
 	size_t aligned_4k_x_max_peers_on_disk_pos;
 };
 
-static unsigned int round_down(size_t i, size_t  g)
+static size_t round_down(size_t i, size_t  g)
 {
 	return i / g * g;
 }
@@ -2203,6 +2203,7 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 
 		/* read the bitmap for this range */
 		bm_on_disk_pos = first_ex.aligned_4k_x_max_peers_on_disk_pos;
+		ASSERT(chunk <= buffer_size)
 		pread_or_die(cfg, on_disk_buffer, chunk, bm_on_disk_off + bm_on_disk_pos, "apply_al read bitmap chunk");
 
 		/* change the bits */
