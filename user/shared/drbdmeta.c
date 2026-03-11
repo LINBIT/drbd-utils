@@ -2188,7 +2188,7 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 					max_peers, bits_per_extent, bm_bytes);
 			if (tmp_ex.on_disk_word32_pos_e >= bm_bytes) {
 				fprintf(stderr, "extent %u beyond end of bitmap! (%zd >= %zd)\n",
-					hot_extent[j], tmp_ex.on_disk_word32_pos_e, bm_bytes);
+					hot_extent[j+1], tmp_ex.on_disk_word32_pos_e, bm_bytes);
 				break;
 			}
 			if (tmp_ex.on_disk_word32_pos_e >= first_ex.aligned_4k_x_max_peers_on_disk_pos + buffer_size)
