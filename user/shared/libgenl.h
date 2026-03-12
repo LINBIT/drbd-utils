@@ -24,6 +24,13 @@
 #include <linux/netlink.h>
 #include <linux/genetlink.h>
 
+/* TODO: find a better way to make GENL_MAGIC_VERSION available here.
+ * Including drbd_genl_api.h directly pulls in too much (genl_magic_struct.h).
+ * For now, duplicate the define with a guard to unblock the build. */
+#ifndef GENL_MAGIC_VERSION
+#define GENL_MAGIC_VERSION	2
+#endif
+
 #ifdef WINDRBD
 #include <windows.h>		/* for HANDLE */
 #endif
@@ -1010,7 +1017,7 @@ static inline void *genlmsg_put(struct msg_buff *msg, struct genl_family *family
 
 	hdr = nlmsg_data(nlh);
 	hdr->cmd = cmd;
-	hdr->version = family->version; /* truncated to u8! */
+	hdr->version = GENL_MAGIC_VERSION;
 	hdr->reserved = 0;
 
 	return (char *) hdr + GENL_HDRLEN;

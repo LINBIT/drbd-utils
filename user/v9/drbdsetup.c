@@ -4837,7 +4837,7 @@ int drbdsetup_main(int argc, char **argv)
 		}
 	}
 
-	if (drbd_genl_family.version != GENL_MAGIC_VERSION ||
+	if (drbd_genl_family.version < 1 ||
 	    drbd_genl_family.hdrsize != sizeof(struct drbd_genlmsghdr)) {
 		fprintf(stderr, "API mismatch!\n\t"
 			"API version drbdsetup: %u kernel: %u\n\t"
