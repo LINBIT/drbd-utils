@@ -1956,21 +1956,22 @@ static int replay_al_84(struct format *cfg, uint32_t *hot_extent)
 		fprintf(stderr, "%u corrupt AL transactions found\n", mx - found_valid);
 
 	if (!found_valid_updates) {
-		if (found_valid == mx)
+		int ret = 0;
+		if (found_valid == mx) {
 			/* nothing to do, all slots are valid AL_TR_INITIALIZED */
-			return 0;
-
-		/* this is only expected, in case the _first_ transaction
-		 * somehow failed. */
-		if (!al_cpu[0].is_valid && found_valid == mx - 1)
-			return 0;
-
-		/* Hmm. Some transactions are valid.
-		 * Some are not.
-		 * This is not expected. */
-		/* FIXME how do we want to handle this? */
-		fprintf(stderr, "No valid AL update transaction found.\n");
-		return -EINVAL;
+		} else if (!al_cpu[0].is_valid && found_valid == mx - 1) {
+			/* this is only expected, in case the _first_ transaction
+			 * somehow failed. */
+		} else {
+			/* Hmm. Some transactions are valid.
+			 * Some are not.
+			 * This is not expected. */
+			/* FIXME how do we want to handle this? */
+			fprintf(stderr, "No valid AL update transaction found.\n");
+			ret = -EINVAL;
+		}
+		free(al_cpu);
+		return ret;
 	}
 
 	/* FIXME what do we do
@@ -2012,6 +2013,7 @@ static int replay_al_84(struct format *cfg, uint32_t *hot_extent)
 			hot_extent[slot] = al_cpu[idx].update_extent_nr[i];
 		}
 	}
+	free(al_cpu);
 	return found_valid_updates;
 }
 
