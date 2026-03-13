@@ -212,8 +212,12 @@ retry:
 	    msg.msg_flags & MSG_TRUNC) {
 		/* Provided buffer is not long enough, enlarge it
 		 * and try again. */
+		void *tmp;
 		iov->iov_len *= 2;
-		iov->iov_base = realloc(iov->iov_base, iov->iov_len);
+		tmp = realloc(iov->iov_base, iov->iov_len);
+		if (!tmp)
+			return -E_RCV_FAILED;
+		iov->iov_base = tmp;
 		goto retry;
 	} else if (flags != 0) {
 		/* Buffer is big enough, do the actual reading */
