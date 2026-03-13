@@ -497,7 +497,6 @@ extern char* drbdsetup;
 extern char* drbdmeta;
 extern char* drbd_proxy_ctl;
 extern char* drbdadm_84;
-extern char ss_buffer[1024];
 extern const char *hostname;
 extern struct names backend_options;
 extern enum cfg_version config_version;
@@ -507,19 +506,11 @@ extern enum cfg_version config_version;
    frame is destroyed (=function returns), the allocated memory is
    freed automatically */
 
-/*
-  // This is the nicer version, that does not need the ss_buffer.
-  // But it only works with very new glibcs.
-
 #define ssprintf(...) \
-	 ({ int _ss_size = snprintf(0, 0, ##__VA_ARGS__);        \
+	({ int _ss_size = snprintf(0, 0, ##__VA_ARGS__);        \
 	 char *_ss_ret = __builtin_alloca(_ss_size+1);           \
 	 snprintf(_ss_ret, _ss_size+1, ##__VA_ARGS__);           \
 	 _ss_ret; })
-*/
-
-#define ssprintf(...) \
-	strcpy(alloca(snprintf(ss_buffer,sizeof(ss_buffer),##__VA_ARGS__)+1),ss_buffer)
 
 #ifndef offsetof
 /* I do not care about non GCC compilers */

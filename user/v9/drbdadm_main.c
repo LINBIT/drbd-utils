@@ -141,7 +141,6 @@ bool is_set_gi_single_node(const struct cfg_ctx *ctx);
 
 static char *get_opt_val(struct options *, const char *, char *);
 
-char ss_buffer[1024];
 const char *hostname;
 int line = 1;
 int fline;
