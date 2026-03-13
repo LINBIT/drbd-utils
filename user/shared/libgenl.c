@@ -75,8 +75,8 @@ static struct genl_sock *genl_connect(__u32 nl_groups, struct genl_connect_optio
 		goto fail;
 
 	sock_len = sizeof(s->s_local);
-	DO_OR_LOG_AND_FAIL(setsockopt(s->s_fd, SOL_SOCKET, SO_SNDBUF, &opts->sndbuf_size, sizeof(&opts->sndbuf_size)));
-	DO_OR_LOG_AND_FAIL(setsockopt(s->s_fd, SOL_SOCKET, SO_RCVBUF, &opts->rcvbuf_size, sizeof(&opts->rcvbuf_size)));
+	DO_OR_LOG_AND_FAIL(setsockopt(s->s_fd, SOL_SOCKET, SO_SNDBUF, &opts->sndbuf_size, sizeof(opts->sndbuf_size)));
+	DO_OR_LOG_AND_FAIL(setsockopt(s->s_fd, SOL_SOCKET, SO_RCVBUF, &opts->rcvbuf_size, sizeof(opts->rcvbuf_size)));
 	DO_OR_LOG_AND_FAIL(bind(s->s_fd, (struct sockaddr*) &s->s_local, sizeof(s->s_local)));
 	DO_OR_LOG_AND_FAIL(getsockname(s->s_fd, (struct sockaddr*) &s->s_local, &sock_len));
 
@@ -92,7 +92,7 @@ static struct genl_sock *genl_connect(__u32 nl_groups, struct genl_connect_optio
 	if (getsockopt(s->s_fd, SOL_SOCKET, SO_RCVBUF, &bsz, &sock_len) == 0) {
 		if ((bsz/2) < opts->rcvbuf_size) {
 			/* retry with FORCE */
-			setsockopt(s->s_fd, SOL_SOCKET, SO_RCVBUFFORCE, &opts->rcvbuf_size, sizeof(&opts->rcvbuf_size));
+			setsockopt(s->s_fd, SOL_SOCKET, SO_RCVBUFFORCE, &opts->rcvbuf_size, sizeof(opts->rcvbuf_size));
 		}
 	}
 #endif
