@@ -2198,8 +2198,7 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 			continue;
 		}
 
-		j = i;
-		while (hot_extent[j+1] != ~0U) {
+		for (j = i; j + 1 < AL_EXTENTS_MAX && hot_extent[j+1] != ~0U; j++) {
 			enr_to_bit_range(&tmp_ex, hot_extent[j+1], bits_per_extent, max_peers);
 			if (verbose >= 3)
 				fprintf(stderr, "       ?: %4d: %5d: [%zd..[%zd; [%zd..[%zd; %zd; peers %d; bits pe: %zd; bm_bytes: %zd\n",
@@ -2217,7 +2216,6 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 			}
 			if (tmp_ex.on_disk_word32_pos_e >= first_ex.aligned_4k_x_max_peers_on_disk_pos + buffer_size)
 				break;
-			++j;
 		}
 		enr_to_bit_range(&last_ex, hot_extent[j], bits_per_extent, max_peers);
 
