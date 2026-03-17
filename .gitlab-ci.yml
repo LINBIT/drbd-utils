@@ -127,8 +127,7 @@ drbd-tests:
     - |
       export DRBD_VERSION=9.2.0.latest
       export DRBD_UTILS_VERSION=9.0.0.$CI_COMMIT_SHA-1
-      cd drbd9-tests
-      ./virter/run-test.sh --out-dir=../tests-out
+      ./drbd9-tests/virter/run-test.sh
   dependencies:
     - build
   artifacts:
