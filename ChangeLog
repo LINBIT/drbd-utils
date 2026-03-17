@@ -3,7 +3,7 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
-9.34.0-rc.1
+9.34.0
 -----------
  * drbdadm: fix adjust for a v8 config with a v9 drbd kernel driver
  * drbdadm: fix segfault if we don't know about peer devices
@@ -14,6 +14,7 @@ Latest:
  * drbdmeta: create-md: add --initialize-bitmap=set-all
  * drbd: add per-peer_device tiebreaker config flag for quorum
  * drbd-utils: add discard-granularity device option
+ * drbdmeta: fix segfault during apply-al
 
 9.33.0
 -----------
