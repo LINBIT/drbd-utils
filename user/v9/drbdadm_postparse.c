@@ -352,6 +352,21 @@ void set_me_in_resource(struct d_resource* res, int match_on_proxy)
 			res->stacked = 1;
 	}
 
+	/* If normal matching found nothing and this is not already a proxy-aware
+	 * call, try matching as a dedicated proxy node.  Do not break on first
+	 * match: multiple hosts may have proxy entries for this node, and all
+	 * need used_as_me set so their paths get my_address and my_proxy
+	 * assigned below. */
+	if (!res->me && !match_on_proxy) {
+		for_each_host(host, &res->all_hosts) {
+			if (!test_proxy_on_host(res, host))
+				continue;
+			res->me = host;
+			host->used_as_me = 1;
+			res->proxy_only = 1;
+		}
+	}
+
 	/* If there is no me, implicitly ignore that resource */
 	if (!res->me) {
 		res->ignore = 1;

@@ -178,8 +178,6 @@ struct path
 	struct d_proxy_info *my_proxy;
 	struct d_proxy_info *peer_proxy;
 
-	char *running_proxy_conn_name; /* set during adjust: name proxy is actually running under */
-
 	unsigned int implicit:1;
 	unsigned int adj_seen:1;
 	unsigned int proxy_conn_is_down:1;
@@ -255,6 +253,8 @@ struct d_resource
 	unsigned int stacked_on_one:1; /* Stacked either on me or on peer */
 	unsigned int peers_addrs_set:1; /* all peer addresses set */
 	unsigned int no_bitmap_done:1;
+
+	unsigned int proxy_only:1;
 
 	/* if a prerequisite command failed, don't try any further commands.
 	 * see run_deferred_cmds() */

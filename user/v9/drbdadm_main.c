@@ -3158,6 +3158,8 @@ void verify_ips(struct d_resource *res)
 		return;
 	if (res->ignore)
 		return;
+	if (res->proxy_only)
+		return;
 	if (res->stacked && !is_drbd_top)
 		return;
 	if (!res->me->address.addr)
@@ -3825,6 +3827,9 @@ int main(int argc, char **argv)
 			for_each_resource(res, &config) {
 				if (!is_dump && res->ignore)
 					continue;
+				if (!is_dump && res->proxy_only &&
+				    !is_adjust && !cmd->is_proxy_cmd)
+					continue;
 
 				if (!is_dump && is_drbd_top != res->stacked)
 					continue;
@@ -3915,6 +3920,14 @@ int main(int argc, char **argv)
 				}
 				if (ctx.res->ignore && !is_dump) {
 					log_err("'%s' ignored, since this host (%s) is not mentioned with an 'on' keyword.\n",
+					    ctx.res->name, hostname);
+					if (rv < E_USAGE)
+					       rv = E_USAGE;
+					continue;
+				}
+				if (ctx.res->proxy_only && !is_dump &&
+				    !is_adjust && !cmd->is_proxy_cmd) {
+					log_err("'%s' ignored, since this host (%s) is a proxy node, not a DRBD node.\n",
 					    ctx.res->name, hostname);
 					if (rv < E_USAGE)
 					       rv = E_USAGE;

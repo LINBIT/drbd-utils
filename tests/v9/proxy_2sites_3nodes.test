@@ -48,3 +48,19 @@ $ __DRBD_NODE__=charlie-pxy drbdadm -c proxy_2sites_3nodes.res -d proxy-up proxy
 drbd-proxy-ctl -c add\ connection\ proxy_2sites_3nodes-alpha-charlie\ 192.168.31.5:7800\ 192.168.31.4:7801\ 192.168.31.5:7801\ 192.168.31.3:7800
 drbd-proxy-ctl -c add\ connection\ proxy_2sites_3nodes-bravo-charlie\ 192.168.31.5:7802\ 192.168.31.4:7803\ 192.168.31.5:7803\ 192.168.31.3:7800
 0
+$ __DRBD_NODE__=site1-pxy drbdadm -c proxy_2sites_3nodes.res -d adjust proxy_2sites_3nodes 2>/dev/null; echo $?
+drbd-proxy-ctl -c add\ connection\ proxy_2sites_3nodes-charlie-alpha\ 192.168.31.4:7800\ 192.168.31.5:7801\ 192.168.31.4:7801\ 192.168.31.1:7800
+drbd-proxy-ctl -c add\ connection\ proxy_2sites_3nodes-charlie-bravo\ 192.168.31.4:7802\ 192.168.31.5:7803\ 192.168.31.4:7803\ 192.168.31.2:7800
+0
+$ __DRBD_NODE__=charlie-pxy drbdadm -c proxy_2sites_3nodes.res -d adjust proxy_2sites_3nodes 2>/dev/null; echo $?
+drbd-proxy-ctl -c add\ connection\ proxy_2sites_3nodes-alpha-charlie\ 192.168.31.5:7800\ 192.168.31.4:7801\ 192.168.31.5:7801\ 192.168.31.3:7800
+drbd-proxy-ctl -c add\ connection\ proxy_2sites_3nodes-bravo-charlie\ 192.168.31.5:7802\ 192.168.31.4:7803\ 192.168.31.5:7803\ 192.168.31.3:7800
+0
+$ __DRBD_NODE__=site1-pxy drbdadm -c proxy_2sites_3nodes.res -d up proxy_2sites_3nodes 2>/dev/null; echo $?
+1
+$ __DRBD_NODE__=charlie-pxy drbdadm -c proxy_2sites_3nodes.res -d up proxy_2sites_3nodes 2>/dev/null; echo $?
+1
+$ __DRBD_NODE__=site1-pxy drbdadm -c proxy_2sites_3nodes.res -d down proxy_2sites_3nodes 2>/dev/null; echo $?
+1
+$ __DRBD_NODE__=charlie-pxy drbdadm -c proxy_2sites_3nodes.res -d down proxy_2sites_3nodes 2>/dev/null; echo $?
+1
