@@ -178,6 +178,8 @@ struct path
 	struct d_proxy_info *my_proxy;
 	struct d_proxy_info *peer_proxy;
 
+	char *running_proxy_conn_name; /* set during adjust: name proxy is actually running under */
+
 	unsigned int implicit:1;
 	unsigned int adj_seen:1;
 	unsigned int proxy_conn_is_down:1;
@@ -461,6 +463,10 @@ extern void set_me_in_resource(struct d_resource* res, int match_on_proxy);
 extern void set_peer_in_resource(struct d_resource* res, int peer_required);
 extern void set_on_hosts_in_res(struct d_resource *res);
 extern void set_disk_in_res(struct d_resource *res);
+extern int _old_proxy_connect_name_len(const struct d_resource *res, const struct connection *conn);
+extern char *_old_proxy_connection_name(char *conn_name, const struct d_resource *res, const struct connection *conn);
+#define old_proxy_connection_name(RES, CONN) \
+	_old_proxy_connection_name(alloca(_old_proxy_connect_name_len(RES, CONN)), RES, CONN)
 extern int _proxy_connect_name_len(const struct d_resource *res, const struct connection *conn);
 extern char *_proxy_connection_name(char *conn_name, const struct d_resource *res, const struct connection *conn);
 #define proxy_connection_name(RES, CONN) \

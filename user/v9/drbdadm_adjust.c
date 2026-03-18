@@ -466,7 +466,7 @@ static int proxy_reconf(const struct cfg_ctx *ctx, struct connection *running_co
 	res_o = STAILQ_FIRST(&path->my_proxy->plugins);
 	run_o = STAILQ_FIRST(&running_path->my_proxy->plugins);
 	used = 0;
-	conn_name = proxy_connection_name(ctx->res, conn); /* this is not possible on running_conn */
+	conn_name = path->running_proxy_conn_name ?: proxy_connection_name(ctx->res, conn);
 	for(i=0; i<MAX_PLUGINS; i++)
 	{
 		if (used >= sizeof(plugin_changes)-1) {
@@ -1021,13 +1021,53 @@ struct d_resource *running_res_by_name(const char *name)
 }
 
 
+/* Query proxy for connection settings.
+ * fake_file: if non-NULL, read from this file instead of running drbd-proxy-ctl. */
+static void parse_proxy_settings(struct path *path, const char *conn_name, const char *fake_file)
+{
+	char *show_conn;
+	char config_file_dummy[250];
+	int pid = -1;
+
+	line = 1;
+	m_asprintf(&show_conn, "show proxy-settings %s", conn_name);
+	sprintf(config_file_dummy, "drbd-proxy-ctl -c '%s'", show_conn);
+	config_file = config_file_dummy;
+
+	if (fake_file) {
+		yyin = fopen(fake_file, "r");
+		if (!yyin) {
+			log_err("Failed to open FAKE_DRBD_PROXY_CTL{,_OLD} %s\n", fake_file);
+			exit(E_USAGE);
+		}
+	} else {
+		const char *argv[4];
+
+		argv[0] = drbd_proxy_ctl;
+		argv[1] = "-c";
+		argv[2] = show_conn;
+		argv[3] = 0;
+
+		yyin = m_popen(&pid, argv);
+	}
+	path->proxy_conn_is_down = parse_proxy_options_section(&path->my_proxy);
+	fclose(yyin);
+	if (pid != -1) {
+		int status, w;
+		w = waitpid(pid, &status, 0);
+		if (w == -1)
+			log_err("waitpid() errno = %d\n", errno);
+		if (WIFEXITED(status) && WEXITSTATUS(status))
+			path->proxy_conn_is_down = 1;
+	}
+}
+
 /*
  * CAUTION this modifies global static char * config_file!
  */
 int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 {
 	struct deferred_cmd *dcmd = NULL;
-	char config_file_dummy[250];
 	struct d_resource* running;
 	struct volumes empty = STAILQ_HEAD_INITIALIZER(empty);
 	struct d_volume *vol;
@@ -1052,14 +1092,13 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 	 * clean them from the proxy. */
 	if (running) {
 		char *fake_drbd_proxy_ctl = getenv("FAKE_DRBD_PROXY_CTL");
+		char *fake_drbd_proxy_ctl_old = getenv("FAKE_DRBD_PROXY_CTL_OLD");
 		struct connection *conn;
 		for_each_connection(conn, &running->connections) {
 			struct connection *configured_conn = NULL;
 			struct path *configured_path;
-			struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
-			struct cfg_ctx tmp_ctx = { .cmd = ctx->cmd, .res = ctx->res };
-			char *show_conn;
-			int pid = -1;
+			struct path *path = STAILQ_FIRST(&conn->paths);
+			char *proxy_conn_name, *old_proxy_conn_name;
 
 			if (!path)
 				continue;
@@ -1070,41 +1109,20 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 			if (!configured_path->peer_proxy)
 				continue;
 
-			tmp_ctx.conn = configured_conn;
+			proxy_conn_name = proxy_connection_name(ctx->res, configured_conn);
+			old_proxy_conn_name = old_proxy_connection_name(ctx->res, configured_conn);
 
-			line = 1;
-			m_asprintf(&show_conn, "show proxy-settings %s", proxy_connection_name(tmp_ctx.res, configured_conn));
-			sprintf(config_file_dummy, "drbd-proxy-ctl -c '%s'", show_conn);
-			config_file = config_file_dummy;
+			/* Try new name first */
+			parse_proxy_settings(path, proxy_conn_name, fake_drbd_proxy_ctl);
 
-			if (fake_drbd_proxy_ctl) {
-				yyin = fopen(fake_drbd_proxy_ctl, "r");
-				if (!yyin) {
-					log_err("Failed to open FAKE_DRBD_PROXY_CTL %s\n", fake_drbd_proxy_ctl);
-					exit(E_USAGE);
-				}
+			if (!path->proxy_conn_is_down) {
+				configured_path->running_proxy_conn_name = strdup(proxy_conn_name);
 			} else {
-				int argc;
-				const char *argv[20];
+				/* Fall back to old name for transition compatibility */
+				parse_proxy_settings(path, old_proxy_conn_name, fake_drbd_proxy_ctl_old);
 
-				argc=0;
-				argv[argc++]=drbd_proxy_ctl;
-				argv[argc++]="-c";
-				argv[argc++]=show_conn;
-				argv[argc++]=0;
-
-				yyin = m_popen(&pid, argv);
-			}
-			path->proxy_conn_is_down = parse_proxy_options_section(&path->my_proxy);
-			fclose(yyin);
-			if (pid != -1) {
-				int status, w;
-				w = waitpid(pid, &status, 0);
-				if (w == -1)
-					log_err("waitpid() errno = %d\n", errno);
-
-				if (WIFEXITED(status) && WEXITSTATUS(status))
-					path->proxy_conn_is_down = 1;
+				if (!path->proxy_conn_is_down)
+					configured_path->running_proxy_conn_name = strdup(old_proxy_conn_name);
 			}
 		}
 	}

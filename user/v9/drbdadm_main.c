@@ -2139,7 +2139,7 @@ void free_opt(struct d_option *item)
 	free(item);
 }
 
-int _proxy_connect_name_len(const struct d_resource *res, const struct connection *conn)
+int _old_proxy_connect_name_len(const struct d_resource *res, const struct connection *conn)
 {
 	struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
 	return (conn->name ? strlen(conn->name) : strlen(res->name)) +
@@ -2148,13 +2148,43 @@ int _proxy_connect_name_len(const struct d_resource *res, const struct connectio
 		3 /* for the two dashes and the trailing 0 character */;
 }
 
-char *_proxy_connection_name(char *conn_name, const struct d_resource *res, const struct connection *conn)
+char *_old_proxy_connection_name(char *conn_name, const struct d_resource *res, const struct connection *conn)
 {
 	struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
 	sprintf(conn_name, "%s-%s-%s",
 		conn->name ?: res->name,
 		names_to_str_c(&path->peer_proxy->on_hosts, '_'),
 		names_to_str_c(&path->my_proxy->on_hosts, '_'));
+	return conn_name;
+}
+
+int _proxy_connect_name_len(const struct d_resource *res, const struct connection *conn)
+{
+	struct path *path = STAILQ_FIRST(&conn->paths);
+	struct hname_address *h;
+	int len = (conn->name ? strlen(conn->name) : strlen(res->name)) +
+		3 /* for the two dashes and the trailing 0 character */;
+	STAILQ_FOREACH(h, &path->hname_address_pairs, link)
+		len += strlen(names_to_str_c(&h->host_info->on_hosts, '_'));
+	return len;
+}
+
+char *_proxy_connection_name(char *conn_name, const struct d_resource *res, const struct connection *conn)
+{
+	struct path *path = STAILQ_FIRST(&conn->paths);
+	struct hname_address *h;
+	char *inside_name = NULL, *outside_name = NULL;
+	STAILQ_FOREACH(h, &path->hname_address_pairs, link) {
+		if (h->used_as_me)
+			inside_name = names_to_str_c(&h->host_info->on_hosts, '_');
+		else
+			outside_name = names_to_str_c(&h->host_info->on_hosts, '_');
+	}
+	assert(inside_name != NULL);
+	assert(outside_name != NULL);
+	sprintf(conn_name, "%s-%s-%s",
+		conn->name ?: res->name,
+		outside_name, inside_name);
 	return conn_name;
 }
 
@@ -2264,16 +2294,25 @@ static int do_proxy_conn_down(const struct cfg_ctx *ctx)
 	struct d_resource *res = ctx->res;
 	struct connection *conn = ctx->conn;
 	struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
-	char *conn_name;
+	char *conn_name, *old_conn_name;
 	const char *argv[4] = { drbd_proxy_ctl, "-c", NULL, NULL};
+	int rv;
 
 	if (!path->my_proxy || !path->peer_proxy)
 		return 0;
 
 	conn_name = proxy_connection_name(ctx->res, conn);
 	argv[2] = ssprintf("del connection %s", conn_name);
+	rv = m_system_ex(argv, SLEEPS_SHORT, res->name);
 
-	return m_system_ex(argv, SLEEPS_SHORT, res->name);
+	/* Also delete old-scheme name for transition compatibility */
+	old_conn_name = old_proxy_connection_name(ctx->res, conn);
+	if (strcmp(old_conn_name, conn_name) != 0) {
+		argv[2] = ssprintf("del connection %s", old_conn_name);
+		m_system_ex(argv, SLEEPS_SHORT, res->name);
+	}
+
+	return rv;
 }
 
 static int check_proxy(const struct cfg_ctx *ctx, int do_up)
