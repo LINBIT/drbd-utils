@@ -1051,6 +1051,7 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 	 * settings from the config file without prior proxy-down, this won't
 	 * clean them from the proxy. */
 	if (running) {
+		char *fake_drbd_proxy_ctl = getenv("FAKE_DRBD_PROXY_CTL");
 		struct connection *conn;
 		for_each_connection(conn, &running->connections) {
 			struct connection *configured_conn = NULL;
@@ -1058,8 +1059,7 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 			struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
 			struct cfg_ctx tmp_ctx = { .cmd = ctx->cmd, .res = ctx->res };
 			char *show_conn;
-			int pid, argc, status, w;
-			const char *argv[20];
+			int pid = -1;
 
 			if (!path)
 				continue;
@@ -1077,23 +1077,35 @@ int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 			sprintf(config_file_dummy, "drbd-proxy-ctl -c '%s'", show_conn);
 			config_file = config_file_dummy;
 
-			argc=0;
-			argv[argc++]=drbd_proxy_ctl;
-			argv[argc++]="-c";
-			argv[argc++]=show_conn;
-			argv[argc++]=0;
+			if (fake_drbd_proxy_ctl) {
+				yyin = fopen(fake_drbd_proxy_ctl, "r");
+				if (!yyin) {
+					log_err("Failed to open FAKE_DRBD_PROXY_CTL %s\n", fake_drbd_proxy_ctl);
+					exit(E_USAGE);
+				}
+			} else {
+				int argc;
+				const char *argv[20];
 
-			/* actually parse "drbd-proxy-ctl show" output */
-			yyin = m_popen(&pid, argv);
+				argc=0;
+				argv[argc++]=drbd_proxy_ctl;
+				argv[argc++]="-c";
+				argv[argc++]=show_conn;
+				argv[argc++]=0;
+
+				yyin = m_popen(&pid, argv);
+			}
 			path->proxy_conn_is_down = parse_proxy_options_section(&path->my_proxy);
 			fclose(yyin);
+			if (pid != -1) {
+				int status, w;
+				w = waitpid(pid, &status, 0);
+				if (w == -1)
+					log_err("waitpid() errno = %d\n", errno);
 
-			w = waitpid(pid, &status, 0);
-			if (w == -1)
-				log_err("waitpid() errno = %d\n", errno);
-
-			if (WIFEXITED(status) && WEXITSTATUS(status))
-				path->proxy_conn_is_down = 1;
+				if (WIFEXITED(status) && WEXITSTATUS(status))
+					path->proxy_conn_is_down = 1;
+			}
 		}
 	}
 

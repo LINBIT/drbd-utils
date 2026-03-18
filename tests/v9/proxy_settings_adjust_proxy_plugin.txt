@@ -1,0 +1,6 @@
+proxy {
+    memlimit 128M;
+    plugin {
+        zstd level 9;
+    }
+}
