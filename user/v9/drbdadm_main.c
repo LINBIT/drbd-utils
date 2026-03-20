@@ -1639,7 +1639,7 @@ int _adm_drbdmeta(const struct cfg_ctx *ctx, int flags, char *argument)
 		char sep = '=';
 		char *pos = diskful_peers;
 		int len;
-		len = snprintf(pos, pos - diskful_peers + sizeof(diskful_peers), "--diskful-peers");
+		len = snprintf(pos, sizeof(diskful_peers) - (pos - diskful_peers), "--diskful-peers");
 		assert(len > 0 && pos + len < diskful_peers + sizeof(diskful_peers));
 		pos += len;
 		for_each_connection(conn, &ctx->res->connections) {
@@ -1651,7 +1651,7 @@ int _adm_drbdmeta(const struct cfg_ctx *ctx, int flags, char *argument)
 			STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
 				if (peer_device->vnr == vol->vnr) {
 					if (!peer_diskless(peer_device)) {
-						len = snprintf(pos, pos - diskful_peers + sizeof(diskful_peers),
+						len = snprintf(pos, sizeof(diskful_peers) - (pos - diskful_peers),
 								"%c%s", sep, conn->peer->node_id);
 						assert(len > 0 && pos + len < diskful_peers + sizeof(diskful_peers));
 						pos += len;
