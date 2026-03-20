@@ -16,6 +16,7 @@
 /usr/s?bin/drbdsetup	--	gen_context(system_u:object_r:drbd_exec_t,s0)
 
 /var/lib/drbd(/.*)?	gen_context(system_u:object_r:drbd_var_lib_t,s0)
+/var/lib/linstor\.d(/.*)?	gen_context(system_u:object_r:drbd_var_lib_t,s0)
 
 /var/lock/subsys/drbd	--	gen_context(system_u:object_r:drbd_lock_t,s0)
 /run/lock/subsys/drbd	--	gen_context(system_u:object_r:drbd_lock_t,s0)
