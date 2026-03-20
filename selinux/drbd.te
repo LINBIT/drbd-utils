@@ -45,6 +45,7 @@ require {
 	class netlink_generic_socket create_socket_perms;
 	class unix_stream_socket all_unix_stream_socket_perms;
 	class system module_request;
+	class process { noatsecure rlimitinh siginh };
 }
 
 #============= drbd_t ==============
@@ -76,6 +77,10 @@ files_tmp_filetrans(drbd_t, drbd_tmp_t, {file dir})
 kernel_domtrans_to(drbd_t, drbd_exec_t)
 kernel_read_system_state(drbd_t)
 kernel_load_module(drbd_t)
+
+# Allow kernel to transition to drbd_t when calling usermode helpers
+# (call_usermodehelper for before-resync-source, fence-peer, etc.)
+allow kernel_t drbd_t:process { noatsecure rlimitinh siginh };
 
 auth_use_nsswitch(drbd_t)
 
