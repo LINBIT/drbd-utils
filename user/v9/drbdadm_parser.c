@@ -548,7 +548,7 @@ static void pe_options(struct context_def *options_def)
 
 	assert(size >= 3);
 
-	buffer = alloca(size);
+	buffer = alloca(size + 1);
 	p = buffer;
 	for (field = options_def->fields; field->name; field++)
 		p += sprintf(p, "%s | ", field->name);
