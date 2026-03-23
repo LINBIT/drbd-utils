@@ -838,8 +838,6 @@ static struct deferred_cmd *adjust_conn(const struct cfg_ctx *ctx, struct d_reso
 		if (connect) {
 			dcmd = adj_schedule_deferred_cmd(&connect_cmd, &tmp_ctx, dcmd, 0);
 			dcmd = adj_schedule_deferred_cmd(&wait_c_adj_cmd, &tmp_ctx, dcmd, 0);
-		} else {
-			dcmd = NULL;
 		}
 
 		path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */

@@ -1,0 +1,20 @@
+# When swapping a tiebreaker (removing one peer and adding another),
+# del-peer must run AFTER connect, not before. Otherwise, if the connect fails
+# (e.g. quorum constraints), the resource is left in a quorum-deadlocked state
+# that cannot self-heal.
+#
+# The bug triggers when a Connected peer that needs no changes is processed
+# by adjust_conn(C_CONNECTED), which resets the dependency chain (dcmd=NULL).
+# This causes the subsequent del-peer to have no dependency on the new peer's
+# connect, so it runs first at CFG_NET_PREP_DOWN before CFG_NET_CONNECT.
+#
+# Running state: peer0 (node-id 0) Connecting, peer2 (node-id 2) Connected
+# Desired state: peer2 (node-id 2) keep, peer3 (node-id 3) new, peer0 removed
+#
+# Expected: new-peer/connect for peer3 BEFORE del-peer for peer0
+$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_tiebreaker_swap.txt ./drbdadm -c ./adjust_tiebreaker_swap.res adjust -d r0 2>/dev/null
+drbdsetup new-peer r0 3 --_name=peer3
+drbdsetup new-path r0 3 ipv4:10.36.50.13:7791 ipv4:10.36.50.11:7791
+drbdsetup connect r0 3
+drbdsetup wait-connect-connection r0 3 --wfc-timeout 1 --degr-wfc-timeout 1 --outdated-wfc-timeout 1
+drbdsetup del-peer r0 0
