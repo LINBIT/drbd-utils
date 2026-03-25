@@ -429,6 +429,7 @@ static struct adm_cmd create_md_cmd = {"create-md", adm_create_md, &create_md_ct
 static struct adm_cmd show_gi_cmd = {"show-gi", adm_setup_and_meta, &forceable_ctx, ACF1_PEER_DEVICE .disk_required = 1};
 static struct adm_cmd get_gi_cmd = {"get-gi", adm_setup_and_meta, &forceable_ctx, ACF1_PEER_DEVICE .disk_required = 1};
 static struct adm_cmd dump_md_cmd = {"dump-md", adm_drbdmeta, &forceable_ctx, ACF1_MINOR_ONLY };
+static struct adm_cmd dump_superblock_cmd = {"dump-superblock", adm_drbdmeta, &dump_superblock_ctx, ACF1_MINOR_ONLY };
 static struct adm_cmd wipe_md_cmd = {"wipe-md", adm_drbdmeta, &forceable_ctx, ACF1_MINOR_ONLY };
 static struct adm_cmd apply_al_cmd = {"apply-al", adm_drbdmeta, &forceable_ctx, ACF1_MINOR_ONLY };
 static struct adm_cmd forget_peer_cmd = {"forget-peer", adm_forget_peer, &forceable_ctx, ACF1_DISCONNECT };
@@ -528,6 +529,7 @@ struct adm_cmd *cmds[] = {
 	&show_gi_cmd,
 	&get_gi_cmd,
 	&dump_md_cmd,
+	&dump_superblock_cmd,
 	&wipe_md_cmd,
 	&apply_al_cmd,
 	&forget_peer_cmd,
@@ -1627,6 +1629,8 @@ int _adm_drbdmeta(const struct cfg_ctx *ctx, int flags, char *argument)
 	argv[NA(argc)] = ctx->cmd->name;
 	if (argument)
 		argv[NA(argc)] = argument;
+	if (!strcmp(ctx->cmd->name, "dump-superblock") && !find_backend_option("--output-format"))
+		argv[NA(argc)] = "--output-format=json";
 	add_setup_options(argv, &argc, ctx->cmd->drbdsetup_ctx);
 
 	/* For create-md, if effective-size is set,

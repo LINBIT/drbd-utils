@@ -1306,6 +1306,13 @@ struct context_def forceable_ctx = {
 		{ } },
 };
 
+struct context_def dump_superblock_ctx = {
+       .fields = {
+		{ .name = "force", .argument_is_optional = true },
+		{ .name = "output-format", .argument_is_optional = false },
+		{ } },
+};
+
 struct context_def adjust_ctx = {
 	.fields = {
 		{ "skip-disk", .argument_is_optional = true },

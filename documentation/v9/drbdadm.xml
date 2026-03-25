@@ -477,6 +477,26 @@
       </varlistentry>
 
       <varlistentry>
+        <term>dump-superblock
+	  <arg choice="req" rep="norepeat"><replaceable>device</replaceable></arg>
+	</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>dump-superblock</secondary>
+	  </indexterm> Dump the raw superblock of a device's DRBD metadata.
+	  The default output format is JSON; pass
+	  <option>--output-format=<replaceable>binary</replaceable></option> or
+	  <option>--output-format=<replaceable>hex</replaceable></option>
+	  to select a different format.  See <citerefentry>
+	    <refentrytitle>drbdmeta</refentrytitle> <manvolnum>8</manvolnum>
+	</citerefentry> for details.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term>get-gi
 	  <arg choice="req" rep="norepeat"><replaceable>peer_device</replaceable></arg>
 	</term>
