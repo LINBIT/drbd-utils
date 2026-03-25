@@ -732,7 +732,7 @@ const struct adm_cmd *deferred_cmd(const struct deferred_cmd *dcmd)
 	return dcmd ? dcmd->ctx.cmd : NULL;
 }
 
-enum on_error { KEEP_RUNNING, EXIT_ON_FAIL };
+enum on_error { KEEP_RUNNING, EXIT_ON_FAIL, SKIP_MISSING_DISK };
 static int __call_cmd_fn(const struct cfg_ctx *ctx, enum on_error on_error)
 {
 	struct d_volume *vol = ctx->vol;
@@ -743,6 +743,8 @@ static int __call_cmd_fn(const struct cfg_ctx *ctx, enum on_error on_error)
 
 	if (ctx->cmd->disk_required &&
 	    (!vol->disk || !vol->meta_disk || !vol->meta_index)) {
+		if (on_error == SKIP_MISSING_DISK)
+			return 0;
 		rv = 10;
 		log_err("The %s command requires a local disk, but the configuration gives none.\n",
 		    ctx->cmd->name);
@@ -761,7 +763,7 @@ static int __call_cmd_fn(const struct cfg_ctx *ctx, enum on_error on_error)
 			tmp_ctx.path = path;
 			rv = tmp_ctx.cmd->function(&tmp_ctx);
 			if (rv >= 20) {
-				if (on_error == EXIT_ON_FAIL)
+				if (on_error != KEEP_RUNNING)
 					exit(rv);
 			}
 
@@ -769,7 +771,7 @@ static int __call_cmd_fn(const struct cfg_ctx *ctx, enum on_error on_error)
 	} else {
 		rv = ctx->cmd->function(ctx);
 		if (rv >= 20) {
-			if (on_error == EXIT_ON_FAIL)
+			if (on_error != KEEP_RUNNING)
 				exit(rv);
 		}
 	}
@@ -3839,7 +3841,7 @@ int main(int argc, char **argv)
 					continue;
 				ctx.res = res;
 				ctx.vol = NULL;
-				r = call_cmd(cmd, &ctx, EXIT_ON_FAIL);	/* does exit for r >= 20! */
+				r = call_cmd(cmd, &ctx, SKIP_MISSING_DISK);	/* does exit for r >= 20! */
 				/* this super positioning of return values is soo ugly
 				 * anyone any better idea? */
 				if (r > rv)
