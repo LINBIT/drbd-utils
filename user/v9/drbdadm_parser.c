@@ -684,6 +684,11 @@ static void __parse_options(struct options *options,
 			 * That really should not happen.
 			 */
 			field_def = find_field(&no_prefix, options_def, yytext);
+			/* But maybe it would have been in one of the "delegate" contexts?
+			 * HACK. Needs a better solution than us guessing.
+			 */
+			if (!field_def)
+				field_def = find_field(&no_prefix, &device_options_ctx, yytext);
 			if (!field_def) {
 				char *s = yytext;
 				log_err("%s:%u: Parse error(ignored): '_unknown %.40s%s', but I don't know about it either.\n",
