@@ -109,7 +109,12 @@
 	  <arg choice="opt" rep="norepeat"><option>--initialize-bitmap=</option><replaceable>{automatic|zeroout|pwrite|skip}</replaceable></arg>
 	  <arg choice="opt" rep="norepeat"><option>--al-stripes=</option><replaceable>val</replaceable></arg>
 	  <arg choice="opt" rep="norepeat"><option>--al-stripe-size-kB=</option><replaceable>val</replaceable></arg> (metadata version v09)
-	  <arg choice="opt" rep="norepeat"><option>--bitmap-block-size=</option><replaceable>val</replaceable></arg></term>
+	  <arg choice="opt" rep="norepeat"><option>--bitmap-block-size=</option><replaceable>val</replaceable></arg>
+	  <arg choice="opt" rep="norepeat"><option>--initial-current-uuid=</option><replaceable>{generate|&lt;hex&gt;}</replaceable></arg>
+	  <arg choice="opt" rep="norepeat"><option>--consistent</option></arg>
+	  <arg choice="opt" rep="norepeat"><option>--uptodate</option></arg>
+	  <arg choice="opt" rep="norepeat"><option>--peers-outdated</option></arg>
+	  <arg choice="opt" rep="norepeat"><option>--rotate-uuids</option></arg></term>
         <listitem>
 	  <para><indexterm
 	      significance="normal"><primary>drbdmeta</primary><secondary>create-md</secondary></indexterm>
@@ -174,6 +179,45 @@
 	    modified block up to a complete bitmap block for change tracking,
 	    and later resync.
 	  </para>
+  <para>
+    The following options are available for metadata version v09 only.
+    They are intended for use when pre-provisioning metadata without an initial full sync.
+  </para>
+  <para>
+    <option>--initial-current-uuid=</option><replaceable>{generate|&lt;hex&gt;}</replaceable>
+    sets the initial <literal>current_uuid</literal> instead of leaving
+    it at the sentinel value <literal>UUID_JUST_CREATED</literal>.
+    Use <option>generate</option> to let <command>drbdmeta</command>
+    pick a random value, or supply an explicit 64-bit hex value.
+    Bit 0 is silently cleared (it is reserved by the DRBD module);
+    the resulting value must not be zero.
+  </para>
+  <para>
+    <option>--consistent</option> sets the
+    <literal>MDF_CONSISTENT</literal> flag on the local device,
+    indicating that its data is consistent.
+    If no <option>--initial-current-uuid</option> is given, a random
+    UUID is generated automatically.
+  </para>
+  <para>
+    <option>--uptodate</option> sets both
+    <literal>MDF_CONSISTENT</literal> and
+    <literal>MDF_WAS_UP_TO_DATE</literal> on the local device,
+    marking it as the authoritative copy.
+    If no <option>--initial-current-uuid</option> is given, a random
+    UUID is generated automatically.
+  </para>
+  <para>
+    <option>--peers-outdated</option> sets
+    <literal>MDF_PEER_OUTDATED</literal> on every peer slot.
+  </para>
+  <para>
+    <option>--rotate-uuids</option> performs a UUID rotation: the
+    current UUID (which will be generated if not provided using <option>--initial-current-uuid</option>)
+    is written into every peer's <literal>bitmap_uuid</literal> slot and
+    into <literal>history_uuids[0]</literal>, and a fresh random value
+    becomes the new <literal>current_uuid</literal>.
+  </para>
         </listitem>
       </varlistentry>
       <varlistentry>

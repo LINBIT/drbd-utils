@@ -1,0 +1,53 @@
+## Tests for the create-md UUID control options added for pre-provisioning:
+## --initial-current-uuid, --consistent, --uptodate, --peers-outdated, --rotate-uuids
+##
+## Part 1: drbdadm passes the options through to drbdmeta (dry-run, uses man.res).
+## Part 2: drbdmeta applies them correctly (direct invocation, no .res needed).
+
+$ __DRBD_NODE__=undertest drbdadm -d -c ./man.res create-md --force --consistent r0/0 2>/dev/null
+drbdmeta 1 v09 /dev/sda7 internal create-md 1 --force --consistent
+$ __DRBD_NODE__=undertest drbdadm -d -c ./man.res create-md --force --uptodate r0/0 2>/dev/null
+drbdmeta 1 v09 /dev/sda7 internal create-md 1 --force --uptodate
+$ __DRBD_NODE__=undertest drbdadm -d -c ./man.res create-md --force --peers-outdated r0/0 2>/dev/null
+drbdmeta 1 v09 /dev/sda7 internal create-md 1 --force --peers-outdated
+$ __DRBD_NODE__=undertest drbdadm -d -c ./man.res create-md --force --rotate-uuids r0/0 2>/dev/null
+drbdmeta 1 v09 /dev/sda7 internal create-md 1 --force --rotate-uuids
+$ __DRBD_NODE__=undertest drbdadm -d -c ./man.res create-md --force --initial-current-uuid=deadbeefcafe1234 r0/0 2>/dev/null
+drbdmeta 1 v09 /dev/sda7 internal create-md 1 --force --initial-current-uuid=deadbeefcafe1234
+$ img=$(mktemp)
+$ truncate -s 128m $img
+$ drbdmeta --force - v09 $img internal create-md --initial-current-uuid deadbeefcafe1234 1 >/dev/null 2>&1; echo $?
+0
+$ drbdmeta --force - v09 $img internal dump-superblock --output json 2>/dev/null | jq -r '.current_uuid'
+0xDEADBEEFCAFE1234
+$ drbdmeta --force - v09 $img internal create-md --initial-current-uuid generate 1 >/dev/null 2>&1; echo $?
+0
+$ drbdmeta --force - v09 $img internal dump-superblock --output json 2>/dev/null | jq -e '(.current_uuid == "0x0000000000000000" or .current_uuid == "0x0000000000000004") | not'
+true
+$ drbdmeta --force - v09 $img internal create-md --initial-current-uuid 0 1 2>&1 | grep "must not"
+--initial-current-uuid: value must not be zero
+$ drbdmeta --force - v09 $img internal create-md --consistent 1 >/dev/null 2>&1; echo $?
+0
+$ drbdmeta --force - v09 $img internal dump-superblock --output json 2>/dev/null | jq -r '.flags'
+0x00000081
+$ drbdmeta --force - v09 $img internal dump-superblock --output json 2>/dev/null | jq -e '(.current_uuid == "0x0000000000000000" or .current_uuid == "0x0000000000000004") | not'
+true
+$ drbdmeta --force - v09 $img internal create-md --uptodate 1 >/dev/null 2>&1; echo $?
+0
+$ drbdmeta --force - v09 $img internal dump-superblock --output json 2>/dev/null | jq -r '.flags'
+0x00000091
+$ drbdmeta --force - v09 $img internal dump-superblock --output json 2>/dev/null | jq -e '(.current_uuid == "0x0000000000000000" or .current_uuid == "0x0000000000000004") | not'
+true
+$ drbdmeta --force - v09 $img internal create-md --peers-outdated 1 >/dev/null 2>&1; echo $?
+0
+$ drbdmeta --force - v09 $img internal dump-superblock --output json 2>/dev/null | jq -r '[.peers[].flags] | unique | .[]'
+0x00000002
+$ drbdmeta --force - v09 $img internal create-md --rotate-uuids 1 >/dev/null 2>&1; echo $?
+0
+$ drbdmeta --force - v09 $img internal dump-superblock --output json 2>/dev/null | jq -e '(.peers | map(.bitmap_uuid) | unique | length == 1) and (.peers[0].bitmap_uuid == .history_uuids[0]) and (.current_uuid == .peers[0].bitmap_uuid | not)'
+true
+$ drbdmeta --force - v09 $img internal create-md --initial-current-uuid deadbeefcafe1234 --rotate-uuids 1 >/dev/null 2>&1; echo $?
+0
+$ drbdmeta --force - v09 $img internal dump-superblock --output json 2>/dev/null | jq -e '(.peers | map(.bitmap_uuid) | unique == ["0xDEADBEEFCAFE1234"]) and (.history_uuids[0] == "0xDEADBEEFCAFE1234") and (.current_uuid == "0xDEADBEEFCAFE1234" | not)'
+true
+$ rm $img

@@ -1297,6 +1297,11 @@ struct context_def create_md_ctx = {
 		{ .name = "effective-size", .argument_is_optional = false },
 		{ .name = "bitmap-block-size", .argument_is_optional = false },
 		{ .name = "diskful-peers", .argument_is_optional = false },
+		{ .name = "initial-current-uuid", .argument_is_optional = false },
+		{ .name = "consistent", .argument_is_optional = true },
+		{ .name = "uptodate", .argument_is_optional = true },
+		{ .name = "peers-outdated", .argument_is_optional = true },
+		{ .name = "rotate-uuids", .argument_is_optional = true },
 		{ } },
 };
 

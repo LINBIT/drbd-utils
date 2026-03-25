@@ -85,6 +85,25 @@ unsigned option_bm_block_size = 0;
 const char *option_bm_block_size_str = NULL;
 uint64_t option_effective_size = 0;
 uint64_t option_diskful_peer_mask = 0;
+const char *option_initial_current_uuid = NULL;
+bool option_consistent = false;
+bool option_uptodate = false;
+bool option_peers_outdated = false;
+bool option_rotate_uuids = false;
+
+static uint64_t generate_random_uuid(void)
+{
+	int i;
+	for (i = 0; i < 4; i++) {
+		uint64_t val;
+		get_random_bytes(&val, sizeof(val));
+		val &= ~UINT64_C(1); /* bit 0 is reserved by the DRBD module */
+		if (val != 0 && val != UUID_JUST_CREATED)
+			return val;
+	}
+	fprintf(stderr, "Failed to generate a valid random UUID\n");
+	exit(20);
+}
 
 /* for dump-superblock */
 enum {
@@ -125,6 +144,11 @@ struct option metaopt[] = {
     { "bitmap-block-size",  required_argument, NULL, 'B' },
     { "initialize-bitmap",  required_argument, NULL, 'b' },
     { "output-format",  required_argument, NULL, 'o' },
+    { "initial-current-uuid", required_argument, NULL, 1001 },
+    { "consistent", no_argument, NULL, 1002 },
+    { "uptodate", no_argument, NULL, 1003 },
+    { "peers-outdated", no_argument, NULL, 1004 },
+    { "rotate-uuids", no_argument, NULL, 1005 },
     { NULL,     0,              0, 0 },
 };
 
@@ -4963,6 +4987,54 @@ int meta_create_md(struct format *cfg, char **argv, int argc)
 			cfg->md.peers[i].flags |= MDF_PEER_DEVICE_SEEN;
 	}
 
+	if (option_initial_current_uuid) {
+		if (strcmp(option_initial_current_uuid, "generate") == 0) {
+			cfg->md.current_uuid = generate_random_uuid();
+		} else {
+			char *end;
+			cfg->md.current_uuid = strtoull(option_initial_current_uuid, &end, 16);
+			if (*end != '\0') {
+				fprintf(stderr, "--initial-current-uuid: expected 'generate' or a hex value, got '%s'\n",
+					option_initial_current_uuid);
+				exit(10);
+			}
+			cfg->md.current_uuid &= ~UINT64_C(1); /* bit 0 is reserved by the DRBD module */
+			if (cfg->md.current_uuid == 0) {
+				fprintf(stderr, "--initial-current-uuid: value must not be zero\n");
+				exit(10);
+			}
+		}
+	}
+
+	if (option_consistent || option_uptodate) {
+		if (cfg->md.current_uuid == UUID_JUST_CREATED)
+			cfg->md.current_uuid = generate_random_uuid();
+	}
+
+	if (option_consistent)
+		cfg->md.flags |= MDF_CONSISTENT;
+
+	if (option_uptodate)
+		cfg->md.flags |= MDF_CONSISTENT | MDF_WAS_UP_TO_DATE;
+
+	if (option_peers_outdated) {
+		int p;
+		for (p = 0; p < DRBD_NODE_ID_MAX; p++)
+			cfg->md.peers[p].flags |= MDF_PEER_OUTDATED;
+	}
+
+	if (option_rotate_uuids) {
+		uint64_t rotate_val;
+		int p;
+		if (cfg->md.current_uuid == UUID_JUST_CREATED)
+			cfg->md.current_uuid = generate_random_uuid();
+		rotate_val = cfg->md.current_uuid;
+		for (p = 0; p < DRBD_NODE_ID_MAX; p++)
+			cfg->md.peers[p].bitmap_uuid = rotate_val;
+		cfg->md.history_uuids[0] = rotate_val;
+		cfg->md.current_uuid = generate_random_uuid();
+	}
+
 	/* FIXME
 	 * if this converted fixed-size 128MB internal meta data
 	 * to flexible size, we'd need to move the AL and bitmap
@@ -5480,6 +5552,21 @@ static uint64_t node_mask_from_arg(const char *arg)
 	exit(10);
 }
 
+static void require_v09_create_md_option(bool option_set, const char *option_name,
+					  struct format *cfg)
+{
+	if (!option_set)
+		return;
+	if (command->function != &meta_create_md) {
+		fprintf(stderr, "The --%s option is only allowed with create-md\n", option_name);
+		exit(10);
+	}
+	if (!is_v09(cfg)) {
+		fprintf(stderr, "--%s is not supported with '%s'\n", option_name, cfg->ops->name);
+		exit(10);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	struct format *cfg;
@@ -5602,6 +5689,21 @@ int main(int argc, char **argv)
 		    option_bm_block_size_str = optarg;
 		    option_bm_block_size = m_strtoll(optarg, '1') ?: DEFAULT_BM_BLOCK_SIZE;
 		    break;
+	    case 1001:
+		option_initial_current_uuid = optarg;
+		break;
+	    case 1002:
+		option_consistent = true;
+		break;
+	    case 1003:
+		option_uptodate = true;
+		break;
+	    case 1004:
+		option_peers_outdated = true;
+		break;
+	    case 1005:
+		option_rotate_uuids = true;
+		break;
 	    default:
 		print_usage_and_exit();
 		break;
@@ -5721,6 +5823,13 @@ int main(int argc, char **argv)
 		fprintf(stderr, "The -D|--diskful-peers option is only allowed with create-md\n");
 		exit(10);
 	}
+
+	/* The first one is `!!(char*)`; the other are simple bool flags */
+	require_v09_create_md_option(!!option_initial_current_uuid, "initial-current-uuid", cfg);
+	require_v09_create_md_option(option_consistent, "consistent", cfg);
+	require_v09_create_md_option(option_uptodate, "uptodate", cfg);
+	require_v09_create_md_option(option_peers_outdated, "peers-outdated", cfg);
+	require_v09_create_md_option(option_rotate_uuids, "rotate-uuids", cfg);
 
 	/* at some point I'd like to go for this: (16*1024*1024/4) */
 	if ((uint64_t)option_al_stripes * option_al_stripe_size_4k > (buffer_size/4096)) {

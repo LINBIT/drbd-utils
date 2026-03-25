@@ -140,8 +140,8 @@ test/drbdsetup_instrumented: $(drbdsetup-instrumented-test-obj)
 
 .PHONY: test
 ifeq ($(WITH_CLITEST),yes)
-test: drbdadm test/drbdsetup_instrumented
-	cd ../../tests/v9 && ln -sf ../../user/v9/drbdadm . && ln -sf ../../user/v9/test/drbdsetup_instrumented .
+test: drbdadm drbdmeta test/drbdsetup_instrumented
+	cd ../../tests/v9 && ln -sf ../../user/v9/drbdadm . && ln -sf ../../user/v9/drbdmeta . && ln -sf ../../user/v9/test/drbdsetup_instrumented .
 	../../tests/run.sh ../../tests/v9/*.test
 else
 test:
