@@ -55,7 +55,7 @@ else
 DESTDIR ?= /
 endif
 
-CFLAGS += -Wall -I../../drbd-headers -I.. -I.
+CFLAGS += -Wall -I../../drbd-headers -I../../drbd-headers/uapi -I.. -I.
 ifeq ($(WITH_WINDRBD),yes)
 CFLAGS += -I../windrbd-compat-headers -DWINDRBD
 endif

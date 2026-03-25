@@ -17,7 +17,7 @@
 # the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 #
 
-VPATH = ../../drbd-headers:../shared
+VPATH = ../../drbd-headers:../../drbd-headers/linux:../shared
 
 # variables set by configure
 prefix = @prefix@
@@ -62,7 +62,8 @@ else
 DESTDIR ?= /
 endif
 
-CFLAGS += -Wall -I../../drbd-headers -I.. -I. -I../shared
+CFLAGS += -Wall -I../../drbd-headers -I../../drbd-headers/uapi -I.. -I. -I../shared
+
 ifeq ($(WITH_WINDRBD),yes)
 CFLAGS += -I../windrbd-compat-headers -DWINDRBD
 endif
@@ -85,11 +86,11 @@ CFLAGS += $(EXTRA_CFLAGS)
 drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_postparse.o \
 	      drbdadm_main.o drbdadm_adjust.o drbdadm_dump.o drbdtool_common.o \
 	      drbdadm_usage_cnt.o drbd_buildtag.o registry.o config_flags.o \
-	      libnla.o shared_tool.o shared_main.o shared_parser.o \
+	      libnla.o drbd_genl_userspace.o shared_tool.o shared_main.o shared_parser.o \
 	      drbd_strings.o
 
 drbdsetup-core-obj = libnla.o registry.o drbdsetup.o drbdtool_common.o \
-		     drbd_buildtag.o drbd_strings.o config_flags.o \
+		     drbd_buildtag.o drbd_strings.o config_flags.o drbd_genl_userspace.o \
 		     wrap_printf.o drbdsetup_colors.o shared_tool.o \
 		     drbdsetup_events2.o
 

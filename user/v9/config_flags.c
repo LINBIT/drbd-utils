@@ -14,11 +14,9 @@
 #include "libgenl.h"
 #include "linux/drbd.h"
 #include "linux/drbd_config.h"
-#include "linux/drbd_genl_api.h"
+#include "linux/drbd_genl_userspace.h"
 #include "linux/drbd_limits.h"
-#include "drbd_nla.h"
 #include "drbdtool_common.h"
-#include "linux/genl_magic_func.h"
 #include "config_flags.h"
 
 #ifndef ARRAY_SIZE
@@ -26,8 +24,8 @@
 #endif
 
 #define NLA_POLICY(p)									\
-	.nla_policy = p ## _nl_policy,							\
-	.nla_policy_size = ARRAY_SIZE(p ## _nl_policy)
+	.nla_policy = drbd_ ## p ## _nl_policy,							\
+	.nla_policy_size = ARRAY_SIZE(drbd_ ## p ## _nl_policy)
 
 
 struct en_map {
@@ -67,6 +65,14 @@ static bool enum_is_equal(const struct field_def *field, const char *a, const ch
 static int type_of_field(struct context_def *ctx, const struct field_def *field)
 {
 	return ctx->nla_policy[field->nla_type].type;
+}
+
+/* NLA_U32 and NLA_S32 share the same wire format. */
+static bool is_32bit_field(struct context_def *ctx, const struct field_def *field)
+{
+	int type = type_of_field(ctx, field);
+
+	return type == NLA_U32 || type == NLA_S32;
 }
 
 static int len_of_field(struct context_def *ctx, const struct field_def *field)
@@ -229,6 +235,7 @@ static const char *get_numeric(struct context_def *ctx, const struct field_def *
 		l = nla_get_u16(nla);
 		break;
 	case NLA_U32:
+	case NLA_S32:
 		l = nla_get_u32(nla);
 		break;
 	case NLA_U64:
@@ -248,6 +255,7 @@ static const char *get_numeric(struct context_def *ctx, const struct field_def *
 			l = (int16_t)l;
 			break;
 		case NLA_U32:
+		case NLA_S32:
 			l = (int32_t)l;
 			break;
 		case NLA_U64:
@@ -279,6 +287,7 @@ static bool put_numeric(struct context_def *ctx, const struct field_def *field,
 		nla_put_u16(msg, field->nla_type, l);
 		break;
 	case NLA_U32:
+	case NLA_S32:
 		nla_put_u32(msg, field->nla_type, l);
 		break;
 	case NLA_U64:
@@ -409,7 +418,7 @@ static const char *get_enum_num(struct context_def *ctx, const struct field_def 
 {
 	int n;
 
-	assert(type_of_field(ctx, field) == NLA_U32);
+	assert(is_32bit_field(ctx, field));
 	n = nla_get_u32(nla);
 
 	return enum_num_to_string(field, n);
@@ -423,7 +432,7 @@ static bool put_enum_num(struct context_def *ctx, const struct field_def *field,
 	n = enum_num_to_int(field->u.en.map, field->u.en.map_size, value, NULL);
 	if (n == -1)
 		return false;
-	assert(type_of_field(ctx, field) == NLA_U32);
+	assert(is_32bit_field(ctx, field));
 	nla_put_u32(msg, field->nla_type, n);
 	return true;
 }
@@ -726,7 +735,7 @@ static const char *get_key_serial(struct context_def *ctx, const struct field_de
 	int ret;
 	key_serial_t serial;
 
-	assert(type_of_field(ctx, field) == NLA_U32);
+	assert(is_32bit_field(ctx, field));
 	serial = nla_get_u32(nla);
 	if (serial <= 0)
 		return NULL;
@@ -833,24 +842,24 @@ struct field_class fc_key_serial = {
 
 /* ============================================================================================== */
 
-#define ENUM(f, d)									\
-	.nla_type = T_ ## f,								\
-	.ops = &fc_enum,									\
+#define ENUM(a, f, d)									\
+	.nla_type = a,									\
+	.ops = &fc_enum,								\
 	.u = { .e = {									\
 		.map = f ## _map,							\
 		.size = ARRAY_SIZE(f ## _map),						\
 		.def = DRBD_ ## d ## _DEF } }
 
-#define ENUM_NOCASE(f, d)								\
-	.nla_type = T_ ## f,								\
+#define ENUM_NOCASE(a, f, d)								\
+	.nla_type = a,									\
 	.ops = &fc_enum_nocase,								\
 	.u = { .e = {									\
 		.map = f ## _map,							\
 		.size = ARRAY_SIZE(f ## _map),						\
 		.def = DRBD_ ## d ## _DEF } }
 
-#define NUMERIC(f, d)									\
-	.nla_type = T_ ## f,								\
+#define NUMERIC(a, f, d)								\
+	.nla_type = a,									\
 	.ops = &fc_numeric,								\
 	.u = { .n = {									\
 		.min = DRBD_ ## d ## _MIN,						\
@@ -859,31 +868,31 @@ struct field_class fc_key_serial = {
 		.is_signed = F_ ## f ## _IS_SIGNED,					\
 		.scale = DRBD_ ## d ## _SCALE } }
 
-#define BOOLEAN(f, d)									\
-	.nla_type = T_ ## f,								\
+#define BOOLEAN(a, d)									\
+	.nla_type = a,									\
 	.ops = &fc_boolean,								\
 	.u = { .b = {									\
 		.def = DRBD_ ## d ## _DEF } },						\
 	.argument_is_optional = true
 
-#define FLAG(f)										\
-	.nla_type = T_ ## f,								\
+#define FLAG(a)										\
+	.nla_type = a,									\
 	.ops = &fc_flag,								\
 	.u = { .b = {									\
 		.def = false } },							\
 	.argument_is_optional = true
 
-#define STRING(f)									\
-	.nla_type = T_ ## f,								\
+#define STRING(a)									\
+	.nla_type = a,									\
 	.ops = &fc_string,								\
 	.needs_double_quoting = true
 
-#define STRING_MAX_LEN(f, l)								\
-	STRING(f),									\
+#define STRING_MAX_LEN(a, l)								\
+	STRING(a),									\
 	.u = { .s = { .max_len = l } }
 
-#define ENUM_NUM(f, d, num_min, num_max)			\
-	.nla_type = T_ ## f,					\
+#define ENUM_NUM(a, f, d, num_min, num_max)			\
+	.nla_type = a,						\
 	.ops = &fc_enum_num,					\
 	.u = { .en = {						\
 		.map = f ## _map,				\
@@ -892,8 +901,8 @@ struct field_class fc_key_serial = {
 		.max = num_max,					\
 		.def = DRBD_ ## d ## _DEF, } }			\
 
-#define KEY_SERIAL(f, key_type)					\
-	.nla_type = T_ ## f,					\
+#define KEY_SERIAL(a, key_type)					\
+	.nla_type = a,						\
 	.ops = &fc_key_serial,					\
 	.needs_double_quoting = true,				\
 	.u = { .k = {						\
@@ -993,77 +1002,77 @@ const struct en_map quorum_map[] = {
 #define quorum_min_redundancy_map quorum_map
 
 #define CHANGEABLE_DISK_OPTIONS								\
-	{ "on-io-error", ENUM(on_io_error, ON_IO_ERROR) },				\
-	/*{ "fencing", ENUM(fencing_policy, FENCING) },*/				\
-	{ "disk-barrier", BOOLEAN(disk_barrier, DISK_BARRIER) },			\
-	{ "disk-flushes", BOOLEAN(disk_flushes, DISK_FLUSHES) },			\
-	{ "disk-drain", BOOLEAN(disk_drain, DISK_DRAIN) },				\
-	{ "md-flushes", BOOLEAN(md_flushes, MD_FLUSHES) },				\
-	{ "resync-after", NUMERIC(resync_after, MINOR_NUMBER), .checked_in_postparse = true}, \
-	{ "al-extents", NUMERIC(al_extents, AL_EXTENTS), .implicit_clamp = true, },	\
-	{ "al-updates", BOOLEAN(al_updates, AL_UPDATES) },				\
+	{ "on-io-error", ENUM(DRBD_A_DISK_CONF_ON_IO_ERROR, on_io_error, ON_IO_ERROR) },				\
+	/*{ "fencing", ENUM(DRBD_A_NET_CONF_FENCING_POLICY, fencing_policy, FENCING) },*/				\
+	{ "disk-barrier", BOOLEAN(DRBD_A_DISK_CONF_DISK_BARRIER, DISK_BARRIER) },			\
+	{ "disk-flushes", BOOLEAN(DRBD_A_DISK_CONF_DISK_FLUSHES, DISK_FLUSHES) },			\
+	{ "disk-drain", BOOLEAN(DRBD_A_DISK_CONF_DISK_DRAIN, DISK_DRAIN) },				\
+	{ "md-flushes", BOOLEAN(DRBD_A_DISK_CONF_MD_FLUSHES, MD_FLUSHES) },				\
+	{ "resync-after", NUMERIC(DRBD_A_DISK_CONF_RESYNC_AFTER, resync_after, MINOR_NUMBER), .checked_in_postparse = true}, \
+	{ "al-extents", NUMERIC(DRBD_A_DISK_CONF_AL_EXTENTS, al_extents, AL_EXTENTS), .implicit_clamp = true, },	\
+	{ "al-updates", BOOLEAN(DRBD_A_DISK_CONF_AL_UPDATES, AL_UPDATES) },				\
 	{ "discard-zeroes-if-aligned",							\
-		BOOLEAN(discard_zeroes_if_aligned, DISCARD_ZEROES_IF_ALIGNED) },	\
+		BOOLEAN(DRBD_A_DISK_CONF_DISCARD_ZEROES_IF_ALIGNED, DISCARD_ZEROES_IF_ALIGNED) },	\
 	{ "disable-write-same",								\
-		BOOLEAN(disable_write_same, DISABLE_WRITE_SAME) },			\
-	{ "disk-timeout", NUMERIC(disk_timeout,	DISK_TIMEOUT),				\
+		BOOLEAN(DRBD_A_DISK_CONF_DISABLE_WRITE_SAME, DISABLE_WRITE_SAME) },			\
+	{ "disk-timeout", NUMERIC(DRBD_A_DISK_CONF_DISK_TIMEOUT, disk_timeout, DISK_TIMEOUT),				\
 	  .unit = "1/10 seconds" },							\
-	{ "read-balancing", ENUM(read_balancing, READ_BALANCING) },			\
+	{ "read-balancing", ENUM(DRBD_A_DISK_CONF_READ_BALANCING, read_balancing, READ_BALANCING) },			\
 	{ "rs-discard-granularity",							\
-	  NUMERIC(rs_discard_granularity, RS_DISCARD_GRANULARITY),			\
+	  NUMERIC(DRBD_A_DISK_CONF_RS_DISCARD_GRANULARITY, rs_discard_granularity, RS_DISCARD_GRANULARITY),			\
 	  .unit = "bytes" },								\
-	{ "bitmap", BOOLEAN(d_bitmap, BITMAP) }
+	{ "bitmap", BOOLEAN(DRBD_A_DISK_CONF_D_BITMAP, BITMAP) }
 
 #define CHANGEABLE_NET_OPTIONS								\
-	{ "protocol", ENUM_NOCASE(wire_protocol, PROTOCOL) },				\
-	{ "timeout", NUMERIC(timeout, TIMEOUT),						\
+	{ "protocol", ENUM_NOCASE(DRBD_A_NET_CONF_WIRE_PROTOCOL, wire_protocol, PROTOCOL) },				\
+	{ "timeout", NUMERIC(DRBD_A_NET_CONF_TIMEOUT, timeout, TIMEOUT),						\
           .unit = "1/10 seconds" },							\
-	{ "max-epoch-size", NUMERIC(max_epoch_size, MAX_EPOCH_SIZE) },			\
-	{ "connect-int", NUMERIC(connect_int, CONNECT_INT),				\
+	{ "max-epoch-size", NUMERIC(DRBD_A_NET_CONF_MAX_EPOCH_SIZE, max_epoch_size, MAX_EPOCH_SIZE) },			\
+	{ "connect-int", NUMERIC(DRBD_A_NET_CONF_CONNECT_INT, connect_int, CONNECT_INT),				\
           .unit = "seconds" },								\
-	{ "ping-int", NUMERIC(ping_int, PING_INT),					\
+	{ "ping-int", NUMERIC(DRBD_A_NET_CONF_PING_INT, ping_int, PING_INT),					\
           .unit = "seconds" },								\
-	{ "sndbuf-size", NUMERIC(sndbuf_size, SNDBUF_SIZE),				\
+	{ "sndbuf-size", NUMERIC(DRBD_A_NET_CONF_SNDBUF_SIZE, sndbuf_size, SNDBUF_SIZE),				\
           .unit = "bytes" },								\
-	{ "rcvbuf-size", NUMERIC(rcvbuf_size, RCVBUF_SIZE),				\
+	{ "rcvbuf-size", NUMERIC(DRBD_A_NET_CONF_RCVBUF_SIZE, rcvbuf_size, RCVBUF_SIZE),				\
           .unit = "bytes" },								\
-	{ "ko-count", NUMERIC(ko_count, KO_COUNT) },					\
-	{ "allow-two-primaries", BOOLEAN(two_primaries, ALLOW_TWO_PRIMARIES) },		\
-	{ "cram-hmac-alg", STRING_MAX_LEN(cram_hmac_alg, SHARED_SECRET_MAX) },		\
-	{ "shared-secret", STRING_MAX_LEN(shared_secret, SHARED_SECRET_MAX) },		\
-	{ "after-sb-0pri", ENUM(after_sb_0p, AFTER_SB_0P) },				\
-	{ "after-sb-1pri", ENUM(after_sb_1p, AFTER_SB_1P) },				\
-	{ "after-sb-2pri", ENUM(after_sb_2p, AFTER_SB_2P) },				\
-	{ "always-asbp", BOOLEAN(always_asbp, ALWAYS_ASBP) },				\
-	{ "rr-conflict", ENUM(rr_conflict, RR_CONFLICT) },				\
-	{ "ping-timeout", NUMERIC(ping_timeo, PING_TIMEO),				\
+	{ "ko-count", NUMERIC(DRBD_A_NET_CONF_KO_COUNT, ko_count, KO_COUNT) },					\
+	{ "allow-two-primaries", BOOLEAN(DRBD_A_NET_CONF_TWO_PRIMARIES, ALLOW_TWO_PRIMARIES) },		\
+	{ "cram-hmac-alg", STRING_MAX_LEN(DRBD_A_NET_CONF_CRAM_HMAC_ALG, SHARED_SECRET_MAX) },		\
+	{ "shared-secret", STRING_MAX_LEN(DRBD_A_NET_CONF_SHARED_SECRET, SHARED_SECRET_MAX) },		\
+	{ "after-sb-0pri", ENUM(DRBD_A_NET_CONF_AFTER_SB_0P, after_sb_0p, AFTER_SB_0P) },				\
+	{ "after-sb-1pri", ENUM(DRBD_A_NET_CONF_AFTER_SB_1P, after_sb_1p, AFTER_SB_1P) },				\
+	{ "after-sb-2pri", ENUM(DRBD_A_NET_CONF_AFTER_SB_2P, after_sb_2p, AFTER_SB_2P) },				\
+	{ "always-asbp", BOOLEAN(DRBD_A_NET_CONF_ALWAYS_ASBP, ALWAYS_ASBP) },				\
+	{ "rr-conflict", ENUM(DRBD_A_NET_CONF_RR_CONFLICT, rr_conflict, RR_CONFLICT) },				\
+	{ "ping-timeout", NUMERIC(DRBD_A_NET_CONF_PING_TIMEO, ping_timeo, PING_TIMEO),				\
           .unit = "1/10 seconds" },							\
-	{ "data-integrity-alg", STRING_MAX_LEN(integrity_alg, SHARED_SECRET_MAX) },	\
-	{ "tcp-cork", BOOLEAN(tcp_cork, TCP_CORK) },					\
-	{ "on-congestion", ENUM(on_congestion, ON_CONGESTION) },			\
-	{ "congestion-fill", NUMERIC(cong_fill, CONG_FILL),				\
+	{ "data-integrity-alg", STRING_MAX_LEN(DRBD_A_NET_CONF_INTEGRITY_ALG, SHARED_SECRET_MAX) },	\
+	{ "tcp-cork", BOOLEAN(DRBD_A_NET_CONF_TCP_CORK, TCP_CORK) },					\
+	{ "on-congestion", ENUM(DRBD_A_NET_CONF_ON_CONGESTION, on_congestion, ON_CONGESTION) },			\
+	{ "congestion-fill", NUMERIC(DRBD_A_NET_CONF_CONG_FILL, cong_fill, CONG_FILL),				\
           .unit = "bytes" },								\
-	{ "congestion-extents", NUMERIC(cong_extents, CONG_EXTENTS) },			\
-	{ "csums-alg", STRING_MAX_LEN(csums_alg, SHARED_SECRET_MAX) },			\
-	{ "csums-after-crash-only", BOOLEAN(csums_after_crash_only,			\
+	{ "congestion-extents", NUMERIC(DRBD_A_NET_CONF_CONG_EXTENTS, cong_extents, CONG_EXTENTS) },			\
+	{ "csums-alg", STRING_MAX_LEN(DRBD_A_NET_CONF_CSUMS_ALG, SHARED_SECRET_MAX) },			\
+	{ "csums-after-crash-only", BOOLEAN(DRBD_A_NET_CONF_CSUMS_AFTER_CRASH_ONLY, \
 						CSUMS_AFTER_CRASH_ONLY) },		\
-	{ "verify-alg", STRING_MAX_LEN(verify_alg, SHARED_SECRET_MAX) },		\
-	{ "use-rle", BOOLEAN(use_rle, USE_RLE) },					\
-	{ "socket-check-timeout", NUMERIC(sock_check_timeo, SOCKET_CHECK_TIMEO) },	\
-	{ "fencing", ENUM(fencing_policy, FENCING) },					\
-	{ "max-buffers", NUMERIC(max_buffers, MAX_BUFFERS) },				\
-	{ "allow-remote-read", BOOLEAN(allow_remote_read, ALLOW_REMOTE_READ) },		\
-	{ "tls", BOOLEAN(tls, TLS) },							\
-	{ "tls-keyring", KEY_SERIAL(tls_keyring, "keyring") },				\
-	{ "tls-privkey", KEY_SERIAL(tls_privkey, "user") },				\
-	{ "tls-certificate", KEY_SERIAL(tls_certificate, "user") },			\
-	{ "rdma-ctrl-rcvbuf-size", NUMERIC(rdma_ctrl_rcvbuf_size, RDMA_CTRL_RCVBUF_SIZE) }, \
-	{ "rdma-ctrl-sndbuf-size", NUMERIC(rdma_ctrl_sndbuf_size, RDMA_CTRL_SNDBUF_SIZE) }, \
-	{ "_name", STRING_MAX_LEN(name, SHARED_SECRET_MAX) }
+	{ "verify-alg", STRING_MAX_LEN(DRBD_A_NET_CONF_VERIFY_ALG, SHARED_SECRET_MAX) },		\
+	{ "use-rle", BOOLEAN(DRBD_A_NET_CONF_USE_RLE, USE_RLE) },					\
+	{ "socket-check-timeout", NUMERIC(DRBD_A_NET_CONF_SOCK_CHECK_TIMEO, sock_check_timeo, SOCKET_CHECK_TIMEO) },	\
+	{ "fencing", ENUM(DRBD_A_NET_CONF_FENCING_POLICY, fencing_policy, FENCING) },					\
+	{ "max-buffers", NUMERIC(DRBD_A_NET_CONF_MAX_BUFFERS, max_buffers, MAX_BUFFERS) },				\
+	{ "allow-remote-read", BOOLEAN(DRBD_A_NET_CONF_ALLOW_REMOTE_READ, ALLOW_REMOTE_READ) },		\
+	{ "tls", BOOLEAN(DRBD_A_NET_CONF_TLS, TLS) },							\
+	{ "tls-keyring", KEY_SERIAL(DRBD_A_NET_CONF_TLS_KEYRING, "keyring") },				\
+	{ "tls-privkey", KEY_SERIAL(DRBD_A_NET_CONF_TLS_PRIVKEY, "user") },				\
+	{ "tls-certificate", KEY_SERIAL(DRBD_A_NET_CONF_TLS_CERTIFICATE, "user") },			\
+	{ "rdma-ctrl-rcvbuf-size", NUMERIC(DRBD_A_NET_CONF_RDMA_CTRL_RCVBUF_SIZE, rdma_ctrl_rcvbuf_size, RDMA_CTRL_RCVBUF_SIZE) }, \
+	{ "rdma-ctrl-sndbuf-size", NUMERIC(DRBD_A_NET_CONF_RDMA_CTRL_SNDBUF_SIZE, rdma_ctrl_sndbuf_size, RDMA_CTRL_SNDBUF_SIZE) }, \
+	{ "_name", STRING_MAX_LEN(DRBD_A_NET_CONF_NAME, SHARED_SECRET_MAX) }
 
 #define IMMUTABLE_NET_OPTIONS								\
-	{ "transport", STRING_MAX_LEN(transport_name, SHARED_SECRET_MAX) },		\
-	{ "load-balance-paths", BOOLEAN(load_balance_paths, LOAD_BALANCE_PATHS) }
+	{ "transport", STRING_MAX_LEN(DRBD_A_NET_CONF_TRANSPORT_NAME, SHARED_SECRET_MAX) },		\
+	{ "load-balance-paths", BOOLEAN(DRBD_A_NET_CONF_LOAD_BALANCE_PATHS, LOAD_BALANCE_PATHS) }
 
 
 struct context_def disk_options_ctx = {
@@ -1086,7 +1095,7 @@ struct context_def primary_cmd_ctx = {
 	NLA_POLICY(set_role_parms),
 	.nla_type = DRBD_NLA_SET_ROLE_PARMS,
 	.fields = {
-		{ "force", FLAG(force) },
+		{ "force", FLAG(DRBD_A_SET_ROLE_PARMS_FORCE) },
 		{ } },
 };
 
@@ -1094,7 +1103,7 @@ struct context_def secondary_cmd_ctx = {
 	NLA_POLICY(set_role_parms),
 	.nla_type = DRBD_NLA_SET_ROLE_PARMS,
 	.fields = {
-		{ "force", FLAG(force) },
+		{ "force", FLAG(DRBD_A_SET_ROLE_PARMS_FORCE) },
 		{ } },
 };
 
@@ -1102,12 +1111,12 @@ struct context_def attach_cmd_ctx = {
 	NLA_POLICY(disk_conf),
 	.nla_type = DRBD_NLA_DISK_CONF,
 	.fields = {
-		{ "size", NUMERIC(disk_size, DISK_SIZE),
+		{ "size", NUMERIC(DRBD_A_DISK_CONF_DISK_SIZE, disk_size, DISK_SIZE),
 		  .unit = "bytes" },
 		CHANGEABLE_DISK_OPTIONS,
-		/* { "*", STRING(backing_dev) }, */
-		/* { "*", STRING(meta_dev) }, */
-		/* { "*", NUMERIC(meta_dev_idx, MINOR_NUMBER) }, */
+		/* { "*", STRING(DRBD_A_DISK_CONF_BACKING_DEV) }, */
+		/* { "*", STRING(DRBD_A_DISK_CONF_META_DEV) }, */
+		/* { "*", NUMERIC(DRBD_A_DISK_CONF_META_DEV_IDX, meta_dev_idx, MINOR_NUMBER) }, */
 		{ } },
 };
 
@@ -1115,8 +1124,8 @@ struct context_def detach_cmd_ctx = {
 	NLA_POLICY(detach_parms),
 	.nla_type = DRBD_NLA_DETACH_PARMS,
 	.fields = {
-		{ "force", FLAG(force_detach) },
-		{ "diskless", FLAG(intentional_diskless_detach) },
+		{ "force", FLAG(DRBD_A_DETACH_PARMS_FORCE_DETACH) },
+		{ "diskless", FLAG(DRBD_A_DETACH_PARMS_INTENTIONAL_DISKLESS_DETACH) },
 		{ }
 	},
 };
@@ -1137,8 +1146,8 @@ struct context_def path_cmd_ctx = {
 };
 
 #define CONNECT_CMD_OPTIONS					\
-	{ "tentative", FLAG(tentative) },			\
-	{ "discard-my-data", FLAG(discard_my_data) }
+	{ "tentative", FLAG(DRBD_A_CONNECT_PARMS_TENTATIVE) },			\
+	{ "discard-my-data", FLAG(DRBD_A_CONNECT_PARMS_DISCARD_MY_DATA) }
 
 struct context_def connect_cmd_ctx = {
 	NLA_POLICY(connect_parms),
@@ -1161,7 +1170,7 @@ struct context_def disconnect_cmd_ctx = {
 	NLA_POLICY(disconnect_parms),
 	.nla_type = DRBD_NLA_DISCONNECT_PARMS,
 	.fields = {
-		{ "force", FLAG(force_disconnect) },
+		{ "force", FLAG(DRBD_A_DISCONNECT_PARMS_FORCE_DISCONNECT) },
 		{ } },
 };
 
@@ -1169,12 +1178,12 @@ struct context_def resize_cmd_ctx = {
 	NLA_POLICY(resize_parms),
 	.nla_type = DRBD_NLA_RESIZE_PARMS,
 	.fields = {
-		{ "size", NUMERIC(resize_size, DISK_SIZE),
+		{ "size", NUMERIC(DRBD_A_RESIZE_PARMS_RESIZE_SIZE, resize_size, DISK_SIZE),
 		  .unit = "bytes" },
-		{ "assume-peer-has-space", FLAG(resize_force) },
-		{ "assume-clean", FLAG(no_resync) },
-		{ "al-stripes", NUMERIC(al_stripes, AL_STRIPES) },
-		{ "al-stripe-size-kB", NUMERIC(al_stripe_size, AL_STRIPE_SIZE) },
+		{ "assume-peer-has-space", FLAG(DRBD_A_RESIZE_PARMS_RESIZE_FORCE) },
+		{ "assume-clean", FLAG(DRBD_A_RESIZE_PARMS_NO_RESYNC) },
+		{ "al-stripes", NUMERIC(DRBD_A_RESIZE_PARMS_AL_STRIPES, al_stripes, AL_STRIPES) },
+		{ "al-stripe-size-kB", NUMERIC(DRBD_A_RESIZE_PARMS_AL_STRIPE_SIZE, al_stripe_size, AL_STRIPE_SIZE) },
 		{ } },
 };
 
@@ -1182,23 +1191,23 @@ struct context_def resource_options_ctx = {
 	NLA_POLICY(res_opts),
 	.nla_type = DRBD_NLA_RESOURCE_OPTS,
 	.fields = {
-		{ "cpu-mask", STRING_MAX_LEN(cpu_mask, DRBD_CPU_MASK_SIZE) },
-		{ "on-no-data-accessible", ENUM(on_no_data, ON_NO_DATA) },
-		{ "auto-promote", BOOLEAN(auto_promote, AUTO_PROMOTE) },
-		{ "peer-ack-window", NUMERIC(peer_ack_window, PEER_ACK_WINDOW), .unit = "bytes" },
-		{ "peer-ack-delay", NUMERIC(peer_ack_delay, PEER_ACK_DELAY),
+		{ "cpu-mask", STRING_MAX_LEN(DRBD_A_RES_OPTS_CPU_MASK, DRBD_CPU_MASK_SIZE) },
+		{ "on-no-data-accessible", ENUM(DRBD_A_RES_OPTS_ON_NO_DATA, on_no_data, ON_NO_DATA) },
+		{ "auto-promote", BOOLEAN(DRBD_A_RES_OPTS_AUTO_PROMOTE, AUTO_PROMOTE) },
+		{ "peer-ack-window", NUMERIC(DRBD_A_RES_OPTS_PEER_ACK_WINDOW, peer_ack_window, PEER_ACK_WINDOW), .unit = "bytes" },
+		{ "peer-ack-delay", NUMERIC(DRBD_A_RES_OPTS_PEER_ACK_DELAY, peer_ack_delay, PEER_ACK_DELAY),
 		  .unit = "milliseconds" },
-		{ "twopc-timeout", NUMERIC(twopc_timeout, TWOPC_TIMEOUT), .unit = "1/10 seconds" },
-		{ "twopc-retry-timeout", NUMERIC(twopc_retry_timeout, TWOPC_RETRY_TIMEOUT),
+		{ "twopc-timeout", NUMERIC(DRBD_A_RES_OPTS_TWOPC_TIMEOUT, twopc_timeout, TWOPC_TIMEOUT), .unit = "1/10 seconds" },
+		{ "twopc-retry-timeout", NUMERIC(DRBD_A_RES_OPTS_TWOPC_RETRY_TIMEOUT, twopc_retry_timeout, TWOPC_RETRY_TIMEOUT),
 		  .unit = "1/10 seconds" },
-		{ "auto-promote-timeout", NUMERIC(auto_promote_timeout, AUTO_PROMOTE_TIMEOUT),
+		{ "auto-promote-timeout", NUMERIC(DRBD_A_RES_OPTS_AUTO_PROMOTE_TIMEOUT, auto_promote_timeout, AUTO_PROMOTE_TIMEOUT),
 		  .unit = "1/10 seconds"},
-		{ "max-io-depth", NUMERIC(nr_requests, NR_REQUESTS) },
-		{ "quorum", ENUM_NUM(quorum, QUORUM, 1, DRBD_PEERS_MAX) },
-		{ "on-no-quorum", ENUM(on_no_quorum, ON_NO_QUORUM) },
-		{ "quorum-minimum-redundancy", ENUM_NUM(quorum_min_redundancy, QUORUM, 1, DRBD_PEERS_MAX) },
-		{ "on-suspended-primary-outdated", ENUM(on_susp_primary_outdated, ON_SUSP_PRI_OUTD) },
-		{ "drbd8-api-compatibility", BOOLEAN(explicit_drbd8_compat, DRBD8_COMPAT_MODE) },
+		{ "max-io-depth", NUMERIC(DRBD_A_RES_OPTS_NR_REQUESTS, nr_requests, NR_REQUESTS) },
+		{ "quorum", ENUM_NUM(DRBD_A_RES_OPTS_QUORUM, quorum, QUORUM, 1, DRBD_PEERS_MAX) },
+		{ "on-no-quorum", ENUM(DRBD_A_RES_OPTS_ON_NO_QUORUM, on_no_quorum, ON_NO_QUORUM) },
+		{ "quorum-minimum-redundancy", ENUM_NUM(DRBD_A_RES_OPTS_QUORUM_MIN_REDUNDANCY, quorum_min_redundancy, QUORUM, 1, DRBD_PEERS_MAX) },
+		{ "on-suspended-primary-outdated", ENUM(DRBD_A_RES_OPTS_ON_SUSP_PRIMARY_OUTDATED, on_susp_primary_outdated, ON_SUSP_PRI_OUTD) },
+		{ "drbd8-api-compatibility", BOOLEAN(DRBD_A_RES_OPTS_EXPLICIT_DRBD8_COMPAT, DRBD8_COMPAT_MODE) },
 		{ } },
 };
 
@@ -1206,8 +1215,8 @@ struct context_def new_current_uuid_cmd_ctx = {
 	NLA_POLICY(new_c_uuid_parms),
 	.nla_type = DRBD_NLA_NEW_C_UUID_PARMS,
 	.fields = {
-		{ "clear-bitmap", FLAG(clear_bm) },
-		{ "force-resync", FLAG(force_resync) },
+		{ "clear-bitmap", FLAG(DRBD_A_NEW_C_UUID_PARMS_CLEAR_BM) },
+		{ "force-resync", FLAG(DRBD_A_NEW_C_UUID_PARMS_FORCE_RESYNC) },
 		{ } },
 };
 
@@ -1215,9 +1224,9 @@ struct context_def verify_cmd_ctx = {
 	NLA_POLICY(start_ov_parms),
 	.nla_type = DRBD_NLA_START_OV_PARMS,
 	.fields = {
-		{ "start", NUMERIC(ov_start_sector, DISK_SIZE),
+		{ "start", NUMERIC(DRBD_A_START_OV_PARMS_OV_START_SECTOR, ov_start_sector, DISK_SIZE),
 		  .unit = "bytes" },
-		{ "stop", NUMERIC(ov_stop_sector, DISK_SIZE),
+		{ "stop", NUMERIC(DRBD_A_START_OV_PARMS_OV_STOP_SECTOR, ov_stop_sector, DISK_SIZE),
 		  .unit = "bytes" },
 		{ } },
 };
@@ -1226,16 +1235,16 @@ struct context_def device_options_ctx = {
 	NLA_POLICY(device_conf),
 	.nla_type = DRBD_NLA_DEVICE_CONF,
 	.fields = {
-		{ "max-bio-size", NUMERIC(max_bio_size, MAX_BIO_SIZE) },
-		{ "diskless", FLAG(intentional_diskless) },
-		{ "block-size", NUMERIC(block_size, BLOCK_SIZE) },
-		{ "discard-granularity", NUMERIC(discard_granularity, DISCARD_GRANULARITY) },
+		{ "max-bio-size", NUMERIC(DRBD_A_DEVICE_CONF_MAX_BIO_SIZE, max_bio_size, MAX_BIO_SIZE) },
+		{ "diskless", FLAG(DRBD_A_DEVICE_CONF_INTENTIONAL_DISKLESS) },
+		{ "block-size", NUMERIC(DRBD_A_DEVICE_CONF_BLOCK_SIZE, block_size, BLOCK_SIZE) },
+		{ "discard-granularity", NUMERIC(DRBD_A_DEVICE_CONF_DISCARD_GRANULARITY, discard_granularity, DISCARD_GRANULARITY) },
 		{ } },
 };
 
 #define INVALIDATE_OPTIONS									\
-		{ "sync-from-peer-node-id", NUMERIC(sync_from_peer_node_id, SYNC_FROM_NID) },	\
-		{ "reset-bitmap", BOOLEAN(reset_bitmap, INVALIDATE_RESET_BITMAP) },
+		{ "sync-from-peer-node-id", NUMERIC(DRBD_A_INVALIDATE_PARMS_SYNC_FROM_PEER_NODE_ID, sync_from_peer_node_id, SYNC_FROM_NID) },	\
+		{ "reset-bitmap", BOOLEAN(DRBD_A_INVALIDATE_PARMS_RESET_BITMAP, INVALIDATE_RESET_BITMAP) },
 
 struct context_def invalidate_ctx = {
 	NLA_POLICY(invalidate_parms),
@@ -1258,7 +1267,7 @@ struct context_def invalidate_peer_ctx = {
 	NLA_POLICY(invalidate_peer_parms),
 	.nla_type = DRBD_NLA_INVAL_PEER_PARAMS,
 	.fields = {
-		{ "reset-bitmap", BOOLEAN(p_reset_bitmap, INVALIDATE_RESET_BITMAP) },
+		{ "reset-bitmap", BOOLEAN(DRBD_A_INVALIDATE_PEER_PARMS_P_RESET_BITMAP, INVALIDATE_RESET_BITMAP) },
 		{ } },
 };
 
@@ -1266,7 +1275,7 @@ struct context_def suspend_io_ctx = {
 	NLA_POLICY(suspend_io_parms),
 	.nla_type = DRBD_NLA_SUSPEND_IO_PARAMS,
 	.fields = {
-		{ "bdev-freeze", BOOLEAN(bdev_freeze, SUSPEND_IO_BDEV_FREEZE) },
+		{ "bdev-freeze", BOOLEAN(DRBD_A_SUSPEND_IO_PARMS_BDEV_FREEZE, SUSPEND_IO_BDEV_FREEZE) },
 		{ } },
 };
 
@@ -1274,15 +1283,15 @@ struct context_def peer_device_options_ctx = {
 	NLA_POLICY(peer_device_conf),
 	.nla_type = DRBD_NLA_PEER_DEVICE_OPTS,
 	.fields = {
-		{ "resync-rate", NUMERIC(resync_rate, RESYNC_RATE), .unit = "bytes/second" },
-		{ "c-plan-ahead", NUMERIC(c_plan_ahead, C_PLAN_AHEAD), .unit = "1/10 seconds" },
-		{ "c-delay-target", NUMERIC(c_delay_target, C_DELAY_TARGET), .unit = "1/10 seconds" },
-		{ "c-fill-target", NUMERIC(c_fill_target, C_FILL_TARGET), .unit = "bytes" },
-		{ "c-max-rate", NUMERIC(c_max_rate, C_MAX_RATE), .unit = "bytes/second" },
-		{ "c-min-rate", NUMERIC(c_min_rate, C_MIN_RATE), .unit = "bytes/second" },
-		{ "bitmap", BOOLEAN(bitmap, BITMAP) },
-		{ "resync-without-replication", BOOLEAN(resync_without_replication, RESYNC_WITHOUT_REPLICATION) },
-		{ "peer-tiebreaker", BOOLEAN(peer_tiebreaker, PEER_TIEBREAKER) },
+		{ "resync-rate", NUMERIC(DRBD_A_PEER_DEVICE_CONF_RESYNC_RATE, resync_rate, RESYNC_RATE), .unit = "bytes/second" },
+		{ "c-plan-ahead", NUMERIC(DRBD_A_PEER_DEVICE_CONF_C_PLAN_AHEAD, c_plan_ahead, C_PLAN_AHEAD), .unit = "1/10 seconds" },
+		{ "c-delay-target", NUMERIC(DRBD_A_PEER_DEVICE_CONF_C_DELAY_TARGET, c_delay_target, C_DELAY_TARGET), .unit = "1/10 seconds" },
+		{ "c-fill-target", NUMERIC(DRBD_A_PEER_DEVICE_CONF_C_FILL_TARGET, c_fill_target, C_FILL_TARGET), .unit = "bytes" },
+		{ "c-max-rate", NUMERIC(DRBD_A_PEER_DEVICE_CONF_C_MAX_RATE, c_max_rate, C_MAX_RATE), .unit = "bytes/second" },
+		{ "c-min-rate", NUMERIC(DRBD_A_PEER_DEVICE_CONF_C_MIN_RATE, c_min_rate, C_MIN_RATE), .unit = "bytes/second" },
+		{ "bitmap", BOOLEAN(DRBD_A_PEER_DEVICE_CONF_BITMAP, BITMAP) },
+		{ "resync-without-replication", BOOLEAN(DRBD_A_PEER_DEVICE_CONF_RESYNC_WITHOUT_REPLICATION, RESYNC_WITHOUT_REPLICATION) },
+		{ "peer-tiebreaker", BOOLEAN(DRBD_A_PEER_DEVICE_CONF_PEER_TIEBREAKER, PEER_TIEBREAKER) },
 		{ } },
 };
 
@@ -1371,9 +1380,9 @@ struct context_def proxy_options_ctx = {
 		{ "read-loops", .ops = &fc_numeric, .u={.n={.min = 0, .max=-1}}},
 		{ "compression", .ops = &fc_numeric, .u={.n={.min = 0, .max=-1}}},
 		{ "bwlimit", .ops = &fc_numeric, .u={.n={.min = 0, .max=-1}}},
-		{ "sndbuf-size", NUMERIC(sndbuf_size, SNDBUF_SIZE), .unit = "bytes" },
-		{ "rcvbuf-size", NUMERIC(rcvbuf_size, RCVBUF_SIZE), .unit = "bytes" },
-		{ "ping-timeout", NUMERIC(ping_timeo, PING_TIMEO), .unit = "1/10 seconds" },
+		{ "sndbuf-size", NUMERIC(DRBD_A_NET_CONF_SNDBUF_SIZE, sndbuf_size, SNDBUF_SIZE), .unit = "bytes" },
+		{ "rcvbuf-size", NUMERIC(DRBD_A_NET_CONF_RCVBUF_SIZE, rcvbuf_size, RCVBUF_SIZE), .unit = "bytes" },
+		{ "ping-timeout", NUMERIC(DRBD_A_NET_CONF_PING_TIMEO, ping_timeo, PING_TIMEO), .unit = "1/10 seconds" },
 		{ } },
 };
 
@@ -1401,45 +1410,45 @@ struct context_def wildcard_ctx = {
 
 #ifdef WITH_84_SUPPORT
 struct field_def attach_compat_84_fields[] = {
-	{ "fencing", ENUM(fencing_policy, FENCING) },
-	{ "resync-rate", NUMERIC(resync_rate, RESYNC_RATE), .unit = "bytes/second" },
-	{ "c-plan-ahead", NUMERIC(c_plan_ahead, C_PLAN_AHEAD), .unit = "1/10 seconds" },
-	{ "c-delay-target", NUMERIC(c_delay_target, C_DELAY_TARGET), .unit = "1/10 seconds" },
-	{ "c-fill-target", NUMERIC(c_fill_target, C_FILL_TARGET), .unit = "bytes" },
-	{ "c-max-rate", NUMERIC(c_max_rate, C_MAX_RATE), .unit = "bytes/second" },
-	{ "c-min-rate", NUMERIC(c_min_rate, C_MIN_RATE), .unit = "bytes/second" },
+	{ "fencing", ENUM(DRBD_A_NET_CONF_FENCING_POLICY, fencing_policy, FENCING) },
+	{ "resync-rate", NUMERIC(DRBD_A_PEER_DEVICE_CONF_RESYNC_RATE, resync_rate, RESYNC_RATE), .unit = "bytes/second" },
+	{ "c-plan-ahead", NUMERIC(DRBD_A_PEER_DEVICE_CONF_C_PLAN_AHEAD, c_plan_ahead, C_PLAN_AHEAD), .unit = "1/10 seconds" },
+	{ "c-delay-target", NUMERIC(DRBD_A_PEER_DEVICE_CONF_C_DELAY_TARGET, c_delay_target, C_DELAY_TARGET), .unit = "1/10 seconds" },
+	{ "c-fill-target", NUMERIC(DRBD_A_PEER_DEVICE_CONF_C_FILL_TARGET, c_fill_target, C_FILL_TARGET), .unit = "bytes" },
+	{ "c-max-rate", NUMERIC(DRBD_A_PEER_DEVICE_CONF_C_MAX_RATE, c_max_rate, C_MAX_RATE), .unit = "bytes/second" },
+	{ "c-min-rate", NUMERIC(DRBD_A_PEER_DEVICE_CONF_C_MIN_RATE, c_min_rate, C_MIN_RATE), .unit = "bytes/second" },
 	{ },
 };
 
 struct field_def connect_compat_84_fields[] = {
-	{ "protocol", ENUM_NOCASE(wire_protocol, PROTOCOL) },
-	{ "timeout", NUMERIC(timeout, TIMEOUT),.unit = "1/10 seconds" },
-	{ "max-epoch-size", NUMERIC(max_epoch_size, MAX_EPOCH_SIZE) },
-	{ "max-buffers", NUMERIC(max_buffers, MAX_BUFFERS) },
-	{ "connect-int", NUMERIC(connect_int, CONNECT_INT), .unit = "seconds" },
-	{ "ping-int", NUMERIC(ping_int, PING_INT), .unit = "seconds" },
-	{ "sndbuf-size", NUMERIC(sndbuf_size, SNDBUF_SIZE), .unit = "bytes" },
-	{ "rcvbuf-size", NUMERIC(rcvbuf_size, RCVBUF_SIZE), .unit = "bytes" },
-	{ "ko-count", NUMERIC(ko_count, KO_COUNT) },
-	{ "allow-two-primaries", BOOLEAN(two_primaries, ALLOW_TWO_PRIMARIES) },
-	{ "cram-hmac-alg", STRING(cram_hmac_alg) },
-	{ "shared-secret", STRING(shared_secret) },
-	{ "after-sb-0pri", ENUM(after_sb_0p, AFTER_SB_0P) },
-	{ "after-sb-1pri", ENUM(after_sb_1p, AFTER_SB_1P) },
-	{ "after-sb-2pri", ENUM(after_sb_2p, AFTER_SB_2P) },
-	{ "always-asbp", BOOLEAN(always_asbp, ALWAYS_ASBP) },
-	{ "rr-conflict", ENUM(rr_conflict, RR_CONFLICT) },
-	{ "ping-timeout", NUMERIC(ping_timeo, PING_TIMEO), .unit = "1/10 seconds" },
-	{ "data-integrity-alg", STRING(integrity_alg) },
-	{ "tcp-cork", BOOLEAN(tcp_cork, TCP_CORK) },
-	{ "on-congestion", ENUM(on_congestion, ON_CONGESTION) },
-	{ "congestion-fill", NUMERIC(cong_fill, CONG_FILL), .unit = "bytes" },
-	{ "congestion-extents", NUMERIC(cong_extents, CONG_EXTENTS) },
-	{ "csums-alg", STRING(csums_alg) },
-	{ "csums-after-crash-only", BOOLEAN(csums_after_crash_only, CSUMS_AFTER_CRASH_ONLY) },
-	{ "verify-alg", STRING(verify_alg) },
-	{ "use-rle", BOOLEAN(use_rle, USE_RLE) },
-	{ "socket-check-timeout", NUMERIC(sock_check_timeo, SOCKET_CHECK_TIMEO) },
+	{ "protocol", ENUM_NOCASE(DRBD_A_NET_CONF_WIRE_PROTOCOL, wire_protocol, PROTOCOL) },
+	{ "timeout", NUMERIC(DRBD_A_NET_CONF_TIMEOUT, timeout, TIMEOUT),.unit = "1/10 seconds" },
+	{ "max-epoch-size", NUMERIC(DRBD_A_NET_CONF_MAX_EPOCH_SIZE, max_epoch_size, MAX_EPOCH_SIZE) },
+	{ "max-buffers", NUMERIC(DRBD_A_NET_CONF_MAX_BUFFERS, max_buffers, MAX_BUFFERS) },
+	{ "connect-int", NUMERIC(DRBD_A_NET_CONF_CONNECT_INT, connect_int, CONNECT_INT), .unit = "seconds" },
+	{ "ping-int", NUMERIC(DRBD_A_NET_CONF_PING_INT, ping_int, PING_INT), .unit = "seconds" },
+	{ "sndbuf-size", NUMERIC(DRBD_A_NET_CONF_SNDBUF_SIZE, sndbuf_size, SNDBUF_SIZE), .unit = "bytes" },
+	{ "rcvbuf-size", NUMERIC(DRBD_A_NET_CONF_RCVBUF_SIZE, rcvbuf_size, RCVBUF_SIZE), .unit = "bytes" },
+	{ "ko-count", NUMERIC(DRBD_A_NET_CONF_KO_COUNT, ko_count, KO_COUNT) },
+	{ "allow-two-primaries", BOOLEAN(DRBD_A_NET_CONF_TWO_PRIMARIES, ALLOW_TWO_PRIMARIES) },
+	{ "cram-hmac-alg", STRING(DRBD_A_NET_CONF_CRAM_HMAC_ALG) },
+	{ "shared-secret", STRING(DRBD_A_NET_CONF_SHARED_SECRET) },
+	{ "after-sb-0pri", ENUM(DRBD_A_NET_CONF_AFTER_SB_0P, after_sb_0p, AFTER_SB_0P) },
+	{ "after-sb-1pri", ENUM(DRBD_A_NET_CONF_AFTER_SB_1P, after_sb_1p, AFTER_SB_1P) },
+	{ "after-sb-2pri", ENUM(DRBD_A_NET_CONF_AFTER_SB_2P, after_sb_2p, AFTER_SB_2P) },
+	{ "always-asbp", BOOLEAN(DRBD_A_NET_CONF_ALWAYS_ASBP, ALWAYS_ASBP) },
+	{ "rr-conflict", ENUM(DRBD_A_NET_CONF_RR_CONFLICT, rr_conflict, RR_CONFLICT) },
+	{ "ping-timeout", NUMERIC(DRBD_A_NET_CONF_PING_TIMEO, ping_timeo, PING_TIMEO), .unit = "1/10 seconds" },
+	{ "data-integrity-alg", STRING(DRBD_A_NET_CONF_INTEGRITY_ALG) },
+	{ "tcp-cork", BOOLEAN(DRBD_A_NET_CONF_TCP_CORK, TCP_CORK) },
+	{ "on-congestion", ENUM(DRBD_A_NET_CONF_ON_CONGESTION, on_congestion, ON_CONGESTION) },
+	{ "congestion-fill", NUMERIC(DRBD_A_NET_CONF_CONG_FILL, cong_fill, CONG_FILL), .unit = "bytes" },
+	{ "congestion-extents", NUMERIC(DRBD_A_NET_CONF_CONG_EXTENTS, cong_extents, CONG_EXTENTS) },
+	{ "csums-alg", STRING(DRBD_A_NET_CONF_CSUMS_ALG) },
+	{ "csums-after-crash-only", BOOLEAN(DRBD_A_NET_CONF_CSUMS_AFTER_CRASH_ONLY, CSUMS_AFTER_CRASH_ONLY) },
+	{ "verify-alg", STRING(DRBD_A_NET_CONF_VERIFY_ALG) },
+	{ "use-rle", BOOLEAN(DRBD_A_NET_CONF_USE_RLE, USE_RLE) },
+	{ "socket-check-timeout", NUMERIC(DRBD_A_NET_CONF_SOCK_CHECK_TIMEO, sock_check_timeo, SOCKET_CHECK_TIMEO) },
 	{ },
 };
 

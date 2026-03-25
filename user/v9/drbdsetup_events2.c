@@ -32,9 +32,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include "drbdsetup.h"
-#include "drbd_nla.h"
 #include "drbdtool_common.h"
-#include <linux/genl_magic_func.h>
 #include "drbd_protocol.h"
 #include "drbd_strings.h"
 #include "drbdsetup_colors.h"

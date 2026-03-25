@@ -66,10 +66,9 @@
 #include "libgenl.h"
 #include "drbd_nla.h"
 #include <linux/drbd_config.h>
-#include <linux/drbd_genl_api.h>
+#include "linux/drbd_genl_userspace.h"
 #include <linux/drbd_limits.h>
 #include "drbdtool_common.h"
-#include <linux/genl_magic_func.h>
 #include "drbd_strings.h"
 #include "registry.h"
 #include "config.h"
@@ -257,9 +256,9 @@ const struct drbd_cmd primary_cmd = {
 const struct drbd_cmd attach_cmd = {
 	"attach", CTX_MINOR, DRBD_ADM_ATTACH, DRBD_NLA_DISK_CONF, F_CONFIG_CMD,
 	.drbd_args = (struct drbd_argument[]) {
-		{ "lower_dev", T_backing_dev, conv_block_dev },
-		{ "meta_data_dev", T_meta_dev, conv_block_dev },
-		{ "meta_data_index", T_meta_dev_idx, conv_md_idx },
+		{ "lower_dev", DRBD_A_DISK_CONF_BACKING_DEV, conv_block_dev },
+		{ "meta_data_dev", DRBD_A_DISK_CONF_META_DEV, conv_block_dev },
+		{ "meta_data_index", DRBD_A_DISK_CONF_META_DEV_IDX, conv_md_idx },
 		{ } },
 	.ctx = &attach_cmd_ctx,
 	.summary = "Attach a lower-level device to an existing replicated device.",
@@ -294,8 +293,8 @@ const struct drbd_cmd new_path_cmd = {"new-path", CTX_PEER_NODE,
 				      DRBD_ADM_NEW_PATH, DRBD_NLA_PATH_PARMS,
 				      F_CONFIG_CMD,
 	.drbd_args = (struct drbd_argument[]) {
-		{"local-addr",  T_my_addr,   conv_addr},
-		{"remote-addr", T_peer_addr, conv_addr},
+		{"local-addr",  DRBD_A_PATH_PARMS_MY_ADDR,   conv_addr},
+		{"remote-addr", DRBD_A_PATH_PARMS_PEER_ADDR, conv_addr},
 		{}},
 	.ctx = &path_cmd_ctx,
 	.summary = "Add a path (endpoint address pair) where a peer host should be reachable."};
@@ -304,8 +303,8 @@ const struct drbd_cmd del_path_cmd = {"del-path", CTX_PEER_NODE,
 				      DRBD_ADM_DEL_PATH, DRBD_NLA_PATH_PARMS,
 				      F_CONFIG_CMD,
 	.drbd_args = (struct drbd_argument[]) {
-		{"local-addr",  T_my_addr,   conv_addr},
-		{"remote-addr", T_peer_addr, conv_addr},
+		{"local-addr",  DRBD_A_PATH_PARMS_MY_ADDR,   conv_addr},
+		{"remote-addr", DRBD_A_PATH_PARMS_PEER_ADDR, conv_addr},
 		{}},
 	.ctx = &path_cmd_ctx,
 	.summary = "Remove a path (endpoint address pair) from a connection to a peer host."};
@@ -319,7 +318,7 @@ const struct drbd_cmd disconnect_cmd = {"disconnect", CTX_PEER_NODE,
 const struct drbd_cmd new_resource_cmd = {
 	"new-resource", CTX_RESOURCE, DRBD_ADM_NEW_RESOURCE, DRBD_NLA_RESOURCE_OPTS, F_CONFIG_CMD,
 	.drbd_args = (struct drbd_argument[]) {
-		{ "node_id", T_node_id, conv_u32 },
+		{ "node_id", DRBD_A_RES_OPTS_NODE_ID, conv_u32 },
 		{ } },
 	.ctx = &resource_options_ctx,
 	.summary = "Create a new resource." };
@@ -333,7 +332,7 @@ const struct drbd_cmd new_minor_cmd = {
 
 const struct drbd_cmd peer_device_options_cmd = {
 	"peer-device-options", CTX_PEER_DEVICE,
-	DRBD_ADM_CHG_PEER_DEVICE_OPTS, DRBD_NLA_PEER_DEVICE_OPTS, F_CONFIG_CMD,
+	DRBD_ADM_PEER_DEVICE_OPTS, DRBD_NLA_PEER_DEVICE_OPTS, F_CONFIG_CMD,
 	.set_defaults = true,
 	.ctx = &peer_device_options_ctx,
 	.summary = "Change peer-device options." };
@@ -353,7 +352,7 @@ const struct drbd_cmd *commands[] = {
 
 	&attach_cmd,
 
-	&(struct drbd_cmd){"disk-options", CTX_MINOR, DRBD_ADM_CHG_DISK_OPTS, DRBD_NLA_DISK_CONF,
+	&(struct drbd_cmd){"disk-options", CTX_MINOR, DRBD_ADM_DISK_OPTS, DRBD_NLA_DISK_CONF,
 		F_CONFIG_CMD,
 	 .set_defaults = true,
 	 .ctx = &disk_options_ctx,
@@ -369,7 +368,7 @@ const struct drbd_cmd *commands[] = {
 	&new_path_cmd,
 	&del_path_cmd,
 
-	&(struct drbd_cmd){"net-options", CTX_PEER_NODE, DRBD_ADM_CHG_NET_OPTS, DRBD_NLA_NET_CONF,
+	&(struct drbd_cmd){"net-options", CTX_PEER_NODE, DRBD_ADM_NET_OPTS, DRBD_NLA_NET_CONF,
 		F_CONFIG_CMD,
 	 .set_defaults = true,
 	 .ctx = &net_options_ctx,
@@ -398,7 +397,7 @@ const struct drbd_cmd *commands[] = {
 	&(struct drbd_cmd){"invalidate", CTX_MINOR, DRBD_ADM_INVALIDATE, DRBD_NLA_INVALIDATE_PARMS, F_CONFIG_CMD,
 	 .ctx = &invalidate_ctx,
 	 .summary = "Replace the local data of a volume with that of a peer." },
-	&(struct drbd_cmd){"invalidate-remote", CTX_PEER_DEVICE, DRBD_ADM_INVAL_PEER, DRBD_NLA_INVAL_PEER_PARAMS, F_CONFIG_CMD,
+	&(struct drbd_cmd){"invalidate-remote", CTX_PEER_DEVICE, DRBD_ADM_INVALIDATE_PEER, DRBD_NLA_INVAL_PEER_PARAMS, F_CONFIG_CMD,
 	 .ctx = &invalidate_peer_ctx,
 	 .summary = "Replace a peer's data of a volume with the local data." },
 	&(struct drbd_cmd){"pause-sync", CTX_PEER_DEVICE, DRBD_ADM_PAUSE_SYNC, NO_PAYLOAD, F_CONFIG_CMD,
@@ -491,12 +490,12 @@ const struct drbd_cmd *commands[] = {
 	 .summary = "Remove a resource." },
 	&(struct drbd_cmd){"forget-peer", CTX_RESOURCE, DRBD_ADM_FORGET_PEER, DRBD_NLA_FORGET_PEER_PARMS, F_CONFIG_CMD,
 	 .drbd_args = (struct drbd_argument[]) {
-		 { "peer_node_id",	T_forget_peer_node_id,	conv_u32 },
+		 { "peer_node_id",	DRBD_A_FORGET_PEER_PARMS_FORGET_PEER_NODE_ID,	conv_u32 },
 		 { } },
 	 .summary = "Completely remove any reference to an unconnected peer from meta-data." },
 	&(struct drbd_cmd){"rename-resource", CTX_RESOURCE, DRBD_ADM_RENAME_RESOURCE, DRBD_NLA_RENAME_RESOURCE_PARMS, F_CONFIG_CMD,
 	.drbd_args = (struct drbd_argument[]) {
-		{ "new_name", T_new_resource_name, conv_str },
+		{ "new_name", DRBD_A_RENAME_RESOURCE_PARMS_NEW_RESOURCE_NAME, conv_str },
 		{ } },
 	.summary = "Rename a resource." },
 	&(struct drbd_cmd){"udev", CTX_MINOR, 0, NO_PAYLOAD, udev_cmd,
@@ -624,8 +623,8 @@ struct genl_sock *drbd_sock = NULL;
 
 struct genl_family drbd_genl_family = {
 	.name = "drbd",
-	.version = GENL_MAGIC_VERSION,
-	.hdrsize = GENL_MAGIC_FAMILY_HDRSZ,
+	.version = DRBD_FAMILY_VERSION,
+	.hdrsize = (sizeof(struct drbd_genlmsghdr)),
 };
 
 #if 0
@@ -985,7 +984,7 @@ void fprintf_all_cfg_reply_info_text(const char *hdr, struct nlmsghdr *nlh)
 	int msg_len = nlmsg_attrlen(nlh, GENL_HDRLEN + drbd_genl_family.hdrsize);
 
 	/* there may be more than one DRBD_NLA_CFG_REPLY,
-	 * and more than one T_info_text inside. */
+	 * and more than one DRBD_A_DRBD_CFG_REPLY_INFO_TEXT inside. */
 	struct nlattr *o_nla, *nla;
 	int o_rem, rem;
 
@@ -998,7 +997,7 @@ void fprintf_all_cfg_reply_info_text(const char *hdr, struct nlmsghdr *nlh)
 			hdr = NULL;
 		}
 		nla_for_each_nested(nla, o_nla, rem) {
-			if (nla_type(nla) == T_info_text)
+			if (nla_type(nla) == DRBD_A_DRBD_CFG_REPLY_INFO_TEXT)
 				fprintf(stderr, "%s\n", (char*)nla_data(nla));
 		}
 	}
@@ -1130,11 +1129,11 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	if (context & ~CTX_MINOR) {
 		nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
 		if (context & CTX_RESOURCE)
-			nla_put_string(smsg, T_ctx_resource_name, objname);
+			nla_put_string(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_RESOURCE_NAME, objname);
 		if (context & CTX_PEER_NODE_ID)
-			nla_put_u32(smsg, T_ctx_peer_node_id, global_ctx.ctx_peer_node_id);
+			nla_put_u32(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_PEER_NODE_ID, global_ctx.ctx_peer_node_id);
 		if (context & CTX_VOLUME)
-			nla_put_u32(smsg, T_ctx_volume, global_ctx.ctx_volume);
+			nla_put_u32(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_VOLUME, global_ctx.ctx_volume);
 		nla_nest_end(smsg, nla);
 	}
 
@@ -1202,7 +1201,7 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 				fprintf(stderr, "new-resource called without node-id: enabling drbd8 compat mode\n");
 				nla = nla_nest_start(smsg, cm->tla_id);
 				nla_put_u32(smsg, ad->nla_type, -1);
-				nla_put_u8(smsg, T_drbd8_compat_mode, 1);
+				nla_put_u8(smsg, DRBD_A_RES_OPTS_DRBD8_COMPAT_MODE, 1);
 				ad++;
 				continue;
 			}
@@ -1553,9 +1552,9 @@ int choose_timeout(struct choose_timeout_ctx *ctx)
 	dhdr->flags = 0;
 
 	nla = nla_nest_start(ctx->smsg, DRBD_NLA_CFG_CONTEXT);
-	nla_put_string(ctx->smsg, T_ctx_resource_name, ctx->ctx.ctx_resource_name);
-	nla_put_u32(ctx->smsg, T_ctx_peer_node_id, ctx->ctx.ctx_peer_node_id);
-	nla_put_u32(ctx->smsg, T_ctx_volume, ctx->ctx.ctx_volume);
+	nla_put_string(ctx->smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_RESOURCE_NAME, ctx->ctx.ctx_resource_name);
+	nla_put_u32(ctx->smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_PEER_NODE_ID, ctx->ctx.ctx_peer_node_id);
+	nla_put_u32(ctx->smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_VOLUME, ctx->ctx.ctx_volume);
 	nla_nest_end(ctx->smsg, nla);
 
 	if (genl_send(drbd_sock, ctx->smsg)) {
@@ -1686,7 +1685,7 @@ static int generic_send(const struct drbd_cmd *cm)
 		/* Restrict the dump to a single resource. */
 		struct nlattr *nla;
 		nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
-		nla_put_string(smsg, T_ctx_resource_name, objname);
+		nla_put_string(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_RESOURCE_NAME, objname);
 		nla_nest_end(smsg, nla);
 	}
 
@@ -2290,7 +2289,7 @@ static void print_paths(struct connections_list *connection)
 		colon = strchr(address, ':');
 		if (colon)
 			*colon = ' ';
-		if (nla_type(nla) == T_my_addr) {
+		if (nla_type(nla) == DRBD_A_PATH_PARMS_MY_ADDR) {
 			pD("path {\n");
 			++indent;
 			pD("_this_host %s;\n", address);
@@ -2303,7 +2302,7 @@ static void print_paths(struct connections_list *connection)
 				--indent;
 			}
 		}
-		if (nla_type(nla) == T_peer_addr) {
+		if (nla_type(nla) == DRBD_A_PATH_PARMS_PEER_ADDR) {
 			pD("_remote_host %s;\n", address);
 			if (json_output) {
 				int rem = tmp;
@@ -2505,7 +2504,7 @@ static struct context_def *resource_options_compat_84()
 	res_opt_84_ctx = malloc(size);
 	memcpy(res_opt_84_ctx, &resource_options_ctx, size);
 	for (field = res_opt_84_ctx->fields; field->name; field++) {
-		if (field->nla_type == T_auto_promote) {
+		if (field->nla_type == DRBD_A_RES_OPTS_AUTO_PROMOTE) {
 			field->u.b.def = 0;
 			break;
 		}
@@ -2544,7 +2543,7 @@ static void show_resource_list(struct resources_list *resources_list, char* old_
 		++indent;
 
 #ifdef WITH_84_SUPPORT
-		nla = nla_find_nested(resource->res_opts, T_drbd8_compat_mode);
+		nla = nla_find_nested(resource->res_opts, DRBD_A_RES_OPTS_DRBD8_COMPAT_MODE);
 		if (nla && *(uint8_t *)nla_data(nla)) {
 			printI("# This resource is in drbd-8.4 compatibility mode!\n");
 
@@ -2558,7 +2557,7 @@ static void show_resource_list(struct resources_list *resources_list, char* old_
 		printI("_this_host {\n");
 		++indent;
 
-		nla = nla_find_nested(resource->res_opts, T_node_id);
+		nla = nla_find_nested(resource->res_opts, DRBD_A_RES_OPTS_NODE_ID);
 		if (nla)
 			printI("node-id\t\t\t%d;\n", *(uint32_t *)nla_data(nla));
 
@@ -2625,7 +2624,7 @@ static void show_resource_list_json(struct resources_list *resources_list, char*
 		printI("\"_this_host\": {\n");
 		++indent;
 
-		nla = nla_find_nested(resource->res_opts, T_node_id);
+		nla = nla_find_nested(resource->res_opts, DRBD_A_RES_OPTS_NODE_ID);
 		if (nla)
 			printI("\"node-id\": %d,\n", *(uint32_t *)nla_data(nla));
 
@@ -3029,7 +3028,7 @@ static void connection_status_json(struct connections_list *connection,
 	struct paths_list *path;
 	int path_index = 0;
 	int i = 0;
-	struct nlattr *tls_nla = nla_find_nested(connection->net_conf, T_tls);
+	struct nlattr *tls_nla = nla_find_nested(connection->net_conf, DRBD_A_NET_CONF_TLS);
 
 	printf("    {\n"
 	       "      \"peer-node-id\": %d,\n"
@@ -3136,7 +3135,7 @@ static void resource_status_json(struct resources_list *resource)
 		resource->info.res_susp_fen ||
 		resource->info.res_susp_quorum;
 
-	nla = nla_find_nested(resource->res_opts, T_node_id);
+	nla = nla_find_nested(resource->res_opts, DRBD_A_RES_OPTS_NODE_ID);
 	if (nla)
 		node_id = *(uint32_t *)nla_data(nla);
 
@@ -3258,7 +3257,7 @@ void resource_status(struct resources_list *resource)
 	if (opt_verbose) {
 		struct nlattr *nla;
 
-		nla = nla_find_nested(resource->res_opts, T_node_id);
+		nla = nla_find_nested(resource->res_opts, DRBD_A_RES_OPTS_NODE_ID);
 		if (nla)
 			wrap_printf(4, " node-id:%d", *(uint32_t *)nla_data(nla));
 	}
@@ -3484,7 +3483,7 @@ static void connection_status(struct connections_list *connection,
 			    drbd_role_str(role),
 			    role_color_stop(role, false));
 
-		struct nlattr *tls_nla = nla_find_nested(connection->net_conf, T_tls);
+		struct nlattr *tls_nla = nla_find_nested(connection->net_conf, DRBD_A_NET_CONF_TLS);
 		if (opt_verbose || (tls_nla && *(uint8_t *)nla_data(tls_nla)))
 			wrap_printf(6, " tls:%s",
 				    tls_nla && *(uint8_t *)nla_data(tls_nla) ? "yes" : "no");
@@ -4950,12 +4949,12 @@ int drbdsetup_main(int argc, char **argv)
 		}
 	}
 
-	if (drbd_genl_family.version != GENL_MAGIC_VERSION ||
+	if (drbd_genl_family.version != DRBD_FAMILY_VERSION ||
 	    drbd_genl_family.hdrsize != sizeof(struct drbd_genlmsghdr)) {
 		fprintf(stderr, "API mismatch!\n\t"
 			"API version drbdsetup: %u kernel: %u\n\t"
 			"header size drbdsetup: %u kernel: %u\n",
-			GENL_MAGIC_VERSION, drbd_genl_family.version,
+			DRBD_FAMILY_VERSION, drbd_genl_family.version,
 			(unsigned)sizeof(struct drbd_genlmsghdr),
 			drbd_genl_family.hdrsize);
 		return 20;

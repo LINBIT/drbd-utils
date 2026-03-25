@@ -23,7 +23,7 @@
 
 #include "linux/drbd.h"
 
-/* FIXME keep in sync with GENL_MAGIC_VERSION,
+/* FIXME keep in sync with DRBD_FAMILY_VERSION,
  * without including all the genl magic...
  */
 #define API_VERSION 2

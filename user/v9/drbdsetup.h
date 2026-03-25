@@ -5,7 +5,7 @@
 
 #include <stdbool.h>
 #include "libgenl.h"
-#include <linux/drbd_genl_api.h>
+#include "linux/drbd_genl_userspace.h"
 #include <linux/types.h>
 
 

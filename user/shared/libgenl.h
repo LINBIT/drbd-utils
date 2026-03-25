@@ -288,13 +288,26 @@ enum {
 	NLA_FLAG,
 	NLA_MSECS,
 	NLA_NESTED,
-	NLA_NESTED_COMPAT,
+	NLA_NESTED_ARRAY,
 	NLA_NUL_STRING,
 	NLA_BINARY,
+	NLA_S8,
+	NLA_S16,
+	NLA_S32,
+	NLA_S64,
+	NLA_BITFIELD32,
+	NLA_REJECT,
+	NLA_BE16,
+	NLA_BE32,
+	NLA_SINT,
+	NLA_UINT,
 	__NLA_TYPE_MAX,
 };
 
 #define NLA_TYPE_MAX (__NLA_TYPE_MAX - 1)
+
+/* Userspace equivalent of the kernel NLA policy macro */
+#define NLA_POLICY_MAX_LEN(_len)	{ .type = NLA_BINARY, .len = (_len) }
 
 /**
  * struct nla_policy - attribute validation policy
@@ -1092,5 +1105,10 @@ enum {
 /* returns negative E_RCV_*, or length of message */
 extern int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int timeout_ms);
 extern bool genl_op_known(struct genl_family *family, int id);
+
+static inline __s32 nla_get_s32(const struct nlattr *nla)
+{
+	return *(__s32 *)nla_data(nla);
+}
 
 #endif	/* LIBGENL_H */

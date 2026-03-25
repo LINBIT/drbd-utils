@@ -25,6 +25,10 @@ static __u16 nla_attr_minlen[NLA_TYPE_MAX+1] __read_mostly = {
 	[NLA_U16]	= sizeof(__u16),
 	[NLA_U32]	= sizeof(__u32),
 	[NLA_U64]	= sizeof(__u64),
+	[NLA_S8]	= sizeof(__s8),
+	[NLA_S16]	= sizeof(__s16),
+	[NLA_S32]	= sizeof(__s32),
+	[NLA_S64]	= sizeof(__s64),
 	[NLA_NESTED]	= NLA_HDRLEN,
 };
 
@@ -77,7 +81,7 @@ static int validate_nla(struct nlattr *nla, int maxtype,
 			return -ERANGE;
 		break;
 
-	case NLA_NESTED_COMPAT:
+	case NLA_NESTED_ARRAY:
 		if (attrlen < pt->len)
 			return -ERANGE;
 		if (attrlen < NLA_ALIGN(pt->len))

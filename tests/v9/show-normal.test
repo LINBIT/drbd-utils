@@ -5,6 +5,7 @@ $ out=$(cat show-normal.msgs | drbdsetup_instrumented show --json) ; echo $? ; e
         "resource": "some-resource",
         "options": {
             "auto-promote": true,
+            "quorum": "majority",
             "on-no-quorum": "suspend-io"
         },
         "_this_host": {
@@ -16,6 +17,7 @@ $ out=$(cat show-normal.msgs | drbdsetup_instrumented show --json) ; echo $? ; e
                     "backing-disk": "/dev/sda",
                     "meta-disk": "internal",
                     "disk": {
+                        "resync-after": "7",
                         "al-extents": "1237",
                         "read-balancing": "prefer-local",
                         "max-bio-size": "1048576"

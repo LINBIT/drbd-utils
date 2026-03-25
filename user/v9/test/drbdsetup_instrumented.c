@@ -33,6 +33,7 @@
 
 #include "../drbdsetup.h"
 #include "../drbdsetup_colors.h"
+#include "linux/drbd_genl_userspace.h"
 
 #include "drbd_protocol.h"
 
@@ -90,49 +91,49 @@ void test_msg_put(struct msg_buff *smsg, __u8 cmd, __u32 minor)
 void test_notification_header(struct msg_buff *smsg, __u32 nh_type)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_NOTIFICATION_HEADER);
-	nla_put_u32(smsg, T_nh_type, nh_type);
+	nla_put_u32(smsg, DRBD_A_DRBD_NOTIFICATION_HEADER_NH_TYPE, nh_type);
 	nla_nest_end(smsg, nla);
 }
 
 void test_resource_context(struct msg_buff *smsg, struct test_vars *vars)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
-	nla_put_string(smsg, T_ctx_resource_name, test_resource_name);
+	nla_put_string(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_RESOURCE_NAME, test_resource_name);
 	nla_nest_end(smsg, nla);
 }
 
 void test_resource_opts(struct msg_buff *smsg, struct test_vars *vars)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_RESOURCE_OPTS);
-	nla_put_u32(smsg, T_node_id, test_node_id);
-	nla_put_u8(smsg, T_auto_promote, vars->auto_promote);
-	nla_put_u32(smsg, T_on_no_quorum, vars->on_no_quorum);
+	nla_put_u32(smsg, DRBD_A_RES_OPTS_NODE_ID, test_node_id);
+	nla_put_u8(smsg, DRBD_A_RES_OPTS_AUTO_PROMOTE, vars->auto_promote);
+	nla_put_u32(smsg, DRBD_A_RES_OPTS_ON_NO_QUORUM, vars->on_no_quorum);
 	nla_nest_end(smsg, nla);
 }
 
 void test_resource_info(struct msg_buff *smsg, struct test_vars *vars, __u32 res_role)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_RESOURCE_INFO);
-	nla_put_u32(smsg, T_res_role, res_role);
-	nla_put_u8(smsg, T_res_susp, false);
-	nla_put_u8(smsg, T_res_susp_nod, false);
-	nla_put_u8(smsg, T_res_susp_fen, false);
-	nla_put_u8(smsg, T_res_susp_quorum, false);
+	nla_put_u32(smsg, DRBD_A_RESOURCE_INFO_RES_ROLE, res_role);
+	nla_put_u8(smsg, DRBD_A_RESOURCE_INFO_RES_SUSP, false);
+	nla_put_u8(smsg, DRBD_A_RESOURCE_INFO_RES_SUSP_NOD, false);
+	nla_put_u8(smsg, DRBD_A_RESOURCE_INFO_RES_SUSP_FEN, false);
+	nla_put_u8(smsg, DRBD_A_RESOURCE_INFO_RES_SUSP_QUORUM, false);
 	nla_nest_end(smsg, nla);
 }
 
 void test_resource_statistics(struct msg_buff *smsg, struct test_vars *vars)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_RESOURCE_STATISTICS);
-	nla_put_u32(smsg, T_res_stat_write_ordering, WO_NONE);
+	nla_put_u32(smsg, DRBD_A_RESOURCE_STATISTICS_RES_STAT_WRITE_ORDERING, WO_NONE);
 	nla_nest_end(smsg, nla);
 }
 
 void test_device_context(struct msg_buff *smsg, struct test_vars *vars)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
-	nla_put_string(smsg, T_ctx_resource_name, test_resource_name);
-	nla_put_u32(smsg, T_ctx_volume, vars->volume_number);
+	nla_put_string(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_RESOURCE_NAME, test_resource_name);
+	nla_put_u32(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_VOLUME, vars->volume_number);
 	nla_nest_end(smsg, nla);
 }
 
@@ -142,18 +143,18 @@ void test_disk_conf(struct msg_buff *smsg, struct test_vars *vars)
 	__u32 dev_disk_state = vars->diskless ? D_DISKLESS :
 		vars->inconsistent ? D_INCONSISTENT : D_UP_TO_DATE;
 
-	nla_put_string(smsg, T_backing_dev, backing_dev(dev_disk_state));
-	nla_put_string(smsg, T_meta_dev, backing_dev(dev_disk_state));
-	nla_put_u32(smsg, T_meta_dev_idx, DRBD_MD_INDEX_FLEX_INT);
-	nla_put_u32(smsg, T_al_extents, vars->al_extents);
-	nla_put_u32(smsg, T_read_balancing, vars->read_balancing);
+	nla_put_string(smsg, DRBD_A_DISK_CONF_BACKING_DEV, backing_dev(dev_disk_state));
+	nla_put_string(smsg, DRBD_A_DISK_CONF_META_DEV, backing_dev(dev_disk_state));
+	nla_put_u32(smsg, DRBD_A_DISK_CONF_META_DEV_IDX, DRBD_MD_INDEX_FLEX_INT);
+	nla_put_u32(smsg, DRBD_A_DISK_CONF_AL_EXTENTS, vars->al_extents);
+	nla_put_u32(smsg, DRBD_A_DISK_CONF_READ_BALANCING, vars->read_balancing);
 	nla_nest_end(smsg, nla);
 }
 
 void test_device_conf(struct msg_buff *smsg, struct test_vars *vars)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_DEVICE_CONF);
-	nla_put_u32(smsg, T_max_bio_size, vars->max_bio_size);
+	nla_put_u32(smsg, DRBD_A_DEVICE_CONF_MAX_BIO_SIZE, vars->max_bio_size);
 	nla_nest_end(smsg, nla);
 }
 
@@ -163,121 +164,121 @@ void test_device_info(struct msg_buff *smsg, struct test_vars *vars)
 	__u32 dev_disk_state = vars->diskless ? D_DISKLESS :
 		vars->inconsistent ? D_INCONSISTENT : D_UP_TO_DATE;
 
-	nla_put_u32(smsg, T_dev_disk_state, dev_disk_state);
-	nla_put_u8(smsg, T_is_intentional_diskless, false);
-	nla_put_u8(smsg, T_dev_is_open, false);
-	nla_put_u8(smsg, T_dev_has_quorum, vars->has_quorum);
-	nla_put_string(smsg, T_backing_dev_path, backing_dev(dev_disk_state));
+	nla_put_u32(smsg, DRBD_A_DEVICE_INFO_DEV_DISK_STATE, dev_disk_state);
+	nla_put_u8(smsg, DRBD_A_DEVICE_INFO_IS_INTENTIONAL_DISKLESS, false);
+	nla_put_u8(smsg, DRBD_A_DEVICE_INFO_DEV_IS_OPEN, false);
+	nla_put_u8(smsg, DRBD_A_DEVICE_INFO_DEV_HAS_QUORUM, vars->has_quorum);
+	nla_put_string(smsg, DRBD_A_DEVICE_INFO_BACKING_DEV_PATH, backing_dev(dev_disk_state));
 	nla_nest_end(smsg, nla);
 }
 
 void test_device_statistics(struct msg_buff *smsg, struct test_vars *vars)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_DEVICE_STATISTICS);
-	nla_put_u64(smsg, T_dev_size, 10);
-	nla_put_u64(smsg, T_dev_read, 20);
-	nla_put_u64(smsg, T_dev_write, 30);
-	nla_put_u64(smsg, T_dev_al_writes, 40);
-	nla_put_u64(smsg, T_dev_bm_writes, 50);
-	nla_put_u32(smsg, T_dev_upper_pending, 60);
-	nla_put_u32(smsg, T_dev_lower_pending, 70);
-	nla_put_u8(smsg, T_dev_upper_blocked, false);
-	nla_put_u8(smsg, T_dev_lower_blocked, false);
-	nla_put_u8(smsg, T_dev_al_suspended, false);
-	nla_put_u32(smsg, T_dev_disk_flags, 0);
+	nla_put_u64(smsg, DRBD_A_DEVICE_STATISTICS_DEV_SIZE, 10);
+	nla_put_u64(smsg, DRBD_A_DEVICE_STATISTICS_DEV_READ, 20);
+	nla_put_u64(smsg, DRBD_A_DEVICE_STATISTICS_DEV_WRITE, 30);
+	nla_put_u64(smsg, DRBD_A_DEVICE_STATISTICS_DEV_AL_WRITES, 40);
+	nla_put_u64(smsg, DRBD_A_DEVICE_STATISTICS_DEV_BM_WRITES, 50);
+	nla_put_u32(smsg, DRBD_A_DEVICE_STATISTICS_DEV_UPPER_PENDING, 60);
+	nla_put_u32(smsg, DRBD_A_DEVICE_STATISTICS_DEV_LOWER_PENDING, 70);
+	nla_put_u8(smsg, DRBD_A_DEVICE_STATISTICS_DEV_UPPER_BLOCKED, false);
+	nla_put_u8(smsg, DRBD_A_DEVICE_STATISTICS_DEV_LOWER_BLOCKED, false);
+	nla_put_u8(smsg, DRBD_A_DEVICE_STATISTICS_DEV_AL_SUSPENDED, false);
+	nla_put_u32(smsg, DRBD_A_DEVICE_STATISTICS_DEV_DISK_FLAGS, 0);
 	nla_nest_end(smsg, nla);
 }
 
 void test_connection_context(struct msg_buff *smsg, struct test_vars *vars)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
-	nla_put_string(smsg, T_ctx_resource_name, test_resource_name);
-	nla_put_string(smsg, T_ctx_conn_name, test_peer_name);
-	nla_put_u32(smsg, T_ctx_peer_node_id, test_peer_node_id);
+	nla_put_string(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_RESOURCE_NAME, test_resource_name);
+	nla_put_string(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_CONN_NAME, test_peer_name);
+	nla_put_u32(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_PEER_NODE_ID, test_peer_node_id);
 	nla_nest_end(smsg, nla);
 }
 
 void test_net_conf(struct msg_buff *smsg, struct test_vars *vars)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_NET_CONF);
-	nla_put_u32(smsg, T_ping_int, vars->ping_int);
-	nla_put_u8(smsg, T_two_primaries, vars->two_primaries);
+	nla_put_u32(smsg, DRBD_A_NET_CONF_PING_INT, vars->ping_int);
+	nla_put_u8(smsg, DRBD_A_NET_CONF_TWO_PRIMARIES, vars->two_primaries);
 	nla_nest_end(smsg, nla);
 }
 
 void test_connection_info(struct msg_buff *smsg, struct test_vars *vars, __u32 conn_connection_state, __u32 conn_role)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_CONNECTION_INFO);
-	nla_put_u32(smsg, T_conn_connection_state, conn_connection_state);
-	nla_put_u32(smsg, T_conn_role, conn_role);
+	nla_put_u32(smsg, DRBD_A_CONNECTION_INFO_CONN_CONNECTION_STATE, conn_connection_state);
+	nla_put_u32(smsg, DRBD_A_CONNECTION_INFO_CONN_ROLE, conn_role);
 	nla_nest_end(smsg, nla);
 }
 
 void test_connection_statistics(struct msg_buff *smsg, struct test_vars *vars)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_CONNECTION_STATISTICS);
-	nla_put_u8(smsg, T_conn_congested, false);
-	nla_put_u64(smsg, T_ap_in_flight, 10);
-	nla_put_u64(smsg, T_rs_in_flight, 20);
+	nla_put_u8(smsg, DRBD_A_CONNECTION_STATISTICS_CONN_CONGESTED, false);
+	nla_put_u64(smsg, DRBD_A_CONNECTION_STATISTICS_AP_IN_FLIGHT, 10);
+	nla_put_u64(smsg, DRBD_A_CONNECTION_STATISTICS_RS_IN_FLIGHT, 20);
 	nla_nest_end(smsg, nla);
 }
 
 void test_peer_device_context(struct msg_buff *smsg, struct test_vars *vars)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
-	nla_put_string(smsg, T_ctx_resource_name, test_resource_name);
-	nla_put_string(smsg, T_ctx_conn_name, test_peer_name);
-	nla_put_u32(smsg, T_ctx_peer_node_id, test_peer_node_id);
-	nla_put_u32(smsg, T_ctx_volume, vars->volume_number);
+	nla_put_string(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_RESOURCE_NAME, test_resource_name);
+	nla_put_string(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_CONN_NAME, test_peer_name);
+	nla_put_u32(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_PEER_NODE_ID, test_peer_node_id);
+	nla_put_u32(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_VOLUME, vars->volume_number);
 	nla_nest_end(smsg, nla);
 }
 
 void test_peer_device_opts(struct msg_buff *smsg, struct test_vars *vars)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_PEER_DEVICE_OPTS);
-	nla_put_u32(smsg, T_c_max_rate, vars->c_max_rate);
-	nla_put_u32(smsg, T_c_min_rate, vars->c_min_rate);
+	nla_put_u32(smsg, DRBD_A_PEER_DEVICE_CONF_C_MAX_RATE, vars->c_max_rate);
+	nla_put_u32(smsg, DRBD_A_PEER_DEVICE_CONF_C_MIN_RATE, vars->c_min_rate);
 	nla_nest_end(smsg, nla);
 }
 
 void test_peer_device_info(struct msg_buff *smsg, struct test_vars *vars, __u32 peer_repl_state, __u32 peer_disk_state)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_PEER_DEVICE_INFO);
-	nla_put_u32(smsg, T_peer_repl_state, peer_repl_state);
-	nla_put_u32(smsg, T_peer_disk_state, peer_disk_state);
-	nla_put_u32(smsg, T_peer_resync_susp_user, false);
-	nla_put_u32(smsg, T_peer_resync_susp_peer, false);
-	nla_put_u32(smsg, T_peer_resync_susp_dependency, false);
-	nla_put_u8(smsg, T_peer_is_intentional_diskless, false);
-	nla_put_u32(smsg, T_peer_resync_susp_max_parallel, false);
+	nla_put_u32(smsg, DRBD_A_PEER_DEVICE_INFO_PEER_REPL_STATE, peer_repl_state);
+	nla_put_u32(smsg, DRBD_A_PEER_DEVICE_INFO_PEER_DISK_STATE, peer_disk_state);
+	nla_put_u32(smsg, DRBD_A_PEER_DEVICE_INFO_PEER_RESYNC_SUSP_USER, false);
+	nla_put_u32(smsg, DRBD_A_PEER_DEVICE_INFO_PEER_RESYNC_SUSP_PEER, false);
+	nla_put_u32(smsg, DRBD_A_PEER_DEVICE_INFO_PEER_RESYNC_SUSP_DEPENDENCY, false);
+	nla_put_u8(smsg, DRBD_A_PEER_DEVICE_INFO_PEER_IS_INTENTIONAL_DISKLESS, false);
+	nla_put_u32(smsg, DRBD_A_PEER_DEVICE_INFO_PEER_RESYNC_SUSP_MAX_PARALLEL, false);
 	nla_nest_end(smsg, nla);
 }
 
 void test_peer_device_statistics(struct msg_buff *smsg, struct test_vars *vars, bool resync)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_PEER_DEVICE_STATISTICS);
-	nla_put_u64(smsg, T_peer_dev_received, 10);
-	nla_put_u64(smsg, T_peer_dev_sent, 20);
-	nla_put_u32(smsg, T_peer_dev_pending, 30);
-	nla_put_u32(smsg, T_peer_dev_unacked, 40);
-	nla_put_u64(smsg, T_peer_dev_out_of_sync, resync ? 5000 : 0);
-	nla_put_u64(smsg, T_peer_dev_resync_failed, 0);
-	nla_put_u32(smsg, T_peer_dev_flags, 0);
-	nla_put_u64(smsg, T_peer_dev_rs_total, resync ? 8000 : 0);
-	nla_put_u64(smsg, T_peer_dev_ov_start_sector, 0);
-	nla_put_u64(smsg, T_peer_dev_ov_stop_sector, 0);
-	nla_put_u64(smsg, T_peer_dev_ov_position, 0);
-	nla_put_u64(smsg, T_peer_dev_ov_left, 0);
-	nla_put_u64(smsg, T_peer_dev_ov_skipped, 0);
-	nla_put_u64(smsg, T_peer_dev_rs_same_csum, 0);
-	nla_put_u64(smsg, T_peer_dev_rs_dt_start_ms, 0);
-	nla_put_u64(smsg, T_peer_dev_rs_paused_ms, 0);
-	nla_put_u64(smsg, T_peer_dev_rs_dt0_ms, 0);
-	nla_put_u64(smsg, T_peer_dev_rs_db0_sectors, 0);
-	nla_put_u64(smsg, T_peer_dev_rs_dt1_ms, resync ? 100 : 0);
-	nla_put_u64(smsg, T_peer_dev_rs_db1_sectors, resync ? 50 : 0);
-	nla_put_u32(smsg, T_peer_dev_rs_c_sync_rate, 0);
-	nla_put_u64(smsg, T_peer_dev_uuid_flags, UUID_FLAG_STABLE);
+	nla_put_u64(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_RECEIVED, 10);
+	nla_put_u64(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_SENT, 20);
+	nla_put_u32(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_PENDING, 30);
+	nla_put_u32(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_UNACKED, 40);
+	nla_put_u64(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_OUT_OF_SYNC, resync ? 5000 : 0);
+	nla_put_u64(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_RESYNC_FAILED, 0);
+	nla_put_u32(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_FLAGS, 0);
+	nla_put_u64(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_RS_TOTAL, resync ? 8000 : 0);
+	nla_put_u64(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_OV_START_SECTOR, 0);
+	nla_put_u64(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_OV_STOP_SECTOR, 0);
+	nla_put_u64(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_OV_POSITION, 0);
+	nla_put_u64(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_OV_LEFT, 0);
+	nla_put_u64(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_OV_SKIPPED, 0);
+	nla_put_u64(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_RS_SAME_CSUM, 0);
+	nla_put_u64(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_RS_DT_START_MS, 0);
+	nla_put_u64(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_RS_PAUSED_MS, 0);
+	nla_put_u64(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_RS_DT0_MS, 0);
+	nla_put_u64(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_RS_DB0_SECTORS, 0);
+	nla_put_u64(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_RS_DT1_MS, resync ? 100 : 0);
+	nla_put_u64(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_RS_DB1_SECTORS, resync ? 50 : 0);
+	nla_put_u32(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_RS_C_SYNC_RATE, 0);
+	nla_put_u64(smsg, DRBD_A_PEER_DEVICE_STATISTICS_PEER_DEV_UUID_FLAGS, UUID_FLAG_STABLE);
 	nla_nest_end(smsg, nla);
 }
 
@@ -294,26 +295,26 @@ void test_path_context(struct msg_buff *smsg, struct test_vars *vars)
 		.sin_addr = { .s_addr = 0x08070605 },
 	};
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
-	nla_put_string(smsg, T_ctx_resource_name, test_resource_name);
-	nla_put_string(smsg, T_ctx_conn_name, test_peer_name);
-	nla_put_u32(smsg, T_ctx_peer_node_id, test_peer_node_id);
-	nla_put(smsg, T_ctx_my_addr, sizeof(test_my_addr), &test_my_addr);
-	nla_put(smsg, T_ctx_peer_addr, sizeof(test_peer_addr), &test_peer_addr);
+	nla_put_string(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_RESOURCE_NAME, test_resource_name);
+	nla_put_string(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_CONN_NAME, test_peer_name);
+	nla_put_u32(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_PEER_NODE_ID, test_peer_node_id);
+	nla_put(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_MY_ADDR, sizeof(test_my_addr), &test_my_addr);
+	nla_put(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_PEER_ADDR, sizeof(test_peer_addr), &test_peer_addr);
 	nla_nest_end(smsg, nla);
 }
 
 void test_path_info(struct msg_buff *smsg, struct test_vars *vars, __u8 path_established)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_PATH_INFO);
-	nla_put_u8(smsg, T_path_established, path_established);
+	nla_put_u8(smsg, DRBD_A_DRBD_PATH_INFO_PATH_ESTABLISHED, path_established);
 	nla_nest_end(smsg, nla);
 }
 
 void test_helper(struct msg_buff *smsg, struct test_vars *vars, __u32 status)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_HELPER);
-	nla_put_string(smsg, T_helper_name, "before-resync-target");
-	nla_put_u32(smsg, T_helper_status, status);
+	nla_put_string(smsg, DRBD_A_DRBD_HELPER_INFO_HELPER_NAME, "before-resync-target");
+	nla_put_u32(smsg, DRBD_A_DRBD_HELPER_INFO_HELPER_STATUS, status);
 	nla_nest_end(smsg, nla);
 }
 
