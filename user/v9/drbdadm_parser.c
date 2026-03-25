@@ -656,12 +656,13 @@ void parse_options_syncer(struct d_resource *res)
 
 static void __parse_options(struct options *options,
 				      struct context_def *options_def,
-				      void (*delegate)(void*),
+				      void (*delegate)(void*, bool),
 				      void *delegate_context)
 {
 	const struct field_def *field_def;
 	char *value;
 	bool no_prefix;
+	bool obey_value;
 	int token;
 
 	STAILQ_INIT(options);
@@ -674,43 +675,37 @@ static void __parse_options(struct options *options,
 			return;
 
 		if (token == TK__UNKNOWN) {
-			struct d_option *no;
-
+			obey_value = false;
 			token = yylex();
-
-			/* Our drbdsetup reported an option as unknown by the kernel.
-			 * If we don't know that option either,
-			 * how can drbdsetup know to report it as unknown?
-			 * That really should not happen.
-			 */
-			field_def = find_field(&no_prefix, options_def, yytext);
-			if (!field_def) {
-				char *s = yytext;
-				log_err("%s:%u: Parse error(ignored): '_unknown %.40s%s', but I don't know about it either.\n",
-				    config_file, line, s, strlen(s) > 40 ? "..." : "");
-				EXP(';');
-				continue;
-			}
-
-			no = new_opt((char*)field_def->name, NULL);
-			no->unknown = true;
-			insert_tail(options, no);
-			EXP(';');
-			continue;
+		} else {
+			obey_value = true;
 		}
 
 		field_def = find_field(&no_prefix, options_def, yytext);
 		if (!field_def) {
 			if (delegate) {
-				delegate(delegate_context);
+				delegate(delegate_context, obey_value);
 				continue;
 			} else {
-				pe_options(options_def);
+				if (!obey_value)
+					log_err("%s:%u: Warning: Ignoring %.40s%s\n",
+						config_file, line, yytext,
+						strlen(yytext) > 40 ? "..." : "");
+				else
+					pe_options(options_def);
 			}
 		}
 
-		value = parse_option_value(field_def, no_prefix);
-		insert_tail(options, new_opt((char *)field_def->name, value));
+		if (obey_value) {
+			value = parse_option_value(field_def, no_prefix);
+			insert_tail(options, new_opt((char *)field_def->name, value));
+		} else {
+			struct d_option *no;
+			no = new_opt((char*)field_def->name, NULL);
+			no->unknown = true;
+			insert_tail(options, no);
+			EXP(';');
+		}
 	}
 }
 
@@ -719,32 +714,47 @@ static void parse_options(struct options *options, struct context_def *options_d
 	__parse_options(options, options_def, NULL, NULL);
 }
 
-static void insert_pd_options_delegate(void *ctx)
+static void insert_pd_options_delegate(void *ctx, bool obey_value)
 {
 	struct peer_delegate_data *params = ctx;
 	const struct field_def *field_def;
 	bool no_prefix;
 	char *value;
+	struct options *target;
 
 	field_def = find_field(&no_prefix, &peer_device_options_ctx, yytext);
 	if (field_def) {
-		value = parse_option_value(field_def, no_prefix);
-		insert_tail(params->peer_device_options, new_opt((char *)field_def->name, value));
-		return;
+		target = params->peer_device_options;
+		goto found;
 	}
 	field_def = find_field(&no_prefix, &device_options_ctx, yytext);
 	if (field_def) {
-		value = parse_option_value(field_def, no_prefix);
-		insert_tail(params->device_options, new_opt((char *)field_def->name, value));
-		return;
+		target = params->device_options;
+		goto found;
 	}
 	if (!strcmp(yytext, "fencing") && params->net_options) {
 		field_def = find_field(&no_prefix, &net_options_ctx, yytext);
-		value = parse_option_value(field_def, no_prefix);
-		insert_tail(params->net_options, new_opt((char *)field_def->name, value));
-		return;
+		target = params->net_options;
+		goto found;
 	}
-	pe_options(&peer_device_options_ctx); /* also mention device_options? */
+	if (!obey_value)
+		log_err("%s:%u: Warning: Ignoring %.40s%s\n", config_file, line, yytext,
+			strlen(yytext) > 40 ? "..." : "");
+	else
+		pe_options(&peer_device_options_ctx); /* also mention device_options? */
+	return;
+
+found:
+	if (obey_value) {
+		value = parse_option_value(field_def, no_prefix);
+		insert_tail(target, new_opt((char *)field_def->name, value));
+	} else {
+		struct d_option *no;
+		no = new_opt((char*)field_def->name, NULL);
+		no->unknown = true;
+		insert_tail(target, no);
+		EXP(';');
+	}
 }
 
 static void parse_disk_options(struct options *disk_options,
@@ -1332,16 +1342,20 @@ void parse_stacked_section(struct d_resource* res)
 	res->stacked_on_one = 1;
 }
 
-void startup_delegate(void *ctx)
+void startup_delegate(void *ctx, bool obey_value)
 {
 	struct d_resource *res = (struct d_resource *)ctx;
 
 	if (!strcmp(yytext, "become-primary-on")) {
-		/* log_err("Warn: Ignoring deprecated become-primary-on. Use automatic-promote\n"); */
-		int token;
-		do {
-			token = yylex();
-		} while (token != ';');
+		if (obey_value) {
+			/* log_err("Warn: Ignoring deprecated become-primary-on. Use automatic-promote\n"); */
+			int token;
+			do {
+				token = yylex();
+			} while (token != ';');
+		} else {
+			EXP(';');
+		}
 	} else if (!strcmp(yytext, "stacked-timeouts")) {
 		res->stacked_timeouts = 1;
 		EXP(';');
@@ -1349,28 +1363,32 @@ void startup_delegate(void *ctx)
 		pe_expected("<an option keyword> | become-primary-on | stacked-timeouts");
 }
 
-void net_delegate(void *ctx)
+void net_delegate(void *ctx, bool obey_value)
 {
 	enum pr_flags flags = (enum pr_flags)ctx;
 
 	if (!strcmp(yytext, "discard-my-data") && flags & PARSE_FOR_ADJUST) {
-		switch(yylex()) {
-		case TK_YES:
-		case TK_NO:
-			/* Ignore this option.  */
+		if (obey_value) {
+			switch(yylex()) {
+			case TK_YES:
+			case TK_NO:
+				/* Ignore this option.  */
+				EXP(';');
+				break;
+			case ';':
+				/* Ignore this option.  */
+				return;
+			default:
+				pe_expected("yes | no | ;");
+			}
+		} else {
 			EXP(';');
-			break;
-		case ';':
-			/* Ignore this option.  */
-			return;
-		default:
-			pe_expected("yes | no | ;");
 		}
 	} else
 		pe_expected("an option keyword");
 }
 
-void proxy_delegate(void *ctx)
+void proxy_delegate(void *ctx, bool obey_value)
 {
 	struct options *proxy_plugins = (struct options *)ctx;
 	int token;
