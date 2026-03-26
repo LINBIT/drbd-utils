@@ -401,6 +401,10 @@ std::unique_ptr<char[]> SubProcessNt::copy_to_buffer(const std::string& text)
         }
         buffer[idx] = '\0';
     }
+    else
+    {
+        buffer[0] = '\0';
+    }
     return buffer;
 }
 
