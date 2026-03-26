@@ -80,6 +80,33 @@ restrict_existing_constraint_further()
 	done
 }
 
+# From ocf-shellfuncs
+# usage: ocf_version_cmp VER1 VER2
+#     version strings can contain digits, dots, and dashes
+#     must start and end with a digit
+# returns:
+#     0: VER1 smaller (older) than VER2
+#     1: versions equal
+#     2: VER1 greater (newer) than VER2
+#     3: bad format
+ocf_version_cmp() {
+	ocf_is_ver "$1" || return 3
+	ocf_is_ver "$2" || return 3
+	local v1=$1
+	local v2=$2
+
+	sort_version="sort -t. -k 1,1n -k 2,2n -k 3,3n -k 4,4n"
+	older=$( (echo "$v1"; echo "$v2") | $sort_version | head -1 )
+
+	if [[ "$v1" == "$v2" ]]; then
+		return 1
+	elif [[ "$v1" == "$older" ]]; then
+		return 0
+	else
+		return 2 # -1 would look funny in shell ;-)
+	fi
+}
+
 # set CIB_file= in environment, unless you want to grab the "live" one.
 #
 # I'd like to use the optional prefix filter on the constraint id,
@@ -691,6 +718,15 @@ existing_constraint_rejects_me()
 setup_new_constraint()
 {
 	new_constraint="<rsc_location rsc=\"$master_id\" id=\"$id_prefix-$master_id\">"$'\n'
+
+	if [[ -z "$role" ]]; then
+		if $OCF_1_1_SUPPORT ; then
+			role="Promoted"
+		else
+			role="Master"
+		fi
+	fi
+
 	# double negation: do not run but with my data.
 	new_constraint+=" <rule role=\"$role\" score=\"-INFINITY\" id=\"$id_prefix-rule-$master_id\">"$'\n'
 
@@ -1444,7 +1480,6 @@ fi
 # apply defaults:
 : "== fencing_attribute   == ${fencing_attribute:="#uname"}"
 : "== id_prefix           == ${id_prefix:="drbd-fence-by-handler"}"
-: "== role                == ${role:="Master"}"
 
 # defaults suitable for most cases
 : "== net_hickup_time     == ${net_hickup_time:=0}"
@@ -1455,6 +1490,12 @@ fi
 : "== lock_file           == ${lock_file}"
 : "== lock_dir            == ${lock_dir}"
 
+OCF_1_1_SUPPORT=false
+ocf_version_cmp "$crm_feature_set" "3.10.0"
+res=$?
+if [[ $res -eq 2 ]] || [[ $res -eq 1 ]]; then
+           OCF_1_1_SUPPORT=true
+fi
 
 # check envars normally passed in by drbdadm
 # TODO DRBD_CONF is also passed in.  we may need to use it in the
