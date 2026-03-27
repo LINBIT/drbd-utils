@@ -2117,12 +2117,6 @@ static int generic_events_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		tmp_cm = *cm;
 		tmp_cm.continuous_poll = false;
 		cm = &tmp_cm;
-	} else {
-		if (genl_join_mc_group_and_ctrl(drbd_sock, "events")) {
-			fprintf(stderr,"%s: unable to join drbd events multicast group\n", objname);
-			err = 20;
-			goto out;
-		}
 	}
 
 	timeout_ms = -1;
@@ -2173,6 +2167,14 @@ static int generic_events_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		free(iov.iov_base);
 
 		timeout_ms = MULTIPLE_TIMEOUTS;
+	}
+
+	if (cm->continuous_poll) {
+		if (genl_join_mc_group_and_ctrl(drbd_sock, "events")) {
+			fprintf(stderr, "%s: unable to join drbd events multicast group\n", objname);
+			err = 20;
+			goto out;
+		}
 	}
 
 	if (cm->handle_reply == &print_event && opt_poll)
