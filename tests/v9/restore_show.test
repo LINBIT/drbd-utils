@@ -1,4 +1,4 @@
-$ ./drbdadm -c ./restore_show.res -d up all 2>/dev/null
+$ drbdadm -c ./restore_show.res -d up all 2>/dev/null
 drbdsetup new-resource lb-tcp-20251117-171820 0
 drbdsetup new-minor lb-tcp-20251117-171820 1 0
 drbdsetup new-peer lb-tcp-20251117-171820 1 --load-balance-paths=yes --_name=f43-2

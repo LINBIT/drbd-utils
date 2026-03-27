@@ -1,13 +1,13 @@
 ## Proxy adjust tests: match, memlimit change, plugin change, proxy down
-$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_adjust_proxy.txt FAKE_DRBD_PROXY_CTL=proxy_settings_adjust_proxy_match.txt ./drbdadm -c ./adjust_proxy.res adjust -d r0 2>/dev/null
-$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_adjust_proxy.txt FAKE_DRBD_PROXY_CTL=proxy_settings_adjust_proxy_memlimit.txt ./drbdadm -c ./adjust_proxy.res adjust -d r0 2>/dev/null
+$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_adjust_proxy.txt FAKE_DRBD_PROXY_CTL=proxy_settings_adjust_proxy_match.txt drbdadm -c ./adjust_proxy.res adjust -d r0 2>/dev/null
+$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_adjust_proxy.txt FAKE_DRBD_PROXY_CTL=proxy_settings_adjust_proxy_memlimit.txt drbdadm -c ./adjust_proxy.res adjust -d r0 2>/dev/null
 drbd-proxy-ctl -c del\ connection\ r0-peer-undertest
 drbd-proxy-ctl -c add\ connection\ r0-peer-undertest\ 10.0.1.1:7789\ 10.0.2.2:7789\ 10.0.2.1:7789\ 10.0.0.1:7789\ --memlimit=128M
 drbd-proxy-ctl -c set\ memlimit\ r0-peer-undertest\ 128M -c set\ plugin\ r0-peer-undertest\ 0\ zstd\ level\ 4 -c set\ plugin\ r0-peer-undertest\ 1\ END
-$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_adjust_proxy.txt FAKE_DRBD_PROXY_CTL=proxy_settings_adjust_proxy_plugin.txt ./drbdadm -c ./adjust_proxy.res adjust -d r0 2>/dev/null
+$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_adjust_proxy.txt FAKE_DRBD_PROXY_CTL=proxy_settings_adjust_proxy_plugin.txt drbdadm -c ./adjust_proxy.res adjust -d r0 2>/dev/null
 drbd-proxy-ctl -c set\ plugin\ r0-peer-undertest\ 0\ zstd\ level\ 4
-$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_adjust_proxy.txt FAKE_DRBD_PROXY_CTL=proxy_settings_adjust_proxy_down.txt FAKE_DRBD_PROXY_CTL_OLD=proxy_settings_adjust_proxy_down.txt ./drbdadm -c ./adjust_proxy.res adjust -d r0 2>/dev/null
+$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_adjust_proxy.txt FAKE_DRBD_PROXY_CTL=proxy_settings_adjust_proxy_down.txt FAKE_DRBD_PROXY_CTL_OLD=proxy_settings_adjust_proxy_down.txt drbdadm -c ./adjust_proxy.res adjust -d r0 2>/dev/null
 drbd-proxy-ctl -c add\ connection\ r0-peer-undertest\ 10.0.1.1:7789\ 10.0.2.2:7789\ 10.0.2.1:7789\ 10.0.0.1:7789\ --memlimit=128M
 drbd-proxy-ctl -c set\ memlimit\ r0-peer-undertest\ 128M -c set\ plugin\ r0-peer-undertest\ 0\ zstd\ level\ 4 -c set\ plugin\ r0-peer-undertest\ 1\ END
-$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_adjust_proxy.txt FAKE_DRBD_PROXY_CTL=proxy_settings_adjust_proxy_down.txt FAKE_DRBD_PROXY_CTL_OLD=proxy_settings_adjust_proxy_plugin.txt ./drbdadm -c ./adjust_proxy.res adjust -d r0 2>/dev/null
+$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_adjust_proxy.txt FAKE_DRBD_PROXY_CTL=proxy_settings_adjust_proxy_down.txt FAKE_DRBD_PROXY_CTL_OLD=proxy_settings_adjust_proxy_plugin.txt drbdadm -c ./adjust_proxy.res adjust -d r0 2>/dev/null
 drbd-proxy-ctl -c set\ plugin\ r0-peer-undertest\ 0\ zstd\ level\ 4

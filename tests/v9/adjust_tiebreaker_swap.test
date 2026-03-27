@@ -12,7 +12,7 @@
 # Desired state: peer2 (node-id 2) keep, peer3 (node-id 3) new, peer0 removed
 #
 # Expected: new-peer/connect for peer3 BEFORE del-peer for peer0
-$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_tiebreaker_swap.txt ./drbdadm -c ./adjust_tiebreaker_swap.res adjust -d r0 2>/dev/null
+$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_tiebreaker_swap.txt drbdadm -c ./adjust_tiebreaker_swap.res adjust -d r0 2>/dev/null
 drbdsetup new-peer r0 3 --_name=peer3
 drbdsetup new-path r0 3 ipv4:10.36.50.13:7791 ipv4:10.36.50.11:7791
 drbdsetup connect r0 3

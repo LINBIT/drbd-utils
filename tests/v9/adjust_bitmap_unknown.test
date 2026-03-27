@@ -3,7 +3,7 @@
 ## The disk-flushes difference triggers adj_disk_opts, which calls
 ## bitmap_will_be_enabled() where the NULL value must be handled.
 
-$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_bitmap_unknown.txt ./drbdadm -c ./adjust_bitmap_enable.res adjust -d r0 2>/dev/null
+$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_bitmap_unknown.txt drbdadm -c ./adjust_bitmap_enable.res adjust -d r0 2>/dev/null
 drbdsetup new-peer r0 1 --_name=peer1
 drbdsetup new-path r0 1 ipv4:10.0.0.1:7789 ipv4:10.0.0.2:7789
 drbdsetup disk-options 1 --set-defaults

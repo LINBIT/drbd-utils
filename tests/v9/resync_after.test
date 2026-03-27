@@ -1,4 +1,4 @@
-$ ./drbdadm -d -c ./resync_after.res dump-md res1 ; echo $?
+$ drbdadm -d -c ./resync_after.res dump-md res1 ; echo $?
 
    found __DRBD_NODE__ in environment
    PRETENDING that I am >>undertest<<
