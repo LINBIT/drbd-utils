@@ -3,7 +3,8 @@
 /drbd.service
 /drbd@.service
 /drbd-demote-or-escalate@.service
-/drbd-graceful-shutdown.service
+/drbd-graceful-disconnect.service
+/drbd-graceful-down.service
 /drbd-promote@.service
 /drbd-reconfigure-suspend-or-error@.service
 /drbd-service-shim.sh

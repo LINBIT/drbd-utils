@@ -1,0 +1,35 @@
+# This unit gets "started" by udev at the moment of the first drbd
+# device gets created. At system shutdown, it takes down all DRBD
+# resources so that metadata is cleanly written.
+
+[Unit]
+Description=DRBD graceful down on system shutdown
+Documentation=man:drbd-graceful-down.service(7)
+
+DefaultDependencies=no
+Before=shutdown.target
+Conflicts=shutdown.target
+
+# Don't take down DRBD while "drbd.service" is still running.
+Before=drbd.service
+
+# Don't take down DRBD while Pacemaker is still running!
+Before=resource-agents-deps.target
+
+# Disconnect before taking down.
+Before=drbd-graceful-disconnect.service
+
+# Take down DRBD before LVM/dm-crypt backing devices are deactivated.
+Before=blk-availability.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+# No ExecStart — this service is started implicitly by udev and only
+# performs work on stop (system shutdown).
+ExecStop=@libdir@/scripts/drbd-service-shim.sh down all
+
+# No [Install] section here.  If you want to opt-out of the
+# drbd-graceful-down.service for some reason, you can still
+# systemctl mask it.

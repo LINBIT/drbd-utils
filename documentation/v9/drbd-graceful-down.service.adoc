@@ -1,0 +1,35 @@
+drbd-graceful-down.service(7)
+==============================
+
+Name
+----
+drbd-graceful-down.service - Take down all DRBD resources on system shutdown
+
+Synopsis
+--------
+**drbd-graceful-down.service**
+
+Description
+-----------
+This service takes down all DRBD resources at system shutdown, ensuring that
+the DRBD devices are marked as clean in the on-disk metadata, ensuring that
+a resync after reboot will **not** cover the disk blocks covered by hot entries
+in the activity log.
+
+On **stop** (system shutdown), it runs `drbdsetup down all` to take down all
+DRBD resources. This is ordered after **drbd-graceful-disconnect.service** so
+that connections are gracefully disconnected first.
+
+This unit uses `DefaultDependencies=no` and is ordered before
+**shutdown.target** via a `Conflicts` dependency.
+
+Resources that are explicitly managed by other systemd services should be stopped there.
+So this is also ordered before **resource-agents-deps.target** and **drbd.service**
+and the per-resource **drbd@.service** templates, which makes it be stopped
+only after those are stopped.
+
+If you for some reason want to opt-out of this service, you can still `systemctl mask` it.
+
+See Also
+--------
+**drbd-graceful-disconnect.service**(7)

@@ -10,6 +10,23 @@
 cmd=$1
 res=$2
 
+GRACEFUL_STATE=/run/drbd/graceful-disconnect
+
+# Parse events2 to find non-StandAlone connections as "resource peer-node-id" pairs.
+# Write one pair per line to the given file.
+get_connected_peers() {
+	@sbindir@/drbdsetup events2 --now 2>/dev/null | awk -v outfile="$1" '
+	/^exists connection / {
+		for (i=1; i<=NF; i++) {
+			if ($i ~ /^name:/) name = substr($i, 6)
+			if ($i ~ /^peer-node-id:/) pnid = substr($i, 14)
+			if ($i ~ /^connection:/) conn = substr($i, 12)
+		}
+		if (conn != "StandAlone")
+			print name, pnid > outfile
+	}'
+}
+
 secondary_check() {
 	local ex_secondary current_state opts
 	opts="$1"
@@ -39,6 +56,25 @@ secondary_check() {
 }
 
 case "$cmd" in
+graceful-disconnect)
+	mkdir -p /run/drbd
+	get_connected_peers "$GRACEFUL_STATE"
+	if [ -f "$GRACEFUL_STATE" ]; then
+		while read name pnid; do
+			@sbindir@/drbdsetup disconnect "$name" "$pnid" || true
+		done < "$GRACEFUL_STATE"
+	fi
+	exit 0
+	;;
+graceful-reconnect)
+	if [ -f "$GRACEFUL_STATE" ]; then
+		while read name pnid; do
+			@sbindir@/drbdsetup connect "$name" "$pnid" || true
+		done < "$GRACEFUL_STATE"
+		rm -f "$GRACEFUL_STATE"
+	fi
+	exit 0
+	;;
 adjust)
   exec @sbindir@/drbdadm adjust "$res"
   ;;

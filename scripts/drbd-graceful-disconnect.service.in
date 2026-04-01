@@ -1,0 +1,29 @@
+# This unit gets "started" by udev at the moment of the first drbd
+# device gets created. When network-online.target goes down (e.g. due
+# to a networkd restart or netplan apply), it gracefully disconnects
+# all connected DRBD peers. When network-online.target comes back up,
+# it reconnects them.
+
+[Unit]
+Description=DRBD graceful disconnect on network down, reconnect on network up
+Documentation=man:drbd-graceful-disconnect.service(7)
+
+BindsTo=network-online.target
+After=network-online.target
+
+# Don't disconnect DRBD while "drbd.service" is still running.
+Before=drbd.service
+
+# Don't disconnect DRBD while Pacemaker is still running!
+Before=resource-agents-deps.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+ExecStart=@libdir@/scripts/drbd-service-shim.sh graceful-reconnect
+ExecStop=@libdir@/scripts/drbd-service-shim.sh graceful-disconnect
+
+# No [Install] section here.  If you want to opt-out of the
+# drbd-graceful-disconnect.service for some reason, you can still
+# systemctl mask it.

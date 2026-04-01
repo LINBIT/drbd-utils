@@ -7,6 +7,6 @@ IMPORT{program}="@sbindir@/drbdsetup udev %m"
 
 ENV{SYMLINK_BY_DISK}!="", SYMLINK+="$env{SYMLINK_BY_DISK}"
 ENV{SYMLINK_BY_RES}!="", SYMLINK+="$env{SYMLINK_BY_RES}"
-ENV{SYSTEMD_WANTS}="drbd-graceful-shutdown.service"
+ENV{SYSTEMD_WANTS}="drbd-graceful-disconnect.service drbd-graceful-down.service"
 
 LABEL="drbd_end"

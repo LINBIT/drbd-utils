@@ -15,7 +15,7 @@ After=drbd-proxy.service
 
 # Actually, reverse: on shutdown, we want to stop explicit instances first,
 # then only stop those resources that have been started by other means.
-After=drbd-graceful-shutdown.service
+After=drbd-graceful-disconnect.service drbd-graceful-down.service
 
 # This is not intended to be combined with pacemaker,
 # but if combined, it should be ordered before pacemaker.

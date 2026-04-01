@@ -1,0 +1,51 @@
+drbd-graceful-disconnect.service(7)
+====================================
+
+Name
+----
+drbd-graceful-disconnect.service - Graceful DRBD disconnect on network down, reconnect on network up
+
+Synopsis
+--------
+**drbd-graceful-disconnect.service**
+
+Description
+-----------
+This service manages DRBD network connections in response to network lifecycle
+events.
+
+On **stop** (network-online.target going down), it disconnects all currently
+connected DRBD peers. Unlike an unexpected loss of network connectivity,
+graceful disconnect allows secondary nodes to mark their disks as Outdated
+during the disconnect two-phase commit. The benefit is that remaining
+partitions containing a primary node can then keep quorum. The list of
+disconnected peers is saved to `/run` so they can be reconnected on start.
+
+On **start** (network-online.target coming up), it reconnects all peers that
+were previously disconnected by the stop action.
+
+Peers that are deliberately StandAlone are not touched. Only connections that
+are currently active in the kernel are affected.
+
+This unit is ordered after **network-online.target**: when the network goes
+down, this service will be stopped before the network is torn down.
+
+Resources that are explicitly managed by other systemd services should be stopped there.
+So this is also ordered before **resource-agents-deps.target** and **drbd.service**
+and the per-resource **drbd@.service** templates, which makes it be stopped
+only after those are stopped.
+
+If you have some other **foo.service** that starts and stops DRBD resources,
+you should add a drop-in `/etc/systemd/system/drbd-graceful-disconnect.service.d/foo.conf`
+```
+[Unit]
+Before=foo.service
+```
+
+(Or the inverse, add an `After=drbd-graceful-disconnect.service` to your `foo.service`).
+
+If you for some reason want to opt-out of this service, you can still `systemctl mask` it.
+
+See Also
+--------
+**drbd-graceful-down.service**(7)

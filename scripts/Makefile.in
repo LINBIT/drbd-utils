@@ -59,7 +59,8 @@ SYSTEMD_TEMPLATES += drbd-lvchange@.service
 SYSTEMD_TEMPLATES += drbd-wait-promotable@.service
 
 SYSTEMD_UNITS  = drbd.service
-SYSTEMD_UNITS += drbd-graceful-shutdown.service
+SYSTEMD_UNITS += drbd-graceful-disconnect.service
+SYSTEMD_UNITS += drbd-graceful-down.service
 SYSTEMD_UNITS += drbd-configured.target
 
 UDEV_TEMPLATES  = drbd.rules
@@ -67,7 +68,8 @@ UDEV_TEMPLATES  = drbd.rules
 SERVICE_TEMPLATES  = drbd.service
 SERVICE_TEMPLATES += drbd@.service
 SERVICE_TEMPLATES += drbd-demote-or-escalate@.service
-SERVICE_TEMPLATES += drbd-graceful-shutdown.service
+SERVICE_TEMPLATES += drbd-graceful-disconnect.service
+SERVICE_TEMPLATES += drbd-graceful-down.service
 SERVICE_TEMPLATES += drbd-promote@.service
 SERVICE_TEMPLATES += drbd-reconfigure-suspend-or-error@.service
 SERVICE_TEMPLATES += drbd-wait-promotable@.service
