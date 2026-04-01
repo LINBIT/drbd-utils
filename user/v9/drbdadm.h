@@ -180,7 +180,6 @@ struct path
 
 	unsigned int implicit:1;
 	unsigned int adj_seen:1;
-	unsigned int proxy_conn_is_down:1;
 	unsigned int ignore:1;
 	STAILQ_ENTRY(path) link;
 };
@@ -407,7 +406,6 @@ extern struct adm_cmd del_minor_cmd;
 extern struct adm_cmd proxy_conn_down_cmd;
 extern struct adm_cmd proxy_conn_up_cmd;
 extern struct adm_cmd proxy_conn_plugins_cmd;
-extern struct adm_cmd proxy_reconf_cmd;
 extern struct adm_cmd sh_list_adjustable;
 
 struct d_name *find_backend_option(const char *opt_name);

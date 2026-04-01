@@ -410,14 +410,13 @@ bool _is_plugin_in_list(char *string,
 }
 
 
-static int proxy_reconf(const struct cfg_ctx *ctx, struct connection *running_conn,
-			char *conn_name)
+static int proxy_reconf(const struct cfg_ctx *ctx, struct d_proxy_info *running_proxy,
+			bool proxy_conn_is_up, char *conn_name)
 {
 	struct deferred_cmd *dcmd = NULL;
 	int reconn = 0;
 	struct connection *conn = ctx->conn;
 	struct path *path = STAILQ_FIRST(&conn->paths); /* multiple paths via proxy, later! */
-	struct path *running_path; /* multiple paths via proxy, later! */
 	struct d_option* res_o, *run_o;
 	unsigned long long v1, v2, minimum;
 	char *plugin_changes[MAX_PLUGINS], *cp;
@@ -429,18 +428,14 @@ static int proxy_reconf(const struct cfg_ctx *ctx, struct connection *running_co
 
 	reconn = 0;
 
-	if (!running_conn)
+	if (!running_proxy)
 		goto redo_whole_conn;
 
-	running_path = STAILQ_FIRST(&running_conn->paths); /* multiple paths via proxy, later! */
-	if (!running_path || !running_path->my_proxy)
-		goto redo_whole_conn;
-
-	if (running_path->proxy_conn_is_down)
+	if (!proxy_conn_is_up)
 		goto up_whole_conn;
 
 	res_o = find_opt(&path->my_proxy->options, "memlimit");
-	run_o = find_opt(&running_path->my_proxy->options, "memlimit");
+	run_o = find_opt(&running_proxy->options, "memlimit");
 	v1 = res_o ? m_strtoll(res_o->value, 1) : 0;
 	v2 = run_o ? m_strtoll(run_o->value, 1) : 0;
 	minimum = v1 < v2 ? v1 : v2;
@@ -465,7 +460,7 @@ static int proxy_reconf(const struct cfg_ctx *ctx, struct connection *running_co
 
 
 	res_o = STAILQ_FIRST(&path->my_proxy->plugins);
-	run_o = STAILQ_FIRST(&running_path->my_proxy->plugins);
+	run_o = STAILQ_FIRST(&running_proxy->plugins);
 	used = 0;
 	for(i=0; i<MAX_PLUGINS; i++)
 	{
@@ -1018,11 +1013,12 @@ struct d_resource *running_res_by_name(const char *name)
 
 /* Query proxy for connection settings.
  * fake_file: if non-NULL, read from this file instead of running drbd-proxy-ctl. */
-static void parse_proxy_settings(struct path *path, const char *conn_name, const char *fake_file)
+static bool parse_proxy_settings(struct d_proxy_info **proxy, const char *conn_name, const char *fake_file)
 {
 	char *show_conn;
 	char config_file_dummy[250];
 	int pid = -1;
+	bool conn_is_up;
 
 	line = 1;
 	m_asprintf(&show_conn, "show proxy-settings %s", conn_name);
@@ -1045,7 +1041,7 @@ static void parse_proxy_settings(struct path *path, const char *conn_name, const
 
 		yyin = m_popen(&pid, argv);
 	}
-	path->proxy_conn_is_down = parse_proxy_options_section(&path->my_proxy);
+	conn_is_up = !parse_proxy_options_section(proxy);
 	fclose(yyin);
 	if (pid != -1) {
 		int status, w;
@@ -1053,13 +1049,14 @@ static void parse_proxy_settings(struct path *path, const char *conn_name, const
 		if (w == -1)
 			log_err("waitpid() errno = %d\n", errno);
 		if (WIFEXITED(status) && WEXITSTATUS(status))
-			path->proxy_conn_is_down = 1;
+			conn_is_up = false;
 	}
+	return conn_is_up;
 }
 
 /* Adjust proxy settings for all connections where this host runs the proxy.
  * This is independent of whether DRBD is running on this node. */
-static void adjust_proxy(const struct cfg_ctx *ctx, struct d_resource *running)
+static void adjust_proxy(const struct cfg_ctx *ctx)
 {
 	char *fake_drbd_proxy_ctl = getenv("FAKE_DRBD_PROXY_CTL");
 	char *fake_drbd_proxy_ctl_old = getenv("FAKE_DRBD_PROXY_CTL_OLD");
@@ -1067,9 +1064,8 @@ static void adjust_proxy(const struct cfg_ctx *ctx, struct d_resource *running)
 
 	for_each_connection(conn, &ctx->res->connections) {
 		struct path *configured_path = STAILQ_FIRST(&conn->paths);
-		struct connection tmp_conn = { };
-		struct connection *running_conn = NULL;
-		struct path *running_path;
+		struct d_proxy_info *running_proxy = NULL;
+		bool proxy_conn_is_up;
 		const struct cfg_ctx tmp_ctx = { .cmd = ctx->cmd, .res = ctx->res, .conn = conn };
 		char *conn_name;
 
@@ -1077,31 +1073,19 @@ static void adjust_proxy(const struct cfg_ctx *ctx, struct d_resource *running)
 		    !hostname_in_list(hostname, &configured_path->my_proxy->on_hosts))
 			continue;
 
-		if (running)
-			running_conn = matching_conn(conn, &running->connections, false);
-
-		if (running_conn) {
-			running_path = STAILQ_FIRST(&running_conn->paths);
-		} else {
-			running_path = alloc_path();
-			STAILQ_INIT(&tmp_conn.paths);
-			STAILQ_INSERT_HEAD(&tmp_conn.paths, running_path, link);
-			running_conn = &tmp_conn;
-		}
-
 		/* Query running proxy settings, with old-name fallback */
 		conn_name = proxy_connection_name(ctx->res, conn);
-		parse_proxy_settings(running_path, conn_name, fake_drbd_proxy_ctl);
+		proxy_conn_is_up = parse_proxy_settings(&running_proxy, conn_name, fake_drbd_proxy_ctl);
 
-		if (running_path->proxy_conn_is_down) {
+		if (!proxy_conn_is_up) {
 			char *old_conn_name = old_proxy_connection_name(ctx->res, conn);
-			parse_proxy_settings(running_path, old_conn_name, fake_drbd_proxy_ctl_old);
+			proxy_conn_is_up = parse_proxy_settings(&running_proxy, old_conn_name, fake_drbd_proxy_ctl_old);
 
-			if (!running_path->proxy_conn_is_down)
+			if (proxy_conn_is_up)
 				conn_name = old_conn_name;
 		}
 
-		proxy_reconf(&tmp_ctx, running_conn, conn_name);
+		proxy_reconf(&tmp_ctx, running_proxy, proxy_conn_is_up, conn_name);
 	}
 }
 
@@ -1163,15 +1147,13 @@ static struct d_resource *adjust_drbd(const struct cfg_ctx *ctx, int adjust_flag
  */
 int _adm_adjust(const struct cfg_ctx *ctx, int adjust_flags)
 {
-	struct d_resource *running = NULL;
-
 	set_me_in_resource(ctx->res, true);
 	set_peer_in_resource(ctx->res, true);
 
 	if (!ctx->res->proxy_only)
-		running = adjust_drbd(ctx, adjust_flags);
+		adjust_drbd(ctx, adjust_flags);
 
-	adjust_proxy(ctx, running);
+	adjust_proxy(ctx);
 
 	return 0;
 }
