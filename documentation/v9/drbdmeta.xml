@@ -22,6 +22,7 @@
     <cmdsynopsis sepchar=" ">
       <command moreinfo="none">drbdmeta</command>
       <arg choice="opt" rep="norepeat">--force</arg>
+      <arg choice="opt" rep="norepeat">--quiet</arg>
       <arg choice="opt" rep="norepeat">--ignore-sanity-checks</arg>
       <arg choice="req" rep="norepeat">
         <replaceable>device</replaceable>
@@ -81,7 +82,21 @@
         <term>--force</term>
         <listitem>
           <para><indexterm significance="normal"><primary>drbdmeta</primary><secondary>--force</secondary></indexterm>
-	    Assume yes as the answer to all questions drbdmeta would ask.</para>
+	    Assume yes as the answer to all questions drbdmeta would ask.
+	    Each auto-confirmed prompt is reported to standard error.
+	    Combine with <option>--quiet</option> to suppress these messages.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>--quiet</term>
+        <listitem>
+          <para><indexterm significance="normal"><primary>drbdmeta</primary><secondary>--quiet</secondary></indexterm>
+	    When combined with <option>--force</option>, suppresses the
+	    informational messages and confirmation prompts that
+	    <option>--force</option> would otherwise auto-confirm and report.
+	    At the end of the run, a single summary line is printed to standard
+	    error stating how many confirmations were suppressed, but only if
+	    at least one was.  Has no effect without <option>--force</option>.</para>
         </listitem>
       </varlistentry>
       <varlistentry>

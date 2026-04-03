@@ -73,7 +73,9 @@ extern FILE* yyin;
 YYSTYPE yylval;
 
 int	force = 0;
+int	quiet = 0;
 int	verbose = 0;
+static int quiet_suppressed = 0; /* counts confirmations suppressed by --force --quiet */
 int	ignore_sanity_checks = 0;
 int	dry_run = 0;
 int     option_peer_max_bio_size = 0;
@@ -134,6 +136,7 @@ struct option metaopt[] = {
     { "dry-run",  no_argument, &dry_run, 1000 },
     { "tentative", no_argument, &dry_run, 1000 },
     { "force",  no_argument,    0, 'f' },
+    { "quiet",  no_argument,    0, 'q' },
     { "verbose",  no_argument,    0, 'v' },
     { "peer-max-bio-size",  required_argument, NULL, 'p' },
     { "node-id",  required_argument, NULL, 'i' },
@@ -164,7 +167,17 @@ struct option metaopt[] = {
  * AND, the exit codes should follow some defined scheme.
  */
 
-bool confirmed(const char *text)
+/*
+ * confirmed_ex - ask for confirmation, optionally with a context preamble.
+ *
+ * context: informational message printed before the question; may be NULL.
+ *          Suppressed when --force --quiet is in effect (auto-confirmed anyway).
+ * question: the yes/no question itself.
+ *
+ * In force mode, auto-confirms. With --quiet, suppresses all output.
+ * In interactive mode (no --force), context and question are always shown.
+ */
+bool confirmed_ex(const char *context, const char *question)
 {
 	const char yes[] = "yes";
 	const ssize_t N = sizeof(yes);
@@ -172,7 +185,14 @@ bool confirmed(const char *text)
 	size_t n = 0;
 	bool ok;
 
-	fprintf(stderr, "\n%s\n", text);
+	if (force && quiet) {
+		quiet_suppressed++;
+		return true;
+	}
+
+	if (context)
+		fprintf(stderr, "\n%s\n", context);
+	fprintf(stderr, "\n%s\n", question);
 
 	if (force) {
 		fprintf(stderr, "*** confirmation forced via --force option ***\n");
@@ -191,6 +211,11 @@ bool confirmed(const char *text)
 	fprintf(stderr, "\n");
 
 	return ok;
+}
+
+bool confirmed(const char *text)
+{
+	return confirmed_ex(NULL, text);
 }
 
 /*
@@ -2827,14 +2852,17 @@ void v08_check_for_resize(struct format *cfg)
 
 	if (found) {
 		if (cfg->lk_bd.bd_uuid && md_test.device_uuid != cfg->lk_bd.bd_uuid) {
-			fprintf(stderr, "Last known and found uuid differ!?\n"
-					X64(016)" != "X64(016)"\n",
-					cfg->lk_bd.bd_uuid, cfg->md.device_uuid);
+			if (!(force && quiet))
+				fprintf(stderr, "Last known and found uuid differ!?\n"
+						X64(016)" != "X64(016)"\n",
+						cfg->lk_bd.bd_uuid, cfg->md.device_uuid);
 			if (!force) {
 				found = 0;
 				fprintf(stderr, "You may --force me to ignore that.\n");
-			} else
+			} else if (!(force && quiet))
 				fprintf(stderr, "You --force'ed me to ignore that.\n");
+			else
+				quiet_suppressed++;
 		}
 	}
 	if (found)
@@ -3157,7 +3185,10 @@ int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc
 		(cfg->md.flags & MDF_AL_CLEAN) != 0;
 
 	if (!al_is_clean) {
-		fprintf(stderr, "Found meta data is \"unclean\", please apply-al first\n");
+		if (!(force && quiet))
+			fprintf(stderr, "Found meta data is \"unclean\", please apply-al first\n");
+		else
+			quiet_suppressed++;
 		if (!force)
 			return -1;
 	}
@@ -4663,23 +4694,24 @@ void check_internal_md_flavours(struct format * cfg) {
 	if (have == DRBD_UNKNOWN)
 		return;
 
-	fprintf(stderr, "You want me to create a %s%s style %s internal meta data block.\n",
-		cfg->ops->name,
-		(is_v07(cfg) && cfg->md_index == DRBD_MD_INDEX_FLEX_INT) ? "(plus)" : "",
-		cfg->md_index == DRBD_MD_INDEX_FLEX_INT ? "flexible-size" : "fixed-size");
-
-
-	fprintf(stderr, "There appears to be a %s %s internal meta data block\n"
-		"already in place on %s at byte offset %llu\n",
-		f_ops[have].name, fixed ? "fixed-size" : "flexible-size",
-		cfg->md_device_name,
-		fixed ? (long long unsigned)fixed_offset : (long long unsigned)flex_offset);
+	char *create_md_context;
+	if (asprintf(&create_md_context,
+		     "You want me to create a %s%s style %s internal meta data block.\n"
+		     "There appears to be a %s %s internal meta data block\n"
+		     "already in place on %s at byte offset %llu",
+		     cfg->ops->name,
+		     (is_v07(cfg) && cfg->md_index == DRBD_MD_INDEX_FLEX_INT) ? "(plus)" : "",
+		     cfg->md_index == DRBD_MD_INDEX_FLEX_INT ? "flexible-size" : "fixed-size",
+		     f_ops[have].name, fixed ? "fixed-size" : "flexible-size",
+		     cfg->md_device_name,
+		     fixed ? (long long unsigned)fixed_offset : (long long unsigned)flex_offset) < 0)
+		create_md_context = NULL;
 
 	if (format_version(cfg) == have) {
 		if (have != DRBD_V07
 		&& (cfg->md.al_stripes != option_al_stripes
 		||  cfg->md.al_stripe_size_4k != option_al_stripe_size_4k)) {
-			if (confirmed("Do you want to change the activity log stripe settings *only*?")) {
+			if (confirmed_ex(create_md_context, "Do you want to change the activity log stripe settings *only*?")) {
 				fprintf(stderr,
 					"Sorry, not yet fully implemented\n"
 					"Try dump-md > dump.txt; restore-md -s x -z y dump.txt\n");
@@ -4693,8 +4725,10 @@ void check_internal_md_flavours(struct format * cfg) {
 				 *  ???
 				 */
 			}
+			/* context was shown (or suppressed in quiet mode); don't repeat it */
+			create_md_context = NULL;
 		}
-		if (!confirmed("Do you really want to overwrite the existing meta-data?")) {
+		if (!confirmed_ex(create_md_context, "Do you really want to overwrite the existing meta-data?")) {
 			printf("Operation cancelled.\n");
 			exit(1); // 1 to avoid online resource counting
 		}
@@ -4704,7 +4738,7 @@ void check_internal_md_flavours(struct format * cfg) {
 
 		snprintf(msg, 160, "Valid %s meta-data found, convert to %s?",
 			 f_ops[have].name, cfg->ops->name);
-		if (confirmed(msg)) {
+		if (confirmed_ex(create_md_context, msg)) {
 			cfg->md = md_now;
 			convert_md(cfg, have);
 		} else {
@@ -4718,6 +4752,7 @@ void check_internal_md_flavours(struct format * cfg) {
 			cfg->md.magic = 0;
 		}
 	}
+	free(create_md_context);
 
 	/* we have two "internal" layouts:
 	 * v07 "fixed" internal:
@@ -5179,7 +5214,7 @@ void print_usage_and_exit()
 	size_t i;
 
 	printf
-	    ("\nUSAGE: %s [--force] DEVICE FORMAT [FORMAT ARGS...] COMMAND [CMD ARGS...]\n",
+	    ("\nUSAGE: %s [--force] [--quiet] DEVICE FORMAT [FORMAT ARGS...] COMMAND [CMD ARGS...]\n",
 	     progname);
 
 	printf("\nFORMATS:\n");
@@ -5635,6 +5670,9 @@ int main(int argc, char **argv)
 	    case 'f':
 		force = 1;
 		break;
+	    case 'q':
+		quiet = 1;
+		break;
 	    case 'v':
 		verbose++;
 		break;
@@ -5864,6 +5902,9 @@ int main(int argc, char **argv)
 	rv = command->function(cfg, argv + ai, argc - ai);
 	if (minor_attached)
 		fprintf(stderr, "# Output might be stale, since minor %d is attached\n", cfg->minor);
+	if (quiet_suppressed)
+		fprintf(stderr, "# --force --quiet: %d confirmation(s) suppressed and auto-confirmed\n",
+			quiet_suppressed);
 
 	return rv;
 	/* and if we want an explicit free,
