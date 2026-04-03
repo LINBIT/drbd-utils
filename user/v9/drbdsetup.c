@@ -2236,7 +2236,7 @@ static void print_paths(struct connections_list *connection)
 		colon = strchr(address, ':');
 		if (colon)
 			*colon = ' ';
-		if (nla->nla_type == T_my_addr) {
+		if (nla_type(nla) == __nla_type(T_my_addr)) {
 			pD("path {\n");
 			++indent;
 			pD("_this_host %s;\n", address);
@@ -2249,7 +2249,7 @@ static void print_paths(struct connections_list *connection)
 				--indent;
 			}
 		}
-		if (nla->nla_type == T_peer_addr) {
+		if (nla_type(nla) == __nla_type(T_peer_addr)) {
 			pD("_remote_host %s;\n", address);
 			if (json_output) {
 				int rem = tmp;
