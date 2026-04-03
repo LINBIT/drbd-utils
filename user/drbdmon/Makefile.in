@@ -55,6 +55,7 @@ l-obj += terminal/MDspSelectionFilter.o terminal/selection_filter.o terminal/MDs
 l-obj += terminal/MDspExportSelection.o terminal/MDspImportSelection.o
 l-obj += subprocess/SubProcessQueue.o subprocess/SubProcess.o subprocess/CmdLine.o subprocess/DrbdCmdConsts.o
 l-obj += subprocess/Linux/SubProcessLx.o terminal/Linux/TerminalControlImpl.o terminal/Linux/InputSequenceDecoder.o
+l-obj += subprocess/ThreadQueue.o
 l-obj += platform/Linux/SystemApiImpl.o platform/Linux/EventsIo.o
 l-obj += configuration/CfgEntryStore.o configuration/CfgEntryBoolean.o configuration/CfgEntryIntegerTypes.o
 l-obj += configuration/CfgEntry.o configuration/Configuration.o platform/IoException.o
