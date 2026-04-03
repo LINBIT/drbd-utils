@@ -1308,6 +1308,7 @@ struct context_def create_md_ctx = {
 struct context_def forceable_ctx = {
        .fields = {
 		{ .name = "force", .argument_is_optional = true },
+		{ .name = "quiet", .argument_is_optional = true },
 		{ } },
 };
 
@@ -1315,6 +1316,7 @@ struct context_def dump_superblock_ctx = {
        .fields = {
 		{ .name = "force", .argument_is_optional = true },
 		{ .name = "output-format", .argument_is_optional = false },
+		{ .name = "quiet", .argument_is_optional = true },
 		{ } },
 };
 
@@ -1336,6 +1338,7 @@ struct context_def repair_md_ctx = {
        .fields = {
 		{ .name = "tentative", .argument_is_optional = true },
 		{ .name = "force", .argument_is_optional = true },
+		{ .name = "quiet", .argument_is_optional = true },
 		{ } },
 };
 
