@@ -768,7 +768,7 @@
 		<simpara>On <emphasis>both</emphasis> nodes, initialize meta data and configure the
 		device.</simpara>
 
-		<simpara><command moreinfo="none">drbdadm create-md --force
+		<simpara><command moreinfo="none">drbdadm create-md
 		<replaceable>res/volume-number</replaceable></command></simpara>
 	      </listitem>
 
@@ -819,23 +819,47 @@
 	  <para>The necessary steps on the current active server are: <orderedlist
 	      continuation="restarts" inheritnum="ignore" numeration="arabic">
 	      <listitem>
-		<simpara><command moreinfo="none">drbdsetup new-current-uuid --clear-bitmap <replaceable>minor</replaceable>
+		<simpara><command moreinfo="none">drdadm new-current-uuid --clear-bitmap <replaceable>res/vol</replaceable>
 		</command></simpara>
+		<simpara>This generated a new current UUID to tag the data generation with, let's call it "UUID_2" in this description.
+		It will be injected later into the new meta data on the new target node.
+		It can be retrieved now with <command moreinfo="none">drbdadm show-gi <replaceable>res/vol</replaceable></command>,
+		or by other means later. Note: "get-gi" is the same information, without the explanatory fluff.
+		The "current uuid" is the first hex number before the first colon.</simpara>
 	      </listitem>
 
 	      <listitem>
-		<simpara>Take the copy of the current active server. E.g. by pulling a disk out of the
-		RAID1 controller, or by copying with dd. You need to copy the actual data, and the
-		meta data.</simpara>
+		<simpara>Copy the data of the current active server to the new peer.
+		This does not have to be an atomic "snapshot" copy, a "dirty", inconsistent, copy using
+		<command moreinfo="none">dd</command> is good enough. For convenience, copying the metadata
+		alongside the data (e.g. with internal metadata) is harmless; it will be
+		overwritten by the <command moreinfo="none">create-md</command> in the next
+		step. In DRBD 9 the metadata stores the local node-id and must be
+		re-initialised on the new node regardless.</simpara>
 	      </listitem>
 
 	      <listitem>
-		<simpara><command moreinfo="none">drbdsetup new-current-uuid <replaceable>minor</replaceable>
+		<simpara><command moreinfo="none">drbdadm new-current-uuid <replaceable>res/vol</replaceable>
 		</command></simpara>
+		<simpara>This again creates a new random current UUID, its specific value is of no concern.
+		After this step, the "UUID_2" (from the previous call to new-current-uuid)
+		appears as the "bitmap UUID" of the peer's slot.
+		Retrieve it with <command moreinfo="none">drbdadm show-gi <replaceable>res/vol</replaceable></command>,
+		if not already noted in step 1; it displays now as the second hex number between the colons.</simpara>
 	      </listitem>
-	    </orderedlist> Now add the disk to the new secondary node, and join it to the cluster. You
-	  will get a resync of that parts that were changed since the first call to <command
-	  moreinfo="none">drbdsetup</command> in step 1.</para></listitem></varlistentry></variablelist>
+	    </orderedlist></para>
+
+	  <para>On the new secondary node, initialise fresh metadata primed with that "UUID_2" as "current" uuid,
+	  then join the cluster:</para>
+
+	  <simpara><command moreinfo="none">drbdadm create-md --initial-current-uuid=<replaceable>UUID_2</replaceable>
+	  <replaceable>res/vol</replaceable></command></simpara>
+
+	  <simpara><command moreinfo="none">drbdadm up <replaceable>res</replaceable></command></simpara>
+
+	  <para>You will get a resync of the parts that were changed since step 1. The new node
+	  receives all writes it may have missed since the copy was taken.</para>
+	  </listitem></varlistentry></variablelist>
 	</listitem>
       </varlistentry>
 
