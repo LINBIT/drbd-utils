@@ -996,7 +996,7 @@ void fprintf_all_cfg_reply_info_text(const char *hdr, struct nlmsghdr *nlh)
 			hdr = NULL;
 		}
 		nla_for_each_nested(nla, o_nla, rem) {
-			if (nla_type(nla) == __nla_type(T_info_text))
+			if (nla_type(nla) == T_info_text)
 				fprintf(stderr, "%s\n", (char*)nla_data(nla));
 		}
 	}
@@ -1358,7 +1358,7 @@ bool should_show_field_info_from_attr_tb(struct nlattr **nlattr_p, const char **
 	struct nlattr *nlattr;
 	const char *str = NULL;
 
-	nlattr = nlattr_tb[__nla_type(field->nla_type)];
+	nlattr = nlattr_tb[field->nla_type];
 	if (nlattr) {
 		str = field->ops->get(ctx, field, nlattr);
 		is_default = field->ops->is_default(field, str);
@@ -2236,7 +2236,7 @@ static void print_paths(struct connections_list *connection)
 		colon = strchr(address, ':');
 		if (colon)
 			*colon = ' ';
-		if (nla_type(nla) == __nla_type(T_my_addr)) {
+		if (nla_type(nla) == T_my_addr) {
 			pD("path {\n");
 			++indent;
 			pD("_this_host %s;\n", address);
@@ -2249,7 +2249,7 @@ static void print_paths(struct connections_list *connection)
 				--indent;
 			}
 		}
-		if (nla_type(nla) == __nla_type(T_peer_addr)) {
+		if (nla_type(nla) == T_peer_addr) {
 			pD("_remote_host %s;\n", address);
 			if (json_output) {
 				int rem = tmp;
@@ -2490,7 +2490,7 @@ static void show_resource_list(struct resources_list *resources_list, char* old_
 		++indent;
 
 #ifdef WITH_84_SUPPORT
-		nla = nla_find_nested(resource->res_opts, __nla_type(T_drbd8_compat_mode));
+		nla = nla_find_nested(resource->res_opts, T_drbd8_compat_mode);
 		if (nla && *(uint8_t *)nla_data(nla)) {
 			printI("# This resource is in drbd-8.4 compatibility mode!\n");
 
@@ -2504,7 +2504,7 @@ static void show_resource_list(struct resources_list *resources_list, char* old_
 		printI("_this_host {\n");
 		++indent;
 
-		nla = nla_find_nested(resource->res_opts, __nla_type(T_node_id));
+		nla = nla_find_nested(resource->res_opts, T_node_id);
 		if (nla)
 			printI("node-id\t\t\t%d;\n", *(uint32_t *)nla_data(nla));
 
@@ -2571,7 +2571,7 @@ static void show_resource_list_json(struct resources_list *resources_list, char*
 		printI("\"_this_host\": {\n");
 		++indent;
 
-		nla = nla_find_nested(resource->res_opts, __nla_type(T_node_id));
+		nla = nla_find_nested(resource->res_opts, T_node_id);
 		if (nla)
 			printI("\"node-id\": %d,\n", *(uint32_t *)nla_data(nla));
 
@@ -2975,7 +2975,7 @@ static void connection_status_json(struct connections_list *connection,
 	struct paths_list *path;
 	int path_index = 0;
 	int i = 0;
-	struct nlattr *tls_nla = nla_find_nested(connection->net_conf, __nla_type(T_tls));
+	struct nlattr *tls_nla = nla_find_nested(connection->net_conf, T_tls);
 
 	printf("    {\n"
 	       "      \"peer-node-id\": %d,\n"
@@ -3082,7 +3082,7 @@ static void resource_status_json(struct resources_list *resource)
 		resource->info.res_susp_fen ||
 		resource->info.res_susp_quorum;
 
-	nla = nla_find_nested(resource->res_opts, __nla_type(T_node_id));
+	nla = nla_find_nested(resource->res_opts, T_node_id);
 	if (nla)
 		node_id = *(uint32_t *)nla_data(nla);
 
@@ -3204,7 +3204,7 @@ void resource_status(struct resources_list *resource)
 	if (opt_verbose) {
 		struct nlattr *nla;
 
-		nla = nla_find_nested(resource->res_opts, __nla_type(T_node_id));
+		nla = nla_find_nested(resource->res_opts, T_node_id);
 		if (nla)
 			wrap_printf(4, " node-id:%d", *(uint32_t *)nla_data(nla));
 	}
@@ -3420,7 +3420,7 @@ static void connection_status(struct connections_list *connection,
 			    drbd_role_str(role),
 			    role_color_stop(role, false));
 
-		struct nlattr *tls_nla = nla_find_nested(connection->net_conf, __nla_type(T_tls));
+		struct nlattr *tls_nla = nla_find_nested(connection->net_conf, T_tls);
 		if (opt_verbose || (tls_nla && *(uint8_t *)nla_data(tls_nla)))
 			wrap_printf(6, " tls:%s",
 				    tls_nla && *(uint8_t *)nla_data(tls_nla) ? "yes" : "no");

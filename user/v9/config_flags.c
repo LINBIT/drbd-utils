@@ -66,12 +66,12 @@ static bool enum_is_equal(const struct field_def *field, const char *a, const ch
 
 static int type_of_field(struct context_def *ctx, const struct field_def *field)
 {
-	return ctx->nla_policy[__nla_type(field->nla_type)].type;
+	return ctx->nla_policy[field->nla_type].type;
 }
 
 static int len_of_field(struct context_def *ctx, const struct field_def *field)
 {
-	return ctx->nla_policy[__nla_type(field->nla_type)].len;
+	return ctx->nla_policy[field->nla_type].len;
 }
 
 static const char *get_enum(struct context_def *ctx, const struct field_def *field, struct nlattr *nla)

@@ -85,11 +85,11 @@ CFLAGS += $(EXTRA_CFLAGS)
 drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_postparse.o \
 	      drbdadm_main.o drbdadm_adjust.o drbdadm_dump.o drbdtool_common.o \
 	      drbdadm_usage_cnt.o drbd_buildtag.o registry.o config_flags.o \
-	      libnla.o drbd_nla.o shared_tool.o shared_main.o shared_parser.o \
+	      libnla.o shared_tool.o shared_main.o shared_parser.o \
 	      drbd_strings.o
 
 drbdsetup-core-obj = libnla.o registry.o drbdsetup.o drbdtool_common.o \
-		     drbd_buildtag.o drbd_strings.o config_flags.o drbd_nla.o \
+		     drbd_buildtag.o drbd_strings.o config_flags.o \
 		     wrap_printf.o drbdsetup_colors.o shared_tool.o \
 		     drbdsetup_events2.o
 

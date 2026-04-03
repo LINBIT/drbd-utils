@@ -104,7 +104,7 @@ void test_resource_context(struct msg_buff *smsg, struct test_vars *vars)
 void test_resource_opts(struct msg_buff *smsg, struct test_vars *vars)
 {
 	struct nlattr *nla = nla_nest_start(smsg, DRBD_NLA_RESOURCE_OPTS);
-	nla_put_u32(smsg,  __nla_type(T_node_id), test_node_id);
+	nla_put_u32(smsg, T_node_id, test_node_id);
 	nla_put_u8(smsg, T_auto_promote, vars->auto_promote);
 	nla_put_u32(smsg, T_on_no_quorum, vars->on_no_quorum);
 	nla_nest_end(smsg, nla);
