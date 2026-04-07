@@ -15,10 +15,20 @@ const size_t    SubProcessQueue::MIN_ACTIVE_COUNT_RANGE = 1;
 const size_t    SubProcessQueue::DFLT_ACTIVE_COUNT      = 8;
 const size_t    SubProcessQueue::MAX_ACTIVE_COUNT_RANGE = 40;
 
-SubProcessQueue::SubProcessQueue()
+SubProcessQueue::SubProcessQueue():
+    SubProcessQueue::SubProcessQueue(DFLT_ACTIVE_COUNT)
+{
+}
+
+SubProcessQueue::SubProcessQueue(const size_t concurrency)
 {
     sys_api = system_api::create_system_api();
     map = std::unique_ptr<EntryMapType>(new EntryMapType(&comparators::compare<uint64_t>));
+
+    const size_t safe_concurrency = bounds(MIN_ACTIVE_COUNT_RANGE, concurrency, MAX_ACTIVE_COUNT_RANGE);
+    crt_pool_size = safe_concurrency;
+    tgt_pool_size = safe_concurrency;
+    max_sub_proc = safe_concurrency;
 
     for (size_t ctr = 0; ctr < crt_pool_size; ++ctr)
     {
