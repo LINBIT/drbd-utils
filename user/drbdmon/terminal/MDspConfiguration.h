@@ -39,6 +39,8 @@ class MDspConfiguration : public MDspMenuBase
     ComponentsHub*  dsp_comp_hub_mutable    {nullptr};
     Configuration*  config                  {nullptr};
     InputField      input_display_interval;
+    InputField      input_taskq_concurrency;
+    uint16_t        taskq_conc_field_row    {1};
 
     action_message_type     action_message  {action_message_type::MSG_NONE};
 
@@ -100,6 +102,7 @@ class MDspConfiguration : public MDspMenuBase
     void opt_colors(const DisplayStyleCollection::ColorStyle style);
     void opt_charset(const DisplayStyleCollection::CharacterStyle style);
     void opt_display_interval();
+    void opt_taskq_concurrency();
     void opt_save_config();
     void opt_load_config();
     void opt_default_config();

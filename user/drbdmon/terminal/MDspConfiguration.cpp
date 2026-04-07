@@ -6,6 +6,7 @@
 #include <platform/IoException.h>
 #include <integerparse.h>
 #include <dsaext.h>
+#include <bounds.h>
 
 const uint16_t  MDspConfiguration::DSP_INTERVAL_FIELD_ROW   = 7;
 
@@ -13,7 +14,8 @@ MDspConfiguration::MDspConfiguration(ComponentsHub& comp_hub, Configuration& con
     MDspMenuBase::MDspMenuBase(comp_hub),
     dsp_comp_hub_mutable(&comp_hub),
     config(&config_ref),
-    input_display_interval(comp_hub, 5)
+    input_display_interval(comp_hub, 5),
+    input_taskq_concurrency(comp_hub, 5)
 {
     saved_config = std::unique_ptr<Configuration>(new Configuration());
 
@@ -134,6 +136,12 @@ MDspConfiguration::MDspConfiguration(ComponentsHub& comp_hub, Configuration& con
         bld.create_with_auto_nr(cmd_fn_suspend_new_tasks)
     );
     add_option(*cmd_suspend_new_tasks);
+
+    ++bld.coords.row;
+    taskq_conc_field_row = bld.coords.row;
+
+    input_taskq_concurrency.set_field_length(5);
+    input_taskq_concurrency.set_position(32, taskq_conc_field_row);
 
     // Page 3
 
@@ -334,6 +342,12 @@ void MDspConfiguration::display_page_02()
     option_text += " ";
     option_text += "Suspend new tasks";
     display_option(5, option_text.c_str(), *cmd_suspend_new_tasks, option_color);
+
+    dsp_comp_hub.dsp_io->cursor_xy(6, taskq_conc_field_row);
+    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->option_text.c_str());
+    dsp_comp_hub.dsp_io->write_text("Active tasks concurrency:");
+    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
+    input_taskq_concurrency.display();
 }
 
 void MDspConfiguration::display_page_03()
@@ -419,6 +433,11 @@ void MDspConfiguration::text_cursor_ops()
         input_display_interval.cursor();
     }
     else
+    if (page_nr == 2 && MDspMenuBase::is_focus_delegated())
+    {
+        input_taskq_concurrency.cursor();
+    }
+    else
     {
         MDspMenuBase::text_cursor_ops();
     }
@@ -444,6 +463,22 @@ bool MDspConfiguration::key_pressed(const uint32_t key)
                 intercepted = true;
             }
         }
+        else
+        if (page_nr == 2)
+        {
+            if (MDspMenuBase::is_focus_delegated())
+            {
+                opt_taskq_concurrency();
+                intercepted = true;
+            }
+            else
+            if (key == KeyCodes::TAB)
+            {
+                toggle_focus_delegation();
+                intercepted = true;
+            }
+        }
+
     }
     if (!intercepted)
     {
@@ -458,8 +493,22 @@ bool MDspConfiguration::key_pressed(const uint32_t key)
             else
             if (MDspMenuBase::is_focus_delegated())
             {
-                input_display_interval.key_pressed(key);
-                intercepted = true;
+                const uint32_t page_nr = get_page_nr();
+                if (page_nr == 1)
+                {
+                    input_display_interval.key_pressed(key);
+                    intercepted = true;
+                }
+                else
+                if (page_nr == 2)
+                {
+                    input_taskq_concurrency.key_pressed(key);
+                    intercepted = true;
+                }
+                else
+                {
+                    toggle_focus_delegation();
+                }
             }
         }
     }
@@ -491,6 +540,24 @@ bool MDspConfiguration::mouse_action(MouseEvent& mouse)
                     intercepted = true;
                 }
             }
+            else
+            if (page_nr == 2)
+            {
+                if (mouse.coord_row == taskq_conc_field_row)
+                {
+                    MDspMenuBase::delegate_focus(true);
+                    input_taskq_concurrency.mouse_action(mouse);
+                    dsp_comp_hub.dsp_selector->refresh_display();
+                    intercepted = true;
+                }
+                else
+                if (MDspMenuBase::is_focus_delegated())
+                {
+                    opt_taskq_concurrency();
+                    dsp_comp_hub.dsp_selector->refresh_display();
+                    intercepted = true;
+                }
+            }
         }
     }
     return intercepted;
@@ -505,6 +572,13 @@ void MDspConfiguration::display_activated()
     {
         const std::string interval_str = std::to_string(static_cast<unsigned int> (config->dsp_interval));
         input_display_interval.set_text(interval_str);
+    }
+    const std::string& taskq_concurrency_text = input_taskq_concurrency.get_text();
+    if (taskq_concurrency_text.empty())
+    {
+        const std::string taskq_concurrency_str =
+            std::to_string(static_cast<unsigned int> (config->taskq_concurrency));
+        input_taskq_concurrency.set_text(taskq_concurrency_str);
     }
 
     saved_page_nr = 0;
@@ -522,12 +596,13 @@ void MDspConfiguration::display_closed()
     }
 
     input_display_interval.clear_text();
+    input_taskq_concurrency.clear_text();
 }
 
 void MDspConfiguration::cursor_to_previous_item()
 {
     const uint32_t page_nr = get_page_nr();
-    if (page_nr == 1)
+    if (page_nr == 1 || page_nr == 2)
     {
         toggle_focus_delegation();
     }
@@ -536,7 +611,7 @@ void MDspConfiguration::cursor_to_previous_item()
 void MDspConfiguration::cursor_to_next_item()
 {
     const uint32_t page_nr = get_page_nr();
-    if (page_nr == 1)
+    if (page_nr == 1 || page_nr == 2)
     {
         toggle_focus_delegation();
     }
@@ -613,7 +688,7 @@ void MDspConfiguration::opt_display_interval()
         const std::string dsp_interval_text = input_display_interval.get_text();
         const uint16_t dsp_interval = dsaext::parse_unsigned_int16(dsp_interval_text);
         config->dsp_interval = dsp_interval;
-        // TODO: Set the new display interval
+        // Interval change through notify_config_changed
     }
     catch (dsaext::NumberFormatException&)
     {
@@ -629,6 +704,58 @@ void MDspConfiguration::opt_display_interval()
     {
         option_change_performed();
         dsp_comp_hub.core_instance->notify_config_changed();
+    }
+    else
+    {
+        dsp_comp_hub.dsp_selector->refresh_display();
+    }
+}
+
+void MDspConfiguration::opt_taskq_concurrency()
+{
+    SubProcessQueue* const sub_proc_queue = dsp_comp_hub.sub_proc_queue;
+
+    const uint16_t dflt_taskq_concurrency =
+        sub_proc_queue->DFLT_ACTIVE_COUNT < UINT16_MAX ? sub_proc_queue->DFLT_ACTIVE_COUNT : UINT16_MAX;
+    const uint16_t min_taskq_concurrency = static_cast<uint16_t> (sub_proc_queue->MIN_ACTIVE_COUNT_RANGE);
+    const uint16_t max_taskq_concurrency =
+        sub_proc_queue->MAX_ACTIVE_COUNT_RANGE < UINT16_MAX ? sub_proc_queue->MAX_ACTIVE_COUNT_RANGE : UINT16_MAX;
+
+    uint16_t bounded_taskq_concurrency =
+        bounds(min_taskq_concurrency, dflt_taskq_concurrency, max_taskq_concurrency);
+
+    const uint16_t prev_taskq_concurrency =
+        bounds(min_taskq_concurrency, config->taskq_concurrency, max_taskq_concurrency);
+    try
+    {
+        const std::string taskq_concurrency_text = input_taskq_concurrency.get_text();
+        const uint16_t taskq_concurrency = dsaext::parse_unsigned_int16(taskq_concurrency_text);
+        bounded_taskq_concurrency =
+            bounds(min_taskq_concurrency, taskq_concurrency, max_taskq_concurrency);
+        config->taskq_concurrency = bounded_taskq_concurrency;
+
+        if (taskq_concurrency != bounded_taskq_concurrency)
+        {
+            // Out of range value, set bounded value
+            input_taskq_concurrency.clear_text();
+            const std::string new_taskq_concurrency_text =
+                std::to_string(static_cast<unsigned int> (bounded_taskq_concurrency));
+            input_taskq_concurrency.set_text(new_taskq_concurrency_text);
+        }
+    }
+    catch (dsaext::NumberFormatException&)
+    {
+        // Unparsable input, set previous value
+        input_taskq_concurrency.clear_text();
+        const std::string taskq_concurrency_text = std::to_string(static_cast<unsigned int> (prev_taskq_concurrency));
+        input_taskq_concurrency.set_text(taskq_concurrency_text);
+    }
+    MDspMenuBase::delegate_focus(false);
+
+    if (prev_taskq_concurrency != bounded_taskq_concurrency)
+    {
+        option_change_performed();
+        sub_proc_queue->change_sub_proc_concurrency(bounded_taskq_concurrency);
     }
     else
     {
@@ -699,6 +826,10 @@ void MDspConfiguration::opt_load_config()
 
         const std::string interval_str = std::to_string(static_cast<unsigned int> (config->dsp_interval));
         input_display_interval.set_text(interval_str);
+
+        const std::string taskq_concurrency_str =
+            std::to_string(static_cast<unsigned int> (config->taskq_concurrency));
+        input_taskq_concurrency.set_text(taskq_concurrency_str);
 
         action_message = action_message_type::MSG_CONFIG_LOADED;
         dsp_comp_hub.dsp_selector->refresh_display();
