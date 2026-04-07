@@ -43,6 +43,9 @@
 const char *IPV4_STR = "ipv4";
 const char *IPV6_STR = "ipv6";
 
+/* Defined in drbdmeta.c; defaults to 0 in binaries that do not implement --quiet. */
+int quiet __attribute__((weak)) = 0;
+
 const char* shell_escape(const char* s)
 {
 	/* ugly static buffer. so what. */
@@ -288,7 +291,7 @@ int lk_bdev_load(const unsigned minor, struct bdev_info *bd)
 	path = lk_bdev_path(minor);
 	fp = fopen(path, "r");
 	if (!fp) {
-		if (errno != ENOENT)
+		if (errno != ENOENT && !quiet)
 			fprintf(stderr, "lk_bdev_load(%s) failed: %m\n", path);
 		goto out;
 	}

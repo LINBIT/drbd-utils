@@ -212,5 +212,6 @@ extern int opened_odirect;
 extern int verbose;
 extern int dry_run;
 extern int force;
+extern int quiet;
 
 #endif

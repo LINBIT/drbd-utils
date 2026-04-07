@@ -302,8 +302,9 @@ int v07_style_md_open_device(struct format *cfg)
 	}
 	ioctl_err = ioctl(cfg->md_fd, BLKSSZGET, &hard_sect_size);
 	if (ioctl_err) {
-		fprintf(stderr, "ioctl(md_fd, BLKSSZGET) returned %d, "
-			"assuming hard_sect_size is 512 Byte\n", ioctl_err);
+		if (!quiet)
+			fprintf(stderr, "ioctl(md_fd, BLKSSZGET) returned %d, "
+				"assuming hard_sect_size is 512 Byte\n", ioctl_err);
 		cfg->md_hard_sect_size = 512;
 	} else {
 		cfg->md_hard_sect_size = hard_sect_size;
