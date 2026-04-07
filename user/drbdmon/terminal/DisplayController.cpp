@@ -65,7 +65,12 @@ DisplayController::DisplayController(
     term_size_mgr = std::unique_ptr<PosixTermSize>(new PosixTermSize());
     dsp_styles_mgr = std::unique_ptr<DisplayStyleCollection>(new DisplayStyleCollection());
     ansi_ctl_mgr = std::unique_ptr<AnsiControl>(new AnsiControl());
-    sub_proc_queue_mgr = std::unique_ptr<SubProcessQueue>(new SubProcessQueue());
+    {
+        const uint16_t taskq_concurrency = mon_env.config->taskq_concurrency;
+        sub_proc_queue_mgr = std::unique_ptr<SubProcessQueue>(
+            new SubProcessQueue(taskq_concurrency)
+        );
+    }
 
     // Enable DRBD actions/commands if tracking live events, and not an events log file
     dsp_comp_hub_mgr->enable_drbd_actions   = events_file.empty();
