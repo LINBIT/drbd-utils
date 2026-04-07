@@ -91,6 +91,7 @@ class SubProcessQueue
     };
 
     SubProcessQueue();
+    SubProcessQueue(const size_t concurrency);
     virtual ~SubProcessQueue() noexcept;
 
     virtual std::mutex& get_queue_lock() noexcept;
@@ -180,7 +181,7 @@ class SubProcessQueue
     uint64_t    entry_count     {0};
     uint64_t    active_count    {0};
     // Maximum number of sub-processes to spawn
-    // Must always be greater than or equal to crt_pool_size and greater than or equal to tgt_pool_size
+    // Must always be less than or equal to crt_pool_size and less than or equal to tgt_pool_size
     size_t      max_sub_proc    {DFLT_ACTIVE_COUNT};
     // Current size of the worker pool; must be greater than or equal to max_sub_proc
     size_t      crt_pool_size   {DFLT_ACTIVE_COUNT};
