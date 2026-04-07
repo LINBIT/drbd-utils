@@ -16,6 +16,7 @@ class Configuration
     static const uint16_t       DFLT_DSP_INTERVAL;
     static const uint16_t       DFLT_COLOR_SCHEME;
     static const uint16_t       DFLT_CHARACTER_SET;
+    static const uint16_t       DFLT_TASKQ_CONCURRENCY;
 
     static const std::string    KEY_DISCARD_SUCC_TASKS;
     static const std::string    KEY_DISCARD_FAIL_TASKS;
@@ -24,6 +25,7 @@ class Configuration
     static const std::string    KEY_DSP_INTERVAL;
     static const std::string    KEY_COLOR_SCHEME;
     static const std::string    KEY_CHARACTER_SET;
+    static const std::string    KEY_TASKQ_CONCURRENCY;
 
     bool        discard_succ_tasks      {DFLT_DISCARD_SUCC_TASKS};
     bool        discard_fail_tasks      {DFLT_DISCARD_FAIL_TASKS};
@@ -35,6 +37,8 @@ class Configuration
 
     uint16_t    color_scheme            {DFLT_COLOR_SCHEME};
     uint16_t    character_set           {DFLT_CHARACTER_SET};
+
+    uint16_t    taskq_concurrency       {DFLT_TASKQ_CONCURRENCY};
 
     Configuration();
     virtual ~Configuration() noexcept;

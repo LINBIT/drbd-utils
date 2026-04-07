@@ -9,6 +9,7 @@ const bool          Configuration::DFLT_ENABLE_MOUSE_NAV    {true};
 const uint16_t      Configuration::DFLT_DSP_INTERVAL        {200};
 const uint16_t      Configuration::DFLT_COLOR_SCHEME        {0};
 const uint16_t      Configuration::DFLT_CHARACTER_SET       {0};
+const uint16_t      Configuration::DFLT_TASKQ_CONCURRENCY   {8};
 
 const std::string   Configuration::KEY_DISCARD_SUCC_TASKS   = "DiscardOkTasks";
 const std::string   Configuration::KEY_DISCARD_FAIL_TASKS   = "DiscardFailedTasks";
@@ -17,6 +18,7 @@ const std::string   Configuration::KEY_ENABLE_MOUSE_NAV     = "EnableMouseNav";
 const std::string   Configuration::KEY_DSP_INTERVAL         = "DisplayInterval";
 const std::string   Configuration::KEY_COLOR_SCHEME         = "ColorScheme";
 const std::string   Configuration::KEY_CHARACTER_SET        = "CharacterSet";
+const std::string   Configuration::KEY_TASKQ_CONCURRENCY    = "TaskQueueConcurrency";
 
 Configuration::Configuration()
 {
@@ -35,6 +37,7 @@ void Configuration::reset()
     dsp_interval        = DFLT_DSP_INTERVAL;
     color_scheme        = DFLT_COLOR_SCHEME;
     character_set       = DFLT_CHARACTER_SET;
+    taskq_concurrency   = DFLT_TASKQ_CONCURRENCY;
 }
 
 void Configuration::save_to(CfgEntryStore& config)
@@ -46,6 +49,7 @@ void Configuration::save_to(CfgEntryStore& config)
     set_entry(config, new CfgEntryUnsgInt16(KEY_DSP_INTERVAL, dsp_interval));
     set_entry(config, new CfgEntryUnsgInt16(KEY_COLOR_SCHEME, color_scheme));
     set_entry(config, new CfgEntryUnsgInt16(KEY_CHARACTER_SET, character_set));
+    set_entry(config, new CfgEntryUnsgInt16(KEY_TASKQ_CONCURRENCY, taskq_concurrency));
 }
 
 void Configuration::load_from(const CfgEntryStore& config)
@@ -57,4 +61,5 @@ void Configuration::load_from(const CfgEntryStore& config)
     dsp_interval        = config.get_unsgint16(KEY_DSP_INTERVAL, DFLT_DSP_INTERVAL);
     color_scheme        = config.get_unsgint16(KEY_COLOR_SCHEME, DFLT_COLOR_SCHEME);
     character_set       = config.get_unsgint16(KEY_CHARACTER_SET, DFLT_CHARACTER_SET);
+    taskq_concurrency   = config.get_unsgint16(KEY_TASKQ_CONCURRENCY, DFLT_TASKQ_CONCURRENCY);
 }
