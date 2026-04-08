@@ -715,8 +715,6 @@ void MDspConfiguration::opt_taskq_concurrency()
 {
     SubProcessQueue* const sub_proc_queue = dsp_comp_hub.sub_proc_queue;
 
-    const uint16_t dflt_taskq_concurrency =
-        sub_proc_queue->DFLT_ACTIVE_COUNT < UINT16_MAX ? sub_proc_queue->DFLT_ACTIVE_COUNT : UINT16_MAX;
     const uint16_t min_taskq_concurrency = static_cast<uint16_t> (sub_proc_queue->MIN_ACTIVE_COUNT_RANGE);
     const uint16_t max_taskq_concurrency =
         sub_proc_queue->MAX_ACTIVE_COUNT_RANGE < UINT16_MAX ? sub_proc_queue->MAX_ACTIVE_COUNT_RANGE : UINT16_MAX;
