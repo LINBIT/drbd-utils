@@ -108,6 +108,7 @@ class MDspTaskQueue : public MDspStdListBase
         const uint32_t              lines_per_page,
         uint32_t&                   item_idx
     );
+    void log_sub_proc_exception(const SubProcess::Exception& exc);
 };
 
 #endif /* TERMINAL_MDSPTASKQUEUE_H_ */
