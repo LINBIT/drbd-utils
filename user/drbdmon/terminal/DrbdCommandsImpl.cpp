@@ -101,12 +101,16 @@ bool DrbdCommandsImpl::execute_command(const std::string& command, StringTokeniz
                     "Cannot execute command, insufficient queue capacity"
                 );
             }
-            catch (SubProcess::Exception&)
+            catch (SubProcess::Exception& exc)
             {
-                dsp_comp_hub.log->add_entry(
-                    MessageLog::log_level::ALERT,
-                    "Command failed: Sub-process execution error"
-                );
+                std::string log_msg("Command execution failed");
+                const std::string& exc_msg = exc.get_error_message();
+                if (!exc_msg.empty())
+                {
+                    log_msg += ": ";
+                    log_msg += exc_msg;
+                }
+                dsp_comp_hub.log->add_entry(MessageLog::log_level::ALERT, log_msg);
             }
         }
         else
