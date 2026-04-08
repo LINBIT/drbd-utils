@@ -721,11 +721,10 @@ void MDspConfiguration::opt_taskq_concurrency()
     const uint16_t max_taskq_concurrency =
         sub_proc_queue->MAX_ACTIVE_COUNT_RANGE < UINT16_MAX ? sub_proc_queue->MAX_ACTIVE_COUNT_RANGE : UINT16_MAX;
 
-    uint16_t bounded_taskq_concurrency =
-        bounds(min_taskq_concurrency, dflt_taskq_concurrency, max_taskq_concurrency);
-
     const uint16_t prev_taskq_concurrency =
         bounds(min_taskq_concurrency, config->taskq_concurrency, max_taskq_concurrency);
+    uint16_t bounded_taskq_concurrency =
+        bounds(min_taskq_concurrency, prev_taskq_concurrency, max_taskq_concurrency);
     try
     {
         const std::string taskq_concurrency_text = input_taskq_concurrency.get_text();
@@ -755,7 +754,18 @@ void MDspConfiguration::opt_taskq_concurrency()
     if (prev_taskq_concurrency != bounded_taskq_concurrency)
     {
         option_change_performed();
-        sub_proc_queue->change_sub_proc_concurrency(bounded_taskq_concurrency);
+        try
+        {
+            sub_proc_queue->change_sub_proc_concurrency(bounded_taskq_concurrency);
+        }
+        catch (SubProcess::Exception&)
+        {
+            dsp_comp_hub.log->add_entry(
+                MessageLog::log_level::WARN,
+                "Thread creation failed while trying to change the active tasks concurrency. "
+                "Check operating system limits."
+            );
+        }
     }
     else
     {
