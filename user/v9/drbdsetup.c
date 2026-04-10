@@ -1868,7 +1868,7 @@ static int generic_recv(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr,
 				rv = OTHER_ERROR;
 				goto out;
 			}
-			if (cm->continuous_poll || cm->cmd_id == DRBD_ADM_GET_INITIAL_STATE) {
+			if (cm->continuous_poll && cm->cmd_id == DRBD_ADM_GET_INITIAL_STATE) {
 				struct drbd_cfg_context ctx;
 				/*
 				 * We will receive all events and have to
