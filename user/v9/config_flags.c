@@ -1111,6 +1111,14 @@ struct context_def attach_cmd_ctx = {
 		{ } },
 };
 
+struct context_def attach_parms_ctx = {
+	NLA_POLICY(attach_parms),
+	.nla_type = DRBD_NLA_ATTACH_PARMS,
+	.fields = {
+		{ "discard-my-data", FLAG(attach_discard_my_data) },
+		{ } },
+};
+
 struct context_def detach_cmd_ctx = {
 	NLA_POLICY(detach_parms),
 	.nla_type = DRBD_NLA_DETACH_PARMS,

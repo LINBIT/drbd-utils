@@ -245,6 +245,7 @@ static struct option status_cmd_options[] = {
 
 #define F_CONFIG_CMD	generic_config_cmd
 #define NO_PAYLOAD	0
+#define OPT_ATTACH_DISCARD_MY_DATA 2001
 #define F_NEW_EVENTS_CMD(scmd)	DRBD_ADM_GET_INITIAL_STATE, NO_PAYLOAD, generic_events_cmd, \
 			.handle_reply = scmd
 
@@ -253,6 +254,11 @@ const struct drbd_cmd primary_cmd = {
 	.ctx = &primary_cmd_ctx,
 	.summary = "Change the role of a node in a resource to primary." };
 
+static struct option attach_extra_options[] = {
+	{ "discard-my-data", no_argument, NULL, OPT_ATTACH_DISCARD_MY_DATA },
+	{ NULL, 0, NULL, 0 }
+};
+
 const struct drbd_cmd attach_cmd = {
 	"attach", CTX_MINOR, DRBD_ADM_ATTACH, DRBD_NLA_DISK_CONF, F_CONFIG_CMD,
 	.drbd_args = (struct drbd_argument[]) {
@@ -260,6 +266,7 @@ const struct drbd_cmd attach_cmd = {
 		{ "meta_data_dev", T_meta_dev, conv_block_dev },
 		{ "meta_data_index", T_meta_dev_idx, conv_md_idx },
 		{ } },
+	.options = attach_extra_options,
 	.ctx = &attach_cmd_ctx,
 	.summary = "Attach a lower-level device to an existing replicated device.",
 #ifdef WITH_84_SUPPORT
@@ -1094,6 +1101,7 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	int c, i;
 	int rv;
 	char *desc = NULL; /* error description from kernel reply message */
+	bool attach_discard_my_data = false;
 
 	struct nlattr *tla[ARRAY_SIZE(drbd_tla_nl_policy)] = { 0, };
 	struct drbd_genlmsghdr *dhdr;
@@ -1175,6 +1183,8 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 			}
 		} else if (c == '(')
 			dhdr->flags |= DRBD_GENL_F_SET_DEFAULTS;
+		else if (c == OPT_ATTACH_DISCARD_MY_DATA)
+			attach_discard_my_data = true;
 		else {
 			rv = OTHER_ERROR;
 			goto error;
@@ -1224,6 +1234,12 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 
 	if (nla)
 		nla_nest_end(smsg, nla);
+
+	if (attach_discard_my_data) {
+		struct nlattr *pnla = nla_nest_start(smsg, DRBD_NLA_ATTACH_PARMS);
+		nla_put_flag(smsg, T_attach_discard_my_data);
+		nla_nest_end(smsg, pnla);
+	}
 
 	/* argc should be cmd + n options + n args;
 	 * if it is more, we did not understand some */

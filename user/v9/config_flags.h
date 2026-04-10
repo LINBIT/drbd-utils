@@ -92,6 +92,7 @@ extern struct context_def show_net_options_ctx;
 extern struct context_def primary_cmd_ctx;
 extern struct context_def secondary_cmd_ctx;
 extern struct context_def attach_cmd_ctx;
+extern struct context_def attach_parms_ctx;
 extern struct context_def detach_cmd_ctx;
 extern struct context_def connect_cmd_ctx;
 extern struct context_def new_peer_cmd_ctx;
