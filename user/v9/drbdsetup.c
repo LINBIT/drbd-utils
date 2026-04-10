@@ -1828,6 +1828,28 @@ static int generic_recv(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr,
 			};
 
 			dbg(3, "received type:%x\n", nlh->nlmsg_type);
+			if (nlh->nlmsg_type == NLMSG_DONE) {
+				/* The kernel may append NLMSG_DONE to the same
+				 * datagram as the last dump data messages rather
+				 * than sending it in a separate datagram.
+				 * genl_recv_msgs() only checks the first message
+				 * in a datagram for NLMSG_DONE, so handle it
+				 * here when it follows data messages. */
+				expect_reply = false;
+				if (cm->continuous_poll)
+					continue;
+				err = cm->handle_reply(cm, NULL, u_ptr);
+				if (err)
+					goto out;
+				err = -*(int*)nlmsg_data(nlh);
+				if (err &&
+				    (err != ENODEV || !cm->missing_ok)) {
+					fprintf(stderr, "received netlink error reply: %s\n",
+						strerror(err));
+					err = 20;
+				}
+				goto out;
+			}
 			if (nlh->nlmsg_type < NLMSG_MIN_TYPE) {
 				/* Ignore netlink control messages. */
 				continue;
