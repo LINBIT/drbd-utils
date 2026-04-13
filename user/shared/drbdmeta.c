@@ -152,6 +152,7 @@ struct option metaopt[] = {
     { "uptodate", no_argument, NULL, 1003 },
     { "peers-outdated", no_argument, NULL, 1004 },
     { "rotate-uuids", no_argument, NULL, 1005 },
+    { "var-lib-drbd", required_argument, NULL, 1006 },
     { NULL,     0,              0, 0 },
 };
 
@@ -5741,6 +5742,9 @@ int main(int argc, char **argv)
 		break;
 	    case 1005:
 		option_rotate_uuids = true;
+		break;
+	    case 1006:
+		drbd_lib_dir_override = optarg;
 		break;
 	    default:
 		print_usage_and_exit();

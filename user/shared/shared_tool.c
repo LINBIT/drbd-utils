@@ -205,10 +205,13 @@ int sget_token(char *s, int size, const char** text)
 	return 1;
 }
 
+const char *drbd_lib_dir_override = NULL;
+
 char *lk_bdev_path(unsigned minor)
 {
+	const char *libdir = drbd_lib_dir_override ? drbd_lib_dir_override : drbd_lib_dir();
 	char *path;
-	m_asprintf(&path, "%s/drbd-minor-%d.lkbd", drbd_lib_dir(), minor);
+	m_asprintf(&path, "%s/drbd-minor-%d.lkbd", libdir, minor);
 	return path;
 }
 
