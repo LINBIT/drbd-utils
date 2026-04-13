@@ -45,13 +45,18 @@ require {
 	class netlink_generic_socket create_socket_perms;
 	class unix_stream_socket all_unix_stream_socket_perms;
 	class system { module_request module_load };
-	class process { noatsecure rlimitinh siginh };
+	class process { noatsecure rlimitinh siginh setpgid };
 }
 
 #============= drbd_t ==============
 allow drbd_t self:capability { dac_read_search  kill net_admin sys_admin };
 dontaudit drbd_t self:capability sys_tty_config;
 allow drbd_t self:dir rw_dir_perms;
+
+# Pacemaker calls setpgid(0, 0) after fork() to isolate each RA
+# invocation in its own process group for group-level kill on timeout.
+# Oracle UEK kernels enforce this check on the drbd_t domain.
+allow drbd_t self:process setpgid;
 allow drbd_t self:fifo_file rw_fifo_file_perms;
 allow drbd_t self:unix_stream_socket create_stream_socket_perms;
 allow drbd_t self:netlink_socket create_socket_perms;
