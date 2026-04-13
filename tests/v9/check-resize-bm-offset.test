@@ -1,0 +1,30 @@
+## Test that v08_move_internal_md_after_resize() copies the old bitmap to the
+## correct byte offset in the new bitmap region.
+##
+## Bug guarded against: old_bm_offset was computed using the new cfg->md.bm_offset
+## (after re_initialize_md_offsets) instead of the old md_old.bm_offset.  This
+## shifted every old bitmap bit by delta_bm bytes inside the new bitmap region,
+## causing bits covering the first device sectors to be garbage or lost.
+##
+## Test layout: 64 MB image, flex-internal metadata, max-peers=4.  Growing to
+## 65 MB yields delta_bm=4096 bytes (one extra 4 K bitmap block).
+## A marker byte ('D', 0x44) is placed at old bitmap byte 0 before the resize.
+## After check-resize the marker must still be at new bitmap byte 0.
+
+$ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
+$ truncate -s 67108864 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md 4 2>/dev/null; echo $?
+initializing activity log
+Writing meta data...
+New drbd meta data block successfully created.
+0
+$ old_bm_abs=$(drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
+$ printf 'D' | dd of="$img" bs=1 seek="$old_bm_abs" count=1 conv=notrunc status=none
+$ truncate -s 68157440 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal check-resize 2>/dev/null; echo $?
+Internal drbd meta data successfully moved.
+0
+$ new_bm_abs=$(drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
+$ od -An -j "$new_bm_abs" -N 1 -tx1 "$img"
+ 44
+$ rm -rf "$tmpdir" "$img"

@@ -4883,15 +4883,16 @@ int v08_move_internal_md_after_resize(struct format *cfg)
 	PREAD(cfg, on_disk_buffer, old_offset - cur_offset, cur_offset);
 	PWRITE(cfg, on_disk_buffer, old_offset - cur_offset, cfg->al_offset);
 
-	/* The AL was of fixed size.
-	 * Bitmap is of flexible size, new bitmap is likely larger.
-	 * We do not initialize that part, we just leave "garbage" in there.
-	 * Once DRBD "agrees" on the new lower level device size, that part of
-	 * the bitmap will be handled by the module, anyways. */
-	old_bm_offset = old_offset + cfg->md.bm_offset * 512LL;
+	/* The AL is of fixed size.
+	 * The new bitmap is larger; its extra portion covers newly-added device
+	 * sectors. Use md_old.bm_offset (the old, smaller bitmap's offset) so
+	 * that old bitmap byte 0 maps to new bitmap byte 0, preserving the
+	 * bit-to-sector correspondence. The extra trailing bytes of the new
+	 * bitmap (for new sectors) are initialised to all-dirty below. */
+	old_bm_offset = old_offset + (off_t)md_old.bm_offset * 512LL;
 
 	/* move bitmap, in chunks, peel off from the end. */
-	cur_offset = old_offset + cfg->md.al_offset * 512LL - buffer_size;
+	cur_offset = old_offset + md_old.al_offset * 512LL - buffer_size;
 	while (cur_offset > old_bm_offset) {
 		PREAD(cfg, on_disk_buffer, buffer_size, cur_offset);
 		PWRITE(cfg, on_disk_buffer, buffer_size,
@@ -4903,6 +4904,28 @@ int v08_move_internal_md_after_resize(struct format *cfg)
 	last_chunk_size = buffer_size - (old_bm_offset - cur_offset);
 	PREAD(cfg, on_disk_buffer, last_chunk_size, old_bm_offset);
 	PWRITE(cfg, on_disk_buffer, last_chunk_size, cfg->bm_offset);
+
+	/* The trailing portion of the new bitmap covers newly-added sectors.
+	 * By default we leave it as-is: the DRBD module's heuristics during
+	 * attach and resize will set those bits to the appropriate state.
+	 * The --initialize-bitmap option overrides this if the user wants
+	 * an explicit initial state (e.g. -b set-all to force a resync). */
+	if (option_initialize_bitmap_mode != IBM_SKIP) {
+		off_t old_bm_bytes = (off_t)(md_old.al_offset - md_old.bm_offset) * 512LL;
+		off_t trail_start  = cfg->bm_offset + old_bm_bytes;
+		off_t trail_end    = cfg->bm_offset + (off_t)cfg->bm_bytes;
+		off_t trail_off    = trail_start;
+		int fill = (option_initialize_bitmap_mode == IBM_SET_ALL) ? 0xff : 0x00;
+
+		memset(on_disk_buffer, fill, buffer_size);
+		while (trail_off < trail_end) {
+			off_t chunk = trail_end - trail_off;
+			if (chunk > (off_t)buffer_size)
+				chunk = buffer_size;
+			PWRITE(cfg, on_disk_buffer, chunk, trail_off);
+			trail_off += chunk;
+		}
+	}
 
 	/* fix bitmap offset in meta data,
 	 * and rewrite the "super block" */
