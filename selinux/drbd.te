@@ -44,7 +44,7 @@ require {
 	class file { map lock open read getattr setattr write };
 	class netlink_generic_socket create_socket_perms;
 	class unix_stream_socket all_unix_stream_socket_perms;
-	class system module_request;
+	class system { module_request module_load };
 	class process { noatsecure rlimitinh siginh };
 }
 
@@ -138,3 +138,8 @@ allow drbd_t var_lock_t:file { lock open read write };
 allow drbd_t modules_dep_t:file { map open read getattr };
 allow drbd_t modules_object_t:file map;
 allow drbd_t kernel_t:system module_request;
+
+# On Oracle UEK7 kernels, finit_module() checks
+# module_load on the calling process context (self).
+# kernel_load_module() only grants this on modules_object_t.
+allow drbd_t self:system module_load;
