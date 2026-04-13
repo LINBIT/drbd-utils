@@ -23,6 +23,7 @@ $ printf 'D' | dd of="$img" bs=1 seek="$old_bm_abs" count=1 conv=notrunc status=
 $ truncate -s 68157440 "$img"
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal check-resize 2>/dev/null; echo $?
 Internal drbd meta data successfully moved.
+Old meta data region zeroed.
 0
 $ new_bm_abs=$(drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
 $ od -An -j "$new_bm_abs" -N 1 -tx1 "$img"

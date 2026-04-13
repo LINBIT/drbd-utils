@@ -4936,11 +4936,37 @@ int v08_move_internal_md_after_resize(struct format *cfg)
 	if (!err)
 		printf("Internal drbd meta data successfully moved.\n");
 
+	if (!err) {
+		/* Ensure new metadata reaches stable storage before wiping
+		 * the old region.  Without this, a crash between the two
+		 * writes could leave the old superblock zeroed while the
+		 * new one has not yet made it to disk. */
+		fdatasync(cfg->md_fd);
+	}
+
 	if (!err && old_offset < cfg->bm_offset) {
-		/* wipe out previous meta data block, it has been superseded. */
-		cfg->wipe_resize = old_offset;
-		memset(on_disk_buffer, 0, 4096);
-		PWRITE(cfg, on_disk_buffer, 4096, old_offset);
+		/* Wipe the entire old metadata region (bitmap, AL, and
+		 * superblock) so stale data cannot be mistaken for valid
+		 * metadata by a future tool invocation.
+		 * Safety cap: stop at cfg->bm_offset in case the new and
+		 * old regions are unusually close (cannot happen for any
+		 * positive device growth, but be defensive). */
+		off_t wipe_off = old_offset + (off_t)md_old.bm_offset * 512LL;
+		off_t wipe_end = old_offset + 4096;
+
+		if (wipe_end > cfg->bm_offset)
+			wipe_end = cfg->bm_offset;
+
+		memset(on_disk_buffer, 0, buffer_size);
+		while (wipe_off < wipe_end) {
+			off_t chunk = wipe_end - wipe_off;
+			if (chunk > (off_t)buffer_size)
+				chunk = buffer_size;
+			cfg->wipe_resize = wipe_off;
+			PWRITE(cfg, on_disk_buffer, chunk, wipe_off);
+			wipe_off += chunk;
+		}
+		printf("Old meta data region zeroed.\n");
 	}
 
 	err = cfg->ops->close(cfg) || err;
