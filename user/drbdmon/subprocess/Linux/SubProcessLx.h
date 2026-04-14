@@ -11,6 +11,7 @@
 #include <VList.h>
 #include <subprocess/CmdLine.h>
 #include <subprocess/SubProcess.h>
+#include <subprocess/SubProcessObserver.h>
 
 extern "C"
 {
@@ -26,7 +27,7 @@ class SubProcessLx : public SubProcess
     static const size_t     BUFFER_CAP[];
     static const size_t     BUFFER_CAP_SIZE;
 
-    SubProcessLx();
+    SubProcessLx(SubProcessObserver* const observer_ref);
     virtual ~SubProcessLx() noexcept;
 
     // @throws SubProcess::Exception
@@ -36,6 +37,8 @@ class SubProcessLx : public SubProcess
 
   private:
     mutable std::mutex  proc_lock;
+
+    SubProcessObserver* const observer {nullptr};
 
     static constexpr size_t PIPE_READ   = 0;
     static constexpr size_t PIPE_WRITE  = 1;

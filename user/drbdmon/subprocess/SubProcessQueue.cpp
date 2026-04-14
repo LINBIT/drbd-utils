@@ -543,7 +543,7 @@ void SubProcessQueue::invoke_thread(ThreadQueue::Node* const q_node)
 
             try
             {
-                selected_entry->process_mgr = sys_api->create_subprocess_handler();
+                selected_entry->process_mgr = sys_api->create_subprocess_handler(observer);
             }
             catch (std::bad_alloc& exc)
             {

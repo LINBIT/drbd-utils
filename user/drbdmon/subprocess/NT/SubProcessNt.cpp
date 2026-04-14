@@ -10,8 +10,9 @@ const DWORD     SubProcessNt::IN_BUFFER_SIZE    = 8192;
 const size_t    SubProcessNt::BUFFER_CAP[]      = {1UL << 14, 1UL << 16};
 const size_t    SubProcessNt::BUFFER_CAP_SIZE   = sizeof (SubProcessNt::BUFFER_CAP) / sizeof (size_t);
 
-SubProcessNt::SubProcessNt():
-    SubProcess::SubProcess()
+SubProcessNt::SubProcessNt(SubProcessObserver* const observer_ref):
+    SubProcess::SubProcess(),
+    observer(observer_ref)
 {
 }
 
@@ -210,6 +211,10 @@ HANDLE SubProcessNt::spawn_process(const CmdLine& cmd, HANDLE events_writer, HAN
         proc_id = cmd_proc_info->dwProcessId;
     }
     proc_lock.unlock();
+    if (observer != nullptr)
+    {
+        observer->notify_queue_changed();
+    }
 
     return proc_handle;
 }

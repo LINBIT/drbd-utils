@@ -26,9 +26,9 @@ NtApi::~NtApi() noexcept
 {
 }
 
-std::unique_ptr<SubProcess> NtApi::create_subprocess_handler()
+std::unique_ptr<SubProcess> NtApi::create_subprocess_handler(SubProcessObserver* const observer_ref)
 {
-    return std::unique_ptr<SubProcess>(dynamic_cast<SubProcess*> (new SubProcessNt()));
+    return std::unique_ptr<SubProcess>(dynamic_cast<SubProcess*> (new SubProcessNt(observer_ref)));
 }
 
 std::unique_ptr<TerminalControl> NtApi::create_terminal_control()

@@ -38,9 +38,9 @@ void LinuxApi::post_thread_invocation()
     sigprocmask(SIG_SETMASK, &saved_mask, nullptr);
 }
 
-std::unique_ptr<SubProcess> LinuxApi::create_subprocess_handler()
+std::unique_ptr<SubProcess> LinuxApi::create_subprocess_handler(SubProcessObserver* const observer_ref)
 {
-    return std::unique_ptr<SubProcess>(dynamic_cast<SubProcess*> (new SubProcessLx()));
+    return std::unique_ptr<SubProcess>(dynamic_cast<SubProcess*> (new SubProcessLx(observer_ref)));
 }
 
 std::unique_ptr<TerminalControl> LinuxApi::create_terminal_control()

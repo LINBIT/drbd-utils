@@ -25,8 +25,9 @@ const size_t    SubProcessLx::FIRED_EVENTS_COUNT        = 3;
 const size_t    SubProcessLx::BUFFER_CAP[]              = {1UL << 14, 1UL << 16};
 const size_t    SubProcessLx::BUFFER_CAP_SIZE           = sizeof (SubProcessLx::BUFFER_CAP) / sizeof (size_t);
 
-SubProcessLx::SubProcessLx():
-    SubProcess::SubProcess()
+SubProcessLx::SubProcessLx(SubProcessObserver* const observer_ref):
+    SubProcess::SubProcess(),
+    observer(observer_ref)
 {
     subproc_stdout_pipe[PIPE_READ]  = -1;
     subproc_stdout_pipe[PIPE_WRITE] = -1;
@@ -171,6 +172,11 @@ void SubProcessLx::execute(const CmdLine& cmd)
         {
             close_fd(subproc_stdout_pipe[PIPE_WRITE]);
             close_fd(subproc_stderr_pipe[PIPE_WRITE]);
+
+            if (observer != nullptr)
+            {
+                observer->notify_queue_changed();
+            }
 
             read_subproc_output();
 
