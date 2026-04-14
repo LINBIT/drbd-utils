@@ -13,20 +13,7 @@
 
 class MDspSelectionFilter : public MDspMenuBase
 {
-  private:
-    class ToggleBoolFunctor
-    {
-      public:
-        ToggleBoolFunctor(bool& state);
-        virtual ~ToggleBoolFunctor() noexcept;
-        // Initialize pointer to the ComponentsHub instance before calling operator()
-        // to enable automatic display updates
-        void operator()() noexcept;
-        bool& state_ref;
-
-        static const ComponentsHub *dsp_comp_hub_ptr;
-    };
-
+  public:
     template<class T>
     class StateSelector
     {
@@ -41,6 +28,20 @@ class MDspSelectionFilter : public MDspMenuBase
 
         bool    selected   {false};
         const T value;
+    };
+
+  private:
+    class ToggleBoolFunctor
+    {
+      public:
+        ToggleBoolFunctor(bool& state);
+        virtual ~ToggleBoolFunctor() noexcept;
+        // Initialize pointer to the ComponentsHub instance before calling operator()
+        // to enable automatic display updates
+        void operator()() noexcept;
+        bool& state_ref;
+
+        static const ComponentsHub *dsp_comp_hub_ptr;
     };
 
     using ResourceRoleSelector          = StateSelector<DrbdRole::resource_role>;
