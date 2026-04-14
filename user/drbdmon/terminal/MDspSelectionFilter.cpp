@@ -1112,28 +1112,13 @@ MDspSelectionFilter::FilterOptionsCollection::~FilterOptionsCollection() noexcep
     // and the contained values are owned by the display
 }
 
-void MDspSelectionFilter::display_selectable(
+void MDspSelectionFilter::display_toggle(
     const char* const   text,
     ClickableCommand&   cmd,
     const bool&         selected
 )
 {
-    dsp_comp_hub.dsp_io->cursor_xy(cmd.clickable_area.start_col, cmd.clickable_area.row);
-    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->option_key.c_str());
-    dsp_comp_hub.dsp_io->write_string_field(cmd.command, 5, true);
-    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
-    if (selected)
-    {
-        dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_character_table->checked_box.c_str());
-    }
-    else
-    {
-        dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_character_table->unchecked_box.c_str());
-    }
-    dsp_comp_hub.dsp_io->write_text(" ");
-    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->option_text.c_str());
-    dsp_comp_hub.dsp_io->write_text(text);
-    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
+    MDspMenuBase::display_selectable(5, text, cmd, selected);
 }
 
 void MDspSelectionFilter::display_restrict_selection()
@@ -1149,17 +1134,17 @@ void MDspSelectionFilter::display_restrict_selection()
         dsp_comp_hub.dsp_io->cursor_xy(3, 6);
         dsp_comp_hub.dsp_io->write_text("Only resources matching the name:");
         rsc_name_pattern_input->display();
-        display_selectable("Invert resource name match", *cmd_inv_rsc_name, inv_rsc_name);
+        display_toggle("Invert resource name match", *cmd_inv_rsc_name, inv_rsc_name);
 
         dsp_comp_hub.dsp_io->cursor_xy(3, 9);
         dsp_comp_hub.dsp_io->write_text("Only connections matching the name:");
         con_name_pattern_input->display();
-        display_selectable("Invert connection name match", *cmd_inv_con_name, inv_con_name);
+        display_toggle("Invert connection name match", *cmd_inv_con_name, inv_con_name);
 
         dsp_comp_hub.dsp_io->cursor_xy(3, 12);
         dsp_comp_hub.dsp_io->write_text("Only volume number:");
         vlm_number_input->display();
-        display_selectable("Invert volume number match", *cmd_inv_vlm_number, inv_vlm_number);
+        display_toggle("Invert volume number match", *cmd_inv_vlm_number, inv_vlm_number);
     }
     else
     if (page == 2)
@@ -1169,10 +1154,10 @@ void MDspSelectionFilter::display_restrict_selection()
         dsp_comp_hub.dsp_io->write_text("Restrict filter matching:");
         dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
 
-        display_selectable("Selected resources", *cmd_rstr_to_slct_rsc, rstr_to_slct_rsc);
-        display_selectable("Selected volumes", *cmd_rstr_to_slct_vlm, rstr_to_slct_vlm);
-        display_selectable("Selected connections", *cmd_rstr_to_slct_con, rstr_to_slct_con);
-        display_selectable("Selected peer volumes", *cmd_rstr_to_slct_peer_vlm, rstr_to_slct_peer_vlm);
+        display_toggle("Selected resources", *cmd_rstr_to_slct_rsc, rstr_to_slct_rsc);
+        display_toggle("Selected volumes", *cmd_rstr_to_slct_vlm, rstr_to_slct_vlm);
+        display_toggle("Selected connections", *cmd_rstr_to_slct_con, rstr_to_slct_con);
+        display_toggle("Selected peer volumes", *cmd_rstr_to_slct_peer_vlm, rstr_to_slct_peer_vlm);
     }
 
     display_option_query(5, 17);
@@ -1185,13 +1170,13 @@ void MDspSelectionFilter::display_resource_criteria()
     dsp_comp_hub.dsp_io->write_text("Resource filter criteria:");
     dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
 
-    display_selectable("Deselect resources", *cmd_op_slct_rsc, op_slct_rsc);
-    display_selectable("Fully operational resources", *cmd_rsc_op_normal, rsc_op_normal.selected);
-    display_selectable("Degraded resources", *cmd_rsc_op_degraded, rsc_op_degraded.selected);
-    display_selectable("Resources with quorum", *cmd_rsc_with_quorum, rsc_with_quorum.selected);
-    display_selectable("Resources without quorum", *cmd_rsc_without_quorum, rsc_without_quorum.selected);
-    display_selectable("Primary resources", *cmd_rsc_primary, rsc_primary.selected);
-    display_selectable("Secondary resources", *cmd_rsc_secondary, rsc_secondary.selected);
+    display_toggle("Deselect resources", *cmd_op_slct_rsc, op_slct_rsc);
+    display_toggle("Fully operational resources", *cmd_rsc_op_normal, rsc_op_normal.selected);
+    display_toggle("Degraded resources", *cmd_rsc_op_degraded, rsc_op_degraded.selected);
+    display_toggle("Resources with quorum", *cmd_rsc_with_quorum, rsc_with_quorum.selected);
+    display_toggle("Resources without quorum", *cmd_rsc_without_quorum, rsc_without_quorum.selected);
+    display_toggle("Primary resources", *cmd_rsc_primary, rsc_primary.selected);
+    display_toggle("Secondary resources", *cmd_rsc_secondary, rsc_secondary.selected);
 
     display_option_query(5, 17);
 }
@@ -1205,23 +1190,23 @@ void MDspSelectionFilter::display_volume_criteria()
 
     dsp_comp_hub.dsp_io->cursor_xy(3, 7);
     dsp_comp_hub.dsp_io->write_text("and any of the selected volume states:");
-    display_selectable("(De)select volumes", *cmd_op_slct_vlm, op_slct_vlm);
-    display_selectable("Fully operational volumes", *cmd_vlm_op_normal, vlm_op_normal.selected);
-    display_selectable("Degraded volumes", *cmd_vlm_op_degraded, vlm_op_degraded.selected);
-    display_selectable("Volumes with quorum", *cmd_vlm_with_quorum, vlm_with_quorum.selected);
-    display_selectable("Volumes without quorum", *cmd_vlm_without_quorum, vlm_without_quorum.selected);
-    display_selectable("Diskless (client)", *cmd_vlm_diskless_client, vlm_diskless_client.selected);
-    display_selectable("Diskless (failed)", *cmd_vlm_diskless_failed, vlm_diskless_failed.selected);
-    display_selectable(DrbdVolume::DS_LABEL_UP_TO_DATE, *cmd_vlm_uptodate, vlm_uptodate.selected);
-    display_selectable(DrbdVolume::DS_LABEL_CONSISTENT, *cmd_vlm_consistent, vlm_consistent.selected);
-    display_selectable(DrbdVolume::DS_LABEL_INCONSISTENT, *cmd_vlm_inconsistent, vlm_inconsistent.selected);
-    display_selectable(DrbdVolume::DS_LABEL_OUTDATED, *cmd_vlm_outdated, vlm_outdated.selected);
-    display_selectable(DrbdVolume::DS_LABEL_ATTACHING, *cmd_vlm_attaching, vlm_attaching.selected);
-    display_selectable(DrbdVolume::DS_LABEL_DETACHING, *cmd_vlm_detaching, vlm_detaching.selected);
-    display_selectable(DrbdVolume::DS_LABEL_FAILED, *cmd_vlm_failed, vlm_failed.selected);
-    display_selectable(DrbdVolume::DS_LABEL_NEGOTIATING, *cmd_vlm_negotiating, vlm_negotiating.selected);
-    display_selectable(DrbdVolume::DS_LABEL_UNKNOWN, *cmd_vlm_unknown, vlm_unknown.selected);
-    display_selectable("Invert disk state match", *cmd_inv_vlm_state, inv_vlm_state);
+    display_toggle("(De)select volumes", *cmd_op_slct_vlm, op_slct_vlm);
+    display_toggle("Fully operational volumes", *cmd_vlm_op_normal, vlm_op_normal.selected);
+    display_toggle("Degraded volumes", *cmd_vlm_op_degraded, vlm_op_degraded.selected);
+    display_toggle("Volumes with quorum", *cmd_vlm_with_quorum, vlm_with_quorum.selected);
+    display_toggle("Volumes without quorum", *cmd_vlm_without_quorum, vlm_without_quorum.selected);
+    display_toggle("Diskless (client)", *cmd_vlm_diskless_client, vlm_diskless_client.selected);
+    display_toggle("Diskless (failed)", *cmd_vlm_diskless_failed, vlm_diskless_failed.selected);
+    display_toggle(DrbdVolume::DS_LABEL_UP_TO_DATE, *cmd_vlm_uptodate, vlm_uptodate.selected);
+    display_toggle(DrbdVolume::DS_LABEL_CONSISTENT, *cmd_vlm_consistent, vlm_consistent.selected);
+    display_toggle(DrbdVolume::DS_LABEL_INCONSISTENT, *cmd_vlm_inconsistent, vlm_inconsistent.selected);
+    display_toggle(DrbdVolume::DS_LABEL_OUTDATED, *cmd_vlm_outdated, vlm_outdated.selected);
+    display_toggle(DrbdVolume::DS_LABEL_ATTACHING, *cmd_vlm_attaching, vlm_attaching.selected);
+    display_toggle(DrbdVolume::DS_LABEL_DETACHING, *cmd_vlm_detaching, vlm_detaching.selected);
+    display_toggle(DrbdVolume::DS_LABEL_FAILED, *cmd_vlm_failed, vlm_failed.selected);
+    display_toggle(DrbdVolume::DS_LABEL_NEGOTIATING, *cmd_vlm_negotiating, vlm_negotiating.selected);
+    display_toggle(DrbdVolume::DS_LABEL_UNKNOWN, *cmd_vlm_unknown, vlm_unknown.selected);
+    display_toggle("Invert disk state match", *cmd_inv_vlm_state, inv_vlm_state);
 
     display_option_query(5, 17);
 }
@@ -1233,31 +1218,31 @@ void MDspSelectionFilter::display_connection_criteria()
     dsp_comp_hub.dsp_io->write_text("Connection filter criteria:");
     dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
 
-    display_selectable("(De)select connections", *cmd_op_slct_con, op_slct_con);
-    display_selectable("Fully operational connections", *cmd_con_op_normal, con_op_normal.selected);
-    display_selectable("Degraded connections", *cmd_con_op_degraded, con_op_degraded.selected);
-    display_selectable("Primary peers", *cmd_con_primary, con_primary.selected);
-    display_selectable("Secondary peers", *cmd_con_secondary, con_secondary.selected);
-    display_selectable(DrbdConnection::ROLE_LABEL_UNKNOWN, *cmd_con_unknown_role, con_unknown_role.selected);
+    display_toggle("(De)select connections", *cmd_op_slct_con, op_slct_con);
+    display_toggle("Fully operational connections", *cmd_con_op_normal, con_op_normal.selected);
+    display_toggle("Degraded connections", *cmd_con_op_degraded, con_op_degraded.selected);
+    display_toggle("Primary peers", *cmd_con_primary, con_primary.selected);
+    display_toggle("Secondary peers", *cmd_con_secondary, con_secondary.selected);
+    display_toggle(DrbdConnection::ROLE_LABEL_UNKNOWN, *cmd_con_unknown_role, con_unknown_role.selected);
 
     dsp_comp_hub.dsp_io->cursor_xy(3, 8);
     dsp_comp_hub.dsp_io->write_text("and any of the selected connection states:");
 
-    display_selectable(DrbdConnection::CS_LABEL_STANDALONE, *cmd_con_standalone, con_standalone.selected);
-    display_selectable(DrbdConnection::CS_LABEL_DISCONNECTING, *cmd_con_disconnecting, con_disconnecting.selected);
-    display_selectable(DrbdConnection::CS_LABEL_UNCONNECTED, *cmd_con_unconnected, con_unconnected.selected);
-    display_selectable(DrbdConnection::CS_LABEL_TIMEOUT, *cmd_con_timeout, con_timeout.selected);
-    display_selectable(DrbdConnection::CS_LABEL_BROKEN_PIPE, *cmd_con_broken_pipe, con_broken_pipe.selected);
-    display_selectable(
+    display_toggle(DrbdConnection::CS_LABEL_STANDALONE, *cmd_con_standalone, con_standalone.selected);
+    display_toggle(DrbdConnection::CS_LABEL_DISCONNECTING, *cmd_con_disconnecting, con_disconnecting.selected);
+    display_toggle(DrbdConnection::CS_LABEL_UNCONNECTED, *cmd_con_unconnected, con_unconnected.selected);
+    display_toggle(DrbdConnection::CS_LABEL_TIMEOUT, *cmd_con_timeout, con_timeout.selected);
+    display_toggle(DrbdConnection::CS_LABEL_BROKEN_PIPE, *cmd_con_broken_pipe, con_broken_pipe.selected);
+    display_toggle(
         DrbdConnection::CS_LABEL_NETWORK_FAILURE,
         *cmd_con_network_failure, con_network_failure.selected
     );
-    display_selectable(DrbdConnection::CS_LABEL_PROTOCOL_ERROR, *cmd_con_protocol_error, con_protocol_error.selected);
-    display_selectable(DrbdConnection::CS_LABEL_TEAR_DOWN, *cmd_con_tear_down, con_tear_down.selected);
-    display_selectable(DrbdConnection::CS_LABEL_CONNECTING, *cmd_con_connecting, con_connecting.selected);
-    display_selectable(DrbdConnection::CS_LABEL_CONNECTED, *cmd_con_connected, con_connected.selected);
-    display_selectable(DrbdConnection::CS_LABEL_UNKNOWN, *cmd_con_unknown_conn, con_unknown_conn.selected);
-    display_selectable("Invert connection state match", *cmd_inv_con_state, inv_con_state);
+    display_toggle(DrbdConnection::CS_LABEL_PROTOCOL_ERROR, *cmd_con_protocol_error, con_protocol_error.selected);
+    display_toggle(DrbdConnection::CS_LABEL_TEAR_DOWN, *cmd_con_tear_down, con_tear_down.selected);
+    display_toggle(DrbdConnection::CS_LABEL_CONNECTING, *cmd_con_connecting, con_connecting.selected);
+    display_toggle(DrbdConnection::CS_LABEL_CONNECTED, *cmd_con_connected, con_connected.selected);
+    display_toggle(DrbdConnection::CS_LABEL_UNKNOWN, *cmd_con_unknown_conn, con_unknown_conn.selected);
+    display_toggle("Invert connection state match", *cmd_inv_con_state, inv_con_state);
 
     display_option_query(5, 17);
 }
@@ -1272,30 +1257,30 @@ void MDspSelectionFilter::display_peer_volume_criteria()
         dsp_comp_hub.dsp_io->write_text("Peer volume filter criteria");
         dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
 
-        display_selectable("(De)select peer volumes", *cmd_op_slct_peer_vlm, op_slct_peer_vlm);
-        display_selectable("Fully operational volumes", *cmd_peer_vlm_op_normal, peer_vlm_op_normal.selected);
-        display_selectable("Degraded volumes", *cmd_peer_vlm_op_degraded, peer_vlm_op_degraded.selected);
-        display_selectable("Volumes with quorum", *cmd_peer_vlm_with_quorum, peer_vlm_with_quorum.selected);
-        display_selectable("Volumes without quorum", *cmd_peer_vlm_without_quorum, peer_vlm_without_quorum.selected);
+        display_toggle("(De)select peer volumes", *cmd_op_slct_peer_vlm, op_slct_peer_vlm);
+        display_toggle("Fully operational volumes", *cmd_peer_vlm_op_normal, peer_vlm_op_normal.selected);
+        display_toggle("Degraded volumes", *cmd_peer_vlm_op_degraded, peer_vlm_op_degraded.selected);
+        display_toggle("Volumes with quorum", *cmd_peer_vlm_with_quorum, peer_vlm_with_quorum.selected);
+        display_toggle("Volumes without quorum", *cmd_peer_vlm_without_quorum, peer_vlm_without_quorum.selected);
 
         dsp_comp_hub.dsp_io->cursor_xy(3, 7);
         dsp_comp_hub.dsp_io->write_text("and any of the selected peer volume disk states:");
 
-        display_selectable("Diskless (client)", *cmd_peer_vlm_diskless_client, peer_vlm_diskless_client.selected);
-        display_selectable("Diskless (failed)", *cmd_peer_vlm_diskless_failed, peer_vlm_diskless_failed.selected);
-        display_selectable(DrbdVolume::DS_LABEL_UP_TO_DATE, *cmd_peer_vlm_uptodate, peer_vlm_uptodate.selected);
-        display_selectable(DrbdVolume::DS_LABEL_CONSISTENT, *cmd_peer_vlm_consistent, peer_vlm_consistent.selected);
-        display_selectable(
+        display_toggle("Diskless (client)", *cmd_peer_vlm_diskless_client, peer_vlm_diskless_client.selected);
+        display_toggle("Diskless (failed)", *cmd_peer_vlm_diskless_failed, peer_vlm_diskless_failed.selected);
+        display_toggle(DrbdVolume::DS_LABEL_UP_TO_DATE, *cmd_peer_vlm_uptodate, peer_vlm_uptodate.selected);
+        display_toggle(DrbdVolume::DS_LABEL_CONSISTENT, *cmd_peer_vlm_consistent, peer_vlm_consistent.selected);
+        display_toggle(
             DrbdVolume::DS_LABEL_INCONSISTENT,
             *cmd_peer_vlm_inconsistent, peer_vlm_inconsistent.selected
         );
-        display_selectable(DrbdVolume::DS_LABEL_OUTDATED, *cmd_peer_vlm_outdated, peer_vlm_outdated.selected);
-        display_selectable(DrbdVolume::DS_LABEL_ATTACHING, *cmd_peer_vlm_attaching, peer_vlm_attaching.selected);
-        display_selectable(DrbdVolume::DS_LABEL_DETACHING, *cmd_peer_vlm_detaching, peer_vlm_detaching.selected);
-        display_selectable(DrbdVolume::DS_LABEL_FAILED, *cmd_peer_vlm_failed, peer_vlm_failed.selected);
-        display_selectable(DrbdVolume::DS_LABEL_NEGOTIATING, *cmd_peer_vlm_negotiating, peer_vlm_negotiating.selected);
-        display_selectable(DrbdVolume::DS_LABEL_UNKNOWN, *cmd_peer_vlm_unknown_disk, peer_vlm_unknown_disk.selected);
-        display_selectable("Invert disk state match", *cmd_inv_peer_vlm_disk_state, inv_peer_vlm_disk_state);
+        display_toggle(DrbdVolume::DS_LABEL_OUTDATED, *cmd_peer_vlm_outdated, peer_vlm_outdated.selected);
+        display_toggle(DrbdVolume::DS_LABEL_ATTACHING, *cmd_peer_vlm_attaching, peer_vlm_attaching.selected);
+        display_toggle(DrbdVolume::DS_LABEL_DETACHING, *cmd_peer_vlm_detaching, peer_vlm_detaching.selected);
+        display_toggle(DrbdVolume::DS_LABEL_FAILED, *cmd_peer_vlm_failed, peer_vlm_failed.selected);
+        display_toggle(DrbdVolume::DS_LABEL_NEGOTIATING, *cmd_peer_vlm_negotiating, peer_vlm_negotiating.selected);
+        display_toggle(DrbdVolume::DS_LABEL_UNKNOWN, *cmd_peer_vlm_unknown_disk, peer_vlm_unknown_disk.selected);
+        display_toggle("Invert disk state match", *cmd_inv_peer_vlm_disk_state, inv_peer_vlm_disk_state);
     }
     else
     if (page == 7)
@@ -1305,71 +1290,71 @@ void MDspSelectionFilter::display_peer_volume_criteria()
         dsp_comp_hub.dsp_io->write_text("Peer volume filter criteria - any of the selected replication states:");
         dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
 
-        display_selectable(
+        display_toggle(
             DrbdVolume::RS_LABEL_OFF,
             *cmd_peer_vlm_off,          peer_vlm_off.selected
         );
-        display_selectable(
+        display_toggle(
             DrbdVolume::RS_LABEL_ESTABLISHED,
             *cmd_peer_vlm_established,  peer_vlm_established.selected
         );
-        display_selectable(
+        display_toggle(
             DrbdVolume::RS_LABEL_STARTING_SYNC_SOURCE,
             *cmd_peer_vlm_str_sync_src, peer_vlm_str_sync_src.selected
         );
-        display_selectable(
+        display_toggle(
             DrbdVolume::RS_LABEL_STARTING_SYNC_TARGET,
             *cmd_peer_vlm_str_sync_tgt, peer_vlm_str_sync_tgt.selected
         );
-        display_selectable(
+        display_toggle(
             DrbdVolume::RS_LABEL_WF_BITMAP_SOURCE,
             *cmd_peer_vlm_wf_bm_src,    peer_vlm_wf_bm_src.selected
         );
-        display_selectable(
+        display_toggle(
             DrbdVolume::RS_LABEL_WF_BITMAP_TARGET,
             *cmd_peer_vlm_wf_bm_tgt,    peer_vlm_wf_bm_tgt.selected
         );
-        display_selectable(
+        display_toggle(
             DrbdVolume::RS_LABEL_WF_SYNC_UUID,
             *cmd_peer_vlm_wf_sync_uuid, peer_vlm_wf_sync_uuid.selected
         );
-        display_selectable(
+        display_toggle(
             DrbdVolume::RS_LABEL_SYNC_SOURCE,
             *cmd_peer_vlm_sync_src,     peer_vlm_sync_src.selected
         );
-        display_selectable(
+        display_toggle(
             DrbdVolume::RS_LABEL_SYNC_TARGET,
             *cmd_peer_vlm_sync_tgt,     peer_vlm_sync_tgt.selected
         );
-        display_selectable(
+        display_toggle(
             DrbdVolume::RS_LABEL_PAUSED_SYNC_SOURCE,
             *cmd_peer_vlm_psd_sync_src, peer_vlm_psd_sync_src.selected
         );
-        display_selectable(
+        display_toggle(
             DrbdVolume::RS_LABEL_PAUSED_SYNC_TARGET,
             *cmd_peer_vlm_psd_sync_tgt, peer_vlm_psd_sync_tgt.selected
         );
-        display_selectable(
+        display_toggle(
             DrbdVolume::RS_LABEL_VERIFY_SOURCE,
             *cmd_peer_vlm_vfy_src,      peer_vlm_vfy_src.selected
         );
-        display_selectable(
+        display_toggle(
             DrbdVolume::RS_LABEL_VERIFY_TARGET,
             *cmd_peer_vlm_vfy_tgt,      peer_vlm_vfy_tgt.selected
         );
-        display_selectable(
+        display_toggle(
             DrbdVolume::RS_LABEL_AHEAD,
             *cmd_peer_vlm_ahead,        peer_vlm_ahead.selected
         );
-        display_selectable(
+        display_toggle(
             DrbdVolume::RS_LABEL_BEHIND,
             *cmd_peer_vlm_behind,       peer_vlm_behind.selected
         );
-        display_selectable(
+        display_toggle(
             DrbdVolume::RS_LABEL_UNKNOWN,
             *cmd_peer_vlm_unknown_repl, peer_vlm_unknown_repl.selected
         );
-        display_selectable("Invert replication state match", *cmd_inv_peer_vlm_repl_state, inv_peer_vlm_repl_state);
+        display_toggle("Invert replication state match", *cmd_inv_peer_vlm_repl_state, inv_peer_vlm_repl_state);
     }
 
     display_option_query(5, 17);
