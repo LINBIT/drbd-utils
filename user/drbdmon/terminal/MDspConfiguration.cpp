@@ -909,6 +909,19 @@ void MDspConfiguration::apply_config()
         dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.ansi_ctl->ANSI_MOUSE_OFF.c_str());
     }
 
+    try
+    {
+        dsp_comp_hub.sub_proc_queue->change_sub_proc_concurrency(config->taskq_concurrency);
+    }
+    catch (SubProcess::Exception&)
+    {
+        dsp_comp_hub.log->add_entry(
+            MessageLog::log_level::WARN,
+            "Thread creation failed while trying to change the active tasks concurrency. "
+            "Check operating system limits."
+        );
+    }
+
     dsp_comp_hub.core_instance->notify_config_changed();
 }
 
