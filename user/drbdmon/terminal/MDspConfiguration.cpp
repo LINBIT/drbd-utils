@@ -835,8 +835,16 @@ void MDspConfiguration::opt_load_config()
         const std::string interval_str = std::to_string(static_cast<unsigned int> (config->dsp_interval));
         input_display_interval.set_text(interval_str);
 
+        SubProcessQueue* const sub_proc_queue = dsp_comp_hub.sub_proc_queue;
+        const uint16_t min_taskq_concurrency = static_cast<uint16_t> (sub_proc_queue->MIN_ACTIVE_COUNT_RANGE);
+        const uint16_t max_taskq_concurrency =
+            sub_proc_queue->MAX_ACTIVE_COUNT_RANGE < UINT16_MAX ?
+            sub_proc_queue->MAX_ACTIVE_COUNT_RANGE : UINT16_MAX;
+
+        const uint16_t bounded_taskq_concurrency =
+            bounds(min_taskq_concurrency, config->taskq_concurrency, max_taskq_concurrency);
         const std::string taskq_concurrency_str =
-            std::to_string(static_cast<unsigned int> (config->taskq_concurrency));
+            std::to_string(static_cast<unsigned int> (bounded_taskq_concurrency));
         input_taskq_concurrency.set_text(taskq_concurrency_str);
 
         action_message = action_message_type::MSG_CONFIG_LOADED;
@@ -880,6 +888,10 @@ void MDspConfiguration::opt_default_config()
 
     InputField& config_option_field = get_option_field();
     config_option_field.clear_text();
+
+    const std::string taskq_concurrency_str =
+        std::to_string(static_cast<unsigned int> (config->taskq_concurrency));
+    input_taskq_concurrency.set_text(taskq_concurrency_str);
 
     dsp_comp_hub.dsp_selector->refresh_display();
 }
