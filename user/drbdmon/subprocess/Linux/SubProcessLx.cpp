@@ -50,7 +50,7 @@ SubProcessLx::~SubProcessLx() noexcept
 uint64_t SubProcessLx::get_pid() const noexcept
 {
     proc_lock.lock();
-    const uint64_t generic_pid = static_cast<uint64_t> (subproc_id);
+    const uint64_t generic_pid = subproc_id > 0 ? static_cast<uint64_t> (subproc_id) : 0;
     proc_lock.unlock();
     return generic_pid;
 }
