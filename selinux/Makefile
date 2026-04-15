@@ -2,6 +2,8 @@
 SE_TYPE = targeted
 SE_PRIORITY = 200
 
+SE_POLICYDB_VERSION ?=
+
 all: drbd.pp.bz2
 
 install:
@@ -26,7 +28,9 @@ drbd.pp: drbd.te drbd.fc
 	    "Do you need to install selinux-policy-devel?" >&2; \
 	  exit 1; \
 	fi
-	make -f /usr/share/selinux/devel/Makefile $@
+	make -f /usr/share/selinux/devel/Makefile \
+		$(if $(SE_POLICYDB_VERSION),CHECKMODULE="checkmodule -M -c $(SE_POLICYDB_VERSION)") \
+		$@
 
 # Apparently generates from the "installed" policy/interface, not from the
 # policy defined here.  So would need to first build and install.  Does not
