@@ -381,7 +381,7 @@ autoconf
     %{?with_coverage:--enable-coverage=package}
 make %{?_smp_mflags}
 %if %{with selinux}
-make selinux
+make selinux %{?se_policydb_version:SE_POLICYDB_VERSION=%{se_policydb_version}}
 %endif
 
 %install
