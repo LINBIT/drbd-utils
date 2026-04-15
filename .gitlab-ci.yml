@@ -100,6 +100,7 @@ drbd-utils-tests:
 
 drbd-tests:
   stage: test
+  interruptible: true
   rules:
     - if: $CI_MERGE_REQUEST_ID
   tags:
