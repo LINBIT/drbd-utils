@@ -3,6 +3,10 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.34.2
+-----------
+ * selinux: all selinux fixes from 9.34.1 to current master
+
 9.34.1
 -----------
  * drbdmeta: do not call drbdsetup with old CLI syntax
