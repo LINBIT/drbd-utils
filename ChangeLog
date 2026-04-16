@@ -3,6 +3,10 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.34.1
+-----------
+ * selinux: all fixes between v9.34.0 and HEAD
+
 9.34.0
 -----------
  * drbdadm: fix adjust for a v8 config with a v9 drbd kernel driver
