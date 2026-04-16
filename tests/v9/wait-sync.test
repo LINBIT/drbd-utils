@@ -1,0 +1,7 @@
+## wait-sync: peer vanishes between pre-query and initial state dump
+$ cat wait-sync-vanished-peer.msgs | drbdsetup_instrumented wait-sync-resource some-resource; echo $?
+0
+$ cat wait-sync-already-done.msgs | drbdsetup_instrumented wait-sync-resource some-resource; echo $?
+0
+$ cat wait-sync-completes.msgs | drbdsetup_instrumented wait-sync-resource some-resource; echo $?
+0

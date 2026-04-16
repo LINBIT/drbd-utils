@@ -89,6 +89,7 @@
 char *progname;
 
 fake_generic_get_t fake_generic_get = NULL;
+bool fake_choose_timeout = false;
 
 #ifndef AF_INET_SDP
 #define AF_INET_SDP 27
@@ -1526,6 +1527,11 @@ int choose_timeout(struct choose_timeout_ctx *ctx)
 {
 	struct nlattr *tla[ARRAY_SIZE(drbd_tla_nl_policy)] = { 0, };
 	char *desc = NULL;
+
+	if (fake_choose_timeout) {
+		ctx->timeout = ctx->wfc_timeout;
+		return 0;
+	}
 	struct drbd_genlmsghdr *dhdr;
 	struct nlattr *nla;
 	int err, rr;
@@ -2181,7 +2187,7 @@ static int generic_events_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		tmp_cm = *cm;
 		tmp_cm.continuous_poll = false;
 		cm = &tmp_cm;
-	} else {
+	} else if (!fake_generic_get) {
 		if (genl_join_mc_group_and_ctrl(drbd_sock, "events")) {
 			fprintf(stderr, "%s: unable to join drbd events multicast group\n", objname);
 			err = 20;
