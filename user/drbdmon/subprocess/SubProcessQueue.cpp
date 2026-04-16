@@ -10,7 +10,7 @@ extern "C"
 }
 
 const uint64_t  SubProcessQueue::TASKQ_NONE         = UINT64_MAX;
-const size_t    SubProcessQueue::MAX_ENTRY_COUNT    = 1024;
+const size_t    SubProcessQueue::MAX_ENTRY_COUNT    = 4000;
 
 const size_t    SubProcessQueue::MIN_ACTIVE_COUNT_RANGE = 1;
 const size_t    SubProcessQueue::DFLT_ACTIVE_COUNT      = 8;
