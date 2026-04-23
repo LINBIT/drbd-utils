@@ -4,26 +4,19 @@
 # export DH_VERBOSE=1
 
 PKG_VERSION=$(shell dpkg-parsechangelog | awk '/^Version:/ { print $$2 }')
-WITH_SYSTEMD=$(shell dh --list 2>/dev/null | sed -ne 's/^systemd$$/--with systemd/p')
 
 %:
-	dh $@ --parallel --with bash-completion $(WITH_SYSTEMD)
+	dh $@ --with bash-completion
 
 override_dh_auto_clean:
 	dh_auto_clean
 	rm -f debian/drbd-utils.drbd.init
 
 configure_with = --prefix=/usr --localstatedir=/var --sysconfdir=/etc \
-		--sbindir=/usr/sbin --with-udev --with-xen \
-		--with-pacemaker --with-rgmanager --without-bashcompletion
-
-ifneq	($(WITH_SYSTEMD),)
-configure_with += --with-systemdunitdir=/lib/systemd/system \
-		--with-initscripttype=both
-# alternatively: --with-initscripttype=systemd,
-# if you want to drop the sysv script from the package. 
-# Need to adjust below, in that case.
-endif
+		--sbindir=/usr/sbin --with-udev \
+		--with-pacemaker --without-bashcompletion \
+		--with-systemdunitdir=/lib/systemd/system \
+		--with-initscripttype=systemd
 
 ifeq (,$(filter noprebuiltman,$(DEB_BUILD_OPTIONS)))
 configure_with += --with-prebuiltman
@@ -40,21 +33,24 @@ override_dh_auto_install:
 	dh_auto_install --destdir debian/drbd-utils
 
 override_dh_install:
-	dh_install --fail-missing
-
+	dh_install
 	# Place the initscript where dh_installinit can find it
-	# (yes, it may be missing; yes, modern debhelper would find it anyways)
 	-mv $(CURDIR)/debian/drbd-utils/etc/init.d/drbd $(CURDIR)/debian/drbd-utils.drbd.init
-ifneq	($(WITH_SYSTEMD),)
-	# Place the systemd service script ...
-	mv $(CURDIR)/debian/drbd-utils/lib/systemd/system/drbd.service $(CURDIR)/debian/ || :
-endif
 
-# do not stop/restart/start, no reason to reconfigure the kernel
-# just because we install/upgrade some tools
+# do not stop/restart/start the sysv init script;
+# no reason to reconfigure the kernel just because we install/upgrade some tools
 override_dh_installinit:
 	dh_installinit -p drbd-utils --name=drbd \
-		--no-restart-on-upgrade --no-start
+		--no-stop-on-upgrade --no-start
+
+# systemd: do not enable drbd.service (users opt in, or use per-resource drbd@.target)
+# do not start/restart any service on install/upgrade
+# (drbd-graceful-down and drbd-graceful-disconnect are triggered by udev)
+override_dh_installsystemd:
+	dh_installsystemd -p drbd-utils --name=drbd --no-enable --no-start
+	dh_installsystemd -p drbd-utils --name=drbd-graceful-down --no-start
+	dh_installsystemd -p drbd-utils --name=drbd-graceful-disconnect --no-start
+	dh_installsystemd -p drbd-utils --remaining --no-start
 
 override_dh_gencontrol:
 	dh_gencontrol -Ndrbd8-utils
@@ -63,4 +59,4 @@ override_dh_gencontrol:
 
 .PHONY: override_dh_auto_configure override_dh_install \
 	override_dh_auto_clean override_dh_installinit \
-	override_dh_gencontrol override_dh_auto_install
+	override_dh_installsystemd override_dh_gencontrol override_dh_auto_install
