@@ -41,7 +41,7 @@ variables:
           .vms[].metadata.BuildDistribution
           | values
           | select(. != "mainline")
-          | sub("rhel(?<major>\\d)\\.\\d"; "rhel\(.major).0")
+          | sub("rhel(?<major>\\d+)\\.\\d+"; "rhel\(.major).0")
         ] | unique | join(",")')
 
         lbbuildctl build drbd-utils --arch amd64 --ci -v "$DRBD_UTILS_VERSION" \
