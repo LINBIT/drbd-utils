@@ -64,7 +64,7 @@
   </refsect1>
   <refsect1>
     <title>Reporting Bugs</title>
-    <simpara>    Report bugs to <email>drbd-user@lists.linbit.com</email>.
+    <simpara>    Report bugs at <ulink url="https://github.com/LINBIT/drbd-utils/issues">https://github.com/LINBIT/drbd-utils/issues</ulink>.
   </simpara>
   </refsect1>
   <refsect1>

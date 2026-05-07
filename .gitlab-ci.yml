@@ -24,7 +24,7 @@ variables:
         local release="$2"
 
         dummy-release.sh drbd-utils "$version" "$release" drbd.spec.in
-        sed -i "s/^AC_INIT.*/AC_INIT(DRBD, $version, [drbd-dev@lists.linbit.com])/" configure.ac
+        sed -i "s/^AC_INIT.*/AC_INIT(DRBD, $version, [drbd-dev@lists.linux.dev])/" configure.ac
         git config --global user.email "invalid@linbit"
         git config --global user.name "Dummy"
         git commit -am "CI $version - $release"

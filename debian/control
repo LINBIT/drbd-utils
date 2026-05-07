@@ -1,7 +1,7 @@
 Source: drbd-utils
 Section: admin
 Priority: extra
-Maintainer: DRBD dev <drbd-dev@lists.linbit.com>
+Maintainer: DRBD dev <drbd-dev@lists.linux.dev>
 Uploaders: Philipp Reisner <philipp.reisner@linbit.com>,
            Lars Ellenberg <lars.ellenberg@linbit.com>
 Build-Depends: bash-completion,
