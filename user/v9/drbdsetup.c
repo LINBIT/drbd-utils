@@ -3307,11 +3307,20 @@ const char *resync_susp_str(struct peer_device_info *info)
 		"user,dependency",
 		"peer,dependency",
 		"user,peer,dependency",
+		"max-parallel",
+		"user,max-parallel",
+		"peer,max-parallel",
+		"user,peer,max-parallel",
+		"dependency,max-parallel",
+		"user,dependency,max-parallel",
+		"peer,dependency,max-parallel",
+		"user,peer,dependency,max-parallel",
 	};
 	int index =
 		(info->peer_resync_susp_user ? 1 : 0) |
 		(info->peer_resync_susp_peer ? 2 : 0) |
-		(info->peer_resync_susp_dependency ? 4 : 0);
+		(info->peer_resync_susp_dependency ? 4 : 0) |
+		(info->peer_resync_susp_max_parallel ? 8 : 0);
 
 	return strs[index];
 }
@@ -3370,7 +3379,8 @@ static void peer_device_status(struct peer_devices_list *peer_device, bool singl
 		if (opt_verbose ||
 		    peer_device->info.peer_resync_susp_user ||
 		    peer_device->info.peer_resync_susp_peer ||
-		    peer_device->info.peer_resync_susp_dependency)
+		    peer_device->info.peer_resync_susp_dependency ||
+		    peer_device->info.peer_resync_susp_max_parallel)
 			wrap_printf(indent, " resync-suspended:%s",
 				    resync_susp_str(&peer_device->info));
 		if (opt_statistics && peer_device->statistics.peer_dev_received != -1) {

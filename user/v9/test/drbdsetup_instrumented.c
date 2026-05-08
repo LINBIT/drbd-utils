@@ -249,6 +249,7 @@ void test_peer_device_info(struct msg_buff *smsg, struct test_vars *vars, __u32 
 	nla_put_u32(smsg, T_peer_resync_susp_peer, false);
 	nla_put_u32(smsg, T_peer_resync_susp_dependency, false);
 	nla_put_u8(smsg, T_peer_is_intentional_diskless, false);
+	nla_put_u32(smsg, T_peer_resync_susp_max_parallel, false);
 	nla_nest_end(smsg, nla);
 }
 
