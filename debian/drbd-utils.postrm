@@ -13,6 +13,9 @@ case $1 in purge|remove|deconfigure)
 	done
 	rm -f /usr/share/man/man5/drbd.conf.5.gz
 	db_purge
+
+	# unregister the drbdsetup alternative
+	update-alternatives --remove drbdsetup /usr/sbin/drbdsetup.drbd-utils
 	;;
 esac
 

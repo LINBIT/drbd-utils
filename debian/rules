@@ -31,6 +31,10 @@ override_dh_auto_configure:
 
 override_dh_auto_install:
 	dh_auto_install --destdir debian/drbd-utils
+	# drbdsetup is managed via update-alternatives; ship the real binary
+	# under a provider-specific name, the link is created in postinst
+	mv $(CURDIR)/debian/drbd-utils/usr/sbin/drbdsetup \
+		$(CURDIR)/debian/drbd-utils/usr/sbin/drbdsetup.drbd-utils
 
 override_dh_install:
 	dh_install

@@ -31,4 +31,13 @@ if ! test /sbin -ef /usr/sbin; then
 	ln -sf /usr/sbin/drbdadm /sbin/
 fi
 
+# Register drbdsetup with update-alternatives at priority 20.
+# A drop-in Rust implementation (drbd-utils-rs) registers a competing
+# provider at priority 10, so this one wins by default but admins can
+# switch with: update-alternatives --config drbdsetup
+if [ "$1" = "configure" ] || [ "$1" = "abort-upgrade" ] || [ "$1" = "abort-deconfigure" ] || [ "$1" = "abort-remove" ]; then
+	update-alternatives --install \
+		/usr/sbin/drbdsetup drbdsetup /usr/sbin/drbdsetup.drbd-utils 20
+fi
+
 #DEBHELPER#

@@ -114,6 +114,8 @@ BuildRequires: keyutils-libs-devel
 Obsoletes: drbd-xen <= 9.30.0
 Obsoletes: drbd-rgmanager <= 9.31.0
 Obsoletes: drbd-heartbeat <= 9.31.0
+Requires(post): /usr/sbin/update-alternatives
+Requires(postun): /usr/sbin/update-alternatives
 
 %description utils
 DRBD mirrors a block device over the network to another machine.
@@ -129,7 +131,8 @@ This packages includes the DRBD administration tools.
 /sbin/drbdadm
 /sbin/drbdmeta
 %endif
-%{_sbindir}/drbdsetup
+%{_sbindir}/drbdsetup.drbd-utils
+%ghost %{_sbindir}/drbdsetup
 %{_sbindir}/drbdadm
 %{_sbindir}/drbdmeta
 %if %{with 84support}
@@ -393,6 +396,9 @@ make selinux %{?se_policydb_version:SE_POLICYDB_VERSION=%{se_policydb_version}}
 %install
 rm -rf %{buildroot}
 make install DESTDIR=%{buildroot} CREATE_MAN_LINK=no
+# drbdsetup is managed via alternatives; install the real binary under
+# a provider-specific name, the alternatives link is created in %%post
+mv %{buildroot}%{_sbindir}/drbdsetup %{buildroot}%{_sbindir}/drbdsetup.drbd-utils
 
 %if %{with selinux}
 install -d %{buildroot}%{_datadir}/selinux/packages
@@ -414,8 +420,19 @@ mkdir -m 0700 -p %{buildroot}%{_var}/run/drbd/lock
 %clean
 rm -rf %{buildroot}
 
+%pre utils
+# transition: %%{_sbindir}/drbdsetup used to be a regular file, now it is
+# an alternatives link. Remove the old file so that update-alternatives in
+# %%post can create the link; %%ghost ownership of the path keeps rpm from
+# erasing the link when the old package's files are removed.
+if [ -e %{_sbindir}/drbdsetup ] && [ ! -L %{_sbindir}/drbdsetup ]; then
+    rm -f %{_sbindir}/drbdsetup
+fi
+
 %post utils
 %systemd_post drbd.service
+update-alternatives --install \
+    %{_sbindir}/drbdsetup drbdsetup %{_sbindir}/drbdsetup.drbd-utils 20
 %if %{with manual}
 _v=9.0
 for f in drbd drbdadm drbdmeta drbdsetup; do
@@ -442,6 +459,9 @@ fi
 
 %postun utils
 %systemd_postun drbd.service
+if [ "$1" = 0 ]; then
+    update-alternatives --remove drbdsetup %{_sbindir}/drbdsetup.drbd-utils
+fi
 
 
 %changelog
