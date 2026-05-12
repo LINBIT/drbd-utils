@@ -148,6 +148,7 @@ namespace selection_filter
         return *(chain_end.next_node);
     }
 
+    // @throws std::bad_alloc, PatternLimitException
     template<class T>
     FilterNode<T>& make_object_name_selector(
         FilterNode<T>& chain_end,

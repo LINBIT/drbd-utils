@@ -169,6 +169,7 @@ namespace selection_filter
         return *(chain_end.next_node);
     }
 
+    // @throws std::bad_alloc, string_matching::PatternLimitException
     void filter_select(
         FilterSettings&     settings,
         ResourcesMap&       rsc_map,
@@ -500,6 +501,7 @@ namespace selection_filter
         }
     }
 
+    // @throws std::bad_alloc, string_matching::PatternLimitException
     void filter_deselect(
         FilterSettings&     settings,
         ResourcesMap&       rsc_map,
