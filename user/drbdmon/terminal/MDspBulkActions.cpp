@@ -813,7 +813,7 @@ void MDspBulkActions::action_loop_for_peer_volumes(
 {
     ResourceSelectionMap::NodesIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
     for (ResourceSelectionMap::Node* rsc_node = rsc_iter.next();
-         rsc_node != nullptr;
+         rsc_node != nullptr && (range.apply_count == 0 || apply_ctr < range.apply_count);
          rsc_node = rsc_iter.next())
     {
         const std::string* const rsc_name = rsc_node->get_key();
@@ -822,7 +822,7 @@ void MDspBulkActions::action_loop_for_peer_volumes(
         {
             ConnectionSelectionMap::NodesIterator con_iter(*(sub_selections.connection_selection));
             for (ConnectionSelectionMap::Node* con_node = con_iter.next();
-                 con_node != nullptr;
+                 con_node != nullptr && (range.apply_count == 0 || apply_ctr < range.apply_count);
                  con_node = con_iter.next())
             {
                 const std::string* const con_name = con_node->get_key();
@@ -831,7 +831,7 @@ void MDspBulkActions::action_loop_for_peer_volumes(
                 {
                     VolumeSelectionMap::KeysIterator peer_vlm_iter(*selected_peer_volumes);
                     for (const uint16_t* peer_vlm_nr = peer_vlm_iter.next();
-                         peer_vlm_nr != nullptr;
+                         peer_vlm_nr != nullptr && (range.apply_count == 0 || apply_ctr < range.apply_count);
                          peer_vlm_nr = peer_vlm_iter.next())
                     {
                         try
