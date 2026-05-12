@@ -99,6 +99,7 @@ class SubProcessQueue
     virtual uint64_t add_entry(std::unique_ptr<CmdLine>& command_mgr, const bool activate);
     virtual bool remove_entry(const uint64_t entry_id);
     virtual bool remove_entry(Entry* const queue_entry);
+    // Caller must hold queue_lock
     virtual Entry* get_entry(const uint64_t entry_id);
     virtual entry_state_type get_entry_state(const uint64_t entry_id);
     virtual entry_state_type get_entry_state(const Entry* const queue_entry);
@@ -111,23 +112,39 @@ class SubProcessQueue
     virtual void set_discard_finished_tasks(const bool discard_flag);
     virtual void set_discard_succeeded_tasks(const bool discard_flag);
 
+    // Caller must hold queue_lock
     virtual uint64_t get_active_queue_selected_id();
+    // Caller must hold queue_lock
     virtual uint64_t get_pending_queue_selected_id();
+    // Caller must hold queue_lock
     virtual uint64_t get_suspended_queue_selected_id();
+    // Caller must hold queue_lock
     virtual uint64_t get_finished_queue_selected_id();
 
+    // Caller must hold queue_lock
     virtual void set_active_queue_selected_id(const uint64_t id);
+    // Caller must hold queue_lock
     virtual void set_pending_queue_selected_id(const uint64_t id);
+    // Caller must hold queue_lock
     virtual void set_suspended_queue_selected_id(const uint64_t id);
+    // Caller must hold queue_lock
     virtual void set_finished_queue_selected_id(const uint64_t id);
 
+    // Caller must hold queue_lock
     virtual Iterator active_queue_iterator();
+    // Caller must hold queue_lock
     virtual Iterator active_queue_offset_iterator(Entry* const start_entry);
+    // Caller must hold queue_lock
     virtual Iterator pending_queue_iterator();
+    // Caller must hold queue_lock
     virtual Iterator pending_queue_offset_iterator(Entry* const start_entry);
+    // Caller must hold queue_lock
     virtual Iterator suspended_queue_iterator();
+    // Caller must hold queue_lock
     virtual Iterator suspended_queue_offset_iterator(Entry* const start_entry);
+    // Caller must hold queue_lock
     virtual Iterator finished_queue_iterator();
+    // Caller must hold queue_lock
     virtual Iterator finished_queue_offset_iterator(Entry* const start_entry);
 
     virtual void set_observer(SubProcessObserver* const new_observer);
@@ -207,11 +224,16 @@ class SubProcessQueue
 
     SubProcessObserver*             observer    {nullptr};
 
+    // Caller must hold queue_lock
     bool remove_entry_impl(Entry* const queue_entry);
+    // Caller must hold queue_lock
     bool move_entry(Entry* const queue_entry, Queue& dst_queue);
+    // Caller must hold queue_lock
     void schedule_threads();
     void invoke_thread(ThreadQueue::Node* const q_node);
+    // Caller must hold queue_lock
     void increase_pool_size_impl(const bool defer_exc);
+    // Caller must hold queue_lock
     void decrease_pool_size_impl();
 };
 

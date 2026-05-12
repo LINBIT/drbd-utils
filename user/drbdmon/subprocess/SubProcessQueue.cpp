@@ -168,6 +168,7 @@ bool SubProcessQueue::remove_entry_impl(Entry* const queue_entry)
     return is_removed;
 }
 
+// Caller must hold queue_lock
 SubProcessQueue::Entry* SubProcessQueue::get_entry(const uint64_t entry_id)
 {
     return map->get(&entry_id);
@@ -258,41 +259,49 @@ void SubProcessQueue::set_discard_succeeded_tasks(const bool discard_flag)
     discard_succeeded_tasks = discard_flag;
 }
 
+// Caller must hold queue_lock
 uint64_t SubProcessQueue::get_active_queue_selected_id()
 {
     return active_queue.selected_id;
 }
 
+// Caller must hold queue_lock
 uint64_t SubProcessQueue::get_pending_queue_selected_id()
 {
     return ready_queue.selected_id;
 }
 
+// Caller must hold queue_lock
 uint64_t SubProcessQueue::get_suspended_queue_selected_id()
 {
     return wait_queue.selected_id;
 }
 
+// Caller must hold queue_lock
 uint64_t SubProcessQueue::get_finished_queue_selected_id()
 {
     return ended_queue.selected_id;
 }
 
+// Caller must hold queue_lock
 void SubProcessQueue::set_active_queue_selected_id(const uint64_t id)
 {
     active_queue.selected_id = id;
 }
 
+// Caller must hold queue_lock
 void SubProcessQueue::set_pending_queue_selected_id(const uint64_t id)
 {
     ready_queue.selected_id = id;
 }
 
+// Caller must hold queue_lock
 void SubProcessQueue::set_suspended_queue_selected_id(const uint64_t id)
 {
     wait_queue.selected_id = id;
 }
 
+// Caller must hold queue_lock
 void SubProcessQueue::set_finished_queue_selected_id(const uint64_t id)
 {
     ended_queue.selected_id = id;
@@ -802,11 +811,11 @@ SubProcessQueue::Entry* SubProcessQueue::Queue::pop_entry()
         {
             head->prev_entry = nullptr;
         }
+        queue_entry->next_entry = nullptr;
+        queue_entry->prev_entry = nullptr;
+        queue_entry->owning_queue = nullptr;
         --size;
     }
-    queue_entry->next_entry = nullptr;
-    queue_entry->prev_entry = nullptr;
-    queue_entry->owning_queue = nullptr;
     return queue_entry;
 }
 
