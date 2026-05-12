@@ -1608,6 +1608,10 @@ void MDspSelectionFilter::execute_select()
         {
             error_msg = "Unparsable volume number";
         }
+        catch (string_matching::PatternLimitException&)
+        {
+            error_msg = "Text pattern exceeds maximum number of wildcard characters";
+        }
     }
 
     // Switch to the statistics page
@@ -1635,6 +1639,10 @@ void MDspSelectionFilter::execute_deselect()
         {
             error_msg = "Unparsable volume number";
         }
+        catch (string_matching::PatternLimitException&)
+        {
+            error_msg = "Text pattern exceeds maximum number of wildcard characters";
+        }
     }
 
     // Switch to the statistics page
@@ -1643,7 +1651,7 @@ void MDspSelectionFilter::execute_deselect()
     dsp_comp_hub.dsp_selector->refresh_display();
 }
 
-// @throws dsaext::NumberFormatException
+// @throws std::bad_alloc, string_matching::PatternLimitException, dsaext::NumberFormatException
 void MDspSelectionFilter::filter_select()
 {
     dsp_comp_hub.dsp_common->application_working();
@@ -1660,7 +1668,7 @@ void MDspSelectionFilter::filter_select()
     selection_filter::filter_select(settings, rsc_map, dsp_shared, debug_log);
 }
 
-// @throws dsaext::NumberFormatException
+// @throws std::bad_alloc, string_matching::PatternLimitException, dsaext::NumberFormatException
 void MDspSelectionFilter::filter_deselect()
 {
     dsp_comp_hub.dsp_common->application_working();
