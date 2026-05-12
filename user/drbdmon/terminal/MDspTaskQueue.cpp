@@ -494,6 +494,9 @@ void MDspTaskQueue::reset_cursor_position()
 
 void MDspTaskQueue::clear_cursor()
 {
+    std::mutex& queue_lock = subproc_queue.get_queue_lock();
+    std::unique_lock<std::mutex> lock(queue_lock);
+
     (subproc_queue.*set_cursor_func)(SubProcessQueue::TASKQ_NONE);
 }
 
@@ -568,6 +571,9 @@ void MDspTaskQueue::reset_display()
 
 void MDspTaskQueue::synchronize_data()
 {
+    std::mutex& queue_lock = subproc_queue.get_queue_lock();
+    std::unique_lock<std::mutex> lock(queue_lock);
+
     dsp_comp_hub.dsp_shared->task_id = (subproc_queue.*get_cursor_func)();
 }
 
