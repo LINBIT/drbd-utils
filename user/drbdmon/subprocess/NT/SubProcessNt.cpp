@@ -286,13 +286,19 @@ void SubProcessNt::read_subproc_output()
                 // Failed I/O operation result dequeued
                 if (op_key == events_key)
                 {
-                    CancelIoEx(events_pipe, NULL);
+                    if (events_pipe != INVALID_HANDLE_VALUE)
+                    {
+                        CancelIoEx(events_pipe, NULL);
+                    }
                     safe_close_handle(&events_pipe);
                 }
                 else
                 if (op_key == errors_key)
                 {
-                    CancelIoEx(errors_pipe, NULL);
+                    if (errors_pipe != INVALID_HANDLE_VALUE)
+                    {
+                        CancelIoEx(errors_pipe, NULL);
+                    }
                     safe_close_handle(&errors_pipe);
                 }
             }
@@ -338,29 +344,36 @@ void SubProcessNt::read_completion_handler(
     const size_t    max_length
 )
 {
-    const size_t current_length = op_data->length();
-    if (current_length < max_length)
+    if (bytes_read >= 1)
     {
-        const size_t copy_length = std::min(
-            static_cast<size_t> (max_length - current_length),
-            static_cast<size_t> (bytes_read)
-        );
-        const size_t result_length = current_length + copy_length;
-        if (result_length > op_data->capacity())
+        const size_t current_length = op_data->length();
+        if (current_length < max_length)
         {
-            if (dst_buffer_cap_idx < BUFFER_CAP_SIZE)
+            const size_t copy_length = std::min(
+                static_cast<size_t> (max_length - current_length),
+                static_cast<size_t> (bytes_read)
+            );
+            const size_t result_length = current_length + copy_length;
+            if (result_length > op_data->capacity())
             {
-                op_data->reserve(std::min(BUFFER_CAP[dst_buffer_cap_idx], max_length));
-                ++dst_buffer_cap_idx;
+                if (dst_buffer_cap_idx < BUFFER_CAP_SIZE)
+                {
+                    op_data->reserve(std::min(BUFFER_CAP[dst_buffer_cap_idx], max_length));
+                    ++dst_buffer_cap_idx;
+                }
+                else
+                {
+                    op_data->reserve(max_length);
+                }
             }
-            else
-            {
-                op_data->reserve(max_length);
-            }
+            op_data->append(op_read_buffer, copy_length);
         }
-        op_data->append(op_read_buffer, copy_length);
+        submit_read_op(op_handle_ptr, op_io_state, op_read_buffer);
     }
-    submit_read_op(op_handle_ptr, op_io_state, op_read_buffer);
+    else
+    {
+        safe_close_handle(op_handle_ptr);
+    }
 }
 
 void SubProcessNt::await_subproc_exit()
