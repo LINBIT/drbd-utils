@@ -333,7 +333,10 @@ void MDspImportSelection::import_selection()
 
             file_in.close();
 
-            message = "Import complete.";
+            if (message.empty())
+            {
+                message = "Import complete.";
+            }
         }
         else
         {
