@@ -1718,10 +1718,13 @@ void MDspSelectionFilter::discard_inactive_objects_selection()
                         if (slct_peer_vlm_map != nullptr)
                         {
                             VolumeSelectionMap::KeysIterator slct_peer_vlm_iter(*slct_peer_vlm_map);
-                            const uint16_t& peer_vlm_nr = *(slct_peer_vlm_iter.next());
-                            if (con->get_volume(peer_vlm_nr) == nullptr)
+                            while (slct_peer_vlm_iter.has_next())
                             {
-                                dsp_comp_hub.dsp_shared->deselect_peer_volume(*slct_con_node, peer_vlm_nr);
+                                const uint16_t& peer_vlm_nr = *(slct_peer_vlm_iter.next());
+                                if (con->get_volume(peer_vlm_nr) == nullptr)
+                                {
+                                    dsp_comp_hub.dsp_shared->deselect_peer_volume(*slct_con_node, peer_vlm_nr);
+                                }
                             }
                         }
                     }
