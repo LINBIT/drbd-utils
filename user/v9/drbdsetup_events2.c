@@ -907,6 +907,20 @@ static void print_connection_changes(const char *prefix, const char *action_new,
 			printf(" role:%s%s%s",
 			       ROLE_COLOR_STRING(new_connection->info.conn_role, 0));
 	}
+	if (new_connection->info.conn_connection_state == C_STANDALONE) {
+		switch (new_connection->info.conn_sync_state) {
+		case S_RESYNCABLE:
+			break;
+		case S_SPLIT_BRAIN:
+			printf(" sync-state:%s", "SplitBrain");
+			break;
+		case S_UNRELATED:
+			printf(" sync-state:%s", "Unrelated");
+			break;
+		default:
+			break;
+		}
+	}
 	if (statistics_changed || opt_fullch) {
 		print_connection_statistics(0, old_connection ? &old_connection->statistics : NULL,
 				&new_connection->statistics, nowrap_printf);
