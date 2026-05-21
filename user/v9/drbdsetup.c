@@ -595,6 +595,7 @@ static const char *error_messages[] = {
 	EM(ERR_LOCAL_AND_PEER_ADDR) = "Combination of local address(port) and remote address(port) already in use\n",
 	EM(ERR_ALREADY_EXISTS) = "Already exists\n",
 	EM(ERR_APV_TOO_LOW) = "A higher DRBD protocol level is required for this operation\n",
+	EM(ERR_PATH_COLLISION) = "Path collides with existing path\n",
 };
 #define MAX_ERROR (sizeof(error_messages)/sizeof(*error_messages))
 const char * error_to_string(int err_no)
