@@ -99,8 +99,9 @@ static struct genl_sock *genl_connect(__u32 nl_groups, struct genl_connect_optio
 	sock_len = sizeof(bsz);
 	if (getsockopt(s->s_fd, SOL_SOCKET, SO_RCVBUF, &bsz, &sock_len) == 0
 	&&  (bsz/2) < opts->rcvbuf_size) {
-		dbg(1, "tried to set SO_RCVBUF %d, got %d; you may need to adjust sysctl net.core.rmem_max\n",
-			opts->rcvbuf_size, (bsz/2));
+		dbg(1, "tried to set SO_RCVBUF %d, got %d; you may need to adjust sysctl net.core.rmem_max;"
+			" or 'export DRBD_GENL_RCVBUF_SZ=%d' to silence this message\n",
+			opts->rcvbuf_size, (bsz/2), (bsz/2));
 	}
 
 	dbg(3, "bound socket to nl_pid:%u, my pid:%u, len:%u, sizeof:%u\n",
