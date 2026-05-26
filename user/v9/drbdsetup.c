@@ -3422,6 +3422,14 @@ static void connection_status(struct connections_list *connection,
 			    cstate_color_start(cstate),
 			    drbd_conn_str(cstate),
 			    cstate_color_stop(cstate));
+
+		if (connection->info.conn_connection_state == C_STANDALONE) {
+			if (connection->info.conn_sync_state == S_SPLIT_BRAIN) {
+				wrap_printf(6, " sync-state:SplitBrain");
+			} else if (connection->info.conn_sync_state == S_UNRELATED) {
+				wrap_printf(6, " sync-state:Unrelated");
+			}
+		}
 	}
 	if (opt_verbose || connection->info.conn_connection_state == C_CONNECTED) {
 		enum drbd_role role = connection->info.conn_role;
