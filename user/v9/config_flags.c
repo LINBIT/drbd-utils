@@ -984,6 +984,16 @@ const char *read_balancing_map[] = {
 	[RB_1M_STRIPING] = "1M-striping"
 };
 
+/* "no"/"yes" keep the former boolean spellings (yes == keep-in-sync, the
+ * historical default); "all" is the new defer-everything mode. */
+const char *resync_without_replication_map[] = {
+	[RWR_NO] = "no",
+	[RWR_PER_EXTENT] = "yes",	/* per-AL-extent (default) */
+	[RWR_ALL] = "all",
+	[RWR_PER_WRITE] = "per-write",
+	[RWR_AUTO] = "auto",
+};
+
 const struct en_map quorum_map[] = {
 	{ "off", QOU_OFF },
 	{ "majority", QOU_MAJORITY },
@@ -1281,7 +1291,7 @@ struct context_def peer_device_options_ctx = {
 		{ "c-max-rate", NUMERIC(c_max_rate, C_MAX_RATE), .unit = "bytes/second" },
 		{ "c-min-rate", NUMERIC(c_min_rate, C_MIN_RATE), .unit = "bytes/second" },
 		{ "bitmap", BOOLEAN(bitmap, BITMAP) },
-		{ "resync-without-replication", BOOLEAN(resync_without_replication, RESYNC_WITHOUT_REPLICATION) },
+		{ "resync-without-replication", ENUM(resync_without_replication, RESYNC_WITHOUT_REPLICATION) },
 		{ "peer-tiebreaker", BOOLEAN(peer_tiebreaker, PEER_TIEBREAKER) },
 		{ } },
 };
