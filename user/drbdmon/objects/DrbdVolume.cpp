@@ -227,8 +227,13 @@ DrbdVolume::disk_state DrbdVolume::get_disk_state() const
 
 const char* DrbdVolume::get_disk_state_label() const
 {
+    return label_for_disk_state(vol_disk_state);
+}
+
+const char* DrbdVolume::label_for_disk_state(const disk_state value) noexcept
+{
     const char* label = DS_LABEL_UNKNOWN;
-    switch (vol_disk_state)
+    switch (value)
     {
         case DrbdVolume::disk_state::ATTACHING:
             label = DS_LABEL_ATTACHING;
@@ -272,8 +277,13 @@ DrbdVolume::repl_state DrbdVolume::get_replication_state() const
 
 const char* DrbdVolume::get_replication_state_label() const
 {
+    return label_for_replication_state(vol_repl_state);
+}
+
+const char* DrbdVolume::label_for_replication_state(const repl_state value) noexcept
+{
     const char* label = RS_LABEL_UNKNOWN;
-    switch (vol_repl_state)
+    switch (value)
     {
         case DrbdVolume::repl_state::AHEAD:
             label = RS_LABEL_AHEAD;

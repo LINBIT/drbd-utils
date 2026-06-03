@@ -33,6 +33,8 @@ class DrbdRole
     virtual resource_role get_role() const;
     virtual const char* get_role_label() const;
 
+    static const char* label_for_role(const resource_role value) noexcept;
+
     // @throws EventMessageException
     static resource_role parse_role(std::string& role_name);
 

@@ -159,6 +159,9 @@ class DrbdVolume : private StateFlags
     virtual bool has_replication_alert() const;
     virtual bool has_quorum_alert() const;
 
+    static const char* label_for_disk_state(const disk_state value) noexcept;
+    static const char* label_for_replication_state(const repl_state value) noexcept;
+
     // Creates (allocates and initializes) a new DrbdVolume object from a map of properties
     //
     // @param event_props Reference to the map of properties from a 'drbdsetup events2' line

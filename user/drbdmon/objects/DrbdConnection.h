@@ -57,6 +57,8 @@ class DrbdConnection : public VolumesContainer, public DrbdRole, private StateFl
     static const char* CS_LABEL_CONNECTED;
     static const char* CS_LABEL_UNKNOWN;
 
+    static const char* SS_LABEL_UNKNOWN;
+    static const char* SS_LABEL_RESYNCABLE;
     static const char* SS_LABEL_SPLIT;
     static const char* SS_LABEL_UNRELATED;
 
@@ -92,6 +94,9 @@ class DrbdConnection : public VolumesContainer, public DrbdRole, private StateFl
     virtual StateFlags::state child_state_flags_changed() override;
     virtual bool has_connection_alert() const;
     virtual bool has_role_alert() const;
+
+    static const char* label_for_connection_state(const state value) noexcept;
+    static const char* label_for_sync_state(const sync_state_type value) noexcept;
 
     // Creates (allocates and initializes) a new DrbdConnection object from a map of properties
     //
