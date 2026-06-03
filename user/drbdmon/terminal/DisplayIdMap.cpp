@@ -35,6 +35,7 @@ namespace dspid
     const DisplayId ID_BULK_ACT(&DisplayId::MDSP_BULK_ACT, DisplayId::display_page::BULK_ACT);
     const DisplayId ID_EXPORT_SLCT(&DisplayId::MDSP_EXPORT_SLCT, DisplayId::display_page::EXPORT_SLCT);
     const DisplayId ID_IMPORT_SLCT(&DisplayId::MDSP_IMPORT_SLCT, DisplayId::display_page::IMPORT_SLCT);
+    const DisplayId ID_OVERVIEW(&DisplayId::MDSP_OVERVIEW, DisplayId::display_page::OVERVIEW);
 
     // @throws std::bad_alloc
     void initialize_display_ids(DisplayMap& map)
@@ -71,6 +72,7 @@ namespace dspid
             map.insert(&DisplayId::MDSP_BULK_ACT,           &ID_BULK_ACT);
             map.insert(&DisplayId::MDSP_EXPORT_SLCT,        &ID_EXPORT_SLCT);
             map.insert(&DisplayId::MDSP_IMPORT_SLCT,        &ID_IMPORT_SLCT);
+            map.insert(&DisplayId::MDSP_OVERVIEW,           &ID_OVERVIEW);
         }
         catch (dsaext::DuplicateInsertException&)
         {

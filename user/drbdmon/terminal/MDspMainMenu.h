@@ -32,6 +32,8 @@ class MDspMainMenu : public MDspMenuBase
     std::unique_ptr<ClickableCommand>   cmd_export_selection;
     std::unique_ptr<ClickableCommand>   cmd_import_selection;
 
+    std::unique_ptr<ClickableCommand>   cmd_overview;
+
     MDspMainMenu(const ComponentsHub& comp_hub);
     virtual ~MDspMainMenu() noexcept;
 
@@ -65,6 +67,8 @@ class MDspMainMenu : public MDspMenuBase
     std::function<void()>   cmd_fn_export_selection;
     std::function<void()>   cmd_fn_import_selection;
 
+    std::function<void()>   cmd_fn_overview;
+
     void opt_resource_overview();
     void opt_log();
     void opt_active_tasks();
@@ -85,6 +89,8 @@ class MDspMainMenu : public MDspMenuBase
     void opt_bulk_actions();
     void opt_export_selection();
     void opt_import_selection();
+
+    void opt_overview();
 };
 
 #endif /* MDSPMAINMENU_H */

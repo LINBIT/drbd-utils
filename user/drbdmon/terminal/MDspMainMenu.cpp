@@ -106,6 +106,11 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
         {
             opt_import_selection();
         };
+    cmd_fn_overview =
+        [this]() -> void
+        {
+            opt_overview();
+        };
 
     ClickableCommand::Builder bld;
     bld.coords.page = 1;
@@ -147,11 +152,17 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
     cmd_export_selection = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_export_selection));
     cmd_import_selection = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_import_selection));
 
+    bld.auto_nr = 60;
+    ++bld.coords.row;
+    cmd_overview = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_overview));
+
+    bld.coords.page = 3;
+
     bld.auto_nr = 90;
     // Long lines for the start/adjust options
     bld.coords.start_col = 5;
     bld.coords.end_col = 90;
-    bld.coords.row = 11;
+    bld.coords.row = 6;
 
     cmd_start_all_rsc = std::unique_ptr<ClickableCommand>(bld.create_with_auto_nr(cmd_fn_start_all_rsc));
     cmd_adjust_all_rsc_skip_disk = std::unique_ptr<ClickableCommand>(
@@ -185,6 +196,8 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
     add_option(*cmd_export_selection);
     add_option(*cmd_import_selection);
 
+    add_option(*cmd_overview);
+
     add_option(*cmd_start_all_rsc);
     add_option(*cmd_adjust_all_rsc_skip_disk);
     add_option(*cmd_adjust_all_rsc_skip_net);
@@ -194,7 +207,7 @@ MDspMainMenu::MDspMainMenu(const ComponentsHub& comp_hub):
     InputField& option_field = get_option_field();
     option_field.set_position(17, 17);
 
-    set_page_count(2);
+    set_page_count(bld.coords.page);
 }
 
 MDspMainMenu::~MDspMainMenu() noexcept
@@ -235,6 +248,11 @@ void MDspMainMenu::display_content()
         display_option(5, "Export selection", *cmd_export_selection, std_color);
         display_option(5, "Import selection", *cmd_import_selection, std_color);
 
+        display_option(5, "DRBD state overview", *cmd_overview, std_color);
+    }
+    else
+    if (page == 3)
+    {
         if (dsp_comp_hub.enable_drbd_actions)
         {
             display_option(5, "Start/adjust all resources", *cmd_start_all_rsc, std_color);
@@ -251,6 +269,11 @@ void MDspMainMenu::display_content()
                 *cmd_adjust_all_rsc_skip_disk_net, std_color
             );
             display_option(5, "Stop all resources", *cmd_stop_all_rsc, caution_color);
+        }
+        else
+        {
+            dsp_comp_hub.dsp_io->cursor_xy(6, 5);
+            dsp_comp_hub.dsp_io->write_text("DRBD actions are currently disabled");
         }
     }
 
@@ -540,6 +563,11 @@ void MDspMainMenu::opt_stop_all_resources()
 
         dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::RSC_LIST);
     }
+}
+
+void MDspMainMenu::opt_overview()
+{
+    dsp_comp_hub.dsp_selector->switch_to_display(DisplayId::display_page::OVERVIEW);
 }
 
 void MDspMainMenu::opt_exit()
