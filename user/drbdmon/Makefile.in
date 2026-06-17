@@ -60,7 +60,7 @@ l-obj += platform/Linux/SystemApiImpl.o platform/Linux/EventsIo.o
 l-obj += configuration/CfgEntryStore.o configuration/CfgEntryBoolean.o configuration/CfgEntryIntegerTypes.o
 l-obj += configuration/CfgEntry.o configuration/Configuration.o platform/IoException.o
 l-obj += persistent_configuration.o
-l-obj += StringTokenizer.o comparators.o utils.o exceptions.o integerfmt.o string_transformations.o
+l-obj += StringTokenizer.o Once.o comparators.o utils.o exceptions.o integerfmt.o string_transformations.o
 l-obj += string_matching.o
 
 ls-obj := drbdmon_main.o $(l-obj) $(dsaext-obj) $(integerparse-obj)
