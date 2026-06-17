@@ -38,37 +38,37 @@ void MDspBulkActions::display_closed()
 
 void MDspBulkActions::display_content()
 {
-    const uint32_t page = get_page_nr();
-    if (page != range_page)
-    {
-        delegate_focus(false);
-        active_input = nullptr;
-
-        if (range_info_msg.empty() && (!skip_count_input->is_empty() || !apply_count_input->is_empty()))
-        {
-            try
-            {
-                RangeSpec range = get_exec_range();
-                if (range.skip_count != 0)
-                {
-                    range_info_msg = "Skip ";
-                    range_info_msg += std::to_string(static_cast<unsigned long> (range.skip_count));
-                }
-                if (range.apply_count != 0)
-                {
-                    range_info_msg += (range_info_msg.empty() ? "Process " : ", process ");
-                    range_info_msg += std::to_string(static_cast<unsigned long> (range.apply_count));
-                }
-            }
-            catch (dsaext::NumberFormatException&)
-            {
-                // no-op
-            }
-        }
-    }
-
     if (dsp_comp_hub.enable_drbd_actions)
     {
+        const uint32_t page = get_page_nr();
+        if (page != range_page)
+        {
+            delegate_focus(false);
+            active_input = nullptr;
+
+            if (range_info_msg.empty() && (!skip_count_input->is_empty() || !apply_count_input->is_empty()))
+            {
+                try
+                {
+                    RangeSpec range = get_exec_range();
+                    if (range.skip_count != 0)
+                    {
+                        range_info_msg = "Skip ";
+                        range_info_msg += std::to_string(static_cast<unsigned long> (range.skip_count));
+                    }
+                    if (range.apply_count != 0)
+                    {
+                        range_info_msg += (range_info_msg.empty() ? "Process " : ", process ");
+                        range_info_msg += std::to_string(static_cast<unsigned long> (range.apply_count));
+                    }
+                }
+                catch (dsaext::NumberFormatException&)
+                {
+                    // no-op
+                }
+            }
+        }
+
         display_actions();
     }
     else
