@@ -23,6 +23,17 @@ CmdLine::~CmdLine() noexcept
         delete cur_arg;
     }
     arg_list->clear();
+
+    if (env_list != nullptr)
+    {
+        StringList::ValuesIterator env_iter(*env_list);
+        while (env_iter.has_next())
+        {
+            std::string* const env_entry = env_iter.next();
+            delete env_entry;
+        }
+        env_list->clear();
+    }
 }
 
 size_t CmdLine::get_argument_count() const
@@ -38,11 +49,15 @@ CmdLine::StringList::ValuesIterator CmdLine::get_argument_iterator() const
 
 size_t CmdLine::get_environment_entry_count() const
 {
-    return env_list->get_size();
+    return env_list == nullptr ? 0 : env_list->get_size();
 }
 
 CmdLine::StringList::ValuesIterator CmdLine::get_environment_entry_iterator() const
 {
+    if (env_list == nullptr)
+    {
+        env_list = std::unique_ptr<StringList>(new StringList(&comparators::compare_string));
+    }
     StringList::ValuesIterator env_iter(*env_list);
     return env_iter;
 }
