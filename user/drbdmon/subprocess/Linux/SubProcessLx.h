@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <thread>
 #include <VList.h>
+#include <Once.h>
 #include <subprocess/CmdLine.h>
 #include <subprocess/SubProcess.h>
 #include <subprocess/SubProcessObserver.h>
@@ -26,6 +27,15 @@ class SubProcessLx : public SubProcess
 
     static const size_t     BUFFER_CAP[];
     static const size_t     BUFFER_CAP_SIZE;
+
+    static std::unique_ptr<const char*[]>   env_base_ptr;
+    static size_t                           env_base_ptr_count;
+    static std::unique_ptr<char[]>          env_base;
+    static size_t                           env_base_size;
+    static Once                             env_init;
+
+    static void env_init_impl();
+    static const std::function<void()>      env_init_func;
 
     SubProcessLx(SubProcessObserver* const observer_ref);
     virtual ~SubProcessLx() noexcept;
