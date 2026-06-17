@@ -33,9 +33,10 @@ class CmdLine
     virtual void add_environment_entry(const std::string& entry);
 
   private:
-    std::unique_ptr<StringList> arg_list;
-    std::unique_ptr<StringList> env_list;
-    std::string                 cmd_description;
+    std::unique_ptr<StringList>             arg_list;
+    mutable std::unique_ptr<StringList>     env_list;
+
+    std::string cmd_description;
 };
 
 #endif /* CMDLINE_H */
