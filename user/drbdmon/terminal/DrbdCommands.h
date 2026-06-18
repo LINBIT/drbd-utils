@@ -67,6 +67,7 @@ class DrbdCommands
         const std::string& con_name
     ) = 0;
     virtual void exec_peer_volume_program(
+        const std::string& program,
         const std::string& rsc_name,
         const std::string& con_name,
         const uint16_t vlm_nr
