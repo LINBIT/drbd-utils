@@ -11,6 +11,11 @@ MDspBulkActions::MDspBulkActions(const ComponentsHub& comp_hub):
     skip_count_input = std::unique_ptr<InputField>(new InputField(dsp_comp_hub, 5, 5, 8, 8));
     apply_count_input = std::unique_ptr<InputField>(new InputField(dsp_comp_hub, 5, 8, 8, 8));
 
+    rsc_program_input = std::unique_ptr<InputField>(new InputField(dsp_comp_hub, 5, 14, 400, 80));
+    vlm_program_input = std::unique_ptr<InputField>(new InputField(dsp_comp_hub, 5, 14, 400, 80));
+    con_program_input = std::unique_ptr<InputField>(new InputField(dsp_comp_hub, 5, 14, 400, 80));
+    peer_vlm_program_input = std::unique_ptr<InputField>(new InputField(dsp_comp_hub, 5, 14, 400, 80));
+
     setup_cmd_functions();
     setup_pages();
 
@@ -26,6 +31,7 @@ void MDspBulkActions::display_closed()
     reset_display();
     active_input = nullptr;
     set_page_nr(1);
+    last_page = 0;
     if (!keep_range)
     {
         skip_count_input->clear_text();
@@ -33,19 +39,27 @@ void MDspBulkActions::display_closed()
         range_info_msg.clear();
         range_error_msg.clear();
     }
+    rsc_program_input->clear_text();
+    vlm_program_input->clear_text();
+    con_program_input->clear_text();
+    peer_vlm_program_input->clear_text();
     MDspMenuBase::display_closed();
 }
 
 void MDspBulkActions::display_content()
 {
+    const uint32_t page = get_page_nr();
+
     if (dsp_comp_hub.enable_drbd_actions)
     {
-        const uint32_t page = get_page_nr();
-        if (page != range_page)
+        if (page != last_page)
         {
             delegate_focus(false);
             active_input = nullptr;
+        }
 
+        if (page != range_page)
+        {
             if (range_info_msg.empty() && (!skip_count_input->is_empty() || !apply_count_input->is_empty()))
             {
                 try
@@ -78,6 +92,8 @@ void MDspBulkActions::display_content()
         dsp_comp_hub.dsp_io->cursor_xy(1, DisplayConsts::PAGE_NAV_Y + 3);
         dsp_comp_hub.dsp_io->write_text("This page is currently disabled");
     }
+
+    last_page = page;
 }
 
 void MDspBulkActions::display_actions()
@@ -85,22 +101,22 @@ void MDspBulkActions::display_actions()
     dsp_comp_hub.dsp_common->display_page_id(DisplayId::MDSP_BULK_ACT);
 
     const uint32_t page = get_page_nr();
-    if (page == 1)
+    if (page == rsc_page)
     {
         display_resource_actions();
     }
     else
-    if (page == 2)
+    if (page == vlm_page)
     {
         display_volume_actions();
     }
     else
-    if (page == 3)
+    if (page == con_page)
     {
         display_connection_actions();
     }
     else
-    if (page == 4)
+    if (page == peer_vlm_page)
     {
         display_peer_volume_actions();
     }
@@ -142,6 +158,11 @@ void MDspBulkActions::display_resource_actions()
     display_option(5, "Set secondary role", *cmd_rsc_secondary, std_color);
     display_option(5, "Force primary role", *cmd_rsc_force_primary, caution_color);
     display_option(5, "Force secondary role", *cmd_rsc_force_secondary, caution_color);
+
+    dsp_comp_hub.dsp_io->cursor_xy(3, 13);
+    dsp_comp_hub.dsp_io->write_text("Execute resource actions program:");
+    rsc_program_input->display();
+    display_option(5, "Execute program", *cmd_rsc_program, std_color);
 }
 
 void MDspBulkActions::display_volume_actions()
@@ -157,6 +178,11 @@ void MDspBulkActions::display_volume_actions()
     display_option(5, "Attach", *cmd_vlm_attach, std_color);
     display_option(5, "Detach", *cmd_vlm_detach, std_color);
     display_option(5, "Invalidate local volume data", *cmd_vlm_invalidate, caution_color);
+
+    dsp_comp_hub.dsp_io->cursor_xy(3, 13);
+    dsp_comp_hub.dsp_io->write_text("Execute volume actions program:");
+    vlm_program_input->display();
+    display_option(5, "Execute program", *cmd_vlm_program, std_color);
 }
 
 void MDspBulkActions::display_connection_actions()
@@ -172,6 +198,11 @@ void MDspBulkActions::display_connection_actions()
     display_option(5, "Connect", *cmd_con_connect, std_color);
     display_option(5, "Disconnect", *cmd_con_disconnect, std_color);
     display_option(5, "Discard & resolve split-brain", *cmd_con_discard, caution_color);
+
+    dsp_comp_hub.dsp_io->cursor_xy(3, 13);
+    dsp_comp_hub.dsp_io->write_text("Execute connection actions program:");
+    con_program_input->display();
+    display_option(5, "Execute program", *cmd_con_program, std_color);
 }
 
 void MDspBulkActions::display_peer_volume_actions()
@@ -188,6 +219,11 @@ void MDspBulkActions::display_peer_volume_actions()
     display_option(5, "Resume resynchronization", *cmd_peer_vlm_resume_sync, std_color);
     display_option(5, "Verify contents", *cmd_peer_vlm_verify, std_color);
     display_option(5, "Invalidate peer volume data", *cmd_peer_vlm_invalidate_remote, caution_color);
+
+    dsp_comp_hub.dsp_io->cursor_xy(3, 13);
+    dsp_comp_hub.dsp_io->write_text("Execute peer volume actions program:");
+    peer_vlm_program_input->display();
+    display_option(5, "Execute program", *cmd_peer_vlm_program, std_color);
 }
 
 void MDspBulkActions::display_range_options()
@@ -245,18 +281,29 @@ uint64_t MDspBulkActions::get_update_mask() noexcept
 
 bool MDspBulkActions::key_pressed(const uint32_t key)
 {
-    bool intercepted = MDspMenuBase::key_pressed(key);
+    bool intercepted = false;
+
+    // Override the capture of the '/' key by the command line logic for those fields that take path arguments
+    if (key == static_cast<uint32_t> ('/') &&
+        (active_input == rsc_program_input.get() || active_input == vlm_program_input.get() ||
+         active_input == con_program_input.get() || active_input == peer_vlm_program_input.get()))
+    {
+        active_input->key_pressed(key);
+        intercepted = true;
+    }
+
     if (!intercepted)
     {
-        if (key == KeyCodes::FUNC_01)
+        intercepted = MDspMenuBase::key_pressed(key);
+
+        if (!intercepted)
         {
-            helptext::open_help_page(helptext::id_type::BULKA_HELP, dsp_comp_hub);
-            intercepted = true;
-        }
-        else
-        {
-            const uint32_t page = get_page_nr();
-            if (page == range_page)
+            if (key == KeyCodes::FUNC_01)
+            {
+                helptext::open_help_page(helptext::id_type::BULKA_HELP, dsp_comp_hub);
+                intercepted = true;
+            }
+            else
             {
                 if (is_focus_delegated() && active_input != nullptr)
                 {
@@ -310,6 +357,26 @@ bool MDspBulkActions::mouse_action(MouseEvent& mouse)
                 dsp_comp_hub.dsp_selector->refresh_display();
             }
         }
+        else
+        if (page == rsc_page)
+        {
+            intercepted = mouse_action_program_input(rsc_program_input, mouse);
+        }
+        else
+        if (page == vlm_page)
+        {
+            intercepted = mouse_action_program_input(vlm_program_input, mouse);
+        }
+        else
+        if (page == con_page)
+        {
+            intercepted = mouse_action_program_input(con_program_input, mouse);
+        }
+        else
+        if (page == peer_vlm_page)
+        {
+            intercepted = mouse_action_program_input(peer_vlm_program_input, mouse);
+        }
     }
     return intercepted;
 }
@@ -337,6 +404,26 @@ void MDspBulkActions::cursor_to_next_item()
             delegate_focus(true);
         }
         dsp_comp_hub.dsp_selector->refresh_display();
+    }
+    else
+    if (page == rsc_page)
+    {
+        switch_program_input(rsc_program_input);
+    }
+    else
+    if (page == vlm_page)
+    {
+        switch_program_input(vlm_program_input);
+    }
+    else
+    if (page == con_page)
+    {
+        switch_program_input(con_program_input);
+    }
+    else
+    if (page == peer_vlm_page)
+    {
+        switch_program_input(peer_vlm_program_input);
     }
 }
 
@@ -371,111 +458,155 @@ void MDspBulkActions::setup_cmd_functions()
     cmd_fn_rsc_start =
         [this]() -> void
         {
-            execute_resource_actions(&DrbdCommands::exec_start);
+            rsc_function action = rsc_function_for_action(&DrbdCommands::exec_start);
+            execute_resource_actions(action);
         };
     cmd_fn_rsc_stop =
         [this]() -> void
         {
-            execute_resource_actions(&DrbdCommands::exec_stop);
+            rsc_function action = rsc_function_for_action(&DrbdCommands::exec_stop);
+            execute_resource_actions(action);
         };
     cmd_fn_rsc_adjust =
         [this]() -> void
         {
-            execute_resource_actions(&DrbdCommands::exec_adjust);
+            rsc_function action = rsc_function_for_action(&DrbdCommands::exec_adjust);
+            execute_resource_actions(action);
         };
     cmd_fn_rsc_adjust_skip_disk =
         [this]() -> void
         {
-            execute_resource_actions(&DrbdCommands::exec_adjust_skip_disk);
+            rsc_function action = rsc_function_for_action(&DrbdCommands::exec_adjust_skip_disk);
+            execute_resource_actions(action);
         };
     cmd_fn_rsc_adjust_skip_net =
         [this]() -> void
         {
-            execute_resource_actions(&DrbdCommands::exec_adjust_skip_net);
+            rsc_function action = rsc_function_for_action(&DrbdCommands::exec_adjust_skip_net);
+            execute_resource_actions(action);
         };
     cmd_fn_rsc_adjust_skip_disk_net =
         [this]() -> void
         {
-            execute_resource_actions(&DrbdCommands::exec_adjust_skip_disk_net);
+            rsc_function action = rsc_function_for_action(&DrbdCommands::exec_adjust_skip_disk_net);
+            execute_resource_actions(action);
         };
     cmd_fn_rsc_primary =
         [this]() -> void
         {
-            execute_resource_actions(&DrbdCommands::exec_primary);
+            rsc_function action = rsc_function_for_action(&DrbdCommands::exec_primary);
+            execute_resource_actions(action);
         };
     cmd_fn_rsc_secondary =
         [this]() -> void
         {
-            execute_resource_actions(&DrbdCommands::exec_secondary);
+            rsc_function action = rsc_function_for_action(&DrbdCommands::exec_secondary);
+            execute_resource_actions(action);
         };
     cmd_fn_rsc_force_primary =
         [this]() -> void
         {
-            execute_resource_actions(&DrbdCommands::exec_force_primary);
+            rsc_function action = rsc_function_for_action(&DrbdCommands::exec_force_primary);
+            execute_resource_actions(action);
         };
     cmd_fn_rsc_force_secondary =
         [this]() -> void
         {
-            execute_resource_actions(&DrbdCommands::exec_force_secondary);
+            rsc_function action = rsc_function_for_action(&DrbdCommands::exec_force_secondary);
+            execute_resource_actions(action);
         };
 
     cmd_fn_vlm_attach =
         [this]() -> void
         {
-            execute_volume_actions(&DrbdCommands::exec_attach);
+            vlm_function action = vlm_function_for_action(&DrbdCommands::exec_attach);
+            execute_volume_actions(action);
         };
     cmd_fn_vlm_detach =
         [this]() -> void
         {
-            execute_volume_actions(&DrbdCommands::exec_detach);
+            vlm_function action = vlm_function_for_action(&DrbdCommands::exec_detach);
+            execute_volume_actions(action);
         };
     cmd_fn_vlm_invalidate =
         [this]() -> void
         {
-            execute_volume_actions(&DrbdCommands::exec_invalidate);
+            vlm_function action = vlm_function_for_action(&DrbdCommands::exec_invalidate);
+            execute_volume_actions(action);
         };
 
     cmd_fn_con_connect =
         [this]() -> void
         {
-            execute_connection_actions(&DrbdCommands::exec_connect);
+            con_function action = con_function_for_action(&DrbdCommands::exec_connect);
+            execute_connection_actions(action);
         };
     cmd_fn_con_disconnect =
         [this]() -> void
         {
-            execute_connection_actions(&DrbdCommands::exec_disconnect);
+            con_function action = con_function_for_action(&DrbdCommands::exec_disconnect);
+            execute_connection_actions(action);
         };
     cmd_fn_con_discard =
         [this]() -> void
         {
-            execute_connection_actions(&DrbdCommands::exec_discard_connect);
+            con_function action = con_function_for_action(&DrbdCommands::exec_discard_connect);
+            execute_connection_actions(action);
         };
 
     cmd_fn_peer_vlm_pause_sync =
         [this]() -> void
         {
-            execute_peer_volume_actions(&DrbdCommands::exec_pause_sync);
+            peer_vlm_function action = peer_vlm_function_for_action(&DrbdCommands::exec_pause_sync);
+            execute_peer_volume_actions(action);
         };
     cmd_fn_peer_vlm_resume_sync =
         [this]() -> void
         {
-            execute_peer_volume_actions(&DrbdCommands::exec_resume_sync);
+            peer_vlm_function action = peer_vlm_function_for_action(&DrbdCommands::exec_resume_sync);
+            execute_peer_volume_actions(action);
         };
     cmd_fn_peer_vlm_verify =
         [this]() -> void
         {
-            execute_peer_volume_actions(&DrbdCommands::exec_verify);
+            peer_vlm_function action = peer_vlm_function_for_action(&DrbdCommands::exec_verify);
+            execute_peer_volume_actions(action);
         };
     cmd_fn_peer_vlm_invalidate_remote =
         [this]() -> void
         {
-            execute_peer_volume_actions(&DrbdCommands::exec_invalidate_remote);
+            peer_vlm_function action = peer_vlm_function_for_action(&DrbdCommands::exec_invalidate_remote);
+            execute_peer_volume_actions(action);
         };
 
     cmd_fn_toggle_keep_range =
         [this]() -> void
         {
             toggle_keep_range();
+        };
+
+    cmd_fn_rsc_program =
+        [this]() -> void
+        {
+            exec_rsc_program();
+        };
+
+    cmd_fn_vlm_program =
+        [this]() -> void
+        {
+            exec_vlm_program();
+        };
+
+    cmd_fn_con_program =
+        [this]() -> void
+        {
+            exec_con_program();
+        };
+
+    cmd_fn_peer_vlm_program =
+        [this]() -> void
+        {
+            exec_peer_vlm_program();
         };
 }
 
@@ -489,6 +620,7 @@ void MDspBulkActions::setup_pages()
     bld.coords.row = 5;
 
     bld.auto_nr = 1;
+    rsc_page = bld.coords.page;
 
     cmd_rsc_start = std::unique_ptr<ClickableCommand>(
         bld.create_with_page_dot_auto_nr(cmd_fn_rsc_start)
@@ -513,6 +645,11 @@ void MDspBulkActions::setup_pages()
     cmd_rsc_adjust_skip_disk_net = std::unique_ptr<ClickableCommand>(
         bld.create_with_page_dot_auto_nr(cmd_fn_rsc_adjust_skip_disk_net)
     );
+
+    bld.coords.start_col = 50;
+    bld.coords.end_col = 90;
+    bld.coords.row = 5;
+
     add_option(*cmd_rsc_adjust_skip_disk_net);
     cmd_rsc_primary = std::unique_ptr<ClickableCommand>(
         bld.create_with_page_dot_auto_nr(cmd_fn_rsc_primary)
@@ -531,9 +668,17 @@ void MDspBulkActions::setup_pages()
     );
     add_option(*cmd_rsc_force_secondary);
 
+    bld.coords.start_col = 5;
+    bld.coords.end_col = 45;
+    bld.coords.row = 15;
+    cmd_rsc_program = std::unique_ptr<ClickableCommand>(
+        bld.create_with_id("R", cmd_fn_rsc_program)
+    );
+
     ++bld.coords.page;
     bld.auto_nr = 1;
     bld.coords.row = 5;
+    vlm_page = bld.coords.page;
 
     cmd_vlm_attach = std::unique_ptr<ClickableCommand>(
         bld.create_with_page_dot_auto_nr(cmd_fn_vlm_attach)
@@ -548,9 +693,15 @@ void MDspBulkActions::setup_pages()
     );
     add_option(*cmd_vlm_invalidate);
 
+    bld.coords.row = 15;
+    cmd_vlm_program = std::unique_ptr<ClickableCommand>(
+        bld.create_with_id("V", cmd_fn_vlm_program)
+    );
+
     ++bld.coords.page;
     bld.auto_nr = 1;
     bld.coords.row = 5;
+    con_page = bld.coords.page;
 
     cmd_con_connect = std::unique_ptr<ClickableCommand>(
         bld.create_with_page_dot_auto_nr(cmd_fn_con_connect)
@@ -565,9 +716,15 @@ void MDspBulkActions::setup_pages()
     );
     add_option(*cmd_con_discard);
 
+    bld.coords.row = 15;
+    cmd_con_program = std::unique_ptr<ClickableCommand>(
+        bld.create_with_id("C", cmd_fn_con_program)
+    );
+
     ++bld.coords.page;
     bld.auto_nr = 1;
     bld.coords.row = 5;
+    peer_vlm_page = bld.coords.page;
 
     cmd_peer_vlm_pause_sync = std::unique_ptr<ClickableCommand>(
         bld.create_with_page_dot_auto_nr(cmd_fn_peer_vlm_pause_sync)
@@ -586,6 +743,11 @@ void MDspBulkActions::setup_pages()
     );
     add_option(*cmd_peer_vlm_invalidate_remote);
 
+    bld.coords.row = 15;
+    cmd_peer_vlm_program = std::unique_ptr<ClickableCommand>(
+        bld.create_with_id("P", cmd_fn_peer_vlm_program)
+    );
+
     // Range page
     ++bld.coords.page;
     bld.auto_nr = 1;
@@ -599,14 +761,14 @@ void MDspBulkActions::setup_pages()
     set_page_count(bld.coords.page);
 }
 
-void MDspBulkActions::execute_resource_actions(DrbdCommands::resource_action_fn action)
+void MDspBulkActions::execute_resource_actions(rsc_function& action)
 {
     dsp_comp_hub.dsp_common->application_working();
 
-    std::function<void(DrbdCommands::resource_action_fn, bool&, MDspBulkActions::RangeSpec&,
+    std::function<void(MDspBulkActions::rsc_function&, bool&, MDspBulkActions::RangeSpec&,
                        uint32_t&, uint32_t&)> action_loop =
         [this](
-            DrbdCommands::resource_action_fn action_ref,
+            rsc_function action_ref,
             bool& range_completed, RangeSpec& range, uint32_t& skip_ctr, uint32_t& apply_ctr
         ) -> void
         {
@@ -615,14 +777,14 @@ void MDspBulkActions::execute_resource_actions(DrbdCommands::resource_action_fn 
     execute_for_range(action_loop, action);
 }
 
-void MDspBulkActions::execute_volume_actions(DrbdCommands::volume_action_fn action)
+void MDspBulkActions::execute_volume_actions(vlm_function& action)
 {
     dsp_comp_hub.dsp_common->application_working();
 
-    std::function<void(DrbdCommands::volume_action_fn, bool&, MDspBulkActions::RangeSpec&,
+    std::function<void(MDspBulkActions::vlm_function&, bool&, MDspBulkActions::RangeSpec&,
                        uint32_t&, uint32_t&)> action_loop =
         [this](
-            DrbdCommands::volume_action_fn action_ref,
+            vlm_function action_ref,
             bool& range_completed, RangeSpec& range, uint32_t& skip_ctr, uint32_t& apply_ctr
         ) -> void
         {
@@ -631,14 +793,14 @@ void MDspBulkActions::execute_volume_actions(DrbdCommands::volume_action_fn acti
     execute_for_range(action_loop, action);
 }
 
-void MDspBulkActions::execute_connection_actions(DrbdCommands::connection_action_fn action)
+void MDspBulkActions::execute_connection_actions(con_function& action)
 {
     dsp_comp_hub.dsp_common->application_working();
 
-    std::function<void(DrbdCommands::connection_action_fn, bool&, MDspBulkActions::RangeSpec&,
+    std::function<void(MDspBulkActions::con_function&, bool&, MDspBulkActions::RangeSpec&,
                        uint32_t&, uint32_t&)> action_loop =
         [this](
-            DrbdCommands::connection_action_fn action_ref,
+            con_function action_ref,
             bool& range_completed, RangeSpec& range, uint32_t& skip_ctr, uint32_t& apply_ctr
         ) -> void
         {
@@ -647,14 +809,14 @@ void MDspBulkActions::execute_connection_actions(DrbdCommands::connection_action
     execute_for_range(action_loop, action);
 }
 
-void MDspBulkActions::execute_peer_volume_actions(DrbdCommands::peer_volume_action_fn action)
+void MDspBulkActions::execute_peer_volume_actions(peer_vlm_function& action)
 {
     dsp_comp_hub.dsp_common->application_working();
 
-    std::function<void(DrbdCommands::peer_volume_action_fn, bool&, MDspBulkActions::RangeSpec&,
+    std::function<void(MDspBulkActions::peer_vlm_function&, bool&, MDspBulkActions::RangeSpec&,
                        uint32_t&, uint32_t&)> action_loop =
         [this](
-            DrbdCommands::peer_volume_action_fn action_ref,
+            peer_vlm_function action_ref,
             bool& range_completed, RangeSpec& range, uint32_t& skip_ctr, uint32_t& apply_ctr
         ) -> void
         {
@@ -665,7 +827,7 @@ void MDspBulkActions::execute_peer_volume_actions(DrbdCommands::peer_volume_acti
 
 // @throws SubProcessQueue::QueueCapacityException
 void MDspBulkActions::action_loop_for_resources(
-    DrbdCommands::resource_action_fn    action,
+    rsc_function&                       action,
     bool&                               range_completed,
     RangeSpec&                          range,
     uint32_t&                           skip_ctr,
@@ -681,7 +843,7 @@ void MDspBulkActions::action_loop_for_resources(
         {
             if (skip_ctr >= range.skip_count)
             {
-                (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name);
+                action(*rsc_name);
                 ++apply_ctr;
             }
             else
@@ -704,7 +866,7 @@ void MDspBulkActions::action_loop_for_resources(
 
 // @throws SubProcessQueue::QueueCapacityException
 void MDspBulkActions::action_loop_for_volumes(
-    DrbdCommands::volume_action_fn      action,
+    vlm_function&                       action,
     bool&                               range_completed,
     RangeSpec&                          range,
     uint32_t&                           skip_ctr,
@@ -729,7 +891,7 @@ void MDspBulkActions::action_loop_for_volumes(
                 {
                     if (skip_ctr >= range.skip_count)
                     {
-                        (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name, *vlm_nr);
+                        action(*rsc_name, *vlm_nr);
                         ++apply_ctr;
                     }
                     else
@@ -754,7 +916,7 @@ void MDspBulkActions::action_loop_for_volumes(
 
 // @throws SubProcessQueue::QueueCapacityException
 void MDspBulkActions::action_loop_for_connections(
-    DrbdCommands::connection_action_fn  action,
+    con_function&                       action,
     bool&                               range_completed,
     RangeSpec&                          range,
     uint32_t&                           skip_ctr,
@@ -779,7 +941,7 @@ void MDspBulkActions::action_loop_for_connections(
                 {
                     if (skip_ctr >= range.skip_count)
                     {
-                        (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name, *con_name);
+                        action(*rsc_name, *con_name);
                         ++apply_ctr;
                     }
                     else
@@ -804,7 +966,7 @@ void MDspBulkActions::action_loop_for_connections(
 
 // @throws SubProcessQueue::QueueCapacityException
 void MDspBulkActions::action_loop_for_peer_volumes(
-    DrbdCommands::peer_volume_action_fn action,
+    peer_vlm_function&                  action,
     bool&                               range_completed,
     RangeSpec&                          range,
     uint32_t&                           skip_ctr,
@@ -838,7 +1000,7 @@ void MDspBulkActions::action_loop_for_peer_volumes(
                         {
                             if (skip_ctr >= range.skip_count)
                             {
-                                (dsp_comp_hub.drbd_cmd_exec->*action)(*rsc_name, *con_name, *peer_vlm_nr);
+                                action(*rsc_name, *con_name, *peer_vlm_nr);
                                 ++apply_ctr;
                             }
                             else
@@ -914,4 +1076,145 @@ void MDspBulkActions::log_insufficient_qcap_error()
         MessageLog::log_level::ALERT,
         "Bulk actions: Cannot execute command, insufficient queue capacity"
     );
+}
+
+void MDspBulkActions::switch_program_input(const std::unique_ptr<InputField>& program_input)
+{
+    if (is_focus_delegated())
+    {
+        delegate_focus(false);
+        active_input = nullptr;
+    }
+    else
+    {
+        active_input = program_input.get();
+        delegate_focus(true);
+    }
+}
+
+bool MDspBulkActions::mouse_action_program_input(
+    const std::unique_ptr<InputField>& program_input,
+    MouseEvent& mouse
+)
+{
+    bool intercepted = false;
+    if (program_input->mouse_action(mouse))
+    {
+        active_input = program_input.get();
+        delegate_focus(true);
+        intercepted = true;
+    }
+    else
+    {
+        InputField& option_field = get_option_field();
+        if (option_field.mouse_action(mouse))
+        {
+            active_input = nullptr;
+            delegate_focus(false);
+            intercepted = true;
+        }
+    }
+    return intercepted;
+}
+
+MDspBulkActions::rsc_function MDspBulkActions::rsc_function_for_action(DrbdCommands::resource_action_fn action)
+{
+    return [this, dsp_comp_hub](const std::string& rsc_name) -> void
+    {
+        (dsp_comp_hub.drbd_cmd_exec->*action)(rsc_name);
+    };
+}
+
+MDspBulkActions::vlm_function MDspBulkActions::vlm_function_for_action(DrbdCommands::volume_action_fn action)
+{
+    return [this, dsp_comp_hub](const std::string& rsc_name, const uint16_t vlm_nr) -> void
+    {
+        (dsp_comp_hub.drbd_cmd_exec->*action)(rsc_name, vlm_nr);
+    };
+}
+
+MDspBulkActions::con_function MDspBulkActions::con_function_for_action(DrbdCommands::connection_action_fn action)
+{
+    return [this, dsp_comp_hub](const std::string& rsc_name, const std::string& con_name) -> void
+    {
+        (dsp_comp_hub.drbd_cmd_exec->*action)(rsc_name, con_name);
+    };
+}
+
+MDspBulkActions::peer_vlm_function MDspBulkActions::peer_vlm_function_for_action(
+    DrbdCommands::peer_volume_action_fn action
+)
+{
+    return [this, dsp_comp_hub](
+        const std::string& rsc_name,
+        const std::string& con_name,
+        const uint16_t vlm_nr
+    ) -> void
+    {
+        (dsp_comp_hub.drbd_cmd_exec->*action)(rsc_name, con_name, vlm_nr);
+    };
+}
+
+void MDspBulkActions::exec_rsc_program()
+{
+    const std::string& program = rsc_program_input->get_text();
+
+    if (program.length() >= 1)
+    {
+        rsc_function action =
+            [this, dsp_comp_hub, program](const std::string& rsc_name) -> void
+            {
+                dsp_comp_hub.drbd_cmd_exec->exec_resource_program(program, rsc_name);
+            };
+        execute_resource_actions(action);
+    }
+}
+
+void MDspBulkActions::exec_vlm_program()
+{
+    const std::string& program = rsc_program_input->get_text();
+
+    if (program.length() >= 1)
+    {
+        vlm_function action =
+            [this, dsp_comp_hub, program](const std::string& rsc_name, const uint16_t vlm_nr) -> void
+            {
+                dsp_comp_hub.drbd_cmd_exec->exec_volume_program(program, rsc_name, vlm_nr);
+            };
+        execute_volume_actions(action);
+    }
+}
+
+void MDspBulkActions::exec_con_program()
+{
+    const std::string& program = rsc_program_input->get_text();
+
+    if (program.length() >= 1)
+    {
+        con_function action =
+            [this, dsp_comp_hub, program](const std::string& rsc_name, const std::string& con_name) -> void
+            {
+                dsp_comp_hub.drbd_cmd_exec->exec_connection_program(program, rsc_name, con_name);
+            };
+        execute_connection_actions(action);
+    }
+}
+
+void MDspBulkActions::exec_peer_vlm_program()
+{
+    const std::string& program = rsc_program_input->get_text();
+
+    if (program.length() >= 1)
+    {
+        peer_vlm_function action =
+            [this, dsp_comp_hub, program](
+                const std::string& rsc_name,
+                const std::string& con_name,
+                const uint16_t vlm_nr
+            ) -> void
+            {
+                dsp_comp_hub.drbd_cmd_exec->exec_peer_volume_program(rsc_name, con_name, vlm_nr);
+            };
+        execute_peer_volume_actions(action);
+    }
 }

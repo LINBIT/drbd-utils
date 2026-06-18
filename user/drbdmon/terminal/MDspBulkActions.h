@@ -34,7 +34,17 @@ class MDspBulkActions : public MDspMenuBase
     std::string                 range_error_msg;
     bool                        keep_range      {false};
 
+    std::unique_ptr<InputField> rsc_program_input;
+    std::unique_ptr<InputField> vlm_program_input;
+    std::unique_ptr<InputField> con_program_input;
+    std::unique_ptr<InputField> peer_vlm_program_input;
+
+    uint32_t                    last_page       {0};
     uint32_t                    range_page      {0};
+    uint32_t                    rsc_page        {0};
+    uint32_t                    vlm_page        {0};
+    uint32_t                    con_page        {0};
+    uint32_t                    peer_vlm_page   {0};
     InputField*                 active_input    {nullptr};
 
     std::function<void()>   cmd_fn_rsc_start;
@@ -65,6 +75,11 @@ class MDspBulkActions : public MDspMenuBase
 
     std::function<void()>   cmd_fn_toggle_keep_range;
 
+    std::function<void()>   cmd_fn_rsc_program;
+    std::function<void()>   cmd_fn_vlm_program;
+    std::function<void()>   cmd_fn_con_program;
+    std::function<void()>   cmd_fn_peer_vlm_program;
+
     std::unique_ptr<ClickableCommand>   cmd_rsc_start;
     std::unique_ptr<ClickableCommand>   cmd_rsc_stop;
     std::unique_ptr<ClickableCommand>   cmd_rsc_adjust;
@@ -93,6 +108,11 @@ class MDspBulkActions : public MDspMenuBase
 
     std::unique_ptr<ClickableCommand>   cmd_toggle_keep_range;
 
+    std::unique_ptr<ClickableCommand>   cmd_rsc_program;
+    std::unique_ptr<ClickableCommand>   cmd_vlm_program;
+    std::unique_ptr<ClickableCommand>   cmd_con_program;
+    std::unique_ptr<ClickableCommand>   cmd_peer_vlm_program;
+
     void display_actions();
     void display_resource_actions();
     void display_volume_actions();
@@ -105,14 +125,19 @@ class MDspBulkActions : public MDspMenuBase
     void setup_cmd_functions();
     void setup_pages();
 
-    void execute_resource_actions(DrbdCommands::resource_action_fn action);
-    void execute_volume_actions(DrbdCommands::volume_action_fn action);
-    void execute_connection_actions(DrbdCommands::connection_action_fn action);
-    void execute_peer_volume_actions(DrbdCommands::peer_volume_action_fn action);
+    using rsc_function = std::function<void(const std::string&)>;
+    using con_function = std::function<void(const std::string&, const std::string&)>;
+    using vlm_function = std::function<void(const std::string&, const uint16_t)>;
+    using peer_vlm_function = std::function<void(const std::string&, const std::string&, const uint16_t)>;
+
+    void execute_resource_actions(rsc_function& action);
+    void execute_volume_actions(vlm_function& action);
+    void execute_connection_actions(con_function& action);
+    void execute_peer_volume_actions(peer_vlm_function& action);
 
     // @throws SubProcessQueue::QueueCapacityException
     void action_loop_for_resources(
-        DrbdCommands::resource_action_fn    action,
+        rsc_function&                       action,
         bool&                               range_completed,
         RangeSpec&                          range,
         uint32_t&                           skip_ctr,
@@ -120,7 +145,7 @@ class MDspBulkActions : public MDspMenuBase
     );
     // @throws SubProcessQueue::QueueCapacityException
     void action_loop_for_volumes(
-        DrbdCommands::volume_action_fn      action,
+        vlm_function&                       action,
         bool&                               range_completed,
         RangeSpec&                          range,
         uint32_t&                           skip_ctr,
@@ -128,7 +153,7 @@ class MDspBulkActions : public MDspMenuBase
     );
     // @throws SubProcessQueue::QueueCapacityException
     void action_loop_for_connections(
-        DrbdCommands::connection_action_fn  action,
+        con_function&                       action,
         bool&                               range_completed,
         RangeSpec&                          range,
         uint32_t&                           skip_ctr,
@@ -136,7 +161,7 @@ class MDspBulkActions : public MDspMenuBase
     );
     // @throws SubProcessQueue::QueueCapacityException
     void action_loop_for_peer_volumes(
-        DrbdCommands::peer_volume_action_fn action,
+        peer_vlm_function&                  action,
         bool&                               range_completed,
         RangeSpec&                          range,
         uint32_t&                           skip_ctr,
@@ -144,7 +169,7 @@ class MDspBulkActions : public MDspMenuBase
     );
 
     template<typename A>
-    void execute_for_range(std::function<void(A, bool&, RangeSpec&, uint32_t&, uint32_t&)> action_loop, A action)
+    void execute_for_range(std::function<void(A&, bool&, RangeSpec&, uint32_t&, uint32_t&)> action_loop, A& action)
     {
         bool updated_range = false;
         try
@@ -201,6 +226,19 @@ class MDspBulkActions : public MDspMenuBase
 
     void log_subprocess_error(const std::string& rsc_name);
     void log_insufficient_qcap_error();
+
+    void switch_program_input(const std::unique_ptr<InputField>& program_input);
+    bool mouse_action_program_input(const std::unique_ptr<InputField>& program_input, MouseEvent& mouse);
+
+    rsc_function rsc_function_for_action(DrbdCommands::resource_action_fn action);
+    vlm_function vlm_function_for_action(DrbdCommands::volume_action_fn action);
+    con_function con_function_for_action(DrbdCommands::connection_action_fn action);
+    peer_vlm_function peer_vlm_function_for_action(DrbdCommands::peer_volume_action_fn action);
+
+    void exec_rsc_program();
+    void exec_vlm_program();
+    void exec_con_program();
+    void exec_peer_vlm_program();
 };
 
 #endif /* MDSPBULKACTIONS_H */
