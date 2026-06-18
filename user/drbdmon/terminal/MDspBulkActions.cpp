@@ -1162,7 +1162,7 @@ void MDspBulkActions::exec_rsc_program()
     if (program.length() >= 1)
     {
         rsc_function action =
-            [this, dsp_comp_hub, program](const std::string& rsc_name) -> void
+            [this, program](const std::string& rsc_name) -> void
             {
                 dsp_comp_hub.drbd_cmd_exec->exec_resource_program(program, rsc_name);
             };
@@ -1177,7 +1177,7 @@ void MDspBulkActions::exec_vlm_program()
     if (program.length() >= 1)
     {
         vlm_function action =
-            [this, dsp_comp_hub, program](const std::string& rsc_name, const uint16_t vlm_nr) -> void
+            [this, program](const std::string& rsc_name, const uint16_t vlm_nr) -> void
             {
                 dsp_comp_hub.drbd_cmd_exec->exec_volume_program(program, rsc_name, vlm_nr);
             };
@@ -1192,7 +1192,7 @@ void MDspBulkActions::exec_con_program()
     if (program.length() >= 1)
     {
         con_function action =
-            [this, dsp_comp_hub, program](const std::string& rsc_name, const std::string& con_name) -> void
+            [this, program](const std::string& rsc_name, const std::string& con_name) -> void
             {
                 dsp_comp_hub.drbd_cmd_exec->exec_connection_program(program, rsc_name, con_name);
             };
@@ -1207,13 +1207,13 @@ void MDspBulkActions::exec_peer_vlm_program()
     if (program.length() >= 1)
     {
         peer_vlm_function action =
-            [this, dsp_comp_hub, program](
+            [this, program](
                 const std::string& rsc_name,
                 const std::string& con_name,
                 const uint16_t vlm_nr
             ) -> void
             {
-                dsp_comp_hub.drbd_cmd_exec->exec_peer_volume_program(rsc_name, con_name, vlm_nr);
+                dsp_comp_hub.drbd_cmd_exec->exec_peer_volume_program(program, rsc_name, con_name, vlm_nr);
             };
         execute_peer_volume_actions(action);
     }
