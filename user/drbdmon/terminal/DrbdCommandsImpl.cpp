@@ -5,6 +5,7 @@
 #include <subprocess/SubProcessQueue.h>
 #include <subprocess/CmdLine.h>
 #include <subprocess/DrbdCmdConsts.h>
+#include <environment_variables.h>
 #include <dsaext.h>
 #include <integerparse.h>
 
@@ -1139,6 +1140,116 @@ void DrbdCommandsImpl::exec_resume_sync(
     queue_command(command);
 }
 
+void DrbdCommandsImpl::exec_resource_program(
+    const std::string& program,
+    const std::string& rsc_name
+)
+{
+    std::string description;
+    description.reserve(STRING_PREALLOC_LENGTH);
+
+    description.append("Run program \"");
+    description.append(program);
+    description.append("\", resource ");
+    description.append(rsc_name);
+
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->add_argument(program);
+
+    add_env_var(command, env_var::drbd_resource, rsc_name);
+
+    command->set_description(description);
+
+    queue_command(command);
+}
+
+void DrbdCommandsImpl::exec_volume_program(
+    const std::string& program,
+    const std::string& rsc_name,
+    const uint16_t vlm_nr
+)
+{
+    std::string description;
+    description.reserve(STRING_PREALLOC_LENGTH);
+
+    std::string vlm_nr_str(std::to_string(static_cast<unsigned int> (vlm_nr)));
+
+    description.append("Run program \"");
+    description.append(program);
+    description.append("\", resource ");
+    description.append(rsc_name);
+    description.append(", volume ");
+    description.append(vlm_nr_str);
+
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->add_argument(program);
+
+    add_env_var(command, env_var::drbd_resource, rsc_name);
+    add_env_var(command, env_var::drbd_volume_nr, vlm_nr_str);
+
+    command->set_description(description);
+
+    queue_command(command);
+}
+
+void DrbdCommandsImpl::exec_connection_program(
+    const std::string& program,
+    const std::string& rsc_name,
+    const std::string& con_name
+)
+{
+    std::string description;
+    description.reserve(STRING_PREALLOC_LENGTH);
+
+    description.append("Run program \"");
+    description.append(program);
+    description.append("\", resource ");
+    description.append(rsc_name);
+    description.append(", connection ");
+    description.append(con_name);
+
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->add_argument(program);
+
+    add_env_var(command, env_var::drbd_resource, rsc_name);
+    add_env_var(command, env_var::drbd_connection, con_name);
+
+    command->set_description(description);
+
+    queue_command(command);
+}
+
+void DrbdCommandsImpl::exec_peer_volume_program(
+    const std::string& program,
+    const std::string& rsc_name,
+    const std::string& con_name,
+    const uint16_t vlm_nr
+)
+{
+    std::string description;
+    description.reserve(STRING_PREALLOC_LENGTH);
+
+    std::string vlm_nr_str(std::to_string(static_cast<unsigned int> (vlm_nr)));
+
+    description.append("Run program \"");
+    description.append(program);
+    description.append("\", resource ");
+    description.append(rsc_name);
+    description.append(", connection ");
+    description.append(con_name);
+
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->add_argument(program);
+
+    add_env_var(command, env_var::drbd_resource, rsc_name);
+    add_env_var(command, env_var::drbd_connection, con_name);
+    add_env_var(command, env_var::drbd_volume_nr, vlm_nr_str);
+
+    command->set_description(description);
+
+    queue_command(command);
+}
+
 void DrbdCommandsImpl::get_resource_name(const std::string& argument, std::string& rsc_name)
 {
     rsc_name.clear();
@@ -1265,4 +1376,19 @@ bool DrbdCommandsImpl::can_run_peer_volume_cmd()
 void DrbdCommandsImpl::queue_command(std::unique_ptr<CmdLine>& command)
 {
     dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+}
+
+void DrbdCommandsImpl::add_env_var(
+    std::unique_ptr<CmdLine>& command,
+    const std::string& key,
+    const std::string& value
+)
+{
+    std::string cmd_var;
+    cmd_var.reserve(key.length() + 1 + value.length());
+    cmd_var.append(key);
+    cmd_var.append(1, '=');
+    cmd_var.append(value);
+
+    command->add_environment_entry(cmd_var);
 }

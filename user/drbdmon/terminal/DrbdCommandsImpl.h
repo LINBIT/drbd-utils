@@ -82,6 +82,27 @@ class DrbdCommandsImpl : public DrbdCommands, public CommandsBase<DrbdCommandsIm
         const uint16_t vlm_nr
     ) override;
 
+    virtual void exec_resource_program(
+        const std::string& program,
+        const std::string& rsc_name
+    ) override;
+    virtual void exec_volume_program(
+        const std::string& program,
+        const std::string& rsc_name,
+        const uint16_t vlm_nr
+    ) override;
+    virtual void exec_connection_program(
+        const std::string& program,
+        const std::string& rsc_name,
+        const std::string& con_name
+    ) override;
+    virtual void exec_peer_volume_program(
+        const std::string& program,
+        const std::string& rsc_name,
+        const std::string& con_name,
+        const uint16_t vlm_nr
+    ) override;
+
   private:
     typedef void (DrbdCommandsImpl::*exec_rsc_type)(const std::string& rsc_name);
     typedef void (DrbdCommandsImpl::*exec_con_type)(const std::string& rsc_name, const std::string& con_name);
@@ -153,6 +174,8 @@ class DrbdCommandsImpl : public DrbdCommands, public CommandsBase<DrbdCommandsIm
     bool can_run_peer_volume_cmd();
 
     void queue_command(std::unique_ptr<CmdLine>& command);
+
+    void add_env_var(std::unique_ptr<CmdLine>& command, const std::string& key, const std::string& value);
 };
 
 #endif /* DRBDCOMMANDSIMPL_H_ */
