@@ -455,6 +455,26 @@ void MDspBulkActions::cursor_to_previous_item()
         }
         dsp_comp_hub.dsp_selector->refresh_display();
     }
+    else
+    if (page == rsc_page)
+    {
+        switch_program_input(rsc_program_input);
+    }
+    else
+    if (page == vlm_page)
+    {
+        switch_program_input(vlm_program_input);
+    }
+    else
+    if (page == con_page)
+    {
+        switch_program_input(con_program_input);
+    }
+    else
+    if (page == peer_vlm_page)
+    {
+        switch_program_input(peer_vlm_program_input);
+    }
 }
 
 void MDspBulkActions::setup_cmd_functions()
@@ -1094,6 +1114,7 @@ void MDspBulkActions::switch_program_input(const std::unique_ptr<InputField>& pr
         active_input = program_input.get();
         delegate_focus(true);
     }
+    dsp_comp_hub.dsp_selector->refresh_display();
 }
 
 bool MDspBulkActions::mouse_action_program_input(
@@ -1118,6 +1139,7 @@ bool MDspBulkActions::mouse_action_program_input(
             intercepted = true;
         }
     }
+    dsp_comp_hub.dsp_selector->refresh_display();
     return intercepted;
 }
 
