@@ -5,9 +5,9 @@
 
 namespace env_var
 {
-    const std::string drbd_resource;
-    const std::string drbd_volume_nr;
-    const std::string drbd_connection;
+    extern const std::string drbd_resource;
+    extern const std::string drbd_volume_nr;
+    extern const std::string drbd_connection;
 }
 
 #endif /* ENVIRONMENTVARIABLES_H */
