@@ -159,6 +159,7 @@ void MDspBulkActions::display_resource_actions()
     display_option(5, "Force primary role", *cmd_rsc_force_primary, caution_color);
     display_option(5, "Force secondary role", *cmd_rsc_force_secondary, caution_color);
 
+    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
     dsp_comp_hub.dsp_io->cursor_xy(3, 13);
     dsp_comp_hub.dsp_io->write_text("Execute resource actions program:");
     rsc_program_input->display();
@@ -179,6 +180,7 @@ void MDspBulkActions::display_volume_actions()
     display_option(5, "Detach", *cmd_vlm_detach, std_color);
     display_option(5, "Invalidate local volume data", *cmd_vlm_invalidate, caution_color);
 
+    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
     dsp_comp_hub.dsp_io->cursor_xy(3, 13);
     dsp_comp_hub.dsp_io->write_text("Execute volume actions program:");
     vlm_program_input->display();
@@ -199,6 +201,7 @@ void MDspBulkActions::display_connection_actions()
     display_option(5, "Disconnect", *cmd_con_disconnect, std_color);
     display_option(5, "Discard & resolve split-brain", *cmd_con_discard, caution_color);
 
+    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
     dsp_comp_hub.dsp_io->cursor_xy(3, 13);
     dsp_comp_hub.dsp_io->write_text("Execute connection actions program:");
     con_program_input->display();
@@ -220,6 +223,7 @@ void MDspBulkActions::display_peer_volume_actions()
     display_option(5, "Verify contents", *cmd_peer_vlm_verify, std_color);
     display_option(5, "Invalidate peer volume data", *cmd_peer_vlm_invalidate_remote, caution_color);
 
+    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
     dsp_comp_hub.dsp_io->cursor_xy(3, 13);
     dsp_comp_hub.dsp_io->write_text("Execute peer volume actions program:");
     peer_vlm_program_input->display();
