@@ -52,9 +52,20 @@ class DrbdCommands
     virtual void exec_pause_sync(const std::string& rsc_name, const std::string& con_name, const uint16_t vlm_nr) = 0;
     virtual void exec_resume_sync(const std::string& rsc_name, const std::string& con_name, const uint16_t vlm_nr) = 0;
 
-    virtual void exec_resource_program(const std::string& rsc_name) = 0;
-    virtual void exec_volume_program(const std::string& rsc_name, const uint16_t vlm_nr) = 0;
-    virtual void exec_connection_program(const std::string& rsc_name, const std::string& con_name) = 0;
+    virtual void exec_resource_program(
+        const std::string& program,
+        const std::string& rsc_name
+    ) = 0;
+    virtual void exec_volume_program(
+        const std::string& program,
+        const std::string& rsc_name,
+        const uint16_t vlm_nr
+    ) = 0;
+    virtual void exec_connection_program(
+        const std::string& program,
+        const std::string& rsc_name,
+        const std::string& con_name
+    ) = 0;
     virtual void exec_peer_volume_program(
         const std::string& rsc_name,
         const std::string& con_name,
