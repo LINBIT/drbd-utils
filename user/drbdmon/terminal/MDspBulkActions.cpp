@@ -698,6 +698,7 @@ void MDspBulkActions::setup_pages()
     cmd_rsc_program = std::unique_ptr<ClickableCommand>(
         bld.create_with_id("R", cmd_fn_rsc_program)
     );
+    add_option(*cmd_rsc_program);
 
     ++bld.coords.page;
     bld.auto_nr = 1;
@@ -721,6 +722,7 @@ void MDspBulkActions::setup_pages()
     cmd_vlm_program = std::unique_ptr<ClickableCommand>(
         bld.create_with_id("V", cmd_fn_vlm_program)
     );
+    add_option(*cmd_vlm_program);
 
     ++bld.coords.page;
     bld.auto_nr = 1;
@@ -744,6 +746,7 @@ void MDspBulkActions::setup_pages()
     cmd_con_program = std::unique_ptr<ClickableCommand>(
         bld.create_with_id("C", cmd_fn_con_program)
     );
+    add_option(*cmd_con_program);
 
     ++bld.coords.page;
     bld.auto_nr = 1;
@@ -771,6 +774,7 @@ void MDspBulkActions::setup_pages()
     cmd_peer_vlm_program = std::unique_ptr<ClickableCommand>(
         bld.create_with_id("P", cmd_fn_peer_vlm_program)
     );
+    add_option(*cmd_peer_vlm_program);
 
     // Range page
     ++bld.coords.page;
