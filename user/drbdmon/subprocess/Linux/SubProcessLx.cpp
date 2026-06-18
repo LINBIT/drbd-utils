@@ -554,6 +554,7 @@ void SubProcessLx::env_init_impl()
                     env_base_size += entry_size;
                     // Trailing null byte
                     ++env_base_size;
+                    ++env_idx;
                 }
             }
 
