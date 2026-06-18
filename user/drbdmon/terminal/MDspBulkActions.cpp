@@ -1119,7 +1119,7 @@ bool MDspBulkActions::mouse_action_program_input(
 
 MDspBulkActions::rsc_function MDspBulkActions::rsc_function_for_action(DrbdCommands::resource_action_fn action)
 {
-    return [this, dsp_comp_hub](const std::string& rsc_name) -> void
+    return [this](const std::string& rsc_name) -> void
     {
         (dsp_comp_hub.drbd_cmd_exec->*action)(rsc_name);
     };
@@ -1127,7 +1127,7 @@ MDspBulkActions::rsc_function MDspBulkActions::rsc_function_for_action(DrbdComma
 
 MDspBulkActions::vlm_function MDspBulkActions::vlm_function_for_action(DrbdCommands::volume_action_fn action)
 {
-    return [this, dsp_comp_hub](const std::string& rsc_name, const uint16_t vlm_nr) -> void
+    return [this](const std::string& rsc_name, const uint16_t vlm_nr) -> void
     {
         (dsp_comp_hub.drbd_cmd_exec->*action)(rsc_name, vlm_nr);
     };
@@ -1135,7 +1135,7 @@ MDspBulkActions::vlm_function MDspBulkActions::vlm_function_for_action(DrbdComma
 
 MDspBulkActions::con_function MDspBulkActions::con_function_for_action(DrbdCommands::connection_action_fn action)
 {
-    return [this, dsp_comp_hub](const std::string& rsc_name, const std::string& con_name) -> void
+    return [this](const std::string& rsc_name, const std::string& con_name) -> void
     {
         (dsp_comp_hub.drbd_cmd_exec->*action)(rsc_name, con_name);
     };
@@ -1145,7 +1145,7 @@ MDspBulkActions::peer_vlm_function MDspBulkActions::peer_vlm_function_for_action
     DrbdCommands::peer_volume_action_fn action
 )
 {
-    return [this, dsp_comp_hub](
+    return [this](
         const std::string& rsc_name,
         const std::string& con_name,
         const uint16_t vlm_nr
