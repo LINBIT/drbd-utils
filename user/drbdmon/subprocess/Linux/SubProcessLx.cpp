@@ -199,6 +199,8 @@ void SubProcessLx::execute(const CmdLine& cmd)
         char** exec_args = sys_cmd_line->get_exec_args();
         int spawn_rc = 1;
 
+        // POSIX states that the environment is in fact effectively const in posix_spawn, and it's only passed
+        // as char** rather than const char** for historic reasons
         char** proc_environ = env_custom_ptr == nullptr ? environ : const_cast<char**> (env_custom_ptr.get());
 
         proc_lock.lock();
