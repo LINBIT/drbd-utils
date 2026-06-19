@@ -4,6 +4,9 @@
 #include <default_types.h>
 #include <StringTokenizer.h>
 #include <string>
+#include <objects/DrbdResource.h>
+#include <objects/DrbdVolume.h>
+#include <objects/DrbdConnection.h>
 
 class DrbdCommands
 {

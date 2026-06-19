@@ -5,6 +5,9 @@
 #include <terminal/CommandsBase.h>
 #include <terminal/DrbdCommands.h>
 #include <terminal/ComponentsHub.h>
+#include <objects/DrbdResource.h>
+#include <objects/DrbdVolume.h>
+#include <objects/DrbdConnection.h>
 #include <subprocess/CmdLine.h>
 #include <QTree.h>
 #include <StringTokenizer.h>
