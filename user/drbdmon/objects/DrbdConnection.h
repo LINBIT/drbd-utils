@@ -81,6 +81,7 @@ class DrbdConnection : public VolumesContainer, public DrbdRole, private StateFl
     virtual state get_connection_state() const;
     virtual const char* get_connection_state_label() const;
     virtual sync_state_type get_sync_state() const;
+    virtual const char* get_sync_state_label() const;
 
     using StateFlags::has_mark_state;
     using StateFlags::has_warn_state;

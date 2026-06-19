@@ -146,6 +146,11 @@ DrbdConnection::sync_state_type DrbdConnection::get_sync_state() const
     return sync_state;
 }
 
+const char* DrbdConnection::get_sync_state_label() const
+{
+    return label_for_sync_state(sync_state);
+}
+
 bool DrbdConnection::has_connection_alert() const
 {
     return conn_alert;
