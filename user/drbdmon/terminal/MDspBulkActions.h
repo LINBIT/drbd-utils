@@ -130,10 +130,10 @@ class MDspBulkActions : public MDspMenuBase
     using vlm_function = std::function<void(const std::string&, const uint16_t)>;
     using peer_vlm_function = std::function<void(const std::string&, const std::string&, const uint16_t)>;
 
-    void execute_resource_actions(rsc_function& action);
-    void execute_volume_actions(vlm_function& action);
-    void execute_connection_actions(con_function& action);
-    void execute_peer_volume_actions(peer_vlm_function& action);
+    void execute_resource_actions(rsc_function& action, bool attach_objects = false);
+    void execute_volume_actions(vlm_function& action, bool attach_objects = false);
+    void execute_connection_actions(con_function& action, bool attach_objects = false);
+    void execute_peer_volume_actions(peer_vlm_function& action, bool attach_objects = false);
 
     // @throws SubProcessQueue::QueueCapacityException
     void action_loop_for_resources(
@@ -141,7 +141,8 @@ class MDspBulkActions : public MDspMenuBase
         bool&                               range_completed,
         RangeSpec&                          range,
         uint32_t&                           skip_ctr,
-        uint32_t&                           apply_ctr
+        uint32_t&                           apply_ctr,
+        bool                                attach_objects
     );
     // @throws SubProcessQueue::QueueCapacityException
     void action_loop_for_volumes(
@@ -149,7 +150,8 @@ class MDspBulkActions : public MDspMenuBase
         bool&                               range_completed,
         RangeSpec&                          range,
         uint32_t&                           skip_ctr,
-        uint32_t&                           apply_ctr
+        uint32_t&                           apply_ctr,
+        bool                                attach_objects
     );
     // @throws SubProcessQueue::QueueCapacityException
     void action_loop_for_connections(
@@ -157,7 +159,8 @@ class MDspBulkActions : public MDspMenuBase
         bool&                               range_completed,
         RangeSpec&                          range,
         uint32_t&                           skip_ctr,
-        uint32_t&                           apply_ctr
+        uint32_t&                           apply_ctr,
+        bool                                attach_objects
     );
     // @throws SubProcessQueue::QueueCapacityException
     void action_loop_for_peer_volumes(
@@ -165,11 +168,16 @@ class MDspBulkActions : public MDspMenuBase
         bool&                               range_completed,
         RangeSpec&                          range,
         uint32_t&                           skip_ctr,
-        uint32_t&                           apply_ctr
+        uint32_t&                           apply_ctr,
+        bool                                attach_objects
     );
 
     template<typename A>
-    void execute_for_range(std::function<void(A&, bool&, RangeSpec&, uint32_t&, uint32_t&)> action_loop, A& action)
+    void execute_for_range(
+        std::function<void(A&, bool&, RangeSpec&, uint32_t&, uint32_t&, bool)> action_loop,
+        A& action,
+        bool attach_objects
+    )
     {
         bool updated_range = false;
         try
@@ -184,7 +192,7 @@ class MDspBulkActions : public MDspMenuBase
             bool range_completed = false;
             try
             {
-                action_loop(action, range_completed, range, skip_ctr, apply_ctr);
+                action_loop(action, range_completed, range, skip_ctr, apply_ctr, attach_objects);
                 range_completed = true;
             }
             catch (SubProcessQueue::QueueCapacityException&)

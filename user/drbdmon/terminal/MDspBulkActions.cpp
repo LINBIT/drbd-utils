@@ -789,68 +789,76 @@ void MDspBulkActions::setup_pages()
     set_page_count(bld.coords.page);
 }
 
-void MDspBulkActions::execute_resource_actions(rsc_function& action)
+void MDspBulkActions::execute_resource_actions(rsc_function& action, bool attach_objects = false)
 {
     dsp_comp_hub.dsp_common->application_working();
 
     std::function<void(MDspBulkActions::rsc_function&, bool&, MDspBulkActions::RangeSpec&,
-                       uint32_t&, uint32_t&)> action_loop =
+                       uint32_t&, uint32_t&, bool)> action_loop =
         [this](
             rsc_function action_ref,
-            bool& range_completed, RangeSpec& range, uint32_t& skip_ctr, uint32_t& apply_ctr
+            bool& range_completed, RangeSpec& range, uint32_t& skip_ctr, uint32_t& apply_ctr,
+            bool attach_objects_param
         ) -> void
         {
-            action_loop_for_resources(action_ref, range_completed, range, skip_ctr, apply_ctr);
+            action_loop_for_resources(action_ref, range_completed, range, skip_ctr, apply_ctr, attach_objects_param);
         };
-    execute_for_range(action_loop, action);
+    execute_for_range(action_loop, action, attach_objects);
 }
 
-void MDspBulkActions::execute_volume_actions(vlm_function& action)
+void MDspBulkActions::execute_volume_actions(vlm_function& action, bool attach_objects = false)
 {
     dsp_comp_hub.dsp_common->application_working();
 
     std::function<void(MDspBulkActions::vlm_function&, bool&, MDspBulkActions::RangeSpec&,
-                       uint32_t&, uint32_t&)> action_loop =
+                       uint32_t&, uint32_t&, bool)> action_loop =
         [this](
             vlm_function action_ref,
-            bool& range_completed, RangeSpec& range, uint32_t& skip_ctr, uint32_t& apply_ctr
+            bool& range_completed, RangeSpec& range, uint32_t& skip_ctr, uint32_t& apply_ctr,
+            bool attach_objects_param
         ) -> void
         {
-            action_loop_for_volumes(action_ref, range_completed, range, skip_ctr, apply_ctr);
+            action_loop_for_volumes(action_ref, range_completed, range, skip_ctr, apply_ctr, attach_objects_param);
         };
-    execute_for_range(action_loop, action);
+    execute_for_range(action_loop, action, attach_objects);
 }
 
-void MDspBulkActions::execute_connection_actions(con_function& action)
+void MDspBulkActions::execute_connection_actions(con_function& action, bool attach_objects = false)
 {
     dsp_comp_hub.dsp_common->application_working();
 
     std::function<void(MDspBulkActions::con_function&, bool&, MDspBulkActions::RangeSpec&,
-                       uint32_t&, uint32_t&)> action_loop =
+                       uint32_t&, uint32_t&, bool)> action_loop =
         [this](
             con_function action_ref,
-            bool& range_completed, RangeSpec& range, uint32_t& skip_ctr, uint32_t& apply_ctr
+            bool& range_completed, RangeSpec& range, uint32_t& skip_ctr, uint32_t& apply_ctr,
+            bool attach_objects_param
         ) -> void
         {
-            action_loop_for_connections(action_ref, range_completed, range, skip_ctr, apply_ctr);
+            action_loop_for_connections(action_ref, range_completed, range, skip_ctr, apply_ctr, attach_objects_param);
         };
-    execute_for_range(action_loop, action);
+    execute_for_range(action_loop, action, attach_objects);
 }
 
-void MDspBulkActions::execute_peer_volume_actions(peer_vlm_function& action)
+void MDspBulkActions::execute_peer_volume_actions(peer_vlm_function& action, bool attach_objects = false)
 {
     dsp_comp_hub.dsp_common->application_working();
 
     std::function<void(MDspBulkActions::peer_vlm_function&, bool&, MDspBulkActions::RangeSpec&,
-                       uint32_t&, uint32_t&)> action_loop =
+                       uint32_t&, uint32_t&, bool)> action_loop =
         [this](
             peer_vlm_function action_ref,
-            bool& range_completed, RangeSpec& range, uint32_t& skip_ctr, uint32_t& apply_ctr
+            bool& range_completed, RangeSpec& range, uint32_t& skip_ctr, uint32_t& apply_ctr,
+            bool attach_objects_param
         ) -> void
         {
-            action_loop_for_peer_volumes(action_ref, range_completed, range, skip_ctr, apply_ctr);
+            action_loop_for_peer_volumes(
+                action_ref,
+                range_completed, range, skip_ctr, apply_ctr,
+                attach_objects_param
+            );
         };
-    execute_for_range(action_loop, action);
+    execute_for_range(action_loop, action, attach_objects);
 }
 
 // @throws SubProcessQueue::QueueCapacityException
@@ -859,7 +867,8 @@ void MDspBulkActions::action_loop_for_resources(
     bool&                               range_completed,
     RangeSpec&                          range,
     uint32_t&                           skip_ctr,
-    uint32_t&                           apply_ctr
+    uint32_t&                           apply_ctr,
+    bool                                attach_objects
 )
 {
     ResourceSelectionMap::KeysIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
@@ -898,7 +907,8 @@ void MDspBulkActions::action_loop_for_volumes(
     bool&                               range_completed,
     RangeSpec&                          range,
     uint32_t&                           skip_ctr,
-    uint32_t&                           apply_ctr
+    uint32_t&                           apply_ctr,
+    bool                                attach_objects
 )
 {
     ResourceSelectionMap::NodesIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
@@ -948,7 +958,8 @@ void MDspBulkActions::action_loop_for_connections(
     bool&                               range_completed,
     RangeSpec&                          range,
     uint32_t&                           skip_ctr,
-    uint32_t&                           apply_ctr
+    uint32_t&                           apply_ctr,
+    bool                                attach_objects
 )
 {
     ResourceSelectionMap::NodesIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
@@ -998,7 +1009,8 @@ void MDspBulkActions::action_loop_for_peer_volumes(
     bool&                               range_completed,
     RangeSpec&                          range,
     uint32_t&                           skip_ctr,
-    uint32_t&                           apply_ctr
+    uint32_t&                           apply_ctr,
+    bool                                attach_objects
 )
 {
     ResourceSelectionMap::NodesIterator rsc_iter(*(dsp_comp_hub.dsp_shared->selected_resources));
