@@ -12,6 +12,7 @@ namespace env_var
     const std::string drbd_volume_quorum("drbd_volume_quorum");
     const std::string drbd_volume_minor_nr("drbd_volume_minor_nr");
     const std::string drbd_volume_disk_state("drbd_volume_disk_state");
+    const std::string drbd_volume_repl_state("drbd_volume_repl_state");
     const std::string drbd_volume_sync_perc("drbd_volume_sync_perc");
 
     const std::string drbd_connection("drbd_connection");
