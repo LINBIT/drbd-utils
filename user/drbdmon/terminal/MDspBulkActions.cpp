@@ -789,7 +789,7 @@ void MDspBulkActions::setup_pages()
     set_page_count(bld.coords.page);
 }
 
-void MDspBulkActions::execute_resource_actions(rsc_function& action, bool attach_objects = false)
+void MDspBulkActions::execute_resource_actions(rsc_function& action, bool attach_objects)
 {
     dsp_comp_hub.dsp_common->application_working();
 
@@ -806,7 +806,7 @@ void MDspBulkActions::execute_resource_actions(rsc_function& action, bool attach
     execute_for_range(action_loop, action, attach_objects);
 }
 
-void MDspBulkActions::execute_volume_actions(vlm_function& action, bool attach_objects = false)
+void MDspBulkActions::execute_volume_actions(vlm_function& action, bool attach_objects)
 {
     dsp_comp_hub.dsp_common->application_working();
 
@@ -823,7 +823,7 @@ void MDspBulkActions::execute_volume_actions(vlm_function& action, bool attach_o
     execute_for_range(action_loop, action, attach_objects);
 }
 
-void MDspBulkActions::execute_connection_actions(con_function& action, bool attach_objects = false)
+void MDspBulkActions::execute_connection_actions(con_function& action, bool attach_objects)
 {
     dsp_comp_hub.dsp_common->application_working();
 
@@ -840,7 +840,7 @@ void MDspBulkActions::execute_connection_actions(con_function& action, bool atta
     execute_for_range(action_loop, action, attach_objects);
 }
 
-void MDspBulkActions::execute_peer_volume_actions(peer_vlm_function& action, bool attach_objects = false)
+void MDspBulkActions::execute_peer_volume_actions(peer_vlm_function& action, bool attach_objects)
 {
     dsp_comp_hub.dsp_common->application_working();
 
