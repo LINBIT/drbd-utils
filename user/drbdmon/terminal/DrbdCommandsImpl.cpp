@@ -1142,7 +1142,8 @@ void DrbdCommandsImpl::exec_resume_sync(
 
 void DrbdCommandsImpl::exec_resource_program(
     const std::string& program,
-    const std::string& rsc_name
+    const std::string& rsc_name,
+    const DrbdResource* const rsc
 )
 {
     std::string description;
@@ -1166,7 +1167,9 @@ void DrbdCommandsImpl::exec_resource_program(
 void DrbdCommandsImpl::exec_volume_program(
     const std::string& program,
     const std::string& rsc_name,
-    const uint16_t vlm_nr
+    const DrbdResource* const rsc,
+    const uint16_t vlm_nr,
+    const DrbdVolume* const vlm
 )
 {
     std::string description;
@@ -1195,7 +1198,9 @@ void DrbdCommandsImpl::exec_volume_program(
 void DrbdCommandsImpl::exec_connection_program(
     const std::string& program,
     const std::string& rsc_name,
-    const std::string& con_name
+    const DrbdResource* const rsc,
+    const std::string& con_name,
+    const DrbdConnection* const con
 )
 {
     std::string description;
@@ -1222,8 +1227,11 @@ void DrbdCommandsImpl::exec_connection_program(
 void DrbdCommandsImpl::exec_peer_volume_program(
     const std::string& program,
     const std::string& rsc_name,
+    const DrbdResource* const rsc,
     const std::string& con_name,
-    const uint16_t vlm_nr
+    const DrbdConnection* const con,
+    const uint16_t vlm_nr,
+    const DrbdVolume* const vlm
 )
 {
     std::string description;

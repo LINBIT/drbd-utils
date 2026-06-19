@@ -84,23 +84,31 @@ class DrbdCommandsImpl : public DrbdCommands, public CommandsBase<DrbdCommandsIm
 
     virtual void exec_resource_program(
         const std::string& program,
-        const std::string& rsc_name
+        const std::string& rsc_name,
+        const DrbdResource* const rsc
     ) override;
     virtual void exec_volume_program(
         const std::string& program,
         const std::string& rsc_name,
-        const uint16_t vlm_nr
+        const DrbdResource* const rsc,
+        const uint16_t vlm_nr,
+        const DrbdVolume* const vlm
     ) override;
     virtual void exec_connection_program(
         const std::string& program,
         const std::string& rsc_name,
-        const std::string& con_name
+        const DrbdResource* const rsc,
+        const std::string& con_name,
+        const DrbdConnection* const con
     ) override;
     virtual void exec_peer_volume_program(
         const std::string& program,
         const std::string& rsc_name,
+        const DrbdResource* const rsc,
         const std::string& con_name,
-        const uint16_t vlm_nr
+        const DrbdConnection* const con,
+        const uint16_t vlm_nr,
+        const DrbdVolume* const vlm
     ) override;
 
   private:

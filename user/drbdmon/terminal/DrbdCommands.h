@@ -54,23 +54,31 @@ class DrbdCommands
 
     virtual void exec_resource_program(
         const std::string& program,
-        const std::string& rsc_name
+        const std::string& rsc_name,
+        const DrbdResource* const rsc
     ) = 0;
     virtual void exec_volume_program(
         const std::string& program,
         const std::string& rsc_name,
-        const uint16_t vlm_nr
+        const DrbdResource* const rsc,
+        const uint16_t vlm_nr,
+        const DrbdVolume* const vlm
     ) = 0;
     virtual void exec_connection_program(
         const std::string& program,
         const std::string& rsc_name,
-        const std::string& con_name
+        const DrbdResource* const rsc,
+        const std::string& con_name,
+        const DrbdConnection* const con
     ) = 0;
     virtual void exec_peer_volume_program(
         const std::string& program,
         const std::string& rsc_name,
+        const DrbdResource* const rsc,
         const std::string& con_name,
-        const uint16_t vlm_nr
+        const DrbdConnection* const con,
+        const uint16_t vlm_nr,
+        const DrbdVolume* const vlm
     ) = 0;
 };
 
