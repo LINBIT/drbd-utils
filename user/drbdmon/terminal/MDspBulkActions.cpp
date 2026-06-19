@@ -876,7 +876,7 @@ void MDspBulkActions::action_loop_for_resources(
          rsc_name != nullptr && (range.apply_count == 0 || apply_ctr < range.apply_count);
          rsc_name = rsc_iter.next())
     {
-        const DrbdResource* const rsc = attach_objects ? dsp_comp_hub.rsc_map->get(rsc_name) : nullptr;
+        DrbdResource* const rsc = attach_objects ? dsp_comp_hub.rsc_map->get(rsc_name) : nullptr;
         try
         {
             if (skip_ctr >= range.skip_count)
@@ -918,7 +918,7 @@ void MDspBulkActions::action_loop_for_volumes(
          rsc_node = rsc_iter.next())
     {
         const std::string* const rsc_name = rsc_node->get_key();
-        const DrbdResource* const rsc = attach_objects ? dsp_comp_hub.rsc_map->get(rsc_name) : nullptr;
+        DrbdResource* const rsc = attach_objects ? dsp_comp_hub.rsc_map->get(rsc_name) : nullptr;
         ResourceSubSelections& sub_selections = *(rsc_node->get_value());
         if (sub_selections.volume_selection)
         {
@@ -927,7 +927,7 @@ void MDspBulkActions::action_loop_for_volumes(
                  vlm_nr != nullptr && (range.apply_count == 0 || apply_ctr < range.apply_count);
                  vlm_nr = vlm_iter.next())
             {
-                const DrbdVolume* vlm = nullptr;
+                DrbdVolume* vlm = nullptr;
                 if (attach_objects && rsc != nullptr)
                 {
                     vlm = rsc->get_volume(*vlm_nr);
@@ -975,7 +975,7 @@ void MDspBulkActions::action_loop_for_connections(
          rsc_node = rsc_iter.next())
     {
         const std::string* const rsc_name = rsc_node->get_key();
-        const DrbdResource* const rsc = attach_objects ? dsp_comp_hub.rsc_map->get(rsc_name) : nullptr;
+        DrbdResource* const rsc = attach_objects ? dsp_comp_hub.rsc_map->get(rsc_name) : nullptr;
         ResourceSubSelections& sub_selections = *(rsc_node->get_value());
         if (sub_selections.connection_selection)
         {
@@ -984,7 +984,7 @@ void MDspBulkActions::action_loop_for_connections(
                  con_name != nullptr && (range.apply_count == 0 || apply_ctr < range.apply_count);
                  con_name = con_iter.next())
             {
-                const DrbdConnection* con = nullptr;
+                DrbdConnection* con = nullptr;
                 if (attach_objects && rsc != nullptr)
                 {
                     con = rsc->get_connection(*con_name);
@@ -1032,7 +1032,7 @@ void MDspBulkActions::action_loop_for_peer_volumes(
          rsc_node = rsc_iter.next())
     {
         const std::string* const rsc_name = rsc_node->get_key();
-        const DrbdResource* const rsc = attach_objects ? dsp_comp_hub.rsc_map->get(rsc_name) : nullptr;
+        DrbdResource* const rsc = attach_objects ? dsp_comp_hub.rsc_map->get(rsc_name) : nullptr;
         ResourceSubSelections& sub_selections = *(rsc_node->get_value());
         if (sub_selections.connection_selection)
         {
@@ -1042,7 +1042,7 @@ void MDspBulkActions::action_loop_for_peer_volumes(
                  con_node = con_iter.next())
             {
                 const std::string* const con_name = con_node->get_key();
-                const DrbdConnection* con = nullptr;
+                DrbdConnection* con = nullptr;
                 if (attach_objects && rsc != nullptr)
                 {
                     con = rsc->get_connection(*con_name);
@@ -1055,7 +1055,7 @@ void MDspBulkActions::action_loop_for_peer_volumes(
                          peer_vlm_nr != nullptr && (range.apply_count == 0 || apply_ctr < range.apply_count);
                          peer_vlm_nr = peer_vlm_iter.next())
                     {
-                        const DrbdVolume* peer_vlm = nullptr;
+                        DrbdVolume* peer_vlm = nullptr;
                         if (attach_objects && con != nullptr)
                         {
                             peer_vlm = con->get_volume(*peer_vlm_nr);
