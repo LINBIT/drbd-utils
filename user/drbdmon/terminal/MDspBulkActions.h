@@ -125,10 +125,14 @@ class MDspBulkActions : public MDspMenuBase
     void setup_cmd_functions();
     void setup_pages();
 
-    using rsc_function = std::function<void(const std::string&)>;
-    using con_function = std::function<void(const std::string&, const std::string&)>;
-    using vlm_function = std::function<void(const std::string&, const uint16_t)>;
-    using peer_vlm_function = std::function<void(const std::string&, const std::string&, const uint16_t)>;
+    using rsc_function = std::function<void(const std::string&, const DrbdResource* const)>;
+    using con_function = std::function<void(const std::string&, const DrbdResource* const,
+                                            const std::string&, const DrbdConnection* const)>;
+    using vlm_function = std::function<void(const std::string&, const DrbdResource* const,
+                                            const uint16_t, const DrbdVolume* const)>;
+    using peer_vlm_function = std::function<void(const std::string&, const DrbdResource* const,
+                                                 const std::string&, const DrbdConnection* const,
+                                                 const uint16_t, const DrbdVolume* const)>;
 
     void execute_resource_actions(rsc_function& action, bool attach_objects = false);
     void execute_volume_actions(vlm_function& action, bool attach_objects = false);
