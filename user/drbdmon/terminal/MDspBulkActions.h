@@ -4,6 +4,9 @@
 #include <default_types.h>
 #include <terminal/MDspMenuBase.h>
 #include <terminal/DrbdCommands.h>
+#include <objects/DrbdResource.h>
+#include <objects/DrbdVolume.h>
+#include <objects/DrbdConnection.h>
 
 class MDspBulkActions : public MDspMenuBase
 {
