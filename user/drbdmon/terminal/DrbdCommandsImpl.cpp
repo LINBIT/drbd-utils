@@ -1159,6 +1159,11 @@ void DrbdCommandsImpl::exec_resource_program(
 
     add_env_var(command, env_var::drbd_resource, rsc_name);
 
+    if (rsc != nullptr)
+    {
+        add_rsc_env_vars(command, rsc);
+    }
+
     command->set_description(description);
 
     queue_command(command);
@@ -1190,6 +1195,15 @@ void DrbdCommandsImpl::exec_volume_program(
     add_env_var(command, env_var::drbd_resource, rsc_name);
     add_env_var(command, env_var::drbd_volume_nr, vlm_nr_str);
 
+    if (rsc != nullptr)
+    {
+        add_rsc_env_vars(command, rsc);
+        if (vlm != nullptr)
+        {
+            add_vlm_env_vars(command, vlm);
+        }
+    }
+
     command->set_description(description);
 
     queue_command(command);
@@ -1218,6 +1232,15 @@ void DrbdCommandsImpl::exec_connection_program(
 
     add_env_var(command, env_var::drbd_resource, rsc_name);
     add_env_var(command, env_var::drbd_connection, con_name);
+
+    if (rsc != nullptr)
+    {
+        add_rsc_env_vars(command, rsc);
+        if (con != nullptr)
+        {
+            add_con_env_vars(command, con);
+        }
+    }
 
     command->set_description(description);
 
@@ -1252,6 +1275,19 @@ void DrbdCommandsImpl::exec_peer_volume_program(
     add_env_var(command, env_var::drbd_resource, rsc_name);
     add_env_var(command, env_var::drbd_connection, con_name);
     add_env_var(command, env_var::drbd_volume_nr, vlm_nr_str);
+
+    if (rsc != nullptr)
+    {
+        add_rsc_env_vars(command, rsc);
+        if (con != nullptr)
+        {
+            add_con_env_vars(command, con);
+            if (vlm != nullptr)
+            {
+                add_vlm_env_vars(command, vlm);
+            }
+        }
+    }
 
     command->set_description(description);
 
@@ -1384,6 +1420,72 @@ bool DrbdCommandsImpl::can_run_peer_volume_cmd()
 void DrbdCommandsImpl::queue_command(std::unique_ptr<CmdLine>& command)
 {
     dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+}
+
+void DrbdCommandsImpl::add_rsc_env_vars(std::unique_ptr<CmdLine>& command, const DrbdResource* const rsc)
+{
+    const uint8_t con_count = rsc->get_connection_count();
+    std::string con_count_str(std::to_string(con_count));
+    add_env_var(command, env_var::drbd_connection_count, con_count_str);
+
+    const uint16_t vlm_count = rsc->get_volume_count();
+    std::string vlm_count_str(std::to_string(vlm_count));
+    add_env_var(command, env_var::drbd_volume_count, vlm_count_str);
+
+    const std::string rsc_role(rsc->get_role_label());
+    add_env_var(command, env_var::drbd_resource_role, rsc_role);
+
+    const std::string quorum_str = (rsc->has_quorum_alert() ? "false" : "true");
+    add_env_var(command, env_var::drbd_resource_quorum, quorum_str);
+}
+
+void DrbdCommandsImpl::add_vlm_env_vars(std::unique_ptr<CmdLine>& command, const DrbdVolume* const vlm)
+{
+    DrbdVolume::client_state client = vlm->get_client_state();
+    if (client == DrbdVolume::client_state::ENABLED)
+    {
+        const std::string client_str("true");
+        add_env_var(command, env_var::drbd_volume_is_client, client_str);
+    }
+    else
+    if (client == DrbdVolume::client_state::DISABLED)
+    {
+        const std::string client_str("false");
+        add_env_var(command, env_var::drbd_volume_is_client, client_str);
+    }
+
+    const std::string quorum_str = vlm->has_quorum_alert() ? "false" : "true";
+    add_env_var(command, env_var::drbd_volume_quorum, quorum_str);
+
+    const uint32_t minor_nr = vlm->get_minor_nr();
+    const std::string minor_nr_str(std::to_string(minor_nr));
+    add_env_var(command, env_var::drbd_volume_minor_nr, minor_nr_str);
+
+    const std::string disk_state(vlm->get_disk_state_label());
+    add_env_var(command, env_var::drbd_volume_disk_state, disk_state);
+
+    const std::string repl_state(vlm->get_replication_state_label());
+    add_env_var(command, env_var::drbd_volume_repl_state, repl_state);
+
+    const uint16_t sync_perc = (vlm->get_sync_perc() / 100);
+    const std::string sync_perc_str(std::to_string(sync_perc));
+    add_env_var(command, env_var::drbd_volume_sync_perc, sync_perc_str);
+}
+
+void DrbdCommandsImpl::add_con_env_vars(std::unique_ptr<CmdLine>& command, const DrbdConnection* const con)
+{
+    const std::string con_role(con->get_role_label());
+    add_env_var(command, env_var::drbd_connection_role, con_role);
+
+    const std::string con_state(con->get_connection_state_label());
+    add_env_var(command, env_var::drbd_connection_state, con_state);
+
+    const std::string sync_state(con->get_sync_state_label());
+    add_env_var(command, env_var::drbd_connection_sync_state, sync_state);
+
+    const uint16_t peer_vlm_count = con->get_volume_count();
+    const std::string peer_vlm_count_str(std::to_string(peer_vlm_count));
+    add_env_var(command, env_var::drbd_peer_volume_count, peer_vlm_count_str);
 }
 
 void DrbdCommandsImpl::add_env_var(

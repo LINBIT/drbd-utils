@@ -186,6 +186,10 @@ class DrbdCommandsImpl : public DrbdCommands, public CommandsBase<DrbdCommandsIm
 
     void queue_command(std::unique_ptr<CmdLine>& command);
 
+    void add_rsc_env_vars(std::unique_ptr<CmdLine>& command, const DrbdResource* const rsc);
+    void add_vlm_env_vars(std::unique_ptr<CmdLine>& command, const DrbdVolume* const vlm);
+    void add_con_env_vars(std::unique_ptr<CmdLine>& command, const DrbdConnection* const con);
+
     void add_env_var(std::unique_ptr<CmdLine>& command, const std::string& key, const std::string& value);
 };
 
