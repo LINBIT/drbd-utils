@@ -12,7 +12,7 @@ MDspOverview::MDspOverview(const ComponentsHub& comp_hub):
         };
 
     cmd_refresh_analysis = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand("R", 1, 1, 1, 21, cmd_fn_refresh_analysis)
+        new ClickableCommand("R", 1, 1, 1, 20, cmd_fn_refresh_analysis)
     );
     // No add_option for this command; it's handled in key_pressed and mouse_action to be
     // active on all pages and in display_content to be repositioned above the command line
