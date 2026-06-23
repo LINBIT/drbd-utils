@@ -609,7 +609,7 @@ void MDspOverview::dsp_write_counter(const uint32_t counter)
 
 bool MDspOverview::key_pressed(const uint32_t key)
 {
-    bool intercepted = MDspMenuBase::key_pressed(key);
+    bool intercepted = MDspBase::key_pressed(key);
     if (!intercepted)
     {
         if (key == static_cast<uint32_t> ('r') || key == static_cast<uint32_t> ('R'))
@@ -626,7 +626,7 @@ bool MDspOverview::key_pressed(const uint32_t key)
 
 bool MDspOverview::mouse_action(MouseEvent& mouse)
 {
-    bool intercepted = MDspMenuBase::mouse_action(mouse);
+    bool intercepted = MDspBase::mouse_action(mouse);
     if (!intercepted)
     {
         const uint32_t page_nr = get_page_nr();
