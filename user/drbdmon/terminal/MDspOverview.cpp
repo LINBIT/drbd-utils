@@ -2,7 +2,7 @@
 #include <string_transformations.h>
 
 MDspOverview::MDspOverview(const ComponentsHub& comp_hub):
-    MDspBase::MDspBase(comp_hub)
+    MDspMenuBase::MDspMenuBase(comp_hub)
 {
     cmd_fn_refresh_analysis =
         [this]() -> void
