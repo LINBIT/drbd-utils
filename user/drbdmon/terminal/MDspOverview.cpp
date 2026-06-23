@@ -4,6 +4,20 @@
 MDspOverview::MDspOverview(const ComponentsHub& comp_hub):
     MDspBase::MDspBase(comp_hub)
 {
+    cmd_fn_refresh_analysis =
+        [this]() -> void
+        {
+            analyze_drbd_state();
+            dsp_comp_hub.dsp_selector->refresh_display();
+        };
+
+    cmd_refresh_analysis = std::unique_ptr<ClickableCommand>(
+        new ClickableCommand("R", 1, 1, 1, 21, cmd_fn_refresh_analysis)
+    );
+    // No add_option for this command; it's handled in key_pressed and mouse_action to be
+    // active on all pages and in display_content to be repositioned above the command line
+    // on terminal size changes
+
     fn_dsp_vlm_disk =
         [this](const DrbdVolume::disk_state state, const uint32_t counter, uint16_t& dsp_line) -> void
         {
@@ -234,10 +248,11 @@ void MDspOverview::display_content()
 {
     if (!have_maps)
     {
-        allocate_all_maps();
-
         analyze_drbd_state();
     }
+
+    cmd_refresh_analysis->clickable_area.page = get_page_nr();
+    cmd_refresh_analysis->clickable_area.row = dsp_comp_hub.term_rows - DisplayConsts::CMD_LINE_Y - 1;
 
     const uint32_t MAX_STATE_LINE = 16;
 
@@ -402,6 +417,12 @@ void MDspOverview::display_content()
         dsp_comp_hub.dsp_io->cursor_xy(25, dsp_line);
         dsp_write_counter(statistics.con_count);
     }
+
+    dsp_comp_hub.dsp_io->cursor_xy(1, dsp_comp_hub.term_rows - DisplayConsts::CMD_LINE_Y - 1);
+    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->hotkey_field.c_str());
+    dsp_comp_hub.dsp_io->write_text(" R ");
+    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->hotkey_label.c_str());
+    dsp_comp_hub.dsp_io->write_text(" Refresh analysis");
     dsp_comp_hub.dsp_common->application_idle();
 }
 
@@ -409,162 +430,166 @@ void MDspOverview::analyze_drbd_state()
 {
     dsp_comp_hub.dsp_common->application_working();
 
-    if (have_maps)
+    if (!have_maps)
     {
-        ClusterStats statsCounters;
-
+        allocate_all_maps();
+    }
+    else
+    {
         reset_all_map_counters();
+    }
 
-        ResourcesMap::ValuesIterator rsc_iter(*(dsp_comp_hub.rsc_map));
-        while (rsc_iter.has_next())
+    ClusterStats statsCounters;
+
+    ResourcesMap::ValuesIterator rsc_iter(*(dsp_comp_hub.rsc_map));
+    while (rsc_iter.has_next())
+    {
+        ++statsCounters.rsc_count;
+        DrbdResource* const rsc = rsc_iter.next();
+
+        // Count resource roles
         {
-            ++statsCounters.rsc_count;
-            DrbdResource* const rsc = rsc_iter.next();
+            const DrbdRole::resource_role role = rsc->get_role();
+            increase_counter(*rsc_roles, role);
+        }
 
-            // Count resource roles
+        // Count resource quorum
+        {
+            const bool quorum = !rsc->has_quorum_alert();
+            increase_counter(*rsc_quorum_map, quorum);
+        }
+
+        // Analyze volumes
+        {
+            uint64_t rsc_counted_disk_states = 0;
+
+            VolumesMap::ValuesIterator vlm_iter(rsc->volumes_iterator());
+            while (vlm_iter.has_next())
             {
-                const DrbdRole::resource_role role = rsc->get_role();
-                increase_counter(*rsc_roles, role);
-            }
+                DrbdVolume* const vlm = vlm_iter.next();
 
-            // Count resource quorum
-            {
-                const bool quorum = !rsc->has_quorum_alert();
-                increase_counter(*rsc_quorum_map, quorum);
-            }
+                const bool is_client = vlm->get_client_state() == DrbdVolume::client_state::ENABLED;
 
-            // Analyze volumes
-            {
-                uint64_t rsc_counted_disk_states = 0;
-
-                VolumesMap::ValuesIterator vlm_iter(rsc->volumes_iterator());
-                while (vlm_iter.has_next())
+                // Count volume quorum
                 {
-                    DrbdVolume* const vlm = vlm_iter.next();
+                    const bool quorum = !vlm->has_quorum_alert();
+                    increase_counter(*vlm_quorum_map, quorum);
+                }
 
-                    const bool is_client = vlm->get_client_state() == DrbdVolume::client_state::ENABLED;
+                // Count volume disk state
+                {
+                    const DrbdVolume::disk_state disk_state = vlm->get_disk_state();
+                    increase_counter(*vlm_disk_states, disk_state);
 
-                    // Count volume quorum
+                    if (disk_state == DrbdVolume::disk_state::DISKLESS && is_client)
                     {
-                        const bool quorum = !vlm->has_quorum_alert();
-                        increase_counter(*vlm_quorum_map, quorum);
+                        ++statsCounters.vlm_client_count;
+                    }
+                    else
+                    {
+                        ++statsCounters.vlm_disk_count;
                     }
 
-                    // Count volume disk state
+                    const uint64_t rsc_counted_flag =
+                        static_cast<uint64_t> (1) << static_cast<uint16_t> (disk_state);
+                    if ((rsc_counted_disk_states & rsc_counted_flag) != rsc_counted_flag)
                     {
-                        const DrbdVolume::disk_state disk_state = vlm->get_disk_state();
-                        increase_counter(*vlm_disk_states, disk_state);
+                        increase_counter(*vlm_disk_states_per_rsc, disk_state);
+                        rsc_counted_disk_states |= rsc_counted_flag;
+                    }
+                }
+            } // end volumes loop
+        } // end volumes analysis scope
 
-                        if (disk_state == DrbdVolume::disk_state::DISKLESS && is_client)
-                        {
-                            ++statsCounters.vlm_client_count;
-                        }
-                        else
-                        {
-                            ++statsCounters.vlm_disk_count;
-                        }
+        // Analyze connections & peer volumes
+        {
+            uint64_t rsc_counted_con_states = 0;
+            uint64_t rsc_counted_con_sync_states = 0;
+
+            uint64_t rsc_counted_peer_disk_states = 0;
+            uint64_t rsc_counted_peer_repl_states = 0;
+
+            ConnectionsMap::ValuesIterator con_iter(rsc->connections_iterator());
+            while (con_iter.has_next())
+            {
+                ++statsCounters.con_count;
+                DrbdConnection* const con = con_iter.next();
+
+                // Count connection state
+                {
+                    const DrbdConnection::state con_net_state = con->get_connection_state();
+                    increase_counter(*con_states, con_net_state);
+
+                    const uint64_t rsc_net_counted_flag =
+                        static_cast<uint64_t> (1) << static_cast<uint16_t>(con_net_state);
+                    if ((rsc_counted_con_states & rsc_net_counted_flag) != rsc_net_counted_flag)
+                    {
+                        increase_counter(*con_states_per_rsc, con_net_state);
+                        rsc_counted_con_states |= rsc_net_counted_flag;
+                    }
+
+                    // Count connection synchronization state
+                    const DrbdConnection::sync_state_type sync_state =
+                        (con_net_state == DrbdConnection::state::CONNECTED ?
+                         DrbdConnection::sync_state_type::RESYNCABLE :
+                         con->get_sync_state());
+                    increase_counter(*con_sync_states, sync_state);
+
+                    const uint64_t rsc_sync_counted_flag =
+                        static_cast<uint64_t> (1) << static_cast<uint16_t> (sync_state);
+                    if ((rsc_counted_con_sync_states & rsc_sync_counted_flag) != rsc_sync_counted_flag)
+                    {
+                        increase_counter(*con_sync_states_per_rsc, sync_state);
+                        rsc_counted_con_sync_states |= rsc_sync_counted_flag;
+                    }
+                }
+
+                VolumesMap::ValuesIterator peer_vlm_iter(con->volumes_iterator());
+                while (peer_vlm_iter.has_next())
+                {
+                    DrbdVolume* const peer_vlm = peer_vlm_iter.next();
+
+                    const bool is_client = peer_vlm->get_client_state() == DrbdVolume::client_state::ENABLED;
+
+                    // Count peer volume disk state
+                    {
+                        const DrbdVolume::disk_state disk_state = peer_vlm->get_disk_state();
+                        increase_counter(*peer_vlm_disk_states, disk_state);
 
                         const uint64_t rsc_counted_flag =
                             static_cast<uint64_t> (1) << static_cast<uint16_t> (disk_state);
-                        if ((rsc_counted_disk_states & rsc_counted_flag) != rsc_counted_flag)
+                        if ((rsc_counted_peer_disk_states & rsc_counted_flag) != rsc_counted_flag)
                         {
-                            increase_counter(*vlm_disk_states_per_rsc, disk_state);
-                            rsc_counted_disk_states |= rsc_counted_flag;
-                        }
-                    }
-                } // end volumes loop
-            } // end volumes analysis scope
-
-            // Analyze connections & peer volumes
-            {
-                uint64_t rsc_counted_con_states = 0;
-                uint64_t rsc_counted_con_sync_states = 0;
-
-                uint64_t rsc_counted_peer_disk_states = 0;
-                uint64_t rsc_counted_peer_repl_states = 0;
-
-                ConnectionsMap::ValuesIterator con_iter(rsc->connections_iterator());
-                while (con_iter.has_next())
-                {
-                    ++statsCounters.con_count;
-                    DrbdConnection* const con = con_iter.next();
-
-                    // Count connection state
-                    {
-                        const DrbdConnection::state con_net_state = con->get_connection_state();
-                        increase_counter(*con_states, con_net_state);
-
-                        const uint64_t rsc_net_counted_flag =
-                            static_cast<uint64_t> (1) << static_cast<uint16_t>(con_net_state);
-                        if ((rsc_counted_con_states & rsc_net_counted_flag) != rsc_net_counted_flag)
-                        {
-                            increase_counter(*con_states_per_rsc, con_net_state);
-                            rsc_counted_con_states |= rsc_net_counted_flag;
+                            increase_counter(*peer_vlm_disk_states_per_rsc, disk_state);
+                            rsc_counted_peer_disk_states |= rsc_counted_flag;
                         }
 
-                        // Count connection synchronization state
-                        const DrbdConnection::sync_state_type sync_state =
-                            (con_net_state == DrbdConnection::state::CONNECTED ?
-                             DrbdConnection::sync_state_type::RESYNCABLE :
-                             con->get_sync_state());
-                        increase_counter(*con_sync_states, sync_state);
-
-                        const uint64_t rsc_sync_counted_flag =
-                            static_cast<uint64_t> (1) << static_cast<uint16_t> (sync_state);
-                        if ((rsc_counted_con_sync_states & rsc_sync_counted_flag) != rsc_sync_counted_flag)
+                        if (disk_state == DrbdVolume::disk_state::DISKLESS && is_client)
                         {
-                            increase_counter(*con_sync_states_per_rsc, sync_state);
-                            rsc_counted_con_sync_states |= rsc_sync_counted_flag;
+                            ++statsCounters.peer_vlm_client_count;
                         }
                     }
 
-                    VolumesMap::ValuesIterator peer_vlm_iter(con->volumes_iterator());
-                    while (peer_vlm_iter.has_next())
+                    // Count peer volume replication state
                     {
-                        DrbdVolume* const peer_vlm = peer_vlm_iter.next();
+                        const DrbdVolume::repl_state repl_state = peer_vlm->get_replication_state();
+                        increase_counter(*peer_vlm_repl_states, repl_state);
 
-                        const bool is_client = peer_vlm->get_client_state() == DrbdVolume::client_state::ENABLED;
-
-                        // Count peer volume disk state
+                        const uint64_t rsc_counted_flag =
+                            static_cast<uint64_t> (1) << static_cast<uint16_t> (repl_state);
+                        if ((rsc_counted_peer_repl_states & rsc_counted_flag) != rsc_counted_flag)
                         {
-                            const DrbdVolume::disk_state disk_state = peer_vlm->get_disk_state();
-                            increase_counter(*peer_vlm_disk_states, disk_state);
-
-                            const uint64_t rsc_counted_flag =
-                                static_cast<uint64_t> (1) << static_cast<uint16_t> (disk_state);
-                            if ((rsc_counted_peer_disk_states & rsc_counted_flag) != rsc_counted_flag)
-                            {
-                                increase_counter(*peer_vlm_disk_states_per_rsc, disk_state);
-                                rsc_counted_peer_disk_states |= rsc_counted_flag;
-                            }
-
-                            if (disk_state == DrbdVolume::disk_state::DISKLESS && is_client)
-                            {
-                                ++statsCounters.peer_vlm_client_count;
-                            }
+                            increase_counter(*peer_vlm_repl_states_per_rsc, repl_state);
+                            rsc_counted_peer_repl_states |= rsc_counted_flag;
                         }
+                    }
+                } // end peer volumes loop
+            } // end connections loop
+        } // end connections analysis scope
+    } // end resource loop
 
-                        // Count peer volume replication state
-                        {
-                            const DrbdVolume::repl_state repl_state = peer_vlm->get_replication_state();
-                            increase_counter(*peer_vlm_repl_states, repl_state);
-
-                            const uint64_t rsc_counted_flag =
-                                static_cast<uint64_t> (1) << static_cast<uint16_t> (repl_state);
-                            if ((rsc_counted_peer_repl_states & rsc_counted_flag) != rsc_counted_flag)
-                            {
-                                increase_counter(*peer_vlm_repl_states_per_rsc, repl_state);
-                                rsc_counted_peer_repl_states |= rsc_counted_flag;
-                            }
-                        }
-                    } // end peer volumes loop
-                } // end connections loop
-            } // end connections analysis scope
-        } // end resource loop
-
-        // Update statistics
-        statistics = statsCounters;
-    }
+    // Update statistics
+    statistics = statsCounters;
 }
 
 // Format and display a counter in the range [0, 9999999] with tousands-separators and right-aligned
@@ -584,8 +609,37 @@ void MDspOverview::dsp_write_counter(const uint32_t counter)
 
 bool MDspOverview::key_pressed(const uint32_t key)
 {
-    // TODO:
-    return MDspBase::key_pressed(key);
+    bool intercepted = MDspMenuBase::key_pressed(key);
+    if (!intercepted)
+    {
+        if (key == static_cast<uint32_t> ('r') || key == static_cast<uint32_t> ('R'))
+        {
+            if (cmd_refresh_analysis->handler_func != nullptr)
+            {
+                (*(cmd_refresh_analysis->handler_func))();
+            }
+            intercepted = true;
+        }
+    }
+    return intercepted;
+}
+
+bool MDspOverview::mouse_action(MouseEvent& mouse)
+{
+    bool intercepted = MDspMenuBase::mouse_action(mouse);
+    if (!intercepted)
+    {
+        const uint32_t page_nr = get_page_nr();
+        if (cmd_refresh_analysis->clickable_area.is_click_in_area(page_nr, mouse.coord_row, mouse.coord_column))
+        {
+            if (cmd_refresh_analysis->handler_func != nullptr)
+            {
+                (*(cmd_refresh_analysis->handler_func))();
+            }
+            intercepted = true;
+        }
+    }
+    return intercepted;
 }
 
 uint64_t MDspOverview::get_update_mask() noexcept
@@ -603,32 +657,17 @@ void MDspOverview::synchronize_data()
 {
 }
 
-void MDspOverview::enter_command_line_mode()
-{
-}
-
-void MDspOverview::leave_command_line_mode()
-{
-}
-
-void MDspOverview::enter_page_nav_mode()
-{
-}
-
-void MDspOverview::leave_page_nav_mode(const page_change_type change)
-{
-    if (change == page_change_type::PG_CHG_CHANGED)
-    {
-        dsp_comp_hub.dsp_selector->refresh_display();
-    }
-}
-
 void MDspOverview::cursor_to_next_item()
 {
 }
 
 void MDspOverview::cursor_to_previous_item()
 {
+}
+
+void MDspOverview::text_cursor_ops()
+{
+    // no-op; prevents MDspMenuBase from positioning the cursor for the option field, which is not used
 }
 
 // @throws std::bad_alloc

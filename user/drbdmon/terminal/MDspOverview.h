@@ -2,7 +2,7 @@
 #define MDSPOVERVIEW_H
 
 #include <default_types.h>
-#include <terminal/MDspBase.h>
+#include <terminal/MDspMenuBase.h>
 #include <terminal/ComponentsHub.h>
 #include <terminal/MouseEvent.h>
 #include <objects/DrbdResource.h>
@@ -14,7 +14,7 @@
 #include <memory>
 #include <functional>
 
-class MDspOverview : public MDspBase
+class MDspOverview : public MDspMenuBase
 {
   private:
     using RscRoleMap = QTree<const DrbdRole::resource_role, uint32_t>;
@@ -31,17 +31,15 @@ class MDspOverview : public MDspBase
     virtual void display_activated() override;
     virtual void display_content() override;
     virtual bool key_pressed(const uint32_t key) override;
+    virtual bool mouse_action(MouseEvent& mouse) override;
 
     virtual uint64_t get_update_mask() noexcept override;
     virtual void display_closed() override;
 
     virtual void synchronize_data() override;
-    virtual void enter_command_line_mode() override;
-    virtual void leave_command_line_mode() override;
-    virtual void enter_page_nav_mode() override;
-    virtual void leave_page_nav_mode(const page_change_type change) override;
     virtual void cursor_to_next_item() override;
     virtual void cursor_to_previous_item() override;
+    virtual void text_cursor_ops() override;
 
   private:
     class ClusterStats
@@ -89,6 +87,9 @@ class MDspOverview : public MDspBase
     std::function<void(const DrbdVolume::repl_state, const uint32_t, uint16_t&)> fn_dsp_peer_vlm_repl;
 
     ClusterStats statistics;
+
+    std::function<void()>               cmd_fn_refresh_analysis;
+    std::unique_ptr<ClickableCommand>   cmd_refresh_analysis;
 
     void analyze_drbd_state();
 
