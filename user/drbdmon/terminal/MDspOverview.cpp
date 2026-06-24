@@ -1,6 +1,6 @@
 #include <terminal/MDspOverview.h>
 #include <string_transformations.h>
-#include <selection_filter.h>
+#include <terminal/selection_filter.h>
 
 MDspOverview::MDspOverview(const ComponentsHub& comp_hub):
     MDspMenuBase::MDspMenuBase(comp_hub)
