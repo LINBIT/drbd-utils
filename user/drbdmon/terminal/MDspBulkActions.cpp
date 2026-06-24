@@ -1237,7 +1237,7 @@ void MDspBulkActions::exec_rsc_program()
             {
                 dsp_comp_hub.drbd_cmd_exec->exec_resource_program(program, rsc_name, rsc);
             };
-        execute_resource_actions(action);
+        execute_resource_actions(action, true);
     }
 }
 
@@ -1253,7 +1253,7 @@ void MDspBulkActions::exec_vlm_program()
             {
                 dsp_comp_hub.drbd_cmd_exec->exec_volume_program(program, rsc_name, rsc, vlm_nr, vlm);
             };
-        execute_volume_actions(action);
+        execute_volume_actions(action, true);
     }
 }
 
@@ -1269,7 +1269,7 @@ void MDspBulkActions::exec_con_program()
             {
                 dsp_comp_hub.drbd_cmd_exec->exec_connection_program(program, rsc_name, rsc, con_name, con);
             };
-        execute_connection_actions(action);
+        execute_connection_actions(action, true);
     }
 }
 
@@ -1296,6 +1296,6 @@ void MDspBulkActions::exec_peer_vlm_program()
                     vlm_nr, vlm
                 );
             };
-        execute_peer_volume_actions(action);
+        execute_peer_volume_actions(action, true);
     }
 }
