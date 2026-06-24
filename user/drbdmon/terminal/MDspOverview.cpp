@@ -1,5 +1,6 @@
 #include <terminal/MDspOverview.h>
 #include <string_transformations.h>
+#include <selection_filter.h>
 
 MDspOverview::MDspOverview(const ComponentsHub& comp_hub):
     MDspMenuBase::MDspMenuBase(comp_hub)
@@ -261,11 +262,6 @@ void MDspOverview::display_content()
     {
         // Resources overview
 
-        // FIXME:
-        // -------------------------------------------------
-        // v-- Experimental --v
-        // -------------------------------------------------
-
         dsp_comp_hub.dsp_io->cursor_xy(3, DisplayConsts::PAGE_NAV_Y + 1);
         dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->emphasis_text.c_str());
         dsp_comp_hub.dsp_io->write_text("DRBD state overview - Resources");
@@ -318,7 +314,6 @@ void MDspOverview::display_content()
         if (no_quorum_count > 0)
         {
             dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->alert.c_str());
-            dsp_column = 31;
             dsp_comp_hub.dsp_io->cursor_xy(3, dsp_line);
             dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_character_table->sym_alert.c_str());
             dsp_comp_hub.dsp_io->write_text(" Resources without quorum: ");
@@ -326,16 +321,25 @@ void MDspOverview::display_content()
             dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
             ++dsp_line;
         }
+
+        ++dsp_line;
+
+        dsp_column = 41;
+        dsp_comp_hub.dsp_io->cursor_xy(5, dsp_line);
+        dsp_comp_hub.dsp_io->write_text("Resources with any Primary nodes: ");
+        dsp_comp_hub.dsp_io->cursor_xy(dsp_column, dsp_line);
+        dsp_write_counter(rsc_primary_count);
+        ++dsp_line;
+        dsp_comp_hub.dsp_io->cursor_xy(5, dsp_line);
+        dsp_comp_hub.dsp_io->write_text("Resources with no Primary nodes: ");
+        dsp_comp_hub.dsp_io->cursor_xy(dsp_column, dsp_line);
+        dsp_write_counter(rsc_no_primary_count);
+        ++dsp_line;
     }
     else
     if (page_nr == 2)
     {
         // Volume states
-
-        // FIXME:
-        // -------------------------------------------------
-        // v-- Experimental --v
-        // -------------------------------------------------
 
         dsp_comp_hub.dsp_io->cursor_xy(3, DisplayConsts::PAGE_NAV_Y + 1);
         dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->emphasis_text.c_str());
@@ -441,11 +445,22 @@ void MDspOverview::analyze_drbd_state()
 
     ClusterStats statsCounters;
 
+    rsc_primary_count = 0;
+    rsc_no_primary_count = 0;
+
+    selection_filter::FilterChain<DrbdResource> chain_primary_rsc;
+    selection_filter::FilterChain<DrbdConnection> chain_primary_con;
+
+    selection_filter::make_resource_role_selector(chain_primary_rsc, DrbdRole::PRIMARY);
+    selection_filter::make_connection_role_selector(chain_primary_con, DrbdRole::PRIMARY);
+
     ResourcesMap::ValuesIterator rsc_iter(*(dsp_comp_hub.rsc_map));
     while (rsc_iter.has_next())
     {
         ++statsCounters.rsc_count;
         DrbdResource* const rsc = rsc_iter.next();
+
+        const bool rsc_primary = chain_primary_rsc.match(*rsc);
 
         // Count resource roles
         {
@@ -509,11 +524,21 @@ void MDspOverview::analyze_drbd_state()
             uint64_t rsc_counted_peer_disk_states = 0;
             uint64_t rsc_counted_peer_repl_states = 0;
 
+            bool any_con_primary = false;
+
             ConnectionsMap::ValuesIterator con_iter(rsc->connections_iterator());
             while (con_iter.has_next())
             {
                 ++statsCounters.con_count;
                 DrbdConnection* const con = con_iter.next();
+
+                if (!rsc_primary)
+                {
+                    if (chain_primary_con.match(*con))
+                    {
+                        any_con_primary = true;
+                    }
+                }
 
                 // Count connection state
                 {
@@ -585,6 +610,16 @@ void MDspOverview::analyze_drbd_state()
                     }
                 } // end peer volumes loop
             } // end connections loop
+
+            if (rsc_primary || any_con_primary)
+            {
+                ++rsc_primary_count;
+            }
+            else
+            {
+                ++rsc_no_primary_count;
+            }
+
         } // end connections analysis scope
     } // end resource loop
 

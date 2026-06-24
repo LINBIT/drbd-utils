@@ -88,6 +88,9 @@ class MDspOverview : public MDspMenuBase
 
     ClusterStats statistics;
 
+    uint32_t    rsc_primary_count       {0};
+    uint32_t    rsc_no_primary_count    {0};
+
     std::function<void()>               cmd_fn_refresh_analysis;
     std::unique_ptr<ClickableCommand>   cmd_refresh_analysis;
 
