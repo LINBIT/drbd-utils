@@ -1243,7 +1243,7 @@ void MDspBulkActions::exec_rsc_program()
 
 void MDspBulkActions::exec_vlm_program()
 {
-    const std::string& program = rsc_program_input->get_text();
+    const std::string& program = vlm_program_input->get_text();
 
     if (program.length() >= 1)
     {
@@ -1259,7 +1259,7 @@ void MDspBulkActions::exec_vlm_program()
 
 void MDspBulkActions::exec_con_program()
 {
-    const std::string& program = rsc_program_input->get_text();
+    const std::string& program = con_program_input->get_text();
 
     if (program.length() >= 1)
     {
@@ -1275,7 +1275,7 @@ void MDspBulkActions::exec_con_program()
 
 void MDspBulkActions::exec_peer_vlm_program()
 {
-    const std::string& program = rsc_program_input->get_text();
+    const std::string& program = peer_vlm_program_input->get_text();
 
     if (program.length() >= 1)
     {
