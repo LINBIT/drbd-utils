@@ -359,12 +359,13 @@ void SubProcessLx::read_subproc_output()
                 {
                     if (fired_events_ptr[idx].data.fd == subproc_stdout_pipe[PIPE_READ])
                     {
-                        if ((fired_events_ptr[idx].events & (EPOLLERR | EPOLLHUP)) == 0)
+                        if ((fired_events_ptr[idx].events & EPOLLIN) != 0)
                         {
                             read_subproc_fd(subproc_stdout_pipe[PIPE_READ], read_buffer_ptr,
                                             subproc_out, out_buffer_cap_idx, SUBPROC_OUT_MAX_SIZE);
                         }
-                        else
+
+                        if ((fired_events_ptr[idx].events & (EPOLLERR | EPOLLHUP)) != 0)
                         {
                             epoll_ctl(poll_fd, EPOLL_CTL_DEL, subproc_stdout_pipe[PIPE_READ], nullptr);
                             close_fd(subproc_stdout_pipe[PIPE_READ]);
@@ -373,12 +374,13 @@ void SubProcessLx::read_subproc_output()
                     else
                     if (fired_events_ptr[idx].data.fd == subproc_stderr_pipe[PIPE_READ])
                     {
-                        if ((fired_events_ptr[idx].events & (EPOLLERR | EPOLLHUP)) == 0)
+                        if ((fired_events_ptr[idx].events & EPOLLIN) != 0)
                         {
                             read_subproc_fd(subproc_stderr_pipe[PIPE_READ], read_buffer_ptr,
                                             subproc_err, err_buffer_cap_idx, SUBPROC_ERR_MAX_SIZE);
                         }
-                        else
+
+                        if ((fired_events_ptr[idx].events & (EPOLLERR | EPOLLHUP)) != 0)
                         {
                             epoll_ctl(poll_fd, EPOLL_CTL_DEL, subproc_stderr_pipe[PIPE_READ], nullptr);
                             close_fd(subproc_stderr_pipe[PIPE_READ]);
@@ -387,7 +389,7 @@ void SubProcessLx::read_subproc_output()
                     else
                     if (fired_events_ptr[idx].data.fd == wakeup_pipe[PIPE_READ])
                     {
-                        if ((fired_events_ptr[idx].events & (EPOLLERR | EPOLLHUP)) == 0)
+                        if ((fired_events_ptr[idx].events & EPOLLIN) != 0)
                         {
                             ssize_t read_count = 0;
                             do
