@@ -719,6 +719,28 @@ setup_new_constraint()
 	new_constraint+=$' </rule>\n</rsc_location>\n'
 }
 
+# By default the fence constraint matches nodes by their Pacemaker node name
+# (Pacemaker's "#uname" attribute), making DRBD's 'on <node_name>' required
+# to match the Corosync/Pacemaker name. If they differ the constraint does not
+# match and the peer cannot be fenced or unfenced. Without this check the
+# handler keeps retrying to write to the CIB until --timeout is reached, with
+# nothing logged to say why a failure occurred.
+constraint_node_names_known_to_pacemaker()
+{
+	# only "#uname" is a plain node-name match; leave custom attributes alone.
+	[[ ${my_attribute:-$fencing_attribute} = "#uname" ]] || return 0
+
+	local pcmk_name drbd_name=${my_value:-$HOSTNAME}
+	pcmk_name=$(crm_node -n 2>/dev/null)
+	[[ $pcmk_name ]] || return 0	# don't report mismatch if we cannot verify
+	[[ $drbd_name = $pcmk_name ]] && return 0
+
+	echo WARNING "$DRBD_RESOURCE: DRBD node name '$drbd_name' does not match Pacemaker node name '$pcmk_name'."
+	echo WARNING "$DRBD_RESOURCE: DRBD's 'on <node_name>' must match the corosync node name (short or FQDN) with fencing enabled."
+	echo WARNING "$DRBD_RESOURCE: fix the node naming to match (compare: crm_node -l  vs  drbdadm dump $DRBD_RESOURCE)."
+	return 1
+}
+
 # drbd_peer_fencing fence|unfence
 drbd_peer_fencing()
 {
@@ -760,6 +782,9 @@ drbd_peer_fencing()
 		local startup_fencing stonith_enabled
 		check_cluster_properties
 		setup_crm_timeout_unit_ms
+
+		# avoid retry-until-timeout if DRBD/Pacemaker node names are mismatched
+		constraint_node_names_known_to_pacemaker || return 1
 
 		if ! $had_constraint_on_entry ; then
 
