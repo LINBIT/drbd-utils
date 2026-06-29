@@ -2117,8 +2117,17 @@ def main() -> int:
     global output_json
     result_json = {}
 
-    desc = """This program automates running DRBD's verification
-           operation on all the resources of this host."""
+    desc = """Run DRBD online verifies across all resources of this host (or
+           only those given with --resource) and investigate any out-of-sync
+           (OOS) blocks they find. Unlike a plain `drbdadm verify`, which
+           compares only this node against its peers, this program performs
+           all the verifies needed to compare every pair of nodes (1 for 2
+           nodes, 3 for 3 nodes, 6 for 4 nodes, and so on). For each pair it
+           then analyses any OOS blocks: it tries to report the affected
+           files (if any), uses heuristics such as the Shannon entropy of the
+           differing blocks and filesystem checks to explain the impact, and
+           recommends a strategy to resolve the difference (use --do-it to
+           execute the suggested resync commands)."""
     epilog = """It is intended for
              interactive use, as it updates its progress display every 3 seconds.
              It starts verifying operations between diskfull peers by copying
