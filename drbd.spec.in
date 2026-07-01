@@ -154,6 +154,7 @@ This packages includes the DRBD administration tools.
 %{_prefix}/lib/drbd/notify-pri-on-incon-degr.sh
 %{_prefix}/lib/drbd/notify.sh
 %{_prefix}/lib/drbd/tnf-drbd-fence.py
+%{_prefix}/lib/drbd/drbd-fence-peer.sh
 %ghost %{_prefix}/lib/drbd/tnf-drbd-fence.pyc
 %ghost %{_prefix}/lib/drbd/tnf-drbd-fence.pyo
 %dir %{_var}/lib/drbd
@@ -181,6 +182,8 @@ This packages includes the DRBD administration tools.
 %config(noreplace) %{_sysconfdir}/drbd.conf
 %dir %{_sysconfdir}/drbd.d
 %config(noreplace) %{_sysconfdir}/drbd.d/global_common.conf
+%dir %{_sysconfdir}/drbd.d/fence-peer
+%dir %{_sysconfdir}/drbd.d/fence-peer/peers
 %config(noreplace) %{_sysconfdir}/multipath/conf.d/drbd.conf
 %if %{with manual}
 %{_mandir}/man8/drbd-*
@@ -199,6 +202,7 @@ This packages includes the DRBD administration tools.
 %endif
 %endif
 %doc scripts/drbd.conf.example
+%doc scripts/fence-peer
 %doc COPYING
 %doc ChangeLog
 %doc README.md

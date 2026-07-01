@@ -1,0 +1,8 @@
+# How to fence node "node-b" (used by its peer when node-b must be shot).
+# IPMI via fence_ipmilan. 'ip' is node-b's BMC address.
+AGENT=/usr/sbin/fence_ipmilan
+ip=10.0.0.2
+lanplus=1
+login=admin
+password=CHANGEME
+method=onoff

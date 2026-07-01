@@ -1,0 +1,9 @@
+# How to fence node "node-b" via Redfish (fence_redfish).
+# 'ip'/'ipport' point at node-b's Redfish BMC. Mode 0600 -- holds credentials.
+AGENT=/usr/sbin/fence_redfish
+ip=10.0.0.2
+ipport=443
+ssl_insecure=1
+username=admin
+password=CHANGEME
+systems_uri=/redfish/v1/Systems/1

@@ -1,0 +1,20 @@
+# How to fence node "node-a" via Redfish (fence_redfish).
+# The file name MUST match the DRBD node name. Mode 0600 -- holds credentials.
+#
+# 'ip'/'ipport' point at node-a's Redfish BMC. Drop 'ssl_insecure=1' and use a
+# trusted certificate in production. 'systems_uri' is the ComputerSystem for
+# this host (often /redfish/v1/Systems/1 or /redfish/v1/Systems/System.Embedded.1
+# on real hardware).
+#
+# SELinux note: the handler runs as drbd_t, which is allowed to connect to HTTP
+# ports (see README). A BMC on a NON-standard port needs:
+#     semanage port -a -t http_port_t -p tcp <port>
+AGENT=/usr/sbin/fence_redfish
+ip=10.0.0.1
+ipport=443
+ssl_insecure=1
+username=admin
+password=CHANGEME
+systems_uri=/redfish/v1/Systems/1
+# No 'delay=' here: the handler computes the priority-fencing-delay itself
+# (Primary-majority node fences first). See FENCE_DELAY in fence.conf.

@@ -1,0 +1,13 @@
+# How to fence node "node-a" (used by its peer when node-a must be shot).
+# The file name MUST match the DRBD node name (the `on <name> { ... }` in the
+# resource / what DRBD reports as the peer). Mode 0600 -- it holds credentials.
+#
+# IPMI via fence_ipmilan. 'ip' is the BMC address, not the node's OS address.
+AGENT=/usr/sbin/fence_ipmilan
+ip=10.0.0.1
+lanplus=1
+login=admin
+password=CHANGEME
+method=onoff
+# No 'delay=' here: the handler computes the priority-fencing-delay itself
+# (Primary-majority node fences first). See FENCE_DELAY in fence.conf.

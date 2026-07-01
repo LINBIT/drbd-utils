@@ -97,6 +97,11 @@ can_exec(drbd_t, drbd_exec_t)
 
 corecmd_exec_bin(drbd_t)
 
+# fence-peer handlers run in drbd_t. drbd-fence-peer.sh driving fence_redfish
+# (and other HTTP(S)-based fence agents) opens an outbound connection to the
+# BMC; this permits those connections to standard HTTP/HTTPS ports. A BMC on a
+# non-standard port instead needs: semanage port -a -t http_port_t -p tcp <port>
+# (fence_ipmilan uses UDP/IPMI and needs no extra rule).
 corenet_tcp_connect_http_port(drbd_t)
 
 dev_read_rand(drbd_t)

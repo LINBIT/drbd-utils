@@ -123,6 +123,8 @@ endif
 	install -m 755 snapshot-resync-target-lvm.sh $(DESTDIR)$(LIBDIR)
 	install -m 755 notify.sh $(DESTDIR)$(LIBDIR)
 	install -m 755 tnf-drbd-fence.py $(DESTDIR)$(LIBDIR)
+	install -m 755 fence-peer/drbd-fence-peer.sh $(DESTDIR)$(LIBDIR)
+	install -d $(DESTDIR)$(sysconfdir)/drbd.d/fence-peer/peers
 	( set -e ; cd $(DESTDIR)$(LIBDIR) ;\
 	  $(LN_S) -f snapshot-resync-target-lvm.sh unsnapshot-resync-target-lvm.sh ;\
 	  $(LN_S) -f notify.sh notify-split-brain.sh ;\
