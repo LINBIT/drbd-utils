@@ -196,7 +196,7 @@ static int conv_u32(struct drbd_argument *, struct msg_buff *, struct drbd_genlm
 static int conv_addr(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 static int conv_str(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
 
-static struct resources_list *list_resources(void);
+static struct resources_list *list_resources(char *);
 static struct resources_list *sort_resources(struct resources_list *);
 static struct devices_list *list_devices(char *);
 static struct connections_list *sort_connections(struct connections_list *);
@@ -2518,7 +2518,7 @@ static void show_resource_list(struct resources_list *resources_list, char* old_
 {
 	struct resources_list *resource;
 
-	if (resources_list == NULL)
+	if (resources_list == NULL && !strcmp(old_objname, "all"))
 		printf("# No currently configured DRBD found.\n");
 
 	for (resource = resources_list; resource; resource = resource->next) {
@@ -2701,7 +2701,7 @@ static int show_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	if (json_output)
 		show_defaults = true;
 
-	resources_list = sort_resources(list_resources());
+	resources_list = sort_resources(list_resources(old_objname));
 
 	if (json_output)
 		show_resource_list_json(resources_list, old_objname);
@@ -3552,9 +3552,9 @@ static int status_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		}
 	}
 
-	resources = sort_resources(list_resources());
+	resources = sort_resources(list_resources(objname));
 
-	if (resources == NULL && !json)
+	if (resources == NULL && !json && !strcmp(objname, "all"))
 		printf("# No currently configured DRBD found.\n");
 
 	sigaction(SIGHUP, &sa, NULL);
@@ -3634,7 +3634,7 @@ static int role_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	struct resources_list *resources, *resource;
 	int ret = ERR_RES_NOT_KNOWN;
 
-	resources = list_resources();
+	resources = list_resources(objname);
 
 	for (resource = resources; resource; resource = resource->next) {
 		if (strcmp(objname, resource->name))
@@ -3897,9 +3897,9 @@ static struct resources_list *sort_resources(struct resources_list *resources)
 }
 
 /*
- * Expects objname to be set to the resource name or "all".
+ * resource_name selects a single resource; NULL (or "all") lists all.
  */
-static struct resources_list *list_resources(void)
+static struct resources_list *list_resources(char *resource_name)
 {
 	struct drbd_cmd cmd = {
 		.cmd_id = DRBD_ADM_GET_RESOURCES,
@@ -3913,7 +3913,7 @@ static struct resources_list *list_resources(void)
 	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
 	int err;
 
-	objname = "all";
+	objname = resource_name ? resource_name : "all";
 	global_ctx.ctx_my_addr_len = 0;
 	global_ctx.ctx_peer_addr_len = 0;
 	err = generic_get(&cmd, 120000, &rctx);
@@ -4447,7 +4447,7 @@ static int down_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	old_objname = objname;
 	context = CTX_RESOURCE;
 
-	resources = list_resources();
+	resources = list_resources(old_objname);
 	for (resource = resources; resource; resource = resource->next) {
 		struct devices_list *devices;
 		int rv2;
