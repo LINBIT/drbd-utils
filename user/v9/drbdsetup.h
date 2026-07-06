@@ -71,11 +71,10 @@ struct wait_for_family_ctx {
 };
 
 /*
- * Per-command request context: the object a command targets. Filled by the
- * argv parser and passed explicitly to the command handlers and the send
- * path, so they need not read the request-context globals (objname/minor/
- * context/global_ctx). On the dump send path a NULL drbd_cmd_ctx * means "use
- * those globals". The globals remain the reply-side event filter's channel.
+ * Per-command request context: the object a command targets. The argv parser
+ * fills it and it is threaded explicitly to the command handlers, the config
+ * and dump send paths, and the reply/event filter. resource name is objname;
+ * nl carries volume, peer node id and addresses.
  */
 struct drbd_cmd_ctx {
 	char *objname;
@@ -198,7 +197,6 @@ typedef int (*fake_generic_get_t)(const struct drbd_cmd *cm, int timeout_arg, st
 /* Used by drbdsetup_instrumented to redirect calls to generic_get() */
 extern fake_generic_get_t fake_generic_get;
 extern bool fake_choose_timeout;
-extern char *objname;
 extern bool opt_now;
 extern bool opt_poll;
 extern int opt_verbose;
@@ -206,9 +204,6 @@ extern bool opt_statistics;
 extern bool opt_timestamps;
 extern bool opt_diff;
 extern bool opt_fullch;
-extern struct drbd_cfg_context global_ctx;
-extern enum cfg_ctx_key context;
-extern unsigned int minor;
 extern const struct drbd_cmd new_resource_cmd;
 extern const struct drbd_cmd new_minor_cmd;
 extern const struct drbd_cmd attach_cmd;

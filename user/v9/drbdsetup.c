@@ -607,15 +607,6 @@ const char * error_to_string(int err_no)
 
 char *cmdname = NULL; /* "drbdsetup" for reporting in usage etc. */
 
-/*
- * In CTX_MINOR, CTX_RESOURCE, CTX_ALL, objname and minor refer to the object
- * the command operates on.
- */
-char *objname;
-unsigned minor = -1U;
-struct drbd_cfg_context global_ctx;
-enum cfg_ctx_key context;
-
 int lock_fd;
 
 struct genl_sock *drbd_sock = NULL;
@@ -1280,7 +1271,7 @@ int _generic_config_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ct
 				goto error;
 			}
 		} while (false);
-		ASSERT(dh->minor == minor);
+		ASSERT(dh->minor == cmd_minor);
 		rv = dh->ret_code;
 		if (rv != SS_IN_TRANSIENT_STATE)
 			break;
@@ -1667,7 +1658,7 @@ bool opt_fullch;
 
 static int generic_send(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx)
 {
-	const char *name = ctx && ctx->objname ? ctx->objname : objname;
+	const char *name = ctx->objname;
 	struct drbd_genlmsghdr *dhdr;
 	struct msg_buff *smsg;
 	int err = 0;
@@ -4918,15 +4909,17 @@ int drbdsetup_main(int argc, char **argv)
 		return 20;
 	}
 
-	context = 0;
+	/* The argv parser fills this request context; it is the sole carrier
+	 * of the target object down into the handlers and the send path. */
+	struct drbd_cmd_ctx ctx = { .minor = -1U };
 	enum cfg_ctx_key ctx_key = cmd->ctx_key, next_arg;
 	for (next_arg = ctx_next_arg(&ctx_key);
 	     next_arg;
 	     next_arg = ctx_next_arg(&ctx_key), optind++) {
 		if (argc == optind &&
 		    !(ctx_key & CTX_MULTIPLE_ARGUMENTS) && (next_arg & CTX_ALL)) {
-			context |= CTX_ALL;  /* assume "all" if no argument is given */
-			objname = "all";
+			ctx.context |= CTX_ALL;  /* assume "all" if no argument is given */
+			ctx.objname = "all";
 			break;
 		} else if (argc <= optind) {
 			fprintf(stderr, "Missing argument %d to command\n", optind);
@@ -4934,33 +4927,33 @@ int drbdsetup_main(int argc, char **argv)
 			exit(20);
 		} else if (next_arg & (CTX_RESOURCE | CTX_MINOR | CTX_ALL)) {
 			ensure_sanity_of_res_name(argv[optind]);
-			if (!objname)
-				objname = argv[optind];
+			if (!ctx.objname)
+				ctx.objname = argv[optind];
 			if (!strcmp(argv[optind], "all")) {
 				if (!(next_arg & CTX_ALL))
 					print_usage_and_exit("command does not accept argument 'all'");
-				context |= CTX_ALL;
+				ctx.context |= CTX_ALL;
 			} else if (next_arg & CTX_MINOR) {
-				minor = dt_minor_of_dev(argv[optind]);
-				if (minor == -1U && next_arg == CTX_MINOR) {
+				ctx.minor = dt_minor_of_dev(argv[optind]);
+				if (ctx.minor == -1U && next_arg == CTX_MINOR) {
 					fprintf(stderr, "Cannot determine minor device number of "
 							"device '%s'\n",
 						argv[optind]);
 					exit(20);
 				}
-				context |= CTX_MINOR;
+				ctx.context |= CTX_MINOR;
 			} else /* not "all", and not a minor number/device name */ {
 				if (!(next_arg & CTX_RESOURCE)) {
 					fprintf(stderr, "command does not accept argument '%s'\n",
-						objname);
+						ctx.objname);
 					print_command_usage(cmd, FULL);
 					exit(20);
 				}
-				context |= CTX_RESOURCE;
-				assert(strlen(objname) < sizeof(global_ctx.ctx_resource_name));
-				memset(global_ctx.ctx_resource_name, 0, sizeof(global_ctx.ctx_resource_name));
-				global_ctx.ctx_resource_name_len = strlen(objname);
-				strcpy(global_ctx.ctx_resource_name, objname);
+				ctx.context |= CTX_RESOURCE;
+				assert(strlen(ctx.objname) < sizeof(ctx.nl.ctx_resource_name));
+				memset(ctx.nl.ctx_resource_name, 0, sizeof(ctx.nl.ctx_resource_name));
+				ctx.nl.ctx_resource_name_len = strlen(ctx.objname);
+				strcpy(ctx.nl.ctx_resource_name, ctx.objname);
 			}
 		} else {
 			if (next_arg == CTX_MY_ADDR) {
@@ -4969,20 +4962,20 @@ int drbdsetup_main(int argc, char **argv)
 
 				if (strncmp(str, "local:", 6) == 0)
 					str += 6;
-				assert(sizeof(global_ctx.ctx_my_addr) >= sizeof(*x));
-				x = (struct sockaddr_storage *)&global_ctx.ctx_my_addr;
-				global_ctx.ctx_my_addr_len = sockaddr_from_str(x, str);
+				assert(sizeof(ctx.nl.ctx_my_addr) >= sizeof(*x));
+				x = (struct sockaddr_storage *)&ctx.nl.ctx_my_addr;
+				ctx.nl.ctx_my_addr_len = sockaddr_from_str(x, str);
 			} else if (next_arg == CTX_PEER_ADDR) {
 				const char *str = argv[optind];
 				struct sockaddr_storage *x;
 
 				if (strncmp(str, "peer:", 5) == 0)
 					str += 5;
-				assert(sizeof(global_ctx.ctx_peer_addr) >= sizeof(*x));
-				x = (struct sockaddr_storage *)&global_ctx.ctx_peer_addr;
-				global_ctx.ctx_peer_addr_len = sockaddr_from_str(x, str);
+				assert(sizeof(ctx.nl.ctx_peer_addr) >= sizeof(*x));
+				x = (struct sockaddr_storage *)&ctx.nl.ctx_peer_addr;
+				ctx.nl.ctx_peer_addr_len = sockaddr_from_str(x, str);
 			} else if (next_arg == CTX_VOLUME) {
-				global_ctx.ctx_volume = m_strtoll(argv[optind], 1);
+				ctx.nl.ctx_volume = m_strtoll(argv[optind], 1);
 			} else if (next_arg == CTX_PEER_NODE_ID) {
 				enum new_strtoll_errs err;
 				unsigned long long r;
@@ -4990,22 +4983,16 @@ int drbdsetup_main(int argc, char **argv)
 
 				err = new_strtoll(argv[optind], def_unit, &r);
 				if (err != MSE_OK) {
-					struct drbd_cmd_ctx c = {
-						.objname = objname,
-						.minor = minor,
-						.context = context,
-						.nl = global_ctx,
-					};
-					int e = drbd8_compat_connect_or_disconnect(&c, cmd, argc, argv);
+					int e = drbd8_compat_connect_or_disconnect(&ctx, cmd, argc, argv);
 					if (!e)
 						return 0;
 
 					print_strtoll_error_and_exit(err, argv[optind], def_unit);
 				}
-				global_ctx.ctx_peer_node_id = m_strtoll(argv[optind], 1);
+				ctx.nl.ctx_peer_node_id = m_strtoll(argv[optind], 1);
 			} else
 				assert(0);
-			context |= next_arg;
+			ctx.context |= next_arg;
 		}
 	}
 
@@ -5018,27 +5005,15 @@ int drbdsetup_main(int argc, char **argv)
 		argc -= optind - first_optind;
 	}
 
-	if (!objname)
-		objname = "??";
+	if (!ctx.objname)
+		ctx.objname = "??";
 
-	if ((context & CTX_MINOR) && !cmd->lockless)
-		lock_fd = dt_lock_drbd(minor);
-
-	/*
-	 * The globals remain the authoritative request context (the 8.4 compat
-	 * shim and the reply-side event filter still read them). Mirror them
-	 * into an explicit ctx that handlers read instead of the globals.
-	 */
-	struct drbd_cmd_ctx ctx = {
-		.objname = objname,
-		.minor = minor,
-		.context = context,
-		.nl = global_ctx,
-	};
+	if ((ctx.context & CTX_MINOR) && !cmd->lockless)
+		lock_fd = dt_lock_drbd(ctx.minor);
 
 	rv = cmd->function(cmd, &ctx, argc, argv);
 
-	if ((context & CTX_MINOR) && !cmd->lockless)
+	if ((ctx.context & CTX_MINOR) && !cmd->lockless)
 		dt_unlock_drbd(lock_fd);
 	return rv;
 }
