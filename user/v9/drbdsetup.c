@@ -3909,17 +3909,11 @@ static struct resources_list *list_resources(char *resource_name)
 	struct resources_list *list = NULL, **tail = &list;
 	struct reply_ctx rctx = { .type = RCTX_RESOURCES_TAIL, .u.resources_tail = &tail };
 	char *old_objname = objname;
-	int old_my_addr_len = global_ctx.ctx_my_addr_len;
-	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
 	int err;
 
 	objname = resource_name ? resource_name : "all";
-	global_ctx.ctx_my_addr_len = 0;
-	global_ctx.ctx_peer_addr_len = 0;
 	err = generic_get(&cmd, 120000, &rctx);
 	objname = old_objname;
-	global_ctx.ctx_my_addr_len = old_my_addr_len;
-	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
 	if (err) {
 		free_resources(list);
 		list = NULL;
@@ -3997,17 +3991,11 @@ static struct devices_list *list_devices(char *resource_name)
 	struct devices_list *list = NULL, **tail = &list;
 	struct reply_ctx rctx = { .type = RCTX_DEVICES_TAIL, .u.devices_tail = &tail };
 	char *old_objname = objname;
-	int old_my_addr_len = global_ctx.ctx_my_addr_len;
-	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
 	int err;
 
 	objname = resource_name ? resource_name : "all";
-	global_ctx.ctx_my_addr_len = 0;
-	global_ctx.ctx_peer_addr_len = 0;
 	err = generic_get(&cmd, 120000, &rctx);
 	objname = old_objname;
-	global_ctx.ctx_my_addr_len = old_my_addr_len;
-	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
 	if (err) {
 		free_devices(list);
 		list = NULL;
@@ -4119,17 +4107,11 @@ static struct connections_list *list_connections(char *resource_name)
 	struct connections_list *list = NULL, **tail = &list;
 	struct reply_ctx rctx = { .type = RCTX_CONNECTIONS_TAIL, .u.connections_tail = &tail };
 	char *old_objname = objname;
-	int old_my_addr_len = global_ctx.ctx_my_addr_len;
-	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
 	int err;
 
 	objname = resource_name ? resource_name : "all";
-	global_ctx.ctx_my_addr_len = 0;
-	global_ctx.ctx_peer_addr_len = 0;
 	err = generic_get(&cmd, 120000, &rctx);
 	objname = old_objname;
-	global_ctx.ctx_my_addr_len = old_my_addr_len;
-	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
 	if (err) {
 		free_connections(list);
 		list = NULL;
@@ -4209,17 +4191,11 @@ static struct peer_devices_list *list_peer_devices(char *resource_name)
 	struct peer_devices_list *list = NULL, **tail = &list;
 	struct reply_ctx rctx = { .type = RCTX_PEER_DEVICES_TAIL, .u.peer_devices_tail = &tail };
 	char *old_objname = objname;
-	int old_my_addr_len = global_ctx.ctx_my_addr_len;
-	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
 	int err;
 
 	objname = resource_name ? resource_name : "all";
-	global_ctx.ctx_my_addr_len = 0;
-	global_ctx.ctx_peer_addr_len = 0;
 	err = generic_get(&cmd, 120000, &rctx);
 	objname = old_objname;
-	global_ctx.ctx_my_addr_len = old_my_addr_len;
-	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
 	if (err) {
 		free_peer_devices(list);
 		list = NULL;
@@ -4287,17 +4263,11 @@ static struct paths_list *list_paths(char *resource_name)
 	struct paths_list *list = NULL, **tail = &list;
 	struct reply_ctx rctx = { .type = RCTX_PATHS_TAIL, .u.paths_tail = &tail };
 	char *old_objname = objname;
-	int old_my_addr_len = global_ctx.ctx_my_addr_len;
-	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
 	int err;
 
 	objname = resource_name ? resource_name : "all";
-	global_ctx.ctx_my_addr_len = 0;
-	global_ctx.ctx_peer_addr_len = 0;
 	err = generic_get(&cmd, 120000, &rctx);
 	objname = old_objname;
-	global_ctx.ctx_my_addr_len = old_my_addr_len;
-	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
 	if (err) {
 		free_paths(list);
 		list = NULL;

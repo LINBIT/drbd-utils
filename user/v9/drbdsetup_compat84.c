@@ -221,15 +221,10 @@ static int drbd8_compat_fake_disconnect(int peer_node_id)
  */
 static int drbd8_compat_get_my_node_id(int argc, char **argv, const char **my_addr, const char **peer_addr)
 {
-	struct sockaddr_storage *x;
-
 	/* parse my_addr */
 	*my_addr = argv[optind];
 	if (strncmp(*my_addr, "local:", 6) == 0)
 		*my_addr += 6;
-	assert(sizeof(global_ctx.ctx_my_addr) >= sizeof(*x));
-	x = (struct sockaddr_storage *)&global_ctx.ctx_my_addr;
-	global_ctx.ctx_my_addr_len = sockaddr_from_str(x, *my_addr);
 
 	optind++;
 	if (optind >= argc) {
@@ -240,9 +235,6 @@ static int drbd8_compat_get_my_node_id(int argc, char **argv, const char **my_ad
 	*peer_addr = argv[optind];
 	if (strncmp(*peer_addr, "peer:", 5) == 0)
 		peer_addr += 5;
-	assert(sizeof(global_ctx.ctx_peer_addr) >= sizeof(*x));
-	x = (struct sockaddr_storage *) &global_ctx.ctx_peer_addr;
-	global_ctx.ctx_peer_addr_len = sockaddr_from_str(x, *peer_addr);
 
 	return compare_addr(*my_addr, *peer_addr);
 }
