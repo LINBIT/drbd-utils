@@ -2157,7 +2157,7 @@ static int generic_events_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_c
 		struct msg_buff *smsg;
 		struct iovec iov;
 		int rr;
-		char *res_name = cm->ctx_key & CTX_RESOURCE ? objname : "all";
+		char *res_name = cm->ctx_key & CTX_RESOURCE ? ctx->objname : "all";
 
 		/* Query the peer devices to wait for, and their timeouts,
 		 * before joining the multicast group. Otherwise a multicast
@@ -2222,7 +2222,7 @@ static int generic_events_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_c
 		cm = &tmp_cm;
 	} else if (!fake_generic_get) {
 		if (genl_join_mc_group_and_ctrl(drbd_sock, "events")) {
-			fprintf(stderr, "%s: unable to join drbd events multicast group\n", objname);
+			fprintf(stderr, "%s: unable to join drbd events multicast group\n", ctx->objname);
 			err = 20;
 			goto out;
 		}
