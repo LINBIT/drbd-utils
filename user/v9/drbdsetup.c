@@ -4391,7 +4391,6 @@ found:
 static int down_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	struct resources_list *resources, *resource;
-	char *old_objname;
 	int rv = 0;
 
 	if(argc > 2) {
@@ -4399,26 +4398,25 @@ static int down_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, i
 		return OTHER_ERROR;
 	}
 
-	old_objname = objname;
-	context = CTX_RESOURCE;
-
-	resources = list_resources(old_objname);
+	resources = list_resources(ctx->objname);
 	for (resource = resources; resource; resource = resource->next) {
 		struct devices_list *devices;
 		int rv2;
 
-		if (strcmp(old_objname, "all") && strcmp(old_objname, resource->name))
+		if (strcmp(ctx->objname, "all") && strcmp(ctx->objname, resource->name))
 			continue;
 
+		/* objname/context are the request channel into _generic_config_cmd */
 		objname = resource->name;
-		devices = list_devices(objname);
+		context = CTX_RESOURCE;
+		devices = list_devices(resource->name);
 		rv2 = _generic_config_cmd(cm, argc, argv);
 		if (!rv2) {
 			struct devices_list *device;
 
 			for (device = devices; device; device = device->next)
 				unregister_minor(device->minor);
-			unregister_resource(objname);
+			unregister_resource(resource->name);
 		}
 		if (!rv)
 			rv = rv2;
