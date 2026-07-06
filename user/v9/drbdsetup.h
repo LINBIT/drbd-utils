@@ -71,14 +71,18 @@ struct wait_for_family_ctx {
 };
 
 /*
- * Per-command request context: the object a query targets. Passed explicitly
- * to the send path so helpers need not mutate the request-context globals
- * (objname/minor/context/global_ctx). A NULL drbd_cmd_ctx * means "use those
- * globals". Grows to carry the minor and full cfg-context as command handlers
- * are converted off the globals.
+ * Per-command request context: the object a command targets. Filled by the
+ * argv parser and passed explicitly to the command handlers and the send
+ * path, so they need not read the request-context globals (objname/minor/
+ * context/global_ctx). A NULL drbd_cmd_ctx * means "use those globals". The
+ * globals remain the authoritative channel for _generic_config_cmd (also
+ * called from the 8.4 compat shim) and the reply-side event filter.
  */
 struct drbd_cmd_ctx {
 	char *objname;
+	unsigned minor;
+	enum cfg_ctx_key context;	/* which of the fields below are valid */
+	struct drbd_cfg_context nl;	/* volume, peer_node_id, addrs; resource name is objname */
 };
 
 /* Typed context passed to a drbd_cmd's handle_reply callback.
@@ -107,12 +111,14 @@ struct reply_ctx {
 	} u;
 };
 
+struct drbd_cmd_ctx;
+
 struct drbd_cmd {
 	const char* cmd;
 	enum cfg_ctx_key ctx_key;
 	int cmd_id;
 	int tla_id; /* top level attribute id */
-	int (*function)(const struct drbd_cmd *, int, char **);
+	int (*function)(const struct drbd_cmd *, const struct drbd_cmd_ctx *, int, char **);
 	struct drbd_argument *drbd_args;
 	int (*handle_reply)(const struct drbd_cmd*, struct genl_info *, struct reply_ctx *);
 	struct option *options;

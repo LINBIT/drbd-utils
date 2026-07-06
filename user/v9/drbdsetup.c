@@ -164,20 +164,20 @@ static void address_json(void *address, int addr_len, char *indent);
 static void address_json_indent(void *address, int addr_len);
 
 // command functions
-static int generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv);
-static int down_cmd(const struct drbd_cmd *cm, int argc, char **argv);
-static int generic_events_cmd(const struct drbd_cmd *cm, int argc, char **argv);
-static int del_minor_cmd(const struct drbd_cmd *cm, int argc, char **argv);
-static int del_resource_cmd(const struct drbd_cmd *cm, int argc, char **argv);
-static int show_cmd(const struct drbd_cmd *cm, int argc, char **argv);
-static int status_cmd(const struct drbd_cmd *cm, int argc, char **argv);
-static int role_cmd(const struct drbd_cmd *cm, int argc, char **argv);
-static int peer_role_cmd(const struct drbd_cmd *cm, int argc, char **argv);
-static int cstate_cmd(const struct drbd_cmd *cm, int argc, char **argv);
-static int dstate_cmd(const struct drbd_cmd *cm, int argc, char **argv);
-static int check_resize_cmd(const struct drbd_cmd *cm, int argc, char **argv);
-static int show_or_get_gi_cmd(const struct drbd_cmd *cm, int argc, char **argv);
-static int udev_cmd(const struct drbd_cmd *cm, int argc, char **argv);
+static int generic_config_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv);
+static int down_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv);
+static int generic_events_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv);
+static int del_minor_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv);
+static int del_resource_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv);
+static int show_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv);
+static int status_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv);
+static int role_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv);
+static int peer_role_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv);
+static int cstate_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv);
+static int dstate_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv);
+static int check_resize_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv);
+static int show_or_get_gi_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv);
+static int udev_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv);
 
 // sub commands for generic_get_cmd
        int print_event(const struct drbd_cmd *, struct genl_info *, struct reply_ctx *); /* is in drbdsetup_events2.c */
@@ -1308,26 +1308,26 @@ error:
 	return rv;
 }
 
-static int generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
+static int generic_config_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	return _generic_config_cmd(cm, argc, argv);
 }
 
-static int del_minor_cmd(const struct drbd_cmd *cm, int argc, char **argv)
+static int del_minor_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	int rv;
 
-	rv = generic_config_cmd(cm, argc, argv);
+	rv = generic_config_cmd(cm, ctx, argc, argv);
 	if (!rv)
 		unregister_minor(minor);
 	return rv;
 }
 
-static int del_resource_cmd(const struct drbd_cmd *cm, int argc, char **argv)
+static int del_resource_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	int rv;
 
-	rv = generic_config_cmd(cm, argc, argv);
+	rv = generic_config_cmd(cm, ctx, argc, argv);
 	if (!rv)
 		unregister_resource(objname);
 	return rv;
@@ -2039,7 +2039,7 @@ static int events2_poll(const struct drbd_cmd *cm, int timeout_arg, struct reply
 	return 0;
 }
 
-static int generic_events_cmd(const struct drbd_cmd *cm, int argc, char **argv)
+static int generic_events_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	static struct option no_options[] = { { } };
 	struct choose_timeout_ctx timeo_ctx = {
@@ -2674,7 +2674,7 @@ static void show_resource_list_json(struct resources_list *resources_list, char*
 	printI("]\n");
 }
 
-static int show_cmd(const struct drbd_cmd *cm, int argc, char **argv)
+static int show_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	struct resources_list *resources_list;
 	char *old_objname = objname;
@@ -3517,7 +3517,7 @@ static void link_peer_devices_to_devices(struct peer_devices_list *peer_devices,
 	}
 }
 
-static int status_cmd(const struct drbd_cmd *cm, int argc, char **argv)
+static int status_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	struct resources_list *resources, *resource;
 	struct sigaction sa = {
@@ -3630,7 +3630,7 @@ static int status_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	return 0;
 }
 
-static int role_cmd(const struct drbd_cmd *cm, int argc, char **argv)
+static int role_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	struct resources_list *resources, *resource;
 	int ret = ERR_RES_NOT_KNOWN;
@@ -3655,7 +3655,7 @@ static int role_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	return 0;
 }
 
-static int peer_role_cmd(const struct drbd_cmd *cm, int argc, char **argv)
+static int peer_role_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	struct connections_list *connections, *connection;
 	bool found = false;
@@ -3678,7 +3678,7 @@ static int peer_role_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	return 0;
 }
 
-static int cstate_cmd(const struct drbd_cmd *cm, int argc, char **argv)
+static int cstate_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	struct connections_list *connections, *connection;
 	bool found = false;
@@ -3701,7 +3701,7 @@ static int cstate_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	return 0;
 }
 
-static int dstate_cmd(const struct drbd_cmd *cm, int argc, char **argv)
+static int dstate_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	struct devices_list *devices, *device;
 	bool found = false;
@@ -3736,7 +3736,7 @@ static int dstate_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	return 0;
 }
 
-static int udev_cmd(const struct drbd_cmd *cm, int argc, char **argv)
+static int udev_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	struct devices_list *devices, *device;
 	bool found = false;
@@ -4275,7 +4275,7 @@ void free_paths(struct paths_list *paths)
 	}
 }
 
-static int check_resize_cmd(const struct drbd_cmd *cm, int argc, char **argv)
+static int check_resize_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	struct devices_list *devices, *device;
 	bool found = false;
@@ -4335,7 +4335,7 @@ static bool peer_device_ctx_match(struct drbd_cfg_context *a, struct drbd_cfg_co
 	&&	a->ctx_volume == b->ctx_volume;
 }
 
-static int show_or_get_gi_cmd(const struct drbd_cmd *cm, int argc, char **argv)
+static int show_or_get_gi_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	struct peer_devices_list *peer_devices, *peer_device;
 	struct devices_list *devices = NULL, *device;
@@ -4394,7 +4394,7 @@ found:
 	goto out;
 }
 
-static int down_cmd(const struct drbd_cmd *cm, int argc, char **argv)
+static int down_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	struct resources_list *resources, *resource;
 	char *old_objname;
@@ -5020,7 +5020,19 @@ int drbdsetup_main(int argc, char **argv)
 	if ((context & CTX_MINOR) && !cmd->lockless)
 		lock_fd = dt_lock_drbd(minor);
 
-	rv = cmd->function(cmd, argc, argv);
+	/*
+	 * The globals remain the authoritative request context (the 8.4 compat
+	 * shim and the reply-side event filter still read them). Mirror them
+	 * into an explicit ctx that handlers read instead of the globals.
+	 */
+	struct drbd_cmd_ctx ctx = {
+		.objname = objname,
+		.minor = minor,
+		.context = context,
+		.nl = global_ctx,
+	};
+
+	rv = cmd->function(cmd, &ctx, argc, argv);
 
 	if ((context & CTX_MINOR) && !cmd->lockless)
 		dt_unlock_drbd(lock_fd);
