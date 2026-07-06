@@ -42,7 +42,8 @@ enum c84_ctx_key {
 	CCTX_PEER_DEVICE,
 };
 
-static bool load_opts(int *argc, char **argv, const struct drbd_cmd *cmd, enum c84_ctx_key key);
+static bool load_opts(const struct drbd_cmd_ctx *ctx, int *argc, char **argv,
+		      const struct drbd_cmd *cmd, enum c84_ctx_key key);
 
 /*
  * This heuristic needs to be in sync with generate_implicit_node_id()
@@ -94,16 +95,17 @@ static void drbd8_compat_relevant_opts(const struct drbd_cmd *cm, char **argv_in
 }
 
 
-static void drbd8_compat_set_peer_device_options(void)
+static void drbd8_compat_set_peer_device_options(const struct drbd_cmd_ctx *base)
 {
-	const char *resname = global_ctx.ctx_resource_name;
+	struct drbd_cmd_ctx c = *base;
+	const char *resname = c.objname;
 	char path[200], *pd_args[40];
 	struct dirent *dirent;
 	int i, vol, argc;
 	bool loaded;
 	DIR *dir;
 
-	context = CTX_PEER_DEVICE;
+	c.context = CTX_PEER_DEVICE;
 	pd_args[0] = (char *)peer_device_options_cmd.cmd;
 
 	snprintf(path, 200, "%s/compat-84/res-%s", drbd_run_dir(), resname);
@@ -119,11 +121,11 @@ static void drbd8_compat_set_peer_device_options(void)
 	while ((dirent = readdir(dir))) {
 		if (sscanf(dirent->d_name, "vol-%d", &vol) == 1) {
 			argc = 1;
-			global_ctx.ctx_volume = vol;
-			loaded = load_opts(&argc, pd_args, &peer_device_options_cmd,
+			c.nl.ctx_volume = vol;
+			loaded = load_opts(&c, &argc, pd_args, &peer_device_options_cmd,
 					   CCTX_PEER_DEVICE);
 			if (loaded) {
-				_generic_config_cmd(&peer_device_options_cmd, argc, pd_args);
+				_generic_config_cmd(&peer_device_options_cmd, &c, argc, pd_args);
 				for (i = 1; i < argc; i++)
 					free(pd_args[i]); /* load_opts() malloc()ed */
 			}
@@ -132,94 +134,102 @@ static void drbd8_compat_set_peer_device_options(void)
 	closedir(dir);
 }
 
-static int drbd8_compat_fake_new_peer(int peer_node_id, int argc_in, char **argv_in)
+static int drbd8_compat_fake_new_peer(const struct drbd_cmd_ctx *base, int peer_node_id,
+				      int argc_in, char **argv_in)
 {
+	struct drbd_cmd_ctx c = *base;
 	char *new_peer_args[40];
 	int rv, i, argc_dyn_start, argc = 0;
 
-	context = CTX_PEER_NODE;
-	global_ctx.ctx_peer_node_id = peer_node_id;
+	c.context = CTX_PEER_NODE;
+	c.nl.ctx_peer_node_id = peer_node_id;
 
 	new_peer_args[argc++] = (char *)new_peer_cmd.cmd;
 	new_peer_args[argc++] = "--_name=remote";
 
 	drbd8_compat_relevant_opts(&new_peer_cmd, argv_in, argc_in, new_peer_args, &argc);
 	argc_dyn_start = argc;
-	load_opts(&argc, new_peer_args, &new_peer_cmd, CCTX_RESOURCE);
+	load_opts(&c, &argc, new_peer_args, &new_peer_cmd, CCTX_RESOURCE);
 
-	rv = _generic_config_cmd(&new_peer_cmd, argc, new_peer_args);
+	rv = _generic_config_cmd(&new_peer_cmd, &c, argc, new_peer_args);
 	for (i = argc_dyn_start; i < argc; i++)
 		free(new_peer_args[i]); /* load_opts() malloc()ed them via getline() */
 
-	drbd8_compat_set_peer_device_options();
+	drbd8_compat_set_peer_device_options(&c);
 	return rv;
 }
 
-static int drbd8_compat_fake_new_path(int peer_node_id, const char *my_addr,
-				      const char *peer_addr)
+static int drbd8_compat_fake_new_path(const struct drbd_cmd_ctx *base, int peer_node_id,
+				      const char *my_addr, const char *peer_addr)
 {
+	struct drbd_cmd_ctx c = *base;
 	char *new_path_args[3];
 	int argc = 0;
 
 	new_path_args[argc++] = (char *)new_path_cmd.cmd;
 	new_path_args[argc++] = (char *)my_addr;
 	new_path_args[argc++] = (char *)peer_addr;
-	context = CTX_PEER_NODE;
-	global_ctx.ctx_peer_node_id = peer_node_id;
-	return _generic_config_cmd(&new_path_cmd, argc, new_path_args);
+	c.context = CTX_PEER_NODE;
+	c.nl.ctx_peer_node_id = peer_node_id;
+	return _generic_config_cmd(&new_path_cmd, &c, argc, new_path_args);
 }
 
-static int drbd8_compat_fake_connect(int peer_node_id)
+static int drbd8_compat_fake_connect(const struct drbd_cmd_ctx *base, int peer_node_id)
 {
+	struct drbd_cmd_ctx c = *base;
 	char *connect_args[1];
 	int argc = 0;
 
 	connect_args[argc++] = (char *)connect_cmd.cmd;
-	context = CTX_PEER_NODE;
-	global_ctx.ctx_peer_node_id = peer_node_id;
-	return _generic_config_cmd(&connect_cmd, argc, connect_args);
+	c.context = CTX_PEER_NODE;
+	c.nl.ctx_peer_node_id = peer_node_id;
+	return _generic_config_cmd(&connect_cmd, &c, argc, connect_args);
 }
 
-static int drbd8_compat_fake_del_peer(int peer_node_id)
+static int drbd8_compat_fake_del_peer(const struct drbd_cmd_ctx *base, int peer_node_id)
 {
+	struct drbd_cmd_ctx c = *base;
 	char *del_peer_args[1];
 	int argc = 0;
 
 	del_peer_args[argc++] = "del-peer";
-	context = CTX_PEER_NODE;
-	global_ctx.ctx_peer_node_id = peer_node_id;
-	return _generic_config_cmd(&del_peer_cmd, argc, del_peer_args);
+	c.context = CTX_PEER_NODE;
+	c.nl.ctx_peer_node_id = peer_node_id;
+	return _generic_config_cmd(&del_peer_cmd, &c, argc, del_peer_args);
 }
 
-static int drbd8_compat_fake_del_path(int peer_node_id, const char *my_addr,
-				      const char *peer_addr)
+static int drbd8_compat_fake_del_path(const struct drbd_cmd_ctx *base, int peer_node_id,
+				      const char *my_addr, const char *peer_addr)
 {
+	struct drbd_cmd_ctx c = *base;
 	char *del_path_args[3];
 	int argc = 0;
 
 	del_path_args[argc++] = (char *)del_path_cmd.cmd;
 	del_path_args[argc++] = (char *)my_addr;
 	del_path_args[argc++] = (char *)peer_addr;
-	context = CTX_PEER_NODE;
-	global_ctx.ctx_peer_node_id = peer_node_id;
-	return _generic_config_cmd(&del_path_cmd, argc, del_path_args);
+	c.context = CTX_PEER_NODE;
+	c.nl.ctx_peer_node_id = peer_node_id;
+	return _generic_config_cmd(&del_path_cmd, &c, argc, del_path_args);
 }
 
-static int drbd8_compat_fake_disconnect(int peer_node_id)
+static int drbd8_compat_fake_disconnect(const struct drbd_cmd_ctx *base, int peer_node_id)
 {
+	struct drbd_cmd_ctx c = *base;
 	char *disconnect_args[1];
 	int argc = 0;
 
 	disconnect_args[argc++] = (char *)disconnect_cmd.cmd;
-	context = CTX_PEER_NODE;
-	global_ctx.ctx_peer_node_id = peer_node_id;
-	return _generic_config_cmd(&disconnect_cmd, argc, disconnect_args);
+	c.context = CTX_PEER_NODE;
+	c.nl.ctx_peer_node_id = peer_node_id;
+	return _generic_config_cmd(&disconnect_cmd, &c, argc, disconnect_args);
 }
 
 /*
  * Parse the addresses of the local and remote node from the command line.
  */
-static int drbd8_compat_get_my_node_id(int argc, char **argv, const char **my_addr, const char **peer_addr)
+static int drbd8_compat_get_my_node_id(int argc, char **argv,
+				       const char **my_addr, const char **peer_addr)
 {
 	/* parse my_addr */
 	*my_addr = argv[optind];
@@ -250,8 +260,10 @@ static int drbd8_compat_get_my_node_id(int argc, char **argv, const char **my_ad
  * 3. Creates a new path to that node with the given addresses.
  * 4. Finally, issues a connect command to that peer.
  */
-static int drbd8_compat_connect_special_case(int argc, char **argv, const struct drbd_cmd *cmd)
+static int drbd8_compat_connect_special_case(const struct drbd_cmd_ctx *base,
+					     const struct drbd_cmd *cmd, int argc, char **argv)
 {
+	struct drbd_cmd_ctx c = *base;
 	const char *my_addr, *peer_addr;
 	int my_node_id, peer_node_id;
 	int err;
@@ -263,19 +275,19 @@ static int drbd8_compat_connect_special_case(int argc, char **argv, const struct
 	}
 	peer_node_id = my_node_id == 0 ? 1 : 0;
 
-	err = drbd8_compat_fake_new_peer(peer_node_id, argc, argv);
+	err = drbd8_compat_fake_new_peer(&c, peer_node_id, argc, argv);
 	if (err) {
 		fprintf(stderr, "Failed to create peer with id %d: %s\n", peer_node_id, strerror(-err));
 		exit(20);
 	}
 
-	err = drbd8_compat_fake_new_path(peer_node_id, my_addr, peer_addr);
+	err = drbd8_compat_fake_new_path(&c, peer_node_id, my_addr, peer_addr);
 	if (err) {
 		fprintf(stderr, "Failed to create path from '%s' to '%s': %s\n", my_addr, peer_addr, strerror(-err));
 		exit(20);
 	}
 
-	err = drbd8_compat_fake_connect(peer_node_id);
+	err = drbd8_compat_fake_connect(&c, peer_node_id);
 	if (err) {
 		fprintf(stderr, "Failed to connect to peer node %d: %s\n", peer_node_id, strerror(-err));
 		exit(20);
@@ -288,8 +300,10 @@ static int drbd8_compat_connect_special_case(int argc, char **argv, const struct
  * Same as drbd8_compat_connect_special_case, but symmetric for the disconnect command.
  * Delete the peer and path we created in the "connect" special case, then do the disconnect.
  */
-static int drbd8_compat_disconnect_special_case(int argc, char **argv, const struct drbd_cmd *cmd)
+static int drbd8_compat_disconnect_special_case(const struct drbd_cmd_ctx *base,
+						const struct drbd_cmd *cmd, int argc, char **argv)
 {
+	struct drbd_cmd_ctx c = *base;
 	const char *my_addr, *peer_addr;
 	int my_node_id, peer_node_id;
 	int err;
@@ -301,19 +315,19 @@ static int drbd8_compat_disconnect_special_case(int argc, char **argv, const str
 	}
 	peer_node_id = my_node_id == 0 ? 1 : 0;
 
-	err = drbd8_compat_fake_del_peer(peer_node_id);
+	err = drbd8_compat_fake_del_peer(&c, peer_node_id);
 	if (err) {
 		fprintf(stderr, "Failed to delete peer with id %d: %s\n", peer_node_id, strerror(-err));
 		exit(20);
 	}
 
-	err = drbd8_compat_fake_del_path(peer_node_id, my_addr, peer_addr);
+	err = drbd8_compat_fake_del_path(&c, peer_node_id, my_addr, peer_addr);
 	if (err) {
 		fprintf(stderr, "Failed to delete path from '%s' to '%s': %s\n", my_addr, peer_addr, strerror(-err));
 		exit(20);
 	}
 
-	err = drbd8_compat_fake_disconnect(peer_node_id);
+	err = drbd8_compat_fake_disconnect(&c, peer_node_id);
 	if (err) {
 		fprintf(stderr, "Failed to disconnect from peer node %d: %s\n", peer_node_id, strerror(-err));
 		exit(20);
@@ -322,7 +336,8 @@ static int drbd8_compat_disconnect_special_case(int argc, char **argv, const str
 	return 0;
 }
 
-int drbd8_compat_connect_or_disconnect(int argc, char **argv, const struct drbd_cmd *cmd)
+int drbd8_compat_connect_or_disconnect(const struct drbd_cmd_ctx *ctx,
+				       const struct drbd_cmd *cmd, int argc, char **argv)
 {
 	if (strcmp(cmd->cmd, "connect") == 0) {
 		/* This is the "connect" command, and parsing the peer node ID failed.
@@ -331,25 +346,26 @@ int drbd8_compat_connect_or_disconnect(int argc, char **argv, const struct drbd_
 		 * Make another attempt to parse the command line arguments, but this time
 		 * interpret them as the drbd-8 style "connect" syntax to try and emulate the old behavior.
 		 */
-		return drbd8_compat_connect_special_case(argc, argv, cmd);
+		return drbd8_compat_connect_special_case(ctx, cmd, argc, argv);
 	} else if (strcmp(cmd->cmd, "disconnect") == 0) {
 		/* Same as above, but for the "disconnect" command */
-		return drbd8_compat_disconnect_special_case(argc, argv, cmd);
+		return drbd8_compat_disconnect_special_case(ctx, cmd, argc, argv);
 	} else
 		return -1;
 }
 
-static void cctx_key_to_path(enum c84_ctx_key key, char *path, int p_len, const char *cmd_str)
+static void cctx_key_to_path(const struct drbd_cmd_ctx *ctx, enum c84_ctx_key key,
+			     char *path, int p_len, const char *cmd_str)
 {
-	const char *resname = global_ctx.ctx_resource_name;
+	const char *resname = ctx->objname;
 	const char *dd = drbd_run_dir();
-	int vol = global_ctx.ctx_volume;
+	int vol = ctx->nl.ctx_volume;
 
 
 	if (key == CCTX_MINOR) {
-		snprintf(path, p_len, "%s/compat-84/minor-%d/%s-opts", dd, minor, cmd_str);
+		snprintf(path, p_len, "%s/compat-84/minor-%d/%s-opts", dd, ctx->minor, cmd_str);
 	} else if (key == CCTX_RES_VIA_MINOR) {
-		snprintf(path, p_len, "%s/compat-84/minor-%d/../%s-opts", dd, minor, cmd_str);
+		snprintf(path, p_len, "%s/compat-84/minor-%d/../%s-opts", dd, ctx->minor, cmd_str);
 	} else if (key == CCTX_RESOURCE) {
 		snprintf(path, p_len, "%s/compat-84/res-%s/%s-opts", dd, resname, cmd_str);
 	} else if (key == CCTX_PEER_DEVICE) {
@@ -361,14 +377,15 @@ static void cctx_key_to_path(enum c84_ctx_key key, char *path, int p_len, const 
 	}
 }
 
-static bool load_opts(int *argc, char **argv, const struct drbd_cmd *cmd, enum c84_ctx_key key)
+static bool load_opts(const struct drbd_cmd_ctx *ctx, int *argc, char **argv,
+		      const struct drbd_cmd *cmd, enum c84_ctx_key key)
 {
 	ssize_t nread;
 	size_t alloced_size;
 	char fname[200], *str;
 	FILE *f;
 
-	cctx_key_to_path(key, fname, 200, cmd->cmd);
+	cctx_key_to_path(ctx, key, fname, 200, cmd->cmd);
 	f = fopen(fname, "r");
 	if (!f)
 		return false;
@@ -388,7 +405,8 @@ static bool load_opts(int *argc, char **argv, const struct drbd_cmd *cmd, enum c
 	return true;
 }
 
-static void store_opts(int argc, char **argv, const struct drbd_cmd *cmd, enum c84_ctx_key key)
+static void store_opts(const struct drbd_cmd_ctx *ctx, int argc, char **argv,
+		       const struct drbd_cmd *cmd, enum c84_ctx_key key)
 {
 	char *opts[7], fname[100];
 	int i, nr_opts = 0;
@@ -398,7 +416,7 @@ static void store_opts(int argc, char **argv, const struct drbd_cmd *cmd, enum c
 	if (nr_opts == 0)
 		return;
 
-	cctx_key_to_path(key, fname, 100, cmd->cmd);
+	cctx_key_to_path(ctx, key, fname, 100, cmd->cmd);
 	f = fopen(fname, "w");
 	if (!f) {
 		fprintf(stderr, "Failed to open '%s' for writing with %s (%d)\n",
@@ -415,7 +433,7 @@ static void store_opts(int argc, char **argv, const struct drbd_cmd *cmd, enum c
  * fencing, c-plan-ahead, c-delay-target, c-fill-target, c-max-rate, c-min-rate
  * fencing is moved to new-peer, the other five are moved to peer-device-options
  */
-int drbd8_compat_attach(int argc_in, char **argv_in)
+int drbd8_compat_attach(const struct drbd_cmd_ctx *ctx, int argc_in, char **argv_in)
 {
 	static struct drbd_cmd attach_cmd_no_recursion;
 	static bool initialized = false;
@@ -427,8 +445,8 @@ int drbd8_compat_attach(int argc_in, char **argv_in)
 		initialized = true;
 	}
 
-	store_opts(argc_in, argv_in, &peer_device_options_cmd, CCTX_MINOR);
-	store_opts(argc_in, argv_in, &new_peer_cmd, CCTX_RES_VIA_MINOR);
+	store_opts(ctx, argc_in, argv_in, &peer_device_options_cmd, CCTX_MINOR);
+	store_opts(ctx, argc_in, argv_in, &new_peer_cmd, CCTX_RES_VIA_MINOR);
 
 	drbd8_compat_relevant_opts(&attach_cmd, argv_in, argc_in, attach_args, &argc);
 
@@ -437,7 +455,7 @@ int drbd8_compat_attach(int argc_in, char **argv_in)
 	attach_args[2] = (char *)argv_in[optind + 1]; /* meta_data_dev */
 	attach_args[3] = (char *)argv_in[optind + 2]; /* meta_data_index */
 
-	return _generic_config_cmd(&attach_cmd_no_recursion, argc, attach_args);
+	return _generic_config_cmd(&attach_cmd_no_recursion, ctx, argc, attach_args);
 }
 
 

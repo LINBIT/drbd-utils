@@ -1002,8 +1002,8 @@ void fprintf_all_cfg_reply_info_text(const char *hdr, struct nlmsghdr *nlh)
 	}
 }
 
-/* prepends global objname to output (if any) */
-static int check_error(int err_no, char *desc, struct nlattr **tla, struct nlmsghdr *nlh)
+/* prepends objname to output (if any) */
+static int check_error(int err_no, const char *objname, char *desc, struct nlattr **tla, struct nlmsghdr *nlh)
 {
 	int rv = 0;
 
@@ -1086,9 +1086,10 @@ int drbd_tla_parse(struct nlattr *tla[], struct nlmsghdr *nlh)
 #define ASSERT(exp) if (!(exp)) \
 		fprintf(stderr,"ASSERT( " #exp " ) in %s:%d\n", __FILE__,__LINE__);
 
-int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
+int _generic_config_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	struct drbd_argument *ad;
+	unsigned int cmd_minor = ctx->minor;
 	struct nlattr *nla;
 	struct option *options;
 	int c, i;
@@ -1122,17 +1123,17 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	dhdr->minor = -1;
 	dhdr->flags = 0;
 
-	if (context & CTX_MINOR)
-		dhdr->minor = minor;
+	if (ctx->context & CTX_MINOR)
+		dhdr->minor = ctx->minor;
 
-	if (context & ~CTX_MINOR) {
+	if (ctx->context & ~CTX_MINOR) {
 		nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
-		if (context & CTX_RESOURCE)
-			nla_put_string(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_RESOURCE_NAME, objname);
-		if (context & CTX_PEER_NODE_ID)
-			nla_put_u32(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_PEER_NODE_ID, global_ctx.ctx_peer_node_id);
-		if (context & CTX_VOLUME)
-			nla_put_u32(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_VOLUME, global_ctx.ctx_volume);
+		if (ctx->context & CTX_RESOURCE)
+			nla_put_string(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_RESOURCE_NAME, ctx->objname);
+		if (ctx->context & CTX_PEER_NODE_ID)
+			nla_put_u32(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_PEER_NODE_ID, ctx->nl.ctx_peer_node_id);
+		if (ctx->context & CTX_VOLUME)
+			nla_put_u32(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_VOLUME, ctx->nl.ctx_volume);
 		nla_nest_end(smsg, nla);
 	}
 
@@ -1142,7 +1143,7 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	if (cm == &attach_cmd) {
 		msg_free(smsg);
 		free(iov.iov_base);
-		return drbd8_compat_attach(argc, argv);
+		return drbd8_compat_attach(ctx, argc, argv);
 	}
 #endif
 
@@ -1220,7 +1221,7 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		ad++;
 	}
 	/* dhdr->minor may have been set by one of the convert functions. */
-	minor = dhdr->minor;
+	cmd_minor = dhdr->minor;
 
 	if (nla)
 		nla_nest_end(smsg, nla);
@@ -1242,15 +1243,15 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		int i;
 		int c = 0;
 		for (i = 0; i <= 2; i++) {
-			if (i == 0) c = snprintf(buf, PATH_MAX, "/sys/devices/virtual/block/drbd%u", minor);
-			if (i == 1) c = snprintf(buf, PATH_MAX, "/sys/devices/virtual/bdi/147:%u", minor);
-			if (i == 2) c = snprintf(buf, PATH_MAX, "/sys/block/drbd%u", minor);
+			if (i == 0) c = snprintf(buf, PATH_MAX, "/sys/devices/virtual/block/drbd%u", cmd_minor);
+			if (i == 1) c = snprintf(buf, PATH_MAX, "/sys/devices/virtual/bdi/147:%u", cmd_minor);
+			if (i == 2) c = snprintf(buf, PATH_MAX, "/sys/block/drbd%u", cmd_minor);
 			if (c < PATH_MAX) {
 				if (lstat(buf, &sb) == 0) {
 					syslog(LOG_ERR, "new-minor %s %u %u: sysfs node '%s' (already? still?) exists\n",
-							objname, minor, global_ctx.ctx_volume, buf);
+							ctx->objname, cmd_minor, ctx->nl.ctx_volume, buf);
 					fprintf(stderr, "new-minor %s %u %u: sysfs node '%s' (already? still?) exists\n",
-							objname, minor, global_ctx.ctx_volume, buf);
+							ctx->objname, cmd_minor, ctx->nl.ctx_volume, buf);
 					rv = ERR_MINOR_OR_VOLUME_EXISTS;
 					desc = NULL;
 					goto error;
@@ -1303,14 +1304,14 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 error:
 	msg_free(smsg);
 
-	rv = check_error(rv, desc, tla, nlh);
+	rv = check_error(rv, ctx->objname, desc, tla, nlh);
 	free(iov.iov_base);
 	return rv;
 }
 
 static int generic_config_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
-	return _generic_config_cmd(cm, argc, argv);
+	return _generic_config_cmd(cm, ctx, argc, argv);
 }
 
 static int del_minor_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
@@ -1961,7 +1962,7 @@ out:
 	if (err && desc)
 		fprintf(stderr, "error desciption: %s\n", desc);
 	if (!err)
-		err = check_error(rv, desc, tla, (struct nlmsghdr *)iov.iov_base);
+		err = check_error(rv, objname, desc, tla, (struct nlmsghdr *)iov.iov_base);
 	free(iov.iov_base);
 	return err;
 }
@@ -4403,14 +4404,17 @@ static int down_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, i
 		struct devices_list *devices;
 		int rv2;
 
+		struct drbd_cmd_ctx res_ctx = {
+			.objname = resource->name,
+			.minor = -1U,
+			.context = CTX_RESOURCE,
+		};
+
 		if (strcmp(ctx->objname, "all") && strcmp(ctx->objname, resource->name))
 			continue;
 
-		/* objname/context are the request channel into _generic_config_cmd */
-		objname = resource->name;
-		context = CTX_RESOURCE;
 		devices = list_devices(resource->name);
-		rv2 = _generic_config_cmd(cm, argc, argv);
+		rv2 = _generic_config_cmd(cm, &res_ctx, argc, argv);
 		if (!rv2) {
 			struct devices_list *device;
 
@@ -4984,7 +4988,13 @@ int drbdsetup_main(int argc, char **argv)
 
 				err = new_strtoll(argv[optind], def_unit, &r);
 				if (err != MSE_OK) {
-					int e = drbd8_compat_connect_or_disconnect(argc, argv, cmd);
+					struct drbd_cmd_ctx c = {
+						.objname = objname,
+						.minor = minor,
+						.context = context,
+						.nl = global_ctx,
+					};
+					int e = drbd8_compat_connect_or_disconnect(&c, cmd, argc, argv);
 					if (!e)
 						return 0;
 

@@ -74,9 +74,8 @@ struct wait_for_family_ctx {
  * Per-command request context: the object a command targets. Filled by the
  * argv parser and passed explicitly to the command handlers and the send
  * path, so they need not read the request-context globals (objname/minor/
- * context/global_ctx). A NULL drbd_cmd_ctx * means "use those globals". The
- * globals remain the authoritative channel for _generic_config_cmd (also
- * called from the 8.4 compat shim) and the reply-side event filter.
+ * context/global_ctx). On the dump send path a NULL drbd_cmd_ctx * means "use
+ * those globals". The globals remain the reply-side event filter's channel.
  */
 struct drbd_cmd_ctx {
 	char *objname;
@@ -110,8 +109,6 @@ struct reply_ctx {
 		struct wait_for_family_ctx *wait;
 	} u;
 };
-
-struct drbd_cmd_ctx;
 
 struct drbd_cmd {
 	const char* cmd;
@@ -224,7 +221,7 @@ extern const struct drbd_cmd disconnect_cmd;
 extern const struct drbd_cmd peer_device_options_cmd;
 
 struct option *make_longoptions(const struct drbd_cmd *cm, bool accept_84_compat);
-int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv);
+int _generic_config_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv);
 void print_command_usage(const struct drbd_cmd *cm, enum usage_type);
 int sockaddr_from_str(struct sockaddr_storage *storage, const char *str);
 

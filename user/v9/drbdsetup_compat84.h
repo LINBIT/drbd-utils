@@ -4,15 +4,17 @@
 #include "drbdsetup.h"
 
 #ifdef WITH_84_SUPPORT
-int drbd8_compat_connect_or_disconnect(int argc, char **argv, const struct drbd_cmd *cmd);
-int drbd8_compat_attach(int argc, char **argv);
+int drbd8_compat_connect_or_disconnect(const struct drbd_cmd_ctx *ctx,
+				       const struct drbd_cmd *cmd, int argc, char **argv);
+int drbd8_compat_attach(const struct drbd_cmd_ctx *ctx, int argc, char **argv);
 void drbd8_compat_new_minor(const char *resname, const char *minor_str, const char *vol_str);
 #else
-static inline int drbd8_compat_connect_or_disconnect(int argc, char **argv, const struct drbd_cmd *cmd)
+static inline int drbd8_compat_connect_or_disconnect(const struct drbd_cmd_ctx *ctx,
+						     const struct drbd_cmd *cmd, int argc, char **argv)
 {
 	return 0;
 }
-static int drbd8_compat_attach(int argc, char **argv)
+static int drbd8_compat_attach(const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	return 0;
 }
