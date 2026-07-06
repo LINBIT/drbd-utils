@@ -3972,7 +3972,7 @@ static int remember_device(const struct drbd_cmd *cm, struct genl_info *info, st
 }
 
 /*
- * Expects objname to be set to the resource name or "all".
+ * resource_name selects a single resource; NULL (or "all") lists all.
  */
 static struct devices_list *list_devices(char *resource_name)
 {
@@ -4086,7 +4086,7 @@ static struct connections_list *sort_connections(struct connections_list *connec
 }
 
 /*
- * Expects objname to be set to the resource name or "all".
+ * resource_name selects a single resource; NULL (or "all") lists all.
  */
 static struct connections_list *list_connections(char *resource_name)
 {
@@ -4168,7 +4168,7 @@ static int remember_peer_device(const struct drbd_cmd *cmd, struct genl_info *in
 }
 
 /*
- * Expects objname to be set to the resource name or "all".
+ * resource_name selects a single resource; NULL (or "all") lists all.
  */
 static struct peer_devices_list *list_peer_devices(char *resource_name)
 {
@@ -4238,7 +4238,7 @@ static int remember_path(const struct drbd_cmd *cmd, struct genl_info *info, str
 }
 
 /*
- * Expects objname to be set to the resource name or "all".
+ * resource_name selects a single resource; NULL (or "all") lists all.
  */
 static struct paths_list *list_paths(char *resource_name)
 {
