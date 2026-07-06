@@ -1664,8 +1664,9 @@ bool opt_timestamps;
 bool opt_diff;
 bool opt_fullch;
 
-static int generic_send(const struct drbd_cmd *cm)
+static int generic_send(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx)
 {
+	const char *name = ctx && ctx->objname ? ctx->objname : objname;
 	struct drbd_genlmsghdr *dhdr;
 	struct msg_buff *smsg;
 	int err = 0;
@@ -1673,23 +1674,23 @@ static int generic_send(const struct drbd_cmd *cm)
 	/* preallocate request message */
 	smsg = msg_new(DEFAULT_MSG_SIZE);
 	if (!smsg) {
-		fprintf(stderr, "%s: could not allocate netlink message\n", objname);
+		fprintf(stderr, "%s: could not allocate netlink message\n", name);
 		return 20;
 	}
 
 	dhdr = genlmsg_put(smsg, &drbd_genl_family, NLM_F_DUMP, cm->cmd_id);
 	dhdr->minor = -1;
 	dhdr->flags = 0;
-	if (strcmp(objname, "all")) {
+	if (strcmp(name, "all")) {
 		/* Restrict the dump to a single resource. */
 		struct nlattr *nla;
 		nla = nla_nest_start(smsg, DRBD_NLA_CFG_CONTEXT);
-		nla_put_string(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_RESOURCE_NAME, objname);
+		nla_put_string(smsg, DRBD_A_DRBD_CFG_CONTEXT_CTX_RESOURCE_NAME, name);
 		nla_nest_end(smsg, nla);
 	}
 
 	if (genl_send(drbd_sock, smsg)) {
-		fprintf(stderr, "%s: error sending config command\n", objname);
+		fprintf(stderr, "%s: error sending config command\n", name);
 		err = 20;
 	}
 
@@ -1972,7 +1973,7 @@ static int generic_get(const struct drbd_cmd *cm, int timeout_arg, struct reply_
 	if (fake_generic_get)
 		return fake_generic_get(cm, timeout_arg, rctx);
 
-	err = generic_send(cm);
+	err = generic_send(cm, rctx->cmd_ctx);
 	if (err != 0)
 		return err;
 
@@ -1989,7 +1990,7 @@ static int events2_poll(const struct drbd_cmd *cm, int timeout_arg, struct reply
 		ssize_t bytes_read;
 
 		if (send_request) {
-			err = generic_send(cm);
+			err = generic_send(cm, rctx->cmd_ctx);
 			if (err != 0)
 				return err;
 		}
@@ -3907,13 +3908,11 @@ static struct resources_list *list_resources(char *resource_name)
 		.missing_ok = false,
 	};
 	struct resources_list *list = NULL, **tail = &list;
-	struct reply_ctx rctx = { .type = RCTX_RESOURCES_TAIL, .u.resources_tail = &tail };
-	char *old_objname = objname;
+	struct drbd_cmd_ctx ctx = { .objname = resource_name ? resource_name : "all" };
+	struct reply_ctx rctx = { .type = RCTX_RESOURCES_TAIL, .cmd_ctx = &ctx, .u.resources_tail = &tail };
 	int err;
 
-	objname = resource_name ? resource_name : "all";
 	err = generic_get(&cmd, 120000, &rctx);
-	objname = old_objname;
 	if (err) {
 		free_resources(list);
 		list = NULL;
@@ -3989,13 +3988,11 @@ static struct devices_list *list_devices(char *resource_name)
 		.missing_ok = false,
 	};
 	struct devices_list *list = NULL, **tail = &list;
-	struct reply_ctx rctx = { .type = RCTX_DEVICES_TAIL, .u.devices_tail = &tail };
-	char *old_objname = objname;
+	struct drbd_cmd_ctx ctx = { .objname = resource_name ? resource_name : "all" };
+	struct reply_ctx rctx = { .type = RCTX_DEVICES_TAIL, .cmd_ctx = &ctx, .u.devices_tail = &tail };
 	int err;
 
-	objname = resource_name ? resource_name : "all";
 	err = generic_get(&cmd, 120000, &rctx);
-	objname = old_objname;
 	if (err) {
 		free_devices(list);
 		list = NULL;
@@ -4105,13 +4102,11 @@ static struct connections_list *list_connections(char *resource_name)
 		.missing_ok = true,
 	};
 	struct connections_list *list = NULL, **tail = &list;
-	struct reply_ctx rctx = { .type = RCTX_CONNECTIONS_TAIL, .u.connections_tail = &tail };
-	char *old_objname = objname;
+	struct drbd_cmd_ctx ctx = { .objname = resource_name ? resource_name : "all" };
+	struct reply_ctx rctx = { .type = RCTX_CONNECTIONS_TAIL, .cmd_ctx = &ctx, .u.connections_tail = &tail };
 	int err;
 
-	objname = resource_name ? resource_name : "all";
 	err = generic_get(&cmd, 120000, &rctx);
-	objname = old_objname;
 	if (err) {
 		free_connections(list);
 		list = NULL;
@@ -4189,13 +4184,11 @@ static struct peer_devices_list *list_peer_devices(char *resource_name)
 		.missing_ok = false,
 	};
 	struct peer_devices_list *list = NULL, **tail = &list;
-	struct reply_ctx rctx = { .type = RCTX_PEER_DEVICES_TAIL, .u.peer_devices_tail = &tail };
-	char *old_objname = objname;
+	struct drbd_cmd_ctx ctx = { .objname = resource_name ? resource_name : "all" };
+	struct reply_ctx rctx = { .type = RCTX_PEER_DEVICES_TAIL, .cmd_ctx = &ctx, .u.peer_devices_tail = &tail };
 	int err;
 
-	objname = resource_name ? resource_name : "all";
 	err = generic_get(&cmd, 120000, &rctx);
-	objname = old_objname;
 	if (err) {
 		free_peer_devices(list);
 		list = NULL;
@@ -4261,13 +4254,11 @@ static struct paths_list *list_paths(char *resource_name)
 		.missing_ok = false,
 	};
 	struct paths_list *list = NULL, **tail = &list;
-	struct reply_ctx rctx = { .type = RCTX_PATHS_TAIL, .u.paths_tail = &tail };
-	char *old_objname = objname;
+	struct drbd_cmd_ctx ctx = { .objname = resource_name ? resource_name : "all" };
+	struct reply_ctx rctx = { .type = RCTX_PATHS_TAIL, .cmd_ctx = &ctx, .u.paths_tail = &tail };
 	int err;
 
-	objname = resource_name ? resource_name : "all";
 	err = generic_get(&cmd, 120000, &rctx);
-	objname = old_objname;
 	if (err) {
 		free_paths(list);
 		list = NULL;

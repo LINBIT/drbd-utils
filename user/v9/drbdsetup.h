@@ -70,6 +70,17 @@ struct wait_for_family_ctx {
 	bool initial_state_done; /* initial state dump is complete */
 };
 
+/*
+ * Per-command request context: the object a query targets. Passed explicitly
+ * to the send path so helpers need not mutate the request-context globals
+ * (objname/minor/context/global_ctx). A NULL drbd_cmd_ctx * means "use those
+ * globals". Grows to carry the minor and full cfg-context as command handlers
+ * are converted off the globals.
+ */
+struct drbd_cmd_ctx {
+	char *objname;
+};
+
 /* Typed context passed to a drbd_cmd's handle_reply callback.
  * The tag says which union member is valid; every consumer
  * asserts that it received the member it expects. */
@@ -85,6 +96,7 @@ enum reply_ctx_type {
 
 struct reply_ctx {
 	enum reply_ctx_type type;
+	const struct drbd_cmd_ctx *cmd_ctx;	/* what the request targeted */
 	union {
 		struct resources_list ***resources_tail;
 		struct devices_list ***devices_tail;
