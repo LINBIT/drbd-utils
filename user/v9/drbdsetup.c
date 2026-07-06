@@ -1912,29 +1912,30 @@ static int generic_recv(const struct drbd_cmd *cm, int timeout_arg, struct reply
 				goto out;
 			}
 			if (cm->continuous_poll || cm->cmd_id == DRBD_ADM_GET_INITIAL_STATE) {
-				struct drbd_cfg_context ctx;
+				const struct drbd_cmd_ctx *ctx = rctx->cmd_ctx;
+				struct drbd_cfg_context evctx;
 				/*
 				 * We will receive all events and have to
 				 * filter for what we want ourself.
 				 */
 
-				err = drbd_cfg_context_from_attrs(&ctx, &info);
+				err = drbd_cfg_context_from_attrs(&evctx, &info);
 				if (!err) {
 					switch ((int)cm->ctx_key) {
 					case CTX_PEER_DEVICE:
-						if (ctx.ctx_volume != global_ctx.ctx_volume)
+						if (evctx.ctx_volume != ctx->nl.ctx_volume)
 							continue;
 						/* also needs to match the connection, of course */
 					case CTX_PEER_NODE:
-						if (ctx.ctx_peer_node_id != global_ctx.ctx_peer_node_id)
+						if (evctx.ctx_peer_node_id != ctx->nl.ctx_peer_node_id)
 							continue;
 						/* also needs to match the resource, of course */
 					case CTX_RESOURCE:
 					case CTX_RESOURCE | CTX_ALL:
-						if (!strcmp(objname, "all"))
+						if (!strcmp(ctx->objname, "all"))
 							break;
 
-						if (strcmp(objname, ctx.ctx_resource_name))
+						if (strcmp(ctx->objname, evctx.ctx_resource_name))
 							continue;
 
 						break;
@@ -1962,7 +1963,7 @@ out:
 	if (err && desc)
 		fprintf(stderr, "error desciption: %s\n", desc);
 	if (!err)
-		err = check_error(rv, objname, desc, tla, (struct nlmsghdr *)iov.iov_base);
+		err = check_error(rv, rctx->cmd_ctx->objname, desc, tla, (struct nlmsghdr *)iov.iov_base);
 	free(iov.iov_base);
 	return err;
 }
@@ -2051,7 +2052,7 @@ static int generic_events_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_c
 	int c, timeout_ms, err = NO_ERROR;
 	struct peer_devices_list *peer_devices = NULL;
 	struct wait_for_family_ctx wctx = { .peer_devices = NULL };
-	struct reply_ctx rctx = { .type = RCTX_NONE };
+	struct reply_ctx rctx = { .type = RCTX_NONE, .cmd_ctx = ctx };
 	struct option *options = cm->options ? cm->options : no_options;
 	const char *opts = make_optstring(options);
 	struct drbd_cmd tmp_cm;
@@ -4448,7 +4449,8 @@ static int wait_for_family(const struct drbd_cmd *cm, struct genl_info *info, st
 	 * Should we ever be called with an empty list, the "nothing left to
 	 * wait for" verdict below covers it. */
 	struct peer_devices_list *peer_devices = wctx->peer_devices;
-	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
+	const struct drbd_cmd_ctx *ctx = rctx->cmd_ctx;
+	struct drbd_cfg_context evctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
 	struct drbd_notification_header nh = { .nh_type = -1U };
 	struct peer_devices_list *peer_device;
 	int err;
@@ -4472,7 +4474,7 @@ static int wait_for_family(const struct drbd_cmd *cm, struct genl_info *info, st
 		goto count_done;
 	}
 
-	err = drbd_cfg_context_from_attrs(&ctx, info);
+	err = drbd_cfg_context_from_attrs(&evctx, info);
 	if (err)
 		return 0;
 
@@ -4501,7 +4503,7 @@ static int wait_for_family(const struct drbd_cmd *cm, struct genl_info *info, st
 
 			fprintf(stderr, "\ndrbd %s connection to peer-id %u ('%s') is %s, "
 				       "but I'm configured to wait anways (--wait-after-sb)\n",
-				       ctx.ctx_resource_name, ctx.ctx_peer_node_id, ctx.ctx_conn_name,
+				       evctx.ctx_resource_name, evctx.ctx_peer_node_id, evctx.ctx_conn_name,
 				       drbd_conn_str(connection_info.conn_connection_state));
 		}
 		break;
@@ -4518,7 +4520,7 @@ static int wait_for_family(const struct drbd_cmd *cm, struct genl_info *info, st
 		for (peer_device = peer_devices;
 		     peer_device;
 		     peer_device = peer_device->next) {
-			if (!peer_device_ctx_match(&ctx, &peer_device->ctx))
+			if (!peer_device_ctx_match(&evctx, &peer_device->ctx))
 				continue;
 
 			if ((nh.nh_type & ~NOTIFY_FLAGS) == NOTIFY_DESTROY)
@@ -4554,12 +4556,12 @@ count_done:
 
 			/* wait-*-volume: filter out all but the specific peer device */
 			if (cm->ctx_key == CTX_PEER_DEVICE &&
-			    !peer_device_ctx_match(&global_ctx, &peer_device->ctx))
+			    !peer_device_ctx_match(&ctx->nl, &peer_device->ctx))
 				continue;
 
 			/* wait-*-connection: filter out other connections */
 			if (cm->ctx_key == CTX_PEER_NODE &&
-			    peer_device->ctx.ctx_peer_node_id != global_ctx.ctx_peer_node_id)
+			    peer_device->ctx.ctx_peer_node_id != ctx->nl.ctx_peer_node_id)
 				continue;
 
 			/* wait-*-resource: no filter */
