@@ -1319,7 +1319,7 @@ static int del_minor_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *c
 
 	rv = generic_config_cmd(cm, ctx, argc, argv);
 	if (!rv)
-		unregister_minor(minor);
+		unregister_minor(ctx->minor);
 	return rv;
 }
 
@@ -1329,7 +1329,7 @@ static int del_resource_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx
 
 	rv = generic_config_cmd(cm, ctx, argc, argv);
 	if (!rv)
-		unregister_resource(objname);
+		unregister_resource(ctx->objname);
 	return rv;
 }
 
@@ -2537,8 +2537,6 @@ static void show_resource_list(struct resources_list *resources_list, char* old_
 		if (devices && connections)
 			peer_devices = list_peer_devices(resource->name);
 
-		objname = resource->name;
-
 		printI("resource \"%s\" {\n", resource->name);
 		++indent;
 
@@ -2612,8 +2610,6 @@ static void show_resource_list_json(struct resources_list *resources_list, char*
 		if (devices && connections)
 			peer_devices = list_peer_devices(resource->name);
 
-		objname = resource->name;
-
 		printI("{\n");
 		++indent;
 		printI(QUOTED("resource") ": " QUOTED("%s") ",\n", resource->name);
@@ -2677,7 +2673,6 @@ static void show_resource_list_json(struct resources_list *resources_list, char*
 static int show_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	struct resources_list *resources_list;
-	char *old_objname = objname;
 	int c;
 
 	optind = 0;  /* reset getopt_long() */
@@ -2702,15 +2697,14 @@ static int show_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, i
 	if (json_output)
 		show_defaults = true;
 
-	resources_list = sort_resources(list_resources(old_objname));
+	resources_list = sort_resources(list_resources(ctx->objname));
 
 	if (json_output)
-		show_resource_list_json(resources_list, old_objname);
+		show_resource_list_json(resources_list, ctx->objname);
 	else
-		show_resource_list(resources_list, old_objname);
+		show_resource_list(resources_list, ctx->objname);
 
 	free(resources_list);
-	objname = old_objname;
 	return 0;
 }
 
@@ -3553,9 +3547,9 @@ static int status_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx,
 		}
 	}
 
-	resources = sort_resources(list_resources(objname));
+	resources = sort_resources(list_resources(ctx->objname));
 
-	if (resources == NULL && !json && !strcmp(objname, "all"))
+	if (resources == NULL && !json && !strcmp(ctx->objname, "all"))
 		printf("# No currently configured DRBD found.\n");
 
 	sigaction(SIGHUP, &sa, NULL);
@@ -3574,7 +3568,7 @@ static int status_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx,
 		bool single_device;
 		static bool jsonisfirst = true;
 
-		if (strcmp(objname, "all") && strcmp(objname, resource->name))
+		if (strcmp(ctx->objname, "all") && strcmp(ctx->objname, resource->name))
 			continue;
 		if (json)
 			jsonisfirst ? jsonisfirst = false : puts(",");
@@ -3623,8 +3617,8 @@ static int status_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx,
 		puts("]\n");
 
 	free_resources(resources);
-	if (!found && strcmp(objname, "all")) {
-		fprintf(stderr, "%s: No such resource\n", objname);
+	if (!found && strcmp(ctx->objname, "all")) {
+		fprintf(stderr, "%s: No such resource\n", ctx->objname);
 		return 10;
 	}
 	return 0;
@@ -3635,10 +3629,10 @@ static int role_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, i
 	struct resources_list *resources, *resource;
 	int ret = ERR_RES_NOT_KNOWN;
 
-	resources = list_resources(objname);
+	resources = list_resources(ctx->objname);
 
 	for (resource = resources; resource; resource = resource->next) {
-		if (strcmp(objname, resource->name))
+		if (strcmp(ctx->objname, resource->name))
 			continue;
 
 		printf("%s\n", drbd_role_str(resource->info.res_role));
@@ -3649,7 +3643,7 @@ static int role_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, i
 	free_resources(resources);
 
 	if (ret != NO_ERROR) {
-		fprintf(stderr, "%s: %s\n", objname, error_to_string(ret));
+		fprintf(stderr, "%s: %s\n", ctx->objname, error_to_string(ret));
 		return 10;
 	}
 	return 0;
@@ -3660,9 +3654,9 @@ static int peer_role_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *c
 	struct connections_list *connections, *connection;
 	bool found = false;
 
-	connections = list_connections(objname);
+	connections = list_connections(ctx->objname);
 	for (connection = connections; connection; connection = connection->next) {
-		if (connection->ctx.ctx_peer_node_id != global_ctx.ctx_peer_node_id)
+		if (connection->ctx.ctx_peer_node_id != ctx->nl.ctx_peer_node_id)
 			continue;
 
 		printf("%s\n", drbd_role_str(connection->info.conn_role));
@@ -3672,7 +3666,7 @@ static int peer_role_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *c
 	free_connections(connections);
 
 	if (!found) {
-		fprintf(stderr, "%s: No such connection\n", objname);
+		fprintf(stderr, "%s: No such connection\n", ctx->objname);
 		return 10;
 	}
 	return 0;
@@ -3683,9 +3677,9 @@ static int cstate_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx,
 	struct connections_list *connections, *connection;
 	bool found = false;
 
-	connections = list_connections(objname);
+	connections = list_connections(ctx->objname);
 	for (connection = connections; connection; connection = connection->next) {
-		if (connection->ctx.ctx_peer_node_id != global_ctx.ctx_peer_node_id)
+		if (connection->ctx.ctx_peer_node_id != ctx->nl.ctx_peer_node_id)
 			continue;
 
 		printf("%s\n", drbd_conn_str(connection->info.conn_connection_state));
@@ -3695,7 +3689,7 @@ static int cstate_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx,
 	free_connections(connections);
 
 	if (!found) {
-		fprintf(stderr, "%s: No such connection\n", objname);
+		fprintf(stderr, "%s: No such connection\n", ctx->objname);
 		return 10;
 	}
 	return 0;
@@ -3709,7 +3703,7 @@ static int dstate_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx,
 
 	devices = list_devices(NULL);
 	for (device = devices; device; device = device->next) {
-		if (device->minor != minor)
+		if (device->minor != ctx->minor)
 			continue;
 
 		printf("%s", drbd_disk_str(device->info.dev_disk_state));
@@ -3730,7 +3724,7 @@ static int dstate_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx,
 	free_devices(devices);
 
 	if (!found) {
-		fprintf(stderr, "%s: No such device\n", objname);
+		fprintf(stderr, "%s: No such device\n", ctx->objname);
 		return 10;
 	}
 	return 0;
@@ -3743,7 +3737,7 @@ static int udev_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, i
 
 	devices = list_devices(NULL);
 	for (device = devices; device; device = device->next) {
-		if (device->minor != minor)
+		if (device->minor != ctx->minor)
 			continue;
 
 		printf("DEVICE=drbd%u\n", device->minor);
@@ -3759,7 +3753,7 @@ static int udev_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, i
 	free_devices(devices);
 
 	if (!found) {
-		fprintf(stderr, "%s: No such device\n", objname);
+		fprintf(stderr, "%s: No such device\n", ctx->objname);
 		return 10;
 	}
 	return 0;
@@ -4288,13 +4282,13 @@ static int check_resize_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx
 		uint64_t bd_size;
 		int fd;
 
-		if (device->minor != minor)
+		if (device->minor != ctx->minor)
 			continue;
 		found = true;
 
 		if (device->disk_conf.meta_dev_idx >= 0 ||
 		    device->disk_conf.meta_dev_idx == DRBD_MD_INDEX_FLEX_EXT) {
-			lk_bdev_delete(minor);
+			lk_bdev_delete(ctx->minor);
 			break;
 		}
 
@@ -4308,26 +4302,26 @@ static int check_resize_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx
 		bd_size = bdev_size(fd);
 		close(fd);
 
-		if (lk_bdev_load(minor, &bd) == 0 &&
+		if (lk_bdev_load(ctx->minor, &bd) == 0 &&
 		    bd.bd_size == bd_size &&
 		    bd.bd_name && !strcmp(bd.bd_name, device->disk_conf.backing_dev))
 			break;	/* nothing changed. */
 
 		bd.bd_size = bd_size;
 		bd.bd_name = device->disk_conf.backing_dev;
-		lk_bdev_save(minor, &bd);
+		lk_bdev_save(ctx->minor, &bd);
 		break;
 	}
 	free_devices(devices);
 
 	if (!found) {
-		fprintf(stderr, "%s: No such device\n", objname);
+		fprintf(stderr, "%s: No such device\n", ctx->objname);
 		return 10;
 	}
 	return ret;
 }
 
-static bool peer_device_ctx_match(struct drbd_cfg_context *a, struct drbd_cfg_context *b)
+static bool peer_device_ctx_match(const struct drbd_cfg_context *a, const struct drbd_cfg_context *b)
 {
 	return
 		strcmp(a->ctx_resource_name, b->ctx_resource_name) == 0
@@ -4344,16 +4338,16 @@ static int show_or_get_gi_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_c
 
 	peer_devices = list_peer_devices(NULL);
 	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next) {
-		if (!peer_device_ctx_match(&global_ctx, &peer_device->ctx))
+		if (!peer_device_ctx_match(&ctx->nl, &peer_device->ctx))
 			continue;
 
 		devices = list_devices(peer_device->ctx.ctx_resource_name);
 		for (device = devices; device; device = device->next) {
-			if (device->ctx.ctx_volume == global_ctx.ctx_volume)
+			if (device->ctx.ctx_volume == ctx->nl.ctx_volume)
 				goto found;
 		}
 	}
-	fprintf(stderr, "%s: No such peer device\n", objname);
+	fprintf(stderr, "%s: No such peer device\n", ctx->objname);
 	ret = 10;
 
 out:
