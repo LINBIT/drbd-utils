@@ -948,10 +948,21 @@ def get_oos_bitmap(res_json: dict, peer: str, snapshot_path: str) -> tuple:
 
     with tempfile.TemporaryFile() as stderr_file:
         with subprocess.Popen(
-                ['drbdmeta', '0', 'v09', snapshot_path, 'internal', 'dump-md', '--force'],
+                ['drbdmeta', '-', 'v09', snapshot_path, 'internal', 'dump-md', '--force'],
                 stdout=subprocess.PIPE,
                 stderr=stderr_file) as proc:
-            bm_byte_per_bit, bitmap_data = parse_bitmap_for_peer(proc.stdout, peer_node_id)
+            try:
+                bm_byte_per_bit, bitmap_data = parse_bitmap_for_peer(proc.stdout, peer_node_id)
+            except RuntimeError:
+                # A drbdmeta failure (empty/truncated dump) surfaces here as a parse error
+                proc.wait()
+                stderr_file.seek(0)
+                for raw_line in stderr_file:
+                    sys.stderr.buffer.write(raw_line)
+                sys.stderr.flush()
+                if proc.returncode != 0:
+                    raise subprocess.CalledProcessError(proc.returncode, proc.args)
+                raise
             proc.wait()
 
         stderr_file.seek(0)
