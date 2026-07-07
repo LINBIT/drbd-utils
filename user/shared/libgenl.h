@@ -1101,6 +1101,7 @@ enum {
 	E_RCV_NLMSG_DONE,
 	E_RCV_ERROR_REPLY,
 	E_RCV_ENOBUFS,
+	E_RCV_DUMP_INTR,
 };
 /* returns negative E_RCV_*, or length of message */
 extern int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int timeout_ms);

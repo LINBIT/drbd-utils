@@ -76,6 +76,10 @@
 #include "drbdsetup_colors.h"
 #include "drbdsetup_compat84.h"
 
+#ifndef NLM_F_DUMP_INTR
+#define NLM_F_DUMP_INTR 0x10  /* dump was inconsistent due to sequence change */
+#endif
+
 #define EXIT_NOMEM 20
 #define EXIT_NO_FAMILY 20
 #define EXIT_SEND_ERR 20
@@ -1711,6 +1715,13 @@ static int generic_recv(const struct drbd_cmd *cm, int timeout_arg, struct reply
 	int timeout_ms;
 	int rv = NO_ERROR;
 	int err = 0;
+	bool dump_interrupted = false;
+	/* Only a dump that is accumulated before it is printed can be discarded
+	 * and re-run when the kernel flags it as inconsistent. The event stream,
+	 * and the initial state dump that events2 --now runs with
+	 * continuous_poll cleared, print as they receive. */
+	const bool report_dump_intr = !cm->continuous_poll &&
+		cm->cmd_id != DRBD_ADM_GET_INITIAL_STATE;
 
 	/* preallocate reply buffer */
 	iov.iov_len = DEFAULT_MSG_SIZE;
@@ -1776,6 +1787,12 @@ static int generic_recv(const struct drbd_cmd *cm, int timeout_arg, struct reply
 				expect_reply = false;
 				if (cm->continuous_poll)
 					continue;
+				if (nlh->nlmsg_flags & NLM_F_DUMP_INTR)
+					dump_interrupted = true;
+				if (dump_interrupted && report_dump_intr) {
+					err = -E_RCV_DUMP_INTR;
+					goto out;
+				}
 				err = cm->handle_reply(cm, NULL, rctx);
 				if (err)
 					goto out;
@@ -1839,6 +1856,11 @@ static int generic_recv(const struct drbd_cmd *cm, int timeout_arg, struct reply
 			};
 
 			dbg(3, "received type:%x\n", nlh->nlmsg_type);
+			/* The kernel flags a dump that raced a structural change
+			 * (an object linked or unlinked mid-dump) as inconsistent;
+			 * the flag may ride on a data message or on NLMSG_DONE. */
+			if (nlh->nlmsg_flags & NLM_F_DUMP_INTR)
+				dump_interrupted = true;
 			if (nlh->nlmsg_type == NLMSG_DONE) {
 				/* The kernel may append NLMSG_DONE to the same
 				 * datagram as the last dump data messages rather
@@ -1849,6 +1871,10 @@ static int generic_recv(const struct drbd_cmd *cm, int timeout_arg, struct reply
 				expect_reply = false;
 				if (cm->continuous_poll)
 					continue;
+				if (dump_interrupted && report_dump_intr) {
+					err = -E_RCV_DUMP_INTR;
+					goto out;
+				}
 				err = cm->handle_reply(cm, NULL, rctx);
 				if (err)
 					goto out;
@@ -1957,6 +1983,23 @@ out:
 		err = check_error(rv, rctx->cmd_ctx->objname, desc, tla, (struct nlmsghdr *)iov.iov_base);
 	free(iov.iov_base);
 	return err;
+}
+
+/* An object dump that raced a structural change is reported as truncated
+ * (generic_recv() returns -E_RCV_DUMP_INTR). The accumulate-then-print
+ * consumers below discard their partial list and re-run the dump. Bounded so
+ * relentless churn cannot loop forever. */
+#define MAX_DUMP_RETRIES 5
+
+static bool dump_should_retry(int err, int *tries, const char *what)
+{
+	if (err != -E_RCV_DUMP_INTR)
+		return false;
+	if (++*tries > MAX_DUMP_RETRIES) {
+		fprintf(stderr, "%s dump kept changing under us, giving up\n", what);
+		exit(20);
+	}
+	return true;
 }
 
 static int generic_get(const struct drbd_cmd *cm, int timeout_arg, struct reply_ctx *rctx)
@@ -3897,9 +3940,16 @@ static struct resources_list *list_resources(char *resource_name)
 	struct resources_list *list = NULL, **tail = &list;
 	struct drbd_cmd_ctx ctx = { .objname = resource_name ? resource_name : "all" };
 	struct reply_ctx rctx = { .type = RCTX_RESOURCES_TAIL, .cmd_ctx = &ctx, .u.resources_tail = &tail };
-	int err;
+	int err, tries = 0;
 
-	err = generic_get(&cmd, 120000, &rctx);
+	while (1) {
+		err = generic_get(&cmd, 120000, &rctx);
+		if (!dump_should_retry(err, &tries, "resource"))
+			break;
+		free_resources(list);
+		list = NULL;
+		tail = &list;
+	}
 	if (err) {
 		free_resources(list);
 		list = NULL;
@@ -3977,9 +4027,16 @@ static struct devices_list *list_devices(char *resource_name)
 	struct devices_list *list = NULL, **tail = &list;
 	struct drbd_cmd_ctx ctx = { .objname = resource_name ? resource_name : "all" };
 	struct reply_ctx rctx = { .type = RCTX_DEVICES_TAIL, .cmd_ctx = &ctx, .u.devices_tail = &tail };
-	int err;
+	int err, tries = 0;
 
-	err = generic_get(&cmd, 120000, &rctx);
+	while (1) {
+		err = generic_get(&cmd, 120000, &rctx);
+		if (!dump_should_retry(err, &tries, "device"))
+			break;
+		free_devices(list);
+		list = NULL;
+		tail = &list;
+	}
 	if (err) {
 		free_devices(list);
 		list = NULL;
@@ -4091,9 +4148,16 @@ static struct connections_list *list_connections(char *resource_name)
 	struct connections_list *list = NULL, **tail = &list;
 	struct drbd_cmd_ctx ctx = { .objname = resource_name ? resource_name : "all" };
 	struct reply_ctx rctx = { .type = RCTX_CONNECTIONS_TAIL, .cmd_ctx = &ctx, .u.connections_tail = &tail };
-	int err;
+	int err, tries = 0;
 
-	err = generic_get(&cmd, 120000, &rctx);
+	while (1) {
+		err = generic_get(&cmd, 120000, &rctx);
+		if (!dump_should_retry(err, &tries, "connection"))
+			break;
+		free_connections(list);
+		list = NULL;
+		tail = &list;
+	}
 	if (err) {
 		free_connections(list);
 		list = NULL;
@@ -4173,9 +4237,16 @@ static struct peer_devices_list *list_peer_devices(char *resource_name)
 	struct peer_devices_list *list = NULL, **tail = &list;
 	struct drbd_cmd_ctx ctx = { .objname = resource_name ? resource_name : "all" };
 	struct reply_ctx rctx = { .type = RCTX_PEER_DEVICES_TAIL, .cmd_ctx = &ctx, .u.peer_devices_tail = &tail };
-	int err;
+	int err, tries = 0;
 
-	err = generic_get(&cmd, 120000, &rctx);
+	while (1) {
+		err = generic_get(&cmd, 120000, &rctx);
+		if (!dump_should_retry(err, &tries, "peer device"))
+			break;
+		free_peer_devices(list);
+		list = NULL;
+		tail = &list;
+	}
 	if (err) {
 		free_peer_devices(list);
 		list = NULL;
@@ -4243,9 +4314,16 @@ static struct paths_list *list_paths(char *resource_name)
 	struct paths_list *list = NULL, **tail = &list;
 	struct drbd_cmd_ctx ctx = { .objname = resource_name ? resource_name : "all" };
 	struct reply_ctx rctx = { .type = RCTX_PATHS_TAIL, .cmd_ctx = &ctx, .u.paths_tail = &tail };
-	int err;
+	int err, tries = 0;
 
-	err = generic_get(&cmd, 120000, &rctx);
+	while (1) {
+		err = generic_get(&cmd, 120000, &rctx);
+		if (!dump_should_retry(err, &tries, "path"))
+			break;
+		free_paths(list);
+		list = NULL;
+		tail = &list;
+	}
 	if (err) {
 		free_paths(list);
 		list = NULL;
