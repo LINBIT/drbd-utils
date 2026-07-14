@@ -1186,6 +1186,7 @@ def compare_peer_peer_entropy(res_name: str, connection_hosts: frozenset,
         log(f' WARNING: no block_size for connection {peer_name1}-{peer_name2}; '
             f'assuming 4096 bytes')
         conn['block_size'] = 4096
+        conn['block_size_assumed'] = True
     bm_byte_per_bit = conn['block_size']
     bm_kbyte_per_bit = bm_byte_per_bit // 1024
     log(f'\r {peer_name1} has higher entropy for {peer1_higher*bm_kbyte_per_bit} KiB\x1b[K')
@@ -2369,6 +2370,161 @@ def frozenset_to_json_key(result_json: dict) -> dict:
     return json_result
 
 
+def _initial_oos_kib(initial_status: Optional[list], res_name: str,
+                     nodes: list, invoked_on: str) -> Optional[int]:
+    """Out-of-sync KiB for this connection as reported by the pre-verify
+    drbdsetup status. Only available for connections that involve the
+    invoking host (its status has no peer-to-peer connections)."""
+    if not initial_status or invoked_on not in nodes:
+        return None
+    peer = next(n for n in nodes if n != invoked_on)
+    for r in initial_status:
+        if r.get('name') != res_name:
+            continue
+        for c in r.get('connections', []):
+            if c.get('name') == peer:
+                pds = c.get('peer_devices', [])
+                if pds:
+                    return pds[0].get('out-of-sync')
+    return None
+
+
+def _connection_v2(nodes: list, v: dict, initial_oos: Optional[int]) -> dict:
+    conn = {'nodes': nodes, 'out_of_sync_kib': v.get('value_KiB', 0)}
+    if initial_oos is not None:
+        conn['out_of_sync_kib_initial'] = initial_oos
+        conn['oos_changed_by_verify'] = initial_oos != conn['out_of_sync_kib']
+    if 'block_size' in v:
+        conn['block_size_bytes'] = v['block_size']
+    if v.get('block_size_assumed'):
+        conn['block_size_assumed'] = True
+    higher = {n: v[f'{n} higher'] for n in nodes if f'{n} higher' in v}
+    if higher:
+        conn['entropy_higher_blocks'] = higher
+    if any(k in v for k in ('oos_free_kib', 'oos_nonfree_kib', 'oos_unknown_kib')):
+        conn['oos_kib_by_class'] = {'free': v.get('oos_free_kib', 0),
+                                    'nonfree': v.get('oos_nonfree_kib', 0),
+                                    'unknown': v.get('oos_unknown_kib', 0)}
+    if 'files_affected' in v:
+        files = {'affected': v['files_affected'],
+                 'conclusive': v.get('files_affected_conclusive', False)}
+        if 'affected_files' in v:
+            files['paths'] = v['affected_files']
+        if 'affected_inodes' in v:
+            files['inodes'] = v['affected_inodes']
+        conn['files'] = files
+    if 'fsck' in v:
+        conn['fsck'] = [{'node': n, 'errors': d.get('errors', 0),
+                         'warnings': d.get('warnings', 0)}
+                        for n, d in sorted(v['fsck'].items())]
+    if 'partitions' in v:
+        parts = []
+        for pn, pv in sorted(v['partitions'].items()):
+            p = {'name': pn, 'fstype': pv.get('fstype'),
+                 'oos_kib': pv.get('oos_kib'), 'method': pv.get('method')}
+            if 'oos_free_kib' in pv:
+                p['oos_kib_by_class'] = {'free': pv['oos_free_kib'],
+                                         'nonfree': pv['oos_nonfree_kib'],
+                                         'unknown': pv['oos_unknown_kib']}
+            parts.append(p)
+        conn['partitions'] = parts
+    return conn
+
+
+def _suggestion_v2(s: dict) -> dict:
+    # Derive the node pair from source/target (the 'connection' string uses
+    # '-' as separator, which is ambiguous since node names contain '-').
+    out = {'nodes': sorted([s['source'], s['target']]),
+           'source': s['source'], 'target': s['target'],
+           'commands': s.get('commands', [])}
+    for k in ('files_affected', 'files_affected_conclusive', 'file_analysis_skipped'):
+        if k in s:
+            out[k] = s[k]
+    return out
+
+
+def _resource_v2(name: str, res_data: dict, initial_status: Optional[list],
+                 invoked_on: str) -> dict:
+    oos = res_data.get('oos', {})
+    connections = []
+    for key, v in oos.items():
+        nodes = sorted(key)
+        connections.append(_connection_v2(
+            nodes, v, _initial_oos_kib(initial_status, name, nodes, invoked_on)))
+    connections.sort(key=lambda c: c['nodes'])
+
+    datasets = res_data.get('datasets')
+    total = sum(c['out_of_sync_kib'] for c in connections)
+    max_pair = max((c['out_of_sync_kib'] for c in connections), default=0)
+    if res_data.get('dataset_error'):
+        status = 'transitivity_error'
+    elif datasets and len(datasets) > 1:
+        status = 'diverged'
+    elif total > 0:
+        status = 'out_of_sync'
+    else:
+        status = 'in_sync'
+
+    files_affected = any(c.get('files', {}).get('affected') for c in connections)
+    fsck_errors = any(f.get('errors') for c in connections for f in c.get('fsck', []))
+    res = {
+        'name': name,
+        'status': status,
+        'summary': {
+            'total_oos_kib': total,
+            'max_pair_oos_kib': max_pair,
+            'dataset_count': len(datasets) if datasets is not None else None,
+            'connection_count': len(connections),
+            'files_affected': files_affected,
+            'fsck_errors': bool(fsck_errors),
+        },
+        'snapshot_used': any(v.get('snapshot') for v in oos.values()),
+        'datasets': datasets,
+        'connections': connections,
+        'resync_suggestions': [_suggestion_v2(s)
+                               for s in res_data.get('resync_suggestions', [])],
+        'warnings': res_data.get('warnings', []),
+    }
+    if res_data.get('dataset_error'):
+        res['dataset_error'] = res_data['dataset_error']
+    return res
+
+
+def build_result_v2(result_json: dict, *, invoked_on: str,
+                    started_at: str, generated_at: Optional[str],
+                    initial_status: Optional[list], final_status: Optional[list],
+                    skipped: list) -> dict:
+    """Build the schema-2 result: an array of resource objects (each with an
+    embedded name, status and summary) plus run provenance and the initial
+    and final drbdsetup status snapshots."""
+    resources = [_resource_v2(name, rd, initial_status, invoked_on)
+                 for name, rd in result_json.items()]
+    for sk in skipped:
+        resources.append({'name': sk['name'], 'status': sk['status'],
+                          'skipped_reason': sk['reason'], 'connections': [],
+                          'resync_suggestions': [], 'warnings': []})
+    resources.sort(key=lambda r: r['name'])
+
+    by_status = Counter(r['status'] for r in resources)
+    return {
+        'schema_version': 2,
+        'started_at': started_at,
+        'generated_at': generated_at,
+        'invoked_on': invoked_on,
+        'summary': {
+            'resources': len(resources),
+            'by_status': dict(sorted(by_status.items())),
+            'total_oos_kib': sum(r.get('summary', {}).get('total_oos_kib', 0)
+                                 for r in resources),
+        },
+        'drbdsetup_status': {
+            'initial': {'captured_at': started_at, 'status': initial_status},
+            'final': {'captured_at': generated_at, 'status': final_status},
+        },
+        'resources': resources,
+    }
+
+
 def main() -> int:
     global output_json, forward_map_limit, forward_map_inode_limit, map_file_names
     global skip_file_analysis
@@ -2465,6 +2621,8 @@ def main() -> int:
 
     with subprocess.Popen(['drbdsetup', 'status', '--json'], stdout=subprocess.PIPE) as p:
         drbd_status_json = json.load(p.stdout)
+    initial_status = drbd_status_json
+    started_at = datetime.datetime.now().isoformat(timespec='seconds')
 
     if args.res_names:
         work = [res for res in drbd_status_json if res['name'] in args.res_names]
@@ -2520,6 +2678,14 @@ def main() -> int:
         return 0
 
     result_file_name = datetime.datetime.now().strftime('drbd-verify-result_%Y-%m-%d_%H%M.json')
+    skipped_resources = []
+
+    def render(final_status, generated_at):
+        return build_result_v2(result_json, invoked_on=host_name,
+                               started_at=started_at, generated_at=generated_at,
+                               initial_status=initial_status, final_status=final_status,
+                               skipped=skipped_resources)
+
     for res_json in work:
         res_name = res_json['name']
 
@@ -2527,18 +2693,40 @@ def main() -> int:
         ready, reason = is_resource_ready(res_json)
         if not ready:
             log(f'Skipping {res_name}: {reason}')
+            skipped_resources.append({'name': res_name, 'status': 'skipped',
+                                      'reason': reason})
+            continue
+        if res_json['devices'][0]['disk-state'] == 'Diskless':
+            log(f'Ignoring {res_name}, because it is Diskless')
+            skipped_resources.append({'name': res_name, 'status': 'diskless',
+                                      'reason': 'local disk-state Diskless'})
             continue
 
         res_json = process_res(res_json, args.peers, args.level2, args.skip_verify)
         if res_json['oos'] or args.level2:
             result_json[res_name] = res_json
         if not args.level2:
+            # Incremental (crash-safe) write; final status not yet known.
             with open(result_file_name + '.tmp', 'w') as f:
-                f.write(json.dumps(frozenset_to_json_key(result_json), sort_keys=True, indent=4))
+                f.write(json.dumps(render(None, None), indent=4))
             os.rename(result_file_name + '.tmp', result_file_name)
 
+    if args.level2:
+        # Internal wire format consumed by the parent's json_key_to_frozenset.
+        print(json.dumps(frozenset_to_json_key(result_json), sort_keys=True, indent=4))
+        return 0
+
+    # A second drbdsetup status: captures state drift over the (possibly
+    # long) run, and lets a consumer see whether this verify changed the
+    # out-of-sync counts (e.g. stale bitmap bits cleared).
+    with subprocess.Popen(['drbdsetup', 'status', '--json'], stdout=subprocess.PIPE) as p:
+        final_status = json.load(p.stdout)
+    out = render(final_status, datetime.datetime.now().isoformat(timespec='seconds'))
+    with open(result_file_name + '.tmp', 'w') as f:
+        f.write(json.dumps(out, indent=4))
+    os.rename(result_file_name + '.tmp', result_file_name)
     log(f'all results as JSON (also in file {result_file_name}):')
-    print(json.dumps(frozenset_to_json_key(result_json), sort_keys=True, indent=4))
+    print(json.dumps(out, indent=4))
 
     # Execute resync commands if --do-it was specified
     if args.do_it:
