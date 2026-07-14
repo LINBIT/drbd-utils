@@ -2407,6 +2407,16 @@ def frozenset_to_json_key(result_json: dict) -> dict:
     return json_result
 
 
+def _short_node(name: str) -> str:
+    """Canonical (short) node name for the v2 output: the leading label.
+
+    os.uname() may be short while drbdsetup names connections by FQDN, so
+    the raw names in a run can be mixed; normalising every identifier to the
+    short form gives a consumer one spelling per node. Executable resync
+    commands keep the drbdsetup-native name (they are left verbatim)."""
+    return name.split('.', 1)[0]
+
+
 def _initial_oos_kib(initial_status: Optional[list], res_name: str,
                      nodes: list, invoked_on: str) -> Optional[int]:
     """Out-of-sync KiB for this connection as reported by the pre-verify
@@ -2427,7 +2437,8 @@ def _initial_oos_kib(initial_status: Optional[list], res_name: str,
 
 
 def _connection_v2(nodes: list, v: dict, initial_oos: Optional[int]) -> dict:
-    conn = {'nodes': nodes, 'out_of_sync_kib': v.get('value_KiB', 0)}
+    conn = {'nodes': sorted(_short_node(n) for n in nodes),
+            'out_of_sync_kib': v.get('value_KiB', 0)}
     if initial_oos is not None:
         conn['out_of_sync_kib_initial'] = initial_oos
         conn['oos_changed_by_verify'] = initial_oos != conn['out_of_sync_kib']
@@ -2435,7 +2446,7 @@ def _connection_v2(nodes: list, v: dict, initial_oos: Optional[int]) -> dict:
         conn['block_size_bytes'] = v['block_size']
     if v.get('block_size_assumed'):
         conn['block_size_assumed'] = True
-    higher = {n: v[f'{n} higher'] for n in nodes if f'{n} higher' in v}
+    higher = {_short_node(n): v[f'{n} higher'] for n in nodes if f'{n} higher' in v}
     if higher:
         conn['entropy_higher_blocks'] = higher
     if any(k in v for k in ('oos_free_kib', 'oos_nonfree_kib', 'oos_unknown_kib')):
@@ -2453,7 +2464,7 @@ def _connection_v2(nodes: list, v: dict, initial_oos: Optional[int]) -> dict:
     detail = v.get('_fsck_detail')
     if detail:
         conn['fsck'] = [
-            {'node': node,
+            {'node': _short_node(node),
              'errors': sum(p.get('errors', 0) for p in parts.values()),
              'warnings': sum(p.get('warnings', 0) for p in parts.values()),
              'partitions': [{'name': pn, 'fstype': pv.get('fstype'),
@@ -2462,7 +2473,7 @@ def _connection_v2(nodes: list, v: dict, initial_oos: Optional[int]) -> dict:
                             for pn, pv in sorted(parts.items())]}
             for node, parts in sorted(detail.items())]
     elif 'fsck' in v:
-        conn['fsck'] = [{'node': n, 'errors': d.get('errors', 0),
+        conn['fsck'] = [{'node': _short_node(n), 'errors': d.get('errors', 0),
                          'warnings': d.get('warnings', 0)}
                         for n, d in sorted(v['fsck'].items())]
     if 'partitions' in v:
@@ -2501,10 +2512,11 @@ def _node_role(status: Optional[list], res_name: str, node: str,
 
 def _suggestion_v2(s: dict, role_status: Optional[list], res_name: str,
                    invoked_on: str) -> dict:
-    # Derive the node pair from source/target (the 'connection' string uses
-    # '-' as separator, which is ambiguous since node names contain '-').
-    out = {'nodes': sorted([s['source'], s['target']]),
-           'source': s['source'], 'target': s['target'],
+    # Node identifiers are normalised to the short form; commands keep the
+    # drbdsetup-native name (source/target derive the pair -- the 'connection'
+    # string uses '-', ambiguous since node names contain '-').
+    src, tgt = _short_node(s['source']), _short_node(s['target'])
+    out = {'nodes': sorted([src, tgt]), 'source': src, 'target': tgt,
            'commands': s.get('commands', [])}
     for k in ('files_affected', 'files_affected_conclusive', 'file_analysis_skipped'):
         if k in s:
@@ -2520,7 +2532,7 @@ def _suggestion_v2(s: dict, role_status: Optional[list], res_name: str,
     if role == 'Primary':
         out['role_conflict'] = True
         out['warning'] = (
-            f"target {s['target']} is currently Primary"
+            f"target {tgt} is currently Primary"
             f"{f' ({disk})' if disk else ''}; resyncing onto it discards data "
             f"in use and can violate cache coherency for current users of the "
             f"device -- take it out of service (Secondary, stop users) first")
@@ -2538,6 +2550,8 @@ def _resource_v2(name: str, res_data: dict, initial_status: Optional[list],
     connections.sort(key=lambda c: c['nodes'])
 
     datasets = res_data.get('datasets')
+    if datasets is not None:
+        datasets = [sorted({_short_node(n) for n in ds}) for ds in datasets]
     total = sum(c['out_of_sync_kib'] for c in connections)
     max_pair = max((c['out_of_sync_kib'] for c in connections), default=0)
     if res_data.get('dataset_error'):
