@@ -735,6 +735,17 @@ def log(*args, **kwargs):
         print(*args, **kwargs)
 
 
+# Warnings accumulated for the current resource. main() snapshots this into
+# the resource result and clears it around each process_res call.
+_warnings: list = []
+
+
+def warn(msg: str) -> None:
+    """Log a warning and record it for the JSON result."""
+    log(f' WARNING: {msg}')
+    _warnings.append(msg.strip())
+
+
 def log_peer_result(peer_result: dict):
     for key in peer_result:
         key_str = '-'.join(sorted(key))
@@ -1183,8 +1194,8 @@ def compare_peer_peer_entropy(res_name: str, connection_hosts: frozenset,
     # KeyError, and record it so downstream consumers stay consistent.
     conn = result_json['oos'][connection_hosts]
     if 'block_size' not in conn:
-        log(f' WARNING: no block_size for connection {peer_name1}-{peer_name2}; '
-            f'assuming 4096 bytes')
+        warn(f'no block_size for connection {peer_name1}-{peer_name2}; '
+             f'assuming 4096 bytes')
         conn['block_size'] = 4096
         conn['block_size_assumed'] = True
     bm_byte_per_bit = conn['block_size']
@@ -1415,7 +1426,7 @@ def get_fsmap_for_range(fd: int, start_block: int, end_block: int) -> Optional[l
                 return None  # ioctl not supported
             # A continuation call failed unexpectedly; return what we have
             # rather than losing the records already gathered.
-            log(' WARNING: GETFSMAP continuation failed; results may be truncated')
+            warn('GETFSMAP continuation failed; results may be truncated')
             break
         first = False
 
@@ -1434,7 +1445,7 @@ def get_fsmap_for_range(fd: int, start_block: int, end_block: int) -> Optional[l
                     last['offset'], last['flags'])
         if next_low == low_key:
             # No forward progress (would otherwise loop forever).
-            log(' WARNING: GETFSMAP did not advance; results may be truncated')
+            warn('GETFSMAP did not advance; results may be truncated')
             break
         low_key = next_low
 
@@ -2153,8 +2164,9 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                             # Report unpartitioned OOS blocks
                             if 'unpartitioned' in oos_by_partition:
                                 unpart = oos_by_partition['unpartitioned']
-                                log(f' WARNING: {unpart["oos_kib"]} KiB of OOS data is outside any partition')
-                                log('   (GPT/MBR header, gaps between partitions, or space after last partition)')
+                                warn(f'{unpart["oos_kib"]} KiB of OOS data is outside any '
+                                     f'partition (GPT/MBR header, gaps between partitions, '
+                                     f'or space after the last partition)')
 
                             # Store fsck results for this connection
                             local_errors = sum(r['errors'] for r in local_fsck_results.values())
@@ -2170,6 +2182,12 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                             result_json['oos'][connection_hosts]['fsck'] = {
                                 host_name: {'errors': local_errors, 'warnings': local_warnings},
                                 peer_name: {'errors': peer_errors, 'warnings': peer_warnings}
+                            }
+                            # Per-partition detail for the v2 result (node
+                            # partition names differ, so keep them per node).
+                            oos_dict['_fsck_detail'] = {
+                                host_name: local_fsck_results,
+                                peer_name: peer_fsck,
                             }
 
                     else:
@@ -2413,7 +2431,18 @@ def _connection_v2(nodes: list, v: dict, initial_oos: Optional[int]) -> dict:
         if 'affected_inodes' in v:
             files['inodes'] = v['affected_inodes']
         conn['files'] = files
-    if 'fsck' in v:
+    detail = v.get('_fsck_detail')
+    if detail:
+        conn['fsck'] = [
+            {'node': node,
+             'errors': sum(p.get('errors', 0) for p in parts.values()),
+             'warnings': sum(p.get('warnings', 0) for p in parts.values()),
+             'partitions': [{'name': pn, 'fstype': pv.get('fstype'),
+                             'errors': pv.get('errors', 0),
+                             'warnings': pv.get('warnings', 0)}
+                            for pn, pv in sorted(parts.items())]}
+            for node, parts in sorted(detail.items())]
+    elif 'fsck' in v:
         conn['fsck'] = [{'node': n, 'errors': d.get('errors', 0),
                          'warnings': d.get('warnings', 0)}
                         for n, d in sorted(v['fsck'].items())]
@@ -2431,7 +2460,28 @@ def _connection_v2(nodes: list, v: dict, initial_oos: Optional[int]) -> dict:
     return conn
 
 
-def _suggestion_v2(s: dict) -> dict:
+def _node_role(status: Optional[list], res_name: str, node: str,
+               invoked_on: str) -> tuple:
+    """(role, disk_state) for node in res_name from the invoking host's
+    drbdsetup status (own fields if node is the invoker, else the peer
+    fields of the connection to it). (None, None) if not determinable."""
+    if not status:
+        return (None, None)
+    for r in status:
+        if r.get('name') != res_name:
+            continue
+        if node == invoked_on:
+            dev = (r.get('devices') or [{}])[0]
+            return (r.get('role'), dev.get('disk-state'))
+        for c in r.get('connections', []):
+            if c.get('name') == node:
+                pd = (c.get('peer_devices') or [{}])[0]
+                return (c.get('peer-role'), pd.get('peer-disk-state'))
+    return (None, None)
+
+
+def _suggestion_v2(s: dict, role_status: Optional[list], res_name: str,
+                   invoked_on: str) -> dict:
     # Derive the node pair from source/target (the 'connection' string uses
     # '-' as separator, which is ambiguous since node names contain '-').
     out = {'nodes': sorted([s['source'], s['target']]),
@@ -2440,11 +2490,26 @@ def _suggestion_v2(s: dict) -> dict:
     for k in ('files_affected', 'files_affected_conclusive', 'file_analysis_skipped'):
         if k in s:
             out[k] = s[k]
+    # The target is the node whose data gets discarded (made SyncTarget).
+    # If it is currently Primary, overwriting it can violate cache coherency
+    # for applications holding the device open -- flag that prominently.
+    role, disk = _node_role(role_status, res_name, s['target'], invoked_on)
+    if role is not None:
+        out['target_role'] = role
+    if disk is not None:
+        out['target_disk_state'] = disk
+    if role == 'Primary':
+        out['role_conflict'] = True
+        out['warning'] = (
+            f"target {s['target']} is currently Primary"
+            f"{f' ({disk})' if disk else ''}; resyncing onto it discards data "
+            f"in use and can violate cache coherency for current users of the "
+            f"device -- take it out of service (Secondary, stop users) first")
     return out
 
 
 def _resource_v2(name: str, res_data: dict, initial_status: Optional[list],
-                 invoked_on: str) -> dict:
+                 role_status: Optional[list], invoked_on: str) -> dict:
     oos = res_data.get('oos', {})
     connections = []
     for key, v in oos.items():
@@ -2481,7 +2546,7 @@ def _resource_v2(name: str, res_data: dict, initial_status: Optional[list],
         'snapshot_used': any(v.get('snapshot') for v in oos.values()),
         'datasets': datasets,
         'connections': connections,
-        'resync_suggestions': [_suggestion_v2(s)
+        'resync_suggestions': [_suggestion_v2(s, role_status, name, invoked_on)
                                for s in res_data.get('resync_suggestions', [])],
         'warnings': res_data.get('warnings', []),
     }
@@ -2497,7 +2562,8 @@ def build_result_v2(result_json: dict, *, invoked_on: str,
     """Build the schema-2 result: an array of resource objects (each with an
     embedded name, status and summary) plus run provenance and the initial
     and final drbdsetup status snapshots."""
-    resources = [_resource_v2(name, rd, initial_status, invoked_on)
+    role_status = final_status or initial_status
+    resources = [_resource_v2(name, rd, initial_status, role_status, invoked_on)
                  for name, rd in result_json.items()]
     for sk in skipped:
         resources.append({'name': sk['name'], 'status': sk['status'],
@@ -2702,7 +2768,9 @@ def main() -> int:
                                       'reason': 'local disk-state Diskless'})
             continue
 
+        _warnings.clear()
         res_json = process_res(res_json, args.peers, args.level2, args.skip_verify)
+        res_json['warnings'] = list(_warnings)
         if res_json['oos'] or args.level2:
             result_json[res_name] = res_json
         if not args.level2:
