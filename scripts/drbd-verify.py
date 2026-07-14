@@ -746,6 +746,24 @@ def warn(msg: str) -> None:
     _warnings.append(msg.strip())
 
 
+def node_names_match(a: str, b: str) -> bool:
+    """Whether two DRBD node names refer to the same node.
+
+    Exact match wins. Only when one name is a bare short name (no dot) and
+    the other is an FQDN (has a dot) do we fall back to comparing the
+    leading label -- this reconciles a short os.uname() name with an FQDN
+    drbdsetup connection name. Two distinct FQDNs, or two distinct short
+    names, are never treated as equal.
+    """
+    if a == b:
+        return True
+    a_short = '.' not in a
+    b_short = '.' not in b
+    if a_short != b_short:
+        return a.split('.', 1)[0] == b.split('.', 1)[0]
+    return False
+
+
 def log_peer_result(peer_result: dict):
     for key in peer_result:
         key_str = '-'.join(sorted(key))
@@ -993,7 +1011,8 @@ def get_oos_bitmap(res_json: dict, peer: str, snapshot_path: str) -> tuple:
     Returns:
         Tuple of (bm_byte_per_bit, bitmap_data)
     """
-    [peer_node_id] = [conn['peer-node-id'] for conn in res_json['connections'] if conn['name'] == peer]
+    [peer_node_id] = [conn['peer-node-id'] for conn in res_json['connections']
+                      if node_names_match(conn['name'], peer)]
 
     with tempfile.TemporaryFile() as stderr_file:
         with subprocess.Popen(
@@ -1037,7 +1056,7 @@ def verify_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) -
         log(f'Running verify operations for {res_name}, from this host first, then between the remotes')
         for peer_json in res_json['connections']:
             peer_name = peer_json['name']
-            if peers and peer_name not in peers:
+            if peers and not any(node_names_match(peer_name, p) for p in peers):
                 continue
             peer_disk_state = peer_json['peer_devices'][0]['peer-disk-state']
             if peer_disk_state not in ['Diskless', 'DUnknown']:
@@ -2400,7 +2419,7 @@ def _initial_oos_kib(initial_status: Optional[list], res_name: str,
         if r.get('name') != res_name:
             continue
         for c in r.get('connections', []):
-            if c.get('name') == peer:
+            if node_names_match(c.get('name', ''), peer):
                 pds = c.get('peer_devices', [])
                 if pds:
                     return pds[0].get('out-of-sync')
@@ -2470,11 +2489,11 @@ def _node_role(status: Optional[list], res_name: str, node: str,
     for r in status:
         if r.get('name') != res_name:
             continue
-        if node == invoked_on:
+        if node_names_match(node, invoked_on):
             dev = (r.get('devices') or [{}])[0]
             return (r.get('role'), dev.get('disk-state'))
         for c in r.get('connections', []):
-            if c.get('name') == node:
+            if node_names_match(c.get('name', ''), node):
                 pd = (c.get('peer_devices') or [{}])[0]
                 return (c.get('peer-role'), pd.get('peer-disk-state'))
     return (None, None)
