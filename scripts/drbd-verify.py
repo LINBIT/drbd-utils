@@ -1221,6 +1221,13 @@ FMR_OF_SPECIAL_OWNER = 0x10  # owner is FMR_OWN_FREE/FS/AG/... (1..10), not an i
 # key advanced to the last record returned.
 FMR_OF_LAST = 0x20
 
+# Pseudo-owner values (uapi/linux/fsmap.h): FMR_OWNER(type, code) =
+# ((__u64)type << 32) | code. FMR_OWN_FREE is generic and uses type 0, so
+# its value is just 1 (the XFS metadata owners use type 'X', 0x58...).
+# Free space is owned by no inode -- the one special owner that lets us
+# conclude "no file here" with certainty.
+FMR_OWN_FREE = (0 << 32) | 1     # FMR_OWNER(0, 1)
+
 
 def pack_fsmap_head(keys_start: tuple, keys_end: tuple, count: int) -> bytes:
     """Pack fsmap_head structure for ioctl call.
@@ -1327,9 +1334,16 @@ def get_fsmap_for_range(fd: int, start_block: int, end_block: int) -> Optional[l
         record with FMR_OF_LAST.
     """
     max_entries = 1024
+    # Bound the query to the filesystem's own device. GETFSMAP orders
+    # records by (device, physical); a key span of device 0..0xffffffff
+    # leaves the physical range unenforced for the real device (whose id
+    # sits strictly inside that span), so every query returns the whole
+    # device. Pin both keys to fstat().st_dev so the physical range
+    # actually applies.
+    dev = os.fstat(fd).st_dev
     # keys: (device, block, owner, offset, flags)
-    low_key = (0, start_block, 0, 0, 0)
-    keys_end = (0xffffffff, end_block, 0xffffffffffffffff, 0xffffffffffffffff, 0xffffffff)
+    low_key = (dev, start_block, 0, 0, 0)
+    keys_end = (dev, end_block, 0xffffffffffffffff, 0xffffffffffffffff, 0xffffffff)
 
     buffer_size = FSMAP_HEAD_SIZE + 2 * FSMAP_SIZE + max_entries * FSMAP_SIZE
     buffer = bytearray(buffer_size)
@@ -1528,7 +1542,9 @@ def find_affected_files_reverse(mountpoint: str, oos_blocks: list,
         bm_byte_per_bit: Bytes per bitmap bit
 
     Returns:
-        Set of affected file paths, or None if reverse mapping not supported
+        Set of affected file paths (empty when every OOS block maps to
+        free space), or None if reverse mapping is unusable and the
+        caller should fall back to forward mapping.
     """
     try:
         fd = os.open(mountpoint, os.O_RDONLY | os.O_DIRECTORY)
@@ -1539,6 +1555,7 @@ def find_affected_files_reverse(mountpoint: str, oos_blocks: list,
     ioctl_supported = None  # Track if ioctl works
     total_records = 0
     special_records = 0
+    free_records = 0
     try:
         for bit_number in oos_blocks:
             # GETFSMAP physical offsets are relative to the partition's
@@ -1562,6 +1579,8 @@ def find_affected_files_reverse(mountpoint: str, oos_blocks: list,
                     # owner is one of the FMR_OWN_* constants (free
                     # space, AG metadata, log, ...), not an inode
                     special_records += 1
+                    if record['owner'] == FMR_OWN_FREE:
+                        free_records += 1
                     continue
                 if record['owner'] > 0:
                     affected_inodes.add(record['owner'])
@@ -1572,12 +1591,21 @@ def find_affected_files_reverse(mountpoint: str, oos_blocks: list,
         # No blocks to check
         return set()
 
+    # Every returned record was a free-space extent (FMR_OWN_FREE) and
+    # none resolved to an inode: free space is owned by no file, so no
+    # file can be affected. Report an empty set with confidence instead
+    # of falling back to a filesystem walk.
+    if (total_records > 0 and not affected_inodes
+            and special_records == free_records):
+        return set()
+
     # If the kernel returned records for every query but every single
-    # one was a special-owner record, the filesystem cannot map back
-    # from physical extents to inodes (XFS without rmapbt=1, ext4
-    # without metadata_csum_seed/...). Treat this as "reverse not
-    # usable" so the caller falls back to forward mapping rather than
-    # silently reporting "no files affected".
+    # one was a special-owner record (and not all free space), the
+    # filesystem cannot map back from physical extents to inodes here
+    # (XFS without rmapbt=1 reports used space as FMR_OWN_UNKNOWN, ext4
+    # without metadata_csum_seed/...). Treat this as "reverse not usable"
+    # so the caller falls back to forward mapping rather than silently
+    # reporting "no files affected".
     if total_records > 0 and total_records == special_records:
         return None
 
@@ -2019,14 +2047,31 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
 
                     files_affected = False
                     all_affected_files = set()
+                    # A "no files affected" verdict is authoritative only
+                    # when every OOS-carrying partition was resolved by an
+                    # ownership-aware method (reverse/forward). Record each
+                    # partition's method and track this so a false in the
+                    # JSON is self-describing rather than ambiguous.
+                    pub_partitions = oos_dict.get('partitions', {})
+                    analysis_conclusive = True
 
                     for part_name, part_info in partitions.items():
                         if part_name == 'unpartitioned':
+                            # OOS outside any partition (GPT/MBR header,
+                            # gaps). Not inspected as a filesystem and could
+                            # hide an undetected one, so it does not make a
+                            # "no files" verdict authoritative.
+                            if part_name in pub_partitions:
+                                pub_partitions[part_name]['method'] = 'unpartitioned'
+                            analysis_conclusive = False
                             continue
 
                         fstype = part_info.get('fstype')
                         if not fstype:
                             log(f' Partition {part_name}: no filesystem detected')
+                            if part_name in pub_partitions:
+                                pub_partitions[part_name]['method'] = 'no_filesystem'
+                            analysis_conclusive = False
                             continue
 
                         oos_blocks = part_info.get('blocks', [])
@@ -2049,6 +2094,13 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                         method = analysis.get('method', 'unknown')
                         affected = analysis.get('affected_files')
 
+                        if part_name in pub_partitions:
+                            pub_partitions[part_name]['method'] = method
+                        if method not in ('reverse', 'forward'):
+                            # entropy_only, mount_failed, unknown: file
+                            # ownership was not actually determined.
+                            analysis_conclusive = False
+
                         if affected is not None:
                             if affected:
                                 files_affected = True
@@ -2067,6 +2119,12 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                     # if we had a snapshot to mount and inspect)
                     if snapshot.snapshot_taken:
                         oos_dict['files_affected'] = files_affected
+                        # files_affected == False is authoritative only when
+                        # the analysis was conclusive; otherwise it means
+                        # "could not determine". files_affected == True is
+                        # always authoritative (the files were found).
+                        oos_dict['files_affected_conclusive'] = (
+                            files_affected or analysis_conclusive)
                         if all_affected_files:
                             oos_dict['affected_files'] = sorted(list(all_affected_files))
 
@@ -2084,6 +2142,8 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                     }
                     if snapshot.snapshot_taken:
                         suggestion['files_affected'] = files_affected
+                        suggestion['files_affected_conclusive'] = (
+                            files_affected or analysis_conclusive)
                     result_json['resync_suggestions'].append(suggestion)
 
                     log(f'\nResync suggestion for {host_name}-{peer_name}:')
