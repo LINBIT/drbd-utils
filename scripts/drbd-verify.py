@@ -29,6 +29,33 @@ this_prog_name = os.path.basename(this_prog_path)
 
 REMOTE_SCRIPT_DIR = '/run/drbd-verify'
 
+# Ceilings for the forward-mapping file-analysis fallback. Its cost
+# scales with the number of files (inodes) walked, not raw capacity, so
+# the used-inode count is the primary gate (cheap via statvfs). An
+# optional partition-size ceiling is available as a secondary guard, off
+# by default so capacity alone never vetoes a low-file-count volume.
+# None means "no limit". Overridable with --forward-map-inode-limit /
+# --forward-map-limit.
+FORWARD_MAP_INODE_LIMIT_DEFAULT = 2_000_000
+forward_map_inode_limit: Optional[int] = FORWARD_MAP_INODE_LIMIT_DEFAULT
+forward_map_limit: Optional[int] = None
+
+
+def parse_size(s: str) -> Optional[int]:
+    """Parse a size like '16G', '512M', '4096' (bytes) into bytes.
+
+    'none'/'unlimited'/'off'/0 mean no limit and return None.
+    """
+    s = s.strip().lower()
+    if s in ('none', 'unlimited', 'off'):
+        return None
+    m = re.fullmatch(r'(\d+(?:\.\d+)?)\s*([kmgt]?)(?:i?b)?', s)
+    if not m:
+        raise ValueError(f'invalid size: {s!r}')
+    mult = {'': 1, 'k': 1024, 'm': 1024**2, 'g': 1024**3, 't': 1024**4}[m.group(2)]
+    val = int(float(m.group(1)) * mult)
+    return val if val > 0 else None
+
 REQUIRED_TOOLS = ['kpartx', 'blkid', 'drbdsetup', 'drbdmeta', 'lvcreate', 'lvremove',
                   'pvs', 'vgchange',
                   'mount', 'umount', 'ssh', 'scp']
@@ -1009,6 +1036,14 @@ def verify_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) -
             script_args = ['--resource', res_name, '--level2', '--peers'] + peers
             if skip_verify:
                 script_args.append('--skip-verify')
+            # Propagate the forward-mapping ceiling so a remote peer that
+            # runs the file analysis for a remote-remote connection uses
+            # the same policy as the invoking host.
+            script_args += ['--forward-map-limit',
+                            'none' if forward_map_limit is None else str(forward_map_limit),
+                            '--forward-map-inode-limit',
+                            'none' if forward_map_inode_limit is None
+                            else str(forward_map_inode_limit)]
             log(f' {peer_name} [remote]', end='', flush=True)
 
             peer_result = run_remote_script(peer_name, script_args, copy_script=True)
@@ -1701,14 +1736,24 @@ def analyze_partition_files(device_path: str, fstype: str, oos_blocks: list,
                 return {'affected_files': affected, 'method': 'reverse',
                         'block_stats': block_stats}
 
-            # Fallback to forward mapping: walks the filesystem and
-            # checks each file's FIEMAP against OOS ranges. Cost grows
-            # with file count, not partition size, but partition size
-            # is the only cheap proxy we have. 16 GiB is generous
-            # enough for typical /boot, /var and small data partitions
-            # without risking minute-long walks on populated PB-scale
-            # volumes.
-            if partition_size_bytes <= 16 * 1024 * 1024 * 1024:
+            # Fallback to forward mapping: walk the filesystem and check
+            # each file's FIEMAP against the OOS ranges. The walk cost
+            # scales with the number of files visited, so gate on the
+            # used-inode count (cheap, one statvfs). The optional size
+            # ceiling is a secondary guard. If the inode count cannot be
+            # determined, do not let it veto the walk; the size ceiling
+            # (when set) still applies.
+            try:
+                vfs = os.statvfs(mount.mountpoint)
+                used_inodes = vfs.f_files - vfs.f_ffree if vfs.f_files else None
+            except OSError:
+                used_inodes = None
+
+            inode_ok = (forward_map_inode_limit is None or used_inodes is None
+                        or used_inodes <= forward_map_inode_limit)
+            size_ok = (forward_map_limit is None
+                       or partition_size_bytes <= forward_map_limit)
+            if inode_ok and size_ok:
                 affected = find_affected_files_forward(
                     mount.mountpoint, oos_blocks, bm_byte_per_bit, partition_start_byte)
                 return {'affected_files': affected, 'method': 'forward',
@@ -2258,7 +2303,7 @@ def frozenset_to_json_key(result_json: dict) -> dict:
 
 
 def main() -> int:
-    global output_json
+    global output_json, forward_map_limit, forward_map_inode_limit
     result_json = {}
 
     desc = """Run DRBD online verifies across all resources of this host (or
@@ -2302,8 +2347,36 @@ def main() -> int:
                             help=argparse.SUPPRESS)
     arg_parser.add_argument('--do-it', dest='do_it', action='store_true',
                             help='Execute the suggested resync commands')
+    arg_parser.add_argument('--forward-map-inode-limit', dest='forward_map_inode_limit',
+                            type=str, default=None, metavar='N',
+                            help='Used-inode ceiling for the forward-mapping '
+                                 'file-analysis fallback; its cost scales with the '
+                                 "number of files walked. 'none' or 0 disables it. "
+                                 'Default 2000000.')
+    arg_parser.add_argument('--forward-map-limit', dest='forward_map_limit',
+                            type=str, default=None, metavar='SIZE',
+                            help='Optional partition-size ceiling for the '
+                                 'forward-mapping fallback (e.g. 16G, 512M), a '
+                                 'secondary guard on top of --forward-map-inode-limit. '
+                                 "'none' or 0 disables it. Default: disabled.")
     args = arg_parser.parse_args()
     output_json = args.json
+    if args.forward_map_limit is not None:
+        try:
+            forward_map_limit = parse_size(args.forward_map_limit)
+        except ValueError as e:
+            print(f'Error: {e}', file=sys.stderr)
+            return 1
+    if args.forward_map_inode_limit is not None:
+        v = args.forward_map_inode_limit.strip().lower()
+        if v in ('none', 'unlimited', 'off'):
+            forward_map_inode_limit = None
+        else:
+            try:
+                forward_map_inode_limit = int(v) or None
+            except ValueError:
+                print(f'Error: invalid inode count: {v!r}', file=sys.stderr)
+                return 1
 
     check_required_tools()
     check_fsck_tools()
