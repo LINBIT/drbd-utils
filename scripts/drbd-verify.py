@@ -1222,11 +1222,14 @@ FMR_OF_SPECIAL_OWNER = 0x10  # owner is FMR_OWN_FREE/FS/AG/... (1..10), not an i
 FMR_OF_LAST = 0x20
 
 # Pseudo-owner values (uapi/linux/fsmap.h): FMR_OWNER(type, code) =
-# ((__u64)type << 32) | code. FMR_OWN_FREE is generic and uses type 0, so
-# its value is just 1 (the XFS metadata owners use type 'X', 0x58...).
-# Free space is owned by no inode -- the one special owner that lets us
-# conclude "no file here" with certainty.
+# ((__u64)type << 32) | code. FMR_OWN_FREE and FMR_OWN_UNKNOWN are
+# generic and use type 0, so their values are just 1 and 2; the XFS
+# metadata owners (FS/LOG/AG/...) use type 'X' (0x58...). Free space is
+# the one special owner that lets us conclude "no file here" with
+# certainty; UNKNOWN is used space the filesystem cannot attribute to an
+# owner (e.g. XFS rmapbt=0), and the type-'X' values are real metadata.
 FMR_OWN_FREE = (0 << 32) | 1     # FMR_OWNER(0, 1)
+FMR_OWN_UNKNOWN = (0 << 32) | 2  # FMR_OWNER(0, 2)
 
 
 def pack_fsmap_head(keys_start: tuple, keys_end: tuple, count: int) -> bytes:
@@ -1533,7 +1536,8 @@ def find_affected_files_forward(mountpoint: str, oos_blocks: list,
 
 def find_affected_files_reverse(mountpoint: str, oos_blocks: list,
                                 bm_byte_per_bit: int,
-                                partition_start_byte: int) -> Optional[set]:
+                                partition_start_byte: int,
+                                block_stats: Optional[dict] = None) -> Optional[set]:
     """Find files affected by OOS blocks using reverse mapping (FS_IOC_GETFSMAP).
 
     Args:
@@ -1545,7 +1549,15 @@ def find_affected_files_reverse(mountpoint: str, oos_blocks: list,
         Set of affected file paths (empty when every OOS block maps to
         free space), or None if reverse mapping is unusable and the
         caller should fall back to forward mapping.
+
+    If ``block_stats`` is passed (a dict), it is filled in place with the
+    per-OOS-block classification counts 'free'/'nonfree'/'unknown', so the
+    caller can report how much of the OOS is definitively free space,
+    definitively occupied, or of unattributable ownership.
     """
+    if block_stats is not None:
+        block_stats.update(free=0, nonfree=0, unknown=0)
+
     try:
         fd = os.open(mountpoint, os.O_RDONLY | os.O_DIRECTORY)
     except OSError:
@@ -1573,17 +1585,36 @@ def find_affected_files_reverse(mountpoint: str, oos_blocks: list,
                 return None
             ioctl_supported = True
 
+            # Classify this OOS block. A block overlapping any occupied
+            # extent (inode-owned or metadata) counts as non-free; else
+            # unknown-owned wins over free; a block with no records at all
+            # is unattributable (unknown).
+            block_nonfree = block_unknown = block_free = False
             for record in records:
                 total_records += 1
                 if record['flags'] & FMR_OF_SPECIAL_OWNER:
                     # owner is one of the FMR_OWN_* constants (free
-                    # space, AG metadata, log, ...), not an inode
+                    # space, unknown, AG metadata, log, ...), not an inode
                     special_records += 1
                     if record['owner'] == FMR_OWN_FREE:
                         free_records += 1
+                        block_free = True
+                    elif record['owner'] == FMR_OWN_UNKNOWN:
+                        block_unknown = True
+                    else:
+                        block_nonfree = True  # static/metadata: real data
                     continue
                 if record['owner'] > 0:
                     affected_inodes.add(record['owner'])
+                    block_nonfree = True
+
+            if block_stats is not None:
+                if block_nonfree:
+                    block_stats['nonfree'] += 1
+                elif block_free and not block_unknown:
+                    block_stats['free'] += 1
+                else:
+                    block_stats['unknown'] += 1
     finally:
         os.close(fd)
 
@@ -1647,17 +1678,28 @@ def analyze_partition_files(device_path: str, fstype: str, oos_blocks: list,
         Dict with:
         - 'affected_files': Set of affected file paths, or None if couldn't determine
         - 'method': 'reverse', 'forward', or 'entropy_only'
+        - 'block_stats': {'free', 'nonfree', 'unknown'} OOS-block counts.
+          Only the 'reverse' method classifies blocks; the others cannot
+          cheaply do so and report every block as 'unknown'.
     """
+    # Fallback classification for paths that cannot split free/non-free:
+    # everything is of unattributable ownership.
+    unknown_stats = {'free': 0, 'nonfree': 0, 'unknown': len(oos_blocks)}
+
     if not fstype:
-        return {'affected_files': None, 'method': 'no_filesystem'}
+        return {'affected_files': None, 'method': 'no_filesystem',
+                'block_stats': unknown_stats}
 
     try:
         with PartitionMount(device_path, fstype) as mount:
             # Try reverse mapping first
+            block_stats = {'free': 0, 'nonfree': 0, 'unknown': 0}
             affected = find_affected_files_reverse(
-                mount.mountpoint, oos_blocks, bm_byte_per_bit, partition_start_byte)
+                mount.mountpoint, oos_blocks, bm_byte_per_bit, partition_start_byte,
+                block_stats=block_stats)
             if affected is not None:
-                return {'affected_files': affected, 'method': 'reverse'}
+                return {'affected_files': affected, 'method': 'reverse',
+                        'block_stats': block_stats}
 
             # Fallback to forward mapping: walks the filesystem and
             # checks each file's FIEMAP against OOS ranges. Cost grows
@@ -1669,13 +1711,16 @@ def analyze_partition_files(device_path: str, fstype: str, oos_blocks: list,
             if partition_size_bytes <= 16 * 1024 * 1024 * 1024:
                 affected = find_affected_files_forward(
                     mount.mountpoint, oos_blocks, bm_byte_per_bit, partition_start_byte)
-                return {'affected_files': affected, 'method': 'forward'}
+                return {'affected_files': affected, 'method': 'forward',
+                        'block_stats': unknown_stats}
 
             # Large partition without reverse mapping support
-            return {'affected_files': None, 'method': 'entropy_only'}
+            return {'affected_files': None, 'method': 'entropy_only',
+                    'block_stats': unknown_stats}
 
     except subprocess.CalledProcessError:
-        return {'affected_files': None, 'method': 'mount_failed'}
+        return {'affected_files': None, 'method': 'mount_failed',
+                'block_stats': unknown_stats}
 
 
 def generate_resync_commands(res_name: str, source_node: str, target_node: str,
@@ -2055,6 +2100,22 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                     pub_partitions = oos_dict.get('partitions', {})
                     analysis_conclusive = True
 
+                    # Roll up how much of this connection's OOS is
+                    # definitively in free space, definitively occupied, or
+                    # of unattributable ownership (KiB). Only reverse mapping
+                    # can split these; other paths count as unknown.
+                    bm_kib = bm_byte_per_bit // 1024
+                    oos_kib_roll = {'free': 0, 'nonfree': 0, 'unknown': 0}
+
+                    def record_triple(pname, free_kib, nonfree_kib, unknown_kib):
+                        if pname in pub_partitions:
+                            pub_partitions[pname]['oos_free_kib'] = free_kib
+                            pub_partitions[pname]['oos_nonfree_kib'] = nonfree_kib
+                            pub_partitions[pname]['oos_unknown_kib'] = unknown_kib
+                        oos_kib_roll['free'] += free_kib
+                        oos_kib_roll['nonfree'] += nonfree_kib
+                        oos_kib_roll['unknown'] += unknown_kib
+
                     for part_name, part_info in partitions.items():
                         if part_name == 'unpartitioned':
                             # OOS outside any partition (GPT/MBR header,
@@ -2063,6 +2124,7 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                             # "no files" verdict authoritative.
                             if part_name in pub_partitions:
                                 pub_partitions[part_name]['method'] = 'unpartitioned'
+                            record_triple(part_name, 0, 0, part_info.get('oos_kib', 0))
                             analysis_conclusive = False
                             continue
 
@@ -2071,6 +2133,7 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                             log(f' Partition {part_name}: no filesystem detected')
                             if part_name in pub_partitions:
                                 pub_partitions[part_name]['method'] = 'no_filesystem'
+                            record_triple(part_name, 0, 0, part_info.get('oos_kib', 0))
                             analysis_conclusive = False
                             continue
 
@@ -2093,6 +2156,13 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
 
                         method = analysis.get('method', 'unknown')
                         affected = analysis.get('affected_files')
+
+                        stats = analysis.get('block_stats',
+                                             {'free': 0, 'nonfree': 0,
+                                              'unknown': len(oos_blocks)})
+                        record_triple(part_name, stats['free'] * bm_kib,
+                                      stats['nonfree'] * bm_kib,
+                                      stats['unknown'] * bm_kib)
 
                         if part_name in pub_partitions:
                             pub_partitions[part_name]['method'] = method
@@ -2125,6 +2195,9 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                         # always authoritative (the files were found).
                         oos_dict['files_affected_conclusive'] = (
                             files_affected or analysis_conclusive)
+                        oos_dict['oos_free_kib'] = oos_kib_roll['free']
+                        oos_dict['oos_nonfree_kib'] = oos_kib_roll['nonfree']
+                        oos_dict['oos_unknown_kib'] = oos_kib_roll['unknown']
                         if all_affected_files:
                             oos_dict['affected_files'] = sorted(list(all_affected_files))
 
