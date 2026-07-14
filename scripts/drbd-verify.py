@@ -2591,6 +2591,142 @@ def build_result_v2(result_json: dict, *, invoked_on: str,
     }
 
 
+# Classification thresholds (KiB) for the "actions" report.
+REPORT_BIG_KIB = 100 * 1024   # a single contradictory pair this large is suspect
+REPORT_SMALL_KIB = 512        # below this, treat as benign/transient
+
+CLASS_ORDER = {'A': 0, 'C': 1, 'B': 2, 'D': 3, 'E': 4}
+CLASS_ACTION = {
+    'A': 'files affected -- identify the authoritative copy, then resync the stale side',
+    'C': 'verify is internally inconsistent (transitivity/contradiction) -- re-verify; do NOT resync blindly',
+    'B': 'genuinely diverged (multiple datasets) -- re-verify; if it persists, resync from the authoritative copy',
+    'D': 'sizable single-pair OOS, likely transient -- re-verify during a quiet window',
+    'E': 'small OOS, likely free-space/transient -- monitor; re-verify if it persists',
+}
+
+
+def _classify(res: dict):
+    """Return (code, label) severity class, or None for in_sync/not-analyzed."""
+    status = res.get('status')
+    if status in ('skipped', 'diskless', 'in_sync'):
+        return None
+    conns = res.get('connections', [])
+    max_pair = res.get('summary', {}).get('max_pair_oos_kib', 0)
+    if any(c.get('files', {}).get('affected') for c in conns):
+        return ('A', 'files-impacted')
+    if status == 'transitivity_error':
+        return ('C', 'inconsistent')
+    if status == 'out_of_sync' and max_pair >= REPORT_BIG_KIB:
+        return ('C', 'inconsistent')
+    if status == 'diverged':
+        return ('B', 'diverged')
+    if status == 'out_of_sync' and max_pair >= REPORT_SMALL_KIB:
+        return ('D', 'suspect')
+    if status == 'out_of_sync':
+        return ('E', 'benign')
+    return None
+
+
+def _entropy_tie(res: dict, sugg: dict) -> bool:
+    for c in res.get('connections', []):
+        if c.get('nodes') == sugg.get('nodes'):
+            e = c.get('entropy_higher_blocks')
+            if not e:
+                return True
+            return len(set(e.values())) <= 1
+    return False
+
+
+def _report_overview(data: dict) -> None:
+    summ = data.get('summary', {})
+    print(f'DRBD verify report  (started {data.get("started_at")}, finished '
+          f'{data.get("generated_at")}, on {data.get("invoked_on")})')
+    by_status = summ.get('by_status', {})
+    print('resources: %d  [%s]' % (
+        summ.get('resources', 0),
+        '  '.join(f'{k}={v}' for k, v in sorted(by_status.items()))))
+    print(f'total out-of-sync: {summ.get("total_oos_kib", 0)} KiB')
+    res = data.get('resources', [])
+    role_conflicts = sum(1 for r in res for s in r.get('resync_suggestions', [])
+                         if s.get('role_conflict'))
+    warns = sum(1 for r in res if r.get('warnings'))
+    if role_conflicts:
+        print(f'!!! {role_conflicts} resync suggestion(s) target a Primary '
+              f'(role conflict -- see the actions report)')
+    if warns:
+        print(f'{warns} resource(s) have analysis warnings')
+    affected = [r for r in res if r.get('summary', {}).get('total_oos_kib', 0) > 0]
+    affected.sort(key=lambda r: -r['summary']['total_oos_kib'])
+    if affected:
+        print('\nlargest out-of-sync:')
+        for r in affected[:8]:
+            print(f'  {r["summary"]["total_oos_kib"]:>13} KiB  '
+                  f'{r["status"]:17} {r["name"]}')
+
+
+def _report_actions(data: dict) -> None:
+    rows = []
+    for res in data.get('resources', []):
+        c = _classify(res)
+        if c:
+            rows.append((c, res))
+    rows.sort(key=lambda t: (CLASS_ORDER[t[0][0]], t[1]['name']))
+    if not rows:
+        print('No affected resources needing action.')
+    for (code, label), res in rows:
+        summ = res.get('summary', {})
+        print(f'\n[{code}] {label:14} {res["name"]}  '
+              f'status={res["status"]}  oos={summ.get("total_oos_kib", 0)} KiB  '
+              f'datasets={summ.get("dataset_count")}')
+        print(f'      action: {CLASS_ACTION[code]}')
+        for s in res.get('resync_suggestions', []):
+            if s.get('role_conflict'):
+                print(f'      !!! ROLE CONFLICT: {s.get("warning", "")}')
+            flags = []
+            if s.get('file_analysis_skipped'):
+                flags.append('file-analysis-skipped')
+            if _entropy_tie(res, s):
+                flags.append('entropy TIED -- direction is a guess, decide manually')
+            suffix = f'   [{"; ".join(flags)}]' if flags else ''
+            for cmd in s.get('commands', []):
+                print(f'      $ {cmd}{suffix}')
+    not_analyzed = [r for r in data.get('resources', [])
+                    if r.get('status') in ('skipped', 'diskless')]
+    if not_analyzed:
+        print('\nNot analyzed:')
+        for r in sorted(not_analyzed, key=lambda r: r['name']):
+            print(f'  {r["name"]}: {r["status"]} ({r.get("skipped_reason", "")})')
+
+
+def run_report(level: str, path: Optional[str]) -> int:
+    """Post-process a schema-2 result. Fails fast with a short message if the
+    input is unreadable, not JSON, or not a schema-2 result."""
+    src = path or 'stdin'
+    try:
+        text = open(path).read() if path else sys.stdin.read()
+    except OSError as e:
+        print(f'error: cannot read {src}: {e.strerror}', file=sys.stderr)
+        return 2
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as e:
+        print(f'error: {src}: invalid JSON ({e.msg}, line {e.lineno})', file=sys.stderr)
+        return 2
+    if not isinstance(data, dict) or data.get('schema_version') != 2:
+        print(f'error: {src}: not a drbd-verify schema_version 2 result '
+              f'(feed the JSON this tool produces)', file=sys.stderr)
+        return 2
+    if not isinstance(data.get('resources'), list):
+        print(f'error: {src}: malformed result, no "resources" array',
+              file=sys.stderr)
+        return 2
+    if level == 'overview':
+        _report_overview(data)
+    else:
+        _report_actions(data)
+    return 0
+
+
 def main() -> int:
     global output_json, forward_map_limit, forward_map_inode_limit, map_file_names
     global skip_file_analysis
@@ -2661,8 +2797,20 @@ def main() -> int:
                                  'but does not identify affected files or the '
                                  'free/non-free split. OOS, entropy, fsck and resync '
                                  'suggestions are still produced.')
+    arg_parser.add_argument('--report', dest='report',
+                            choices=['overview', 'actions'],
+                            help='Post-process a result JSON (from FILE or stdin) into '
+                                 'a human report and exit, without running any verify. '
+                                 "'overview' is a cluster summary; 'actions' is a "
+                                 'severity-ranked list of recommended corrective or '
+                                 'investigative actions.')
+    arg_parser.add_argument('report_file', nargs='?',
+                            help='Result JSON to post-process with --report '
+                                 '(default: stdin).')
     args = arg_parser.parse_args()
     output_json = args.json
+    if args.report:
+        return run_report(args.report, args.report_file)
     map_file_names = args.map_file_names
     skip_file_analysis = args.skip_file_analysis
     if args.forward_map_limit is not None:
