@@ -45,6 +45,12 @@ forward_map_limit: Optional[int] = None
 # full-tree walk+stat -- markedly cheaper on large/populated filesystems.
 map_file_names = True
 
+# Skip the per-partition affected-files mapping (mounting + reverse/
+# forward mapping) entirely. OOS detection, entropy, fsck and resync
+# suggestions still run; only the "which files are affected" step and its
+# free/non-free/unknown breakdown are skipped. Set by --skip-file-analysis.
+skip_file_analysis = False
+
 
 def parse_size(s: str) -> Optional[int]:
     """Parse a size like '16G', '512M', '4096' (bytes) into bytes.
@@ -1051,6 +1057,8 @@ def verify_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) -
                             else str(forward_map_inode_limit)]
             if not map_file_names:
                 script_args.append('--no-file-names')
+            if skip_file_analysis:
+                script_args.append('--skip-file-analysis')
             log(f' {peer_name} [remote]', end='', flush=True)
 
             peer_result = run_remote_script(peer_name, script_args, copy_script=True)
@@ -2231,6 +2239,16 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                         if not oos_blocks:
                             continue
 
+                        if skip_file_analysis:
+                            log(f' Partition {part_name} ({fstype}): '
+                                f'{part_info.get("oos_kib", 0)} KiB OOS, '
+                                f'skipping file analysis (--skip-file-analysis)')
+                            if part_name in pub_partitions:
+                                pub_partitions[part_name]['method'] = 'skipped'
+                            record_triple(part_name, 0, 0, part_info.get('oos_kib', 0))
+                            analysis_conclusive = False
+                            continue
+
                         # Get partition size and start from kpartx
                         kpart_info = kpartx.partitions.get(part_name, {})
                         part_size_bytes = kpart_info.get('length_sectors', 0) * 512
@@ -2305,10 +2323,12 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                         'target': target,
                         'commands': commands,
                     }
-                    if snapshot.snapshot_taken:
+                    if snapshot.snapshot_taken and not skip_file_analysis:
                         suggestion['files_affected'] = files_affected
                         suggestion['files_affected_conclusive'] = (
                             files_affected or analysis_conclusive)
+                    if skip_file_analysis:
+                        suggestion['file_analysis_skipped'] = True
                     result_json['resync_suggestions'].append(suggestion)
 
                     log(f'\nResync suggestion for {host_name}-{peer_name}:')
@@ -2351,6 +2371,7 @@ def frozenset_to_json_key(result_json: dict) -> dict:
 
 def main() -> int:
     global output_json, forward_map_limit, forward_map_inode_limit, map_file_names
+    global skip_file_analysis
     result_json = {}
 
     desc = """Run DRBD online verifies across all resources of this host (or
@@ -2411,9 +2432,17 @@ def main() -> int:
                             help='Report affected inode numbers instead of file '
                                  'paths. Skips a full-tree walk in reverse-mapping '
                                  'mode; markedly faster on large filesystems.')
+    arg_parser.add_argument('--skip-file-analysis', dest='skip_file_analysis',
+                            action='store_true',
+                            help='Skip the affected-files analysis on partitions '
+                                 "(no mounting or block-to-file mapping); faster, "
+                                 'but does not identify affected files or the '
+                                 'free/non-free split. OOS, entropy, fsck and resync '
+                                 'suggestions are still produced.')
     args = arg_parser.parse_args()
     output_json = args.json
     map_file_names = args.map_file_names
+    skip_file_analysis = args.skip_file_analysis
     if args.forward_map_limit is not None:
         try:
             forward_map_limit = parse_size(args.forward_map_limit)
