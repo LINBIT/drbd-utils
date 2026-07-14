@@ -40,6 +40,11 @@ FORWARD_MAP_INODE_LIMIT_DEFAULT = 2_000_000
 forward_map_inode_limit: Optional[int] = FORWARD_MAP_INODE_LIMIT_DEFAULT
 forward_map_limit: Optional[int] = None
 
+# Resolve affected inode numbers to file paths (default). Turning this
+# off reports raw inode numbers and, in reverse-mapping mode, skips a
+# full-tree walk+stat -- markedly cheaper on large/populated filesystems.
+map_file_names = True
+
 
 def parse_size(s: str) -> Optional[int]:
     """Parse a size like '16G', '512M', '4096' (bytes) into bytes.
@@ -1044,6 +1049,8 @@ def verify_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) -
                             '--forward-map-inode-limit',
                             'none' if forward_map_inode_limit is None
                             else str(forward_map_inode_limit)]
+            if not map_file_names:
+                script_args.append('--no-file-names')
             log(f' {peer_name} [remote]', end='', flush=True)
 
             peer_result = run_remote_script(peer_name, script_args, copy_script=True)
@@ -1516,7 +1523,8 @@ def get_file_extents(filepath: str) -> list:
 
 def find_affected_files_forward(mountpoint: str, oos_blocks: list,
                                 bm_byte_per_bit: int,
-                                partition_start_byte: int) -> set:
+                                partition_start_byte: int,
+                                want_names: bool = True) -> set:
     """Find files affected by OOS blocks using forward mapping (FIEMAP).
 
     Walks the filesystem and checks each file's extents against OOS blocks.
@@ -1529,9 +1537,11 @@ def find_affected_files_forward(mountpoint: str, oos_blocks: list,
             the backing device. Subtracted from device-wide OOS offsets so
             they line up with FIEMAP physical offsets, which are relative
             to the partition's block device.
+        want_names: return relative paths (True) or inode numbers (False).
 
     Returns:
-        Set of affected file paths (relative to mountpoint)
+        Set of affected file paths (relative to mountpoint), or inode
+        numbers when ``want_names`` is False.
     """
     affected_files = set()
 
@@ -1557,8 +1567,11 @@ def find_affected_files_forward(mountpoint: str, oos_blocks: list,
                     for oos_start, oos_end in oos_ranges:
                         # Check for overlap
                         if phys_start < oos_end and phys_end > oos_start:
-                            rel_path = os.path.relpath(filepath, mountpoint)
-                            affected_files.add(rel_path)
+                            if want_names:
+                                affected_files.add(
+                                    os.path.relpath(filepath, mountpoint))
+                            else:
+                                affected_files.add(os.stat(filepath).st_ino)
                             break
                     else:
                         continue
@@ -1581,9 +1594,10 @@ def find_affected_files_reverse(mountpoint: str, oos_blocks: list,
         bm_byte_per_bit: Bytes per bitmap bit
 
     Returns:
-        Set of affected file paths (empty when every OOS block maps to
-        free space), or None if reverse mapping is unusable and the
-        caller should fall back to forward mapping.
+        Set of affected inode numbers (empty when every OOS block maps to
+        free space), or None if reverse mapping is unusable and the caller
+        should fall back to forward mapping. The caller resolves inodes to
+        paths only if requested.
 
     If ``block_stats`` is passed (a dict), it is filled in place with the
     per-OOS-block classification counts 'free'/'nonfree'/'unknown', so the
@@ -1593,6 +1607,32 @@ def find_affected_files_reverse(mountpoint: str, oos_blocks: list,
     if block_stats is not None:
         block_stats.update(free=0, nonfree=0, unknown=0)
 
+    # Translate each OOS bit to a partition-relative [start, end) byte
+    # range (clamped to the partition) and coalesce contiguous ranges into
+    # runs. GETFSMAP is queried once per run, not once per block: a bounded
+    # query seeks straight to the run and returns only the extents
+    # overlapping it, so cost scales with the OOS footprint rather than the
+    # whole-device extent count, and a file extent spanning many OOS blocks
+    # is fetched once rather than per block.
+    ranges = []
+    for bit_number in oos_blocks:
+        start = bit_number * bm_byte_per_bit - partition_start_byte
+        end = start + bm_byte_per_bit
+        if end <= 0:
+            continue  # bit lies entirely before the partition
+        if start < 0:
+            start = 0  # bit straddles the partition start
+        ranges.append((start, end))
+    ranges.sort()
+
+    runs = []  # [run_start, run_end, [member (start, end), ...]]
+    for start, end in ranges:
+        if runs and start <= runs[-1][1]:
+            runs[-1][1] = max(runs[-1][1], end)
+            runs[-1][2].append((start, end))
+        else:
+            runs.append([start, end, [(start, end)]])
+
     try:
         fd = os.open(mountpoint, os.O_RDONLY | os.O_DIRECTORY)
     except OSError:
@@ -1600,55 +1640,59 @@ def find_affected_files_reverse(mountpoint: str, oos_blocks: list,
 
     affected_inodes = set()
     ioctl_supported = None  # Track if ioctl works
-    total_records = 0
-    special_records = 0
-    free_records = 0
+    saw_unknown = False     # FMR_OWN_UNKNOWN seen -> reverse can't resolve
     try:
-        for bit_number in oos_blocks:
-            # GETFSMAP physical offsets are relative to the partition's
-            # block device, so translate from device-wide OOS coords.
-            start_offset = bit_number * bm_byte_per_bit - partition_start_byte
-            end_offset = start_offset + bm_byte_per_bit
-            if end_offset <= 0:
-                continue  # bit lies entirely before the partition
-            if start_offset < 0:
-                start_offset = 0  # bit straddles the partition start
-
-            records = get_fsmap_for_range(fd, start_offset, end_offset)
+        for run_start, run_end, members in runs:
+            records = get_fsmap_for_range(fd, run_start, run_end)
             if records is None:
-                # ioctl not supported
-                return None
+                return None  # ioctl not supported
             ioctl_supported = True
 
-            # Classify this OOS block. A block overlapping any occupied
-            # extent (inode-owned or metadata) counts as non-free; else
-            # unknown-owned wins over free; a block with no records at all
-            # is unattributable (unknown).
-            block_nonfree = block_unknown = block_free = False
+            # Classify the run's extents and collect any inode owners
+            # (files with data in the OOS run).
+            extents = []  # (ext_start, ext_end, kind)
             for record in records:
-                total_records += 1
+                phys = record['physical']
                 if record['flags'] & FMR_OF_SPECIAL_OWNER:
-                    # owner is one of the FMR_OWN_* constants (free
-                    # space, unknown, AG metadata, log, ...), not an inode
-                    special_records += 1
+                    # owner is one of the FMR_OWN_* constants (free space,
+                    # unknown, AG metadata, log, ...), not an inode
                     if record['owner'] == FMR_OWN_FREE:
-                        free_records += 1
-                        block_free = True
+                        kind = 'free'
                     elif record['owner'] == FMR_OWN_UNKNOWN:
-                        block_unknown = True
+                        kind = 'unknown'
+                        saw_unknown = True
                     else:
-                        block_nonfree = True  # static/metadata: real data
-                    continue
-                if record['owner'] > 0:
-                    affected_inodes.add(record['owner'])
-                    block_nonfree = True
-
-            if block_stats is not None:
-                if block_nonfree:
-                    block_stats['nonfree'] += 1
-                elif block_free and not block_unknown:
-                    block_stats['free'] += 1
+                        kind = 'nonfree'  # static/metadata: real fs data
                 else:
+                    kind = 'nonfree'
+                    if record['owner'] > 0:
+                        affected_inodes.add(record['owner'])
+                extents.append((phys, phys + record['length'], kind))
+
+            if block_stats is None:
+                continue
+
+            # Classify each member block by the extents overlapping it.
+            # Both members and extents are in physical order, so sweep them
+            # together (O(members + extents) per run). A block wins the
+            # strongest class it touches: non-free > unknown/uncovered >
+            # free.
+            extents.sort()
+            j0 = 0
+            for bstart, bend in members:
+                while j0 < len(extents) and extents[j0][1] <= bstart:
+                    j0 += 1
+                kinds = set()
+                j = j0
+                while j < len(extents) and extents[j][0] < bend:
+                    if extents[j][1] > bstart:
+                        kinds.add(extents[j][2])
+                    j += 1
+                if 'nonfree' in kinds:
+                    block_stats['nonfree'] += 1
+                elif kinds == {'free'}:
+                    block_stats['free'] += 1
+                else:  # 'unknown', or no covering extent
                     block_stats['unknown'] += 1
     finally:
         os.close(fd)
@@ -1657,41 +1701,37 @@ def find_affected_files_reverse(mountpoint: str, oos_blocks: list,
         # No blocks to check
         return set()
 
-    # Every returned record was a free-space extent (FMR_OWN_FREE) and
-    # none resolved to an inode: free space is owned by no file, so no
-    # file can be affected. Report an empty set with confidence instead
-    # of falling back to a filesystem walk.
-    if (total_records > 0 and not affected_inodes
-            and special_records == free_records):
-        return set()
+    # Files resolved: report their inode numbers (the caller maps them to
+    # paths only if names were requested).
+    if affected_inodes:
+        return affected_inodes
 
-    # If the kernel returned records for every query but every single
-    # one was a special-owner record (and not all free space), the
-    # filesystem cannot map back from physical extents to inodes here
-    # (XFS without rmapbt=1 reports used space as FMR_OWN_UNKNOWN, ext4
-    # without metadata_csum_seed/...). Treat this as "reverse not usable"
-    # so the caller falls back to forward mapping rather than silently
-    # reporting "no files affected".
-    if total_records > 0 and total_records == special_records:
+    # No inode owners. If any OOS extent was unattributable
+    # (FMR_OWN_UNKNOWN, e.g. XFS rmapbt=0), reverse mapping cannot decide
+    # here -- fall back to forward mapping. Otherwise every OOS extent was
+    # free space or filesystem metadata, so no file is affected: report an
+    # empty set with confidence rather than walking the tree.
+    if saw_unknown:
         return None
+    return set()
 
-    if not affected_inodes:
-        return set()
 
-    # Map inodes to file paths
-    affected_files = set()
+def resolve_inodes_to_paths(mountpoint: str, inodes: set) -> set:
+    """Walk ``mountpoint`` and return the relative paths of files whose
+    inode is in ``inodes``. This is the expensive step (stat per file)
+    that reporting inode numbers alone avoids."""
+    paths = set()
+    if not inodes:
+        return paths
     for root, dirs, files in os.walk(mountpoint):
         for filename in files:
             filepath = os.path.join(root, filename)
             try:
-                stat = os.stat(filepath)
-                if stat.st_ino in affected_inodes:
-                    rel_path = os.path.relpath(filepath, mountpoint)
-                    affected_files.add(rel_path)
+                if os.stat(filepath).st_ino in inodes:
+                    paths.add(os.path.relpath(filepath, mountpoint))
             except OSError:
                 continue
-
-    return affected_files
+    return paths
 
 
 def analyze_partition_files(device_path: str, fstype: str, oos_blocks: list,
@@ -1711,7 +1751,8 @@ def analyze_partition_files(device_path: str, fstype: str, oos_blocks: list,
 
     Returns:
         Dict with:
-        - 'affected_files': Set of affected file paths, or None if couldn't determine
+        - 'affected_files': Set of affected file paths (or inode numbers when
+          name resolution is disabled), or None if couldn't determine
         - 'method': 'reverse', 'forward', or 'entropy_only'
         - 'block_stats': {'free', 'nonfree', 'unknown'} OOS-block counts.
           Only the 'reverse' method classifies blocks; the others cannot
@@ -1727,12 +1768,15 @@ def analyze_partition_files(device_path: str, fstype: str, oos_blocks: list,
 
     try:
         with PartitionMount(device_path, fstype) as mount:
-            # Try reverse mapping first
+            # Try reverse mapping first. It yields inode numbers; resolve
+            # them to paths (a full-tree walk) only if names were asked for.
             block_stats = {'free': 0, 'nonfree': 0, 'unknown': 0}
             affected = find_affected_files_reverse(
                 mount.mountpoint, oos_blocks, bm_byte_per_bit, partition_start_byte,
                 block_stats=block_stats)
             if affected is not None:
+                if map_file_names and affected:
+                    affected = resolve_inodes_to_paths(mount.mountpoint, affected)
                 return {'affected_files': affected, 'method': 'reverse',
                         'block_stats': block_stats}
 
@@ -1755,7 +1799,8 @@ def analyze_partition_files(device_path: str, fstype: str, oos_blocks: list,
                        or partition_size_bytes <= forward_map_limit)
             if inode_ok and size_ok:
                 affected = find_affected_files_forward(
-                    mount.mountpoint, oos_blocks, bm_byte_per_bit, partition_start_byte)
+                    mount.mountpoint, oos_blocks, bm_byte_per_bit, partition_start_byte,
+                    want_names=map_file_names)
                 return {'affected_files': affected, 'method': 'forward',
                         'block_stats': unknown_stats}
 
@@ -2244,7 +2289,9 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                         oos_dict['oos_nonfree_kib'] = oos_kib_roll['nonfree']
                         oos_dict['oos_unknown_kib'] = oos_kib_roll['unknown']
                         if all_affected_files:
-                            oos_dict['affected_files'] = sorted(list(all_affected_files))
+                            key = ('affected_files' if map_file_names
+                                   else 'affected_inodes')
+                            oos_dict[key] = sorted(all_affected_files)
 
                     # Generate resync suggestion (direction = higher entropy → lower)
                     source, target = determine_resync_direction(
@@ -2303,7 +2350,7 @@ def frozenset_to_json_key(result_json: dict) -> dict:
 
 
 def main() -> int:
-    global output_json, forward_map_limit, forward_map_inode_limit
+    global output_json, forward_map_limit, forward_map_inode_limit, map_file_names
     result_json = {}
 
     desc = """Run DRBD online verifies across all resources of this host (or
@@ -2359,8 +2406,14 @@ def main() -> int:
                                  'forward-mapping fallback (e.g. 16G, 512M), a '
                                  'secondary guard on top of --forward-map-inode-limit. '
                                  "'none' or 0 disables it. Default: disabled.")
+    arg_parser.add_argument('--no-file-names', dest='map_file_names',
+                            action='store_false',
+                            help='Report affected inode numbers instead of file '
+                                 'paths. Skips a full-tree walk in reverse-mapping '
+                                 'mode; markedly faster on large filesystems.')
     args = arg_parser.parse_args()
     output_json = args.json
+    map_file_names = args.map_file_names
     if args.forward_map_limit is not None:
         try:
             forward_map_limit = parse_size(args.forward_map_limit)
