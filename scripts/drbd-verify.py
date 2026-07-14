@@ -2727,34 +2727,86 @@ def run_report(level: str, path: Optional[str]) -> int:
     return 0
 
 
+_DESCRIPTION = """\
+Run DRBD online verifies across all resources of this host (or only those
+given with -r/--resource) and analyse any out-of-sync (OOS) blocks.
+
+Unlike a plain `drbdadm verify` (this node against its peers), this runs
+every pairwise verify needed to compare all nodes (1 for 2 nodes, 3 for 3,
+6 for 4, ...). For each OOS block it reports the affected files where it
+can, uses the Shannon entropy of the differing blocks and filesystem
+checks to gauge impact, and recommends a resync direction (use --do-it to
+execute it). Results are written to a schema_version 2 JSON file,
+drbd-verify-result_YYYY-MM-DD_HHMM.json, in the current directory.
+"""
+
+_EPILOG = """\
+report modes (post-process a result JSON; no verify is run):
+  --report overview [FILE]   cluster summary: status counts, total OOS,
+                             largest out-of-sync resources
+  --report actions  [FILE]   resources ranked by suspected severity, each
+                             with a recommended corrective/investigative
+                             action; a resync onto a node that is currently
+                             Primary is flagged as a ROLE CONFLICT
+  FILE defaults to stdin, so:  drbd-verify.py ... | drbd-verify.py --report actions
+
+examples:
+  drbd-verify.py                         verify every local resource
+  drbd-verify.py -r res0 res1            verify only res0 and res1
+  drbd-verify.py -r res0 --skip-verify   analyse the CURRENT OOS of res0
+  drbd-verify.py --report actions drbd-verify-result_2026-07-11_0021.json
+
+requirements:
+  Passwordless SSH (keys + ssh-agent) to every peer: for the pairwise
+  verifies the tool copies itself to /run/drbd-verify/ on each diskful peer
+  and runs there. The progress display updates about every 3 seconds.
+
+related:
+  drbd-resource-host-map.py is a companion planner. It reads a LINSTOR
+  machine-readable resource list (e.g. `linstor -m resource list`) and
+  prints, grouped per host, the `drbd-verify.py -r <resource>` commands to
+  run so that every diskful resource is verified exactly once, from a host
+  that holds it. Use it to drive a cluster-wide verification: run the block
+  under each `#host <name>:` on that host.
+"""
+
+
+class _ShortHelp(argparse.Action):
+    """-h : concise usage summary."""
+    def __init__(self, option_strings, dest=argparse.SUPPRESS, **kw):
+        super().__init__(option_strings, dest, nargs=0,
+                         default=argparse.SUPPRESS, **kw)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        parser.print_usage()
+        print('\nVerify DRBD resources and analyse out-of-sync blocks.\n'
+              'Use --help for full documentation.')
+        parser.exit()
+
+
+class _LongHelp(argparse.Action):
+    """--help : full, man-page-like documentation."""
+    def __init__(self, option_strings, dest=argparse.SUPPRESS, **kw):
+        super().__init__(option_strings, dest, nargs=0,
+                         default=argparse.SUPPRESS, **kw)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        parser.print_help()
+        parser.exit()
+
+
 def main() -> int:
     global output_json, forward_map_limit, forward_map_inode_limit, map_file_names
     global skip_file_analysis
     result_json = {}
 
-    desc = """Run DRBD online verifies across all resources of this host (or
-           only those given with --resource) and investigate any out-of-sync
-           (OOS) blocks they find. Unlike a plain `drbdadm verify`, which
-           compares only this node against its peers, this program performs
-           all the verifies needed to compare every pair of nodes (1 for 2
-           nodes, 3 for 3 nodes, 6 for 4 nodes, and so on). For each pair it
-           then analyses any OOS blocks: it tries to report the affected
-           files (if any), uses heuristics such as the Shannon entropy of the
-           differing blocks and filesystem checks to explain the impact, and
-           recommends a strategy to resolve the difference (use --do-it to
-           execute the suggested resync commands)."""
-    epilog = """It is intended for
-             interactive use, as it updates its progress display every 3 seconds.
-             It starts verifying operations between diskfull peers by copying
-             itself to those machines (/run/drbd-verify/) and running itself
-             there. For
-             that, it requires logging into all peers by ssh without providing a
-             password. Please use ssh keys and the ssh-agent to enable passwordless
-             login.  It creates a file in the current working directory with the
-             name drbd-verify-result_YYYY-MM-DD_HHMM.json that contains the results
-             in JSON format."""
-
-    arg_parser = argparse.ArgumentParser(description=desc, epilog=epilog)
+    arg_parser = argparse.ArgumentParser(
+        add_help=False, description=_DESCRIPTION, epilog=_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    arg_parser.add_argument('-h', action=_ShortHelp,
+                            help='short usage summary')
+    arg_parser.add_argument('--help', action=_LongHelp,
+                            help='full documentation (this text)')
     arg_parser.add_argument('-j', '--json', dest='json', action='store_true',
                             help='only output json, suppress progress output')
     arg_parser.add_argument('-r', '--resource', dest='res_names', type=str, nargs='*',
