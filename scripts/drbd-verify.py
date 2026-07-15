@@ -1569,12 +1569,16 @@ def find_affected_files_reverse(mountpoint: str, oos_blocks: list,
         paths only if requested.
 
     If ``block_stats`` is passed (a dict), it is filled in place with the
-    per-OOS-block classification counts 'free'/'nonfree'/'unknown', so the
-    caller can report how much of the OOS is definitively free space,
-    definitively occupied, or of unattributable ownership.
+    per-OOS-block classification counts 'free'/'filedata'/'metadata'/
+    'unknown' (mutually exclusive, so they sum to the block count), plus a
+    'metadata_seen' bool. The bool is set whenever any OOS extent belonged
+    to filesystem metadata, even if the block also carried file data (in
+    which case it is counted under 'filedata'), so metadata involvement is
+    visible whether or not file data is affected as well.
     """
     if block_stats is not None:
-        block_stats.update(free=0, nonfree=0, unknown=0)
+        block_stats.update(free=0, filedata=0, metadata=0, unknown=0,
+                           metadata_seen=False)
 
     # Translate each OOS bit to a partition-relative [start, end) byte
     # range (clamped to the partition) and coalesce contiguous ranges into
@@ -1602,6 +1606,7 @@ def find_affected_files_reverse(mountpoint: str, oos_blocks: list,
     affected_inodes = set()
     ioctl_supported = None  # Track if ioctl works
     saw_unknown = False     # FMR_OWN_UNKNOWN seen -> reverse can't resolve
+    saw_metadata = False    # any filesystem-metadata extent seen
     try:
         for run_start, run_end, members in runs:
             records = get_fsmap_for_range(fd, run_start, run_end)
@@ -1623,9 +1628,10 @@ def find_affected_files_reverse(mountpoint: str, oos_blocks: list,
                         kind = 'unknown'
                         saw_unknown = True
                     else:
-                        kind = 'nonfree'  # static/metadata: real fs data
+                        kind = 'metadata'  # static fs metadata (FS/LOG/AG/...)
+                        saw_metadata = True
                 else:
-                    kind = 'nonfree'
+                    kind = 'filedata'  # inode-owned: real file data
                     if record['owner'] > 0:
                         affected_inodes.add(record['owner'])
                 extents.append((phys, phys + record['length'], kind))
@@ -1636,8 +1642,8 @@ def find_affected_files_reverse(mountpoint: str, oos_blocks: list,
             # Classify each member block by the extents overlapping it.
             # Both members and extents are in physical order, so sweep them
             # together (O(members + extents) per run). A block wins the
-            # strongest class it touches: non-free > unknown/uncovered >
-            # free.
+            # strongest class it touches: filedata > metadata >
+            # unknown/uncovered > free.
             extents.sort()
             j0 = 0
             for bstart, bend in members:
@@ -1649,14 +1655,18 @@ def find_affected_files_reverse(mountpoint: str, oos_blocks: list,
                     if extents[j][1] > bstart:
                         kinds.add(extents[j][2])
                     j += 1
-                if 'nonfree' in kinds:
-                    block_stats['nonfree'] += 1
+                if 'filedata' in kinds:
+                    block_stats['filedata'] += 1
+                elif 'metadata' in kinds:
+                    block_stats['metadata'] += 1
                 elif kinds == {'free'}:
                     block_stats['free'] += 1
                 else:  # 'unknown', or no covering extent
                     block_stats['unknown'] += 1
     finally:
         os.close(fd)
+        if block_stats is not None:
+            block_stats['metadata_seen'] = saw_metadata
 
     if ioctl_supported is None:
         # No blocks to check
@@ -1715,13 +1725,15 @@ def analyze_partition_files(device_path: str, fstype: str, oos_blocks: list,
         - 'affected_files': Set of affected file paths (or inode numbers when
           name resolution is disabled), or None if couldn't determine
         - 'method': 'reverse', 'forward', or 'entropy_only'
-        - 'block_stats': {'free', 'nonfree', 'unknown'} OOS-block counts.
-          Only the 'reverse' method classifies blocks; the others cannot
-          cheaply do so and report every block as 'unknown'.
+        - 'block_stats': {'free', 'filedata', 'metadata', 'unknown'}
+          OOS-block counts plus a 'metadata_seen' bool. Only the 'reverse'
+          method classifies blocks; the others cannot cheaply do so and
+          report every block as 'unknown'.
     """
-    # Fallback classification for paths that cannot split free/non-free:
-    # everything is of unattributable ownership.
-    unknown_stats = {'free': 0, 'nonfree': 0, 'unknown': len(oos_blocks)}
+    # Fallback classification for paths that cannot split ownership:
+    # everything is of unattributable ownership, metadata undetermined.
+    unknown_stats = {'free': 0, 'filedata': 0, 'metadata': 0,
+                     'unknown': len(oos_blocks), 'metadata_seen': False}
 
     if not fstype:
         return {'affected_files': None, 'method': 'no_filesystem',
@@ -1731,7 +1743,8 @@ def analyze_partition_files(device_path: str, fstype: str, oos_blocks: list,
         with PartitionMount(device_path, fstype) as mount:
             # Try reverse mapping first. It yields inode numbers; resolve
             # them to paths (a full-tree walk) only if names were asked for.
-            block_stats = {'free': 0, 'nonfree': 0, 'unknown': 0}
+            block_stats = {'free': 0, 'filedata': 0, 'metadata': 0,
+                           'unknown': 0, 'metadata_seen': False}
             affected = find_affected_files_reverse(
                 mount.mountpoint, oos_blocks, bm_byte_per_bit, partition_start_byte,
                 block_stats=block_stats)
@@ -2151,19 +2164,25 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                     analysis_conclusive = True
 
                     # Roll up how much of this connection's OOS is
-                    # definitively in free space, definitively occupied, or
-                    # of unattributable ownership (KiB). Only reverse mapping
-                    # can split these; other paths count as unknown.
+                    # definitively free space, file data, filesystem
+                    # metadata, or of unattributable ownership (KiB). Only
+                    # reverse mapping can split these; other paths count the
+                    # whole partition as unknown.
                     bm_kib = bm_byte_per_bit // 1024
-                    oos_kib_roll = {'free': 0, 'nonfree': 0, 'unknown': 0}
+                    metadata_affected = False
+                    oos_kib_roll = {'free': 0, 'filedata': 0, 'metadata': 0,
+                                    'unknown': 0}
 
-                    def record_triple(pname, free_kib, nonfree_kib, unknown_kib):
+                    def record_kib(pname, free_kib, filedata_kib, metadata_kib,
+                                   unknown_kib):
                         if pname in pub_partitions:
                             pub_partitions[pname]['oos_free_kib'] = free_kib
-                            pub_partitions[pname]['oos_nonfree_kib'] = nonfree_kib
+                            pub_partitions[pname]['oos_filedata_kib'] = filedata_kib
+                            pub_partitions[pname]['oos_metadata_kib'] = metadata_kib
                             pub_partitions[pname]['oos_unknown_kib'] = unknown_kib
                         oos_kib_roll['free'] += free_kib
-                        oos_kib_roll['nonfree'] += nonfree_kib
+                        oos_kib_roll['filedata'] += filedata_kib
+                        oos_kib_roll['metadata'] += metadata_kib
                         oos_kib_roll['unknown'] += unknown_kib
 
                     for part_name, part_info in partitions.items():
@@ -2174,7 +2193,7 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                             # "no files" verdict authoritative.
                             if part_name in pub_partitions:
                                 pub_partitions[part_name]['method'] = 'unpartitioned'
-                            record_triple(part_name, 0, 0, part_info.get('oos_kib', 0))
+                            record_kib(part_name, 0, 0, 0, part_info.get('oos_kib', 0))
                             analysis_conclusive = False
                             continue
 
@@ -2183,7 +2202,7 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                             log(f' Partition {part_name}: no filesystem detected')
                             if part_name in pub_partitions:
                                 pub_partitions[part_name]['method'] = 'no_filesystem'
-                            record_triple(part_name, 0, 0, part_info.get('oos_kib', 0))
+                            record_kib(part_name, 0, 0, 0, part_info.get('oos_kib', 0))
                             analysis_conclusive = False
                             continue
 
@@ -2197,7 +2216,7 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                                 f'skipping file analysis (--skip-file-analysis)')
                             if part_name in pub_partitions:
                                 pub_partitions[part_name]['method'] = 'skipped'
-                            record_triple(part_name, 0, 0, part_info.get('oos_kib', 0))
+                            record_kib(part_name, 0, 0, 0, part_info.get('oos_kib', 0))
                             analysis_conclusive = False
                             continue
 
@@ -2218,32 +2237,42 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                         affected = analysis.get('affected_files')
 
                         stats = analysis.get('block_stats',
-                                             {'free': 0, 'nonfree': 0,
-                                              'unknown': len(oos_blocks)})
-                        record_triple(part_name, stats['free'] * bm_kib,
-                                      stats['nonfree'] * bm_kib,
-                                      stats['unknown'] * bm_kib)
+                                             {'free': 0, 'filedata': 0,
+                                              'metadata': 0,
+                                              'unknown': len(oos_blocks),
+                                              'metadata_seen': False})
+                        record_kib(part_name, stats['free'] * bm_kib,
+                                   stats['filedata'] * bm_kib,
+                                   stats['metadata'] * bm_kib,
+                                   stats['unknown'] * bm_kib)
+                        if stats.get('metadata_seen'):
+                            metadata_affected = True
 
                         if part_name in pub_partitions:
                             pub_partitions[part_name]['method'] = method
+                            pub_partitions[part_name]['metadata_affected'] = \
+                                bool(stats.get('metadata_seen'))
                         if method not in ('reverse', 'forward'):
                             # entropy_only, mount_failed, unknown: file
                             # ownership was not actually determined.
                             analysis_conclusive = False
 
+                        meta_note = ' (+ fs metadata)' if stats.get('metadata_seen') else ''
                         if affected is not None:
                             if affected:
                                 files_affected = True
                                 all_affected_files.update(affected)
-                                log(f'\r Partition {part_name}: {len(affected)} file(s) affected (via {method})\x1b[K')
+                                log(f'\r Partition {part_name}: {len(affected)} file(s) affected{meta_note} (via {method})\x1b[K')
                                 for f in sorted(affected)[:10]:  # Show first 10
                                     log(f'   - {f}')
                                 if len(affected) > 10:
                                     log(f'   ... and {len(affected) - 10} more')
+                            elif stats.get('metadata_seen'):
+                                log(f'\r Partition {part_name}: no file data affected, but fs metadata is out of sync (via {method})\x1b[K')
                             else:
                                 log(f'\r Partition {part_name}: no files affected (via {method})\x1b[K')
                         else:
-                            log(f'\r Partition {part_name}: could not determine affected files ({method})\x1b[K')
+                            log(f'\r Partition {part_name}: could not determine affected files{meta_note} ({method})\x1b[K')
 
                     # Store file analysis results (only meaningful
                     # if we had a snapshot to mount and inspect)
@@ -2255,8 +2284,16 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                         # always authoritative (the files were found).
                         oos_dict['files_affected_conclusive'] = (
                             files_affected or analysis_conclusive)
+                        # metadata_affected mirrors files_affected: True is
+                        # always authoritative (metadata extents were seen);
+                        # False is authoritative only when analysis was
+                        # conclusive, else it means "could not determine".
+                        oos_dict['metadata_affected'] = metadata_affected
+                        oos_dict['metadata_affected_conclusive'] = (
+                            metadata_affected or analysis_conclusive)
                         oos_dict['oos_free_kib'] = oos_kib_roll['free']
-                        oos_dict['oos_nonfree_kib'] = oos_kib_roll['nonfree']
+                        oos_dict['oos_filedata_kib'] = oos_kib_roll['filedata']
+                        oos_dict['oos_metadata_kib'] = oos_kib_roll['metadata']
                         oos_dict['oos_unknown_kib'] = oos_kib_roll['unknown']
                         if all_affected_files:
                             key = ('affected_files' if map_file_names
@@ -2279,6 +2316,7 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                         suggestion['files_affected'] = files_affected
                         suggestion['files_affected_conclusive'] = (
                             files_affected or analysis_conclusive)
+                        suggestion['metadata_affected'] = metadata_affected
                     if skip_file_analysis:
                         suggestion['file_analysis_skipped'] = True
                     result_json['resync_suggestions'].append(suggestion)
@@ -2363,9 +2401,11 @@ def _connection_v2(nodes: list, v: dict, initial_oos: Optional[int]) -> dict:
     higher = {_short_node(n): v[f'{n} higher'] for n in nodes if f'{n} higher' in v}
     if higher:
         conn['entropy_higher_blocks'] = higher
-    if any(k in v for k in ('oos_free_kib', 'oos_nonfree_kib', 'oos_unknown_kib')):
+    if any(k in v for k in ('oos_free_kib', 'oos_filedata_kib',
+                            'oos_metadata_kib', 'oos_unknown_kib')):
         conn['oos_kib_by_class'] = {'free': v.get('oos_free_kib', 0),
-                                    'nonfree': v.get('oos_nonfree_kib', 0),
+                                    'filedata': v.get('oos_filedata_kib', 0),
+                                    'metadata': v.get('oos_metadata_kib', 0),
                                     'unknown': v.get('oos_unknown_kib', 0)}
     if 'files_affected' in v:
         files = {'affected': v['files_affected'],
@@ -2375,6 +2415,10 @@ def _connection_v2(nodes: list, v: dict, initial_oos: Optional[int]) -> dict:
         if 'affected_inodes' in v:
             files['inodes'] = v['affected_inodes']
         conn['files'] = files
+    if 'metadata_affected' in v:
+        conn['metadata_affected'] = {
+            'affected': v['metadata_affected'],
+            'conclusive': v.get('metadata_affected_conclusive', False)}
     detail = v.get('_fsck_detail')
     if detail:
         conn['fsck'] = [
@@ -2397,8 +2441,11 @@ def _connection_v2(nodes: list, v: dict, initial_oos: Optional[int]) -> dict:
                  'oos_kib': pv.get('oos_kib'), 'method': pv.get('method')}
             if 'oos_free_kib' in pv:
                 p['oos_kib_by_class'] = {'free': pv['oos_free_kib'],
-                                         'nonfree': pv['oos_nonfree_kib'],
+                                         'filedata': pv['oos_filedata_kib'],
+                                         'metadata': pv['oos_metadata_kib'],
                                          'unknown': pv['oos_unknown_kib']}
+            if 'metadata_affected' in pv:
+                p['metadata_affected'] = pv['metadata_affected']
             parts.append(p)
         conn['partitions'] = parts
     return conn
@@ -2597,9 +2644,15 @@ def _report_overview(data: dict) -> None:
     role_conflicts = sum(1 for r in res for s in r.get('resync_suggestions', [])
                          if s.get('role_conflict'))
     warns = sum(1 for r in res if r.get('warnings'))
+    meta_affected = sum(
+        1 for r in res
+        if any(c.get('metadata_affected', {}).get('affected')
+               for c in r.get('connections', [])))
     if role_conflicts:
         print(f'!!! {role_conflicts} resync suggestion(s) target a Primary '
               f'(role conflict -- see the actions report)')
+    if meta_affected:
+        print(f'{meta_affected} resource(s) have filesystem metadata out of sync')
     if warns:
         print(f'{warns} resource(s) have analysis warnings')
     affected = [r for r in res if r.get('summary', {}).get('total_oos_kib', 0) > 0]
@@ -2629,6 +2682,9 @@ def _report_actions(data: dict) -> None:
         for s in res.get('resync_suggestions', []):
             if s.get('role_conflict'):
                 print(f'      !!! ROLE CONFLICT: {s.get("warning", "")}')
+            if s.get('metadata_affected'):
+                print('      note: filesystem metadata is out of sync '
+                      '(whether or not file data is)')
             flags = []
             if s.get('file_analysis_skipped'):
                 flags.append('file-analysis-skipped')
