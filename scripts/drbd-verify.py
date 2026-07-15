@@ -325,6 +325,15 @@ def run_silent(cmd: list, check: bool = True) -> subprocess.CompletedProcess:
     return result
 
 
+def drbdsetup_json(*args):
+    """Run ``drbdsetup <args> --json`` and return the parsed result.
+
+    run_silent drains both pipes, so this is safe against the PIPE-buffer
+    deadlock and raises CalledProcessError on a non-zero drbdsetup exit.
+    For streaming subcommands (events2) keep using Popen directly."""
+    return json.loads(run_silent(['drbdsetup', *args, '--json']).stdout)
+
+
 class Snapshot:
     """Context manager exposing a block device of a DRBD backing
     volume at ``snapshot_path`` while inside ``with``. Subclasses
@@ -767,8 +776,7 @@ def run_remote_script(peer_name: str, script_args: list, copy_script: bool = Fal
 
 
 def get_oos(res_name: str, peer_node_id: int) -> int:
-    with subprocess.Popen(['drbdsetup', 'status', res_name, '--json'], stdout=subprocess.PIPE) as p:
-        res_status_json = json.load(p.stdout)
+    res_status_json = drbdsetup_json('status', res_name)
     [con] = [con for con in res_status_json[0]['connections'] if con['peer-node-id'] == peer_node_id]
     return con['peer_devices'][0]['out-of-sync']
 
@@ -811,8 +819,7 @@ def verify_peer(res_name: str, peer_json: dict, skip_verify: bool = False) -> in
 
 
 def backing_dev_res(res_name: str) -> str:
-    with subprocess.Popen(['drbdsetup', 'show', res_name, '--json'], stdout=subprocess.PIPE) as p:
-        show_json = json.load(p.stdout)
+    show_json = drbdsetup_json('show', res_name)
     return show_json[0]['_this_host']['volumes'][0]['backing-disk']
 
 
@@ -2822,8 +2829,7 @@ def main() -> int:
     check_required_tools()
     check_fsck_tools()
 
-    with subprocess.Popen(['drbdsetup', 'status', '--json'], stdout=subprocess.PIPE) as p:
-        drbd_status_json = json.load(p.stdout)
+    drbd_status_json = drbdsetup_json('status')
     initial_status = drbd_status_json
     started_at = datetime.datetime.now().isoformat(timespec='seconds')
 
@@ -2924,8 +2930,7 @@ def main() -> int:
     # A second drbdsetup status: captures state drift over the (possibly
     # long) run, and lets a consumer see whether this verify changed the
     # out-of-sync counts (e.g. stale bitmap bits cleared).
-    with subprocess.Popen(['drbdsetup', 'status', '--json'], stdout=subprocess.PIPE) as p:
-        final_status = json.load(p.stdout)
+    final_status = drbdsetup_json('status')
     out = render(final_status, datetime.datetime.now().isoformat(timespec='seconds'))
     with open(result_file_name + '.tmp', 'w') as f:
         f.write(json.dumps(out, indent=4))
