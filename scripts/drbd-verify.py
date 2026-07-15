@@ -115,194 +115,101 @@ def check_fsck_tools() -> None:
             available_fsck_tools.add(tool)
 
 
-def parse_xfs_repair_output(stdout: str, stderr: str, returncode: int) -> dict:
-    """Parse xfs_repair -n output to count errors and warnings.
-
-    Args:
-        stdout: Standard output from xfs_repair
-        stderr: Standard error from xfs_repair
-        returncode: Exit code (0=clean, 1=corruption, 2=dirty log)
-
-    Returns:
-        Dict with 'errors' and 'warnings' counts
-    """
-    errors = 0
-    warnings = 0
-    combined = stdout + '\n' + stderr
-
-    # Error patterns - actions that would be taken in repair mode
-    error_patterns = [
-        r'\bwould\s+(clear|correct|reset|rebuild|fix|remove|free)',
-        r'\bwill\s+(clear|correct|reset|rebuild|fix|remove|free)',
-        r'\bclearing\b',
-        r'\bcorrecting\b',
-        r'\bresetting\b',
-        r'\bjunking\s+entry\b',
-        r'\bbad\s+(extent|fork|attribute|inode)\b',
-        r'\bdisconnected\s+(inode|dir)\b',
-        r'\bNo\s+modify\s+flag\s+set,\s+skipping',
-    ]
-
-    # Warning patterns - informational but concerning
-    warning_patterns = [
-        r'\bmissing\b',
-        r'\bunexpected\b',
-        r'\binconsistent\b',
-    ]
-
-    for pattern in error_patterns:
-        errors += len(re.findall(pattern, combined, re.IGNORECASE))
-
-    for pattern in warning_patterns:
-        warnings += len(re.findall(pattern, combined, re.IGNORECASE))
-
-    # If return code indicates corruption but we found no specific errors, count as 1 error
-    if returncode == 1 and errors == 0:
-        errors = 1
-
-    return {'errors': errors, 'warnings': warnings}
-
-
-def parse_e2fsck_output(stdout: str, stderr: str, returncode: int) -> dict:
-    """Parse e2fsck -n -f output to count errors and warnings.
-
-    Args:
-        stdout: Standard output from e2fsck
-        stderr: Standard error from e2fsck
-        returncode: Exit code (bitmask: 1=corrected, 4=uncorrected)
-
-    Returns:
-        Dict with 'errors' and 'warnings' counts
-    """
-    errors = 0
-    warnings = 0
-    combined = stdout + '\n' + stderr
-
-    # Error patterns - things that would be fixed
-    error_patterns = [
-        r'\bFIXED\b',
-        r'\bCLEARED\b',
-        r'\bSALVAGED\b',
-        r'\bTRUNCATED\b',
-        r'\bRECOVERED\b',
-        r'\bIllegal\b',
-        r'\bInvalid\b',
-        r'\bDuplicate\b',
-        r'\bMissing\b',
-        r'\bError\s+reading\b',
-        r'\bCorrupt\b',
-        r'\?\s*\bno\b',  # Prompts answered 'no' in -n mode
-    ]
-
-    # Warning patterns
-    warning_patterns = [
-        r'\bwarning\b',
-        r'\bnon-contiguous\b',
-    ]
-
-    for pattern in error_patterns:
-        errors += len(re.findall(pattern, combined, re.IGNORECASE))
-
-    for pattern in warning_patterns:
-        warnings += len(re.findall(pattern, combined, re.IGNORECASE))
-
-    # Check return code for errors left uncorrected
-    if returncode & 4 and errors == 0:
-        errors = 1
-
-    return {'errors': errors, 'warnings': warnings}
+# Per-fsck-tool output-parsing spec: (error_patterns, warning_patterns,
+# corrupt(returncode)). All four tools are parsed the same way -- count
+# pattern hits across stdout+stderr -- so only the pattern lists and the
+# "return code means corruption" predicate differ.
+FSCK_PARSE_SPECS = {
+    # xfs_repair -n: exit 0=clean, 1=corruption, 2=dirty log.
+    'xfs_repair': (
+        # error: actions that would be taken in repair mode
+        [r'\bwould\s+(clear|correct|reset|rebuild|fix|remove|free)',
+         r'\bwill\s+(clear|correct|reset|rebuild|fix|remove|free)',
+         r'\bclearing\b',
+         r'\bcorrecting\b',
+         r'\bresetting\b',
+         r'\bjunking\s+entry\b',
+         r'\bbad\s+(extent|fork|attribute|inode)\b',
+         r'\bdisconnected\s+(inode|dir)\b',
+         r'\bNo\s+modify\s+flag\s+set,\s+skipping'],
+        # warning: informational but concerning
+        [r'\bmissing\b',
+         r'\bunexpected\b',
+         r'\binconsistent\b'],
+        lambda rc: rc == 1,
+    ),
+    # e2fsck -n -f: exit is a bitmask (1=corrected, 4=uncorrected).
+    'e2fsck': (
+        # error: things that would be fixed
+        [r'\bFIXED\b',
+         r'\bCLEARED\b',
+         r'\bSALVAGED\b',
+         r'\bTRUNCATED\b',
+         r'\bRECOVERED\b',
+         r'\bIllegal\b',
+         r'\bInvalid\b',
+         r'\bDuplicate\b',
+         r'\bMissing\b',
+         r'\bError\s+reading\b',
+         r'\bCorrupt\b',
+         r'\?\s*\bno\b'],  # prompts answered 'no' in -n mode
+        [r'\bwarning\b',
+         r'\bnon-contiguous\b'],
+        lambda rc: rc & 4,
+    ),
+    # fsck.fat -n: exit 0=clean, 1=errors found.
+    'fsck.fat': (
+        # error: actual filesystem problems
+        [r'\bTruncating\s+file\b',
+         r'\bcorrupt\b',
+         r'\binvalid\b',
+         r'\bcross-link\b',
+         r'\borphan\b',
+         r'\bcontains\s+a?\s*free\s+cluster\b',
+         r'\bfirst\s+cluster\s+.*\s+out\s+of\b',
+         r'\bBoth\s+FATs\s+.*\s+corrupt\b',
+         r'\bshare\s+.*\s+cluster\b'],
+        # warning: less severe issues
+        [r'\bDirty\s+bit\s+is\s+set\b',
+         r'\bFATs\s+differ\b',
+         r'\breclaimed\b'],
+        lambda rc: rc == 1,
+    ),
+    # ntfsfix -n: any non-zero exit means something went wrong.
+    'ntfsfix': (
+        [r'\bFAILED\b',
+         r'\bError\b',
+         r'\bcorrupt\b',
+         r'\bmissing\b',
+         r'\bInput/output\s+error\b',
+         r'\bFailed\s+to\s+load\b',
+         r'\bUnrecoverable\b'],
+        [r'\bYou\s+should\s+run\s+chkdsk\b',
+         r'\bscheduled\b.*\bcheck\b'],
+        lambda rc: rc != 0,
+    ),
+}
 
 
-def parse_fsck_fat_output(stdout: str, stderr: str, returncode: int) -> dict:
-    """Parse fsck.fat -n output to count errors and warnings.
+def parse_fsck_output(tool: str, stdout: str, stderr: str, returncode: int) -> dict:
+    """Count errors/warnings in an fsck tool's ``-n`` output.
 
-    Args:
-        stdout: Standard output from fsck.fat
-        stderr: Standard error from fsck.fat
-        returncode: Exit code (0=clean, 1=errors found)
+    Patterns from FSCK_PARSE_SPECS[tool] are matched case-insensitively
+    across stdout+stderr. If the return code signals corruption but no
+    error pattern matched, one error is assumed so a non-zero exit is
+    never reported as clean.
 
     Returns:
-        Dict with 'errors' and 'warnings' counts
+        Dict with 'errors' and 'warnings' counts.
     """
-    errors = 0
-    warnings = 0
+    error_patterns, warning_patterns, is_corrupt = FSCK_PARSE_SPECS[tool]
     combined = stdout + '\n' + stderr
-
-    # Error patterns - actual filesystem problems
-    error_patterns = [
-        r'\bTruncating\s+file\b',
-        r'\bcorrupt\b',
-        r'\binvalid\b',
-        r'\bcross-link\b',
-        r'\borphan\b',
-        r'\bcontains\s+a?\s*free\s+cluster\b',
-        r'\bfirst\s+cluster\s+.*\s+out\s+of\b',
-        r'\bBoth\s+FATs\s+.*\s+corrupt\b',
-        r'\bshare\s+.*\s+cluster\b',
-    ]
-
-    # Warning patterns - less severe issues
-    warning_patterns = [
-        r'\bDirty\s+bit\s+is\s+set\b',
-        r'\bFATs\s+differ\b',
-        r'\breclaimed\b',
-    ]
-
-    for pattern in error_patterns:
-        errors += len(re.findall(pattern, combined, re.IGNORECASE))
-
-    for pattern in warning_patterns:
-        warnings += len(re.findall(pattern, combined, re.IGNORECASE))
-
-    # If return code indicates errors but we found none, count as 1
-    if returncode == 1 and errors == 0:
+    errors = sum(len(re.findall(p, combined, re.IGNORECASE))
+                 for p in error_patterns)
+    warnings = sum(len(re.findall(p, combined, re.IGNORECASE))
+                   for p in warning_patterns)
+    if is_corrupt(returncode) and errors == 0:
         errors = 1
-
-    return {'errors': errors, 'warnings': warnings}
-
-
-def parse_ntfsfix_output(stdout: str, stderr: str, returncode: int) -> dict:
-    """Parse ntfsfix -n output to count errors and warnings.
-
-    Args:
-        stdout: Standard output from ntfsfix
-        stderr: Standard error from ntfsfix
-        returncode: Exit code
-
-    Returns:
-        Dict with 'errors' and 'warnings' counts
-    """
-    errors = 0
-    warnings = 0
-    combined = stdout + '\n' + stderr
-
-    # Error patterns
-    error_patterns = [
-        r'\bFAILED\b',
-        r'\bError\b',
-        r'\bcorrupt\b',
-        r'\bmissing\b',
-        r'\bInput/output\s+error\b',
-        r'\bFailed\s+to\s+load\b',
-        r'\bUnrecoverable\b',
-    ]
-
-    # Warning patterns
-    warning_patterns = [
-        r'\bYou\s+should\s+run\s+chkdsk\b',
-        r'\bscheduled\b.*\bcheck\b',
-    ]
-
-    for pattern in error_patterns:
-        errors += len(re.findall(pattern, combined, re.IGNORECASE))
-
-    for pattern in warning_patterns:
-        warnings += len(re.findall(pattern, combined, re.IGNORECASE))
-
-    # Non-zero return with no errors means something went wrong
-    if returncode != 0 and errors == 0:
-        errors = 1
-
     return {'errors': errors, 'warnings': warnings}
 
 
@@ -358,22 +265,19 @@ def run_fsck_check(device_path: str, fstype: str) -> Optional[dict]:
         # can actually inspect the metadata.
         replay_xfs_log(device_path)
         cmd = ['xfs_repair', '-n', device_path]
-        parser = parse_xfs_repair_output
     elif tool == 'e2fsck':
         cmd = ['e2fsck', '-n', '-f', device_path]
-        parser = parse_e2fsck_output
     elif tool == 'fsck.fat':
         cmd = ['fsck.fat', '-n', device_path]
-        parser = parse_fsck_fat_output
     elif tool == 'ntfsfix':
         cmd = ['ntfsfix', '-n', device_path]
-        parser = parse_ntfsfix_output
     else:
         return None
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True)
-        return parser(result.stdout, result.stderr, result.returncode)
+        return parse_fsck_output(tool, result.stdout, result.stderr,
+                                 result.returncode)
     except (subprocess.SubprocessError, OSError):
         return None
 
