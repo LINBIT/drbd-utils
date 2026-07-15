@@ -2525,6 +2525,8 @@ def _resource_v2(name: str, res_data: dict, initial_status: Optional[list],
         status = 'in_sync'
 
     files_affected = any(c.get('files', {}).get('affected') for c in connections)
+    metadata_affected = any(c.get('metadata_affected', {}).get('affected')
+                            for c in connections)
     fsck_errors = any(f.get('errors') for c in connections for f in c.get('fsck', []))
     res = {
         'name': name,
@@ -2535,6 +2537,7 @@ def _resource_v2(name: str, res_data: dict, initial_status: Optional[list],
             'dataset_count': len(datasets) if datasets is not None else None,
             'connection_count': len(connections),
             'files_affected': files_affected,
+            'metadata_affected': metadata_affected,
             'fsck_errors': bool(fsck_errors),
         },
         'snapshot_used': any(v.get('snapshot') for v in oos.values()),
@@ -2647,10 +2650,8 @@ def _report_overview(data: dict) -> None:
     role_conflicts = sum(1 for r in res for s in r.get('resync_suggestions', [])
                          if s.get('role_conflict'))
     warns = sum(1 for r in res if r.get('warnings'))
-    meta_affected = sum(
-        1 for r in res
-        if any(c.get('metadata_affected', {}).get('affected')
-               for c in r.get('connections', [])))
+    meta_affected = sum(1 for r in res
+                        if r.get('summary', {}).get('metadata_affected'))
     if role_conflicts:
         print(f'!!! {role_conflicts} resync suggestion(s) target a Primary '
               f'(role conflict -- see the actions report)')
