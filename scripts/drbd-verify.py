@@ -1093,6 +1093,23 @@ def fetch_peer_entropy(peer_name: str, res_name: str, target_peer: str) -> dict:
         json_object_hook=lambda d: {int(k): v for k, v in d.items()})
 
 
+def count_entropy_higher(entropy_a: dict, entropy_b: dict) -> tuple:
+    """Count blocks where a's entropy exceeds b's, and vice versa.
+
+    Only blocks present in both maps are compared; ties count for neither.
+    Returns (a_higher, b_higher)."""
+    a_higher = 0
+    b_higher = 0
+    for bit_number, ea in entropy_a.items():
+        eb = entropy_b.get(bit_number)
+        if eb is not None:
+            if ea > eb:
+                a_higher += 1
+            elif eb > ea:
+                b_higher += 1
+    return (a_higher, b_higher)
+
+
 def compare_peer_peer_entropy(res_name: str, connection_hosts: frozenset,
                               result_json: dict) -> None:
     """Fetch entropy from both endpoints of a remote-only connection and
@@ -1108,15 +1125,7 @@ def compare_peer_peer_entropy(res_name: str, connection_hosts: frozenset,
     peer1_entropy = fetch_peer_entropy(peer_name1, res_name, peer_name2)
     peer2_entropy = fetch_peer_entropy(peer_name2, res_name, peer_name1)
 
-    peer1_higher = 0
-    peer2_higher = 0
-    for bit_number, e1 in peer1_entropy.items():
-        e2 = peer2_entropy.get(bit_number)
-        if e2 is not None:
-            if e1 > e2:
-                peer1_higher += 1
-            elif e2 > e1:
-                peer2_higher += 1
+    peer1_higher, peer2_higher = count_entropy_higher(peer1_entropy, peer2_entropy)
 
     # block_size is normally populated by the level2 run on a diskful peer
     # and merged back in by verify_res. If it is somehow absent, fall back
@@ -1471,6 +1480,24 @@ def get_file_extents(filepath: str) -> list:
     return extents
 
 
+def oos_bit_ranges(oos_blocks: list, bm_byte_per_bit: int,
+                   partition_start_byte: int) -> list:
+    """Translate OOS bit numbers to partition-relative [start, end) byte
+    ranges, clamped to the partition. Bits lying entirely before the
+    partition are dropped; a bit straddling the start is clamped to 0.
+    Returned unsorted, in oos_blocks order."""
+    ranges = []
+    for bit_number in oos_blocks:
+        start = bit_number * bm_byte_per_bit - partition_start_byte
+        end = start + bm_byte_per_bit
+        if end <= 0:
+            continue  # bit lies entirely before the partition
+        if start < 0:
+            start = 0  # bit straddles the partition start
+        ranges.append((start, end))
+    return ranges
+
+
 def find_affected_files_forward(mountpoint: str, oos_blocks: list,
                                 bm_byte_per_bit: int,
                                 partition_start_byte: int,
@@ -1497,15 +1524,7 @@ def find_affected_files_forward(mountpoint: str, oos_blocks: list,
 
     # Convert OOS blocks to partition-relative byte ranges so they line
     # up with FIEMAP physical offsets.
-    oos_ranges = []
-    for bit_number in oos_blocks:
-        start = bit_number * bm_byte_per_bit - partition_start_byte
-        end = start + bm_byte_per_bit
-        if end <= 0:
-            continue  # bit lies entirely before the partition
-        if start < 0:
-            start = 0  # bit straddles the partition start
-        oos_ranges.append((start, end))
+    oos_ranges = oos_bit_ranges(oos_blocks, bm_byte_per_bit, partition_start_byte)
 
     # Walk the filesystem
     for root, dirs, files in os.walk(mountpoint):
@@ -1564,15 +1583,7 @@ def find_affected_files_reverse(mountpoint: str, oos_blocks: list,
     # overlapping it, so cost scales with the OOS footprint rather than the
     # whole-device extent count, and a file extent spanning many OOS blocks
     # is fetched once rather than per block.
-    ranges = []
-    for bit_number in oos_blocks:
-        start = bit_number * bm_byte_per_bit - partition_start_byte
-        end = start + bm_byte_per_bit
-        if end <= 0:
-            continue  # bit lies entirely before the partition
-        if start < 0:
-            start = 0  # bit straddles the partition start
-        ranges.append((start, end))
+    ranges = oos_bit_ranges(oos_blocks, bm_byte_per_bit, partition_start_byte)
     ranges.sort()
 
     runs = []  # [run_start, run_end, [member (start, end), ...]]
@@ -2060,16 +2071,8 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                         peer_oos_blocks_entropy = fetch_peer_entropy(peer_name, res_name, host_name)
                         entropy_map[connection_hosts][peer_name] = peer_oos_blocks_entropy
 
-                        local_higher = 0
-                        peer_higher = 0
-
-                        for bit_number, entropy in oos_blocks_entropy.items():
-                            peer_entropy = peer_oos_blocks_entropy.get(bit_number)
-                            if peer_entropy is not None:
-                                if entropy > peer_entropy:
-                                    local_higher += 1
-                                elif peer_entropy > entropy:
-                                    peer_higher += 1
+                        local_higher, peer_higher = count_entropy_higher(
+                            oos_blocks_entropy, peer_oos_blocks_entropy)
 
                         bm_byte_per_bit = oos_bitmap[0]
                         bm_kbyte_per_bit = bm_byte_per_bit // 1024
