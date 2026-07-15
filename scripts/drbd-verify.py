@@ -24,14 +24,28 @@ progress_re = re.compile(
 
 host_name = os.uname()[1]
 output_json = False
-this_prog_path = os.path.realpath(__file__)
-this_prog_name = os.path.basename(this_prog_path)
+try:
+    this_prog_path = os.path.realpath(__file__)
+    this_prog_name = os.path.basename(this_prog_path)
+except NameError:
+    # In Kubernetes mode the orchestrator streams this script to
+    # ``python3 -`` inside a satellite pod, where __file__ is undefined.
+    # Only the orchestrator ever needs the path, so a placeholder is fine.
+    this_prog_path = None
+    this_prog_name = 'drbd-verify.py'
 
 REMOTE_SCRIPT_DIR = '/run/drbd-verify'
 
-REQUIRED_TOOLS = ['kpartx', 'blkid', 'drbdsetup', 'drbdmeta', 'lvcreate', 'lvremove',
-                  'pvs', 'vgchange',
-                  'mount', 'umount', 'ssh', 'scp']
+# Tools needed for the low-level, per-node work, i.e. whenever this script
+# runs *on* a node -- directly, over SSH, or inside a satellite pod.
+# Partition/file/fsck analysis additionally uses kpartx/blkid/mount, but
+# those degrade gracefully at runtime when absent (e.g. a minimal pod), so
+# they are not hard requirements here.
+LEAF_TOOLS = ['drbdsetup', 'drbdmeta', 'lvcreate', 'lvremove', 'pvs', 'vgchange']
+
+# Extra tools the SSH orchestrator needs on the invoking node (which is also
+# a DRBD node, so it does leaf work locally too).
+SSH_ORCH_TOOLS = ['kpartx', 'blkid', 'mount', 'umount', 'ssh', 'scp']
 
 # Mapping of filesystem type to fsck tool name
 FSCK_TOOLS = {
@@ -49,20 +63,25 @@ FSCK_TOOLS = {
 available_fsck_tools = set()
 
 
-def check_required_tools() -> None:
-    """Check that all required external tools are available.
+def check_required_tools(tools: list) -> None:
+    """Check that all tools in ``tools`` are available.
 
     Exits with error message if any tool is missing.
     """
-    missing = []
-    for tool in REQUIRED_TOOLS:
-        if shutil.which(tool) is None:
-            missing.append(tool)
+    missing = [tool for tool in tools if shutil.which(tool) is None]
 
     if missing:
         print(f'Error: Required tools not found: {", ".join(missing)}', file=sys.stderr)
         print('Please install the missing tools and try again.', file=sys.stderr)
         sys.exit(1)
+
+
+def have_partition_tools() -> bool:
+    """True if the tools needed to expose and inspect partitions inside a
+    disk image (kpartx, blkid) are present. Partition, fsck and file
+    analysis are skipped when they are not, so a minimal environment still
+    yields entropy-based results."""
+    return shutil.which('kpartx') is not None and shutil.which('blkid') is not None
 
 
 def check_fsck_tools() -> None:
@@ -334,7 +353,8 @@ def run_fsck_check(device_path: str, fstype: str) -> Optional[dict]:
         return None
 
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, universal_newlines=True)
         return parser(result.stdout, result.stderr, result.returncode)
     except (subprocess.SubprocessError, OSError):
         return None
@@ -372,7 +392,8 @@ def run_silent(cmd: list, check: bool = True) -> subprocess.CompletedProcess:
     captured stdout and stderr to fd 2; raise CalledProcessError if
     ``check`` is True. Safe against the PIPE-buffer deadlock because
     subprocess.run drains both streams via communicate()."""
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, universal_newlines=True)
     if result.returncode != 0:
         if result.stdout:
             print(result.stdout, end='', file=sys.stderr)
@@ -381,6 +402,116 @@ def run_silent(cmd: list, check: bool = True) -> subprocess.CompletedProcess:
         if check:
             result.check_returncode()
     return result
+
+
+class Transport:
+    """How the orchestrator reaches DRBD nodes: it runs a plain command on
+    a node, and it runs this very script on a node in one of its leaf
+    sub-modes (``--verify-only`` / ``--entropy-only`` / ``--fsck-only`` /
+    ``--analyze-only``). Two concrete transports exist: SSH (the traditional
+    deployment, where every node runs the DRBD tools) and kubectl (Kubernetes,
+    where the DRBD tools live inside the LINSTOR satellite pod)."""
+
+    def prepare(self, node: str) -> None:
+        """One-time setup before running the script on ``node``."""
+
+    def node_command_argv(self, node: str, cmd: list) -> list:
+        """argv that runs the plain command ``cmd`` on ``node``."""
+        raise NotImplementedError
+
+    def script_argv(self, node: str, script_args: list) -> tuple:
+        """Return ``(argv, stdin_bytes)`` that runs this script on ``node``
+        with ``--json`` plus ``script_args``. ``stdin_bytes`` is fed to the
+        child's stdin (the script source) or is ``None``."""
+        raise NotImplementedError
+
+    def is_connect_failure(self, returncode: int) -> bool:
+        """True if ``returncode`` signals a transport-level (not script)
+        failure, so a connection-oriented hint can be shown."""
+        return False
+
+    def connect_hint(self) -> str:
+        return ''
+
+    def resync_command(self, node: str, cmd: list) -> str:
+        """A human-facing shell command string that runs ``cmd`` on
+        ``node`` (used in resync suggestions and by ``--do-it``)."""
+        raise NotImplementedError
+
+
+class SshTransport(Transport):
+    def prepare(self, node: str) -> None:
+        # install(1) sets mode 0700 idempotently, and /run is not
+        # world-writable, so a non-privileged attacker cannot plant a
+        # symlink at the scp destination.
+        run_silent(['ssh'] + ssh_opts + [node, f'install -d -m 0700 {REMOTE_SCRIPT_DIR}'])
+        run_silent(['scp'] + ssh_opts + ['-q', this_prog_path, f'{node}:{REMOTE_SCRIPT_DIR}/'])
+
+    def node_command_argv(self, node: str, cmd: list) -> list:
+        return ['ssh'] + ssh_opts + [node] + cmd
+
+    def script_argv(self, node: str, script_args: list) -> tuple:
+        # Invoke via python3 explicitly so the script also runs on hosts
+        # that mount /run with noexec (e.g. Ubuntu). noexec blocks execve()
+        # of the script's inode but not reading it as input to python3.
+        argv = ['ssh'] + ssh_opts + [node, 'python3',
+                f'{REMOTE_SCRIPT_DIR}/{this_prog_name}', '--json'] + script_args
+        return argv, None
+
+    def is_connect_failure(self, returncode: int) -> bool:
+        # ssh(1) reserves 255 for its own connection/auth failures.
+        return returncode == 255
+
+    def connect_hint(self) -> str:
+        return ('This tool requires passwordless SSH access to all peer nodes.\n'
+                'Please set up SSH keys and use ssh-agent to enable passwordless login:\n'
+                '  1. Generate SSH key: ssh-keygen\n'
+                '  2. Copy public key to all peers')
+
+    def resync_command(self, node: str, cmd: list) -> str:
+        return 'ssh ' + node + ' ' + ' '.join(cmd)
+
+
+class KubectlTransport(Transport):
+    """Reach nodes by exec-ing into their LINSTOR satellite pod, which
+    carries the DRBD tools. The script itself is streamed to ``python3 -``
+    over stdin, so nothing needs to be installed in the pod."""
+
+    def __init__(self, namespace: str, pod_pattern: str):
+        self.namespace = namespace
+        self.pod_pattern = pod_pattern
+
+    def pod(self, node: str) -> str:
+        return self.pod_pattern.format(node=node)
+
+    def _exec_argv(self, node: str, cmd: list, stdin: bool = False) -> list:
+        base = ['kubectl', '-n', self.namespace, 'exec']
+        if stdin:
+            base.append('-i')
+        return base + [self.pod(node), '--'] + cmd
+
+    def node_command_argv(self, node: str, cmd: list) -> list:
+        return self._exec_argv(node, cmd)
+
+    def script_argv(self, node: str, script_args: list) -> tuple:
+        argv = self._exec_argv(node, ['python3', '-', '--json'] + script_args,
+                               stdin=True)
+        with open(this_prog_path, 'rb') as f:
+            return argv, f.read()
+
+    def connect_hint(self) -> str:
+        return ('This tool runs node commands via:\n'
+                f'  kubectl -n {self.namespace} exec {self.pod("<node>")} -- <cmd>\n'
+                'Check that kubectl is configured, the namespace is correct, and '
+                'the satellite pods are running.')
+
+    def resync_command(self, node: str, cmd: list) -> str:
+        return ' '.join(self._exec_argv(node, cmd))
+
+
+# The active transport. Replaced with a KubectlTransport in main() when
+# --kubectl is given. Leaf sub-modes never touch it: they only do local work.
+TRANSPORT = SshTransport()
 
 
 class Snapshot:
@@ -419,7 +550,10 @@ class LVMSnapShot(Snapshot):
         lv_name = os.path.basename(backing_dev)
         vg_path = os.path.dirname(backing_dev)
 
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        # Microseconds keep the name unique even when the same origin is
+        # snapshotted twice in one second (e.g. external metadata dumped for
+        # several peers in a row).
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
         self.snapshot_name = f'{lv_name}_snap_{timestamp}'
         # Path that the snapshot WILL have if creation succeeds. We
         # only commit it to ``self.snapshot_path`` in __enter__ after
@@ -490,7 +624,10 @@ class ZFSSnapshot(Snapshot):
     def __init__(self, backing_dev: str, dataset: str):
         super().__init__(backing_dev)
         self.dataset = dataset
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        # Microseconds keep the name unique even when the same origin is
+        # snapshotted twice in one second (e.g. external metadata dumped for
+        # several peers in a row).
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S_%f')
         self.snap_full = f'{dataset}@drbdverify_{timestamp}'
         self.clone_full = f'{dataset}_drbdverify_{timestamp}'
         # Path the clone WILL have if creation succeeds. Only
@@ -569,7 +706,8 @@ class KpartxMappings:
     def __enter__(self) -> 'KpartxMappings':
         result = subprocess.run(
             ['kpartx', '-av', self.device_path],
-            capture_output=True, text=True)
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            universal_newlines=True)
         # kpartx may output warnings to stderr but still succeed
         # Parse stdout for partition mappings
         for line in result.stdout.splitlines():
@@ -593,7 +731,8 @@ class KpartxMappings:
             try:
                 blkid_result = subprocess.run(
                     ['blkid', part_info['dev_path']],
-                    capture_output=True, text=True)
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    universal_newlines=True)
                 if blkid_result.returncode == 0:
                     # Parse TYPE="..." from blkid output
                     type_match = re.search(r'TYPE="([^"]+)"', blkid_result.stdout)
@@ -630,7 +769,8 @@ class KpartxMappings:
         """Return the VG UUID for the PV at ``pv_path`` or None."""
         result = subprocess.run(
             ['pvs', '--noheadings', '-o', 'vg_uuid', pv_path],
-            capture_output=True, text=True)
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            universal_newlines=True)
         if result.returncode != 0:
             return None
         uuid = result.stdout.strip()
@@ -726,73 +866,62 @@ def is_resource_ready(res_json: dict) -> tuple:
 
 def run_remote_script(peer_name: str, script_args: list, copy_script: bool = False,
                       json_object_hook=None) -> dict:
-    """Run this script on a remote peer via SSH and return JSON result.
+    """Run this script on ``peer_name`` through the active transport and
+    return its parsed JSON output.
 
     Args:
-        peer_name: The peer hostname to SSH into
-        script_args: Arguments to pass to the remote script (--json is added automatically)
-        copy_script: Whether to copy the script to the remote host first via SCP
-        json_object_hook: Optional object_hook for json.load()
+        peer_name: The node to run the script on
+        script_args: Arguments to pass to the script (--json is added automatically)
+        copy_script: Whether the transport should stage the script first
+        json_object_hook: Optional object_hook for json.loads()
 
     Returns:
-        Parsed JSON output from the remote script
+        Parsed JSON output from the script
     """
-    def ssh_help_and_exit():
-        print(f'\nError: Failed to connect to peer "{peer_name}"', file=sys.stderr)
-        print('This tool requires passwordless SSH access to all peer nodes.', file=sys.stderr)
-        print('Please set up SSH keys and use ssh-agent to enable passwordless login:', file=sys.stderr)
-        print('  1. Generate SSH key: ssh-keygen', file=sys.stderr)
-        print('  2. Copy public key to all peers', file=sys.stderr)
+    def connect_help_and_exit(stderr_text: str):
+        print(f'\nError: failed to run drbd-verify on node "{peer_name}"',
+              file=sys.stderr)
+        if stderr_text.strip():
+            print(stderr_text, end='', file=sys.stderr)
+        hint = TRANSPORT.connect_hint()
+        if hint:
+            print(hint, file=sys.stderr)
         sys.exit(10)
 
     try:
         if copy_script:
-            # install(1) sets mode 0700 idempotently, and /run is not
-            # world-writable, so a non-privileged attacker cannot plant a
-            # symlink at the scp destination.
-            run_silent(
-                ['ssh'] + ssh_opts + [peer_name,
-                 f'install -d -m 0700 {REMOTE_SCRIPT_DIR}'])
-            run_silent(
-                ['scp'] + ssh_opts + ['-q', this_prog_path,
-                 f'{peer_name}:{REMOTE_SCRIPT_DIR}/'])
-
-        # Invoke via python3 explicitly so the script also runs on hosts
-        # that mount /run with noexec (e.g. Ubuntu). noexec blocks execve()
-        # of the script's inode but not reading it as input to python3.
-        args = ['ssh'] + ssh_opts + [peer_name,
-                'python3', f'{REMOTE_SCRIPT_DIR}/{this_prog_name}',
-                '--json'] + script_args
-
-        with subprocess.Popen(args, stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE) as p:
-            try:
-                if json_object_hook:
-                    result = json.load(p.stdout, object_hook=json_object_hook)
-                else:
-                    result = json.load(p.stdout)
-            except json.JSONDecodeError:
-                result = None
-            remote_stderr = p.stderr.read().decode('utf-8', 'replace')
-            rc = p.wait()
-
-        if rc == 255:
-            # ssh(1) reserves 255 for its own connection/auth failures.
-            if remote_stderr.strip():
-                print(remote_stderr, end='', file=sys.stderr)
-            ssh_help_and_exit()
-
-        if rc != 0 or result is None:
-            print(f'\nError: remote drbd-verify.py on "{peer_name}" failed '
-                  f'(exit {rc})', file=sys.stderr)
-            if remote_stderr.strip():
-                print(remote_stderr, end='', file=sys.stderr)
-            sys.exit(10)
-
-        return result
+            TRANSPORT.prepare(peer_name)
     except subprocess.CalledProcessError:
-        # Reached only from the install/scp steps above.
-        ssh_help_and_exit()
+        connect_help_and_exit('')
+
+    argv, stdin_bytes = TRANSPORT.script_argv(peer_name, script_args)
+    # subprocess.run drains stdin/stdout/stderr concurrently (via
+    # communicate()), so feeding the script on stdin cannot deadlock against
+    # a large JSON reply on stdout.
+    proc = subprocess.run(argv, input=stdin_bytes,
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    rc = proc.returncode
+    remote_stderr = proc.stderr.decode('utf-8', 'replace')
+
+    try:
+        if json_object_hook:
+            result = json.loads(proc.stdout, object_hook=json_object_hook)
+        else:
+            result = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        result = None
+
+    if TRANSPORT.is_connect_failure(rc):
+        connect_help_and_exit(remote_stderr)
+
+    if rc != 0 or result is None:
+        print(f'\nError: remote drbd-verify.py on "{peer_name}" failed '
+              f'(exit {rc})', file=sys.stderr)
+        if remote_stderr.strip():
+            print(remote_stderr, end='', file=sys.stderr)
+        sys.exit(10)
+
+    return result
 
 
 def get_oos(res_name: str, peer_node_id: int) -> int:
@@ -839,10 +968,37 @@ def verify_peer(res_name: str, peer_json: dict, skip_verify: bool = False) -> in
     return oos
 
 
-def backing_dev_res(res_name: str) -> str:
+def _volume0_show(res_name: str) -> dict:
+    """Return the ``_this_host`` volume-0 dict from ``drbdsetup show``."""
     with subprocess.Popen(['drbdsetup', 'show', res_name, '--json'], stdout=subprocess.PIPE) as p:
         show_json = json.load(p.stdout)
-    return show_json[0]['_this_host']['volumes'][0]['backing-disk']
+    return show_json[0]['_this_host']['volumes'][0]
+
+
+def backing_dev_res(res_name: str) -> str:
+    return _volume0_show(res_name)['backing-disk']
+
+
+def meta_config_res(res_name: str) -> tuple:
+    """Return ``(is_internal, meta_disk, meta_index)`` for volume 0, mirroring
+    how drbdadm builds the drbdmeta argument list (see _adm_drbdmeta):
+
+      internal          -> dump the backing device, index 'internal'
+      flexible external -> dump the meta device,    index 'flex-external'
+      indexed external  -> dump the meta device,    index '<n>'
+
+    ``drbdsetup show`` prints ``"meta-disk": "internal"`` for internal/
+    flex-internal, the bare meta device path for flex-external, and the meta
+    device path plus a ``"meta-disk-index"`` for old-style fixed indexes.
+    """
+    vol = _volume0_show(res_name)
+    meta = vol.get('meta-disk')
+    if not meta or meta == 'internal':
+        return (True, None, 'internal')
+    idx = vol.get('meta-disk-index')
+    if idx is None:
+        return (False, meta, 'flex-external')
+    return (False, meta, str(idx))
 
 
 def parse_bitmap_for_peer(metadata_stream, peer_node_id: int) -> tuple:
@@ -930,25 +1086,16 @@ def parse_bitmap_for_peer(metadata_stream, peer_node_id: int) -> tuple:
     return (bm_byte_per_bit, bytes(result))
 
 
-def get_oos_bitmap(res_json: dict, peer: str, snapshot_path: str) -> tuple:
-    """Get the out-of-sync bitmap for a specific peer.
-
-    Dumps DRBD metadata from the given snapshot and extracts the bitmap
-    for the specified peer.
-
-    Args:
-        res_json: Resource JSON from drbdsetup status
-        peer: Peer name to get bitmap for
-        snapshot_path: Path to the LVM snapshot device
-
-    Returns:
-        Tuple of (bm_byte_per_bit, bitmap_data)
-    """
-    [peer_node_id] = [conn['peer-node-id'] for conn in res_json['connections'] if conn['name'] == peer]
-
+def _dump_bitmap(metadev: str, meta_index: str, peer_node_id: int) -> tuple:
+    """Run ``drbdmeta dump-md`` on ``metadev`` (with ``meta_index`` selecting
+    internal / flex-external / an indexed slot) and return the bitmap for
+    ``peer_node_id``. ``metadev`` must be an offline device (a snapshot),
+    not the live one DRBD holds open."""
     with tempfile.TemporaryFile() as stderr_file:
+        # '-' as the device name makes drbdmeta skip the drbd-minor lock,
+        # which is pointless for an offline snapshot (see git history).
         with subprocess.Popen(
-                ['drbdmeta', '-', 'v09', snapshot_path, 'internal', 'dump-md', '--force'],
+                ['drbdmeta', '-', 'v09', metadev, meta_index, 'dump-md', '--force'],
                 stdout=subprocess.PIPE,
                 stderr=stderr_file) as proc:
             try:
@@ -976,6 +1123,35 @@ def get_oos_bitmap(res_json: dict, peer: str, snapshot_path: str) -> tuple:
             raise subprocess.CalledProcessError(proc.returncode, proc.args)
 
     return (bm_byte_per_bit, bitmap_data)
+
+
+def get_oos_bitmap(res_json: dict, peer: str, snapshot_path: str) -> tuple:
+    """Get the out-of-sync bitmap for a specific peer.
+
+    Dumps DRBD metadata and extracts the bitmap for the specified peer.
+
+    Args:
+        res_json: Resource JSON from drbdsetup status
+        peer: Peer name to get bitmap for
+        snapshot_path: Path to the backing-disk snapshot (used only for
+            internal metadata, which is stored inside the backing device).
+
+    Returns:
+        Tuple of (bm_byte_per_bit, bitmap_data)
+    """
+    [peer_node_id] = [conn['peer-node-id'] for conn in res_json['connections'] if conn['name'] == peer]
+
+    is_internal, meta_disk, meta_index = meta_config_res(res_json['name'])
+    if is_internal:
+        # Internal metadata lives at the end of the backing device, so the
+        # backing-disk snapshot already contains it.
+        return _dump_bitmap(snapshot_path, meta_index, peer_node_id)
+
+    # External metadata is on a separate device that DRBD holds open. Snapshot
+    # it too, so drbdmeta can open it offline and exclusively -- exactly the
+    # reason the backing device is snapshotted for the internal case.
+    with make_backing_snapshot(meta_disk) as meta_snapshot:
+        return _dump_bitmap(meta_snapshot.snapshot_path, meta_index, peer_node_id)
 
 
 def verify_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) -> dict:
@@ -1074,7 +1250,11 @@ def get_oos_blocks_entropy(backing_dev: str, bm_byte_per_bit: int, bitmap_data: 
         try:
             for bit_number in iterate_oos_offsets(bm_byte_per_bit, bitmap_data):
                 disk_offset = bit_number * bm_byte_per_bit
-                bytes_read = os.preadv(fd, [buffer], disk_offset)
+                # os.preadv would be tidier but is Python 3.7+; the LINSTOR
+                # satellite pod ships 3.6. lseek+readv is equivalent here and
+                # still reads into the page-aligned mmap that O_DIRECT needs.
+                os.lseek(fd, disk_offset, os.SEEK_SET)
+                bytes_read = os.readv(fd, [buffer])
                 entropy = shannon_entropy(buffer[:bytes_read])
                 entropy_dict[bit_number] = entropy
         finally:
@@ -1651,7 +1831,7 @@ def analyze_partition_files(device_path: str, fstype: str, oos_blocks: list,
 
 
 def generate_resync_commands(res_name: str, source_node: str, target_node: str,
-                             invoking_host: str) -> list:
+                             invoking_host: Optional[str]) -> list:
     """Generate resync commands to sync from source to target node.
 
     Args:
@@ -1659,7 +1839,9 @@ def generate_resync_commands(res_name: str, source_node: str, target_node: str,
         source_node: Node with authoritative data (the blocks with higher entropy;
                     we always sync from higher-entropy blocks onto lower-entropy ones)
         target_node: Node to be overwritten
-        invoking_host: The host where drbd-verify.py was invoked
+        invoking_host: The host where drbd-verify.py was invoked, or None when
+                    there is no local node (Kubernetes mode), which forces the
+                    remote (transport) form.
 
     Returns:
         List of command strings to execute
@@ -1675,9 +1857,12 @@ def generate_resync_commands(res_name: str, source_node: str, target_node: str,
         cmd = f"drbdadm invalidate-remote --reset-bitmap=no {res_name}:{target_node}"
         commands.append(cmd)
     else:
-        # Both nodes are remote - need to SSH
-        cmd = f"ssh {target_node} drbdadm invalidate --reset-bitmap=no {res_name}:{source_node}"
-        commands.append(cmd)
+        # The target is remote to the invoking host - run the invalidate on
+        # it through the active transport (ssh, or kubectl exec in K8s).
+        commands.append(TRANSPORT.resync_command(
+            target_node,
+            ['drbdadm', 'invalidate', '--reset-bitmap=no',
+             f'{res_name}:{source_node}']))
 
     return commands
 
@@ -2100,6 +2285,165 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
     return result_json
 
 
+def enumerate_nodes(res_json: dict, node: str) -> dict:
+    """Return ``{node_name: is_diskful}`` for a resource, derived from
+    ``node``'s ``drbdsetup status``.
+
+    Assumes a full mesh (every node connected to every other), which is the
+    normal LINSTOR/DRBD layout, so ``node``'s connection list names every
+    other node in the resource."""
+    nodes = {node: res_json['devices'][0]['disk-state'] != 'Diskless'}
+    for conn in res_json['connections']:
+        peer_disk_state = conn['peer_devices'][0]['peer-disk-state']
+        nodes[conn['name']] = peer_disk_state not in ('Diskless', 'DUnknown')
+    return nodes
+
+
+def fsck_totals(fsck_results: dict) -> dict:
+    """Collapse per-partition fsck results into total error/warning counts."""
+    return {
+        'errors': sum(r['errors'] for r in fsck_results.values()),
+        'warnings': sum(r['warnings'] for r in fsck_results.values()),
+    }
+
+
+def process_res_kubectl(res_json: dict, node: str, peers, skip_verify: bool = False) -> dict:
+    """Kubernetes orchestrator for one resource.
+
+    There is no local DRBD node here: every node is reached via ``kubectl
+    exec`` into its satellite pod. So, unlike ``process_res``, every
+    connection is treated uniformly as "remote-remote". Verifies are
+    initiated on one endpoint of each diskful pair; entropy, fsck and file
+    analysis for a pair are gathered from *both* endpoints (one snapshot per
+    node covers all of that node's OOS peers) and compared here."""
+    res_name = res_json['name']
+    result_json = {'oos': {}}
+
+    nodes = enumerate_nodes(res_json, node)
+    diskful = sorted(name for name, is_diskful in nodes.items() if is_diskful)
+    if peers:
+        allowed = set(peers) | {node}
+        diskful = [n for n in diskful if n in allowed]
+
+    if len(diskful) < 2:
+        log(f'Ignoring {res_name}: fewer than two diskful nodes to compare')
+        return result_json
+
+    log(f'Running verify operations for {res_name} across nodes: '
+        f'{", ".join(diskful)}')
+
+    # 1. Verify every diskful pair. Each pair is initiated on its
+    # lexicographically-first node, so every pair is verified exactly once.
+    for i, initiator in enumerate(diskful):
+        targets = diskful[i + 1:]
+        if not targets:
+            continue
+        script_args = ['--resource', res_name, '--verify-only', '--peers'] + targets
+        if skip_verify:
+            script_args.append('--skip-verify')
+        log(f' {initiator} verifying against {", ".join(targets)} ...',
+            end='', flush=True)
+        oos_by_peer = run_remote_script(initiator, script_args, copy_script=True)
+        for target, oos in oos_by_peer.items():
+            result_json['oos'][frozenset([initiator, target])] = {'value_KiB': oos}
+            log(f'\r {initiator}-{target} out-of-sync: {oos} KiB\x1b[K')
+
+    # 2. For every node that is an endpoint of an OOS pair, gather the
+    # entropy/fsck/file analysis once (a single snapshot per node covers all
+    # of that node's OOS peers).
+    analyze_peers = {}
+    for connection_hosts, oos_dict in result_json['oos'].items():
+        if oos_dict['value_KiB'] > 0:
+            for endpoint in connection_hosts:
+                other = next(iter(connection_hosts - {endpoint}))
+                analyze_peers.setdefault(endpoint, set()).add(other)
+
+    analysis = {}
+    for n, peer_set in analyze_peers.items():
+        script_args = ['--resource', res_name, '--analyze-only',
+                       '--peers'] + sorted(peer_set)
+        log(f' Analyzing out-of-sync blocks on {n} ...', end='', flush=True)
+        analysis[n] = run_remote_script(n, script_args, copy_script=True)
+        log(f'\r Analyzed out-of-sync blocks on {n}\x1b[K')
+
+    # 3. Compare the two endpoints of each OOS pair.
+    for connection_hosts, oos_dict in result_json['oos'].items():
+        if oos_dict['value_KiB'] == 0:
+            continue
+        node_a, node_b = sorted(connection_hosts)
+        a_res = analysis[node_a]['peers'][node_b]
+        b_res = analysis[node_b]['peers'][node_a]
+        # JSON turned the integer bit numbers into strings; turn them back.
+        a_entropy = {int(k): v for k, v in a_res['entropy'].items()}
+        b_entropy = {int(k): v for k, v in b_res['entropy'].items()}
+
+        a_higher = b_higher = 0
+        for bit_number, entropy_a in a_entropy.items():
+            entropy_b = b_entropy.get(bit_number)
+            if entropy_b is not None:
+                if entropy_a > entropy_b:
+                    a_higher += 1
+                elif entropy_b > entropy_a:
+                    b_higher += 1
+
+        bm_byte_per_bit = a_res.get('block_size', 4096)
+        bm_kbyte_per_bit = bm_byte_per_bit // 1024
+        oos_dict['block_size'] = bm_byte_per_bit
+        oos_dict[f'{node_a} higher'] = a_higher
+        oos_dict[f'{node_b} higher'] = b_higher
+        log(f' {node_a} has higher entropy for {a_higher * bm_kbyte_per_bit} KiB')
+        log(f' {node_b} has higher entropy for {b_higher * bm_kbyte_per_bit} KiB')
+
+        oos_dict['fsck'] = {
+            node_a: fsck_totals(analysis[node_a].get('fsck', {})),
+            node_b: fsck_totals(analysis[node_b].get('fsck', {})),
+        }
+
+        partitions = {}
+        if a_res.get('partitions'):
+            partitions[node_a] = a_res['partitions']
+        if b_res.get('partitions'):
+            partitions[node_b] = b_res['partitions']
+        if partitions:
+            oos_dict['partitions'] = partitions
+
+        affected = {}
+        if a_res.get('affected_files'):
+            affected[node_a] = a_res['affected_files']
+        if b_res.get('affected_files'):
+            affected[node_b] = b_res['affected_files']
+        if affected:
+            oos_dict['affected_files'] = affected
+            for endpoint, files in affected.items():
+                log(f' {endpoint}: {len(files)} file(s) affected')
+        oos_dict['files_affected'] = bool(affected)
+
+    # 4. Dataset analysis and resync suggestions.
+    if not append_dataset_analysis(result_json):
+        return result_json
+
+    result_json['resync_suggestions'] = []
+    for connection_hosts, oos_dict in result_json['oos'].items():
+        if oos_dict['value_KiB'] == 0:
+            continue
+        node_a, node_b = sorted(connection_hosts)
+        source, target = determine_resync_direction(oos_dict, node_a, node_b)
+        # invoking_host=None: there is no local node, so the invalidate
+        # always runs on the target through the transport (kubectl exec).
+        commands = generate_resync_commands(res_name, source, target, None)
+        result_json['resync_suggestions'].append({
+            'connection': f'{node_a}-{node_b}',
+            'source': source,
+            'target': target,
+            'commands': commands,
+        })
+        log(f'\nResync suggestion for {node_a}-{node_b}:')
+        log(f'  Sync from higher entropy ({source}) to lower ({target})')
+        log(f'  Command: {commands[0]}')
+
+    return result_json
+
+
 def json_key_to_frozenset(oos_dict: dict) -> dict:
     """Convert OOS dictionary with comma-separated string keys to frozenset keys."""
     result = {}
@@ -2146,9 +2490,13 @@ def main() -> int:
              there. For
              that, it requires logging into all peers by ssh without providing a
              password. Please use ssh keys and the ssh-agent to enable passwordless
-             login.  It creates a file in the current working directory with the
-             name drbd-verify-result_YYYY-MM-DD_HHMM.json that contains the results
-             in JSON format."""
+             login.
+             In Kubernetes there is usually no such ssh access and the nodes do
+             not carry the DRBD tools; pass --kubectl and --node NODE to instead
+             reach every node by running commands inside its LINSTOR satellite
+             pod (kubectl exec). It creates a file in the current working
+             directory with the name drbd-verify-result_YYYY-MM-DD_HHMM.json
+             that contains the results in JSON format."""
 
     arg_parser = argparse.ArgumentParser(description=desc, epilog=epilog)
     arg_parser.add_argument('-j', '--json', dest='json', action='store_true',
@@ -2159,11 +2507,30 @@ def main() -> int:
     arg_parser.add_argument('--skip-verify', dest='skip_verify', action='store_true',
                             help='Skip the drbdsetup verify step and analyze the '
                                  'currently out-of-sync blocks as reported by DRBD')
+    arg_parser.add_argument('--kubectl', dest='kubectl', action='store_true',
+                            help='Run in Kubernetes: reach every node by executing '
+                                 'commands inside its LINSTOR satellite pod via '
+                                 'kubectl exec, instead of over SSH. Requires --node.')
+    arg_parser.add_argument('--node', dest='node', type=str,
+                            help='(--kubectl) Name of the node whose drbdsetup status '
+                                 'is used to discover the resources and their peers.')
+    arg_parser.add_argument('--namespace', dest='namespace', type=str,
+                            default='linbit-sds',
+                            help='(--kubectl) Kubernetes namespace of the satellite '
+                                 'pods (default: linbit-sds)')
+    arg_parser.add_argument('--pod-pattern', dest='pod_pattern', type=str,
+                            default='ds/linstor-satellite.{node}',
+                            help='(--kubectl) kubectl exec target for a node, with '
+                                 '{node} substituted (default: ds/linstor-satellite.{node})')
     arg_parser.add_argument('--level2', dest='level2', action='store_true',
                             help=argparse.SUPPRESS)
     arg_parser.add_argument('--entropy-only', dest='entropy_only', action='store_true',
                             help=argparse.SUPPRESS)
     arg_parser.add_argument('--fsck-only', dest='fsck_only', action='store_true',
+                            help=argparse.SUPPRESS)
+    arg_parser.add_argument('--verify-only', dest='verify_only', action='store_true',
+                            help=argparse.SUPPRESS)
+    arg_parser.add_argument('--analyze-only', dest='analyze_only', action='store_true',
                             help=argparse.SUPPRESS)
     arg_parser.add_argument('--peers', dest='peers', type=str, nargs='*',
                             help=argparse.SUPPRESS)
@@ -2172,11 +2539,48 @@ def main() -> int:
     args = arg_parser.parse_args()
     output_json = args.json
 
-    check_required_tools()
+    global TRANSPORT, host_name
+    if args.kubectl:
+        if not args.node:
+            print('--kubectl requires --node NODE', file=sys.stderr)
+            return 1
+        TRANSPORT = KubectlTransport(args.namespace, args.pod_pattern)
+        # No local DRBD node in this mode; use --node as the perspective.
+        host_name = args.node
+    elif args.node:
+        print('--node is only meaningful together with --kubectl', file=sys.stderr)
+        return 1
+
+    # Leaf sub-modes do only local work inside the current host/pod, so they
+    # need just the DRBD tools -- not the orchestration transport (ssh/kubectl).
+    if args.verify_only:
+        check_required_tools(['drbdsetup'])
+    elif args.entropy_only or args.fsck_only or args.analyze_only:
+        check_required_tools(LEAF_TOOLS)
+    elif args.kubectl:
+        # The orchestrator only shells out to kubectl; the DRBD tools live in
+        # the pods, not here.
+        check_required_tools(['kubectl'])
+    else:
+        check_required_tools(LEAF_TOOLS + SSH_ORCH_TOOLS)
     check_fsck_tools()
 
-    with subprocess.Popen(['drbdsetup', 'status', '--json'], stdout=subprocess.PIPE) as p:
-        drbd_status_json = json.load(p.stdout)
+    if args.kubectl:
+        status_argv = TRANSPORT.node_command_argv(
+            args.node, ['drbdsetup', 'status', '--json'])
+        proc = subprocess.run(status_argv, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE)
+        if proc.returncode != 0:
+            print(f'Error: could not get DRBD status from node "{args.node}"',
+                  file=sys.stderr)
+            if proc.stderr:
+                sys.stderr.buffer.write(proc.stderr)
+            print(TRANSPORT.connect_hint(), file=sys.stderr)
+            return 1
+        drbd_status_json = json.loads(proc.stdout)
+    else:
+        with subprocess.Popen(['drbdsetup', 'status', '--json'], stdout=subprocess.PIPE) as p:
+            drbd_status_json = json.load(p.stdout)
 
     if args.res_names:
         work = [res for res in drbd_status_json if res['name'] in args.res_names]
@@ -2217,18 +2621,109 @@ def main() -> int:
         res_json = work[0]
         backing_dev = backing_dev_res(res_json['name'])
 
-        # Create snapshot and run fsck on partitions. If the
-        # snapshot can't be taken (e.g. VG/pool full on this
-        # remote), return an empty dict: fsck on the live backing
-        # device is not safe.
+        # Create snapshot and run fsck on partitions. If the snapshot can't
+        # be taken (e.g. VG/pool full on this node) or the partition tools
+        # are missing (minimal pod), return an empty dict: fsck on the live
+        # backing device is not safe.
         with make_backing_snapshot(backing_dev) as snapshot:
-            if snapshot.snapshot_taken:
+            if snapshot.snapshot_taken and have_partition_tools():
                 with KpartxMappings(snapshot.snapshot_path) as kpartx:
                     fsck_results = run_fsck_on_partitions(kpartx)
             else:
                 fsck_results = {}
 
         print(json.dumps(fsck_results))
+        return 0
+
+    if args.verify_only:
+        if args.res_names is None or len(args.res_names) != 1:
+            print('Exactly one resource is mandatory in --verify-only mode',
+                  file=sys.stderr)
+            sys.exit(10)
+        if not args.peers:
+            print('At least one peer is necessary in --verify-only mode',
+                  file=sys.stderr)
+            sys.exit(10)
+
+        res_json = work[0]
+        res_name = res_json['name']
+        oos_by_peer = {}
+        for peer_name in args.peers:
+            matches = [c for c in res_json['connections'] if c['name'] == peer_name]
+            if not matches:
+                print(f'Peer "{peer_name}" is not a connection of {res_name}',
+                      file=sys.stderr)
+                sys.exit(10)
+            oos_by_peer[peer_name] = verify_peer(res_name, matches[0], args.skip_verify)
+
+        print(json.dumps(oos_by_peer))
+        return 0
+
+    if args.analyze_only:
+        if args.res_names is None or len(args.res_names) != 1:
+            print('Exactly one resource is mandatory in --analyze-only mode',
+                  file=sys.stderr)
+            sys.exit(10)
+        if not args.peers:
+            print('At least one peer is necessary in --analyze-only mode',
+                  file=sys.stderr)
+            sys.exit(10)
+
+        res_json = work[0]
+        backing_dev = backing_dev_res(res_json['name'])
+
+        # One snapshot covers the entropy/fsck/file analysis for every peer
+        # this node differs from. fsck is peer-independent; entropy,
+        # partition map and affected files are per-peer (each peer has its
+        # own out-of-sync bitmap).
+        out = {'snapshot_taken': False, 'fsck': {}, 'peers': {}}
+        with make_backing_snapshot(backing_dev) as snapshot:
+            out['snapshot_taken'] = snapshot.snapshot_taken
+            bitmaps = {p: get_oos_bitmap(res_json, p, snapshot.snapshot_path)
+                       for p in args.peers}
+
+            can_partition = snapshot.snapshot_taken and have_partition_tools()
+            can_files = can_partition and shutil.which('mount') is not None
+            kpartx_cls = KpartxMappings if can_partition else NoKpartxMappings
+
+            with kpartx_cls(snapshot.snapshot_path) as kpartx:
+                if can_partition:
+                    out['fsck'] = run_fsck_on_partitions(kpartx)
+
+                for peer_name in args.peers:
+                    oos_bitmap = bitmaps[peer_name]
+                    bm_byte_per_bit = oos_bitmap[0]
+                    entropy = get_oos_blocks_entropy(snapshot.snapshot_path, *oos_bitmap)
+                    peer_out = {'block_size': bm_byte_per_bit, 'entropy': entropy}
+
+                    if can_partition:
+                        oos_by_partition = map_oos_to_partitions(oos_bitmap, kpartx)
+                        peer_out['partitions'] = {
+                            name: {'oos_kib': info['oos_kib'], 'fstype': info['fstype']}
+                            for name, info in oos_by_partition.items()
+                        }
+                        if can_files:
+                            affected = set()
+                            for part_name, part_info in oos_by_partition.items():
+                                if part_name == 'unpartitioned' or not part_info['fstype']:
+                                    continue
+                                blocks = part_info.get('blocks', [])
+                                if not blocks:
+                                    continue
+                                kpart_info = kpartx.partitions.get(part_name, {})
+                                analysis = analyze_partition_files(
+                                    kpart_info.get('dev_path', f'/dev/mapper/{part_name}'),
+                                    part_info['fstype'], blocks, bm_byte_per_bit,
+                                    kpart_info.get('length_sectors', 0) * 512,
+                                    kpart_info.get('start_sector', 0) * 512,
+                                )
+                                if analysis.get('affected_files'):
+                                    affected.update(analysis['affected_files'])
+                            peer_out['affected_files'] = sorted(affected)
+
+                    out['peers'][peer_name] = peer_out
+
+        print(json.dumps(out))
         return 0
 
     result_file_name = datetime.datetime.now().strftime('drbd-verify-result_%Y-%m-%d_%H%M.json')
@@ -2241,7 +2736,11 @@ def main() -> int:
             log(f'Skipping {res_name}: {reason}')
             continue
 
-        res_json = process_res(res_json, args.peers, args.level2, args.skip_verify)
+        if args.kubectl:
+            res_json = process_res_kubectl(
+                res_json, args.node, args.peers, args.skip_verify)
+        else:
+            res_json = process_res(res_json, args.peers, args.level2, args.skip_verify)
         if res_json['oos'] or args.level2:
             result_json[res_name] = res_json
         if not args.level2:
