@@ -2589,9 +2589,10 @@ def build_result_v2(result_json: dict, *, invoked_on: str,
 REPORT_BIG_KIB = 100 * 1024   # a single contradictory pair this large is suspect
 REPORT_SMALL_KIB = 512        # below this, treat as benign/transient
 
-CLASS_ORDER = {'A': 0, 'C': 1, 'B': 2, 'D': 3, 'E': 4}
+CLASS_ORDER = {'A': 0, 'M': 0, 'C': 1, 'B': 2, 'D': 3, 'E': 4}
 CLASS_ACTION = {
     'A': 'files affected -- identify the authoritative copy, then resync the stale side',
+    'M': 'filesystem metadata affected (no file data) -- identify the authoritative copy, then resync the stale side',
     'C': 'verify is internally inconsistent (transitivity/contradiction) -- re-verify; do NOT resync blindly',
     'B': 'genuinely diverged (multiple datasets) -- re-verify; if it persists, resync from the authoritative copy',
     'D': 'sizable single-pair OOS, likely transient -- re-verify during a quiet window',
@@ -2608,6 +2609,8 @@ def _classify(res: dict):
     max_pair = res.get('summary', {}).get('max_pair_oos_kib', 0)
     if any(c.get('files', {}).get('affected') for c in conns):
         return ('A', 'files-impacted')
+    if any(c.get('metadata_affected', {}).get('affected') for c in conns):
+        return ('M', 'metadata-impacted')
     if status == 'transitivity_error':
         return ('C', 'inconsistent')
     if status == 'out_of_sync' and max_pair >= REPORT_BIG_KIB:
@@ -2682,7 +2685,7 @@ def _report_actions(data: dict) -> None:
         for s in res.get('resync_suggestions', []):
             if s.get('role_conflict'):
                 print(f'      !!! ROLE CONFLICT: {s.get("warning", "")}')
-            if s.get('metadata_affected'):
+            if code != 'M' and s.get('metadata_affected'):
                 print('      note: filesystem metadata is out of sync '
                       '(whether or not file data is)')
             flags = []
