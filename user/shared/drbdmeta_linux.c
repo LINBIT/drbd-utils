@@ -289,7 +289,12 @@ int v07_style_md_open_device(struct format *cfg)
 	}
 
 	if (!S_ISBLK(sb.st_mode)) {
-		if (!force) {
+		/* The userspace-port shim has no block devices; DRBD there runs as a
+		 * process and keeps metadata in a plain file, sized via fstat (see the
+		 * matching relaxation in drbdsetup_linux.c). Accept a regular file when
+		 * talking to the shim, so `drbdadm up` (which runs apply-al without
+		 * --force) works. The check is unchanged for a normal drbdmeta. */
+		if (!force && !(getenv("DRBD_GENL_SHIM_SOCK") && S_ISREG(sb.st_mode))) {
 			fprintf(stderr, "'%s' is not a block device!\n",
 				cfg->md_device_name);
 			exit(20);
