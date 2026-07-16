@@ -1,12 +1,32 @@
 #include "libgenl.h"
 
 #include <sys/types.h>
+#include <sys/un.h>
 #include <stdbool.h>
 #include <unistd.h>
 #include <time.h>
 #include <poll.h>
 
 #include "config.h"
+
+/* --- DRBD userspace port: optional AF_UNIX transport to a genl shim --------
+ * When DRBD_GENL_SHIM_SOCK is set in the environment, the tool talks to a
+ * userspace shim that emulates the drbd generic-netlink family over a unix
+ * socket, instead of the in-kernel generic-netlink controller. This is the
+ * client half of spike S3 of the userspace-Linux port. Only the transport
+ * changes: family resolution (genl_connect_to_family), message marshalling
+ * (genlmsg_put/nla_put_*) and event parsing all run unchanged, because the
+ * shim speaks the same netlink/genl wire format the kernel does.
+ *
+ * A production port would put this in a build-selected libgenl_shim.c, exactly
+ * as WinDRBD does with libgenl_windrbd.c; it is inlined here (guarded by the
+ * environment variable) so the change is a reviewable diff against one file. */
+static const char *genl_shim_path(void)
+{
+	return getenv("DRBD_GENL_SHIM_SOCK");
+}
+#define SHIM_CMD_SUBSCRIBE 0xEE
+static struct genl_family genl_ctrl;	/* defined below */
 
 int genl_join_mc_group(struct genl_sock *s, const char *name) {
 	int g_id;
@@ -20,6 +40,19 @@ int genl_join_mc_group(struct genl_sock *s, const char *name) {
 			continue;
 
 		g_id = s->s_family->mc_groups[i].id;
+		if (genl_shim_path()) {
+			/* No NETLINK_ADD_MEMBERSHIP on a unix socket; tell the
+			 * shim which group we want with a control message. */
+			struct msg_buff *m = msg_new(DEFAULT_MSG_SIZE);
+			int err;
+			if (!m)
+				return -1;
+			genlmsg_put(m, &genl_ctrl, 0, SHIM_CMD_SUBSCRIBE);
+			nla_put_u32(m, CTRL_ATTR_MCAST_GRP_ID, g_id);
+			err = genl_send(s, m);
+			msg_free(m);
+			return err;
+		}
 		return setsockopt(s->s_fd, SOL_NETLINK, NETLINK_ADD_MEMBERSHIP,
 				&g_id, sizeof(g_id));
 	}
@@ -69,6 +102,17 @@ static struct genl_sock *genl_connect(__u32 nl_groups, struct genl_connect_optio
 	s->s_peer.nl_family = AF_NETLINK;
 	/* start with some sane sequence number */
 	s->s_seq_expect = s->s_seq_next = time(0);
+
+	if (genl_shim_path()) {
+		struct sockaddr_un sun = { .sun_family = AF_UNIX };
+		s->s_fd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
+		if (s->s_fd == -1)
+			goto fail;
+		snprintf(sun.sun_path, sizeof(sun.sun_path), "%s", genl_shim_path());
+		if (connect(s->s_fd, (struct sockaddr *)&sun, sizeof(sun)) == -1)
+			goto fail;
+		return s;
+	}
 
 	s->s_fd = socket(AF_NETLINK, SOCK_DGRAM, NETLINK_GENERIC);
 	if (s->s_fd == -1)
@@ -179,6 +223,14 @@ int genl_recv_timeout(struct genl_sock *s, struct iovec *iov, int timeout_ms)
 		iov->iov_base = malloc(iov->iov_len);
 	}
 
+	/* A unix socket delivers a sockaddr_un source (up to 110 bytes), which
+	 * would overflow the sockaddr_nl above; the shim socket is connected, so
+	 * no source address is needed. */
+	if (genl_shim_path()) {
+		msg.msg_name = NULL;
+		msg.msg_namelen = 0;
+	}
+
 	flags = MSG_PEEK;
 retry:
 	pfd.fd = s->s_fd;
@@ -226,13 +278,17 @@ retry:
 		goto retry;
 	}
 
-	if (msg.msg_namelen != sizeof(struct sockaddr_nl))
-		return -E_RCV_NO_SOURCE_ADDR;
+	/* A connected unix socket has no sockaddr_nl source; the netlink
+	 * sender checks below only apply to a real AF_NETLINK socket. */
+	if (!genl_shim_path()) {
+		if (msg.msg_namelen != sizeof(struct sockaddr_nl))
+			return -E_RCV_NO_SOURCE_ADDR;
 
-	if (addr.nl_pid != 0) {
-		dbg(3, "ignoring message from sender pid %u != 0\n",
-				addr.nl_pid);
-		goto retry;
+		if (addr.nl_pid != 0) {
+			dbg(3, "ignoring message from sender pid %u != 0\n",
+					addr.nl_pid);
+			goto retry;
+		}
 	}
 	return n;
 }
