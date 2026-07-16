@@ -4884,7 +4884,9 @@ int drbdsetup_main(int argc, char **argv)
 
 	/* Do not use DRBD if generic_get() is faked */
 	if (!fake_generic_get) {
-		if (!modprobe_drbd()) {
+		/* The userspace-port shim replaces the kernel module, so there
+		 * is nothing to modprobe (see spike S3 / drbd-utils.diff). */
+		if (!getenv("DRBD_GENL_SHIM_SOCK") && !modprobe_drbd()) {
 			if (!strcmp(argv[1], "down") ||
 					!strcmp(argv[1], "secondary") ||
 					!strcmp(argv[1], "disconnect") ||
