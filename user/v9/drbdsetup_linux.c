@@ -53,6 +53,14 @@ int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 	}
 
 	if(!S_ISBLK(sb.st_mode)) {
+		/* The userspace-port shim has no block devices, so it attaches to
+		 * plain files; the core sizes them via fstat (see spike S1/S2 /
+		 * drbd-utils.diff). Accept a regular file when talking to the shim. */
+		if (getenv("DRBD_GENL_SHIM_SOCK") && S_ISREG(sb.st_mode)) {
+			close(device_fd);
+			nla_put_string(msg, ad->nla_type, arg);
+			return NO_ERROR;
+		}
 		fprintf(stderr, "%s is not a block device!\n", arg);
 		close(device_fd);
 		return OTHER_ERROR;
