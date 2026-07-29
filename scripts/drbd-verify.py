@@ -2167,6 +2167,13 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                     # JSON is self-describing rather than ambiguous.
                     pub_partitions = oos_dict.get('partitions', {})
                     analysis_conclusive = True
+                    # Metadata conclusiveness is tracked separately and is
+                    # strictly stronger: only reverse mapping ever looks at
+                    # filesystem metadata. Forward mapping walks the tree and
+                    # tests file extents, which settles the file question but
+                    # says nothing at all about metadata, so it must not make
+                    # a metadata_affected == False authoritative.
+                    metadata_conclusive = True
 
                     # Roll up how much of this connection's OOS is
                     # definitively free space, file data, filesystem
@@ -2199,7 +2206,7 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                             if part_name in pub_partitions:
                                 pub_partitions[part_name]['method'] = 'unpartitioned'
                             record_kib(part_name, 0, 0, 0, part_info.get('oos_kib', 0))
-                            analysis_conclusive = False
+                            analysis_conclusive = metadata_conclusive = False
                             continue
 
                         fstype = part_info.get('fstype')
@@ -2208,7 +2215,7 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                             if part_name in pub_partitions:
                                 pub_partitions[part_name]['method'] = 'no_filesystem'
                             record_kib(part_name, 0, 0, 0, part_info.get('oos_kib', 0))
-                            analysis_conclusive = False
+                            analysis_conclusive = metadata_conclusive = False
                             continue
 
                         oos_blocks = part_info.get('blocks', [])
@@ -2222,7 +2229,7 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                             if part_name in pub_partitions:
                                 pub_partitions[part_name]['method'] = 'skipped'
                             record_kib(part_name, 0, 0, 0, part_info.get('oos_kib', 0))
-                            analysis_conclusive = False
+                            analysis_conclusive = metadata_conclusive = False
                             continue
 
                         # Get partition size and start from kpartx
@@ -2261,6 +2268,12 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                             # entropy_only, mount_failed, unknown: file
                             # ownership was not actually determined.
                             analysis_conclusive = False
+                        if method != 'reverse':
+                            # Only GETFSMAP reports metadata ownership. A
+                            # forward FIEMAP walk settles the file question
+                            # but never saw a metadata extent, so it cannot
+                            # make "no metadata affected" authoritative.
+                            metadata_conclusive = False
 
                         meta_note = ' (+ fs metadata)' if stats.get('metadata_seen') else ''
                         if affected is not None:
@@ -2291,11 +2304,14 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                             files_affected or analysis_conclusive)
                         # metadata_affected mirrors files_affected: True is
                         # always authoritative (metadata extents were seen);
-                        # False is authoritative only when analysis was
-                        # conclusive, else it means "could not determine".
+                        # False is authoritative only when every OOS-carrying
+                        # partition was reverse-mapped, else it means "could
+                        # not determine". Note this is a stricter bar than
+                        # files_affected_conclusive, which forward mapping
+                        # also satisfies.
                         oos_dict['metadata_affected'] = metadata_affected
                         oos_dict['metadata_affected_conclusive'] = (
-                            metadata_affected or analysis_conclusive)
+                            metadata_affected or metadata_conclusive)
                         oos_dict['oos_free_kib'] = oos_kib_roll['free']
                         oos_dict['oos_filedata_kib'] = oos_kib_roll['filedata']
                         oos_dict['oos_metadata_kib'] = oos_kib_roll['metadata']
