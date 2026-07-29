@@ -189,8 +189,8 @@ def fence_peer_exclusive(res):
                     msg, code = fence_peer(res)
                     print('{}§{}'.format(code, msg), file=fw)
                 finally:
-                    os.remove(LOCK_FILE)
                     fcntl.flock(fw.fileno(), fcntl.LOCK_UN)
+                    os.remove(LOCK_FILE)
             break
         except FileExistsError:
             try:
