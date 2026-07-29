@@ -2484,7 +2484,8 @@ def _suggestion_v2(s: dict, role_status: Optional[list], res_name: str,
     src, tgt = _short_node(s['source']), _short_node(s['target'])
     out = {'nodes': sorted([src, tgt]), 'source': src, 'target': tgt,
            'commands': s.get('commands', [])}
-    for k in ('files_affected', 'files_affected_conclusive', 'file_analysis_skipped'):
+    for k in ('files_affected', 'files_affected_conclusive', 'metadata_affected',
+              'file_analysis_skipped'):
         if k in s:
             out[k] = s[k]
     # The target is the node whose data gets discarded (made SyncTarget).
