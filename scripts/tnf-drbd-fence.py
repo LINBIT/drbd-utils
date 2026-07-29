@@ -188,6 +188,7 @@ def fence_peer_exclusive(res):
                 try:
                     msg, code = fence_peer(res)
                     print('{}§{}'.format(code, msg), file=fw)
+                    fw.flush() # Flush BEFORE releasing the lock.
                 finally:
                     os.remove(LOCK_FILE)
                     fcntl.flock(fw.fileno(), fcntl.LOCK_UN)
