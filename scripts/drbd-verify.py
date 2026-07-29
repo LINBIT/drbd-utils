@@ -1692,22 +1692,38 @@ def find_affected_files_reverse(mountpoint: str, oos_blocks: list,
     return set()
 
 
-def resolve_inodes_to_paths(mountpoint: str, inodes: set) -> set:
-    """Walk ``mountpoint`` and return the relative paths of files whose
-    inode is in ``inodes``. This is the expensive step (stat per file)
-    that reporting inode numbers alone avoids."""
-    paths = set()
+def resolve_inodes_to_paths(mountpoint: str, inodes: set) -> dict:
+    """Walk ``mountpoint`` and map each inode in ``inodes`` to the relative
+    path(s) carrying it. This is the expensive step (lstat per entry) that
+    reporting inode numbers alone avoids.
+
+    Directories are walked too, not just files: directory data blocks are
+    inode-owned just like file data, so a directory is a perfectly ordinary
+    owner of an out-of-sync extent. lstat() is used so that a symlink is
+    identified by its own inode rather than its target's.
+
+    Inodes absent from the returned dict could not be resolved to a path.
+    The caller must still treat them as affected -- reverse mapping already
+    proved the block belongs to them."""
+    found: dict = {}
     if not inodes:
-        return paths
+        return found
+    try:
+        root_ino = os.stat(mountpoint).st_ino
+        if root_ino in inodes:
+            found.setdefault(root_ino, set()).add('.')
+    except OSError:
+        pass
     for root, dirs, files in os.walk(mountpoint):
-        for filename in files:
-            filepath = os.path.join(root, filename)
+        for name in dirs + files:
+            path = os.path.join(root, name)
             try:
-                if os.stat(filepath).st_ino in inodes:
-                    paths.add(os.path.relpath(filepath, mountpoint))
+                ino = os.lstat(path).st_ino
             except OSError:
                 continue
-    return paths
+            if ino in inodes:
+                found.setdefault(ino, set()).add(os.path.relpath(path, mountpoint))
+    return found
 
 
 def analyze_partition_files(device_path: str, fstype: str, oos_blocks: list,
@@ -1729,6 +1745,12 @@ def analyze_partition_files(device_path: str, fstype: str, oos_blocks: list,
         Dict with:
         - 'affected_files': Set of affected file paths (or inode numbers when
           name resolution is disabled), or None if couldn't determine
+        - 'affected_count': How many owners were found, whether or not a path
+          could be put to them. This, not len(affected_files), decides
+          "are files affected": an owner that resolves to no path is still an
+          owner, and dropping it would turn a positive into a false negative.
+        - 'unresolved_inodes': Sorted inode numbers that were found to own an
+          OOS block but could not be resolved to a path.
         - 'method': 'reverse', 'forward', or 'entropy_only'
         - 'block_stats': {'free', 'filedata', 'metadata', 'unknown'}
           OOS-block counts plus a 'metadata_seen' bool. Only the 'reverse'
@@ -1741,7 +1763,8 @@ def analyze_partition_files(device_path: str, fstype: str, oos_blocks: list,
                      'unknown': len(oos_blocks), 'metadata_seen': False}
 
     if not fstype:
-        return {'affected_files': None, 'method': 'no_filesystem',
+        return {'affected_files': None, 'affected_count': 0,
+                'unresolved_inodes': [], 'method': 'no_filesystem',
                 'block_stats': unknown_stats}
 
     try:
@@ -1754,9 +1777,22 @@ def analyze_partition_files(device_path: str, fstype: str, oos_blocks: list,
                 mount.mountpoint, oos_blocks, bm_byte_per_bit, partition_start_byte,
                 block_stats=block_stats)
             if affected is not None:
-                if map_file_names and affected:
-                    affected = resolve_inodes_to_paths(mount.mountpoint, affected)
-                return {'affected_files': affected, 'method': 'reverse',
+                # Reverse mapping yields inode numbers, and that set is the
+                # authoritative answer to "is anything affected". Path
+                # resolution is only cosmetics on top of it and may come up
+                # empty (an inode whose entry is gone, an unreadable
+                # subtree); those inodes are reported as numbers so the
+                # verdict never silently degrades to "no files affected".
+                inodes = set(affected)
+                unresolved = []
+                if map_file_names and inodes:
+                    found = resolve_inodes_to_paths(mount.mountpoint, inodes)
+                    affected = set()
+                    for paths in found.values():
+                        affected |= paths
+                    unresolved = sorted(inodes - set(found))
+                return {'affected_files': affected, 'affected_count': len(inodes),
+                        'unresolved_inodes': unresolved, 'method': 'reverse',
                         'block_stats': block_stats}
 
             # Fallback to forward mapping: walk the filesystem and check
@@ -1780,15 +1816,19 @@ def analyze_partition_files(device_path: str, fstype: str, oos_blocks: list,
                 affected = find_affected_files_forward(
                     mount.mountpoint, oos_blocks, bm_byte_per_bit, partition_start_byte,
                     want_names=map_file_names)
-                return {'affected_files': affected, 'method': 'forward',
+                return {'affected_files': affected,
+                        'affected_count': len(affected),
+                        'unresolved_inodes': [], 'method': 'forward',
                         'block_stats': unknown_stats}
 
             # Large partition without reverse mapping support
-            return {'affected_files': None, 'method': 'entropy_only',
+            return {'affected_files': None, 'affected_count': 0,
+                    'unresolved_inodes': [], 'method': 'entropy_only',
                     'block_stats': unknown_stats}
 
     except subprocess.CalledProcessError:
-        return {'affected_files': None, 'method': 'mount_failed',
+        return {'affected_files': None, 'affected_count': 0,
+                'unresolved_inodes': [], 'method': 'mount_failed',
                 'block_stats': unknown_stats}
 
 
@@ -2160,6 +2200,10 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
 
                     files_affected = False
                     all_affected_files = set()
+                    # Owners that reverse mapping proved to be affected but
+                    # whose path could not be determined. Reported as inode
+                    # numbers rather than dropped.
+                    all_unresolved_inodes = set()
                     # A "no files affected" verdict is authoritative only
                     # when every OOS-carrying partition was resolved by an
                     # ownership-aware method (reverse/forward). Record each
@@ -2247,6 +2291,10 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
 
                         method = analysis.get('method', 'unknown')
                         affected = analysis.get('affected_files')
+                        # Owners found, whether or not a path was put to
+                        # them; see analyze_partition_files().
+                        affected_count = analysis.get('affected_count', 0)
+                        unresolved = analysis.get('unresolved_inodes') or []
 
                         stats = analysis.get('block_stats',
                                              {'free': 0, 'filedata': 0,
@@ -2277,14 +2325,21 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
 
                         meta_note = ' (+ fs metadata)' if stats.get('metadata_seen') else ''
                         if affected is not None:
-                            if affected:
+                            if affected_count:
                                 files_affected = True
                                 all_affected_files.update(affected)
-                                log(f'\r Partition {part_name}: {len(affected)} file(s) affected{meta_note} (via {method})\x1b[K')
+                                all_unresolved_inodes.update(unresolved)
+                                log(f'\r Partition {part_name}: {affected_count} file(s) affected{meta_note} (via {method})\x1b[K')
                                 for f in sorted(affected)[:10]:  # Show first 10
                                     log(f'   - {f}')
                                 if len(affected) > 10:
                                     log(f'   ... and {len(affected) - 10} more')
+                                for ino in unresolved[:10]:
+                                    log(f'   - inode {ino} (no path found; '
+                                        f'directory or unlinked entry)')
+                                if len(unresolved) > 10:
+                                    log(f'   ... and {len(unresolved) - 10} '
+                                        f'more unresolved inode(s)')
                             elif stats.get('metadata_seen'):
                                 log(f'\r Partition {part_name}: no file data affected, but fs metadata is out of sync (via {method})\x1b[K')
                             else:
@@ -2320,6 +2375,8 @@ def process_res(res_json: dict, peers, level2: bool, skip_verify: bool = False) 
                             key = ('affected_files' if map_file_names
                                    else 'affected_inodes')
                             oos_dict[key] = sorted(all_affected_files)
+                        if all_unresolved_inodes:
+                            oos_dict['unresolved_inodes'] = sorted(all_unresolved_inodes)
 
                     # Generate resync suggestion (direction = higher entropy → lower)
                     source, target = determine_resync_direction(
@@ -2435,6 +2492,11 @@ def _connection_v2(nodes: list, v: dict, initial_oos: Optional[int]) -> dict:
             files['paths'] = v['affected_files']
         if 'affected_inodes' in v:
             files['inodes'] = v['affected_inodes']
+        if 'unresolved_inodes' in v:
+            # Owners proven affected by reverse mapping for which no path
+            # exists in the tree (a directory whose entry is gone, an
+            # unreadable subtree). Part of the affected set regardless.
+            files['unresolved_inodes'] = v['unresolved_inodes']
         conn['files'] = files
     if 'metadata_affected' in v:
         conn['metadata_affected'] = {
