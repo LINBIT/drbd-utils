@@ -130,8 +130,13 @@ FSCK_PARSE_SPECS = {
          r'\bresetting\b',
          r'\bjunking\s+entry\b',
          r'\bbad\s+(extent|fork|attribute|inode)\b',
-         r'\bdisconnected\s+(inode|dir)\b',
-         r'\bNo\s+modify\s+flag\s+set,\s+skipping'],
+         r'\bdisconnected\s+(inode|dir)\b'],
+        # Deliberately NOT an error pattern: "No modify flag set, skipping
+        # ..." is printed twice by *every* clean -n run (once for phase 5,
+        # once before exiting). It reports that -n suppressed a repair, not
+        # that there is anything to repair. Matching it scored 2 errors on
+        # every healthy XFS. A genuine finding either matches a pattern
+        # above or shows up in the exit code below.
         # warning: informational but concerning
         [r'\bmissing\b',
          r'\bunexpected\b',
