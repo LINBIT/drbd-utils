@@ -2360,6 +2360,23 @@ int meta_apply_al(struct format *cfg, char **argv __attribute((unused)), int arg
 		return -1;
 	}
 
+	/* Crashed as primary with the activity log disabled: it holds no record
+	 * of the crash window, so replaying it cannot mark anything.
+	 */
+	/* MDF_PRIMARY_IND (need_to_apply_al()): a clean shutdown clears it,
+	 * MDF_CRASHED_PRIMARY may stay set, so this runs once per crash.
+	 */
+	if (format_version(cfg) >= DRBD_V08 && need_to_apply_al(cfg) &&
+	    (cfg->md.flags & (MDF_AL_DISABLED | MDF_CRASHED_PRIMARY)) ==
+			     (MDF_AL_DISABLED | MDF_CRASHED_PRIMARY)) {
+		fprintf(stderr, "Activity log was disabled, and this node did not stop cleanly as primary.\n"
+				"Marking the whole device out-of-sync in all bitmap slots.\n");
+		set_all_bitmap_pwrite(cfg);
+		need_to_update_md_flags = 1;
+		re_initialize_anyways = 1;
+		goto initialize_al_and_update_md_flags;
+	}
+
 	al_size = cfg->md.al_stripes * cfg->md.al_stripe_size_4k * 4096;
 
 	/* read in first chunk (which is actually the whole AL
@@ -2436,6 +2453,7 @@ int meta_apply_al(struct format *cfg, char **argv __attribute((unused)), int arg
 	 * We can skip this, if it was clean anyways (err == 0),
 	 * or if we know that this is for 0.7.
 	 */
+ initialize_al_and_update_md_flags:
 	if (re_initialize_anyways || (err > 0 && !is_v07(cfg)))
 		initialize_al(cfg);
 
