@@ -4091,6 +4091,12 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 		return 0;
 	}
 
+	/* The dump carries no activity log, and its flags may say al-clean:
+	 * whatever is in the AL area belongs to an older generation.
+	 */
+	if (format_version(cfg) >= DRBD_V07)
+		initialize_al(cfg);
+
 	err = cfg->ops->md_cpu_to_disk(cfg);
 	err = cfg->ops->close(cfg) || err;
 	if (err) {
