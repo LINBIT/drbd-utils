@@ -659,7 +659,9 @@
       </para>
       <para>The default value of <option>bitmap</option> is <option>yes</option>.
         This option is available since drbd-utils 9.33 and
-	the drbd kernel driver 9.3.0.
+	the drbd kernel driver 9.3.0. Overruling the automatic
+	<option>bitmap no</option> of a diskless peer is possible since
+	drbd-utils 9.35.
       </para>
     </definition>
   </drbdsetup_option>

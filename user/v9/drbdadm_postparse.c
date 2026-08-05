@@ -516,7 +516,8 @@ static void add_no_bitmap_opt(struct d_resource *res)
 			continue;
 
 		STAILQ_FOREACH(peer_device, &conn->peer_devices, connection_link) {
-			if (peer_device->connection->peer && peer_diskless(peer_device))
+			if (peer_device->connection->peer && peer_diskless(peer_device) &&
+			    !find_opt(&peer_device->pd_options, "bitmap"))
 				insert_tail(&peer_device->pd_options, new_opt("bitmap", "no"));
 		}
 	}

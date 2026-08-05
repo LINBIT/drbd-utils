@@ -1,0 +1,18 @@
+## An explicitly configured peer-device "bitmap" option wins over the
+## "bitmap no" that drbdadm adds automatically for diskless peers.
+## That allows to keep a peer's bitmap slot (and with it the ability to do a
+## bitmap based resync) while a previously diskful peer is temporarily
+## diskless.  "maint" has "bitmap yes;" configured, "witness" has not.
+##
+## The full emit on "up" must not contain both --bitmap=yes and --bitmap=no
+## for the same peer device, and the dump must show the configured value once.
+
+$ drbdadm -d -c ./bitmap_keep.res peer-device-options keep-bitmap-test 2>/dev/null
+drbdsetup peer-device-options keep-bitmap-test 1 0
+drbdsetup peer-device-options keep-bitmap-test 2 0 --bitmap=yes
+drbdsetup peer-device-options keep-bitmap-test 3 0 --bitmap=no
+$ drbdadm -d -c ./bitmap_keep.res up keep-bitmap-test 2>/dev/null | grep peer-device-options
+drbdsetup peer-device-options keep-bitmap-test 2 0 --bitmap=yes
+drbdsetup peer-device-options keep-bitmap-test 3 0 --bitmap=no
+$ drbdadm -c ./bitmap_keep.res dump keep-bitmap-test 2>/dev/null | grep -c '^ *bitmap'
+1
