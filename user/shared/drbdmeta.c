@@ -1546,6 +1546,66 @@ static void set_all_bitmap_pwrite(struct format *cfg)
 	init_bitmap_pwrite(cfg, 0xff);
 }
 
+/* Is anything out-of-sync with any peer?
+ *
+ * Unlike the other bitmap helpers this one works on the meta data as found in
+ * cfg->md, not on cfg->bm_offset and cfg->bm_bytes: it is used while converting
+ * from one meta data flavour to an other, where the byte offsets of the format
+ * we are converting *from* were never mapped. */
+static bool bitmap_has_bits_set(struct format *cfg)
+{
+	off_t bm_on_disk_off = cfg->md_offset + (int64_t)cfg->md.bm_offset * 512LL;
+	/* the bits for the last agreed size, but never more than the bitmap
+	 * area the activity log follows */
+	uint64_t on_disk_bytes = (uint64_t)(cfg->md.al_offset - cfg->md.bm_offset) * 512;
+	uint64_t bytes_left = ALIGN(bm_bytes(&cfg->md, cfg->md.effective_size),
+				    cfg->md_hard_sect_size);
+	size_t chunk, i;
+
+	if (bytes_left > on_disk_bytes)
+		bytes_left = on_disk_bytes;
+
+	while (bytes_left) {
+		chunk = buffer_size < bytes_left ? buffer_size : bytes_left;
+		pread_or_die(cfg, on_disk_buffer, chunk, bm_on_disk_off,
+			     "bitmap_has_bits_set");
+		for (i = 0; i < chunk / sizeof(long); i++) {
+			if (((long *)on_disk_buffer)[i])
+				return true;
+		}
+		bm_on_disk_off += chunk;
+		bytes_left -= chunk;
+	}
+	return false;
+}
+
+/* What md_convert_09_to_08() left for meta_create_md() to do to the bitmap
+ * area, once the new offsets are known and all questions are answered.
+ * IBM_SKIP: nothing, keep the bitmap as it is on disk. */
+static enum initialize_bitmap_mode convert_initialize_bitmap_mode = IBM_SKIP;
+
+static void initialize_bitmap_after_convert(struct format *cfg)
+{
+	const size_t bitmap_kbytes = ALIGN(cfg->bm_bytes, cfg->md_hard_sect_size) >> 10;
+	char ppb[10];
+
+	ppsize(ppb, bitmap_kbytes);
+	switch (convert_initialize_bitmap_mode) {
+	case IBM_SKIP:
+		return;
+	case IBM_SET_ALL:
+		fprintf(stderr, "marking the whole device out-of-sync in the new bitmap (%s)\n", ppb);
+		set_all_bitmap_pwrite(cfg);
+		break;
+	case IBM_ZEROOUT:
+	case IBM_ZEROOUT_IOCTL_ONLY:
+	case IBM_ZEROOUT_PWRITE:
+		fprintf(stderr, "initializing the new bitmap (%s) to all zero\n", ppb);
+		zeroout_bitmap_pwrite(cfg);
+		break;
+	}
+}
+
 static void initialize_bitmap(struct format *cfg)
 {
 	const size_t bitmap_kbytes = ALIGN(cfg->bm_bytes, cfg->md_hard_sect_size) >> 10;
@@ -4253,6 +4313,9 @@ void md_convert_08_to_09(struct format *cfg)
 
 void md_convert_09_to_08(struct format *cfg)
 {
+	bool convert_bitmap = cfg->md.bm_bytes_per_bit != BM_BLOCK_SIZE_4k;
+	bool out_of_sync = convert_bitmap && bitmap_has_bits_set(cfg);
+
 	if (cfg->md.peers[0].flags & MDF_PEER_CONNECTED)
 		cfg->md.flags |= MDF_CONNECTED_IND;
 
@@ -4264,7 +4327,38 @@ void md_convert_09_to_08(struct format *cfg)
 
 	cfg->md.magic = DRBD_MD_MAGIC_08;
 	cfg->md.max_peers = 1;
+
+	if (convert_bitmap) {
+		fprintf(stderr,
+			"Bitmap block size %u is not supported by DRBD 8.4 and older,\n"
+			"re-creating the bitmap with %u bytes per bit.\n",
+			cfg->md.bm_bytes_per_bit, BM_BLOCK_SIZE_4k);
+
+		cfg->md.bm_bytes_per_bit = BM_BLOCK_SIZE_4k;
+
+		/* For internal meta data the grown bitmap area also still holds
+		 * whatever was in the data area before. */
+		convert_initialize_bitmap_mode = out_of_sync ? IBM_SET_ALL : IBM_ZEROOUT_PWRITE;
+	}
+
 	re_initialize_md_offsets(cfg);
+
+	if (cfg->md.effective_size > cfg->max_usable_sect) {
+		/* Only reachable via the bm_bytes_per_bit conversion above:
+		 * dropping the peers can only give space back. */
+		fprintf(stderr,
+			"The %u byte bitmap leaves only %llu kB of this device usable,\n"
+			"while the last agreed device size is %llu kB.\n"
+			"DRBD 8.4 would refuse to attach that, or truncate the device.\n"
+			"Shrink the file system and the DRBD device by %llu kB or more\n"
+			"while still running DRBD 9, then convert the meta data.\n"
+			"Conversion refused.\n",
+			cfg->md.bm_bytes_per_bit,
+			(unsigned long long)cfg->max_usable_sect >> 1,
+			(unsigned long long)cfg->md.effective_size >> 1,
+			(unsigned long long)(cfg->md.effective_size - cfg->max_usable_sect) >> 1);
+		exit(10);
+	}
 
 	if (!is_valid_md(DRBD_V08, &cfg->md, cfg->md_index, cfg->bd_size)) {
 		fprintf(stderr, "Conversion failed.\nThis is a bug :(\n");
@@ -5152,6 +5246,11 @@ int meta_create_md(struct format *cfg, char **argv, int argc)
 	 * the previous DRBD into "clean" L_ESTABLISHED R_SECONDARY/R_SECONDARY, so AL
 	 * and bitmap should be empty anyways.
 	 */
+
+	/* The conversion may have changed the bitmap granularity, in which case
+	 * the bitmap has to be re-created before the new super block claims it. */
+	initialize_bitmap_after_convert(cfg);
+
 	printf("Writing meta data...\n");
 	err = err || cfg->ops->md_cpu_to_disk(cfg); // <- short circuit
 	if (!err)
