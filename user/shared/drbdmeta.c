@@ -5092,7 +5092,7 @@ int meta_create_md(struct format *cfg, char **argv, int argc)
 		cfg->md.effective_size = option_effective_size;
 
 	for (i = 0; i < DRBD_PEERS_MAX; i++) {
-		if (option_diskful_peer_mask & (1<<i))
+		if (option_diskful_peer_mask & (1ULL<<i))
 			cfg->md.peers[i].flags |= MDF_PEER_DEVICE_SEEN;
 	}
 
@@ -5643,7 +5643,7 @@ static uint64_t node_mask_from_arg(const char *arg)
 		if (base == 16)
 			result = tmp;
 		else if (0 <= tmp && tmp < DRBD_NODE_ID_MAX)
-			result |= 1<<tmp;
+			result |= 1ULL<<tmp;
 		else
 			break;
 
