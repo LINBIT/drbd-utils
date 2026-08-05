@@ -194,6 +194,15 @@
 	    modified block up to a complete bitmap block for change tracking,
 	    and later resync.
 	  </para>
+	  <para>
+	    Note that DRBD 8.4 and older only know the 4KiB granularity.
+	    Converting such metadata to <literal>v08</literal> therefore
+	    re-creates the bitmap with 4KiB per bit, which needs more bits, and
+	    with internal metadata thus more space, for the same device. If the
+	    last agreed device size leaves no room for that, the conversion is
+	    refused: shrink the file system and the DRBD device first, while
+	    still running DRBD 9.
+	  </para>
   <para>
     The following options are available for metadata version v09 only.
     They are intended for use when pre-provisioning metadata without an initial full sync.
