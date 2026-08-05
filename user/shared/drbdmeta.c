@@ -413,6 +413,12 @@ int is_valid_md(enum md_format f,
 		return 0;
 	}
 
+	if (f == DRBD_V08 && md->bm_bytes_per_bit != BM_BLOCK_SIZE_4k) {
+		fprintf(stderr, "%s unexpected bm_bytes_per_bit: %u (expected %u)\n",
+			v, md->bm_bytes_per_bit, BM_BLOCK_SIZE_4k);
+		return 0;
+	}
+
 	if (md->max_peers < 1 || md->max_peers > DRBD_PEERS_MAX - 1) {
 		fprintf(stderr, "%s max-peers value %d out of bounds\n",
 			v, md->max_peers);
@@ -4053,6 +4059,12 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 		|| yylval.u64 > BM_BLOCK_SIZE_MAX) {
 			fprintf(stderr, "Invalid value for bm-byte-per-bit: "
 				"value must be a power-of-two in [4k .. 1M]\n");
+			exit(10);
+		}
+		if (format_version(cfg) < DRBD_V09 && yylval.u64 != BM_BLOCK_SIZE_4k) {
+			fprintf(stderr, "Invalid value for bm-byte-per-bit: "
+				"'%s' meta data supports only %u\n",
+				cfg->ops->name, BM_BLOCK_SIZE_4k);
 			exit(10);
 		}
 		EXP(TK_DEVICE_UUID); EXP(TK_U64); EXP(';');
