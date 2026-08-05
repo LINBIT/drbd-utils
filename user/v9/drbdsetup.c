@@ -1693,12 +1693,17 @@ static int generic_send(const struct drbd_cmd *cm)
 	return err;
 }
 
+static struct wait_for_family_ctx *wait_ctx(struct reply_ctx *rctx)
+{
+	assert(rctx && rctx->type == RCTX_WAIT_FOR_FAMILY);
+	return rctx->u.wait;
+}
+
 /* The timeout bookkeeping for MULTIPLE_TIMEOUTS operates on the wait list
  * of the wait-* commands, the only users of MULTIPLE_TIMEOUTS. */
 static struct peer_devices_list *wait_peer_devices(struct reply_ctx *rctx)
 {
-	assert(rctx && rctx->type == RCTX_WAIT_FOR_FAMILY);
-	return rctx->u.wait_peer_devices;
+	return wait_ctx(rctx)->peer_devices;
 }
 
 static int generic_recv(const struct drbd_cmd *cm, int timeout_arg, struct reply_ctx *rctx, int extra_poll_fd, bool expect_reply)
@@ -2039,6 +2044,7 @@ static int generic_events_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	};
 	int c, timeout_ms, err = NO_ERROR;
 	struct peer_devices_list *peer_devices = NULL;
+	struct wait_for_family_ctx wctx = { .peer_devices = NULL };
 	struct reply_ctx rctx = { .type = RCTX_NONE };
 	struct option *options = cm->options ? cm->options : no_options;
 	const char *opts = make_optstring(options);
@@ -2140,24 +2146,6 @@ static int generic_events_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		return 20;
 	}
 
-	if (cm->handle_reply == &print_event && opt_now) {
-		/* When --now is given, we just need the replies from the
-		 * initial state request. So we do not need to subscribe to the
-		 * multicast events or try to receive them.
-		 *
-		 * When --poll is also set, we block at the point where we
-		 * attempt to read from stdin. */
-		tmp_cm = *cm;
-		tmp_cm.continuous_poll = false;
-		cm = &tmp_cm;
-	} else {
-		if (genl_join_mc_group_and_ctrl(drbd_sock, "events")) {
-			fprintf(stderr,"%s: unable to join drbd events multicast group\n", objname);
-			err = 20;
-			goto out;
-		}
-	}
-
 	timeout_ms = -1;
 	if (cm->handle_reply == &wait_for_family) {
 		struct peer_devices_list *peer_device;
@@ -2166,6 +2154,12 @@ static int generic_events_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		int rr;
 		char *res_name = cm->ctx_key & CTX_RESOURCE ? objname : "all";
 
+		/* Query the peer devices to wait for, and their timeouts,
+		 * before joining the multicast group. Otherwise a multicast
+		 * event could interleave with a request/reply exchange and
+		 * cause a sequence number mismatch. The initial state dump,
+		 * which happens after the join, refreshes this information;
+		 * see wait_for_family(). */
 		peer_devices = list_peer_devices(res_name);
 
 		/* if there are no peer devices, we don't wait by definition */
@@ -2205,9 +2199,28 @@ static int generic_events_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		msg_free(smsg);
 		free(iov.iov_base);
 
+		wctx.peer_devices = peer_devices;
 		rctx.type = RCTX_WAIT_FOR_FAMILY;
-		rctx.u.wait_peer_devices = peer_devices;
+		rctx.u.wait = &wctx;
 		timeout_ms = MULTIPLE_TIMEOUTS;
+	}
+
+	if (cm->handle_reply == &print_event && opt_now) {
+		/* When --now is given, we just need the replies from the
+		 * initial state request. So we do not need to subscribe to the
+		 * multicast events or try to receive them.
+		 *
+		 * When --poll is also set, we block at the point where we
+		 * attempt to read from stdin. */
+		tmp_cm = *cm;
+		tmp_cm.continuous_poll = false;
+		cm = &tmp_cm;
+	} else if (!fake_generic_get) {
+		if (genl_join_mc_group_and_ctrl(drbd_sock, "events")) {
+			fprintf(stderr, "%s: unable to join drbd events multicast group\n", objname);
+			err = 20;
+			goto out;
+		}
 	}
 
 	if (cm->handle_reply == &print_event && opt_poll)
@@ -4456,50 +4469,47 @@ static int down_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	return rv;
 }
 
-void peer_devices_remove(struct peer_devices_list **peer_devices, struct drbd_cfg_context *ctx)
+/* The peer device no longer exists (or is not there anymore); exclude it
+ * from the wait without removing it from the list. Clear its timeout so
+ * that it no longer influences the timeout bookkeeping in generic_recv(). */
+static void peer_device_stop_waiting(struct peer_devices_list *peer_device)
 {
-	struct peer_devices_list *to_delete, **peer_device;
-
-	for (peer_device = peer_devices; *peer_device; peer_device = &(*peer_device)->next) {
-		if (peer_device_ctx_match(&(*peer_device)->ctx, ctx)) {
-			to_delete = *peer_device;
-			*peer_device = (*peer_device)->next;
-			free_peer_device(to_delete);
-			break;
-		}
-	}
-}
-
-void peer_devices_append(struct peer_devices_list *peer_devices, struct genl_info *info)
-{
-	struct peer_devices_list *peer_device, **tail = NULL;
-
-	if (!peer_devices)
-		return;
-
-	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next)
-		tail = &peer_device->next;
-
-	{
-		struct reply_ctx rctx = {
-			.type = RCTX_PEER_DEVICES_TAIL,
-			.u.peer_devices_tail = &tail,
-		};
-		remember_peer_device(NULL, info, &rctx);
-	}
+	peer_device->gone = true;
+	peer_device->timeout_ms = 0;
 }
 
 /* Actually waits for all volumes of a connection... */
 static int wait_for_family(const struct drbd_cmd *cm, struct genl_info *info, struct reply_ctx *rctx)
 {
-	struct peer_devices_list *peer_devices = wait_peer_devices(rctx);
+	struct wait_for_family_ctx *wctx = wait_ctx(rctx);
+	/* An empty peer device list (a resource without volumes) is legal;
+	 * generic_events_cmd() reports success without waiting in that case.
+	 * Should we ever be called with an empty list, the "nothing left to
+	 * wait for" verdict below covers it. */
+	struct peer_devices_list *peer_devices = wctx->peer_devices;
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
 	struct drbd_notification_header nh = { .nh_type = -1U };
-	struct drbd_genlmsghdr *dh;
+	struct peer_devices_list *peer_device;
 	int err;
 
 	if (!info)
 		return 0;
+
+	if (info->genlhdr->cmd == DRBD_INITIAL_STATE_DONE) {
+		/* A peer device from the pre-query that did not appear in
+		 * the initial state dump was removed before we joined the
+		 * multicast group; its NOTIFY_DESTROY was sent before we
+		 * could receive it. Stop waiting for such peer devices. */
+		for (peer_device = peer_devices;
+		     peer_device;
+		     peer_device = peer_device->next) {
+			if (!peer_device->seen_in_dump)
+				peer_device_stop_waiting(peer_device);
+		}
+
+		wctx->initial_state_done = true;
+		goto count_done;
+	}
 
 	err = drbd_cfg_context_from_attrs(&ctx, info);
 	if (err)
@@ -4508,10 +4518,6 @@ static int wait_for_family(const struct drbd_cmd *cm, struct genl_info *info, st
 	err = drbd_notification_header_from_attrs(&nh, info);
 	if (err)
 		return 0;
-
-	dh = info->userhdr;
-	if (dh->ret_code != NO_ERROR)
-		return dh->ret_code;
 
 	switch(info->genlhdr->cmd) {
 	case DRBD_CONNECTION_STATE: {
@@ -4541,9 +4547,6 @@ static int wait_for_family(const struct drbd_cmd *cm, struct genl_info *info, st
 	}
 	case DRBD_PEER_DEVICE_STATE: {
 		struct peer_device_info peer_device_info;
-		struct peer_devices_list *peer_device;
-		int nr_peer_devices = 0, nr_done = 0;
-		bool wait_connect;
 
 		err = peer_device_info_from_attrs(&peer_device_info, info);
 		if (err) {
@@ -4551,21 +4554,42 @@ static int wait_for_family(const struct drbd_cmd *cm, struct genl_info *info, st
 			break;
 		}
 
-		wait_connect = strstr(cm->cmd, "sync") == NULL;
+		for (peer_device = peer_devices;
+		     peer_device;
+		     peer_device = peer_device->next) {
+			if (!peer_device_ctx_match(&ctx, &peer_device->ctx))
+				continue;
 
-		if ((nh.nh_type & ~NOTIFY_FLAGS) == NOTIFY_DESTROY)
-			peer_devices_remove(&peer_devices, &ctx);
+			if ((nh.nh_type & ~NOTIFY_FLAGS) == NOTIFY_DESTROY)
+				peer_device_stop_waiting(peer_device);
+			else
+				peer_device->info = peer_device_info;
 
-		if ((nh.nh_type & ~NOTIFY_FLAGS) == NOTIFY_CREATE)
-			peer_devices_append(peer_devices, info);
+			if ((nh.nh_type & ~NOTIFY_FLAGS) == NOTIFY_EXISTS)
+				peer_device->seen_in_dump = true;
+			break;
+		}
+		/* A peer device that is not in the pre-query was created
+		 * after this command started; it is not waited for. */
+
+		goto count_done;
+	}
+	}
+
+	return 0;
+
+count_done:
+	{
+		int nr_peer_devices = 0, nr_done = 0;
+		bool wait_connect = strstr(cm->cmd, "sync") == NULL;
 
 		for (peer_device = peer_devices;
 		     peer_device;
 		     peer_device = peer_device->next) {
 			enum drbd_repl_state rs;
 
-			if (peer_device_ctx_match(&ctx, &peer_device->ctx))
-				peer_device->info = peer_device_info;
+			if (peer_device->gone)
+				continue;
 
 			/* wait-*-volume: filter out all but the specific peer device */
 			if (cm->ctx_key == CTX_PEER_DEVICE &&
@@ -4587,11 +4611,21 @@ static int wait_for_family(const struct drbd_cmd *cm, struct genl_info *info, st
 				nr_done++;
 		}
 
+		/* Nothing left to wait for. This verdict only depends on
+		 * NOTIFY_DESTROY events, which are always current, so it is
+		 * valid even before the initial state dump is complete. */
+		if (nr_peer_devices == 0)
+			return -1;
+
+		/* Before the initial state dump is complete, the info of
+		 * peer devices that have not appeared in the dump yet is
+		 * the pre-query state, which may be outdated. A "done"
+		 * verdict based on it would be untrustworthy. */
+		if (!wctx->initial_state_done)
+			return 0;
+
 		if (nr_peer_devices == nr_done)
 			return -1; /* Done with waiting */
-
-		break;
-	}
 	}
 
 	return 0;

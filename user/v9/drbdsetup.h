@@ -64,6 +64,12 @@ enum cfg_ctx_key {
 	CTX_PEER_DEVICE = CTX_PEER_NODE | CTX_VOLUME,
 };
 
+/* State of a wait-* command; owned by generic_events_cmd(). */
+struct wait_for_family_ctx {
+	struct peer_devices_list *peer_devices; /* wait list from the pre-query */
+	bool initial_state_done; /* initial state dump is complete */
+};
+
 /* Typed context passed to a drbd_cmd's handle_reply callback.
  * The tag says which union member is valid; every consumer
  * asserts that it received the member it expects. */
@@ -85,7 +91,7 @@ struct reply_ctx {
 		struct connections_list ***connections_tail;
 		struct peer_devices_list ***peer_devices_tail;
 		struct paths_list ***paths_tail;
-		struct peer_devices_list *wait_peer_devices;
+		struct wait_for_family_ctx *wait;
 	} u;
 };
 
@@ -154,6 +160,8 @@ struct peer_devices_list {
 	struct peer_device_statistics statistics;
 	struct devices_list *device;
 	int timeout_ms; /* used only by wait_for_family() */
+	bool seen_in_dump; /* used only by wait_for_family() */
+	bool gone; /* used only by wait_for_family() */
 };
 struct paths_list {
 	struct paths_list *next;
