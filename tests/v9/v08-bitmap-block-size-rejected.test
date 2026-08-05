@@ -1,0 +1,34 @@
+## Test that drbdmeta does not accept v08 meta data that tracks more than 4k of
+## data per bitmap bit -- neither on disk, nor in a dump to restore.
+##
+## Bug guarded against: only v09 knows other bitmap granularities.  DRBD 8.4
+## compares bm_bytes_per_bit against its compile-time BM_BLOCK_SIZE and refuses
+## to attach anything else, but is_valid_md() computed the expected meta data
+## layout from whatever the super block claimed, and thus called such a block
+## valid.  Userspace and kernel disagreed about the very same meta data, and the
+## only hint about the actual reason was in the kernel log.
+##
+## Test layout: 256 MB image, flex-internal v08 meta data, with the
+## bm_bytes_per_bit of the super block (4 bytes at offset 80) patched to 8192.
+
+$ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
+$ truncate -s 268435456 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ md_abs=$(drbdmeta --force - v08 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '.["#meta"].dump_offset')
+$ printf '\000\000\040\000' | dd of="$img" bs=1 seek=$((md_abs + 80)) count=4 conv=notrunc status=none
+$ drbdmeta --force - v08 "$img" flex-internal dump-superblock --output json 2>&1 >/dev/null | grep -e '^v08 unexpected'
+v08 unexpected bm_bytes_per_bit: 8192 (expected 4096)
+$ drbdmeta --force - v08 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -c '[.bm_bytes_per_bit, .["#meta"].valid]'
+[8192,"NO_VALID_MD_FOUND"]
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal apply-al 2>&1 >/dev/null | grep -e '^No valid meta data'
+No valid meta data found
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force - v08 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -c '[.bm_bytes_per_bit, .["#meta"].valid]'
+[4096,"VALID_MD_FOUND"]
+$ drbdmeta --force - v08 "$img" flex-internal dump-md 2>/dev/null | sed 's/^bm-byte-per-bit 4096;/bm-byte-per-bit 8192;/' > "$tmpdir/dump.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal restore-md "$tmpdir/dump.txt" 2>&1 >/dev/null | grep -e '^Invalid value'; echo "${PIPESTATUS[0]}"
+Invalid value for bm-byte-per-bit: 'v08' meta data supports only 4096
+10
+$ rm -rf "$tmpdir" "$img"
