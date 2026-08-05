@@ -182,6 +182,7 @@ extern char *progname;
 typedef int (*fake_generic_get_t)(const struct drbd_cmd *cm, int timeout_arg, struct reply_ctx *rctx);
 /* Used by drbdsetup_instrumented to redirect calls to generic_get() */
 extern fake_generic_get_t fake_generic_get;
+extern bool fake_choose_timeout;
 extern char *objname;
 extern bool opt_now;
 extern bool opt_poll;

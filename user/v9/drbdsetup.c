@@ -89,6 +89,7 @@
 char *progname;
 
 fake_generic_get_t fake_generic_get = NULL;
+bool fake_choose_timeout = false;
 
 #ifndef AF_INET_SDP
 #define AF_INET_SDP 27
@@ -1526,6 +1527,11 @@ int choose_timeout(struct choose_timeout_ctx *ctx)
 	struct drbd_genlmsghdr *dhdr;
 	struct nlattr *nla;
 	int err, rr;
+
+	if (fake_choose_timeout) {
+		ctx->timeout = ctx->wfc_timeout;
+		return 0;
+	}
 
 	if (0 < ctx->wfc_timeout &&
 	      (ctx->wfc_timeout < ctx->degr_wfc_timeout || ctx->degr_wfc_timeout == 0)) {

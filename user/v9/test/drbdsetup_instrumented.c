@@ -429,6 +429,24 @@ void test_connection_destroy(struct msg_buff *smsg, struct test_vars *vars)
 	test_notification_header(smsg, NOTIFY_DESTROY);
 }
 
+void test_peer_device_exists(struct msg_buff *smsg, struct test_vars *vars)
+{
+	test_msg_put(smsg, DRBD_PEER_DEVICE_STATE, -1U);
+	test_peer_device_context(smsg, vars);
+	test_notification_header(smsg, NOTIFY_EXISTS);
+	test_peer_device_info(smsg, vars, L_ESTABLISHED, D_UP_TO_DATE);
+	test_peer_device_statistics(smsg, vars, false);
+}
+
+void test_peer_device_exists_sync(struct msg_buff *smsg, struct test_vars *vars)
+{
+	test_msg_put(smsg, DRBD_PEER_DEVICE_STATE, -1U);
+	test_peer_device_context(smsg, vars);
+	test_notification_header(smsg, NOTIFY_EXISTS);
+	test_peer_device_info(smsg, vars, L_SYNC_SOURCE, D_INCONSISTENT);
+	test_peer_device_statistics(smsg, vars, true);
+}
+
 void test_peer_device_create(struct msg_buff *smsg, struct test_vars *vars)
 {
 	test_msg_put(smsg, DRBD_PEER_DEVICE_STATE, -1U);
@@ -543,6 +561,15 @@ static void test_get_peer_device(struct msg_buff *smsg, struct test_vars *vars)
 	test_peer_device_opts(smsg, vars);
 }
 
+static void test_get_peer_device_sync(struct msg_buff *smsg, struct test_vars *vars)
+{
+	test_msg_put(smsg, DRBD_ADM_GET_PEER_DEVICES, vars->minor);
+	test_peer_device_context(smsg, vars);
+	test_peer_device_info(smsg, vars, L_SYNC_SOURCE, D_INCONSISTENT);
+	test_peer_device_statistics(smsg, vars, true);
+	test_peer_device_opts(smsg, vars);
+}
+
 /*
  * ################# main() #################
  */
@@ -588,6 +615,8 @@ int test_build_msg(struct msg_buff *smsg, char *msg_name, struct test_vars *vars
 	TEST_MSG(connection_change_connection);
 	TEST_MSG(connection_change_role);
 	TEST_MSG(connection_destroy);
+	TEST_MSG(peer_device_exists);
+	TEST_MSG(peer_device_exists_sync);
 	TEST_MSG(peer_device_create);
 	TEST_MSG(peer_device_change_replication);
 	TEST_MSG(peer_device_change_sync);
@@ -601,6 +630,7 @@ int test_build_msg(struct msg_buff *smsg, char *msg_name, struct test_vars *vars
 	TEST_MSG(get_device);
 	TEST_MSG(get_connection);
 	TEST_MSG(get_peer_device);
+	TEST_MSG(get_peer_device_sync);
 	fprintf(stderr, "unknown message '%s'\n", msg_name);
 	return 1;
 }
@@ -754,6 +784,9 @@ int generic_get_instrumented(const struct drbd_cmd *cm, int timeout_arg, struct 
 		case DRBD_ADM_GET_PEER_DEVICES:
 			cmd_id_name = "DRBD_ADM_GET_PEER_DEVICES";
 			break;
+		case DRBD_ADM_GET_INITIAL_STATE:
+			cmd_id_name = "DRBD_ADM_GET_INITIAL_STATE";
+			break;
 		default:
 			fprintf(stderr, "Unknown cmd_id=%d\n", cm->cmd_id);
 			exit(1);
@@ -770,6 +803,7 @@ int generic_get_instrumented(const struct drbd_cmd *cm, int timeout_arg, struct 
 		struct test_vars vars = test_init_vars();
 		struct msg_buff *smsg;
 		struct nlmsghdr *nlh;
+		struct drbd_genlmsghdr *dh;
 		struct nlattr *tla[128];
 		struct genl_info info;
 		int err;
@@ -778,8 +812,14 @@ int generic_get_instrumented(const struct drbd_cmd *cm, int timeout_arg, struct 
 		if (err)
 			return err;
 
-		if (!strcmp(msg_name, "-"))
+		if (!strcmp(msg_name, "-")) {
+			/* Like NLMSG_DONE in generic_recv(): ends the reply,
+			 * but a continuously polling command keeps receiving
+			 * events. */
+			if (cm->continuous_poll)
+				continue;
 			return 0;
+		}
 
 		/* build msg as if sending */
 		smsg = msg_new(DEFAULT_MSG_SIZE);
@@ -794,12 +834,27 @@ int generic_get_instrumented(const struct drbd_cmd *cm, int timeout_arg, struct 
 		/* read message as if receiving */
 		info = nlmsghdr_to_genl_info(nlh, tla);
 
+		/* generic_recv() checks ret_code before invoking the
+		 * handle_reply callback; mirror that, so that the callbacks
+		 * do not need a check of their own. */
+		dh = genlmsg_data(nlmsg_data(nlh));
+		if (dh->ret_code != NO_ERROR &&
+		    !(dh->ret_code == ERR_MINOR_INVALID && cm->missing_ok)) {
+			fprintf(stderr, "ret_code %d\n", dh->ret_code);
+			return 20;
+		}
+
 		err = cm->handle_reply(cm, &info, rctx);
-		if (err)
+		if (err) {
+			if (err < 0)
+				err = 0;
 			return err;
+		}
 	}
 
-	return 0;
+	/* Input exhausted. A continuously polling command would block
+	 * waiting for further events; report that like a timeout. */
+	return cm->continuous_poll ? 5 : 0;
 }
 
 int main_events2(int argc, char **argv)
@@ -868,8 +923,9 @@ int main_generic_instrumented(int argc, char **argv)
 	/* Prevent reading of version from /proc/drbd */
 	setenv("DRBD_DRIVER_VERSION_OVERRIDE", "9.2.14", 1);
 
-	/* Redirect calls to generic_get() */
+	/* Redirect calls to generic_get() and choose_timeout() */
 	fake_generic_get = generic_get_instrumented;
+	fake_choose_timeout = true;
 
 	return drbdsetup_main(argc, argv);
 }
@@ -889,10 +945,11 @@ int main(int argc, char **argv)
 	if (strcmp(argv[1], "events2") == 0)
 		return main_events2(argc - 1, argv + 1);
 
-	if (strcmp(argv[1], "show") == 0)
+	if (strcmp(argv[1], "show") == 0 ||
+	    strncmp(argv[1], "wait-", 5) == 0)
 		return main_generic_instrumented(argc, argv);
 
 	fprintf(stderr, "Unknown command '%s'\n", argv[1]);
-	fprintf(stderr, "USAGE: drbdsetup_instrumented {events2|show} [options]\n");
+	fprintf(stderr, "USAGE: drbdsetup_instrumented {events2|show|wait-*} [options]\n");
 	return 1;
 }

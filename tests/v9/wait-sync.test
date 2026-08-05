@@ -1,0 +1,17 @@
+## wait-sync/wait-connect tests, in order:
+## 1. peer vanishes between pre-query and initial state dump
+## 2. sync already complete
+## 3. sync completes after the initial state dump
+## 4. must not return before the initial state dump is complete;
+##    the pre-query state of the second volume is stale
+## 5. wait-connect: a syncing peer device counts as connected
+$ cat wait-sync-vanished-peer.msgs | drbdsetup_instrumented wait-sync-resource some-resource; echo $?
+0
+$ cat wait-sync-already-done.msgs | drbdsetup_instrumented wait-sync-resource some-resource; echo $?
+0
+$ cat wait-sync-completes.msgs | drbdsetup_instrumented wait-sync-resource some-resource; echo $?
+0
+$ cat wait-sync-second-volume-syncing.msgs | drbdsetup_instrumented wait-sync-resource some-resource; echo $?
+5
+$ cat wait-sync-second-volume-syncing.msgs | drbdsetup_instrumented wait-connect-resource some-resource; echo $?
+0

@@ -1,0 +1,8 @@
+DRBD_ADM_GET_PEER_DEVICES
+get_peer_device
+get_peer_device volume_number 1 minor 1001
+-
+DRBD_ADM_GET_INITIAL_STATE
+peer_device_exists
+peer_device_exists_sync volume_number 1 minor 1001
+initial_state_done
