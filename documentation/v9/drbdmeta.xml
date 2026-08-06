@@ -125,6 +125,8 @@
 	  <arg choice="opt" rep="norepeat"><option>--al-stripes=</option><replaceable>val</replaceable></arg>
 	  <arg choice="opt" rep="norepeat"><option>--al-stripe-size-kB=</option><replaceable>val</replaceable></arg> (metadata version v09)
 	  <arg choice="opt" rep="norepeat"><option>--bitmap-block-size=</option><replaceable>val</replaceable></arg>
+	  <arg choice="opt" rep="norepeat"><option>--peers=</option><replaceable>node-id-list</replaceable></arg>
+	  <arg choice="opt" rep="norepeat"><option>--bitmap-slots=</option><replaceable>slot-list</replaceable></arg>
 	  <arg choice="opt" rep="norepeat"><option>--initial-current-uuid=</option><replaceable>{generate|&lt;hex&gt;}</replaceable></arg>
 	  <arg choice="opt" rep="norepeat"><option>--consistent</option></arg>
 	  <arg choice="opt" rep="norepeat"><option>--uptodate</option></arg>
@@ -202,6 +204,28 @@
 	    last agreed device size leaves no room for that, the conversion is
 	    refused: shrink the file system and the DRBD device first, while
 	    still running DRBD 9.
+	  </para>
+	  <para>
+	    DRBD 8.4 and older also have a single bitmap slot, so converting
+	    metadata that has more than one drops all but one of them, and
+	    re-creates the bitmap. Which slot survives has to be clear:
+	    <option>--peers</option> names it by the node id of the peer
+	    that owns it, <option>--bitmap-slots</option> by slot number.
+	    Use the slot number for a slot that no peer owns any more, which is
+	    what <option>forget-peer</option> leaves behind. Both options take a
+	    comma separated list, or a mask in hexadecimal, so that they can also
+	    express a conversion that keeps more than one slot; naming more than
+	    the conversion keeps is refused, and a conversion to
+	    <literal>v08</literal> keeps one. If nothing is named, and more than
+	    one slot is in use, the conversion is refused and lists the
+	    candidates; a single slot in use is unambiguous and is kept. The peer
+	    that owns the kept slot provides the bitmap UUID and the peer flags
+	    of the <literal>v08</literal> metadata.
+	    Only the slot that is kept decides the state of the new bitmap: if it
+	    tracks nothing out of sync, the new bitmap is all clear, even when a
+	    dropped slot did track something. If it does, the whole device is
+	    marked out of sync, because a bit of the old bitmap does not describe
+	    the same blocks as a bit of the new one.
 	  </para>
   <para>
     The following options are available for metadata version v09 only.

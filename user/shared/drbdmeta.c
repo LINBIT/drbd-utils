@@ -87,6 +87,8 @@ unsigned option_bm_block_size = 0;
 const char *option_bm_block_size_str = NULL;
 uint64_t option_effective_size = 0;
 uint64_t option_diskful_peer_mask = 0;
+uint64_t option_peer_mask = 0;
+uint64_t option_slot_mask = 0;
 const char *option_initial_current_uuid = NULL;
 bool option_consistent = false;
 bool option_uptodate = false;
@@ -153,6 +155,8 @@ struct option metaopt[] = {
     { "peers-outdated", no_argument, NULL, 1004 },
     { "rotate-uuids", no_argument, NULL, 1005 },
     { "var-lib-drbd", required_argument, NULL, 1006 },
+    { "peers", required_argument, NULL, 1007 },
+    { "bitmap-slots", required_argument, NULL, 1008 },
     { NULL,     0,              0, 0 },
 };
 
@@ -944,6 +948,8 @@ struct meta_cmd cmds[] = {
 		"[--al-stripes {val}] "
 		"[--al-stripe-size-kB {val}] "
 		"[--bitmap-block-size {val}] "
+		"[--peers {val}] "
+		"[--bitmap-slots {val}] "
 		"{max_peers}",
 		meta_create_md, 1, 0, 1},
 	{"forget-peer", 0, meta_forget_peer, 1, 1, 1},
@@ -1552,13 +1558,14 @@ static void set_all_bitmap_pwrite(struct format *cfg)
 	init_bitmap_pwrite(cfg, 0xff);
 }
 
-/* Is anything out-of-sync with any peer?
+/* Which bitmap slots have anything out-of-sync?  Returns a mask of slot
+ * numbers, not of peer node ids.
  *
  * Unlike the other bitmap helpers this one works on the meta data as found in
  * cfg->md, not on cfg->bm_offset and cfg->bm_bytes: it is used while converting
  * from one meta data flavour to an other, where the byte offsets of the format
  * we are converting *from* were never mapped. */
-static bool bitmap_has_bits_set(struct format *cfg)
+static uint64_t bitmap_dirty_slots(struct format *cfg)
 {
 	off_t bm_on_disk_off = cfg->md_offset + (int64_t)cfg->md.bm_offset * 512LL;
 	/* The bitmap is the last thing in the meta data area, except with the
@@ -1571,23 +1578,100 @@ static bool bitmap_has_bits_set(struct format *cfg)
 	uint64_t on_disk_bytes = (uint64_t)on_disk_sect * 512;
 	uint64_t bytes_left = ALIGN(bm_bytes(&cfg->md, cfg->md.effective_size),
 				    cfg->md_hard_sect_size);
+	unsigned int slots = cfg->md.max_peers;
+	uint64_t all_slots = (1ULL << slots) - 1;
+	uint64_t dirty = 0;
+	uint64_t word = 0;
 	size_t chunk, i;
 
 	if (bytes_left > on_disk_bytes)
 		bytes_left = on_disk_bytes;
 
-	while (bytes_left) {
+	while (bytes_left && dirty != all_slots) {
 		chunk = buffer_size < bytes_left ? buffer_size : bytes_left;
 		pread_or_die(cfg, on_disk_buffer, chunk, bm_on_disk_off,
-			     "bitmap_has_bits_set");
-		for (i = 0; i < chunk / sizeof(long); i++) {
-			if (((long *)on_disk_buffer)[i])
-				return true;
+			     "bitmap_dirty_slots");
+		/* the slots are interleaved, one 32 bit word each */
+		for (i = 0; i < chunk / sizeof(le_u32); i++, word++) {
+			if (((le_u32 *)on_disk_buffer)[i].le)
+				dirty |= 1ULL << (word % slots);
 		}
 		bm_on_disk_off += chunk;
 		bytes_left -= chunk;
 	}
-	return false;
+	return dirty;
+}
+
+/* Which bitmap slots survive a conversion that keeps fewer of them?  Returns a
+ * mask of slot numbers, empty if no peer has a bitmap slot at all.
+ *
+ * --peers names them by the peer that owns them, --bitmap-slots by
+ * number.  A slot without an owner can only be named by number: forget-peer
+ * clears the peer entry, while the slot keeps its bits until something
+ * re-writes the bitmap. */
+static uint64_t keep_slots_mask(struct format *cfg, unsigned int slots_left)
+{
+	unsigned int slots = cfg->md.max_peers;
+	uint64_t keep = 0;
+	unsigned int n = 0;
+	int p, slot;
+
+	for (slot = 0; slot < DRBD_PEERS_MAX; slot++) {
+		if (!(option_slot_mask & (1ULL << slot)))
+			continue;
+		if ((unsigned int)slot >= slots) {
+			fprintf(stderr,
+				"--bitmap-slots: this meta data has %u bitmap slot%s,"
+				" numbered 0 to %u\n",
+				slots, slots == 1 ? "" : "s", slots - 1);
+			exit(10);
+		}
+		keep |= 1ULL << slot;
+		n++;
+	}
+	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
+		if (!(option_peer_mask & (1ULL << p)))
+			continue;
+		if (cfg->md.peers[p].bitmap_index < 0) {
+			fprintf(stderr, "--peers: peer node id %d has no bitmap slot\n", p);
+			exit(10);
+		}
+		keep |= 1ULL << cfg->md.peers[p].bitmap_index;
+		n++;
+	}
+	if (n > slots_left) {
+		fprintf(stderr,
+			"%s: %u named, but only %u bitmap slot%s survives the conversion\n",
+			option_slot_mask ? "--bitmap-slots" : "--peers",
+			n, slots_left, slots_left == 1 ? "" : "s");
+		exit(10);
+	}
+	if (keep)
+		return keep;
+
+	/* Nothing named: keep the slots that peers own, as long as the
+	 * conversion has room for all of them.  Do not fall back to node id 0:
+	 * that may well be this node itself, which has no bitmap slot. */
+	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
+		if (cfg->md.peers[p].bitmap_index >= 0) {
+			keep |= 1ULL << cfg->md.peers[p].bitmap_index;
+			n++;
+		}
+	}
+	if (n <= slots_left)
+		return keep;
+
+	fprintf(stderr, "This meta data has %u bitmap slots in use, the conversion keeps %u:\n",
+		n, slots_left);
+	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
+		if (cfg->md.peers[p].bitmap_index >= 0)
+			fprintf(stderr, "  peer node id %d owns bitmap slot %d\n",
+				p, cfg->md.peers[p].bitmap_index);
+	}
+	fprintf(stderr,
+		"Name the peer to keep with --peers, or its slot with\n"
+		"--bitmap-slots.  \"drbdmeta dump-md\" shows what each slot tracks.\n");
+	exit(10);
 }
 
 /* What md_convert_09_to_08() left for meta_create_md() to do to the bitmap
@@ -4341,7 +4425,34 @@ void md_convert_09_to_08(struct format *cfg)
 	unsigned int max_peers = cfg->md.max_peers;
 	bool convert_bitmap = cfg->md.bm_bytes_per_bit != BM_BLOCK_SIZE_4k ||
 			      max_peers != 1;
-	bool out_of_sync = convert_bitmap && bitmap_has_bits_set(cfg);
+	uint64_t keep_slots = keep_slots_mask(cfg, 1);	/* v08 keeps one slot */
+	uint64_t dirty = convert_bitmap ? bitmap_dirty_slots(cfg) : 0;
+	int slot_owner[DRBD_PEERS_MAX];	/* peer node id per slot, before we move any */
+	bool out_of_sync;
+	int keep = -1;
+	int p, slot;
+
+	for (slot = 0; slot < DRBD_PEERS_MAX; slot++)
+		slot_owner[slot] = -1;
+	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
+		slot = cfg->md.peers[p].bitmap_index;
+
+		if (slot < 0 || slot_owner[slot] >= 0)
+			continue;
+		slot_owner[slot] = p;
+		if ((keep_slots & (1ULL << slot)) && keep < 0)
+			keep = p;
+	}
+
+	/* Only the slots that are kept decide.  Unless none is: then there is
+	 * nobody to attribute out-of-sync bits to, and dropping them silently
+	 * is not an option. */
+	out_of_sync = keep_slots ? !!(dirty & keep_slots) : dirty != 0;
+
+	/* Whatever the v08 meta data still knows about a peer belongs to the
+	 * one that keeps its bitmap slot. */
+	if (keep > 0)
+		cfg->md.peers[0] = cfg->md.peers[keep];
 
 	if (cfg->md.peers[0].flags & MDF_PEER_CONNECTED)
 		cfg->md.flags |= MDF_CONNECTED_IND;
@@ -4366,6 +4477,31 @@ void md_convert_09_to_08(struct format *cfg)
 				max_peers);
 		fprintf(stderr, "re-creating the bitmap with %u bytes per bit.\n",
 			BM_BLOCK_SIZE_4k);
+
+		if (max_peers != 1) {
+			for (slot = 0; slot < (int)max_peers; slot++) {
+				if (!(keep_slots & (1ULL << slot)))
+					continue;
+				if (slot_owner[slot] >= 0)
+					fprintf(stderr, "keeping bitmap slot %d of peer node id %d\n",
+						slot, slot_owner[slot]);
+				else
+					fprintf(stderr, "keeping bitmap slot %d, which no peer owns\n",
+						slot);
+			}
+		}
+		for (slot = 0; !out_of_sync && slot < (int)max_peers; slot++) {
+			if (!(dirty & (1ULL << slot)) || (keep_slots & (1ULL << slot)))
+				continue;
+			if (slot_owner[slot] >= 0)
+				fprintf(stderr,
+					"dropping the out-of-sync bits of peer node id %d (bitmap slot %d)\n",
+					slot_owner[slot], slot);
+			else
+				fprintf(stderr,
+					"dropping the out-of-sync bits of bitmap slot %d, which no peer owns\n",
+					slot);
+		}
 
 		cfg->md.bm_bytes_per_bit = BM_BLOCK_SIZE_4k;
 
@@ -5967,6 +6103,12 @@ int main(int argc, char **argv)
 	    case 1006:
 		drbd_lib_dir_override = optarg;
 		break;
+	    case 1007:
+		option_peer_mask = node_mask_from_arg(optarg);
+		break;
+	    case 1008:
+		option_slot_mask = node_mask_from_arg(optarg);
+		break;
 	    default:
 		print_usage_and_exit();
 		break;
@@ -6084,6 +6226,23 @@ int main(int argc, char **argv)
 	if (option_diskful_peer_mask &&
 	    command->function != &meta_create_md) {
 		fprintf(stderr, "The -D|--diskful-peers option is only allowed with create-md\n");
+		exit(10);
+	}
+
+	if (option_peer_mask &&
+	    command->function != &meta_create_md) {
+		fprintf(stderr, "The --peers option is only allowed with create-md\n");
+		exit(10);
+	}
+
+	if (option_slot_mask &&
+	    command->function != &meta_create_md) {
+		fprintf(stderr, "The --bitmap-slots option is only allowed with create-md\n");
+		exit(10);
+	}
+
+	if (option_peer_mask && option_slot_mask) {
+		fprintf(stderr, "Name either peers or bitmap slots to keep, not both\n");
 		exit(10);
 	}
 

@@ -1,3 +1,9 @@
 $ drbdadm -d -c ./man.res create-md --force r0/0 2>/dev/null; echo $?
 drbdmeta 1 v09 /dev/sda7 internal create-md 1 --force
 0
+$ drbdadm -d -c ./man.res create-md --force --peers=1 r0/0 2>/dev/null; echo $?
+drbdmeta 1 v09 /dev/sda7 internal create-md 1 --force --peers=1
+0
+$ drbdadm -d -c ./man.res create-md --force --bitmap-slots=0 r0/0 2>/dev/null; echo $?
+drbdmeta 1 v09 /dev/sda7 internal create-md 1 --force --bitmap-slots=0
+0

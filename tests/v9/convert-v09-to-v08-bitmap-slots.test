@@ -1,0 +1,100 @@
+## Test the v09 -> v08 conversion of meta data that has more than one bitmap
+## slot: one slot survives, --peers or --bitmap-slots picks which one,
+## and only that slot decides the state of the new bitmap.
+##
+## Test layout: 256 MB image, flex-internal meta data, 4k per bitmap bit, three
+## bitmap slots.  A dump is edited to give the peers with node id 1, 2, 3 the
+## bitmap slots 0, 1, 2, and node id 2 a distinctive bitmap UUID.  Then the first
+## 32 bit word of slot 1 is set: the slots are interleaved word by word, so that
+## is out-of-sync for node id 2 alone.
+##
+## The test walks through, in this order:
+##  - with more than one slot in use and no choice made, the conversion is
+##    refused, and names the candidates
+##  - --peers 1 keeps a slot that tracks nothing: the new bitmap comes out
+##    all clear, even though the dropped slot of node id 2 does track something
+##  - --peers 2 keeps the slot that tracks something: the whole device is
+##    marked out-of-sync, and the v08 meta data keeps that peer's bitmap UUID
+##  - --bitmap-slots 2 names by slot number what --peers 3 names by
+##    peer
+##  - a node id without a slot, a slot that does not exist, more names than the
+##    conversion keeps slots, and both options at once are refused.  The v09
+##    meta data then stays as it is
+##  - a slot that no peer owns can only be named by number, and its bits are
+##    dropped like those of any other slot that is not kept
+##  - the options are only allowed with create-md
+$ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
+$ truncate -s 268435456 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --effective-size 500000 3 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null > "$tmpdir/dump.txt"
+$ awk '/^peer\[1\] \{/{p=1} /^peer\[2\] \{/{p=2} /^peer\[3\] \{/{p=3} /^\}/{p=0} p && /bitmap-index/{sub(/-1/, p-1)} p==2 && /bitmap-uuid/{sub(/0x0000000000000000/, "0x00000000CAFE0002")} {print}' "$tmpdir/dump.txt" > "$tmpdir/slots.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md "$tmpdir/slots.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ bm_abs=$(drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
+$ printf '\001' | dd of="$img" bs=1 seek=$((bm_abs + 4)) count=1 conv=notrunc status=none
+$ cp "$img" "$tmpdir/v09.img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md 2>&1 >/dev/null | grep -e '^This meta data has' -e '^  peer node id' -e '^Name the peer'; echo "${PIPESTATUS[0]}"
+This meta data has 3 bitmap slots in use, the conversion keeps 1:
+  peer node id 1 owns bitmap slot 0
+  peer node id 2 owns bitmap slot 1
+  peer node id 3 owns bitmap slot 2
+Name the peer to keep with --peers, or its slot with
+10
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -e '^max-peers' -e CAFE0002
+max-peers 3;
+    bitmap-uuid 0x00000000CAFE0002;
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --peers 1 2>&1 >/dev/null | grep -e '^keeping' -e '^dropping' -e '^initializing' -e '^marking'
+keeping bitmap slot 0 of peer node id 1
+dropping the out-of-sync bits of peer node id 2 (bitmap slot 1)
+initializing the new bitmap (8 KB) to all zero
+$ drbdmeta --force - v08 "$img" flex-internal dump-md 2>/dev/null | grep -c CAFE0002
+0
+$ cp "$tmpdir/v09.img" "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --peers 2 2>&1 >/dev/null | grep -e '^keeping' -e '^dropping' -e '^initializing' -e '^marking'
+keeping bitmap slot 1 of peer node id 2
+marking the whole device out-of-sync in the new bitmap (8 KB)
+$ drbdmeta --force - v08 "$img" flex-internal dump-md 2>/dev/null | grep -c CAFE0002
+1
+$ bm8_abs=$(drbdmeta --force - v08 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
+$ od -An -j "$bm8_abs" -N 8 -tx1 "$img"
+ ff ff ff ff ff ff ff ff
+$ cp "$tmpdir/v09.img" "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --bitmap-slots 2 2>&1 >/dev/null | grep -e '^keeping' -e '^dropping' -e '^initializing' -e '^marking'
+keeping bitmap slot 2 of peer node id 3
+dropping the out-of-sync bits of peer node id 2 (bitmap slot 1)
+initializing the new bitmap (8 KB) to all zero
+$ cp "$tmpdir/v09.img" "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --peers 9 2>&1 >/dev/null | grep -e '^--peers'; echo "${PIPESTATUS[0]}"
+--peers: peer node id 9 has no bitmap slot
+10
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --bitmap-slots 3 2>&1 >/dev/null | grep -e '^--bitmap-slots'; echo "${PIPESTATUS[0]}"
+--bitmap-slots: this meta data has 3 bitmap slots, numbered 0 to 2
+10
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --peers 1,2 2>&1 >/dev/null | grep -e '^--peers'; echo "${PIPESTATUS[0]}"
+--peers: 2 named, but only 1 bitmap slot survives the conversion
+10
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --peers 1 --bitmap-slots 0 2>&1 >/dev/null | grep -e 'not both'; echo "${PIPESTATUS[0]}"
+Name either peers or bitmap slots to keep, not both
+10
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -e '^max-peers' -e CAFE0002
+max-peers 3;
+    bitmap-uuid 0x00000000CAFE0002;
+$ awk '/^peer\[2\] \{/{p=1} /^\}/{p=0} p && /bitmap-index/{sub(/1;/, "-1;")} {print}' "$tmpdir/slots.txt" > "$tmpdir/orphan.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md "$tmpdir/orphan.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ printf '\001' | dd of="$img" bs=1 seek=$((bm_abs + 4)) count=1 conv=notrunc status=none
+$ cp "$img" "$tmpdir/orphan.img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --bitmap-slots 1 2>&1 >/dev/null | grep -e '^keeping' -e '^dropping' -e '^initializing' -e '^marking'
+keeping bitmap slot 1, which no peer owns
+marking the whole device out-of-sync in the new bitmap (8 KB)
+$ cp "$tmpdir/orphan.img" "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --bitmap-slots 0 2>&1 >/dev/null | grep -e '^keeping' -e '^dropping' -e '^initializing' -e '^marking'
+keeping bitmap slot 0 of peer node id 1
+dropping the out-of-sync bits of bitmap slot 1, which no peer owns
+initializing the new bitmap (8 KB) to all zero
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal apply-al --peers 1 2>&1 >/dev/null | grep -e peers
+The --peers option is only allowed with create-md
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal apply-al --bitmap-slots 1 2>&1 >/dev/null | grep -e bitmap-slots
+The --bitmap-slots option is only allowed with create-md
+$ rm -rf "$tmpdir" "$img"
