@@ -2648,9 +2648,12 @@ void printf_bm(struct format *cfg)
 		fprintf_bm(stdout, cfg, 0, "");
 		break;
 	case DRBD_V09:
+		/* One count per slot: cfg->bits_set only ever holds the one of
+		 * the slot dumped last. */
 		for (i = 0; i < cfg->md.max_peers; i++) {
 			printf("bitmap[%d] ", i);
 			fprintf_bm(stdout, cfg, i, "");
+			printf("# bits-set[%d] "U64";\n", i, cfg->bits_set);
 		}
 		break;
 	case DRBD_UNKNOWN:
@@ -3333,7 +3336,8 @@ int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc
 		}
 		printf("# bm-bytes "U64";\n", cfg->bm_bytes);
 		printf_bm(cfg); /* pretty prints the whole bitmap */
-		printf("# bits-set "U64";\n", cfg->bits_set);
+		if (format_version(cfg) < DRBD_V09)
+			printf("# bits-set "U64";\n", cfg->bits_set);
 
 		/* This is half assed, still. Hide it. */
 		if (verbose >= 10)
