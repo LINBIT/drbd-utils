@@ -64,6 +64,31 @@ enum cfg_ctx_key {
 	CTX_PEER_DEVICE = CTX_PEER_NODE | CTX_VOLUME,
 };
 
+/* Typed context passed to a drbd_cmd's handle_reply callback.
+ * The tag says which union member is valid; every consumer
+ * asserts that it received the member it expects. */
+enum reply_ctx_type {
+	RCTX_NONE,
+	RCTX_RESOURCES_TAIL,
+	RCTX_DEVICES_TAIL,
+	RCTX_CONNECTIONS_TAIL,
+	RCTX_PEER_DEVICES_TAIL,
+	RCTX_PATHS_TAIL,
+	RCTX_WAIT_FOR_FAMILY,
+};
+
+struct reply_ctx {
+	enum reply_ctx_type type;
+	union {
+		struct resources_list ***resources_tail;
+		struct devices_list ***devices_tail;
+		struct connections_list ***connections_tail;
+		struct peer_devices_list ***peer_devices_tail;
+		struct paths_list ***paths_tail;
+		struct peer_devices_list *wait_peer_devices;
+	} u;
+};
+
 struct drbd_cmd {
 	const char* cmd;
 	enum cfg_ctx_key ctx_key;
@@ -71,7 +96,7 @@ struct drbd_cmd {
 	int tla_id; /* top level attribute id */
 	int (*function)(const struct drbd_cmd *, int, char **);
 	struct drbd_argument *drbd_args;
-	int (*handle_reply)(const struct drbd_cmd*, struct genl_info *, void *u_ptr);
+	int (*handle_reply)(const struct drbd_cmd*, struct genl_info *, struct reply_ctx *);
 	struct option *options;
 	bool missing_ok;
 	bool continuous_poll;
@@ -146,7 +171,7 @@ __attribute__((format(printf, 2, 3)))
 int (*wrap_printf_fn_t)(int indent, const char *format, ...);
 
 extern char *progname;
-typedef int (*fake_generic_get_t)(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr);
+typedef int (*fake_generic_get_t)(const struct drbd_cmd *cm, int timeout_arg, struct reply_ctx *rctx);
 /* Used by drbdsetup_instrumented to redirect calls to generic_get() */
 extern fake_generic_get_t fake_generic_get;
 extern char *objname;

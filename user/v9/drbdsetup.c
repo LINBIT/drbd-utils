@@ -181,14 +181,14 @@ static int show_or_get_gi_cmd(const struct drbd_cmd *cm, int argc, char **argv);
 static int udev_cmd(const struct drbd_cmd *cm, int argc, char **argv);
 
 // sub commands for generic_get_cmd
-       int print_event(const struct drbd_cmd *, struct genl_info *, void *); /* is in drbdsetup_events2.c */
+       int print_event(const struct drbd_cmd *, struct genl_info *, struct reply_ctx *); /* is in drbdsetup_events2.c */
        void events2_prepare_update(); /* is in drbdsetup_events2.c */
        void events2_reset(); /* is in drbdsetup_events2.c */
-static int wait_for_family(const struct drbd_cmd *, struct genl_info *, void *);
-static int remember_resource(const struct drbd_cmd *, struct genl_info *, void *);
-static int remember_device(const struct drbd_cmd *, struct genl_info *, void *);
-static int remember_connection(const struct drbd_cmd *, struct genl_info *, void *);
-static int remember_peer_device(const struct drbd_cmd *, struct genl_info *, void *);
+static int wait_for_family(const struct drbd_cmd *, struct genl_info *, struct reply_ctx *);
+static int remember_resource(const struct drbd_cmd *, struct genl_info *, struct reply_ctx *);
+static int remember_device(const struct drbd_cmd *, struct genl_info *, struct reply_ctx *);
+static int remember_connection(const struct drbd_cmd *, struct genl_info *, struct reply_ctx *);
+static int remember_peer_device(const struct drbd_cmd *, struct genl_info *, struct reply_ctx *);
 
 
 // convert functions for arguments
@@ -1693,7 +1693,15 @@ static int generic_send(const struct drbd_cmd *cm)
 	return err;
 }
 
-static int generic_recv(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr, int extra_poll_fd, bool expect_reply)
+/* The timeout bookkeeping for MULTIPLE_TIMEOUTS operates on the wait list
+ * of the wait-* commands, the only users of MULTIPLE_TIMEOUTS. */
+static struct peer_devices_list *wait_peer_devices(struct reply_ctx *rctx)
+{
+	assert(rctx && rctx->type == RCTX_WAIT_FOR_FAMILY);
+	return rctx->u.wait_peer_devices;
+}
+
+static int generic_recv(const struct drbd_cmd *cm, int timeout_arg, struct reply_ctx *rctx, int extra_poll_fd, bool expect_reply)
 {
 	struct nlattr *tla[ARRAY_SIZE(drbd_tla_nl_policy)] = { 0, };
 	char *desc = NULL;
@@ -1722,7 +1730,8 @@ static int generic_recv(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr,
 		gettimeofday(&before, NULL);
 
 		timeout_ms =
-			timeout_arg == MULTIPLE_TIMEOUTS ? shortest_timeout(u_ptr) : timeout_arg;
+			timeout_arg == MULTIPLE_TIMEOUTS ?
+			shortest_timeout(wait_peer_devices(rctx)) : timeout_arg;
 
 		/* Wait for new data or error/HUP. We want to receive the full
 		 * reply before returning, so only check for data on
@@ -1765,7 +1774,7 @@ static int generic_recv(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr,
 				expect_reply = false;
 				if (cm->continuous_poll)
 					continue;
-				err = cm->handle_reply(cm, NULL, u_ptr);
+				err = cm->handle_reply(cm, NULL, rctx);
 				if (err)
 					goto out;
 				err = -*(int*)nlmsg_data(nlh);
@@ -1804,7 +1813,7 @@ static int generic_recv(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr,
 				(after.tv_usec - before.tv_usec) / 1000;
 
 			if (timeout_arg == MULTIPLE_TIMEOUTS) {
-				exit = update_timeouts(u_ptr, elapsed_ms);
+				exit = update_timeouts(wait_peer_devices(rctx), elapsed_ms);
 			} else {
 				timeout_ms -= elapsed_ms;
 				exit = timeout_ms <= 0;
@@ -1838,7 +1847,7 @@ static int generic_recv(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr,
 				expect_reply = false;
 				if (cm->continuous_poll)
 					continue;
-				err = cm->handle_reply(cm, NULL, u_ptr);
+				err = cm->handle_reply(cm, NULL, rctx);
 				if (err)
 					goto out;
 				err = -*(int*)nlmsg_data(nlh);
@@ -1929,7 +1938,7 @@ static int generic_recv(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr,
 				rv = NO_ERROR;
 			if (rv != NO_ERROR)
 				goto out;
-			err = cm->handle_reply(cm, &info, u_ptr);
+			err = cm->handle_reply(cm, &info, rctx);
 			if (err) {
 				if (err < 0)
 					err = 0;
@@ -1947,21 +1956,21 @@ out:
 	return err;
 }
 
-static int generic_get(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
+static int generic_get(const struct drbd_cmd *cm, int timeout_arg, struct reply_ctx *rctx)
 {
 	int err;
 
 	if (fake_generic_get)
-		return fake_generic_get(cm, timeout_arg, u_ptr);
+		return fake_generic_get(cm, timeout_arg, rctx);
 
 	err = generic_send(cm);
 	if (err != 0)
 		return err;
 
-	return generic_recv(cm, timeout_arg, u_ptr, -1, true);
+	return generic_recv(cm, timeout_arg, rctx, -1, true);
 }
 
-static int events2_poll(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
+static int events2_poll(const struct drbd_cmd *cm, int timeout_arg, struct reply_ctx *rctx)
 {
 	int err;
 	bool send_request = true;
@@ -1983,12 +1992,12 @@ static int events2_poll(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
 				 * reply is done. This is important on Windows
 				 * because the extra_poll_fd parameter is not
 				 * supported on that platform. */
-				err = generic_recv(cm, timeout_arg, u_ptr, -1, send_request);
+				err = generic_recv(cm, timeout_arg, rctx, -1, send_request);
 				if (err != 0)
 					return err;
 			}
 		} else {
-			err = generic_recv(cm, timeout_arg, u_ptr, STDIN_FILENO, send_request);
+			err = generic_recv(cm, timeout_arg, rctx, STDIN_FILENO, send_request);
 			if (err != 0)
 				return err;
 		}
@@ -2030,6 +2039,7 @@ static int generic_events_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	};
 	int c, timeout_ms, err = NO_ERROR;
 	struct peer_devices_list *peer_devices = NULL;
+	struct reply_ctx rctx = { .type = RCTX_NONE };
 	struct option *options = cm->options ? cm->options : no_options;
 	const char *opts = make_optstring(options);
 	struct drbd_cmd tmp_cm;
@@ -2195,13 +2205,15 @@ static int generic_events_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		msg_free(smsg);
 		free(iov.iov_base);
 
+		rctx.type = RCTX_WAIT_FOR_FAMILY;
+		rctx.u.wait_peer_devices = peer_devices;
 		timeout_ms = MULTIPLE_TIMEOUTS;
 	}
 
 	if (cm->handle_reply == &print_event && opt_poll)
-		err = events2_poll(cm, timeout_ms, peer_devices);
+		err = events2_poll(cm, timeout_ms, &rctx);
 	else
-		err = generic_get(cm, timeout_ms, peer_devices);
+		err = generic_get(cm, timeout_ms, &rctx);
 
 out:
 	free_peer_devices(peer_devices);
@@ -3811,9 +3823,12 @@ struct resources_list *new_resource_from_info(struct genl_info *info)
 	return r;
 }
 
-static int remember_resource(const struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
+static int remember_resource(const struct drbd_cmd *cmd, struct genl_info *info, struct reply_ctx *rctx)
 {
-	struct resources_list ***tail = u_ptr;
+	struct resources_list ***tail;
+
+	assert(rctx->type == RCTX_RESOURCES_TAIL);
+	tail = rctx->u.resources_tail;
 
 	if (info) {
 		struct resources_list *r = new_resource_from_info(info);
@@ -3875,6 +3890,7 @@ static struct resources_list *list_resources(void)
 		.missing_ok = false,
 	};
 	struct resources_list *list = NULL, **tail = &list;
+	struct reply_ctx rctx = { .type = RCTX_RESOURCES_TAIL, .u.resources_tail = &tail };
 	char *old_objname = objname;
 	int old_my_addr_len = global_ctx.ctx_my_addr_len;
 	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
@@ -3883,7 +3899,7 @@ static struct resources_list *list_resources(void)
 	objname = "all";
 	global_ctx.ctx_my_addr_len = 0;
 	global_ctx.ctx_peer_addr_len = 0;
-	err = generic_get(&cmd, 120000, &tail);
+	err = generic_get(&cmd, 120000, &rctx);
 	objname = old_objname;
 	global_ctx.ctx_my_addr_len = old_my_addr_len;
 	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
@@ -3935,9 +3951,12 @@ struct devices_list *new_device_from_info(struct genl_info *info)
 	return d;
 }
 
-static int remember_device(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
+static int remember_device(const struct drbd_cmd *cm, struct genl_info *info, struct reply_ctx *rctx)
 {
-	struct devices_list ***tail = u_ptr;
+	struct devices_list ***tail;
+
+	assert(rctx->type == RCTX_DEVICES_TAIL);
+	tail = rctx->u.devices_tail;
 
 	if (info) {
 		struct devices_list *d = new_device_from_info(info);
@@ -3959,6 +3978,7 @@ static struct devices_list *list_devices(char *resource_name)
 		.missing_ok = false,
 	};
 	struct devices_list *list = NULL, **tail = &list;
+	struct reply_ctx rctx = { .type = RCTX_DEVICES_TAIL, .u.devices_tail = &tail };
 	char *old_objname = objname;
 	int old_my_addr_len = global_ctx.ctx_my_addr_len;
 	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
@@ -3967,7 +3987,7 @@ static struct devices_list *list_devices(char *resource_name)
 	objname = resource_name ? resource_name : "all";
 	global_ctx.ctx_my_addr_len = 0;
 	global_ctx.ctx_peer_addr_len = 0;
-	err = generic_get(&cmd, 120000, &tail);
+	err = generic_get(&cmd, 120000, &rctx);
 	objname = old_objname;
 	global_ctx.ctx_my_addr_len = old_my_addr_len;
 	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
@@ -4022,9 +4042,12 @@ struct connections_list *new_connection_from_info(struct genl_info *info)
 	return c;
 }
 
-static int remember_connection(const struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
+static int remember_connection(const struct drbd_cmd *cmd, struct genl_info *info, struct reply_ctx *rctx)
 {
-	struct connections_list ***tail = u_ptr;
+	struct connections_list ***tail;
+
+	assert(rctx->type == RCTX_CONNECTIONS_TAIL);
+	tail = rctx->u.connections_tail;
 
 	if (info) {
 		struct connections_list *c = new_connection_from_info(info);
@@ -4077,6 +4100,7 @@ static struct connections_list *list_connections(char *resource_name)
 		.missing_ok = true,
 	};
 	struct connections_list *list = NULL, **tail = &list;
+	struct reply_ctx rctx = { .type = RCTX_CONNECTIONS_TAIL, .u.connections_tail = &tail };
 	char *old_objname = objname;
 	int old_my_addr_len = global_ctx.ctx_my_addr_len;
 	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
@@ -4085,7 +4109,7 @@ static struct connections_list *list_connections(char *resource_name)
 	objname = resource_name ? resource_name : "all";
 	global_ctx.ctx_my_addr_len = 0;
 	global_ctx.ctx_peer_addr_len = 0;
-	err = generic_get(&cmd, 120000, &tail);
+	err = generic_get(&cmd, 120000, &rctx);
 	objname = old_objname;
 	global_ctx.ctx_my_addr_len = old_my_addr_len;
 	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
@@ -4139,9 +4163,12 @@ struct peer_devices_list *new_peer_device_from_info(struct genl_info *info)
 	return p;
 
 }
-static int remember_peer_device(const struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
+static int remember_peer_device(const struct drbd_cmd *cmd, struct genl_info *info, struct reply_ctx *rctx)
 {
-	struct peer_devices_list ***tail = u_ptr;
+	struct peer_devices_list ***tail;
+
+	assert(rctx->type == RCTX_PEER_DEVICES_TAIL);
+	tail = rctx->u.peer_devices_tail;
 
 	if (info) {
 		struct peer_devices_list *p = new_peer_device_from_info(info);
@@ -4163,6 +4190,7 @@ static struct peer_devices_list *list_peer_devices(char *resource_name)
 		.missing_ok = false,
 	};
 	struct peer_devices_list *list = NULL, **tail = &list;
+	struct reply_ctx rctx = { .type = RCTX_PEER_DEVICES_TAIL, .u.peer_devices_tail = &tail };
 	char *old_objname = objname;
 	int old_my_addr_len = global_ctx.ctx_my_addr_len;
 	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
@@ -4171,7 +4199,7 @@ static struct peer_devices_list *list_peer_devices(char *resource_name)
 	objname = resource_name ? resource_name : "all";
 	global_ctx.ctx_my_addr_len = 0;
 	global_ctx.ctx_peer_addr_len = 0;
-	err = generic_get(&cmd, 120000, &tail);
+	err = generic_get(&cmd, 120000, &rctx);
 	objname = old_objname;
 	global_ctx.ctx_my_addr_len = old_my_addr_len;
 	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
@@ -4213,9 +4241,12 @@ struct paths_list *new_path_from_info(struct genl_info *info)
 	return p;
 }
 
-static int remember_path(const struct drbd_cmd *cmd, struct genl_info *info, void *u_ptr)
+static int remember_path(const struct drbd_cmd *cmd, struct genl_info *info, struct reply_ctx *rctx)
 {
-	struct paths_list ***tail = u_ptr;
+	struct paths_list ***tail;
+
+	assert(rctx->type == RCTX_PATHS_TAIL);
+	tail = rctx->u.paths_tail;
 
 	if (info) {
 		struct paths_list *p = new_path_from_info(info);
@@ -4237,6 +4268,7 @@ static struct paths_list *list_paths(char *resource_name)
 		.missing_ok = false,
 	};
 	struct paths_list *list = NULL, **tail = &list;
+	struct reply_ctx rctx = { .type = RCTX_PATHS_TAIL, .u.paths_tail = &tail };
 	char *old_objname = objname;
 	int old_my_addr_len = global_ctx.ctx_my_addr_len;
 	int old_peer_addr_len = global_ctx.ctx_peer_addr_len;
@@ -4245,7 +4277,7 @@ static struct paths_list *list_paths(char *resource_name)
 	objname = resource_name ? resource_name : "all";
 	global_ctx.ctx_my_addr_len = 0;
 	global_ctx.ctx_peer_addr_len = 0;
-	err = generic_get(&cmd, 120000, &tail);
+	err = generic_get(&cmd, 120000, &rctx);
 	objname = old_objname;
 	global_ctx.ctx_my_addr_len = old_my_addr_len;
 	global_ctx.ctx_peer_addr_len = old_peer_addr_len;
@@ -4448,13 +4480,19 @@ void peer_devices_append(struct peer_devices_list *peer_devices, struct genl_inf
 	for (peer_device = peer_devices; peer_device; peer_device = peer_device->next)
 		tail = &peer_device->next;
 
-	remember_peer_device(NULL, info, &tail);
+	{
+		struct reply_ctx rctx = {
+			.type = RCTX_PEER_DEVICES_TAIL,
+			.u.peer_devices_tail = &tail,
+		};
+		remember_peer_device(NULL, info, &rctx);
+	}
 }
 
 /* Actually waits for all volumes of a connection... */
-static int wait_for_family(const struct drbd_cmd *cm, struct genl_info *info, void *u_ptr)
+static int wait_for_family(const struct drbd_cmd *cm, struct genl_info *info, struct reply_ctx *rctx)
 {
-	struct peer_devices_list *peer_devices = u_ptr;
+	struct peer_devices_list *peer_devices = wait_peer_devices(rctx);
 	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U };
 	struct drbd_notification_header nh = { .nh_type = -1U };
 	struct drbd_genlmsghdr *dh;

@@ -36,7 +36,7 @@
 
 #include "drbd_protocol.h"
 
-int print_event(struct drbd_cmd *cm, struct genl_info *info, void *u_ptr);
+int print_event(const struct drbd_cmd *cm, struct genl_info *info, struct reply_ctx *rctx);
 
 extern struct genl_family drbd_genl_family;
 
@@ -689,7 +689,7 @@ int test_events2()
 		struct msg_buff *smsg;
 		struct nlmsghdr *nlh;
 		int err;
-		struct drbd_cmd cm;
+		struct drbd_cmd cm = { };
 		struct nlattr *tla[128];
 		struct genl_info info;
 
@@ -730,7 +730,7 @@ int test_events2()
 	return 0;
 }
 
-int generic_get_instrumented(const struct drbd_cmd *cm, int timeout_arg, void *u_ptr)
+int generic_get_instrumented(const struct drbd_cmd *cm, int timeout_arg, struct reply_ctx *rctx)
 {
 	char input[MAX_INPUT_LENGTH];
 	char *cmd_id_name;
@@ -794,7 +794,7 @@ int generic_get_instrumented(const struct drbd_cmd *cm, int timeout_arg, void *u
 		/* read message as if receiving */
 		info = nlmsghdr_to_genl_info(nlh, tla);
 
-		err = cm->handle_reply(cm, &info, u_ptr);
+		err = cm->handle_reply(cm, &info, rctx);
 		if (err)
 			return err;
 	}
