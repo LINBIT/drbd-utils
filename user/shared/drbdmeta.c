@@ -134,10 +134,25 @@ enum initialize_bitmap_mode {
 enum initialize_bitmap_mode option_initialize_bitmap_mode = IBM_ZEROOUT;
 bool option_initialize_bitmap_mode_seen = false;
 
+/* Long options without a short equivalent. getopt_long() returns these values,
+ * except for the flag-setting entries, which store OPT_FLAG_SET and return 0.
+ */
+enum metaopt_long_only {
+	OPT_FLAG_SET = 1000,
+	OPT_INITIAL_CURRENT_UUID,
+	OPT_CONSISTENT,
+	OPT_UPTODATE,
+	OPT_PEERS_OUTDATED,
+	OPT_ROTATE_UUIDS,
+	OPT_VAR_LIB_DRBD,
+	OPT_PEERS,
+	OPT_BITMAP_SLOTS,
+};
+
 struct option metaopt[] = {
-    { "ignore-sanity-checks",  no_argument, &ignore_sanity_checks, 1000 },
-    { "dry-run",  no_argument, &dry_run, 1000 },
-    { "tentative", no_argument, &dry_run, 1000 },
+    { "ignore-sanity-checks",  no_argument, &ignore_sanity_checks, OPT_FLAG_SET },
+    { "dry-run",  no_argument, &dry_run, OPT_FLAG_SET },
+    { "tentative", no_argument, &dry_run, OPT_FLAG_SET },
     { "force",  no_argument,    0, 'f' },
     { "quiet",  no_argument,    0, 'q' },
     { "verbose",  no_argument,    0, 'v' },
@@ -150,14 +165,14 @@ struct option metaopt[] = {
     { "bitmap-block-size",  required_argument, NULL, 'B' },
     { "initialize-bitmap",  required_argument, NULL, 'b' },
     { "output-format",  required_argument, NULL, 'o' },
-    { "initial-current-uuid", required_argument, NULL, 1001 },
-    { "consistent", no_argument, NULL, 1002 },
-    { "uptodate", no_argument, NULL, 1003 },
-    { "peers-outdated", no_argument, NULL, 1004 },
-    { "rotate-uuids", no_argument, NULL, 1005 },
-    { "var-lib-drbd", required_argument, NULL, 1006 },
-    { "peers", required_argument, NULL, 1007 },
-    { "bitmap-slots", required_argument, NULL, 1008 },
+    { "initial-current-uuid", required_argument, NULL, OPT_INITIAL_CURRENT_UUID },
+    { "consistent", no_argument, NULL, OPT_CONSISTENT },
+    { "uptodate", no_argument, NULL, OPT_UPTODATE },
+    { "peers-outdated", no_argument, NULL, OPT_PEERS_OUTDATED },
+    { "rotate-uuids", no_argument, NULL, OPT_ROTATE_UUIDS },
+    { "var-lib-drbd", required_argument, NULL, OPT_VAR_LIB_DRBD },
+    { "peers", required_argument, NULL, OPT_PEERS },
+    { "bitmap-slots", required_argument, NULL, OPT_BITMAP_SLOTS },
     { NULL,     0,              0, 0 },
 };
 
@@ -6114,28 +6129,28 @@ int main(int argc, char **argv)
 		    option_bm_block_size_str = optarg;
 		    option_bm_block_size = m_strtoll(optarg, '1') ?: DEFAULT_BM_BLOCK_SIZE;
 		    break;
-	    case 1001:
+	    case OPT_INITIAL_CURRENT_UUID:
 		option_initial_current_uuid = optarg;
 		break;
-	    case 1002:
+	    case OPT_CONSISTENT:
 		option_consistent = true;
 		break;
-	    case 1003:
+	    case OPT_UPTODATE:
 		option_uptodate = true;
 		break;
-	    case 1004:
+	    case OPT_PEERS_OUTDATED:
 		option_peers_outdated = true;
 		break;
-	    case 1005:
+	    case OPT_ROTATE_UUIDS:
 		option_rotate_uuids = true;
 		break;
-	    case 1006:
+	    case OPT_VAR_LIB_DRBD:
 		drbd_lib_dir_override = optarg;
 		break;
-	    case 1007:
+	    case OPT_PEERS:
 		option_peer_mask = node_mask_from_arg(optarg);
 		break;
-	    case 1008:
+	    case OPT_BITMAP_SLOTS:
 		option_slot_mask = node_mask_from_arg(optarg);
 		break;
 	    default:
