@@ -1,0 +1,30 @@
+## Test that drbdmeta refuses to convert v09 meta data to v07, whether the
+## target is the fixed-size or the flexible-size internal layout, and leaves the
+## v09 meta data alone.
+##
+## v07 keeps generation counters where v08 and v09 keep data generation
+## identifiers, and the v08 -> v07 step never generated them ("Conversion
+## v08 -> v07 is BROKEN!").
+## The conversion also went through md_convert_09_to_08(), which reads the
+## bitmap of the meta data it converts from -- at an offset that only matches
+## for a flexible-size target.
+##
+## Test layout: 256 MB image, v09 flex-internal meta data, 8k per bitmap bit,
+## one peer, one bit set in the bitmap.
+$ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
+$ truncate -s 268435456 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --bitmap-block-size 8K --effective-size 100000 1 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ bm_abs=$(drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
+$ printf '\001' | dd of="$img" bs=1 seek="$bm_abs" count=1 conv=notrunc status=none
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v07 "$img" internal create-md 2>&1 >/dev/null | grep -e '^Refusing' -e '^re-creating' -e '^initializing' -e '^marking'; echo "${PIPESTATUS[0]}"
+Refusing to convert v09 meta data to v07.
+10
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v07 "$img" flex-internal create-md 2>&1 >/dev/null | grep -e '^Refusing'; echo "${PIPESTATUS[0]}"
+Refusing to convert v09 meta data to v07.
+10
+$ drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -c '[.bm_bytes_per_bit, .effective_size, .["#meta"].valid]'
+[8192,100000,"VALID_MD_FOUND"]
+$ od -An -j "$bm_abs" -N 8 -tx1 "$img"
+ 01 00 00 00 00 00 00 00
+$ rm -rf "$tmpdir" "$img"

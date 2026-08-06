@@ -4427,7 +4427,8 @@ void convert_md(struct format *cfg, enum md_format from)
 	case DRBD_V07:
 		switch(from) {
 		case DRBD_V09:
-			md_convert_09_to_08(cfg);
+			fprintf(stderr, "Refusing to convert v09 meta data to v07.\n");
+			exit(10);
 		case DRBD_V08:
 			md_convert_08_to_07(cfg);
 		case DRBD_V07:
