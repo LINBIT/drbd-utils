@@ -1630,15 +1630,17 @@ static uint64_t bitmap_dirty_slots(struct format *cfg)
 }
 
 /* Which bitmap slots survive a conversion that keeps fewer of them?  Returns a
- * mask of slot numbers, empty if no peer has a bitmap slot at all.
+ * mask of slot numbers, empty if no peer has a bitmap slot at all.  "what"
+ * names what is being converted, for the messages: meta data, or a dump.
  *
  * --peers names them by the peer that owns them, --bitmap-slots by
  * number.  A slot without an owner can only be named by number: forget-peer
  * clears the peer entry, while the slot keeps its bits until something
  * re-writes the bitmap. */
-static uint64_t keep_slots_mask(struct format *cfg, unsigned int slots_left)
+static uint64_t keep_slots_mask(const struct md_cpu *md, unsigned int slots_left,
+				const char *what)
 {
-	unsigned int slots = cfg->md.max_peers;
+	unsigned int slots = md->max_peers;
 	uint64_t keep = 0;
 	unsigned int n = 0;
 	int p, slot;
@@ -1648,9 +1650,9 @@ static uint64_t keep_slots_mask(struct format *cfg, unsigned int slots_left)
 			continue;
 		if ((unsigned int)slot >= slots) {
 			fprintf(stderr,
-				"--bitmap-slots: this meta data has %u bitmap slot%s,"
+				"--bitmap-slots: this %s has %u bitmap slot%s,"
 				" numbered 0 to %u\n",
-				slots, slots == 1 ? "" : "s", slots - 1);
+				what, slots, slots == 1 ? "" : "s", slots - 1);
 			exit(10);
 		}
 		keep |= 1ULL << slot;
@@ -1659,11 +1661,11 @@ static uint64_t keep_slots_mask(struct format *cfg, unsigned int slots_left)
 	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
 		if (!(option_peer_mask & (1ULL << p)))
 			continue;
-		if (cfg->md.peers[p].bitmap_index < 0) {
+		if (md->peers[p].bitmap_index < 0) {
 			fprintf(stderr, "--peers: peer node id %d has no bitmap slot\n", p);
 			exit(10);
 		}
-		keep |= 1ULL << cfg->md.peers[p].bitmap_index;
+		keep |= 1ULL << md->peers[p].bitmap_index;
 		n++;
 	}
 	if (n > slots_left) {
@@ -1680,25 +1682,47 @@ static uint64_t keep_slots_mask(struct format *cfg, unsigned int slots_left)
 	 * conversion has room for all of them.  Do not fall back to node id 0:
 	 * that may well be this node itself, which has no bitmap slot. */
 	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
-		if (cfg->md.peers[p].bitmap_index >= 0) {
-			keep |= 1ULL << cfg->md.peers[p].bitmap_index;
+		if (md->peers[p].bitmap_index >= 0) {
+			keep |= 1ULL << md->peers[p].bitmap_index;
 			n++;
 		}
 	}
 	if (n <= slots_left)
 		return keep;
 
-	fprintf(stderr, "This meta data has %u bitmap slots in use, the conversion keeps %u:\n",
-		n, slots_left);
+	fprintf(stderr, "This %s has %u bitmap slots in use, the conversion keeps %u:\n",
+		what, n, slots_left);
 	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
-		if (cfg->md.peers[p].bitmap_index >= 0)
+		if (md->peers[p].bitmap_index >= 0)
 			fprintf(stderr, "  peer node id %d owns bitmap slot %d\n",
-				p, cfg->md.peers[p].bitmap_index);
+				p, md->peers[p].bitmap_index);
 	}
 	fprintf(stderr,
 		"Name the peer to keep with --peers, or its slot with\n"
 		"--bitmap-slots.  \"drbdmeta dump-md\" shows what each slot tracks.\n");
 	exit(10);
+}
+
+/* What DRBD 8.4 records about its one peer, taken from the v09 peer entry whose
+ * bitmap slot survives.  A negative "keep" means no slot survives, and peer
+ * entry 0 stands in for the peer we know nothing about.  The v09 peer flags
+ * have no place of their own in v08: the super block flags carry them. */
+static void md_09_to_08_peer(struct md_cpu *md, int keep)
+{
+	if (keep > 0)
+		md->peers[0] = md->peers[keep];
+
+	if (md->peers[0].flags & MDF_PEER_CONNECTED)
+		md->flags |= MDF_CONNECTED_IND;
+
+	if (md->peers[0].flags & MDF_PEER_FULL_SYNC)
+		md->flags |= MDF_FULL_SYNC;
+
+	if (md->peers[0].flags & MDF_PEER_OUTDATED)
+		md->flags |= MDF_PEER_OUT_DATED;
+
+	md->magic = DRBD_MD_MAGIC_08;
+	md->max_peers = 1;
 }
 
 /* Write the bitmap area of meta data that is about to be written.
@@ -3380,6 +3404,81 @@ char *pretty_peer_md_flags(char *inbuf, unsigned int buf_size, unsigned int flag
 	return inbuf;
 }
 
+/* The data generation identifiers of "md", as a dump of format "v" spells
+ * them. */
+static void print_dump_gi(FILE *f, const struct md_cpu *md, enum md_format v)
+{
+	int i;
+
+	switch (v) {
+	case DRBD_V06:
+	case DRBD_V07:
+		fprintf(f, "gc {\n   ");
+		for (i = 0; i < GEN_CNT_SIZE; i++)
+			fprintf(f, " %d;", md->gc[i]);
+		fprintf(f, "\n}\n");
+		break;
+	case DRBD_V08:
+		fprintf(f, "uuid {\n");
+		fprintf(f, "    0x"X64(016)"; 0x"X64(016)"; 0x"X64(016)"; 0x"X64(016)";\n",
+			md->current_uuid,
+			md->peers[0].bitmap_uuid,
+			md->history_uuids[0],
+			md->history_uuids[1]);
+		fprintf(f, "    flags 0x"X32(08)";\n", md->flags);
+		fprintf(f, "}\n");
+		break;
+	case DRBD_V09:
+		fprintf(f, "node-id %d;\n"
+			   "current-uuid 0x"X64(016)";\n"
+			   "flags 0x"X32(08)";\n"
+			   "members 0x"X64(016)";\n"
+			   "features 0x"X64(016)";\n",
+			md->node_id, md->current_uuid, md->flags, md->members,
+			md->features);
+		for (i = 0; i < DRBD_NODE_ID_MAX; i++) {
+			const struct peer_md_cpu *peer = &md->peers[i];
+			char flag_buf[80];
+
+			fprintf(f, "peer[%d] {\n"
+				   "    bitmap-index %d;\n"
+				   "    bitmap-uuid 0x"X64(016)";\n"
+				   "    bitmap-dagtag 0x"X64(016)";\n"
+				   "    flags 0x"X32(08)";%s\n"
+				   "}\n",
+				i, peer->bitmap_index,
+				peer->bitmap_uuid,
+				peer->bitmap_dagtag,
+				peer->flags,
+				pretty_peer_md_flags(flag_buf, sizeof(flag_buf),
+					peer->flags, " # ", " | "));
+		}
+		fprintf(f, "history-uuids {");
+		for (i = 0; i < ARRAY_SIZE(md->history_uuids); i++)
+			fprintf(f, "%s0x"X64(016)";",
+				i % 4 ? " " : "\n        ",
+				md->history_uuids[i]);
+		fprintf(f, "\n}\n");
+		break;
+	case DRBD_UNKNOWN:
+		fprintf(stderr, "BUG in %s().\n", __FUNCTION__);
+	}
+}
+
+/* The device size and the geometry of "md", as a dump of format "v" spells
+ * them. */
+static void print_dump_sizes(FILE *f, const struct md_cpu *md, enum md_format v)
+{
+	fprintf(f, "la-size-sect "U64";\n", md->effective_size);
+	if (v < DRBD_V08)
+		return;
+	fprintf(f, "bm-byte-per-bit "U32";\n", md->bm_bytes_per_bit);
+	fprintf(f, "device-uuid 0x"X64(016)";\n", md->device_uuid);
+	fprintf(f, "la-peer-max-bio-size %d;\n", md->la_peer_max_bio_size);
+	fprintf(f, "al-stripes "U32";\n", md->al_stripes);
+	fprintf(f, "al-stripe-size-4k "U32";\n", md->al_stripe_size_4k);
+}
+
 int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc)
 {
 	int al_is_clean;
@@ -3450,79 +3549,11 @@ int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc
 	printf("# bm_offset %llu\n", (long long unsigned)cfg->bm_offset);
 	printf("\n");
 
-	switch (format_version(cfg)) {
-	case DRBD_V06:
-	case DRBD_V07:
-		printf("gc {\n   ");
-		for (i = 0; i < GEN_CNT_SIZE; i++) {
-			printf(" %d;", cfg->md.gc[i]);
-		}
-		printf("\n}\n");
-		break;
-	case DRBD_V08:
-		printf("uuid {\n");
-		printf("    0x"X64(016)"; 0x"X64(016)"; 0x"X64(016)"; 0x"X64(016)";\n",
-		       cfg->md.current_uuid,
-		       cfg->md.peers[0].bitmap_uuid,
-		       cfg->md.history_uuids[0],
-		       cfg->md.history_uuids[1]);
-		printf("    flags 0x"X32(08)";\n", cfg->md.flags);
-		printf("}\n");
-		break;
-	case DRBD_V09:
-		printf("node-id %d;\n"
-		       "current-uuid 0x"X64(016)";\n"
-		       "flags 0x"X32(08)";\n"
-		       "members 0x"X64(016)";\n"
-		       "features 0x"X64(016)";\n",
-		       cfg->md.node_id,
-		       cfg->md.current_uuid, cfg->md.flags, cfg->md.members,
-		       cfg->md.features);
-		for (i = 0; i < DRBD_NODE_ID_MAX; i++) {
-			struct peer_md_cpu *peer = &cfg->md.peers[i];
-			char flag_buf[80];
-
-			printf("peer[%d] {\n", i);
-			if (format_version(cfg) >= DRBD_V09) {
-				printf("    bitmap-index %d;\n",
-				       peer->bitmap_index);
-			}
-			printf("    bitmap-uuid 0x"X64(016)";\n"
-			       "    bitmap-dagtag 0x"X64(016)";\n"
-			       "    flags 0x"X32(08)";%s\n",
-			       peer->bitmap_uuid,
-			       peer->bitmap_dagtag,
-			       peer->flags,
-			       pretty_peer_md_flags(flag_buf, sizeof(flag_buf),
-					peer->flags, " # ", " | "));
-			printf("}\n");
-		}
-		printf("history-uuids {");
-		for (i = 0; i < ARRAY_SIZE(cfg->md.history_uuids); i++)
-			printf("%s0x"X64(016)";",
-			       i % 4 ? " " : "\n        ",
-			       cfg->md.history_uuids[i]);
-		printf("\n}\n");
-		break;
-	case DRBD_UNKNOWN:
-		fprintf(stderr, "BUG in %s().\n", __FUNCTION__);
-	}
+	print_dump_gi(stdout, &cfg->md, format_version(cfg));
 
 	if (format_version(cfg) >= DRBD_V07) {
 		printf("# al-extents %u;\n", cfg->md.al_nr_extents);
-		printf("la-size-sect "U64";\n", cfg->md.effective_size);
-		if (format_version(cfg) >= DRBD_V08) {
-			printf("bm-byte-per-bit "U32";\n",
-			       cfg->md.bm_bytes_per_bit);
-			printf("device-uuid 0x"X64(016)";\n",
-			       cfg->md.device_uuid);
-			printf("la-peer-max-bio-size %d;\n",
-			       cfg->md.la_peer_max_bio_size);
-			printf("al-stripes "U32";\n",
-				cfg->md.al_stripes);
-			printf("al-stripe-size-4k "U32";\n",
-				cfg->md.al_stripe_size_4k);
-		}
+		print_dump_sizes(stdout, &cfg->md, format_version(cfg));
 		printf("# bm-bytes "U64";\n", cfg->bm_bytes);
 		printf_bm(cfg); /* pretty prints the whole bitmap */
 		if (format_version(cfg) < DRBD_V09)
@@ -4108,14 +4139,141 @@ void parse_bitmap(struct format *cfg, int parse_only)
 	} while (words == buffer_size / sizeof(*bm));
 }
 
+/* Read everything a dump of format "v" says about the meta data into "md",
+ * except the "version" and "max-peers" lines the caller has read already, and
+ * the bitmap sections that follow. */
+static void parse_dump_md(struct md_cpu *md, enum md_format v)
+{
+	char slots_seen[DRBD_NODE_ID_MAX] = { 0, };
+	int cur_slot;
+	int i, token;
+
+	if (v < DRBD_V08) {
+		EXP(TK_GC); EXP('{');
+		for (i = 0; i < GEN_CNT_SIZE; i++) {
+			EXP(TK_NUM); EXP(';');
+			md->gc[i] = yylval.u64;
+		}
+		EXP('}');
+	} else if (v == DRBD_V08) {
+		EXP(TK_UUID); EXP('{');
+		EXP(TK_U64); EXP(';');
+		md->current_uuid = yylval.u64;
+		EXP(TK_U64); EXP(';');
+		md->peers[0].bitmap_uuid = yylval.u64;
+		for (i = 0; i < HISTORY_UUIDS_V08; i++) {
+			EXP(TK_U64); EXP(';');
+			md->history_uuids[i] = yylval.u64;
+		}
+		EXP(TK_FLAGS); EXP(TK_U32); EXP(';');
+		md->flags = (uint32_t)yylval.u64;
+		EXP('}');
+	} else /* >= 09 */ {
+		EXP(TK_NODE_ID);
+		EXP(TK_NUM); EXP(';');
+		md->node_id = yylval.u64;
+		EXP(TK_CURRENT_UUID);
+		EXP(TK_U64); EXP(';');
+		md->current_uuid = yylval.u64;
+		EXP(TK_FLAGS); EXP(TK_U32); EXP(';');
+		md->flags = (uint32_t)yylval.u64;
+		token = yylex();
+		if (token == TK_MEMBERS) {
+			EXP(TK_U64);
+			EXP(';');
+			md->members = yylval.u64;
+			token = yylex();
+		} else {
+			md->members = 0;
+		}
+		if (token == TK_FEATURES) {
+			EXP(TK_U64);
+			EXP(';');
+			md->features = yylval.u64;
+			token = yylex();
+		} else {
+			md->features = 0;
+		}
+		for (i = 0; i < DRBD_NODE_ID_MAX; i++) {
+			if (token != TK_PEER)
+				EXP(TK_PEER);
+			token = 0; /* 0 != TK_PEER */
+			EXP('[');
+			EXP(TK_NUM); EXP(']');
+			cur_slot = yylval.u64;
+			if (cur_slot < 0 || cur_slot >= DRBD_NODE_ID_MAX) {
+				fprintf(stderr, "Parse error in line %u: "
+					"Slot %d out of range\n",
+					yylineno, cur_slot);
+				exit(10);
+			}
+			if (slots_seen[cur_slot]) {
+				fprintf(stderr, "Parse error in line %u: "
+					"Peer slot %d defined multiple times\n",
+					yylineno, cur_slot);
+				exit(10);
+			}
+			slots_seen[cur_slot] = 1;
+			EXP('{');
+			EXP(TK_BITMAP_INDEX);
+			EXP(TK_NUM); EXP(';');
+			md->peers[cur_slot].bitmap_index = yylval.u64;
+			EXP(TK_BITMAP_UUID); EXP(TK_U64); EXP(';');
+			md->peers[cur_slot].bitmap_uuid = yylval.u64;
+			EXP(TK_BITMAP_DAGTAG); EXP(TK_U64); EXP(';');
+			md->peers[cur_slot].bitmap_dagtag = yylval.u64;
+			EXP(TK_FLAGS); EXP(TK_U32); EXP(';');
+			md->peers[cur_slot].flags = (uint32_t)yylval.u64;
+			EXP('}');
+		}
+		EXP(TK_HISTORY_UUIDS); EXP('{');
+		for (i = 0; i < ARRAY_SIZE(md->history_uuids); i++) {
+			EXP(TK_U64); EXP(';');
+			md->history_uuids[i] = yylval.u64;
+		}
+		EXP('}');
+	}
+
+	EXP(TK_LA_SIZE); EXP(TK_NUM); EXP(';');
+	md->effective_size = yylval.u64;
+	if (v < DRBD_V08) {
+		md->bm_bytes_per_bit = BM_BLOCK_SIZE_4k;
+		return;
+	}
+
+	EXP(TK_BM_BYTE_PER_BIT); EXP(TK_NUM); EXP(';');
+	md->bm_bytes_per_bit = yylval.u64;
+	/* Check whether the value of bm_bytes_per_bit is
+	 * a power-of-two multiple of 4k. */
+	if (!is_power_of_2(yylval.u64)
+	|| yylval.u64 < BM_BLOCK_SIZE_MIN
+	|| yylval.u64 > BM_BLOCK_SIZE_MAX) {
+		fprintf(stderr, "Invalid value for bm-byte-per-bit: "
+			"value must be a power-of-two in [4k .. 1M]\n");
+		exit(10);
+	}
+	if (v < DRBD_V09 && yylval.u64 != BM_BLOCK_SIZE_4k) {
+		fprintf(stderr, "Invalid value for bm-byte-per-bit: "
+			"'%s' meta data supports only %u\n",
+			f_ops[v].name, BM_BLOCK_SIZE_4k);
+		exit(10);
+	}
+	EXP(TK_DEVICE_UUID); EXP(TK_U64); EXP(';');
+	md->device_uuid = yylval.u64;
+	EXP(TK_LA_BIO_SIZE); EXP(TK_NUM); EXP(';');
+	md->la_peer_max_bio_size = yylval.u64;
+
+	EXP(TK_AL_STRIPES); EXP(TK_NUM); EXP(';');
+	md->al_stripes = yylval.u64;
+	EXP(TK_AL_STRIPE_SIZE_4K); EXP(TK_NUM); EXP(';');
+	md->al_stripe_size_4k = yylval.u64;
+}
+
 int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int parse_only)
 {
 	int old_max_peers = -1;
 	int new_max_peers = 1;
-	int i, token;
 	int err;
-	char slots_seen[DRBD_NODE_ID_MAX] = { 0, };
-	int cur_slot;
 
 	if (argc > 0) {
 		yyin = fopen(argv[0],"r");
@@ -4162,125 +4320,7 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 	}
 
 
-	if (format_version(cfg) < DRBD_V08) {
-		EXP(TK_GC); EXP('{');
-		for (i = 0; i < GEN_CNT_SIZE; i++) {
-			EXP(TK_NUM); EXP(';');
-			cfg->md.gc[i] = yylval.u64;
-		}
-		EXP('}');
-	} else { // >= 08
-		if (is_v08(cfg)) {
-			EXP(TK_UUID); EXP('{');
-			EXP(TK_U64); EXP(';');
-			cfg->md.current_uuid = yylval.u64;
-			EXP(TK_U64); EXP(';');
-			cfg->md.peers[0].bitmap_uuid = yylval.u64;
-			for (i = 0; i < HISTORY_UUIDS_V08; i++) {
-				EXP(TK_U64); EXP(';');
-				cfg->md.history_uuids[i] = yylval.u64;
-			}
-			EXP(TK_FLAGS); EXP(TK_U32); EXP(';');
-			cfg->md.flags = (uint32_t)yylval.u64;
-			EXP('}');
-	} else /* >= 09 */ {
-			EXP(TK_NODE_ID);
-			EXP(TK_NUM); EXP(';');
-			cfg->md.node_id = yylval.u64;
-			EXP(TK_CURRENT_UUID);
-			EXP(TK_U64); EXP(';');
-			cfg->md.current_uuid = yylval.u64;
-			EXP(TK_FLAGS); EXP(TK_U32); EXP(';');
-			cfg->md.flags = (uint32_t)yylval.u64;
-			token = yylex();
-			if (token == TK_MEMBERS) {
-				EXP(TK_U64);
-				EXP(';');
-				cfg->md.members = yylval.u64;
-				token = yylex();
-			} else {
-				cfg->md.members = 0;
-			}
-			if (token == TK_FEATURES) {
-				EXP(TK_U64);
-				EXP(';');
-				cfg->md.features = yylval.u64;
-				token = yylex();
-			} else {
-				cfg->md.features = 0;
-			}
-			for (i = 0; i < DRBD_NODE_ID_MAX; i++) {
-				if (token != TK_PEER)
-					EXP(TK_PEER);
-				token = 0; /* 0 != TK_PEER */
-				EXP('[');
-				EXP(TK_NUM); EXP(']');
-				cur_slot = yylval.u64;
-				if (cur_slot < 0 || cur_slot >= DRBD_NODE_ID_MAX) {
-					fprintf(stderr, "Parse error in line %u: "
-						"Slot %d out of range\n",
-						yylineno, cur_slot);
-					exit(10);
-				}
-				if (slots_seen[cur_slot]) {
-					fprintf(stderr, "Parse error in line %u: "
-						"Peer slot %d defined multiple times\n",
-						yylineno, cur_slot);
-					exit(10);
-				}
-				slots_seen[cur_slot] = 1;
-				EXP('{');
-				EXP(TK_BITMAP_INDEX);
-				EXP(TK_NUM); EXP(';');
-				cfg->md.peers[cur_slot].bitmap_index = yylval.u64;
-				EXP(TK_BITMAP_UUID); EXP(TK_U64); EXP(';');
-				cfg->md.peers[cur_slot].bitmap_uuid = yylval.u64;
-				EXP(TK_BITMAP_DAGTAG); EXP(TK_U64); EXP(';');
-				cfg->md.peers[cur_slot].bitmap_dagtag = yylval.u64;
-				EXP(TK_FLAGS); EXP(TK_U32); EXP(';');
-				cfg->md.peers[cur_slot].flags = (uint32_t)yylval.u64;
-				EXP('}');
-			}
-			EXP(TK_HISTORY_UUIDS); EXP('{');
-			for (i = 0; i < ARRAY_SIZE(cfg->md.history_uuids); i++) {
-				EXP(TK_U64); EXP(';');
-				cfg->md.history_uuids[i] = yylval.u64;
-			}
-			EXP('}');
-		}
-	}
-	EXP(TK_LA_SIZE); EXP(TK_NUM); EXP(';');
-	cfg->md.effective_size = yylval.u64;
-	if (format_version(cfg) >= DRBD_V08) {
-		EXP(TK_BM_BYTE_PER_BIT); EXP(TK_NUM); EXP(';');
-		cfg->md.bm_bytes_per_bit = yylval.u64;
-		/* Check whether the value of bm_bytes_per_bit is
-		 * a power-of-two multiple of 4k. */
-		if (!is_power_of_2(yylval.u64)
-		|| yylval.u64 < BM_BLOCK_SIZE_MIN
-		|| yylval.u64 > BM_BLOCK_SIZE_MAX) {
-			fprintf(stderr, "Invalid value for bm-byte-per-bit: "
-				"value must be a power-of-two in [4k .. 1M]\n");
-			exit(10);
-		}
-		if (format_version(cfg) < DRBD_V09 && yylval.u64 != BM_BLOCK_SIZE_4k) {
-			fprintf(stderr, "Invalid value for bm-byte-per-bit: "
-				"'%s' meta data supports only %u\n",
-				cfg->ops->name, BM_BLOCK_SIZE_4k);
-			exit(10);
-		}
-		EXP(TK_DEVICE_UUID); EXP(TK_U64); EXP(';');
-		cfg->md.device_uuid = yylval.u64;
-		EXP(TK_LA_BIO_SIZE); EXP(TK_NUM); EXP(';');
-		cfg->md.la_peer_max_bio_size = yylval.u64;
-
-		EXP(TK_AL_STRIPES); EXP(TK_NUM); EXP(';');
-		cfg->md.al_stripes = yylval.u64;
-		EXP(TK_AL_STRIPE_SIZE_4K); EXP(TK_NUM); EXP(';');
-		cfg->md.al_stripe_size_4k = yylval.u64;
-	} else {
-		cfg->md.bm_bytes_per_bit = BM_BLOCK_SIZE_4k;
-	}
+	parse_dump_md(&cfg->md, format_version(cfg));
 
 	if (option_al_stripes != cfg->md.al_stripes ||
 	    option_al_stripe_size_4k != cfg->md.al_stripe_size_4k) {
@@ -4483,7 +4523,8 @@ void md_convert_09_to_08(struct format *cfg)
 	unsigned int max_peers = cfg->md.max_peers;
 	bool convert_bitmap = cfg->md.bm_bytes_per_bit != BM_BLOCK_SIZE_4k ||
 			      max_peers != 1;
-	uint64_t keep_slots = keep_slots_mask(cfg, 1);	/* v08 keeps one slot */
+	/* v08 keeps one slot */
+	uint64_t keep_slots = keep_slots_mask(&cfg->md, 1, "meta data");
 	uint64_t dirty = convert_bitmap && !option_initialize_bitmap_mode_seen ?
 			 bitmap_dirty_slots(cfg) : 0;
 	int slot_owner[DRBD_PEERS_MAX];	/* peer node id per slot, before we move any */
@@ -4510,20 +4551,7 @@ void md_convert_09_to_08(struct format *cfg)
 
 	/* Whatever the v08 meta data still knows about a peer belongs to the
 	 * one that keeps its bitmap slot. */
-	if (keep > 0)
-		cfg->md.peers[0] = cfg->md.peers[keep];
-
-	if (cfg->md.peers[0].flags & MDF_PEER_CONNECTED)
-		cfg->md.flags |= MDF_CONNECTED_IND;
-
-	if (cfg->md.peers[0].flags & MDF_PEER_FULL_SYNC)
-		cfg->md.flags |= MDF_FULL_SYNC;
-
-	if (cfg->md.peers[0].flags & MDF_PEER_OUTDATED)
-		cfg->md.flags |= MDF_PEER_OUT_DATED;
-
-	cfg->md.magic = DRBD_MD_MAGIC_08;
-	cfg->md.max_peers = 1;
+	md_09_to_08_peer(&cfg->md, keep);
 
 	if (convert_bitmap) {
 		if (cfg->md.bm_bytes_per_bit != BM_BLOCK_SIZE_4k)
