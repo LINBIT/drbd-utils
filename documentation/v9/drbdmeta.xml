@@ -121,7 +121,7 @@
 	<term><option>create-md</option>
           <arg choice="req" rep="norepeat">number-of-bitmap-slots</arg>
 	  <arg choice="opt" rep="norepeat"><option>--peer-max-bio-size=</option><replaceable>val</replaceable></arg>
-	  <arg choice="opt" rep="norepeat"><option>--initialize-bitmap=</option><replaceable>{automatic|zeroout|pwrite|skip}</replaceable></arg>
+	  <arg choice="opt" rep="norepeat"><option>--initialize-bitmap=</option><replaceable>{automatic|zeroout|pwrite|set-all|skip}</replaceable></arg>
 	  <arg choice="opt" rep="norepeat"><option>--al-stripes=</option><replaceable>val</replaceable></arg>
 	  <arg choice="opt" rep="norepeat"><option>--al-stripe-size-kB=</option><replaceable>val</replaceable></arg> (metadata version v09)
 	  <arg choice="opt" rep="norepeat"><option>--bitmap-block-size=</option><replaceable>val</replaceable></arg>
@@ -164,7 +164,19 @@
 	    the kernel. This can make a noticable difference when initializing
 	    huge volumes. Default is <option>automatic</option>, which is
 	    zeroout with an implicit fallback to pwrite.
+	    <option>set-all</option> marks the whole device out of sync instead.
 	    </para>
+	  <para>
+	    When <option>create-md</option> converts existing metadata,
+	    <option>--initialize-bitmap</option> also overrides what the
+	    conversion would do to the bitmap on its own:
+	    <option>set-all</option> asks for a full resync, the zeroing
+	    variants declare the device in sync with the peer that keeps its
+	    bitmap slot, and <option>skip</option> leaves the bitmap area as it
+	    is on disk. Use <option>skip</option> with care: if the conversion
+	    changes the bitmap geometry, the bitmap area then holds bits that
+	    describe other blocks than DRBD will read them as.
+	  </para>
 	  <para>
 	    If you want to use more than 6433 activity log extents, or live on
 	    top of a spriped RAID, you may specify the number of stripes

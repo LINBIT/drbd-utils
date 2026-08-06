@@ -48,6 +48,7 @@ $ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md
 keeping bitmap slot 0 of peer node id 1
 dropping the out-of-sync bits of peer node id 2 (bitmap slot 1)
 initializing the new bitmap (8 KB) to all zero
+initializing the new bitmap (8 KB) to all zero using pwrite
 $ drbdmeta --force - v08 "$img" flex-internal dump-md 2>/dev/null | grep -c CAFE0002
 0
 $ cp "$tmpdir/v09.img" "$img"
@@ -64,6 +65,7 @@ $ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md
 keeping bitmap slot 2 of peer node id 3
 dropping the out-of-sync bits of peer node id 2 (bitmap slot 1)
 initializing the new bitmap (8 KB) to all zero
+initializing the new bitmap (8 KB) to all zero using pwrite
 $ cp "$tmpdir/v09.img" "$img"
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --peers 9 2>&1 >/dev/null | grep -e '^--peers'; echo "${PIPESTATUS[0]}"
 --peers: peer node id 9 has no bitmap slot
@@ -93,6 +95,7 @@ $ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md
 keeping bitmap slot 0 of peer node id 1
 dropping the out-of-sync bits of bitmap slot 1, which no peer owns
 initializing the new bitmap (8 KB) to all zero
+initializing the new bitmap (8 KB) to all zero using pwrite
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal apply-al --peers 1 2>&1 >/dev/null | grep -e peers
 The --peers option is only allowed with create-md
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal apply-al --bitmap-slots 1 2>&1 >/dev/null | grep -e bitmap-slots

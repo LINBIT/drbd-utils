@@ -10,6 +10,10 @@
 ## bit.  The 4k bitmap of the converted meta data needs 8 sectors more, so
 ## md_size_sect grows from 80 to 88 and the data area shrinks accordingly.
 ##
+## When re-initializing bitmaps, drbdmeta tries ioctl BLKZEROOUT first,
+## which is expected to fail in these tests using tmpfiles,
+## then falls back to pwrite.
+##
 ## The test walks through, in this order:
 ##  - an in-sync device converts, and gets a bitmap of the 4k granularity
 ##  - bits set in the old bitmap describe other blocks than the new bits do, so
@@ -27,6 +31,10 @@
 ##    interleaved slots do not line up with the bits of the single v08 slot
 ##  - meta data of the 4k granularity with one peer converts without touching
 ##    the bitmap
+##  - --initialize-bitmap overrides what the conversion decides on its own:
+##    set-all on an in-sync device, and a zeroing variant on a device that has
+##    out-of-sync bits.  With skip it also says that the bitmap area is left
+##    holding bits that describe other blocks now
 ##  - external meta data, where the bitmap is the last thing in the meta data
 ##    area rather than being followed by the activity log: a last agreed device
 ##    size that the bitmap area can not cover at all must not make the scan read
@@ -45,6 +53,7 @@ $ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md
 Bitmap block size 8192 is not supported by DRBD 8.4 and older,
 re-creating the bitmap with 4096 bytes per bit.
 initializing the new bitmap (8 KB) to all zero
+initializing the new bitmap (8 KB) to all zero using pwrite
 $ drbdmeta --force - v08 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -c '[.bm_bytes_per_bit, .md_size_sect, .["#meta"].valid]'
 [4096,88,"VALID_MD_FOUND"]
 $ bm_abs=$(drbdmeta --force - v08 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
@@ -104,6 +113,29 @@ $ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md
 0
 $ drbdmeta --force - v08 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -c '[.bm_bytes_per_bit, .["#meta"].valid]'
 [4096,"VALID_MD_FOUND"]
+$ rm -f "$img" && truncate -s 268435456 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --bitmap-block-size 8K --effective-size 100000 1 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ cp "$img" "$tmpdir/clean.img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --initialize-bitmap set-all 2>&1 >/dev/null | grep -e '^initializing' -e '^marking'
+marking the whole device out-of-sync in the new bitmap (8 KB)
+$ bm_abs=$(drbdmeta --force - v08 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
+$ od -An -j "$bm_abs" -N 8 -tx1 "$img"
+ ff ff ff ff ff ff ff ff
+$ cp "$tmpdir/clean.img" "$img"
+$ old_bm_abs=$(drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
+$ printf '\001' | dd of="$img" bs=1 seek="$old_bm_abs" count=1 conv=notrunc status=none
+$ cp "$img" "$tmpdir/dirty.img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --initialize-bitmap pwrite 2>&1 >/dev/null | grep -e '^initializing' -e '^marking'
+initializing the new bitmap (8 KB) to all zero using pwrite
+$ bm_abs=$(drbdmeta --force - v08 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
+$ od -An -j "$bm_abs" -N 8 -tx1 "$img"
+ 00 00 00 00 00 00 00 00
+$ cp "$tmpdir/dirty.img" "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --initialize-bitmap skip 2>&1 >/dev/null | grep -e '^skipping' -e '^geometry changed' -e '^SKIPPED'
+skipping the bitmap initialization even though the bitmap
+geometry changed: the bitmap area holds stale bits now
+SKIPPED initializing the new bitmap area
 $ rm -f "$img" && truncate -s 33554432 "$img"
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-external create-md --bitmap-block-size 8K --effective-size 5000000000 1 2>/dev/null | tail -1
 New drbd meta data block successfully created.

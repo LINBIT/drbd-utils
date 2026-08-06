@@ -132,6 +132,7 @@ enum initialize_bitmap_mode {
 };
 
 enum initialize_bitmap_mode option_initialize_bitmap_mode = IBM_ZEROOUT;
+bool option_initialize_bitmap_mode_seen = false;
 
 struct option metaopt[] = {
     { "ignore-sanity-checks",  no_argument, &ignore_sanity_checks, 1000 },
@@ -1674,6 +1675,48 @@ static uint64_t keep_slots_mask(struct format *cfg, unsigned int slots_left)
 	exit(10);
 }
 
+/* Write the bitmap area of meta data that is about to be written.
+ *
+ * "converted" only picks the wording: for meta data that create-md converts,
+ * an all set bitmap means a full resync of a device that has data, while for
+ * new meta data it is just the initial state. */
+static void initialize_bitmap(struct format *cfg, enum initialize_bitmap_mode mode, bool converted)
+{
+	const size_t bitmap_kbytes = ALIGN(cfg->bm_bytes, cfg->md_hard_sect_size) >> 10;
+	const char *which = converted ? "the new bitmap" : "bitmap";
+	char ppb[10];
+
+	ppsize(ppb, bitmap_kbytes);
+	switch (mode) {
+	case IBM_SKIP:
+		fprintf(stderr, "SKIPPED initializing %s area\n", which);
+		break;
+	case IBM_ZEROOUT_IOCTL_ONLY:
+	case IBM_ZEROOUT:
+		fprintf(stderr, "initializing %s (%s) to all zero\n", which, ppb);
+		if (zeroout_bitmap_fast(cfg) == 0)
+			return;
+		if (IBM_ZEROOUT_IOCTL_ONLY == mode) {
+			fprintf(stderr, "fast zero-out failed, fallback disabled\n");
+			exit(10);
+		}
+		/* fall through */
+	case IBM_ZEROOUT_PWRITE:
+		fprintf(stderr, "initializing %s (%s) to all zero using pwrite\n", which, ppb);
+		zeroout_bitmap_pwrite(cfg);
+		break;
+	case IBM_SET_ALL:
+		if (converted)
+			fprintf(stderr, "marking the whole device out-of-sync in %s (%s)\n",
+				which, ppb);
+		else
+			fprintf(stderr, "initializing %s (%s) to all set using pwrite\n",
+				which, ppb);
+		set_all_bitmap_pwrite(cfg);
+		break;
+	}
+}
+
 /* What md_convert_09_to_08() left for meta_create_md() to do to the bitmap
  * area, once the new offsets are known and all questions are answered.
  * IBM_SKIP: nothing, keep the bitmap as it is on disk. */
@@ -1681,55 +1724,22 @@ static enum initialize_bitmap_mode convert_initialize_bitmap_mode = IBM_SKIP;
 
 static void initialize_bitmap_after_convert(struct format *cfg)
 {
-	const size_t bitmap_kbytes = ALIGN(cfg->bm_bytes, cfg->md_hard_sect_size) >> 10;
-	char ppb[10];
+	enum initialize_bitmap_mode mode = convert_initialize_bitmap_mode;
 
-	ppsize(ppb, bitmap_kbytes);
-	switch (convert_initialize_bitmap_mode) {
-	case IBM_SKIP:
+	/* The user says what the bitmap of the converted meta data looks like,
+	 * whether or not the conversion has an opinion of its own. */
+	if (option_initialize_bitmap_mode_seen) {
+		if (option_initialize_bitmap_mode == IBM_SKIP && mode != IBM_SKIP)
+			fprintf(stderr,
+				"skipping the bitmap initialization even though the bitmap\n"
+				"geometry changed: the bitmap area holds stale bits now\n");
+		mode = option_initialize_bitmap_mode;
+	} else if (mode == IBM_SKIP) {
+		/* keep the bitmap as it is on disk, and say nothing about it */
 		return;
-	case IBM_SET_ALL:
-		fprintf(stderr, "marking the whole device out-of-sync in the new bitmap (%s)\n", ppb);
-		set_all_bitmap_pwrite(cfg);
-		break;
-	case IBM_ZEROOUT:
-	case IBM_ZEROOUT_IOCTL_ONLY:
-	case IBM_ZEROOUT_PWRITE:
-		fprintf(stderr, "initializing the new bitmap (%s) to all zero\n", ppb);
-		zeroout_bitmap_pwrite(cfg);
-		break;
 	}
-}
 
-static void initialize_bitmap(struct format *cfg)
-{
-	const size_t bitmap_kbytes = ALIGN(cfg->bm_bytes, cfg->md_hard_sect_size) >> 10;
-	char ppb[10];
-
-	ppsize(ppb, bitmap_kbytes);
-	switch (option_initialize_bitmap_mode) {
-	case IBM_SKIP:
-		fprintf(stderr, "SKIPPED initializing bitmap area\n");
-		break;
-	case IBM_ZEROOUT_IOCTL_ONLY:
-	case IBM_ZEROOUT:
-		fprintf(stderr, "initializing bitmap (%s) to all zero\n", ppb);
-		if (zeroout_bitmap_fast(cfg) == 0)
-			return;
-		if (IBM_ZEROOUT_IOCTL_ONLY == option_initialize_bitmap_mode) {
-			fprintf(stderr, "fast zero-out failed, fallback disabled\n");
-			exit(10);
-		}
-		/* fall through */
-	case IBM_ZEROOUT_PWRITE:
-		fprintf(stderr, "initializing bitmap (%s) to all zero using pwrite\n", ppb);
-		zeroout_bitmap_pwrite(cfg);
-		break;
-	case IBM_SET_ALL:
-		fprintf(stderr, "initializing bitmap (%s) to all set using pwrite\n", ppb);
-		set_all_bitmap_pwrite(cfg);
-		break;
-	}
+	initialize_bitmap(cfg, mode, true);
 }
 
 /* MAYBE DOES DISK WRITES!! */
@@ -1760,7 +1770,7 @@ int md_initialize_common(struct format *cfg, int do_disk_writes)
 	 * In case the current UUID is left at UUID_JUST_CREATED, the kernel
 	 * driver will set all bits to 1 when using it in a handshake...
 	 */
-	initialize_bitmap(cfg);
+	initialize_bitmap(cfg, option_initialize_bitmap_mode, false);
 
 	return 0;
 }
@@ -4426,7 +4436,8 @@ void md_convert_09_to_08(struct format *cfg)
 	bool convert_bitmap = cfg->md.bm_bytes_per_bit != BM_BLOCK_SIZE_4k ||
 			      max_peers != 1;
 	uint64_t keep_slots = keep_slots_mask(cfg, 1);	/* v08 keeps one slot */
-	uint64_t dirty = convert_bitmap ? bitmap_dirty_slots(cfg) : 0;
+	uint64_t dirty = convert_bitmap && !option_initialize_bitmap_mode_seen ?
+			 bitmap_dirty_slots(cfg) : 0;
 	int slot_owner[DRBD_PEERS_MAX];	/* peer node id per slot, before we move any */
 	bool out_of_sync;
 	int keep = -1;
@@ -4507,7 +4518,7 @@ void md_convert_09_to_08(struct format *cfg)
 
 		/* The new bitmap area is not zero: it may reach into the former
 		 * data area, or into the middle of the old bitmap. */
-		convert_initialize_bitmap_mode = out_of_sync ? IBM_SET_ALL : IBM_ZEROOUT_PWRITE;
+		convert_initialize_bitmap_mode = out_of_sync ? IBM_SET_ALL : IBM_ZEROOUT;
 	}
 
 	re_initialize_md_offsets(cfg);
@@ -5432,9 +5443,10 @@ int meta_create_md(struct format *cfg, char **argv, int argc)
 	 * and bitmap should be empty anyways.
 	 */
 
-	/* The conversion may have changed the bitmap granularity, in which case
-	 * the bitmap has to be re-created before the new super block claims it. */
-	initialize_bitmap_after_convert(cfg);
+	/* The conversion may have changed the bitmap geometry, in which case the
+	 * bitmap has to be re-created before the new super block claims it. */
+	if (converted)
+		initialize_bitmap_after_convert(cfg);
 
 	printf("Writing meta data...\n");
 	err = err || cfg->ops->md_cpu_to_disk(cfg); // <- short circuit
@@ -6080,6 +6092,7 @@ int main(int argc, char **argv)
 		    break;
 	    case 'b':
 		    option_initialize_bitmap_mode = check_ibm_arg(optarg);
+		    option_initialize_bitmap_mode_seen = true;
 		    break;
 	    case 'B':
 		    option_bm_block_size_str = optarg;
