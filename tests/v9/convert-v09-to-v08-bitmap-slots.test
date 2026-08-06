@@ -13,8 +13,9 @@
 ##    refused, and names the candidates
 ##  - --peers 1 keeps a slot that tracks nothing: the new bitmap comes out
 ##    all clear, even though the dropped slot of node id 2 does track something
-##  - --peers 2 keeps the slot that tracks something: the whole device is
-##    marked out-of-sync, and the v08 meta data keeps that peer's bitmap UUID
+##  - --peers 2 keeps the slot that tracks something: after a confirmation the
+##    whole device is marked out-of-sync, and the v08 meta data keeps that
+##    peer's bitmap UUID
 ##  - --bitmap-slots 2 names by slot number what --peers 3 names by
 ##    peer
 ##  - a node id without a slot, a slot that does not exist, more names than the
@@ -52,8 +53,11 @@ initializing the new bitmap (8 KB) to all zero using pwrite
 $ drbdmeta --force - v08 "$img" flex-internal dump-md 2>/dev/null | grep -c CAFE0002
 0
 $ cp "$tmpdir/v09.img" "$img"
-$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --peers 2 2>&1 >/dev/null | grep -e '^keeping' -e '^dropping' -e '^initializing' -e '^marking'
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --peers 2 2>&1 >/dev/null | grep -e '^keeping' -e '^dropping' -e '^initializing' -e '^marking' -e '^A few out-of-sync' -e '^Bring the device' -e '^Mark the whole'
 keeping bitmap slot 1 of peer node id 2
+A few out-of-sync blocks become a resync of the whole device.
+Bring the device in sync while still running DRBD 9 instead,
+Mark the whole device out of sync?
 marking the whole device out-of-sync in the new bitmap (8 KB)
 $ drbdmeta --force - v08 "$img" flex-internal dump-md 2>/dev/null | grep -c CAFE0002
 1

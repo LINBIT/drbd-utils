@@ -232,7 +232,12 @@
 	    one slot is in use, the conversion is refused and lists the
 	    candidates; a single slot in use is unambiguous and is kept. The peer
 	    that owns the kept slot provides the bitmap UUID and the peer flags
-	    of the <literal>v08</literal> metadata.
+	    of the <literal>v08</literal> metadata. If that slot tracks anything out
+	    of sync, the whole device has to be marked out of sync, and
+	    <command>drbdmeta</command> asks before it does: a few out-of-sync
+	    blocks would become a resync of the whole device, so bringing the
+	    device in sync while still running DRBD 9 is usually the better
+	    order.
 	    Only the slot that is kept decides the state of the new bitmap: if it
 	    tracks nothing out of sync, the new bitmap is all clear, even when a
 	    dropped slot did track something. If it does, the whole device is

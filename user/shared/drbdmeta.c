@@ -4516,6 +4516,15 @@ void md_convert_09_to_08(struct format *cfg)
 
 		cfg->md.bm_bytes_per_bit = BM_BLOCK_SIZE_4k;
 
+		if (out_of_sync && !option_initialize_bitmap_mode_seen &&
+		    !confirmed("A few out-of-sync blocks become a resync of the whole device.\n"
+			       "Bring the device in sync while still running DRBD 9 instead,\n"
+			       "then convert the meta data.\n"
+			       "Mark the whole device out of sync?")) {
+			printf("Operation cancelled.\n");
+			exit(1);
+		}
+
 		/* The new bitmap area is not zero: it may reach into the former
 		 * data area, or into the middle of the old bitmap. */
 		convert_initialize_bitmap_mode = out_of_sync ? IBM_SET_ALL : IBM_ZEROOUT;
