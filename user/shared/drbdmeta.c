@@ -4397,22 +4397,29 @@ void md_convert_08_to_07(struct format *cfg)
 
 void md_convert_08_to_09(struct format *cfg)
 {
+	uint64_t bitmap_uuid = cfg->md.peers[0].bitmap_uuid;
+	uint32_t peer_flags = 0;
 	int p;
 
-	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
-		cfg->md.peers[p].bitmap_uuid = 0;
-		cfg->md.peers[p].flags = 0;
-		cfg->md.peers[p].bitmap_index = -1;
-	}
-
 	if (cfg->md.flags & MDF_CONNECTED_IND)
-		cfg->md.peers[0].flags |= MDF_PEER_CONNECTED;
+		peer_flags |= MDF_PEER_CONNECTED;
 
 	if (cfg->md.flags & MDF_FULL_SYNC)
-		cfg->md.peers[0].flags |= MDF_PEER_FULL_SYNC;
+		peer_flags |= MDF_PEER_FULL_SYNC;
 
 	if (cfg->md.flags & MDF_PEER_OUT_DATED)
-		cfg->md.peers[0].flags |= MDF_PEER_OUTDATED;
+		peer_flags |= MDF_PEER_OUTDATED;
+
+	/* v08 knows one peer, and no node ids: not the one of that peer, and
+	 * not its own.  What it says about its peer holds for every peer we may
+	 * get -- none of them has seen our data -- so give it to all of them.
+	 * Our own entry is never read as a peer.  The bitmap slot stays
+	 * unassigned: DRBD 9 hands it to the peer that connects first. */
+	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
+		cfg->md.peers[p].bitmap_uuid = bitmap_uuid;
+		cfg->md.peers[p].flags = peer_flags;
+		cfg->md.peers[p].bitmap_index = -1;
+	}
 
 	cfg->md.flags &= ~(MDF_CONNECTED_IND | MDF_FULL_SYNC | MDF_PEER_OUT_DATED);
 

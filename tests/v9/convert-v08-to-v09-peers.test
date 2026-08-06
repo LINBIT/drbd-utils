@@ -1,0 +1,33 @@
+## Test where the v08 -> v09 conversion puts what the v08 meta data says about
+## its peer: the peer flags and the bitmap UUID.
+##
+## v08 meta data knows one peer and no node ids, so the conversion cannot tell
+## which peer entry that peer becomes.  The information used to land in peers[0],
+## the entry of node id 0, which is this node itself whenever its node id is 0,
+## and the bitmap UUID was dropped altogether.
+##
+## Test layout: 256 MB image, flex-internal v08 meta data, its bitmap UUID set to
+## a distinctive value and the peer related flags of the super block set:
+## 0xa4 is MDF_AL_CLEAN | MDF_CONNECTED_IND | MDF_PEER_OUT_DATED, which becomes
+## MDF_PEER_CONNECTED | MDF_PEER_OUTDATED (0x3) of a peer.  After the conversion
+## every peer entry has both, and none of them the one bitmap slot.
+$ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
+$ truncate -s 268435456 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force - v08 "$img" flex-internal dump-md 2>/dev/null > "$tmpdir/dump.txt"
+$ awk '/^uuid \{/{u=1} u && /^    0x/{sub(/0x0000000000000000;/, "0x00000000CAFE0008;")} u && /^    flags/{sub(/0x00000080/, "0x000000A4")} /^\}/{u=0} {print}' "$tmpdir/dump.txt" > "$tmpdir/v08.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal restore-md "$tmpdir/v08.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v08 "$img" flex-internal dump-md 2>/dev/null | sed -n '/^uuid {/,/^}/p' | grep -e CAFE0008 -e flags
+    0x0000000000000004; 0x00000000CAFE0008; 0x0000000000000000; 0x0000000000000000;
+    flags 0x000000A4;
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md 1 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -c CAFE0008
+32
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -c 'flags 0x00000003'
+32
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -e 'bitmap-index [0-9]' -e '^node-id'
+node-id -1;
+$ rm -rf "$tmpdir" "$img"

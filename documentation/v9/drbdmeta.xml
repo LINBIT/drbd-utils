@@ -244,6 +244,14 @@
 	    marked out of sync, because a bit of the old bitmap does not describe
 	    the same blocks as a bit of the new one.
 	  </para>
+	  <para>
+	    In the other direction, <literal>v08</literal> metadata knows one
+	    peer, and no node ids: neither the one of that peer, nor its own.
+	    What it says about that peer -- the peer flags and the bitmap UUID --
+	    goes to every peer entry, since none of them has seen our data. The
+	    one bitmap slot stays unassigned; DRBD 9 hands it to the peer that
+	    connects first.
+	  </para>
   <para>
     The following options are available for metadata version v09 only.
     They are intended for use when pre-provisioning metadata without an initial full sync.
