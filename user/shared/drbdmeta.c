@@ -4334,7 +4334,13 @@ void md_convert_08_to_09(struct format *cfg)
 
 void md_convert_09_to_08(struct format *cfg)
 {
-	bool convert_bitmap = cfg->md.bm_bytes_per_bit != BM_BLOCK_SIZE_4k;
+	/* DRBD 8.4 and older know one bitmap slot of 4k per bit. With any other
+	 * geometry the bits of this bitmap describe other blocks than the bits
+	 * of the v08 bitmap do, and for more than one peer slot the bitmap area
+	 * also moves. */
+	unsigned int max_peers = cfg->md.max_peers;
+	bool convert_bitmap = cfg->md.bm_bytes_per_bit != BM_BLOCK_SIZE_4k ||
+			      max_peers != 1;
 	bool out_of_sync = convert_bitmap && bitmap_has_bits_set(cfg);
 
 	if (cfg->md.peers[0].flags & MDF_PEER_CONNECTED)
@@ -4350,15 +4356,21 @@ void md_convert_09_to_08(struct format *cfg)
 	cfg->md.max_peers = 1;
 
 	if (convert_bitmap) {
-		fprintf(stderr,
-			"Bitmap block size %u is not supported by DRBD 8.4 and older,\n"
-			"re-creating the bitmap with %u bytes per bit.\n",
-			cfg->md.bm_bytes_per_bit, BM_BLOCK_SIZE_4k);
+		if (cfg->md.bm_bytes_per_bit != BM_BLOCK_SIZE_4k)
+			fprintf(stderr,
+				"Bitmap block size %u is not supported by DRBD 8.4 and older,\n",
+				cfg->md.bm_bytes_per_bit);
+		if (max_peers != 1)
+			fprintf(stderr,
+				"Bitmap slots for %u peers are not supported by DRBD 8.4 and older,\n",
+				max_peers);
+		fprintf(stderr, "re-creating the bitmap with %u bytes per bit.\n",
+			BM_BLOCK_SIZE_4k);
 
 		cfg->md.bm_bytes_per_bit = BM_BLOCK_SIZE_4k;
 
-		/* For internal meta data the grown bitmap area also still holds
-		 * whatever was in the data area before. */
+		/* The new bitmap area is not zero: it may reach into the former
+		 * data area, or into the middle of the old bitmap. */
 		convert_initialize_bitmap_mode = out_of_sync ? IBM_SET_ALL : IBM_ZEROOUT_PWRITE;
 	}
 

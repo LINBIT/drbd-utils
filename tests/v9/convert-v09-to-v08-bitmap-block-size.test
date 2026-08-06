@@ -22,7 +22,11 @@
 ##  - the same, with a last agreed device size that is not a whole kB: sizes and
 ##    the difference are then reported in sectors, or a difference of a single
 ##    sector would print as no difference at all
-##  - meta data of the 4k granularity converts without touching the bitmap
+##  - the 4k granularity with more than one peer slot also needs a new bitmap:
+##    dropping the peer slots moves the bitmap area, and the bits of the
+##    interleaved slots do not line up with the bits of the single v08 slot
+##  - meta data of the 4k granularity with one peer converts without touching
+##    the bitmap
 ##  - external meta data, where the bitmap is the last thing in the meta data
 ##    area rather than being followed by the activity log: a last agreed device
 ##    size that the bitmap area can not cover at all must not make the scan read
@@ -83,7 +87,18 @@ The 4096 byte bitmap leaves only 524200 sectors of this device usable,
 while the last agreed device size is 524201 sectors.
 Shrink the file system and the DRBD device by 1 sector or more
 $ rm -f "$img" && truncate -s 268435456 "$img"
-$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md 3 2>/dev/null | tail -1
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --effective-size 500000 3 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ old_bm_abs=$(drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
+$ printf '\001' | dd of="$img" bs=1 seek="$old_bm_abs" count=1 conv=notrunc status=none
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md 2>&1 >/dev/null | grep -e '^Bitmap slots' -e '^marking the whole device'
+Bitmap slots for 3 peers are not supported by DRBD 8.4 and older,
+marking the whole device out-of-sync in the new bitmap (8 KB)
+$ bm_abs=$(drbdmeta --force - v08 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
+$ od -An -j "$bm_abs" -N 8 -tx1 "$img"
+ ff ff ff ff ff ff ff ff
+$ rm -f "$img" && truncate -s 268435456 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md 1 2>/dev/null | tail -1
 New drbd meta data block successfully created.
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md 2>&1 >/dev/null | grep -e bitmap; echo "${PIPESTATUS[0]}"
 0
