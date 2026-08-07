@@ -1,0 +1,77 @@
+## Test the bitmap resampling of "drbdmeta convert-dump": --bitmap-block-size
+## writes a v09 dump whose bitmap tracks a different number of bytes per bit.
+##
+## One rule covers both directions: a target bit is set if any source bit
+## covering the same byte range is set.  A finer target repeats every source
+## bit, so nothing is lost; a coarser target or-s them together, which can only
+## add out-of-sync, never drop it.
+##
+## Test layout: 256 MB image, flex-internal meta data, one bitmap slot, 8192
+## bytes per bit and a last agreed device size of 500000 sectors.  That is
+## 31250 bits of bitmap in an area padded out to 4096 bytes.  The bits 0 and 31
+## are set by writing the first 32 bit word of the bitmap area.
+##
+## The test walks through, in this order:
+##  - 8k to 4k doubles every bit, and keeps the run-length form a run
+##  - 4k back to 8k or-s the pairs, and arrives at the dump it started from
+##  - the same block size changes nothing
+##  - restoring a resampled dump gives meta data of that granularity
+##  - bits of the padding past the last agreed device size do not appear in the
+##    output, and repeating the last bit does not reach past it either
+##  - values that are not a power of two in [4k .. 1M], and a v08 target
+$ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
+$ truncate -s 268435456 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --effective-size 500000 --bitmap-block-size 8192 1 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ bm_abs=$(drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
+$ printf '\001\000\000\200' | dd of="$img" bs=1 seek=$((bm_abs)) count=4 conv=notrunc status=none
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null > "$tmpdir/8k.txt"
+$ grep -e '^bm-byte-per-bit' -e '^# bm-bytes' -e '^# bits-set' "$tmpdir/8k.txt"
+bm-byte-per-bit 8192;
+# bm-bytes 4096;
+# bits-set[0] 2;
+$ sed -n '/^bitmap\[0\]/,/^}/p' "$tmpdir/8k.txt"
+bitmap[0] {
+   # at 0kB
+    0x0000000080000001; 0x0000000000000000; 0x0000000000000000; 0x0000000000000000;
+    508 times 0x0000000000000000;
+}
+$ drbdmeta --force - v09 "$img" flex-internal convert-dump --bitmap-block-size 4096 "$tmpdir/8k.txt" 2>/dev/null > "$tmpdir/4k.txt"
+$ grep -e '^bm-byte-per-bit' -e '^# bm-bytes' -e '^# bits-set' "$tmpdir/4k.txt"
+bm-byte-per-bit 4096;
+# bm-bytes 8192;
+# bits-set[0] 4;
+$ sed -n '/^bitmap\[0\]/,/^}/p' "$tmpdir/4k.txt"
+bitmap[0] {
+   # at 0kB
+    0xC000000000000003; 0x0000000000000000; 0x0000000000000000; 0x0000000000000000;
+    1020 times 0x0000000000000000;
+}
+$ drbdmeta --force - v09 "$img" flex-internal convert-dump --bitmap-block-size 8192 "$tmpdir/4k.txt" 2>/dev/null > "$tmpdir/8k2.txt"
+$ diff <(grep -v '^#' "$tmpdir/8k.txt") <(grep -v '^#' "$tmpdir/8k2.txt"); echo $?
+0
+$ drbdmeta --force - v09 "$img" flex-internal convert-dump --bitmap-block-size 8192 "$tmpdir/8k.txt" 2>/dev/null > "$tmpdir/8k3.txt"
+$ diff <(grep -v '^#' "$tmpdir/8k.txt") <(grep -v '^#' "$tmpdir/8k3.txt"); echo $?
+0
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md "$tmpdir/4k.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -e '^bm-byte-per-bit' -e '^# bits-set'
+bm-byte-per-bit 4096;
+# bits-set[0] 4;
+$ rm -f "$img" && truncate -s 268435456 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --effective-size 500008 --bitmap-block-size 8192 1 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ bm_abs=$(drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
+$ printf '\014' | dd of="$img" bs=1 seek=$((bm_abs + 3906)) count=1 conv=notrunc status=none
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null > "$tmpdir/edge.txt"
+$ grep -e '^# bits-set' "$tmpdir/edge.txt"
+# bits-set[0] 2;
+$ drbdmeta --force - v09 "$img" flex-internal convert-dump --bitmap-block-size 4096 "$tmpdir/edge.txt" 2>/dev/null | grep -e '^# bits-set'
+# bits-set[0] 1;
+$ drbdmeta --force - v09 "$img" flex-internal convert-dump --bitmap-block-size 6144 "$tmpdir/8k.txt" 2>&1 >/dev/null; echo "${PIPESTATUS[0]}"
+bitmap-block-size must be a power of 2 within [4k .. 1M], not '6144'
+10
+$ drbdmeta --force - v08 "$img" flex-internal convert-dump --bitmap-block-size 8192 "$tmpdir/8k.txt" 2>&1 >/dev/null; echo "${PIPESTATUS[0]}"
+bitmap-block-size not supported with 'v08'
+10
+$ rm -rf "$tmpdir" "$img"

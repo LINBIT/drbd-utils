@@ -23,7 +23,7 @@
 ##    meta data then stays as it is
 ##  - a slot that no peer owns can only be named by number, and its bits are
 ##    dropped like those of any other slot that is not kept
-##  - the options are only allowed with create-md
+##  - the options are only allowed with the commands that choose slots
 $ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
 $ truncate -s 268435456 "$img"
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --effective-size 500000 3 2>/dev/null | tail -1
@@ -101,7 +101,7 @@ dropping the out-of-sync bits of bitmap slot 1, which no peer owns
 initializing the new bitmap (8 KB) to all zero
 initializing the new bitmap (8 KB) to all zero using pwrite
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal apply-al --peers 1 2>&1 >/dev/null | grep -e peers
-The --peers option is only allowed with create-md and restore-md
+The --peers option is only allowed with create-md, restore-md and convert-dump
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal apply-al --bitmap-slots 1 2>&1 >/dev/null | grep -e bitmap-slots
-The --bitmap-slots option is only allowed with create-md
+The --bitmap-slots option is only allowed with create-md and convert-dump
 $ rm -rf "$tmpdir" "$img"

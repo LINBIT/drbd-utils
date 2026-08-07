@@ -938,6 +938,7 @@ int meta_hex_dump_superblock(struct format *cfg, char **argv, int argc);
 int meta_apply_al(struct format *cfg, char **argv, int argc);
 int meta_restore_md(struct format *cfg, char **argv, int argc);
 int meta_verify_dump_file(struct format *cfg, char **argv, int argc);
+int meta_convert_dump(struct format *cfg, char **argv, int argc);
 int meta_create_md(struct format *cfg, char **argv, int argc);
 int meta_wipe_md(struct format *cfg, char **argv, int argc);
 int meta_outdate(struct format *cfg, char **argv, int argc);
@@ -964,6 +965,12 @@ struct meta_cmd cmds[] = {
 		"[--peers {val}]",
 		meta_restore_md, 1, 0, 1},
 	{"verify-dump", "file", meta_verify_dump_file, 1, 0, 0},
+	{"convert-dump",
+		"file "
+		"[--peers {val}] "
+		"[--bitmap-slots {val}] "
+		"[--bitmap-block-size {val}]",
+		meta_convert_dump, 1, 0, 0},
 	{"apply-al", 0, meta_apply_al, 1, 0, 1},
 	{"wipe-md", 0, meta_wipe_md, 1, 0, 1},
 	{"outdate", 0, meta_outdate, 1, 0, 1},
@@ -2756,7 +2763,7 @@ unsigned long bm_bytes(const struct md_cpu * const md, uint64_t sectors)
 	return ALIGN(bm_bits / 8 * md->max_peers, 4096);
 }
 
-static void fprintf_bm_eol(FILE *f, unsigned int i, int peer_nr, const char* indent)
+static void fprintf_bm_eol(FILE *f, uint64_t i, int peer_nr, const char* indent)
 {
 	if ((i & 63) == peer_nr)
 		fprintf(f, "\n%s   # at %llukB\n%s   ", indent, (128LLU * (i - peer_nr)), indent);
@@ -2864,6 +2871,48 @@ next:
 	}
 	fprintf(f, "\n%s}\n", indent);
 	cfg->bits_set = bits_set;
+}
+
+/* Print bitmap slot "peer_nr" of a bitmap area that is in memory rather than on
+ * disk, the way fprintf_bm() prints one that is on disk.  "n" counts the 32 bit
+ * words of the whole area, which interleaves the slots word by word. */
+static void fprintf_bm_mem(FILE *f, const le_u32 *bm, uint64_t n,
+			   unsigned int max_peers, unsigned int peer_nr,
+			   uint64_t *bits_set)
+{
+	const unsigned int WPL = 8;
+	le_u32 cw;		/* current word for rl encoding */
+	le_u32 lw = {0};	/* low word for 64 bit output */
+	uint64_t bits = 0;
+	uint64_t i, j, run;
+
+	fprintf(f, "{");
+	for (i = peer_nr; i < n; i += max_peers) {
+		cw = bm[i];
+		if ((i - peer_nr) % (WPL * max_peers) == 0) {
+			fprintf_bm_eol(f, i, peer_nr, "");
+
+			for (j = i; j < n && cw.le == bm[j].le; j += max_peers)
+				;
+			run = round_down((j - i) / max_peers, WPL);
+			if (run > WPL) {
+				fprintf(f, " %llu times 0x%08X%08X;",
+					(unsigned long long)(run / 2),
+					le32_to_cpu(cw.le), le32_to_cpu(cw.le));
+				bits += run * generic_hweight32(cw.le);
+				i += (run - 1) * max_peers;
+				continue;
+			}
+		}
+		if (((i - peer_nr) / max_peers) & 1)
+			fprintf(f, " 0x%08X%08X;",
+				le32_to_cpu(bm[i].le), le32_to_cpu(lw.le));
+		else
+			lw = bm[i];
+		bits += generic_hweight32(bm[i].le);
+	}
+	fprintf(f, "\n}\n");
+	*bits_set = bits;
 }
 
 void printf_bm(struct format *cfg)
@@ -4739,6 +4788,433 @@ int meta_restore_md(struct format *cfg, char **argv, int argc)
 int meta_verify_dump_file(struct format *cfg, char **argv, int argc)
 {
 	return verify_dumpfile_or_restore(cfg,argv,argc,1);
+}
+
+/*
+ * convert-dump: read a dump, write a dump of the format named on the command
+ * line.  A dump holds one bitmap section per slot, while the meta data
+ * interleaves the slots word by word.  Dropping a slot or changing the bitmap
+ * block size is therefore a matter of re-writing those sections, and the
+ * out-of-sync state survives -- which converting the meta data in place cannot
+ * offer, because the bitmap area moves and the bits change meaning.
+ *
+ * The device is never opened.  What the target meta data has room for is for
+ * restore-md to decide, which is the step that knows the device.
+ */
+struct dump_conv {
+	enum md_format from;
+	enum md_format to;
+	struct md_cpu md;		/* the dump we read, then the one we write */
+	unsigned int src_max_peers;
+	unsigned int src_bm_bytes_per_bit;
+	uint64_t src_bm_bits;		/* bits per slot that describe something */
+	uint64_t dst_bm_bits;
+	uint64_t src_slot_words;	/* 32 bit words of one source slot */
+	uint64_t dst_words;		/* 32 bit words of the whole target area */
+	le_u32 *src_slot;
+	le_u32 *dst_bm;
+	int target[DRBD_PEERS_MAX];	/* dump slot -> target slot, -1 to drop */
+	int owner[DRBD_PEERS_MAX];	/* peer node id per slot, as the dump has it */
+	uint64_t dropped_dirty;		/* dropped slots that track something */
+};
+
+/* How many bits of a bitmap slot describe something, as opposed to padding the
+ * area out to a full 4k block. */
+static uint64_t bm_bits_used(uint64_t sectors, unsigned int bm_bytes_per_bit)
+{
+	unsigned long sectors_per_bit = bm_bytes_per_bit >> 9;
+
+	return (sectors + sectors_per_bit - 1) / sectors_per_bit;
+}
+
+/* Set target bits "from" up to "to", stopping at "limit": rounding a source bit
+ * up to a whole target bit reaches past the last bit that describes something,
+ * and the padding behind it must stay clear. */
+static void bm_set_range(le_u32 *bm, unsigned int stride, uint64_t from, uint64_t to,
+			 uint64_t limit)
+{
+	if (to > limit)
+		to = limit;
+	while (from < to) {
+		unsigned int b = from % 32;
+		unsigned int n = to - from < 32 - b ? to - from : 32 - b;
+		uint32_t mask = n == 32 ? ~0U : ((1U << n) - 1) << b;
+
+		bm[from / 32 * stride].le |= cpu_to_le32(mask);
+		from += n;
+	}
+}
+
+/* Fill bitmap slot "target" of the target area from the source slot we just
+ * read.  One rule covers both directions: a target bit is set if any source bit
+ * covering the same byte range is set.  A finer target repeats every source bit
+ * and loses nothing; a coarser target or-s them together, which can only add
+ * out-of-sync, never drop it. */
+static void resample_bitmap_slot(struct dump_conv *c, int target)
+{
+	const le_u32 *src = c->src_slot;
+	le_u32 *dst = c->dst_bm + target;
+	unsigned int stride = c->md.max_peers;
+	unsigned int src_bpb = c->src_bm_bytes_per_bit;
+	unsigned int dst_bpb = c->md.bm_bytes_per_bit;
+	uint64_t lim = c->dst_bm_bits;
+	uint64_t words = (c->src_bm_bits + 31) / 32;
+	uint64_t bit, w;
+	unsigned int k, b;
+
+	if (words > c->src_slot_words)
+		words = c->src_slot_words;
+
+	if (dst_bpb <= src_bpb) {
+		k = src_bpb / dst_bpb;
+		for (w = 0; w < words; w++) {
+			uint32_t v = le32_to_cpu(src[w].le);
+
+			if (!v)
+				continue;
+			if (v == ~0U && (w + 1) * 32 <= c->src_bm_bits) {
+				bm_set_range(dst, stride, w * 32 * k, (w + 1) * 32 * k, lim);
+				continue;
+			}
+			for (b = 0; b < 32; b++) {
+				bit = w * 32 + b;
+				if (bit >= c->src_bm_bits)
+					break;
+				if (v & (1U << b))
+					bm_set_range(dst, stride, bit * k, (bit + 1) * k, lim);
+			}
+		}
+	} else {
+		k = dst_bpb / src_bpb;
+		for (w = 0; w < words; w++) {
+			uint32_t v = le32_to_cpu(src[w].le);
+
+			if (!v)
+				continue;
+			if (v == ~0U && (w + 1) * 32 <= c->src_bm_bits) {
+				bm_set_range(dst, stride, w * 32 / k,
+					     ((w + 1) * 32 - 1) / k + 1, lim);
+				continue;
+			}
+			for (b = 0; b < 32; b++) {
+				bit = w * 32 + b;
+				if (bit >= c->src_bm_bits)
+					break;
+				if (v & (1U << b))
+					bm_set_range(dst, stride, bit / k, bit / k + 1, lim);
+			}
+		}
+	}
+}
+
+/* Read one bitmap section of the dump into c->src_slot. */
+static void parse_dump_bitmap_slot(struct dump_conv *c, int slot)
+{
+	le_u32 *bm = c->src_slot;
+	uint64_t i = 0;
+	uint64_t value;
+	uint64_t times;
+	uint64_t room;
+
+	memset(bm, 0x00, c->src_slot_words * sizeof(*bm));
+
+	if (c->from < DRBD_V09)
+		EXP(TK_BM);
+	else {
+		EXP(TK_BITMAP); EXP('[');
+		EXP(TK_NUM); EXP(']');
+		if ((int)yylval.u64 != slot) {
+			fprintf(stderr, "Parse error in line %u: "
+				"Expected peer slot %d but found %d\n",
+				yylineno, slot, (int)yylval.u64);
+			exit(10);
+		}
+	}
+	EXP('{');
+
+	while (1) {
+		int tok = yylex();
+
+		switch (tok) {
+		case TK_U64:
+			EXP(';');
+			/* EXP(';') advanced the scanner, but yylval still holds
+			 * what the 16 digit hex number scanned to. */
+			times = 1;
+			break;
+		case TK_NUM:
+			times = yylval.u64;
+			EXP(TK_TIMES); EXP(TK_U64); EXP(';');
+			break;
+		case '}':
+			return;
+		default:
+			md_parse_error(0 /* ignored, since etext is set */,
+				       tok, "repeat count, 16-digit hex number, or closing brace (})");
+			return;
+		}
+		value = yylval.u64;
+		/* Beyond the bitmap area the dump only has padding.  Trim the
+		 * repeat count without multiplying: 2 * times can wrap. */
+		room = i < c->src_slot_words ? (c->src_slot_words - i) / 2 : 0;
+		if (times > room)
+			times = room;
+		while (times--) {
+			bm[i++].le = cpu_to_le32((uint32_t)value);
+			bm[i++].le = cpu_to_le32((uint32_t)(value >> 32));
+		}
+	}
+}
+
+static void convert_dump_bitmap(struct dump_conv *c)
+{
+	unsigned int slots = c->from < DRBD_V09 ? 1 : c->src_max_peers;
+	uint64_t w;
+	int s, t;
+
+	for (s = 0; s < (int)slots; s++) {
+		parse_dump_bitmap_slot(c, s);
+		t = c->target[s];
+		if (t >= 0) {
+			resample_bitmap_slot(c, t);
+			continue;
+		}
+		for (w = 0; w < c->src_slot_words; w++) {
+			if (c->src_slot[w].le) {
+				c->dropped_dirty |= 1ULL << s;
+				break;
+			}
+		}
+	}
+}
+
+/* Which bitmap slot of the dump survives, and what the target meta data says
+ * about the peer that owns it. */
+static void convert_dump_slots(struct dump_conv *c)
+{
+	unsigned int slots = c->src_max_peers;
+	uint64_t keep;
+	int keep_owner;
+	int keep_slot = -1;
+	int p, s;
+
+	/* md_09_to_08_peer() below overwrites peer entry 0, so take down who
+	 * owns what while the dump still says so. */
+	for (s = 0; s < DRBD_PEERS_MAX; s++) {
+		c->target[s] = -1;
+		c->owner[s] = -1;
+	}
+	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
+		s = c->md.peers[p].bitmap_index;
+		if (s >= 0 && c->owner[s] < 0)
+			c->owner[s] = p;
+	}
+
+	if (c->to == c->from) {
+		for (s = 0; s < (int)slots; s++)
+			c->target[s] = s;
+		return;
+	}
+
+	/* DRBD 8.4 and older know one bitmap slot, and 4k per bit. */
+	keep = keep_slots_mask(&c->md, 1, "dump");
+	for (s = 0; s < (int)slots; s++) {
+		if (keep & (1ULL << s)) {
+			keep_slot = s;
+			break;
+		}
+	}
+	keep_owner = keep_slot >= 0 ? c->owner[keep_slot] : -1;
+	if (keep_slot >= 0) {
+		c->target[keep_slot] = 0;
+		if (slots > 1) {
+			if (keep_owner >= 0)
+				fprintf(stderr, "keeping bitmap slot %d of peer node id %d\n",
+					keep_slot, keep_owner);
+			else
+				fprintf(stderr, "keeping bitmap slot %d, which no peer owns\n",
+					keep_slot);
+		}
+	}
+
+	md_09_to_08_peer(&c->md, keep_owner);
+	c->md.bm_bytes_per_bit = BM_BLOCK_SIZE_4k;
+}
+
+static bool kept_any_slot(const struct dump_conv *c)
+{
+	int s;
+
+	for (s = 0; s < DRBD_PEERS_MAX; s++) {
+		if (c->target[s] >= 0)
+			return true;
+	}
+	return false;
+}
+
+/* Name the out-of-sync state that does not fit through the conversion.  Whether
+ * there is anywhere left to put it is the caller's question. */
+static void report_dropped_slots(struct dump_conv *c)
+{
+	int s;
+
+	for (s = 0; s < (int)c->src_max_peers; s++) {
+		if (!(c->dropped_dirty & (1ULL << s)))
+			continue;
+		if (c->owner[s] >= 0)
+			fprintf(stderr,
+				"dropping the out-of-sync bits of peer node id %d (bitmap slot %d)\n",
+				c->owner[s], s);
+		else
+			fprintf(stderr,
+				"dropping the out-of-sync bits of bitmap slot %d, which no peer owns\n",
+				s);
+	}
+}
+
+static void print_converted_dump(struct dump_conv *c)
+{
+	uint64_t bits_set;
+	int t;
+
+	print_dump_header();
+	printf("version \"%s\";\n\n", f_ops[c->to].name);
+	if (c->to >= DRBD_V09)
+		printf("max-peers %d;\n\n", c->md.max_peers);
+
+	print_dump_gi(stdout, &c->md, c->to);
+	print_dump_sizes(stdout, &c->md, c->to);
+	printf("# bm-bytes "U64";\n", c->dst_words * sizeof(le_u32));
+
+	if (c->to < DRBD_V09) {
+		printf("bm ");
+		fprintf_bm_mem(stdout, c->dst_bm, c->dst_words, 1, 0, &bits_set);
+		printf("# bits-set "U64";\n", bits_set);
+		return;
+	}
+	for (t = 0; t < (int)c->md.max_peers; t++) {
+		printf("bitmap[%d] ", t);
+		fprintf_bm_mem(stdout, c->dst_bm, c->dst_words,
+			       c->md.max_peers, t, &bits_set);
+		printf("# bits-set[%d] "U64";\n", t, bits_set);
+	}
+}
+
+/* The dump names its own format; the command line names the one to write. */
+static enum md_format parse_dump_format(void)
+{
+	enum md_format v;
+
+	EXP(TK_VERSION); EXP(TK_STRING);
+	for (v = DRBD_V06; v <= DRBD_V09; v++) {
+		if (!strcmp(yylval.txt, f_ops[v].name)) {
+			EXP(';');
+			return v;
+		}
+	}
+	fprintf(stderr, "dump is '%s', which is no meta data format I know.\n",
+		yylval.txt);
+	exit(10);
+}
+
+int meta_convert_dump(struct format *cfg, char **argv, int argc)
+{
+	uint64_t src_bm_bytes;
+	struct dump_conv c;
+	uint64_t src_words;
+	int p, s;
+
+	if (argc < 1) {
+		fprintf(stderr, "convert-dump needs the dump to convert as an argument\n");
+		exit(20);
+	}
+	yyin = fopen(argv[0], "r");
+	if (yyin == NULL) {
+		fprintf(stderr, "open of '%s' failed.\n", argv[0]);
+		exit(20);
+	}
+
+	memset(&c, 0, sizeof(c));
+	c.to = format_version(cfg);
+	c.from = parse_dump_format();
+
+	if (c.from != c.to && !(c.from == DRBD_V09 && c.to == DRBD_V08)) {
+		fprintf(stderr, "Refusing to convert a '%s' dump to '%s'.\n"
+			"convert-dump writes the format of the dump it reads, or "
+			"converts 'v09' to 'v08'.\n",
+			f_ops[c.from].name, f_ops[c.to].name);
+		exit(10);
+	}
+
+	if (c.from == c.to && (option_peer_mask || option_slot_mask)) {
+		fprintf(stderr, "convert-dump: --peers and --bitmap-slots say which bitmap slots\n"
+			"to keep where the conversion drops some.  A '%s' dump written as\n"
+			"'%s' keeps them all, so there is nothing to choose\n",
+			f_ops[c.from].name, f_ops[c.to].name);
+		exit(10);
+	}
+
+	c.src_max_peers = 1;
+	if (c.from >= DRBD_V09)
+		c.src_max_peers = parse_dump_max_peers();
+	for (p = 0; p < DRBD_NODE_ID_MAX; p++)
+		c.md.peers[p].bitmap_index = -1;
+	c.md.max_peers = c.src_max_peers;
+
+	parse_dump_md(&c.md, c.from);
+
+	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
+		s = c.md.peers[p].bitmap_index;
+		if (s >= (int)c.src_max_peers) {
+			fprintf(stderr,
+				"peer node id %d owns bitmap slot %d, but this dump has %u\n",
+				p, s, c.src_max_peers);
+			exit(10);
+		}
+	}
+
+	c.src_bm_bytes_per_bit = c.md.bm_bytes_per_bit;
+	c.src_bm_bits = bm_bits_used(c.md.effective_size, c.src_bm_bytes_per_bit);
+	src_bm_bytes = bm_bytes(&c.md, c.md.effective_size);
+	src_words = src_bm_bytes / sizeof(le_u32);
+	c.src_slot_words = (src_words + c.src_max_peers - 1) / c.src_max_peers;
+
+	convert_dump_slots(&c);
+	if (option_bm_block_size)
+		c.md.bm_bytes_per_bit = option_bm_block_size;
+
+	c.dst_bm_bits = bm_bits_used(c.md.effective_size, c.md.bm_bytes_per_bit);
+	c.dst_words = bm_bytes(&c.md, c.md.effective_size) / sizeof(le_u32);
+
+	c.src_slot = calloc(c.src_slot_words, sizeof(le_u32));
+	c.dst_bm = calloc(c.dst_words, sizeof(le_u32));
+	if (!c.src_slot || !c.dst_bm) {
+		fprintf(stderr, "Out of memory for a bitmap of %llu and %llu bytes\n",
+			(unsigned long long)(c.src_slot_words * 4),
+			(unsigned long long)(c.dst_words * 4));
+		exit(20);
+	}
+
+	convert_dump_bitmap(&c);
+
+	/* there should be no trailing garbage in the input file */
+	EXP(0);
+
+	report_dropped_slots(&c);
+	if (c.dropped_dirty && !kept_any_slot(&c)) {
+		fprintf(stderr,
+			"No peer of this dump owns a bitmap slot, so there is nobody to\n"
+			"attribute the out-of-sync bits to.  Name the slot to keep with\n"
+			"--bitmap-slots.  \"drbdmeta dump-md\" shows what each slot tracks.\n"
+			"Conversion refused.\n");
+		exit(10);
+	}
+
+	print_converted_dump(&c);
+
+	free(c.src_slot);
+	free(c.dst_bm);
+	return 0;
 }
 
 void md_convert_07_to_08(struct format *cfg)
@@ -6666,9 +7142,10 @@ int main(int argc, char **argv)
 	}
 
 	if (option_bm_block_size) {
-		if (command->function != &meta_create_md) {
+		if (command->function != &meta_create_md &&
+		    command->function != &meta_convert_dump) {
 			/* TODO: restore-md */
-			fprintf(stderr, "The --bitmap-block-size option is only allowed with create-md\n");
+			fprintf(stderr, "The --bitmap-block-size option is only allowed with create-md and convert-dump\n");
 			exit(10);
 		}
 		if (!is_v09(cfg)) {
@@ -6708,14 +7185,16 @@ int main(int argc, char **argv)
 
 	if (option_peer_mask &&
 	    command->function != &meta_create_md &&
-	    command->function != &meta_restore_md) {
-		fprintf(stderr, "The --peers option is only allowed with create-md and restore-md\n");
+	    command->function != &meta_restore_md &&
+	    command->function != &meta_convert_dump) {
+		fprintf(stderr, "The --peers option is only allowed with create-md, restore-md and convert-dump\n");
 		exit(10);
 	}
 
 	if (option_slot_mask &&
-	    command->function != &meta_create_md) {
-		fprintf(stderr, "The --bitmap-slots option is only allowed with create-md\n");
+	    command->function != &meta_create_md &&
+	    command->function != &meta_convert_dump) {
+		fprintf(stderr, "The --bitmap-slots option is only allowed with create-md and convert-dump\n");
 		exit(10);
 	}
 

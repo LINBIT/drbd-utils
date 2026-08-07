@@ -255,6 +255,14 @@
 	    the same blocks as a bit of the new one.
 	  </para>
 	  <para>
+	    Both of these re-create the bitmap, because the metadata is converted
+	    where it lies and the bitmap area moves.  The
+	    <option>convert-dump</option> command converts a dump instead.  A
+	    dump has one bitmap section per slot, rather than the interleaved
+	    on-disk layout, so the out-of-sync state survives.  Use it where a
+	    full resync after the conversion is worth avoiding.
+	  </para>
+	  <para>
 	    In the other direction, <literal>v08</literal> metadata knows one
 	    peer, and no node ids: neither the one of that peer, nor its own.
 	    What it says about that peer -- the peer flags and the bitmap UUID --
@@ -457,6 +465,58 @@
 	    one shared by the peers that have not seen our data. With internal
 	    metadata the added slots take their space from the data area; if the
 	    last agreed device size no longer fits, the restore is refused.
+	  </para>
+	  <para>
+	    The same holds for a dump whose <literal>bm-byte-per-bit</literal>
+	    differs from the metadata in place: the offsets follow the bitmap
+	    the dump asks for, and a finer bitmap that no longer leaves room for
+	    the last agreed device size is refused.
+	  </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><option>convert-dump</option> <replaceable>dump_file</replaceable>
+	  <arg choice="opt" rep="norepeat"><option>--peers=</option><replaceable>node-id-list</replaceable></arg>
+	  <arg choice="opt" rep="norepeat"><option>--bitmap-slots=</option><replaceable>slot-list</replaceable></arg>
+	  <arg choice="opt" rep="norepeat"><option>--bitmap-block-size=</option><replaceable>val</replaceable></arg></term>
+        <listitem>
+          <para><indexterm significance="normal"><primary>drbdmeta</primary><secondary>convert-dump </secondary></indexterm>
+	    Read <replaceable>dump_file</replaceable> and write a dump of the
+	    metadata version named on the command line to standard output.  A
+	    dump names its own version, so the dump is the source and the
+	    command line names the target.  The device is not touched; feed the
+	    result to <option>restore-md</option> to write it.
+	  </para>
+	  <para>
+	    <command>drbdmeta - v08 /dev/vg23/lv42 internal convert-dump v09.txt --peers 2 &gt; v08.txt</command>
+	    <?linebreak?>
+	    <command>drbdmeta - v08 /dev/vg23/lv42 internal restore-md v08.txt</command>
+	  </para>
+	  <para>
+	    <literal>v09</literal> to <literal>v08</literal> is the rollback to
+	    DRBD 8.4. <option>create-md</option> converts the metadata where it
+	    lies and has to re-create the bitmap;
+	    <option>convert-dump</option> re-writes the bitmap section of the
+	    slot that survives, so the out-of-sync state of that peer reaches
+	    the <literal>v08</literal> metadata instead of a full resync.
+	    <option>--peers</option> and <option>--bitmap-slots</option> name
+	    the slot to keep, as they do for the conversion in place, and
+	    <command>drbdmeta</command> reports the out-of-sync bits it drops
+	    with the other slots. Where no slot survives at all, there is nobody
+	    to attribute those bits to, and the conversion is refused.
+	  </para>
+	  <para>
+	    Either version written as itself changes nothing, except that
+	    <option>--bitmap-block-size</option> gives a <literal>v09</literal>
+	    dump a different number of bytes per bitmap bit. A target bit is set
+	    if any source bit covering the same byte range is set. A finer
+	    bitmap repeats every source bit and loses nothing; a coarser one
+	    or-s them together, which can only add out-of-sync, never drop it.
+	  </para>
+	  <para>
+	    Other directions are refused. Converting <literal>v08</literal>
+	    metadata to <literal>v09</literal> is what
+	    <option>create-md</option> does, and it keeps the bitmap as it is.
 	  </para>
         </listitem>
       </varlistentry>

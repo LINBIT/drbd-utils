@@ -1,0 +1,133 @@
+## Test "drbdmeta convert-dump", which reads a meta data dump and writes one of
+## the format named on the command line.  The device is never touched.
+##
+## Test layout: 256 MB image, flex-internal meta data, 3 bitmap slots, peer node
+## id 1 owning slot 0 and peer node id 2 owning slot 1.  Slot 2 is in use by
+## nobody.  The first 32 bit word of slot 1 is set: the slots interleave word by
+## word, so that is out-of-sync for node id 2 alone.
+##
+## The test walks through, in this order:
+##  - a dump written as its own format comes out unchanged, except for the lines
+##    only the device can answer: where the meta data sits
+##  - with more than one slot in use and no choice made, the conversion is
+##    refused, and names the candidates
+##  - --peers 2 keeps the slot that tracks something, and its 32 out-of-sync
+##    bits reach the v08 dump.  Restoring that dump gives v08 meta data with
+##    those 32 bits, where converting the same meta data in place marks the
+##    whole device out of sync
+##  - --peers 1 keeps the slot that tracks nothing, and says whose bits it drops
+##  - a slot that no peer owns can only be named by number, and with no slot
+##    kept at all there is nowhere to put the out-of-sync bits: refused
+##  - the peer entry that keeps its slot moves to node id 0 in the v08 dump,
+##    which must not cost the dropped slots the node id they name
+##  - the peer entry of the kept slot becomes the one peer entry of the v08
+##    dump, and its peer flags become super block flags: connected 0x1 becomes
+##    0x4, outdated 0x2 becomes 0x20, full-sync 0x8 stays 0x8.  0x80 is
+##    al-clean, which the dump already has
+##  - a hand-edited repeat count large enough to overflow the multiplication
+##    that bounds it fills the slot and stops there
+##  - the directions convert-dump does not do, and options that mean nothing
+$ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
+$ truncate -s 268435456 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --effective-size 500000 3 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | awk '/^peer\[1\] \{/{p=1} /^peer\[2\] \{/{p=2} {if (p==1 && sub(/bitmap-index -1;/, "bitmap-index 0;")) p=0; else if (p==2 && sub(/bitmap-index -1;/, "bitmap-index 1;")) p=0} {print}' > "$tmpdir/edit.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md "$tmpdir/edit.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ bm_abs=$(drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
+$ printf '\377\377\377\377' | dd of="$img" bs=1 seek=$((bm_abs + 4)) count=4 conv=notrunc status=none
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null > "$tmpdir/base.txt"
+$ cp "$img" "$tmpdir/base.img"
+$ grep -e '^max-peers' -e '^# bits-set' "$tmpdir/base.txt"
+max-peers 3;
+# bits-set[0] 0;
+# bits-set[1] 32;
+# bits-set[2] 0;
+$ drbdmeta --force - v09 "$img" flex-internal convert-dump "$tmpdir/base.txt" 2>/dev/null > "$tmpdir/same.txt"
+$ diff <(grep -v '^#' "$tmpdir/base.txt") <(grep -v '^#' "$tmpdir/same.txt"); echo $?
+0
+$ diff <(grep -e '^# bm-bytes' -e '^# bits-set' "$tmpdir/base.txt") <(grep -e '^# bm-bytes' -e '^# bits-set' "$tmpdir/same.txt"); echo $?
+0
+$ grep -c -e '^# md_offset' -e '^# al_offset' -e '^# bm_offset' -e '^# md_size_sect' -e '^# al-extents' "$tmpdir/same.txt"
+0
+$ drbdmeta --force - v08 "$img" flex-internal convert-dump "$tmpdir/base.txt" 2>&1 >/dev/null; echo "${PIPESTATUS[0]}"
+This dump has 2 bitmap slots in use, the conversion keeps 1:
+  peer node id 1 owns bitmap slot 0
+  peer node id 2 owns bitmap slot 1
+Name the peer to keep with --peers, or its slot with
+--bitmap-slots.  "drbdmeta dump-md" shows what each slot tracks.
+10
+$ drbdmeta --force - v08 "$img" flex-internal convert-dump --peers 2 "$tmpdir/base.txt" 2>"$tmpdir/err.txt" > "$tmpdir/v08.txt"
+$ cat "$tmpdir/err.txt"
+keeping bitmap slot 1 of peer node id 2
+$ grep -e '^version' -e '^la-size-sect' -e '^bm-byte-per-bit' -e '^# bm-bytes' -e '^# bits-set' "$tmpdir/v08.txt"
+version "v08";
+la-size-sect 500000;
+bm-byte-per-bit 4096;
+# bm-bytes 8192;
+# bits-set 32;
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal restore-md "$tmpdir/v08.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v08 "$img" flex-internal dump-md 2>/dev/null | grep -e '^la-size-sect' -e '^# bits-set'
+la-size-sect 500000;
+# bits-set 32;
+$ cp "$tmpdir/base.img" "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --peers 2 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force - v08 "$img" flex-internal dump-md 2>/dev/null | grep -e '^# bits-set'
+# bits-set 65536;
+$ cp "$tmpdir/base.img" "$img"
+$ drbdmeta --force - v08 "$img" flex-internal convert-dump --peers 1 "$tmpdir/base.txt" 2>&1 >/dev/null
+keeping bitmap slot 0 of peer node id 1
+dropping the out-of-sync bits of peer node id 2 (bitmap slot 1)
+$ drbdmeta --force - v08 "$img" flex-internal convert-dump --peers 1 "$tmpdir/base.txt" 2>/dev/null | grep -e '^# bits-set'
+# bits-set 0;
+$ printf '\377\377\377\377' | dd of="$img" bs=1 seek=$((bm_abs)) count=4 conv=notrunc status=none
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | awk '/^peer\[1\] \{/{p=1} /^\}/{p=0} p && /bitmap-index/{sub(/0;/, "-1;")} {print}' | awk '/^peer\[0\] \{/{p=1} {if (p && sub(/bitmap-index -1;/, "bitmap-index 0;")) p=0} {print}' > "$tmpdir/node0.txt"
+$ drbdmeta --force - v08 "$img" flex-internal convert-dump --peers 2 "$tmpdir/node0.txt" 2>&1 >/dev/null
+keeping bitmap slot 1 of peer node id 2
+dropping the out-of-sync bits of peer node id 0 (bitmap slot 0)
+$ cp "$tmpdir/base.img" "$img"
+$ awk '/^peer\[[12]\] \{/{p=1} /^\}/{p=0} p && /bitmap-index/{sub(/[01];/, "-1;")} {print}' "$tmpdir/base.txt" > "$tmpdir/orphan.txt"
+$ drbdmeta --force - v08 "$img" flex-internal convert-dump "$tmpdir/orphan.txt" 2>&1 >/dev/null; echo "${PIPESTATUS[0]}"
+dropping the out-of-sync bits of bitmap slot 1, which no peer owns
+No peer of this dump owns a bitmap slot, so there is nobody to
+attribute the out-of-sync bits to.  Name the slot to keep with
+--bitmap-slots.  "drbdmeta dump-md" shows what each slot tracks.
+Conversion refused.
+10
+$ drbdmeta --force - v08 "$img" flex-internal convert-dump --bitmap-slots 1 "$tmpdir/orphan.txt" 2>&1 >/dev/null
+keeping bitmap slot 1, which no peer owns
+$ drbdmeta --force - v08 "$img" flex-internal convert-dump --bitmap-slots 1 "$tmpdir/orphan.txt" 2>/dev/null | grep -e '^# bits-set'
+# bits-set 32;
+$ awk '/^peer\[2\] \{/{p=1} /^\}/{p=0} p && /bitmap-uuid/{sub(/0x0000000000000000/, "0x00000000CAFE0002")} p && /flags/{sub(/0x00000000/, "0x0000000B")} {print}' "$tmpdir/base.txt" > "$tmpdir/flags.txt"
+$ drbdmeta --force - v08 "$img" flex-internal convert-dump --peers 2 "$tmpdir/flags.txt" 2>/dev/null | sed -n '/^uuid {/,/^}/p'
+uuid {
+    0x0000000000000004; 0x00000000CAFE0002; 0x0000000000000000; 0x0000000000000000;
+    flags 0x000000AC;
+}
+$ awk '/^bitmap\[0\] \{/{p=1} p && /times/{sub(/[0-9]+ times 0x[0-9A-F]+;/, "9223372036854775808 times 0xFFFFFFFFFFFFFFFF;"); p=0} {print}' "$tmpdir/base.txt" > "$tmpdir/huge.txt"
+$ drbdmeta --force - v09 "$img" flex-internal convert-dump "$tmpdir/huge.txt" 2>/dev/null | grep -e '^# bits-set'
+# bits-set[0] 62500;
+# bits-set[1] 32;
+# bits-set[2] 0;
+$ drbdmeta --force - v07 "$img" flex-internal convert-dump "$tmpdir/base.txt" 2>&1 >/dev/null; echo "${PIPESTATUS[0]}"
+Refusing to convert a 'v09' dump to 'v07'.
+convert-dump writes the format of the dump it reads, or converts 'v09' to 'v08'.
+10
+$ drbdmeta --force - v09 "$img" flex-internal convert-dump "$tmpdir/v08.txt" 2>&1 >/dev/null; echo "${PIPESTATUS[0]}"
+Refusing to convert a 'v08' dump to 'v09'.
+convert-dump writes the format of the dump it reads, or converts 'v09' to 'v08'.
+10
+$ drbdmeta --force - v09 "$img" flex-internal convert-dump --peers 2 "$tmpdir/base.txt" 2>&1 >/dev/null; echo "${PIPESTATUS[0]}"
+convert-dump: --peers and --bitmap-slots say which bitmap slots
+to keep where the conversion drops some.  A 'v09' dump written as
+'v09' keeps them all, so there is nothing to choose
+10
+$ drbdmeta --force - v08 "$img" flex-internal convert-dump 2>&1 >/dev/null; echo "${PIPESTATUS[0]}"
+convert-dump needs the dump to convert as an argument
+20
+$ drbdmeta --force - v08 "$img" flex-internal convert-dump /nosuchdir/nosuchfile 2>&1 >/dev/null; echo "${PIPESTATUS[0]}"
+open of '/nosuchdir/nosuchfile' failed.
+20
+$ rm -rf "$tmpdir" "$img"
