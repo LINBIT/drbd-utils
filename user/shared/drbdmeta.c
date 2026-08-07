@@ -3255,6 +3255,119 @@ int v09_md_initialize(struct format *cfg, int do_disk_writes, int max_peers)
   }}} end of v09
  ******************************************/
 
+/* How much data area a device of that size would leave, with the meta data
+ * laid out the way this command lays it out. */
+static uint64_t usable_sect_of(struct format *probe, uint64_t dev_size)
+{
+	probe->bd_size = dev_size;
+	probe->md_offset = v07_style_md_get_byte_offset(probe->md_index, dev_size);
+	re_initialize_md_offsets(probe);
+	return probe->max_usable_sect;
+}
+
+/* How much bigger the device the meta data lives on would have to be to leave
+ * room for "needed" sectors of data.  A bigger device needs a bigger bitmap,
+ * and with external meta data the bitmap is all the device holds, so the two
+ * sizes are unrelated: search for the smallest device that is big enough.
+ * Returns 0 where growing the device does not help: the fixed size slot an
+ * indexed meta data device holds stays the size it is.  Every size probed here
+ * is one the layout accepts, being slightly above one that already is. */
+static uint64_t missing_device_bytes(const struct format *cfg, uint64_t needed_sect)
+{
+	struct format probe = *cfg;
+	int saved_verbose = verbose;
+	uint64_t too_small = cfg->bd_size;
+	uint64_t big_enough = cfg->bd_size;
+	uint64_t missing = 0;
+	int i;
+
+	if (cfg->md_index >= 0)
+		return 0;
+
+	/* The layout re_initialize_md_offsets() dumps in verbose mode is the one
+	 * this command writes, not the one of the device probed here. */
+	verbose = 0;
+
+	/* Adding the room that is missing covers it whatever the bitmap takes
+	 * back, so this converges; it only overshoots. */
+	for (i = 0; i < 4; i++) {
+		uint64_t usable = usable_sect_of(&probe, big_enough);
+
+		if (usable >= needed_sect)
+			break;
+		too_small = big_enough;
+		big_enough += ALIGN((needed_sect - usable) * 512, 4096);
+	}
+
+	/* Usable data area grows with device size, so bisect for the smallest
+	 * device that fits.  4k is the granularity of the meta data layout. */
+	if (usable_sect_of(&probe, big_enough) >= needed_sect) {
+		while (big_enough - too_small > 4096) {
+			uint64_t mid = too_small + ALIGN((big_enough - too_small) / 2, 4096);
+
+			if (usable_sect_of(&probe, mid) >= needed_sect)
+				big_enough = mid;
+			else
+				too_small = mid;
+		}
+		missing = big_enough - cfg->bd_size;
+	}
+	verbose = saved_verbose;
+
+	return missing;
+}
+
+/* The bitmap of the meta data about to be written claims room the data area
+ * still uses.  State by how much, and name both ways out.  "bitmap" describes
+ * the bitmap as the subject of the first sentence, "note" is an optional
+ * sentence about the consequences, the caller states when to apply the hint
+ * and what it refused. */
+static void report_data_area_too_small(const struct format *cfg,
+				       const char *bitmap, const char *note)
+{
+	bool internal = cfg->md_index == DRBD_MD_INDEX_INTERNAL ||
+			cfg->md_index == DRBD_MD_INDEX_FLEX_INT;
+	uint64_t usable = cfg->max_usable_sect;
+	uint64_t agreed = cfg->md.effective_size;
+	uint64_t excess = agreed - usable;
+	/* always a multiple of 4k, so it needs no rounding of its own */
+	uint64_t grow = missing_device_bytes(cfg, agreed) >> 9;
+	/* Sizes that are not a whole kB would print as equal, and a
+	 * difference of a single sector as no difference at all. */
+	bool in_sect = (usable | agreed) & 1;
+	const char *unit = in_sect ? "sectors" : "kB";
+
+	if (!in_sect) {
+		usable >>= 1;
+		agreed >>= 1;
+		excess >>= 1;
+		grow >>= 1;
+	}
+
+	fprintf(stderr,
+		"%s leaves room for only %llu %s of data,\n"
+		"while the last agreed device size is %llu %s.\n",
+		bitmap,
+		(unsigned long long)usable, unit,
+		(unsigned long long)agreed, unit);
+	if (note)
+		fprintf(stderr, "%s\n", note);
+	fprintf(stderr,
+		"You need to%s\n"
+		"   * reduce the data area by at least %llu %s\n"
+		"     (a DRBD device that is in use somewhere must not be truncated:\n"
+		"     shrink the file system, or whatever else uses it, first)\n",
+		grow ? " either" : "",
+		(unsigned long long)excess,
+		in_sect && excess == 1 ? "sector" : unit);
+	if (grow)
+		fprintf(stderr,
+			"   * grow the %s device %s by at least %llu %s\n",
+			internal ? "backing" : "meta data",
+			cfg->md_device_name,
+			(unsigned long long)grow, unit);
+}
+
 int meta_get_gi(struct format *cfg, char **argv __attribute((unused)), int argc)
 {
 	if (argc > 0) {
@@ -4624,34 +4737,18 @@ void md_convert_09_to_08(struct format *cfg)
 	re_initialize_md_offsets(cfg);
 
 	if (cfg->md.effective_size > cfg->max_usable_sect) {
-		uint64_t usable = cfg->max_usable_sect;
-		uint64_t agreed = cfg->md.effective_size;
-		uint64_t excess = agreed - usable;
-		/* Sizes that are not a whole kB would print as equal, and a
-		 * difference of a single sector as no difference at all. */
-		bool in_sect = (usable | agreed) & 1;
-		const char *unit = in_sect ? "sectors" : "kB";
-
-		if (!in_sect) {
-			usable >>= 1;
-			agreed >>= 1;
-			excess >>= 1;
-		}
+		char bitmap[80];
 
 		/* Only reachable via the bm_bytes_per_bit conversion above:
 		 * dropping the peers can only give space back. */
+		snprintf(bitmap, sizeof(bitmap), "The %u byte bitmap",
+			 cfg->md.bm_bytes_per_bit);
+		report_data_area_too_small(cfg, bitmap,
+			"DRBD 8.4 would refuse to attach that, or truncate the device.");
 		fprintf(stderr,
-			"The %u byte bitmap leaves only %llu %s of this device usable,\n"
-			"while the last agreed device size is %llu %s.\n"
-			"DRBD 8.4 would refuse to attach that, or truncate the device.\n"
-			"Shrink the file system and the DRBD device by %llu %s or more\n"
-			"while still running DRBD 9, then convert the meta data.\n"
-			"Conversion refused.\n",
-			cfg->md.bm_bytes_per_bit,
-			(unsigned long long)usable, unit,
-			(unsigned long long)agreed, unit,
-			(unsigned long long)excess,
-			in_sect && excess == 1 ? "sector" : unit);
+			"Reducing the data area means resizing the DRBD device, which\n"
+			"takes DRBD 9: do it before you convert the meta data.\n"
+			"Conversion refused.\n");
 		exit(10);
 	}
 

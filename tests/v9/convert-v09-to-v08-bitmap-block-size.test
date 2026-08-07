@@ -21,7 +21,8 @@
 ##  - the same, with 3 peers, where a bit set in the last third of the bitmap is
 ##    only found when looking at the bitmap before dropping the peer slots
 ##  - if the last agreed device size leaves no room for the larger bitmap, the
-##    conversion is refused, and the v09 meta data stays as it is.
+##    conversion is refused, and the v09 meta data stays as it is.  The refusal
+##    names both ways out: a smaller data area, or a bigger device.
 ##    524208 sectors is all a 256 MB image leaves with the 8k bitmap
 ##  - the same, with a last agreed device size that is not a whole kB: sizes and
 ##    the difference are then reported in sectors, or a difference of a single
@@ -39,7 +40,8 @@
 ##    area rather than being followed by the activity log: a last agreed device
 ##    size that the bitmap area can not cover at all must not make the scan read
 ##    past the end of the device.  32 MB of external meta data track 2 TB with
-##    8k per bitmap bit, the size used below asks for 2.3 TB.
+##    8k per bitmap bit, the size used below asks for 2.3 TB.  Here it is the
+##    meta data device that the refusal offers to grow, not the backing device.
 
 $ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
 $ truncate -s 268435456 "$img"
@@ -79,11 +81,17 @@ marking the whole device out-of-sync in the new bitmap (8 KB)
 $ rm -f "$img" && truncate -s 268435456 "$img"
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --bitmap-block-size 8K --effective-size 524208 1 2>/dev/null | tail -1
 New drbd meta data block successfully created.
-$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md 2>&1 >/dev/null | grep -e '^The 4096 byte bitmap' -e '^while the last' -e '^DRBD 8.4 would' -e '^Shrink' -e '^Conversion refused'; echo "${PIPESTATUS[0]}"
-The 4096 byte bitmap leaves only 262100 kB of this device usable,
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md 2>&1 >/dev/null | tail -11 | sed -e "s|$img|IMG|"; echo "${PIPESTATUS[0]}"
+The 4096 byte bitmap leaves room for only 262100 kB of data,
 while the last agreed device size is 262104 kB.
 DRBD 8.4 would refuse to attach that, or truncate the device.
-Shrink the file system and the DRBD device by 4 kB or more
+You need to either
+   * reduce the data area by at least 4 kB
+     (a DRBD device that is in use somewhere must not be truncated:
+     shrink the file system, or whatever else uses it, first)
+   * grow the backing device IMG by at least 8 kB
+Reducing the data area means resizing the DRBD device, which
+takes DRBD 9: do it before you convert the meta data.
 Conversion refused.
 10
 $ drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -c '[.bm_bytes_per_bit, .md_size_sect, .effective_size, .["#meta"].valid]'
@@ -91,10 +99,11 @@ $ drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/d
 $ rm -f "$img" && truncate -s 268435456 "$img"
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --bitmap-block-size 8K --effective-size 524201 1 2>/dev/null | tail -1
 New drbd meta data block successfully created.
-$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md 2>&1 >/dev/null | grep -e '^The 4096 byte bitmap' -e '^while the last' -e '^Shrink'
-The 4096 byte bitmap leaves only 524200 sectors of this device usable,
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md 2>&1 >/dev/null | grep -e '^The 4096 byte bitmap' -e '^while the last' -e '^   \* ' | sed -e "s|$img|IMG|"
+The 4096 byte bitmap leaves room for only 524200 sectors of data,
 while the last agreed device size is 524201 sectors.
-Shrink the file system and the DRBD device by 1 sector or more
+   * reduce the data area by at least 1 sector
+   * grow the backing device IMG by at least 16 sectors
 $ rm -f "$img" && truncate -s 268435456 "$img"
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --effective-size 500000 3 2>/dev/null | tail -1
 New drbd meta data block successfully created.
@@ -139,7 +148,8 @@ SKIPPED initializing the new bitmap area
 $ rm -f "$img" && truncate -s 33554432 "$img"
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-external create-md --bitmap-block-size 8K --effective-size 5000000000 1 2>/dev/null | tail -1
 New drbd meta data block successfully created.
-$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-external create-md 2>&1 >/dev/null | grep -e '^confused' -e '^Conversion refused'; echo "${PIPESTATUS[0]}"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-external create-md 2>&1 >/dev/null | grep -e '^confused' -e '^   \* grow' -e '^Conversion refused' | sed -e "s|$img|IMG|"; echo "${PIPESTATUS[0]}"
+   * grow the meta data device IMG by at least 43564 kB
 Conversion refused.
 10
 $ rm -rf "$tmpdir" "$img"
