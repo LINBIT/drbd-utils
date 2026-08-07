@@ -421,13 +421,40 @@
         </listitem>
       </varlistentry>
       <varlistentry>
-        <term><option>restore-md</option> <replaceable>dump_file</replaceable></term>
+        <term><option>restore-md</option> <replaceable>dump_file</replaceable>
+	  <arg choice="opt" rep="norepeat"><option>--max-peers=</option><replaceable>val</replaceable></arg>
+	  <arg choice="opt" rep="norepeat"><option>--peers=</option><replaceable>node-id-list</replaceable></arg></term>
         <listitem>
           <para><indexterm significance="normal"><primary>drbdmeta</primary><secondary>restore-md </secondary></indexterm>
 	    Replace the metadata on the device with the contents of
 	    <replaceable>dump_file</replaceable>.  The dump file format is
 	    defined by the output of the <option>dump-md</option> command.
 	</para>
+	  <para>
+	    <option>--max-peers</option> writes a different number of bitmap
+	    slots than the dump has, keeping the data generation identifiers
+	    that <option>create-md</option> would discard. The dump holds one
+	    <literal>bitmap[N]</literal> section per slot, so the slots are
+	    re-numbered rather than re-interleaved.
+	  </para>
+	  <para>
+	    Fewer slots than the dump has drop the ones that no peer owns
+	    first. If the peers still own more slots than remain, the choice is
+	    refused and the candidates are listed;
+	    <option>--peers</option> then names the peers whose slots to keep.
+	    A kept slot takes the lowest free number, and its peer entry
+	    follows it.
+	  </para>
+	  <para>
+	    More slots than the dump has take their content from a slot that no
+	    peer owns. Those all track from day0, so any of them will do; if the
+	    dump has none, the added slots come out all set, which is the state
+	    <option>forget-peer</option> leaves behind. A peer entry that the
+	    dump points at one of the added slots gets the day0 bitmap UUID, the
+	    one shared by the peers that have not seen our data. With internal
+	    metadata the added slots take their space from the data area; if the
+	    last agreed device size no longer fits, the restore is refused.
+	  </para>
         </listitem>
       </varlistentry>
     </variablelist>

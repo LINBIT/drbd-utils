@@ -1,0 +1,148 @@
+## Test "drbdmeta restore-md --max-peers", which changes the number of bitmap
+## slots of v09 meta data while keeping the data generation identifiers.
+##
+## Test layout: 256 MB image, flex-internal meta data, 3 bitmap slots, peer node
+## id 1 owning slot 0 and peer node id 2 owning slot 1.  Slot 2 is in use by
+## nobody.  The first 32 bit word of slot 1 is set: the slots interleave word by
+## word, so that is out-of-sync for node id 2 alone.
+##
+## The test walks through, in this order:
+##  - the same count changes nothing
+##  - fewer slots drop the ones no peer owns first
+##  - fewer slots than peers own is ambiguous and refused; --peers says which
+##    to keep, the kept slot is renumbered, and its bits follow it
+##  - room that the kept slots leave over goes to a slot the dump has, rather
+##    than to a slot that comes out all set; where every slot of the dump is
+##    owned there is none left to keep, and the all set slot is reported
+##  - --peers naming a peer that owns no slot at all is refused
+##  - more slots copy a slot that no peer owns, since those all track from
+##    day0; with no such slot to copy, the added slot comes out all set
+##  - a peer that a new slot is handed to gets the day0 bitmap UUID
+##  - growing beyond what the last agreed device size leaves is refused
+##  - a dump whose "max-peers" is out of range is refused before anything
+##    indexes a bitmap slot array with it
+$ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
+$ truncate -s 268435456 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --effective-size 500000 3 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | awk '/^peer\[1\] \{/{p=1} /^peer\[2\] \{/{p=2} {if (p==1 && sub(/bitmap-index -1;/, "bitmap-index 0;")) p=0; else if (p==2 && sub(/bitmap-index -1;/, "bitmap-index 1;")) p=0} {print}' > "$tmpdir/edit.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md "$tmpdir/edit.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ bm_abs=$(drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
+$ printf '\377\377\377\377' | dd of="$img" bs=1 seek=$((bm_abs + 4)) count=4 conv=notrunc status=none
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null > "$tmpdir/base.txt"
+$ grep -e '^max-peers' -e '^# bits-set' "$tmpdir/base.txt"
+max-peers 3;
+# bits-set[0] 0;
+# bits-set[1] 32;
+# bits-set[2] 0;
+$ cp "$img" "$tmpdir/base.img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md --max-peers 3 "$tmpdir/base.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -e '^max-peers' -e '^# bits-set'
+max-peers 3;
+# bits-set[0] 0;
+# bits-set[1] 32;
+# bits-set[2] 0;
+$ cp "$tmpdir/base.img" "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md --max-peers 2 "$tmpdir/base.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -e '^max-peers' -e '^# bits-set'
+max-peers 2;
+# bits-set[0] 0;
+# bits-set[1] 32;
+$ cp "$tmpdir/base.img" "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md --max-peers 1 "$tmpdir/base.txt" 2>&1 >/dev/null | grep -e '^This dump' -e '^  peer node id' -e '^Name the peers'; echo "${PIPESTATUS[0]}"
+This dump has 2 bitmap slots in use, --max-peers keeps 1:
+  peer node id 1 owns bitmap slot 0
+  peer node id 2 owns bitmap slot 1
+Name the peers to keep with --peers.  "drbdmeta dump-md" shows
+10
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -e '^max-peers'
+max-peers 3;
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md --max-peers 1 --peers 2 "$tmpdir/base.txt" 2>&1 >/dev/null | grep -e '^dropping' -e '^bitmap slot'
+dropping bitmap slot 0 of peer node id 1
+bitmap slot 1 of peer node id 2 becomes slot 0
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -e '^max-peers' -e '^# bits-set'
+max-peers 1;
+# bits-set[0] 32;
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | sed -n '/^peer\[2\] {/,/^}/p' | grep -e bitmap-index
+    bitmap-index 0;
+$ cp "$tmpdir/base.img" "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md --max-peers 2 --peers 2 "$tmpdir/base.txt" 2>&1 >/dev/null | grep -e '^dropping' -e '^bitmap slot'
+dropping bitmap slot 0 of peer node id 1
+bitmap slot 1 of peer node id 2 becomes slot 0
+bitmap slot 2, which no peer owns, becomes slot 1
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -e '^max-peers' -e '^# bits-set'
+max-peers 2;
+# bits-set[0] 32;
+# bits-set[1] 0;
+$ cp "$tmpdir/base.img" "$img"
+$ awk '/^peer\[3\] \{/{p=1} {if (p && sub(/bitmap-index -1;/, "bitmap-index 2;")) p=0} {print}' "$tmpdir/base.txt" > "$tmpdir/owned.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md --max-peers 2 --peers 2 "$tmpdir/owned.txt" 2>&1 >/dev/null | grep -e '^dropping' -e '^bitmap slot' -e '^no slot left'
+dropping bitmap slot 0 of peer node id 1
+bitmap slot 1 of peer node id 2 becomes slot 0
+dropping bitmap slot 2 of peer node id 3
+bitmap slot 1 comes out all out of sync: the dump has
+no slot left that no peer owns
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -e '^max-peers' -e '^# bits-set'
+max-peers 2;
+# bits-set[0] 32;
+# bits-set[1] 65536;
+$ cp "$tmpdir/base.img" "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md --max-peers 2 --peers 5 "$tmpdir/base.txt" 2>&1 >/dev/null | grep -e '^--peers'; echo "${PIPESTATUS[0]}"
+--peers: peer node id 5 has no bitmap slot in this dump
+10
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -e '^max-peers'
+max-peers 3;
+$ cp "$tmpdir/base.img" "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md --max-peers 5 "$tmpdir/base.txt" 2>&1 >/dev/null | grep -e '^adding'
+adding bitmap slots 3 to 4, as a copy of day0 slot 2
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -e '^max-peers' -e '^# bits-set'
+max-peers 5;
+# bits-set[0] 0;
+# bits-set[1] 32;
+# bits-set[2] 0;
+# bits-set[3] 0;
+# bits-set[4] 0;
+$ cp "$tmpdir/base.img" "$img"
+$ sed -e 's/^max-peers 3;/max-peers 2;/' -e '/^bitmap\[2\] {/,/^}/d' -e '/^# bits-set\[2\]/d' "$tmpdir/base.txt" > "$tmpdir/full.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md --max-peers 3 "$tmpdir/full.txt" 2>&1 >/dev/null | grep -e '^adding'
+adding bitmap slot 2, all out of sync: no day0 slot to copy
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -e '^max-peers' -e '^# bits-set'
+max-peers 3;
+# bits-set[0] 0;
+# bits-set[1] 32;
+# bits-set[2] 65536;
+$ cp "$tmpdir/base.img" "$img"
+$ awk '/^peer\[31\] \{/{p=1} {if (p && sub(/bitmap-uuid 0x0000000000000000;/, "bitmap-uuid 0x00000000DA700000;")) p=0} {print}' "$tmpdir/base.txt" | awk '/^peer\[4\] \{/{p=1} {if (p && sub(/bitmap-index -1;/, "bitmap-index 3;")) p=0} {print}' > "$tmpdir/day0.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md --max-peers 4 "$tmpdir/day0.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | sed -n '/^peer\[4\] {/,/^}/p' | grep -e bitmap-index -e bitmap-uuid
+    bitmap-index 3;
+    bitmap-uuid 0x00000000DA700000;
+$ rm -f "$img" && truncate -s 268435456 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --effective-size 524200 1 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null > "$tmpdir/tight.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md --max-peers 8 "$tmpdir/tight.txt" 2>&1 >/dev/null | tail -8 | sed -e "s|$img|IMG|"; echo "${PIPESTATUS[0]}"
+A bitmap of 8 slots at 4096 bytes per bit leaves room for only 262044 kB of data,
+while the last agreed device size is 262100 kB.
+You need to either
+   * reduce the data area by at least 56 kB
+     (a DRBD device that is in use somewhere must not be truncated:
+     shrink the file system, or whatever else uses it, first)
+   * grow the backing device IMG by at least 60 kB
+Restore refused.
+10
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -e '^max-peers'
+max-peers 1;
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md --peers 1 "$tmpdir/tight.txt" 2>&1 >/dev/null | grep -e '^restore-md' -e '^--max-peers drops'; echo "${PIPESTATUS[0]}"
+restore-md: --peers says which bitmap slots to keep when
+--max-peers drops some.  Without it there is nothing to choose
+10
+$ sed -e 's/^max-peers 1;/max-peers 99;/' "$tmpdir/tight.txt" > "$tmpdir/out-of-range.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md --max-peers 2 "$tmpdir/out-of-range.txt" 2>&1 >/dev/null | grep -e '^Parse error'; echo "${PIPESTATUS[0]}"
+Parse error in line 8: max-peers 99 out of range (1 to 32)
+10
+$ rm -rf "$tmpdir" "$img"

@@ -89,6 +89,7 @@ uint64_t option_effective_size = 0;
 uint64_t option_diskful_peer_mask = 0;
 uint64_t option_peer_mask = 0;
 uint64_t option_slot_mask = 0;
+int	option_max_peers = -1;
 const char *option_initial_current_uuid = NULL;
 bool option_consistent = false;
 bool option_uptodate = false;
@@ -147,6 +148,7 @@ enum metaopt_long_only {
 	OPT_VAR_LIB_DRBD,
 	OPT_PEERS,
 	OPT_BITMAP_SLOTS,
+	OPT_MAX_PEERS,
 };
 
 struct option metaopt[] = {
@@ -173,6 +175,7 @@ struct option metaopt[] = {
     { "var-lib-drbd", required_argument, NULL, OPT_VAR_LIB_DRBD },
     { "peers", required_argument, NULL, OPT_PEERS },
     { "bitmap-slots", required_argument, NULL, OPT_BITMAP_SLOTS },
+    { "max-peers", required_argument, NULL, OPT_MAX_PEERS },
     { NULL,     0,              0, 0 },
 };
 
@@ -955,7 +958,11 @@ struct meta_cmd cmds[] = {
 		"[--output-format={binary,hex,json}]",
 		meta_dump_superblock, 1, 0, 0},
 	{"hexdump-superblock", 0, meta_hex_dump_superblock, 1, 0, 0},
-	{"restore-md", "file", meta_restore_md, 1, 0, 1},
+	{"restore-md",
+		"file "
+		"[--max-peers {val}] "
+		"[--peers {val}]",
+		meta_restore_md, 1, 0, 1},
 	{"verify-dump", "file", meta_verify_dump_file, 1, 0, 0},
 	{"apply-al", 0, meta_apply_al, 1, 0, 1},
 	{"wipe-md", 0, meta_wipe_md, 1, 0, 1},
@@ -1650,8 +1657,8 @@ static uint64_t bitmap_dirty_slots(struct format *cfg)
  *
  * --peers names them by the peer that owns them, --bitmap-slots by
  * number.  A slot without an owner can only be named by number: forget-peer
- * clears the peer entry, while the slot keeps its bits until something
- * re-writes the bitmap. */
+ * clears the peer entry, and what stays behind is a slot that tracks from
+ * day0, like every other slot no peer owns. */
 static uint64_t keep_slots_mask(const struct md_cpu *md, unsigned int slots_left,
 				const char *what)
 {
@@ -4128,24 +4135,39 @@ static int assign_32_of_64bit(int i, uint64_t value, int max_peers)
 	return i + max_peers;
 }
 
-int parse_bitmap_window_one_peer(struct format *cfg, int window, int peer_nr, int parse_only)
+/* Where the bitmap slots of the dump end up in the meta data we write.  Plain
+ * restore-md keeps them where they are; --max-peers drops or adds slots. */
+static struct {
+	int dump_max_peers;
+	int target[DRBD_PEERS_MAX];	/* dump slot -> our slot, -1 to drop it */
+	int source;			/* our slot the added ones copy, -1 for none */
+	uint64_t new_slots;		/* our slots the dump has no section for */
+} bitmap_slot_map;
+
+/* Read the "bitmap[dump_slot]" section of the dump into bitmap slot
+ * target_slot of the meta data we are about to write.  A negative target_slot
+ * consumes the section without keeping it: --max-peers drops that slot. */
+int parse_bitmap_window_one_peer(struct format *cfg, int window, int dump_slot,
+				 int target_slot, int parse_only)
 {
 	unsigned int max_peers = cfg->md.max_peers;
 	le_u32 *bm = on_disk_buffer;
+	int drop = parse_only || target_slot < 0;
+	int start = target_slot < 0 ? 0 : target_slot;
 	uint64_t value;
 	int i, times;
 
-	i = peer_nr - window * (buffer_size / sizeof(*bm));
+	i = start - window * (buffer_size / sizeof(*bm));
 
 	if (format_version(cfg) < DRBD_V09)
 		EXP(TK_BM);
 	else {
 		EXP(TK_BITMAP); EXP('[');
 		EXP(TK_NUM); EXP(']');
-		if (yylval.u64 != peer_nr) {
+		if (yylval.u64 != dump_slot) {
 			fprintf(stderr, "Parse error in line %u: "
 				"Expected peer slot %d but found %d\n",
-				yylineno, i, (int)yylval.u64);
+				yylineno, dump_slot, (int)yylval.u64);
 			exit(10);
 		}
 	}
@@ -4164,7 +4186,7 @@ int parse_bitmap_window_one_peer(struct format *cfg, int window, int peer_nr, in
 			 * This seemed to be the least ugly way to implement a
 			 * "parse_only" functionality without ugly if-branches
 			 * or the maintenance nightmare of code duplication */
-			if (parse_only) {
+			if (drop) {
 				i += max_peers * (sizeof(value) / sizeof(*bm));
 				break;
 			}
@@ -4178,7 +4200,7 @@ int parse_bitmap_window_one_peer(struct format *cfg, int window, int peer_nr, in
 			EXP(TK_TIMES);
 			EXP(TK_U64);
 			EXP(';');
-			if (parse_only) {
+			if (drop) {
 				i += times * max_peers * (sizeof(value) / sizeof(*bm));
 				break;
 			}
@@ -4198,20 +4220,46 @@ int parse_bitmap_window_one_peer(struct format *cfg, int window, int peer_nr, in
 	}
 break_loop:
 
-	return i - peer_nr;
+	return i - start;
 }
 
 int parse_bitmap_window(struct format *cfg, int window, int parse_only)
 {
-	int words = 0, i;
+	unsigned int max_peers = cfg->md.max_peers;
+	le_u32 *bm = on_disk_buffer;
+	const le_u32 all_set = { .le = cpu_to_le32(~0U) };
+	int words = 0, w, s, t, g;
 
-	if (format_version(cfg) < DRBD_V09) {
-		return parse_bitmap_window_one_peer(cfg, window, 0, parse_only);
-	} else /* >= DRBD_V09 */ {
-		for (i = 0; i < cfg->md.max_peers; i++) {
-			words = parse_bitmap_window_one_peer(cfg, window, i, parse_only);
-		}
+	if (format_version(cfg) < DRBD_V09)
+		return parse_bitmap_window_one_peer(cfg, window, 0, 0, parse_only);
+
+	/* Slots the dump does not fill keep whatever the previous window left
+	 * in the buffer, unless we clear it here. */
+	if (!parse_only)
+		memset(on_disk_buffer, 0x00, buffer_size);
+
+	for (s = 0; s < bitmap_slot_map.dump_max_peers; s++) {
+		w = parse_bitmap_window_one_peer(cfg, window, s,
+						 bitmap_slot_map.target[s], parse_only);
+		if (w > words)
+			words = w;
 	}
+
+	if (parse_only || !bitmap_slot_map.new_slots)
+		return words;
+
+	/* Slots that --max-peers added have no section in the dump.  Give them
+	 * what a day0 slot of the dump holds; with no day0 slot to copy, all
+	 * bits are the only honest answer, as for a peer that forget-peer
+	 * dropped. */
+	for (t = 0; t < (int)max_peers; t++) {
+		if (!(bitmap_slot_map.new_slots & (1ULL << t)))
+			continue;
+		for (g = 0; g * max_peers < (unsigned int)words; g++)
+			bm[g * max_peers + t] = bitmap_slot_map.source < 0 ?
+				all_set : bm[g * max_peers + bitmap_slot_map.source];
+	}
+
 	return words;
 }
 
@@ -4265,6 +4313,166 @@ void parse_bitmap(struct format *cfg, int parse_only)
 
 		window++;
 	} while (words == buffer_size / sizeof(*bm));
+}
+
+static int day0_peer_id(struct format *cfg);
+
+/* Work out where the bitmap slots of the dump go, once every peer entry of the
+ * dump has been read.  Without --max-peers they stay where they are. */
+static void map_bitmap_slots(struct format *cfg)
+{
+	int dump_max = bitmap_slot_map.dump_max_peers;
+	int max_peers = cfg->md.max_peers;
+	int owner[DRBD_PEERS_MAX];
+	int highest = dump_max > max_peers ? dump_max : max_peers;
+	uint64_t keep = 0;
+	int day0, n_keep = 0;
+	int p, s, t;
+
+	for (s = 0; s < DRBD_PEERS_MAX; s++) {
+		bitmap_slot_map.target[s] = s < dump_max ? s : -1;
+		owner[s] = -1;
+	}
+	bitmap_slot_map.source = -1;
+	bitmap_slot_map.new_slots = 0;
+
+	if (!is_v09(cfg))
+		return;
+
+	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
+		s = cfg->md.peers[p].bitmap_index;
+		if (s < 0)
+			continue;
+		if (s >= highest) {
+			fprintf(stderr,
+				"peer node id %d owns bitmap slot %d, but there are only %d\n",
+				p, s, highest);
+			exit(10);
+		}
+		owner[s] = p;
+	}
+
+	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
+		if (!(option_peer_mask & (1ULL << p)))
+			continue;
+		if (cfg->md.peers[p].bitmap_index < 0) {
+			fprintf(stderr, "--peers: peer node id %d has no bitmap slot"
+				" in this dump\n", p);
+			exit(10);
+		}
+	}
+
+	if (max_peers >= dump_max) {
+		/* The slots of the dump keep their number.  Whoever owns one we
+		 * add has not seen our data: give it the day0 UUID. */
+		day0 = day0_peer_id(cfg);
+		for (t = dump_max; t < max_peers; t++) {
+			bitmap_slot_map.new_slots |= 1ULL << t;
+			p = owner[t];
+			if (p < 0 || day0 < 0 || cfg->md.peers[p].bitmap_uuid)
+				continue;
+			cfg->md.peers[p].bitmap_uuid = cfg->md.peers[day0].bitmap_uuid;
+			cfg->md.peers[p].bitmap_dagtag = cfg->md.peers[day0].bitmap_dagtag;
+		}
+		/* Slots no peer owns all track from day0, so any of them serves
+		 * as the source; take the first. */
+		for (s = 0; s < dump_max; s++) {
+			if (owner[s] < 0) {
+				bitmap_slot_map.source = s;
+				break;
+			}
+		}
+		if (bitmap_slot_map.new_slots) {
+			if (max_peers - dump_max == 1)
+				fprintf(stderr, "adding bitmap slot %d, ", dump_max);
+			else
+				fprintf(stderr, "adding bitmap slots %d to %d, ",
+					dump_max, max_peers - 1);
+			if (bitmap_slot_map.source < 0)
+				fprintf(stderr, "all out of sync: no day0 slot to copy\n");
+			else
+				fprintf(stderr, "as a copy of day0 slot %d\n",
+					bitmap_slot_map.source);
+		}
+		return;
+	}
+
+	/* Fewer slots than the dump has: the ones no peer owns go first, and
+	 * only as far as the owned ones need the room. */
+	for (s = 0; s < dump_max; s++) {
+		if (owner[s] < 0)
+			continue;
+		if (option_peer_mask && !(option_peer_mask & (1ULL << owner[s])))
+			continue;
+		keep |= 1ULL << s;
+		n_keep++;
+	}
+	if (n_keep > max_peers) {
+		fprintf(stderr,
+			"This dump has %d bitmap slots in use, --max-peers keeps %d:\n",
+			n_keep, max_peers);
+		for (s = 0; s < dump_max; s++) {
+			if (keep & (1ULL << s))
+				fprintf(stderr, "  peer node id %d owns bitmap slot %d\n",
+					owner[s], s);
+		}
+		fprintf(stderr,
+			"Name the peers to keep with --peers.  \"drbdmeta dump-md\" shows\n"
+			"what each slot tracks.\n");
+		exit(10);
+	}
+
+	/* Room the owned slots leave over is better spent on slots the dump
+	 * has than on slots that come out all set.  Those all track from day0,
+	 * so it does not matter which of them stays. */
+	for (s = 0; s < dump_max && n_keep < max_peers; s++) {
+		if (owner[s] < 0) {
+			keep |= 1ULL << s;
+			n_keep++;
+		}
+	}
+
+	for (s = 0, t = 0; s < dump_max; s++) {
+		p = owner[s];
+		if (keep & (1ULL << s)) {
+			bitmap_slot_map.target[s] = t;
+			if (p >= 0)
+				cfg->md.peers[p].bitmap_index = t;
+			if (s != t && p >= 0)
+				fprintf(stderr, "bitmap slot %d of peer node id %d becomes slot %d\n",
+					s, p, t);
+			else if (s != t)
+				fprintf(stderr, "bitmap slot %d, which no peer owns, becomes slot %d\n",
+					s, t);
+			t++;
+			continue;
+		}
+		bitmap_slot_map.target[s] = -1;
+		if (p >= 0) {
+			fprintf(stderr, "dropping bitmap slot %d of peer node id %d\n", s, p);
+			cfg->md.peers[p].bitmap_index = -1;
+		}
+	}
+	for (; t < max_peers; t++) {
+		bitmap_slot_map.new_slots |= 1ULL << t;
+		fprintf(stderr, "bitmap slot %d comes out all out of sync: the dump has\n"
+			"no slot left that no peer owns\n", t);
+	}
+}
+
+/* The "max-peers" line of a v09 dump.  The slot count it names indexes arrays
+ * of DRBD_PEERS_MAX entries, so it has to be in range before anything looks at
+ * it. */
+static unsigned int parse_dump_max_peers(void)
+{
+	EXP(TK_MAX_PEERS); EXP(TK_NUM); EXP(';');
+	if (yylval.u64 < 1 || yylval.u64 > DRBD_PEERS_MAX) {
+		fprintf(stderr, "Parse error in line %u: "
+			"max-peers "U64" out of range (1 to %d)\n",
+			yylineno, yylval.u64, DRBD_PEERS_MAX);
+		exit(10);
+	}
+	return yylval.u64;
 }
 
 /* Read everything a dump of format "v" says about the meta data into "md",
@@ -4429,9 +4637,10 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 	}
 	EXP(';');
 	if (is_v09(cfg)) {
-		EXP(TK_MAX_PEERS);
-		EXP(TK_NUM); EXP(';');
-		new_max_peers = yylval.u64;
+		new_max_peers = parse_dump_max_peers();
+		bitmap_slot_map.dump_max_peers = new_max_peers;
+		if (option_max_peers != -1)
+			new_max_peers = option_max_peers;
 	}
 
 	cfg->ops->md_initialize(cfg, 0, new_max_peers);
@@ -4460,6 +4669,21 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 		if (verbose >= 2)
 			fprintf(stderr, "adjusting activity-log and bitmap offsets\n");
 		re_initialize_md_offsets(cfg);
+	}
+
+	map_bitmap_slots(cfg);
+
+	/* More bitmap slots need more bitmap, which with internal meta data
+	 * takes that space from the data area.  Truncating a device a file
+	 * system still believes is larger is not ours to decide. */
+	if (option_max_peers != -1 && cfg->md.effective_size > cfg->max_usable_sect) {
+		char bitmap[80];
+
+		snprintf(bitmap, sizeof(bitmap), "A bitmap of %u slot%s",
+			 cfg->md.max_peers, cfg->md.max_peers == 1 ? "" : "s");
+		report_data_area_too_small(cfg, bitmap, NULL);
+		fprintf(stderr, "Restore refused.\n");
+		exit(10);
 	}
 
 	clip_effective_size_and_bm_bytes(cfg);
@@ -6338,6 +6562,14 @@ int main(int argc, char **argv)
 	    case OPT_BITMAP_SLOTS:
 		option_slot_mask = node_mask_from_arg(optarg);
 		break;
+	    case OPT_MAX_PEERS:
+		option_max_peers = m_strtoll(optarg, 1);
+		if (option_max_peers < 1 || option_max_peers > DRBD_PEERS_MAX) {
+			fprintf(stderr, "--max-peers: out of range (1 to %d)\n",
+				DRBD_PEERS_MAX);
+			exit(20);
+		}
+		break;
 	    default:
 		print_usage_and_exit();
 		break;
@@ -6459,14 +6691,28 @@ int main(int argc, char **argv)
 	}
 
 	if (option_peer_mask &&
-	    command->function != &meta_create_md) {
-		fprintf(stderr, "The --peers option is only allowed with create-md\n");
+	    command->function != &meta_create_md &&
+	    command->function != &meta_restore_md) {
+		fprintf(stderr, "The --peers option is only allowed with create-md and restore-md\n");
 		exit(10);
 	}
 
 	if (option_slot_mask &&
 	    command->function != &meta_create_md) {
 		fprintf(stderr, "The --bitmap-slots option is only allowed with create-md\n");
+		exit(10);
+	}
+
+	if (option_max_peers != -1 &&
+	    command->function != &meta_restore_md) {
+		fprintf(stderr, "The --max-peers option is only allowed with restore-md\n");
+		exit(10);
+	}
+
+	if (option_peer_mask && option_max_peers == -1 &&
+	    command->function == &meta_restore_md) {
+		fprintf(stderr, "restore-md: --peers says which bitmap slots to keep when\n"
+			"--max-peers drops some.  Without it there is nothing to choose\n");
 		exit(10);
 	}
 

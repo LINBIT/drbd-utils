@@ -101,7 +101,7 @@ dropping the out-of-sync bits of bitmap slot 1, which no peer owns
 initializing the new bitmap (8 KB) to all zero
 initializing the new bitmap (8 KB) to all zero using pwrite
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal apply-al --peers 1 2>&1 >/dev/null | grep -e peers
-The --peers option is only allowed with create-md
+The --peers option is only allowed with create-md and restore-md
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal apply-al --bitmap-slots 1 2>&1 >/dev/null | grep -e bitmap-slots
 The --bitmap-slots option is only allowed with create-md
 $ rm -rf "$tmpdir" "$img"
