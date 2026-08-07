@@ -1,0 +1,64 @@
+## Test the activity log geometry of a "drbdmeta create-md" that converts:
+## --al-stripes and --al-stripe-size win over what the meta data being converted
+## carries, and without them that geometry is kept.
+##
+## Bug guarded against: create-md silently ignored both options wherever it
+## converted, so the only way to change the geometry was dump-md plus restore-md.
+##
+## The activity log sits between the bitmap and the super block of the
+## flexible-size internal layout, so a bigger one moves the bitmap and takes its
+## room from the data area: 4 stripes of 32 KB instead of one grow md_size_sect
+## from 88 to 280 sectors, and shrink the data area by 96 kB.
+##
+## Test layout: 256 MB image, flex-internal meta data, one peer.
+
+$ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
+$ truncate -s 268435456 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --effective-size 500000 1 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -c '[.al_stripes, .al_stripe_size_4k, .al_offset, .bm_offset, .md_size_sect]'
+[1,8,-64,-80,88]
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --al-stripes 4 --al-stripe-size 32 2>&1 >/dev/null | grep -e '^re-creating the activity log'
+re-creating the activity log with 4 stripes of 32 KB
+$ drbdmeta --force - v08 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -c '[.al_stripes, .al_stripe_size_4k, .al_offset, .bm_offset, .md_size_sect, .["#meta"].valid]'
+[4,8,-256,-272,280,"VALID_MD_FOUND"]
+$ al_abs=$(drbdmeta --force - v08 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .al_offset * 512)')
+$ od -An -j "$al_abs" -N 4 -tx1 "$img"
+ 69 cb 65 a2
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md 1 2>&1 >/dev/null | grep -c '^re-creating the activity log'
+0
+$ drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -c '[.al_stripes, .al_stripe_size_4k, .md_size_sect, .["#meta"].valid]'
+[4,8,280,"VALID_MD_FOUND"]
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --al-stripes 4 --al-stripe-size 32 2>&1 >/dev/null | grep -c '^re-creating the activity log'
+0
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --al-stripes 1 --al-stripe-size 32 1 2>&1 >/dev/null | grep -e '^re-creating the activity log'
+re-creating the activity log with 1 stripe of 32 KB
+$ drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -c '[.al_stripes, .md_size_sect, .["#meta"].valid]'
+[1,88,"VALID_MD_FOUND"]
+$ bm_abs=$(drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
+$ printf '\001' | dd of="$img" bs=1 seek="$bm_abs" count=1 conv=notrunc status=none
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --al-stripes 4 --al-stripe-size 32 2>&1 >/dev/null | grep -e '^The activity log takes' -e '^become a resync' -e '^--al-stripe-size the' -e '^Mark the whole' -e '^marking the whole device'
+The activity log takes its room next to the bitmap, so another
+become a resync of the whole device.  Without --al-stripes and
+--al-stripe-size the conversion keeps them.
+Mark the whole device out of sync?
+marking the whole device out-of-sync in the new bitmap (8 KB)
+$ bm_abs=$(drbdmeta --force - v08 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
+$ od -An -j "$bm_abs" -N 8 -tx1 "$img"
+ ff ff ff ff ff ff ff ff
+$ rm -f "$img" && truncate -s 268435456 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --effective-size 524200 1 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md --al-stripes 4 --al-stripe-size 32 2>&1 >/dev/null | tail -8 | sed -e "s|$img|IMG|"; echo "${PIPESTATUS[0]}"
+An activity log of 4 stripes of 32 KB leaves room for only 262004 kB of data,
+while the last agreed device size is 262100 kB.
+You need to either
+   * reduce the data area by at least 96 kB
+     (a DRBD device that is in use somewhere must not be truncated:
+     shrink the file system, or whatever else uses it, first)
+   * grow the backing device IMG by at least 100 kB
+Conversion refused.
+10
+$ drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -c '[.al_stripes, .md_size_sect, .effective_size, .["#meta"].valid]'
+[1,88,524200,"VALID_MD_FOUND"]
+$ rm -rf "$tmpdir" "$img"

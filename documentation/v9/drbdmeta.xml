@@ -198,6 +198,17 @@
 	    <command>drbdmeta 0 v08 /dev/vg23/lv42 internal create-md --al-stripes 7 --al-stripe-size 64</command>
 	  </para>
 	  <para>
+	    When <option>create-md</option> converts existing metadata, the two
+	    options change the activity log geometry of that metadata as well.
+	    The activity log sits next to the bitmap, so another geometry moves
+	    the bitmap: the activity log is re-created, and the bitmap with it.
+	    Where the bitmap being replaced tracks out-of-sync blocks, that costs
+	    a resync of the whole device, and <option>create-md</option> asks
+	    first. Without the two options the conversion keeps the geometry the
+	    metadata carries, and the out-of-sync blocks with it. Unapplied
+	    activity log transactions are lost either way.
+	  </para>
+	  <para>
 	    A numeric <replaceable>index</replaceable> names a slot of fixed size
 	    and fixed offsets, which holds one 32 KiB activity log stripe and
 	    4096 bytes per bitmap bit, and nothing else; DRBD refuses to attach

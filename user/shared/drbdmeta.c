@@ -6222,12 +6222,68 @@ int v08_move_internal_md_after_resize(struct format *cfg)
 	return err;
 }
 
+/* A create-md that converts keeps the activity log geometry of the meta data it
+ * converts.  Where the command line asks for another one, lay the meta data out
+ * for that instead.  The activity log sits next to the bitmap, so a different
+ * geometry moves the bitmap, and with internal meta data it also takes its room
+ * from the data area.  Returns whether the activity log has to be re-created.
+ */
+static bool convert_al_geometry(struct format *cfg)
+{
+	bool bitmap_moves, dirty;
+
+	if (cfg->md.al_stripes == option_al_stripes &&
+	    cfg->md.al_stripe_size_4k == option_al_stripe_size_4k)
+		return false;
+
+	/* The bitmap of the meta data being converted still lies where that meta
+	 * data had it; read it while its offsets are still the ones on disk.  It
+	 * is only left in place if nothing else moved it already. */
+	bitmap_moves = convert_initialize_bitmap_mode == IBM_SKIP;
+	dirty = bitmap_moves && bitmap_dirty_slots(cfg) != 0;
+
+	cfg->md.al_stripes = option_al_stripes;
+	cfg->md.al_stripe_size_4k = option_al_stripe_size_4k;
+	re_initialize_md_offsets(cfg);
+
+	if (cfg->md.effective_size > cfg->max_usable_sect) {
+		char al[80];
+
+		snprintf(al, sizeof(al), "An activity log of %u stripe%s of %u KB",
+			 cfg->md.al_stripes, cfg->md.al_stripes == 1 ? "" : "s",
+			 cfg->md.al_stripe_size_4k * 4);
+		report_data_area_too_small(cfg, al, NULL);
+		fprintf(stderr, "Conversion refused.\n");
+		exit(10);
+	}
+
+	fprintf(stderr, "re-creating the activity log with %u stripe%s of %u KB\n",
+		cfg->md.al_stripes, cfg->md.al_stripes == 1 ? "" : "s",
+		cfg->md.al_stripe_size_4k * 4);
+
+	if (bitmap_moves) {
+		if (dirty && !option_initialize_bitmap_mode_seen &&
+		    !confirmed("The activity log takes its room next to the bitmap, so another\n"
+			       "geometry moves the bitmap, and the out-of-sync blocks it tracks\n"
+			       "become a resync of the whole device.  Without --al-stripes and\n"
+			       "--al-stripe-size the conversion keeps them.\n"
+			       "Mark the whole device out of sync?")) {
+			printf("Operation cancelled.\n");
+			exit(1);
+		}
+		convert_initialize_bitmap_mode = dirty ? IBM_SET_ALL : IBM_ZEROOUT;
+	}
+
+	return true;
+}
+
 int meta_create_md(struct format *cfg, char **argv, int argc)
 {
 	int err = 0;
 	int max_peers = 1;
 	int i;
 	bool converted = false;
+	bool initialize_al_area = false;
 
 	if (is_v09(cfg)) {
 		if (argc < 1) {
@@ -6303,6 +6359,9 @@ int meta_create_md(struct format *cfg, char **argv, int argc)
 		converted = true;
 		err = 0; /* we have successfully converted something */
 
+		if (option_al_stripes_used)
+			initialize_al_area = convert_al_geometry(cfg);
+
 		check_for_existing_data(cfg);
 	}
 
@@ -6377,8 +6436,11 @@ int meta_create_md(struct format *cfg, char **argv, int argc)
 
 	/* The conversion may have changed the bitmap geometry, in which case the
 	 * bitmap has to be re-created before the new super block claims it. */
-	if (converted)
+	if (converted) {
+		if (initialize_al_area)
+			initialize_al(cfg);
 		initialize_bitmap_after_convert(cfg);
+	}
 
 	printf("Writing meta data...\n");
 	err = err || cfg->ops->md_cpu_to_disk(cfg); // <- short circuit
