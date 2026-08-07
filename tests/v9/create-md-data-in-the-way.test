@@ -1,0 +1,40 @@
+## Test the refusal of "drbdmeta create-md" when internal meta data would take
+## room a file system on the device still uses: it now says by how much, in both
+## directions -- how much the file system has to give up, and how much bigger
+## the device would have to be.
+##
+## Test layout: a 256 MB image with an ext2 super block written by hand -- 65536
+## blocks of 4096 bytes, so the file system claims all 262144 kB of it.  With 31
+## bitmap slots, 261860 kB are left over for data, 284 kB short.  Growing the
+## device has to cover the bigger bitmap that comes with it, hence 288 kB.
+##
+## An ext2 super block starts at byte 1024: the block count at 0x404, the log2
+## of the block size at 0x418, and the 0xEF53 magic at 0x438.
+
+$ img=$(mktemp --suffix=.img) && tmpdir=$(mktemp -d)
+$ truncate -s 268435456 "$img"
+$ printf '\000\000\001\000' | dd of="$img" bs=1 seek=1028 count=4 conv=notrunc status=none
+$ printf '\002' | dd of="$img" bs=1 seek=1048 count=1 conv=notrunc status=none
+$ printf '\123\357' | dd of="$img" bs=1 seek=1080 count=2 conv=notrunc status=none
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md 31 </dev/null 2>&1 | grep -v '^$' | tail -11 | sed -e "s|$img|IMG|"; echo "${PIPESTATUS[0]}"
+      262144 kB data area apparently used
+      261860 kB left usable by current configuration
+Device size would be truncated, which
+would corrupt data and result in
+'access beyond end of device' errors.
+You need to either
+   * use external meta data (recommended)
+   * shrink that filesystem by at least 284 kB first
+   * grow IMG by at least 288 kB
+   * zero out the device (destroy the filesystem)
+Operation refused.
+40
+$ truncate -s $((268435456 + 290816)) "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md 31 </dev/null 2>&1 | grep -v '^$' | tail -1; echo "${PIPESTATUS[0]}"
+Operation refused.
+40
+$ truncate -s $((268435456 + 294912)) "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md 31 </dev/null 2>&1 | grep -v '^$' | tail -1; echo "${PIPESTATUS[0]}"
+New drbd meta data block successfully created.
+0
+$ rm -rf "$tmpdir" "$img"

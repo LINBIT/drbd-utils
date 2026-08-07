@@ -5127,13 +5127,22 @@ void check_for_existing_data(struct format *cfg)
 
 		/* looks like file system data */
 		if (fs_kB > max_usable_kB) {
+			uint64_t grow_kB = missing_device_bytes(cfg, fs_kB << 1) >> 10;
+
 			printf(
 "\nDevice size would be truncated, which\n"
 "would corrupt data and result in\n"
 "'access beyond end of device' errors.\n"
 "You need to either\n"
 "   * use external meta data (recommended)\n"
-"   * shrink that filesystem first\n"
+"   * shrink that filesystem by at least %llu kB first\n",
+				(unsigned long long)(fs_kB - max_usable_kB));
+			if (grow_kB)
+				printf(
+"   * grow %s by at least %llu kB\n",
+					cfg->md_device_name,
+					(unsigned long long)grow_kB);
+			printf(
 "   * zero out the device (destroy the filesystem)\n"
 "Operation refused.\n\n");
 			exit(40); /* FIXME sane exit code! */
