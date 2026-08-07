@@ -1,0 +1,41 @@
+## Test that drbdmeta writes only the one layout that an indexed meta data
+## device can hold: a 32 KB activity log and 4096 bytes per bitmap bit.
+##
+## Bug guarded against: the slot an index names is 128 MB with fixed offsets,
+## and DRBD refuses to attach anything else there ("meta data offsets don't
+## make sense").  drbdmeta still laid out activity log striping as asked, and
+## max_usable_sectors() ran into its own assertion for any other bitmap
+## granularity: "ASSERT((cfg->md.bm_bytes_per_bit == 4096)) failed", abort.
+##
+## Test layout: a 192 MB image as the meta data device, index 0.  The default
+## layout is written, everything else refused, for v08 and v09 alike.
+## Flexible meta data, which sizes itself after the device, keeps taking both.
+
+$ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
+$ truncate -s 201326592 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" 0 create-md --effective-size 1000000 1 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force - v09 "$img" 0 dump-superblock --output json 2>/dev/null | jq -c '[.bm_bytes_per_bit, .md_size_sect, .al_offset, .bm_offset, .al_stripes, .al_stripe_size_4k]'
+[4096,262144,8,72,1,8]
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" 0 create-md --bitmap-block-size 8K --effective-size 1000000 1 2>&1 >/dev/null | tail -5; echo "${PIPESTATUS[0]}"
+Meta data at index 0 asks for an activity log of 32 KB and
+8192 bytes per bitmap bit.  The fixed size slot of an indexed
+meta data device takes only 32 KB and 4096 bytes per bitmap
+bit; DRBD would refuse to attach anything else.
+Use a meta data device of its own instead of an index.
+10
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" 0 create-md --al-stripes 4 --al-stripe-size 32 --effective-size 1000000 1 2>&1 >/dev/null | grep -e '^Meta data at index'; echo "${PIPESTATUS[0]}"
+Meta data at index 0 asks for an activity log of 128 KB and
+10
+$ drbdmeta --force - v09 "$img" 0 dump-superblock --output json 2>/dev/null | jq -c '[.bm_bytes_per_bit, .bm_offset, .al_stripes, .["#meta"].valid]'
+[4096,72,1,"VALID_MD_FOUND"]
+$ rm -f "$img" && truncate -s 201326592 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" 0 create-md --al-stripes 4 --al-stripe-size 32 2>&1 >/dev/null | grep -e '^Meta data at index'; echo "${PIPESTATUS[0]}"
+Meta data at index 0 asks for an activity log of 128 KB and
+10
+$ rm -f "$img" && truncate -s 201326592 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-external create-md --bitmap-block-size 8K --al-stripes 4 --al-stripe-size 32 --effective-size 1000000 1 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force - v09 "$img" flex-external dump-superblock --output json 2>/dev/null | jq -c '[.bm_bytes_per_bit, .al_stripes, .al_stripe_size_4k]'
+[8192,4,8]
+$ rm -rf "$tmpdir" "$img"

@@ -1449,6 +1449,21 @@ void re_initialize_md_offsets(struct format *cfg)
 	al_size_sect = cfg->md.al_stripes * cfg->md.al_stripe_size_4k * 8;
 	switch(cfg->md_index) {
 	default:
+		/* The meta data slot at a fixed index is exactly that: fixed.
+		 * DRBD accepts one 32 KB activity log stripe and 4k per bitmap
+		 * bit there, and nothing else, so write nothing else. */
+		if (al_size_sect != MD_AL_MAX_SECT_07 ||
+		    cfg->md.bm_bytes_per_bit != BM_BLOCK_SIZE_4k) {
+			fprintf(stderr,
+				"Meta data at index %d asks for an activity log of %u KB and\n"
+				"%u bytes per bitmap bit.  The fixed size slot of an indexed\n"
+				"meta data device takes only 32 KB and %u bytes per bitmap\n"
+				"bit; DRBD would refuse to attach anything else.\n"
+				"Use a meta data device of its own instead of an index.\n",
+				cfg->md_index, al_size_sect / 2,
+				cfg->md.bm_bytes_per_bit, BM_BLOCK_SIZE_4k);
+			exit(10);
+		}
 		cfg->md.md_size_sect = MD_RESERVED_SECT_07;
 		cfg->md.al_offset = MD_AL_OFFSET_07;
 		cfg->md.bm_offset = cfg->md.al_offset + al_size_sect;

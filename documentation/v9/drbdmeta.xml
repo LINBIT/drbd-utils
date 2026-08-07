@@ -198,6 +198,16 @@
 	    <command>drbdmeta 0 v08 /dev/vg23/lv42 internal create-md --al-stripes 7 --al-stripe-size 64</command>
 	  </para>
 	  <para>
+	    A numeric <replaceable>index</replaceable> names a slot of fixed size
+	    and fixed offsets, which holds one 32 KiB activity log stripe and
+	    4096 bytes per bitmap bit, and nothing else; DRBD refuses to attach
+	    anything else. Both <option>--al-stripes</option> /
+	    <option>--al-stripe-size-kB</option> and
+	    <option>--bitmap-block-size</option> therefore need a metadata device
+	    of their own, or one of the flexible layouts, which size themselves
+	    after the device.
+	  </para>
+	  <para>
 	    With the <option>--bitmap-block-size</option> option you can change the
 	    change-tracking bitmap's granularity from 4KiB to another
 	    value. Allowed values are: 4k, 8k, 16k, 32k, 64k, 128k, 256k, 512k,
