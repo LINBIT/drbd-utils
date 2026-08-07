@@ -1,0 +1,53 @@
+## Test "drbdmeta restore-md" with a dump whose "bm-byte-per-bit" is not the
+## 4096 that restore-md lays the meta data out for before it reads the dump.
+##
+## Test layout: 256 MB image, flex-internal meta data, one bitmap slot.
+##
+## The test walks through, in this order:
+##  - a dump of 8192 bytes per bit restores onto a device that currently holds
+##    4096-bytes-per-bit meta data, bits and all
+##  - where the finer bitmap no longer leaves room for the last agreed device
+##    size, restore-md refuses rather than truncating it, and the meta data on
+##    the device is left alone
+$ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
+$ truncate -s 268435456 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --effective-size 500008 --bitmap-block-size 8192 1 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ bm_abs=$(drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)')
+$ printf '\377\377\377\377' | dd of="$img" bs=1 seek=$((bm_abs)) count=4 conv=notrunc status=none
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null > "$tmpdir/8k.txt"
+$ grep -e '^la-size-sect' -e '^bm-byte-per-bit' -e '^# bm-bytes' -e '^# bits-set' "$tmpdir/8k.txt"
+la-size-sect 500008;
+bm-byte-per-bit 8192;
+# bm-bytes 4096;
+# bits-set[0] 32;
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --effective-size 500008 1 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md "$tmpdir/8k.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -e '^bm-byte-per-bit' -e '^# bm-bytes' -e '^# bits-set'
+bm-byte-per-bit 8192;
+# bm-bytes 4096;
+# bits-set[0] 32;
+$ rm -f "$img" && truncate -s 268435456 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md --effective-size 524224 --bitmap-block-size 8192 1 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null > "$tmpdir/tight8k.txt"
+$ grep -e '^la-size-sect' -e '^# bm-bytes' "$tmpdir/tight8k.txt"
+la-size-sect 524208;
+# bm-bytes 4096;
+$ sed -e 's/^bm-byte-per-bit 8192;/bm-byte-per-bit 4096;/' "$tmpdir/tight8k.txt" > "$tmpdir/tight4k.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md "$tmpdir/tight4k.txt" 2>&1 >/dev/null | tail -8 | sed -e "s|$img|IMG|"; echo "${PIPESTATUS[0]}"
+A bitmap of 1 slot at 4096 bytes per bit leaves room for only 262100 kB of data,
+while the last agreed device size is 262104 kB.
+You need to either
+   * reduce the data area by at least 4 kB
+     (a DRBD device that is in use somewhere must not be truncated:
+     shrink the file system, or whatever else uses it, first)
+   * grow the backing device IMG by at least 8 kB
+Restore refused.
+10
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -e '^la-size-sect' -e '^bm-byte-per-bit'
+la-size-sect 524208;
+bm-byte-per-bit 8192;
+$ rm -rf "$tmpdir" "$img"

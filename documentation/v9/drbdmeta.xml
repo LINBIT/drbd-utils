@@ -429,6 +429,9 @@
 	    Replace the metadata on the device with the contents of
 	    <replaceable>dump_file</replaceable>.  The dump file format is
 	    defined by the output of the <option>dump-md</option> command.
+	    The metadata is laid out for what the dump says, including a
+	    <literal>bm-byte-per-bit</literal> other than 4096 and an activity
+	    log geometry other than the default.
 	</para>
 	  <para>
 	    <option>--max-peers</option> writes a different number of bitmap

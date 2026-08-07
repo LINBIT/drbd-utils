@@ -4607,8 +4607,11 @@ static void parse_dump_md(struct md_cpu *md, enum md_format v)
 
 int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int parse_only)
 {
+	unsigned int laid_out_for;	/* bytes per bitmap bit of the layout */
+	unsigned int old_bm_bytes_per_bit = 0;
 	int old_max_peers = -1;
 	int new_max_peers = 1;
+	bool al_differs;
 	int err;
 
 	if (argc > 0) {
@@ -4622,6 +4625,7 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 	if (!parse_only) {
 		if (cfg->ops->open(cfg) != NO_VALID_MD_FOUND) {
 			old_max_peers = cfg->md.max_peers;
+			old_bm_bytes_per_bit = cfg->md.bm_bytes_per_bit;
 			if (!confirmed("Valid meta-data in place, overwrite?"))
 				return -1;
 		} else {
@@ -4644,6 +4648,7 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 	}
 
 	cfg->ops->md_initialize(cfg, 0, new_max_peers);
+	laid_out_for = cfg->md.bm_bytes_per_bit;
 	if (!parse_only) {
 		fprintf(stderr, "reinitializing\n");
 		if (old_max_peers < new_max_peers &&
@@ -4659,13 +4664,19 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 
 	parse_dump_md(&cfg->md, format_version(cfg));
 
-	if (option_al_stripes != cfg->md.al_stripes ||
-	    option_al_stripe_size_4k != cfg->md.al_stripe_size_4k) {
-		if (option_al_stripes_used) {
-			fprintf(stderr, "override activity log striping from commandline\n");
-			cfg->md.al_stripes = option_al_stripes;
-			cfg->md.al_stripe_size_4k = option_al_stripe_size_4k;
-		}
+	al_differs = option_al_stripes != cfg->md.al_stripes ||
+		     option_al_stripe_size_4k != cfg->md.al_stripe_size_4k;
+
+	if (al_differs && option_al_stripes_used) {
+		fprintf(stderr, "override activity log striping from commandline\n");
+		cfg->md.al_stripes = option_al_stripes;
+		cfg->md.al_stripe_size_4k = option_al_stripe_size_4k;
+	}
+	/* md_initialize() laid the meta data out for the default number of
+	 * bytes per bitmap bit, and for the activity log geometry the command
+	 * line asks for.  Where the dump says otherwise, the bitmap needs a
+	 * different amount of room, and the offsets move with it. */
+	if (al_differs || laid_out_for != cfg->md.bm_bytes_per_bit) {
 		if (verbose >= 2)
 			fprintf(stderr, "adjusting activity-log and bitmap offsets\n");
 		re_initialize_md_offsets(cfg);
@@ -4673,14 +4684,19 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 
 	map_bitmap_slots(cfg);
 
-	/* More bitmap slots need more bitmap, which with internal meta data
-	 * takes that space from the data area.  Truncating a device a file
-	 * system still believes is larger is not ours to decide. */
-	if (option_max_peers != -1 && cfg->md.effective_size > cfg->max_usable_sect) {
+	/* More bitmap slots, or fewer bytes per bit, need more bitmap, which
+	 * with internal meta data takes that space from the data area.
+	 * Truncating a device a file system still believes is larger is not
+	 * ours to decide. */
+	if ((option_max_peers != -1 ||
+	     (old_bm_bytes_per_bit && old_bm_bytes_per_bit != cfg->md.bm_bytes_per_bit)) &&
+	    cfg->md.effective_size > cfg->max_usable_sect) {
 		char bitmap[80];
 
-		snprintf(bitmap, sizeof(bitmap), "A bitmap of %u slot%s",
-			 cfg->md.max_peers, cfg->md.max_peers == 1 ? "" : "s");
+		snprintf(bitmap, sizeof(bitmap),
+			 "A bitmap of %u slot%s at %u bytes per bit",
+			 cfg->md.max_peers, cfg->md.max_peers == 1 ? "" : "s",
+			 cfg->md.bm_bytes_per_bit);
 		report_data_area_too_small(cfg, bitmap, NULL);
 		fprintf(stderr, "Restore refused.\n");
 		exit(10);
