@@ -1246,6 +1246,7 @@ void m_set_v9_uuid(struct md_cpu *md, int node_id, char **argv, int argc __attri
 		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_FENCING)) break;
 		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_FULL_SYNC)) break;
 		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_DEVICE_SEEN)) break;
+		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_DIVERGENCE_BITMAP)) break;
 	} while (0);
 }
 
@@ -3339,6 +3340,7 @@ char *pretty_peer_md_flags(char *inbuf, unsigned int buf_size, unsigned int flag
 	/* MDF_PEER_FENCING     */ [2] = "fencing",
 	/* MDF_PEER_FULL_SYNC   */ [3] = "full-sync",
 	/* MDF_PEER_DEVICE_SEEN */ [4] = "seen",
+	/* MDF_PEER_DIVERGENCE_BITMAP */ [5] = "divergence",
 	/* MDF_NODE_EXISTS      */ [16] = "exists",
 	};
 
