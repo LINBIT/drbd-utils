@@ -53,6 +53,8 @@ struct test_vars {
 	int msg_seq;
 	int auto_promote;
 	unsigned int on_no_quorum;
+	int quorum;
+	int resync_after;
 	unsigned int minor;
 	unsigned int volume_number;
 	int diskless;
@@ -108,6 +110,8 @@ void test_resource_opts(struct msg_buff *smsg, struct test_vars *vars)
 	nla_put_u32(smsg, DRBD_A_RES_OPTS_NODE_ID, test_node_id);
 	nla_put_u8(smsg, DRBD_A_RES_OPTS_AUTO_PROMOTE, vars->auto_promote);
 	nla_put_u32(smsg, DRBD_A_RES_OPTS_ON_NO_QUORUM, vars->on_no_quorum);
+	/* s32 on the wire, same encoding as u32 */
+	nla_put_u32(smsg, DRBD_A_RES_OPTS_QUORUM, vars->quorum);
 	nla_nest_end(smsg, nla);
 }
 
@@ -147,6 +151,8 @@ void test_disk_conf(struct msg_buff *smsg, struct test_vars *vars)
 	nla_put_string(smsg, DRBD_A_DISK_CONF_META_DEV, backing_dev(dev_disk_state));
 	nla_put_u32(smsg, DRBD_A_DISK_CONF_META_DEV_IDX, DRBD_MD_INDEX_FLEX_INT);
 	nla_put_u32(smsg, DRBD_A_DISK_CONF_AL_EXTENTS, vars->al_extents);
+	/* s32 on the wire, same encoding as u32 */
+	nla_put_u32(smsg, DRBD_A_DISK_CONF_RESYNC_AFTER, vars->resync_after);
 	nla_put_u32(smsg, DRBD_A_DISK_CONF_READ_BALANCING, vars->read_balancing);
 	nla_nest_end(smsg, nla);
 }
@@ -644,6 +650,8 @@ struct test_vars test_init_vars()
 		.msg_seq = -1,
 		.auto_promote = 1,
 		.on_no_quorum = 1,
+		.quorum = QOU_MAJORITY,
+		.resync_after = 7,
 		.minor = test_minor,
 		.volume_number = test_volume_number,
 		.diskless = 0,
@@ -689,6 +697,8 @@ int test_parse_vars(char *input, char *msg_name, struct test_vars *vars)
 		TEST_VAR(var_name, consumed, input, msg_seq, "%d")
 		TEST_VAR(var_name, consumed, input, auto_promote, "%d")
 		TEST_VAR(var_name, consumed, input, on_no_quorum, "%u")
+		TEST_VAR(var_name, consumed, input, quorum, "%d")
+		TEST_VAR(var_name, consumed, input, resync_after, "%d")
 		TEST_VAR(var_name, consumed, input, minor, "%u")
 		TEST_VAR(var_name, consumed, input, volume_number, "%u")
 		TEST_VAR(var_name, consumed, input, diskless, "%d")
