@@ -3,7 +3,7 @@ stages:
   - test
 
 variables:
-  BUILD_HELPERS_VERSION: 1aac59c8c8c2559448851ca5c6820fcf3a363363
+  BUILD_HELPERS_VERSION: 0fa86e05314b906db34862d95e81b598dc029fa1
   DRBD9_TESTS_REF: master
   # we have to change the way GitLab CI clones the repository.
   # by default, it is shallow, which gives us a wrong commit count when
@@ -14,9 +14,10 @@ variables:
 
 .setup-lbbuild:
   before_script:
-    - . .gitlab/gitlab-utils.sh
-    - drbd_prepare_tools
-    - drbd_fetch_lbbuildctl
+    - . gitlab-utils.sh
+    - ci_prepare_tools
+    - ci_fetch_rq
+    - ci_fetch_lbbuildctl
     - git clone --branch ${DRBD9_TESTS_REF} https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/drbd/drbd9-tests.git
     - |
       drbd_utils_build () {
@@ -32,7 +33,11 @@ variables:
         ./configure --prefix=/usr --localstatedir=/var --sysconfdir=/etc --without-manual
         install /dev/null $(which lbvers.py)
         make debrelease VERSION="$version" FORCE=1
-        curl -isSf -u $LINBIT_REGISTRY_USER:$LINBIT_REGISTRY_PASSWORD --upload-file drbd-utils-*.tar.gz $LINBIT_REGISTRY_URL/repository/lbbuild-upstream/
+        local tarball
+        tarball=$(ls drbd-utils-*.tar.gz)
+        pulp file content upload --repository lbbuild-upstream \
+          --file "$tarball" \
+          --relative-path "$tarball"
 
         # Distributions, comma separated.
         # * "mainline" is excluded because the user space components are the same as the base distribution.
@@ -45,9 +50,6 @@ variables:
         ] | unique | join(",")')
 
         lbbuildctl build drbd-utils --arch amd64 --ci -v "$DRBD_UTILS_VERSION" \
-          -e LINBIT_REGISTRY_USER=$LINBIT_REGISTRY_USER \
-          -e LINBIT_REGISTRY_PASSWORD=$LINBIT_REGISTRY_PASSWORD \
-          -e LINBIT_REGISTRY_URL=$LINBIT_REGISTRY_URL \
           -d $dists
       }
 
