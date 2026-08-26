@@ -72,7 +72,7 @@ struct field_def {
 };
 
 struct context_def {
-	struct nla_policy *nla_policy;
+	const struct nla_policy *nla_policy;
 	int nla_policy_size;
 	int nla_type;
 	struct field_def fields[];

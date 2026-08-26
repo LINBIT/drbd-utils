@@ -64,7 +64,6 @@
  * coding the necessary bits right here.
  */
 #include "libgenl.h"
-#include "drbd_nla.h"
 #include <linux/drbd_config.h>
 #include "linux/drbd_genl_userspace.h"
 #include <linux/drbd_limits.h>
@@ -1383,7 +1382,7 @@ static bool __print_options(struct nlattr *attr, struct context_def *ctx, const 
 	if (!attr)
 		return false;
 
-	if (drbd_nla_parse_nested(nested_attr_tb, ctx->nla_policy_size - 1,
+	if (nla_parse_nested(nested_attr_tb, ctx->nla_policy_size - 1,
 				  attr, ctx->nla_policy)) {
 		fprintf(stderr, "nla_policy violation for %s payload!\n", sect_name);
 		/* still, print those that validated ok */
@@ -1451,7 +1450,7 @@ static bool __print_options_json(
 	if (!attr)
 		return false;
 
-	if (drbd_nla_parse_nested(nested_attr_tb, ctx->nla_policy_size - 1,
+	if (nla_parse_nested(nested_attr_tb, ctx->nla_policy_size - 1,
 				  attr, ctx->nla_policy)) {
 		fprintf(stderr, "nla_policy violation for %s payload!\n", sect_name);
 		/* still, print those that validated ok */
@@ -2247,7 +2246,7 @@ static bool options_empty(struct nlattr *attr, struct context_def *ctx)
 	if (!attr)
 		return true;
 
-	if (drbd_nla_parse_nested(nested_attr_tb, ctx->nla_policy_size - 1,
+	if (nla_parse_nested(nested_attr_tb, ctx->nla_policy_size - 1,
 				  attr, ctx->nla_policy)) {
 		fprintf(stderr, "nla_policy violation\n");
 	}
