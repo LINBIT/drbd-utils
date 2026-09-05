@@ -4739,13 +4739,22 @@ int may_be_swap(const char *data, struct fstype_s *f)
 
 #define N_ERR_LINES 4
 #define MAX_ERR_LINE_LEN 1024
+
+static void close_fd(int *fd)
+{
+	if (*fd >= 0) {
+		close(*fd);
+		*fd = -1;
+	}
+}
+
 int guessed_size_from_pvs(struct fstype_s *f, char *dev_name)
 {
 	char buf_in[200];
 	char *buf_err[N_ERR_LINES];
-	size_t c;
+	ssize_t c;
 	unsigned long long bnum;
-	int pipes[3][2];
+	int pipes[3][2] = {{-1, -1}, {-1, -1}, {-1, -1}};
 	int err_lines = 0;
 	FILE *child_err = NULL;
 	int i;
@@ -4789,11 +4798,11 @@ int guessed_size_from_pvs(struct fstype_s *f, char *dev_name)
 		_exit(0);
 	}
 	/* parent */
-	close(pipes[0][0]); /* close unused pipe ends */
-	close(pipes[1][1]);
-	close(pipes[2][1]);
+	close_fd(&pipes[0][0]); /* close unused pipe ends */
+	close_fd(&pipes[1][1]);
+	close_fd(&pipes[2][1]);
 
-	close(pipes[0][1]); /* we do not use stdin in child */
+	close_fd(&pipes[0][1]); /* we do not use stdin in child */
 
 	/* We use blocking IO on pipes. This could deadlock,
 	 * If the child process would do something unexpected.
@@ -4806,6 +4815,8 @@ int guessed_size_from_pvs(struct fstype_s *f, char *dev_name)
 	child_err = fdopen(pipes[2][0], "r");
 	if (child_err) {
 		char *b;
+
+		pipes[2][0] = -1; /* child_err owns this fd now */
 		do {
 			err_lines = (err_lines + 1) % N_ERR_LINES;
 			b = fgets(buf_err[err_lines], MAX_ERR_LINE_LEN, child_err);
@@ -4831,11 +4842,10 @@ int guessed_size_from_pvs(struct fstype_s *f, char *dev_name)
 		fprintf(stderr, "\n");
 	}
 
-	i = 2;
 out:
-	for ( ; i >= 0; i--) {
-		close(pipes[i][0]);
-		close(pipes[i][1]);
+	for (i = 0; i < 3; i++) {
+		close_fd(&pipes[i][0]);
+		close_fd(&pipes[i][1]);
 	}
 	if (child_err)
 		fclose(child_err);
