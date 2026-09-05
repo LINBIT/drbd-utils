@@ -3119,6 +3119,7 @@ static void print_option(struct option *opt)
 	}
 }
 
+__attribute__ ((noreturn))
 void print_usage_and_exit(struct adm_cmd *cmd, const char *addinfo, int status)
 {
 	struct option *opt;
