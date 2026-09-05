@@ -1092,11 +1092,12 @@ static int apply_stored_event(const char *timestamp_prefix, struct nlmsg_entry *
 	err = drbd_tla_parse(stored_info.attrs, entry->nlh);
 	if (err) {
 		fprintf(stderr, "drbd_tla_parse() failed");
-		return 1;
+		err = 1;
+	} else {
+		err = apply_event(timestamp_prefix, &stored_info);
 	}
 
-	err = apply_event(timestamp_prefix, &stored_info);
-
+	/* We were handed the entry; free it whatever happened. */
 	free(entry->nlh);
 	free(entry);
 

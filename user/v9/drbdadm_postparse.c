@@ -1447,7 +1447,12 @@ static void sanity_check_cmd(char *cmd_name)
 	if (strchr(cmd_name, '/')) {
 		sanity_check_abs_cmd(cmd_name);
 	} else {
-		path = pp = c = strdup(getenv("PATH"));
+		const char *env_path = getenv("PATH");
+
+		if (!env_path)
+			return; /* without a PATH there is nothing to search */
+
+		path = pp = c = strdup(env_path);
 
 		while (1) {
 			c = strchr(pp, ':');

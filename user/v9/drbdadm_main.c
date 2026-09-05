@@ -2872,7 +2872,7 @@ static int adm_wait_ci(const struct cfg_ctx *ctx)
 		if (saved_stdin == -1)
 			perror("dup(stdin)");
 		saved_stdout = dup(fileno(stdout));
-		if (saved_stdin == -1)
+		if (saved_stdout == -1)
 			perror("dup(stdout)");
 		fd = open("/dev/console", O_RDONLY);
 		if (fd == -1) {
@@ -2880,10 +2880,14 @@ static int adm_wait_ci(const struct cfg_ctx *ctx)
 			have_tty = 0;
 		} else {
 			dup2(fd, fileno(stdin));
+			close(fd);
 			fd = open("/dev/console", O_WRONLY);
-			if (fd == -1)
+			if (fd == -1) {
 				perror("open('/dev/console, O_WRONLY)");
-			dup2(fd, fileno(stdout));
+			} else {
+				dup2(fd, fileno(stdout));
+				close(fd);
+			}
 		}
 	}
 
@@ -3032,7 +3036,11 @@ static int adm_wait_ci(const struct cfg_ctx *ctx)
 
 	if (saved_stdin != -1) {
 		dup2(saved_stdin, fileno(stdin));
+		close(saved_stdin);
+	}
+	if (saved_stdout != -1) {
 		dup2(saved_stdout, fileno(stdout));
+		close(saved_stdout);
 	}
 
 	return 0;
