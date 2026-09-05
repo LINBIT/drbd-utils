@@ -110,11 +110,13 @@ struct ifreq *get_ifreq(void)
 		ifc.ifc_len = buf_size;
 		if (NULL == (ifc.ifc_req = realloc(ifc.ifc_req, ifc.ifc_len))) {
 			fprintf(stderr, "Out of memory.\n");
+			close(sockfd);
 			return NULL;
 		}
 		if (ioctl(sockfd, SIOCGIFCONF, &ifc)) {
 			perror("ioctl SIOCFIFCONF");
 			free(ifc.ifc_req);
+			close(sockfd);
 			return NULL;
 		}
 	} while (buf_size <= (size_t) ifc.ifc_len);
@@ -365,6 +367,8 @@ void m__system(const char **argv, int flags, const char *res_name, pid_t *kid, i
 			||  flags == RETURN_PID) {
 		if (fd)
 			*fd = pipe_fds[0];
+		else
+			close(pipe_fds[0]); /* nobody to hand it to */
 
 		return;
 	}

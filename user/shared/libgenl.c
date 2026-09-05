@@ -111,6 +111,8 @@ static struct genl_sock *genl_connect(__u32 nl_groups, struct genl_connect_optio
 	return s;
 
 fail:
+	if (s->s_fd != -1)
+		close(s->s_fd);
 	free(s);
 	return NULL;
 }

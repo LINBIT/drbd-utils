@@ -163,6 +163,7 @@ static int read_node_id(struct node_info *ni)
 		memcpy(ni->rev.git_hash, on_disk.ni.rev.git_hash, GIT_HASH_BYTE);
 		break;
 	default:
+		close(fd);
 		return 0;
 	}
 
@@ -505,10 +506,9 @@ static char* run_adm_drbdmeta(const struct cfg_ctx *ctx, const char *arg_overrid
 	rr = read(pipes[0], buffer, SLURP_SIZE-1);
 	if( rr == -1) {
 		free(buffer);
-		// FIXME cleanup
-		return 0;
-	}
-	buffer[rr]=0;
+		buffer = NULL;
+	} else
+		buffer[rr]=0;
 	close(pipes[0]);
 
 	waitpid(pid,0,0);
