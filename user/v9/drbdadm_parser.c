@@ -1436,8 +1436,13 @@ void proxy_delegate(void *ctx, bool obey_value)
 		free_names(&line);
 	}
 out:
-	if (proxy_plugins)
-		*proxy_plugins = options;
+	/* Do not copy the list head by value: while the list is empty,
+	 * stqh_last points at our own stqh_first, and the copy would keep
+	 * pointing into this stack frame. */
+	if (proxy_plugins) {
+		STAILQ_INIT(proxy_plugins);
+		STAILQ_CONCAT(proxy_plugins, &options);
+	}
 }
 
 static int parse_proxy_options(struct options *proxy_options, struct options *proxy_plugins)
@@ -1447,8 +1452,11 @@ static int parse_proxy_options(struct options *proxy_options, struct options *pr
 	EXP('{');
 	__parse_options(&opts, &proxy_options_ctx, proxy_delegate, proxy_plugins);
 
-	if (proxy_options)
-		*proxy_options = opts;
+	/* See the comment in proxy_delegate(). */
+	if (proxy_options) {
+		STAILQ_INIT(proxy_options);
+		STAILQ_CONCAT(proxy_options, &opts);
+	}
 
 	return 0;
 }
