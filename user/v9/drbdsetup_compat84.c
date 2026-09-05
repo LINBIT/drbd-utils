@@ -29,6 +29,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <dirent.h>
+#include <errno.h>
 
 #include "drbdtool_common.h"
 #include "drbdsetup.h"
@@ -107,8 +108,15 @@ static void drbd8_compat_set_peer_device_options(void)
 
 	snprintf(path, 200, "%s/compat-84/res-%s", drbd_run_dir(), resname);
 	dir = opendir(path);
-	dirent = readdir(dir);
-	while (dirent) {
+	if (!dir) {
+		/* ENOENT: nothing stored for this resource, nothing to apply */
+		if (errno != ENOENT)
+			fprintf(stderr, "Failed to open '%s' with %s (%d)\n",
+				path, strerror(errno), errno);
+		return;
+	}
+
+	while ((dirent = readdir(dir))) {
 		if (sscanf(dirent->d_name, "vol-%d", &vol) == 1) {
 			argc = 1;
 			global_ctx.ctx_volume = vol;
@@ -120,8 +128,6 @@ static void drbd8_compat_set_peer_device_options(void)
 					free(pd_args[i]); /* load_opts() malloc()ed */
 			}
 		}
-
-		dirent = readdir(dir);
 	}
 	closedir(dir);
 }
