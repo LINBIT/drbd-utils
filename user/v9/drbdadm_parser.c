@@ -686,14 +686,17 @@ static void __parse_options(struct options *options,
 			if (delegate) {
 				delegate(delegate_context, obey_value);
 				continue;
-			} else {
-				if (!obey_value)
-					log_err("%s:%u: Warning: Ignoring %.40s%s\n",
-						config_file, line, yytext,
-						strlen(yytext) > 40 ? "..." : "");
-				else
-					pe_options(options_def);
 			}
+			if (obey_value)
+				pe_options(options_def); /* does not return */
+
+			/* An "_unknown foo;" for an option this drbdadm does
+			 * not know either. Warn, and skip the statement. */
+			log_err("%s:%u: Warning: Ignoring %.40s%s\n",
+				config_file, line, yytext,
+				strlen(yytext) > 40 ? "..." : "");
+			EXP(';');
+			continue;
 		}
 
 		if (obey_value) {
@@ -737,11 +740,12 @@ static void insert_pd_options_delegate(void *ctx, bool obey_value)
 		target = params->net_options;
 		goto found;
 	}
-	if (!obey_value)
-		log_err("%s:%u: Warning: Ignoring %.40s%s\n", config_file, line, yytext,
-			strlen(yytext) > 40 ? "..." : "");
-	else
+	if (obey_value) /* does not return */
 		pe_options(&peer_device_options_ctx); /* also mention device_options? */
+
+	log_err("%s:%u: Warning: Ignoring %.40s%s\n", config_file, line, yytext,
+		strlen(yytext) > 40 ? "..." : "");
+	EXP(';');
 	return;
 
 found:
