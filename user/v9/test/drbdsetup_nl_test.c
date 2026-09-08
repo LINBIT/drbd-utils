@@ -779,6 +779,26 @@ static void test_drbd2_parse_resource_rename(void)
 	msg_free(m);
 }
 
+/* genl_connect_to_family() must return NULL for a family the kernel does not
+ * know, rather than a socket with s_family == NULL: drbd_nl_connect()'s
+ * drbd2-to-legacy fallback loop relies on that contract (see C1). A NULL
+ * return is also what we get if this test cannot even open a netlink
+ * socket for lack of permissions, so only a non-NULL socket with a
+ * non-NULL s_family is a failure here. */
+static void test_genl_connect_to_family_unregistered(void)
+{
+	/* GENL_NAMSIZ (16, including the terminating NUL) caps how long this
+	 * name can be. */
+	struct genl_family family = { .name = "no-such-family" };
+	struct genl_sock *s = genl_connect_to_family(&family, NULL);
+
+	CHECK(!s || !s->s_family);
+	if (s) {
+		close(s->s_fd);
+		free(s);
+	}
+}
+
 /* A message for a different genl family is skipped, not misparsed. */
 static void test_drbd2_parse_msg_skip_other_family(void)
 {
@@ -910,6 +930,7 @@ int main(int argc, char **argv)
 	test_drbd2_parse_connection_dump();
 	test_drbd2_parse_helper_and_done();
 	test_drbd2_parse_resource_rename();
+	test_genl_connect_to_family_unregistered();
 	test_drbd2_parse_msg_skip_other_family();
 	test_drbd2_parse_path_get();
 	test_drbd2_parse_skips_without_identity();
