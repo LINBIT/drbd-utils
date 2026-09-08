@@ -77,6 +77,13 @@ static struct genl_sock *genl_connect(__u32 nl_groups, struct genl_connect_optio
 	if (s->s_fd == -1)
 		goto fail;
 
+	{
+		/* Ask for extended ACKs; an old kernel just does not know the option. */
+		int one = 1;
+
+		setsockopt(s->s_fd, SOL_NETLINK, NETLINK_EXT_ACK, &one, sizeof(one));
+	}
+
 	sock_len = sizeof(s->s_local);
 	DO_OR_LOG_AND_FAIL(setsockopt(s->s_fd, SOL_SOCKET, SO_SNDBUF, &opts->sndbuf_size, sizeof(opts->sndbuf_size)));
 	DO_OR_LOG_AND_FAIL(setsockopt(s->s_fd, SOL_SOCKET, SO_RCVBUF, &opts->rcvbuf_size, sizeof(opts->rcvbuf_size)));
@@ -247,6 +254,30 @@ retry:
 }
 
 
+int genl_extack_msg(const struct nlmsghdr *nlh, char *buf, size_t size)
+{
+	const struct nlmsgerr *e = nlmsg_data(nlh);
+	struct nlattr *nla;
+	int hdrlen = sizeof(*e), rem;
+
+	if (size)
+		buf[0] = '\0';
+	if (nlh->nlmsg_type != NLMSG_ERROR || !(nlh->nlmsg_flags & NLM_F_ACK_TLVS))
+		return 0;
+	if (nlh->nlmsg_len < NLMSG_HDRLEN + sizeof(*e))
+		return 0;
+	/* Unless capped, the ACK echoes the whole offending request. */
+	if (!(nlh->nlmsg_flags & NLM_F_CAPPED))
+		hdrlen += e->msg.nlmsg_len - NLMSG_HDRLEN;
+	nla_for_each_attr(nla, nlmsg_attrdata((struct nlmsghdr *)nlh, hdrlen), nlmsg_attrlen((struct nlmsghdr *)nlh, hdrlen), rem) {
+		if (nla_type(nla) == NLMSGERR_ATTR_MSG) {
+			nla_strlcpy(buf, nla, size);
+			return 1;
+		}
+	}
+	return 0;
+}
+
 /* Note that one datagram may contain multiple netlink messages
  * (e.g. for a dump response). This only checks the _first_ message,
  * caller has to iterate over multiple messages with nlmsg_for_each_msg()
@@ -305,8 +336,9 @@ int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int 
 		else {
 			dbg(3, "got a NACK message for seq:%u, error:%d",
 					s->s_seq_expect, e->error);
+			genl_extack_msg(nlh, s->s_extack_msg, sizeof(s->s_extack_msg));
 			if (err_desc)
-				*err_desc = strerror(errno);
+				*err_desc = s->s_extack_msg[0] ? s->s_extack_msg : strerror(errno);
 		}
 		return -E_RCV_ERROR_REPLY;
 	}

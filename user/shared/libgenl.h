@@ -36,6 +36,20 @@
 #define NLA_F_NESTED 0
 #endif
 
+/* Extended ACK support (Linux 4.12); defined here for older system headers. */
+#ifndef NETLINK_EXT_ACK
+#define NETLINK_EXT_ACK 11
+#endif
+#ifndef NLM_F_CAPPED
+#define NLM_F_CAPPED 0x100
+#endif
+#ifndef NLM_F_ACK_TLVS
+#define NLM_F_ACK_TLVS 0x200
+#endif
+#ifndef NLMSGERR_ATTR_MSG
+#define NLMSGERR_ATTR_MSG 1
+#endif
+
 #define GENL_MAX_OPS 128
 
 #define DEBUG_LEVEL 1
@@ -308,6 +322,9 @@ enum {
 
 /* Userspace equivalent of the kernel NLA policy macro */
 #define NLA_POLICY_MAX_LEN(_len)	{ .type = NLA_BINARY, .len = (_len) }
+#define NLA_POLICY_NESTED(_policy)	{ .type = NLA_NESTED }
+#define NLA_POLICY_MAX(_type, _max)	{ .type = (_type) }
+#define NLA_POLICY_EXACT_LEN(_len)	{ .type = NLA_BINARY, .len = (_len) }
 
 /**
  * struct nla_policy - attribute validation policy
@@ -1081,6 +1098,7 @@ struct genl_sock {
 	unsigned int		s_seq_next;
 	unsigned int		s_seq_expect;
 	unsigned int		s_flags;
+	char			s_extack_msg[256];
 	struct genl_family	*s_family;
 };
 
@@ -1104,6 +1122,8 @@ enum {
 };
 /* returns negative E_RCV_*, or length of message */
 extern int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int timeout_ms);
+/* The NLMSGERR_ATTR_MSG text of an NLMSG_ERROR, if any; buf is always NUL terminated. */
+extern int genl_extack_msg(const struct nlmsghdr *nlh, char *buf, size_t size);
 extern bool genl_op_known(struct genl_family *family, int id);
 
 static inline __s32 nla_get_s32(const struct nlattr *nla)

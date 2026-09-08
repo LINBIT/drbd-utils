@@ -239,6 +239,54 @@ static void test_legacy_parse_device_change(void)
 	msg_free(m);
 }
 
+/* An NLMSG_ERROR with extended ACK TLVs, as the kernel builds it. */
+static struct nlmsghdr *build_error_reply(struct msg_buff *m, int error, bool capped,
+					  const char *text)
+{
+	struct nlmsghdr *nlh = msg_put(m, NLMSG_HDRLEN);
+	struct nlmsgerr *e;
+	struct nlmsghdr req = { .nlmsg_len = NLMSG_HDRLEN + 8, .nlmsg_type = 0x1f };
+	int payload = sizeof(*e) + (capped ? 0 : 8);
+
+	memset(nlh, 0, NLMSG_HDRLEN);
+	nlh->nlmsg_type = NLMSG_ERROR;
+	nlh->nlmsg_flags = NLM_F_ACK_TLVS | (capped ? NLM_F_CAPPED : 0);
+	e = msg_put(m, NLMSG_ALIGN(payload));
+	memset(e, 0, NLMSG_ALIGN(payload));
+	e->error = error;
+	e->msg = req;
+	if (text)
+		nla_put_string(m, NLMSGERR_ATTR_MSG, text);
+	nlh->nlmsg_len = m->tail - (unsigned char *)nlh;
+	return nlh;
+}
+
+static void test_extack_message(void)
+{
+	struct msg_buff *m;
+	struct nlmsghdr *nlh;
+	char buf[64];
+
+	m = msg_new(DEFAULT_MSG_SIZE);
+	nlh = build_error_reply(m, -ENOENT, true, "unknown resource");
+	CHECK(genl_extack_msg(nlh, buf, sizeof(buf)) == 1);
+	CHECK(!strcmp(buf, "unknown resource"));
+	msg_free(m);
+
+	m = msg_new(DEFAULT_MSG_SIZE);
+	nlh = build_error_reply(m, -EINVAL, false, "echoed request follows the header");
+	CHECK(genl_extack_msg(nlh, buf, sizeof(buf)) == 1);
+	CHECK(!strcmp(buf, "echoed request follows the header"));
+	msg_free(m);
+
+	m = msg_new(DEFAULT_MSG_SIZE);
+	nlh = build_error_reply(m, -EINVAL, true, NULL);
+	buf[0] = 'x';
+	CHECK(genl_extack_msg(nlh, buf, sizeof(buf)) == 0);
+	CHECK(buf[0] == '\0');
+	msg_free(m);
+}
+
 int main(int argc, char **argv)
 {
 	test_event_init_defaults();
@@ -247,6 +295,7 @@ int main(int argc, char **argv)
 	test_legacy_request_layout();
 	test_legacy_path_and_forget_peer_context();
 	test_legacy_parse_device_change();
+	test_extack_message();
 
 	if (failures)
 		fprintf(stderr, "%d check(s) failed\n", failures);
