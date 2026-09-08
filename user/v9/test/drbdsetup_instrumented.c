@@ -579,14 +579,40 @@ static void test_get_peer_device_sync(struct msg_buff *smsg, struct test_vars *v
  * ################# main() #################
  */
 
+#ifndef WINDRBD
+struct nlmsghdr *drbd2_test_encode(const struct drbd_nl_event *ev, enum drbd_nl_cmd cmd,
+				   struct msg_buff *out);
+#endif
+
+/* Fixtures are legacy messages. With DRBD_NETLINK_FAMILY=drbd2 they are
+ * parsed by the legacy dialect, re-encoded as the drbd2 kernel would send
+ * them, and parsed again by the drbd2 dialect. */
 static void nlmsghdr_to_event(struct nlmsghdr *nlh, enum drbd_nl_cmd cmd, struct drbd_nl_event *ev)
 {
-	enum drbd_nl_msg r = nl->parse_msg(nlh, cmd, ev);
+	enum drbd_nl_msg r = legacy_dialect.parse_msg(nlh, cmd, ev);
 
 	if (r != NL_MSG_EVENT) {
-		fprintf(stderr, "parse_msg() did not yield an event (%d)\n", r);
+		fprintf(stderr, "legacy parse_msg() did not yield an event (%d)\n", r);
 		exit(1);
 	}
+#ifndef WINDRBD
+	if (nl == &drbd2_dialect) {
+		static struct msg_buff *m;
+		struct nlmsghdr *nlh2;
+		unsigned int seq = ev->seq;
+
+		if (!m)
+			m = msg_new(2 * DEFAULT_MSG_SIZE);
+		m->tail = m->data;
+		nlh2 = drbd2_test_encode(ev, cmd, m);
+		nlh2->nlmsg_seq = seq;
+		r = drbd2_dialect.parse_msg(nlh2, cmd, ev);
+		if (r != NL_MSG_EVENT) {
+			fprintf(stderr, "drbd2 parse_msg() did not yield an event (%d)\n", r);
+			exit(1);
+		}
+	}
+#endif
 }
 
 #define TEST_MSG(name) do { \
@@ -866,8 +892,6 @@ int main_events2(int argc, char **argv)
 		{ }
 	};
 
-	nl = &legacy_dialect;
-
 	opt_color = NEVER_COLOR;
 	for(;;) {
 		int c;
@@ -918,8 +942,6 @@ int main_events2(int argc, char **argv)
 
 int main_generic_instrumented(int argc, char **argv)
 {
-	nl = &legacy_dialect;
-
 	/* Prevent reading of version from /proc/drbd */
 	setenv("DRBD_DRIVER_VERSION_OVERRIDE", "9.2.14", 1);
 
@@ -937,6 +959,16 @@ int main_generic_instrumented(int argc, char **argv)
  */
 int main(int argc, char **argv)
 {
+	nl = &legacy_dialect;
+#ifndef WINDRBD
+	{
+		const char *family = getenv("DRBD_NETLINK_FAMILY");
+
+		if (family && !strcmp(family, "drbd2"))
+			nl = &drbd2_dialect;
+	}
+#endif
+
 	if (argc < 2) {
 		fprintf(stderr, "USAGE: drbdsetup_instrumented {events2|show} [options]\n");
 		return 1;
