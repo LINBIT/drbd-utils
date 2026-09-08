@@ -1,0 +1,33 @@
+# vmshed provisioning step for the packaging tests.
+#
+# vmshed passes the per-VM values from vms.toml (repository URLs, apt suite,
+# ...) only to this provisioning step, not to the test run. So all this step
+# does is store them in the image for run.toml to pick up.
+
+version = 1
+
+[values]
+RepositoryURL = ""          # repository containing the CI build under test
+ReleaseRepositoryURL = ""   # repository containing released versions
+RepositoryDistribution = "" # apt: e.g. noble; also the suite of the release repository
+RepositorySuite = ""        # apt: suite of the CI repository, defaults to RepositoryDistribution
+RepositoryComponent = "main" # apt: component of the CI repository
+
+[[steps]]
+[steps.shell]
+script = '''
+set -e
+cat > /etc/drbd-utils-packaging-test.env <<EOF
+REPOSITORY_URL='$REPOSITORY_URL'
+RELEASE_REPOSITORY_URL='$RELEASE_REPOSITORY_URL'
+REPOSITORY_DISTRIBUTION='$REPOSITORY_DISTRIBUTION'
+REPOSITORY_SUITE='$REPOSITORY_SUITE'
+REPOSITORY_COMPONENT='$REPOSITORY_COMPONENT'
+EOF
+'''
+[steps.shell.env]
+REPOSITORY_URL = "{{.RepositoryURL}}"
+RELEASE_REPOSITORY_URL = "{{.ReleaseRepositoryURL}}"
+REPOSITORY_DISTRIBUTION = "{{.RepositoryDistribution}}"
+REPOSITORY_SUITE = "{{.RepositorySuite}}"
+REPOSITORY_COMPONENT = "{{.RepositoryComponent}}"

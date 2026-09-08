@@ -1,0 +1,14 @@
+# vmshed test specification for the packaging tests.
+#
+# One test, run once on every VM that carries the "distro" tag.
+
+test_suite_file = "run.toml"
+test_timeout = "30m"
+
+[[variants]]
+name = "default"
+vm_tags = [ "distro" ]
+
+[tests.packaging]
+vms = [1]
+needallplatforms = true

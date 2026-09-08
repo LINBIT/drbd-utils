@@ -1,0 +1,34 @@
+# vmshed test suite file for the packaging tests.
+#
+# Copies the test script into the VM and runs it against the repositories
+# recorded by provision.toml.
+
+version = 1
+
+[values]
+DrbdUtilsVersion = "" # version-release of the build under test, e.g. 9.99.0.<sha>-1
+TestScript = "tests/packaging/drbd-utils-packaging-test.py" # relative to the working directory of vmshed
+OutDir = "" # set by vmshed, unused
+
+[[steps]]
+[steps.rsync]
+source = "{{.TestScript}}"
+dest = "/usr/local/bin/drbd-utils-packaging-test.py"
+
+[[steps]]
+[steps.shell]
+script = '''
+set -e
+[ -n "$DRBD_UTILS_VERSION" ] || { echo "values.DrbdUtilsVersion must be set" >&2; exit 1; }
+. /etc/drbd-utils-packaging-test.env
+export REPOSITORY_URL RELEASE_REPOSITORY_URL
+export REPOSITORY_DISTRIBUTION REPOSITORY_SUITE REPOSITORY_COMPONENT
+# RHEL 7 only has Python 3 as a software collection, which login shells
+# enable through /etc/profile.d; do the same here.
+if ! command -v python3 >/dev/null 2>&1 && [ -r /opt/rh/rh-python36/enable ]; then
+	. /opt/rh/rh-python36/enable
+fi
+exec python3 /usr/local/bin/drbd-utils-packaging-test.py
+'''
+[steps.shell.env]
+DRBD_UTILS_VERSION = "{{.DrbdUtilsVersion}}"
