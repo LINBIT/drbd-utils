@@ -727,6 +727,17 @@ static inline int nla_put_u32(struct msg_buff *msg, int attrtype, __u32 value)
 }
 
 /**
+ * nla_put_s32 - Add a s32 netlink attribute to a message buffer
+ * @msg: message buffer to add attribute to
+ * @attrtype: attribute type
+ * @value: numeric value
+ */
+static inline int nla_put_s32(struct msg_buff *msg, int attrtype, __s32 value)
+{
+	return nla_put(msg, attrtype, sizeof(__s32), &value);
+}
+
+/**
  * nla_put_64 - Add a u64 netlink attribute to a message buffer
  * @msg: message buffer to add attribute to
  * @attrtype: attribute type

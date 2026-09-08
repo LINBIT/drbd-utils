@@ -489,6 +489,267 @@ static void test_drbd2_outcome(void)
 	CHECK(out.desc && !strcmp(out.desc, "unknown resource"));
 	msg_free(m);
 }
+
+/* A device state change as the drbd2 kernel sends it. */
+static struct nlmsghdr *build_drbd2_device_change(struct msg_buff *m, bool more)
+{
+	struct nlattr *obj, *nest;
+
+	genlmsg_put(m, drbd2_dialect.family, 0, DRBD2_CMD_STATE_CHANGE_NTF);
+	nla_put_u32(m, DRBD2_A_STATE_CHANGE_ACTION, DRBD2_STATE_CHANGE_ACTION_CHANGE);
+	if (more)
+		nla_put_flag(m, DRBD2_A_STATE_CHANGE_MORE);
+	obj = nla_nest_start(m, DRBD2_A_STATE_CHANGE_DEVICE);
+	nest = nla_nest_start(m, DRBD2_A_DEVICE_CONTEXT);
+	nla_put_string(m, DRBD2_A_CONTEXT_RESOURCE_NAME, "r0");
+	nla_put_u32(m, DRBD2_A_CONTEXT_VOLUME, 0);
+	nla_put_u32(m, DRBD2_A_CONTEXT_MINOR, 1000);
+	nla_nest_end(m, nest);
+	nest = nla_nest_start(m, DRBD2_A_DEVICE_INFO);
+	nla_put_u32(m, DRBD2_A_DEVICE_INFO_DISK_STATE, D_UP_TO_DATE);
+	nla_put_u8(m, DRBD2_A_DEVICE_INFO_IS_OPEN, 1);
+	nla_put_string(m, DRBD2_A_DEVICE_INFO_BACKING_DEV_PATH, "/dev/sda");
+	nla_nest_end(m, nest);
+	nest = nla_nest_start(m, DRBD2_A_DEVICE_STATISTICS);
+	nla_put_u64(m, DRBD2_A_DEVICE_STATISTICS_SIZE, 4096);
+	nla_put_u32(m, DRBD2_A_DEVICE_STATISTICS_UPPER_PENDING, 3);
+	nla_nest_end(m, nest);
+	nla_nest_end(m, obj);
+	return finish_msg(m);
+}
+
+static void test_drbd2_parse_device_change(void)
+{
+	struct msg_buff *m = msg_new(DEFAULT_MSG_SIZE);
+	struct nlmsghdr *nlh = build_drbd2_device_change(m, true);
+	struct drbd_nl_event ev;
+
+	nlh->nlmsg_seq = 7;
+	CHECK(drbd2_dialect.parse_msg(nlh, DRBD_NL_CMD_GET_INITIAL_STATE, &ev) == NL_MSG_EVENT);
+	CHECK(ev.kind == NL_OBJ_DEVICE);
+	CHECK(ev.action == (NOTIFY_CHANGE | NOTIFY_CONTINUES));
+	CHECK(ev.seq == 7 && ev.minor == 1000 && ev.ret_code == NO_ERROR);
+	CHECK(!strcmp(ev.ctx.ctx_resource_name, "r0") && ev.ctx.ctx_volume == 0);
+	CHECK(ev.ctx.ctx_peer_node_id == -1U);
+	CHECK(ev.have_info);
+	CHECK(ev.info.device.dev_disk_state == D_UP_TO_DATE);
+	CHECK(ev.info.device.dev_is_open == 1);
+	CHECK(ev.info.device.is_intentional_diskless == IS_INTENTIONAL_DEF);	/* absent */
+	CHECK(!strcmp(ev.info.device.backing_dev_path, "/dev/sda"));
+	CHECK(ev.info.device.backing_dev_path_len == strlen("/dev/sda"));
+	CHECK(ev.stats.device.dev_size == 4096);
+	CHECK(ev.stats.device.dev_upper_pending == 3);
+	CHECK(ev.stats.device.dev_read == -1ULL);
+	CHECK(ev.opts == NULL && ev.opts2 == NULL);
+	msg_free(m);
+}
+
+/* A connection dump reply with net options and two paths. */
+static struct nlmsghdr *build_drbd2_connection_get(struct msg_buff *m)
+{
+	struct sockaddr_in6 sin6 = { .sin6_family = AF_INET6, .sin6_port = htons(7789),
+				     .sin6_addr = IN6ADDR_LOOPBACK_INIT };
+	struct sockaddr_in sin = { .sin_family = AF_INET, .sin_port = htons(7790),
+				   .sin_addr = { .s_addr = htonl(0x0a000002) } };
+	struct nlattr *obj, *nest, *path, *pctx;
+
+	genlmsg_put(m, drbd2_dialect.family, NLM_F_MULTI, DRBD2_CMD_CONNECTION_GET);
+	obj = nla_nest_start(m, DRBD2_A_CONNECTION);
+	nest = nla_nest_start(m, DRBD2_A_CONNECTION_CONTEXT);
+	nla_put_string(m, DRBD2_A_CONTEXT_RESOURCE_NAME, "r0");
+	nla_put_u32(m, DRBD2_A_CONTEXT_PEER_NODE_ID, 1);
+	nla_put_string(m, DRBD2_A_CONTEXT_CONNECTION_NAME, "peer");
+	nla_nest_end(m, nest);
+	nest = nla_nest_start(m, DRBD2_A_CONNECTION_INFO);
+	nla_put_u32(m, DRBD2_A_CONNECTION_INFO_CONNECTION_STATE, C_CONNECTED);
+	nla_put_u32(m, DRBD2_A_CONNECTION_INFO_ROLE, R_SECONDARY);
+	nla_nest_end(m, nest);
+	nest = nla_nest_start(m, DRBD2_A_CONNECTION_NET_CONF);
+	nla_put_u32(m, DRBD2_A_NET_CONF_PROTOCOL, 3);
+	nla_put_u32(m, DRBD2_A_NET_CONF_PING_INT, 10);
+	nla_put_u8(m, DRBD2_A_NET_CONF_TWO_PRIMARIES, 0);
+	nla_nest_end(m, nest);
+	path = nla_nest_start(m, DRBD2_A_CONNECTION_PATH);
+	pctx = nla_nest_start(m, DRBD2_A_PATH_CONTEXT);
+	drbd2_put_address(m, DRBD2_A_CONTEXT_MY_ADDRESS, &sin6, sizeof(sin6));
+	drbd2_put_address(m, DRBD2_A_CONTEXT_PEER_ADDRESS, &sin, sizeof(sin));
+	nla_nest_end(m, pctx);
+	nest = nla_nest_start(m, DRBD2_A_PATH_INFO);
+	nla_put_u8(m, DRBD2_A_PATH_INFO_ESTABLISHED, 1);
+	nla_nest_end(m, nest);
+	nla_nest_end(m, path);
+	path = nla_nest_start(m, DRBD2_A_CONNECTION_PATH);
+	pctx = nla_nest_start(m, DRBD2_A_PATH_CONTEXT);
+	sin.sin_port = htons(7791);
+	drbd2_put_address(m, DRBD2_A_CONTEXT_MY_ADDRESS, &sin, sizeof(sin));
+	drbd2_put_address(m, DRBD2_A_CONTEXT_PEER_ADDRESS, &sin, sizeof(sin));
+	nla_nest_end(m, pctx);
+	nla_nest_end(m, path);
+	nla_nest_end(m, obj);
+	return finish_msg(m);
+}
+
+static void test_drbd2_parse_connection_dump(void)
+{
+	struct msg_buff *m = msg_new(DEFAULT_MSG_SIZE);
+	struct nlmsghdr *nlh = build_drbd2_connection_get(m);
+	struct drbd_nl_event ev;
+	struct nlattr *a;
+	int rem, n = 0;
+
+	CHECK(drbd2_dialect.parse_msg(nlh, DRBD_NL_CMD_GET_CONNECTIONS, &ev) == NL_MSG_EVENT);
+	CHECK(ev.kind == NL_OBJ_CONNECTION && ev.action == NOTIFY_EXISTS);
+	CHECK(ev.ctx.ctx_peer_node_id == 1);
+	CHECK(!strcmp(ev.ctx.ctx_conn_name, "peer") && ev.ctx.ctx_conn_name_len == 4);
+	CHECK(ev.have_info && ev.info.connection.conn_connection_state == C_CONNECTED);
+	CHECK(ev.stats.connection.ap_in_flight == -1ULL);
+
+	/* net options renumbered into the legacy ids */
+	CHECK(ev.opts != NULL);
+	a = nla_find_nested(ev.opts, DRBD_A_NET_CONF_WIRE_PROTOCOL);
+	CHECK(a && nla_get_u32(a) == 3);
+	a = nla_find_nested(ev.opts, DRBD_A_NET_CONF_PING_INT);
+	CHECK(a && nla_get_u32(a) == 10);
+	a = nla_find_nested(ev.opts, DRBD_A_NET_CONF_TWO_PRIMARIES);
+	CHECK(a && nla_len(a) == 1 && nla_get_u8(a) == 0);
+
+	/* paths as the legacy blob list: my, peer, my, peer */
+	CHECK(ev.paths != NULL);
+	nla_for_each_nested(a, ev.paths, rem) {
+		if (n == 0) {
+			struct sockaddr_in6 *s6 = nla_data(a);
+
+			CHECK(nla_type(a) == DRBD_A_PATH_PARMS_MY_ADDR);
+			CHECK(nla_len(a) == sizeof(*s6) && s6->sin6_family == AF_INET6 &&
+			      s6->sin6_port == htons(7789) &&
+			      IN6_IS_ADDR_LOOPBACK(&s6->sin6_addr));
+		} else if (n == 1) {
+			struct sockaddr_in *s4 = nla_data(a);
+
+			CHECK(nla_type(a) == DRBD_A_PATH_PARMS_PEER_ADDR);
+			CHECK(nla_len(a) == sizeof(*s4) && s4->sin_port == htons(7790) &&
+			      s4->sin_addr.s_addr == htonl(0x0a000002));
+		} else {
+			CHECK(nla_type(a) == (n == 2 ? DRBD_A_PATH_PARMS_MY_ADDR : DRBD_A_PATH_PARMS_PEER_ADDR));
+		}
+		n++;
+	}
+	CHECK(n == 4);
+	msg_free(m);
+}
+
+static void test_drbd2_parse_helper_and_done(void)
+{
+	struct msg_buff *m = msg_new(DEFAULT_MSG_SIZE);
+	struct nlmsghdr *nlh;
+	struct nlattr *nest;
+	struct drbd_nl_event ev;
+
+	genlmsg_put(m, drbd2_dialect.family, 0, DRBD2_CMD_HELPER_NTF);
+	nest = nla_nest_start(m, DRBD2_A_CONTEXT);
+	nla_put_string(m, DRBD2_A_CONTEXT_RESOURCE_NAME, "r0");
+	nla_put_u32(m, DRBD2_A_CONTEXT_MINOR, 5);
+	nla_put_u32(m, DRBD2_A_CONTEXT_VOLUME, 0);
+	nla_nest_end(m, nest);
+	nest = nla_nest_start(m, DRBD2_A_HELPER);
+	nla_put_string(m, DRBD2_A_HELPER_INFO_NAME, "before-resync-target");
+	nla_put_u32(m, DRBD2_A_HELPER_INFO_STATUS, 0);
+	nla_put_u32(m, DRBD2_A_HELPER_INFO_PHASE, DRBD2_HELPER_PHASE_RESPONSE);
+	nla_nest_end(m, nest);
+	nlh = finish_msg(m);
+	CHECK(drbd2_dialect.parse_msg(nlh, DRBD_NL_CMD_GET_INITIAL_STATE, &ev) == NL_MSG_EVENT);
+	CHECK(ev.kind == NL_OBJ_HELPER && ev.action == NOTIFY_RESPONSE);
+	CHECK(ev.minor == 5 && ev.ctx.ctx_volume == 0);
+	CHECK(ev.have_info && !strcmp(ev.helper.helper_name, "before-resync-target"));
+	msg_free(m);
+
+	m = msg_new(DEFAULT_MSG_SIZE);
+	nlh = (struct nlmsghdr *)m->data;
+	memset(nlh, 0, sizeof(*nlh));
+	nlh->nlmsg_len = NLMSG_HDRLEN;
+	nlh->nlmsg_type = NLMSG_DONE;
+	nlh->nlmsg_seq = 11;
+	CHECK(drbd2_dialect.parse_msg(nlh, DRBD_NL_CMD_GET_INITIAL_STATE, &ev) == NL_MSG_EVENT);
+	CHECK(ev.kind == NL_OBJ_INITIAL_STATE_DONE && ev.seq == 11);
+	CHECK(drbd2_dialect.parse_msg(nlh, DRBD_NL_CMD_GET_DEVICES, &ev) == NL_MSG_DONE);
+	msg_free(m);
+}
+
+static void test_drbd2_parse_resource_rename(void)
+{
+	struct msg_buff *m = msg_new(DEFAULT_MSG_SIZE);
+	struct nlmsghdr *nlh;
+	struct nlattr *obj, *nest;
+	struct drbd_nl_event ev;
+
+	genlmsg_put(m, drbd2_dialect.family, 0, DRBD2_CMD_STATE_CHANGE_NTF);
+	nla_put_u32(m, DRBD2_A_STATE_CHANGE_ACTION, DRBD2_STATE_CHANGE_ACTION_RENAME);
+	obj = nla_nest_start(m, DRBD2_A_STATE_CHANGE_RESOURCE);
+	nest = nla_nest_start(m, DRBD2_A_RESOURCE_CONTEXT);
+	nla_put_string(m, DRBD2_A_CONTEXT_RESOURCE_NAME, "r0");
+	nla_nest_end(m, nest);
+	nla_put_string(m, DRBD2_A_RESOURCE_NEW_NAME, "r1");
+	nest = nla_nest_start(m, DRBD2_A_RESOURCE_RESOURCE_OPTS);
+	nla_put_u32(m, DRBD2_A_RESOURCE_OPTS_NODE_ID, 4);
+	nla_put_s32(m, DRBD2_A_RESOURCE_OPTS_QUORUM, -1);
+	nla_nest_end(m, nest);
+	nla_nest_end(m, obj);
+	nlh = finish_msg(m);
+	CHECK(drbd2_dialect.parse_msg(nlh, DRBD_NL_CMD_GET_INITIAL_STATE, &ev) == NL_MSG_EVENT);
+	CHECK(ev.kind == NL_OBJ_RESOURCE && ev.action == NOTIFY_RENAME);
+	CHECK(!ev.have_info);
+	CHECK(!strcmp(ev.rename.res_new_name, "r1") && ev.rename.res_new_name_len == 2);
+	CHECK(ev.opts && nla_find_nested(ev.opts, DRBD_A_RES_OPTS_NODE_ID));
+	CHECK(nla_get_u32(nla_find_nested(ev.opts, DRBD_A_RES_OPTS_NODE_ID)) == 4);
+	CHECK((int)nla_get_u32(nla_find_nested(ev.opts, DRBD_A_RES_OPTS_QUORUM)) == -1);
+	msg_free(m);
+}
+
+/* A message for a different genl family is skipped, not misparsed. */
+static void test_drbd2_parse_msg_skip_other_family(void)
+{
+	struct msg_buff *m = msg_new(DEFAULT_MSG_SIZE);
+	struct nlmsghdr *nlh;
+	struct drbd_nl_event ev;
+
+	genlmsg_put(m, drbd2_dialect.family, 0, DRBD2_CMD_HELPER_NTF);
+	nlh = finish_msg(m);
+	nlh->nlmsg_type = drbd2_dialect.family->id + 1;
+	CHECK(drbd2_dialect.parse_msg(nlh, DRBD_NL_CMD_GET_INITIAL_STATE, &ev) == NL_MSG_SKIP);
+	msg_free(m);
+}
+
+/* A DRBD2_CMD_PATH_GET dump reply: a path's context and info. */
+static void test_drbd2_parse_path_get(void)
+{
+	struct sockaddr_in sin = { .sin_family = AF_INET, .sin_port = htons(7789),
+				   .sin_addr = { .s_addr = htonl(0x0a000001) } };
+	struct msg_buff *m = msg_new(DEFAULT_MSG_SIZE);
+	struct nlmsghdr *nlh;
+	struct nlattr *obj, *pctx, *nest;
+	struct drbd_nl_event ev;
+
+	genlmsg_put(m, drbd2_dialect.family, NLM_F_MULTI, DRBD2_CMD_PATH_GET);
+	obj = nla_nest_start(m, DRBD2_A_PATH);
+	pctx = nla_nest_start(m, DRBD2_A_PATH_CONTEXT);
+	nla_put_string(m, DRBD2_A_CONTEXT_RESOURCE_NAME, "r0");
+	nla_put_u32(m, DRBD2_A_CONTEXT_PEER_NODE_ID, 1);
+	drbd2_put_address(m, DRBD2_A_CONTEXT_MY_ADDRESS, &sin, sizeof(sin));
+	nla_nest_end(m, pctx);
+	nest = nla_nest_start(m, DRBD2_A_PATH_INFO);
+	nla_put_u8(m, DRBD2_A_PATH_INFO_ESTABLISHED, 1);
+	nla_nest_end(m, nest);
+	nla_nest_end(m, obj);
+	nlh = finish_msg(m);
+
+	CHECK(drbd2_dialect.parse_msg(nlh, DRBD_NL_CMD_GET_PATHS, &ev) == NL_MSG_EVENT);
+	CHECK(ev.kind == NL_OBJ_PATH);
+	CHECK(!strcmp(ev.ctx.ctx_resource_name, "r0") && ev.ctx.ctx_peer_node_id == 1);
+	CHECK(ev.have_info);
+	CHECK(ev.info.path.path_established == 1);
+	CHECK(ev.ctx.ctx_my_addr_len == sizeof(struct sockaddr_in));
+	msg_free(m);
+}
 #endif /* !WINDRBD */
 
 int main(int argc, char **argv)
@@ -504,6 +765,12 @@ int main(int argc, char **argv)
 	test_drbd2_attr_maps_complete();
 	test_drbd2_request_layout();
 	test_drbd2_outcome();
+	test_drbd2_parse_device_change();
+	test_drbd2_parse_connection_dump();
+	test_drbd2_parse_helper_and_done();
+	test_drbd2_parse_resource_rename();
+	test_drbd2_parse_msg_skip_other_family();
+	test_drbd2_parse_path_get();
 #endif
 
 	if (failures)
