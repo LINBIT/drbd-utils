@@ -92,7 +92,7 @@ struct drbd_cmd {
 	enum drbd_nl_attr_set tla_id; /* the request's attribute set */
 	int (*function)(const struct drbd_cmd *, int, char **);
 	struct drbd_argument *drbd_args;
-	int (*handle_reply)(const struct drbd_cmd*, struct genl_info *, struct reply_ctx *);
+	int (*handle_reply)(const struct drbd_cmd*, struct drbd_nl_event *, struct reply_ctx *);
 	struct option *options;
 	bool missing_ok;
 	bool continuous_poll;
@@ -231,11 +231,11 @@ void print_peer_device_statistics(int indent,
 				  wrap_printf_fn_t wrap_printf);
 __attribute__((format(printf, 2, 3)))
 int nowrap_printf(int indent, const char *format, ...);
-struct resources_list *new_resource_from_info(struct genl_info *info);
-struct devices_list *new_device_from_info(struct genl_info *info);
-struct connections_list *new_connection_from_info(struct genl_info *info);
-struct peer_devices_list *new_peer_device_from_info(struct genl_info *info);
-struct paths_list *new_path_from_info(struct genl_info *info);
+struct resources_list *new_resource_from_event(const struct drbd_nl_event *ev);
+struct devices_list *new_device_from_event(const struct drbd_nl_event *ev);
+struct connections_list *new_connection_from_event(const struct drbd_nl_event *ev);
+struct peer_devices_list *new_peer_device_from_event(const struct drbd_nl_event *ev);
+struct paths_list *new_path_from_event(const struct drbd_nl_event *ev);
 void free_resources(struct resources_list *);
 void free_device(struct devices_list *);
 void free_devices(struct devices_list *);
@@ -244,7 +244,6 @@ void free_connections(struct connections_list *);
 void free_peer_device(struct peer_devices_list *);
 void free_peer_devices(struct peer_devices_list *);
 void free_paths(struct paths_list *);
-int drbd_tla_parse(struct nlattr *tla[], struct nlmsghdr *nlh);
 
 int drbdsetup_main(int argc, char **argv);
 

@@ -67,7 +67,7 @@ bool receive_update = false; /* receiving updates in "exists" messages */
 void *all_resources;
 struct resources_list *update_resources;
 
-static int apply_event(const char *prefix, struct genl_info *info);
+static int apply_event(const char *prefix, const struct drbd_nl_event *ev);
 
 static int resource_obj_cmp(const void *a, const void *b)
 {
@@ -1062,43 +1062,30 @@ static void print_helper(const char *timestamp_prefix, struct drbd_cfg_context *
 	printf("\n");
 }
 
-/* singly-linked list entry with a netlink message */
+/* singly-linked list entry with a stored event */
 struct nlmsg_entry {
 	struct nlmsg_entry *next;
-	struct nlmsghdr *nlh;
+	struct drbd_nl_event *ev;
 };
 
-/* copy an entire netlink message */
-static struct nlmsg_entry *nlmsg_copy(struct genl_info *info)
+static struct nlmsg_entry *nlmsg_copy(const struct drbd_nl_event *ev)
 {
 	struct nlmsg_entry *entry = calloc(1, sizeof(struct nlmsg_entry));
-	entry->nlh = malloc(info->nlhdr->nlmsg_len);
-	memcpy(entry->nlh, info->nlhdr, info->nlhdr->nlmsg_len);
+
+	if (!entry)
+		exit(20);
+	entry->ev = drbd_nl_event_copy(ev);
+	if (!entry->ev)
+		exit(20);
 	return entry;
 }
 
 static int apply_stored_event(const char *timestamp_prefix, struct nlmsg_entry *entry)
 {
-	struct nlattr *tla[ARRAY_SIZE(drbd_tla_nl_policy)];
-	struct genl_info stored_info = {
-		.seq = entry->nlh->nlmsg_seq,
-		.nlhdr = entry->nlh,
-		.genlhdr = nlmsg_data(entry->nlh),
-		.userhdr = genlmsg_data(nlmsg_data(entry->nlh)),
-		.attrs = tla,
-	};
-	int err;
-
-	err = drbd_tla_parse(stored_info.attrs, entry->nlh);
-	if (err) {
-		fprintf(stderr, "drbd_tla_parse() failed");
-		err = 1;
-	} else {
-		err = apply_event(timestamp_prefix, &stored_info);
-	}
+	int err = apply_event(timestamp_prefix, entry->ev);
 
 	/* We were handed the entry; free it whatever happened. */
-	free(entry->nlh);
+	drbd_nl_event_free(entry->ev);
 	free(entry);
 
 	return err;
@@ -1109,39 +1096,33 @@ static bool seq_a_less_or_equal_b(uint32_t a, uint32_t b)
 	return (int32_t)a - (int32_t)b <= 0;
 }
 
-int print_event(const struct drbd_cmd *cm, struct genl_info *info, struct reply_ctx *rctx)
+int print_event(const struct drbd_cmd *cm, struct drbd_nl_event *ev, struct reply_ctx *rctx)
 {
 	static uint32_t next_seq; /* nlmsg_seq of the next message to apply */
 	static bool next_seq_known;
 	static struct nlmsg_entry *stored_messages = NULL;
 	static struct nlmsg_entry **tail_next = &stored_messages;
 
-	struct drbd_notification_header nh = { .nh_type = -1U };
 	enum drbd_notification_type action;
-	struct drbd_genlmsghdr *dh;
 	int err;
 	char timestamp_prefix[TIMESTAMP_LEN];
 	struct nlmsg_entry *entry, **iter_prev_next;
 
-	if (!info)
+	if (!ev)
 		return 0;
 
-	dh = info->userhdr;
-	if (dh->ret_code == ERR_MINOR_INVALID && cm->missing_ok)
+	if (ev->ret_code == ERR_MINOR_INVALID && cm->missing_ok)
 		return 0;
-	if (dh->ret_code != NO_ERROR)
-		return dh->ret_code;
+	if (ev->ret_code != NO_ERROR)
+		return ev->ret_code;
 
-	err = drbd_notification_header_from_attrs(&nh, info);
-	if (err)
-		return 0;
-	action = nh.nh_type & ~NOTIFY_FLAGS;
+	action = ev->action & ~NOTIFY_FLAGS;
 
 	err = format_timestamp(timestamp_prefix);
 	if (err)
 		exit(20);
 
-	if (info->genlhdr->cmd == DRBD_INITIAL_STATE_DONE) {
+	if (ev->kind == NL_OBJ_INITIAL_STATE_DONE) {
 		if (initial_state)
 			printf("%s%s -\n", timestamp_prefix, action_exists);
 		fflush(stdout);
@@ -1150,10 +1131,10 @@ int print_event(const struct drbd_cmd *cm, struct genl_info *info, struct reply_
 		receive_update = false;
 	} else if (action == NOTIFY_EXISTS) {
 		/* apply initial state "exists" messages immediately */
-		return apply_event(timestamp_prefix, info);
+		return apply_event(timestamp_prefix, ev);
 	} else {
-		uint32_t seq = info->nlhdr->nlmsg_seq;
-		struct nlmsg_entry *entry = nlmsg_copy(info);
+		uint32_t seq = ev->seq;
+		struct nlmsg_entry *entry = nlmsg_copy(ev);
 
 		if (!next_seq_known) {
 			next_seq = seq;
@@ -1173,11 +1154,11 @@ restart:
 	entry = stored_messages;
 	while (entry) {
 		/* if the first messages were out-of-order, seq may decrease */
-		if (seq_a_less_or_equal_b(entry->nlh->nlmsg_seq, next_seq)) {
+		if (seq_a_less_or_equal_b(entry->ev->seq, next_seq)) {
 			if (tail_next == &entry->next) /* tail element will be freed */
 				tail_next = iter_prev_next;
 
-			if (entry->nlh->nlmsg_seq == next_seq)
+			if (entry->ev->seq == next_seq)
 				next_seq++;
 
 			/* remove entry from list */
@@ -1197,12 +1178,10 @@ restart:
 	return 0;
 }
 
-static int apply_event(const char *prefix, struct genl_info *info)
+static int apply_event(const char *prefix, const struct drbd_nl_event *ev)
 {
-	int err;
-	struct drbd_notification_header nh = { .nh_type = -1U };
-	enum drbd_notification_type action;
-	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = -1U, };
+	enum drbd_notification_type action = ev->action & ~NOTIFY_FLAGS;
+	const struct drbd_cfg_context *ctx = &ev->ctx;
 	bool is_resource_create;
 	struct resources_list *new_resource;
 	struct resources_list *old_resource;
@@ -1211,34 +1190,25 @@ static int apply_event(const char *prefix, struct genl_info *info)
 	struct peer_devices_list *peer_device;
 	struct paths_list *path;
 
-	err = drbd_notification_header_from_attrs(&nh, info);
-	if (err)
-		return 0;
-	action = nh.nh_type & ~NOTIFY_FLAGS;
-
 	if (action == NOTIFY_EXISTS && receive_update)
 		action = NOTIFY_CHANGE; /* exists messages are actually updates */
 
-	err = drbd_cfg_context_from_attrs(&ctx, info);
-	if (err)
-		return 0;
-
-	is_resource_create = info->genlhdr->cmd == DRBD_RESOURCE_STATE &&
+	is_resource_create = ev->kind == NL_OBJ_RESOURCE &&
 		(action == NOTIFY_CREATE || action == NOTIFY_EXISTS);
 
 	/* look for the resource in the current update */
 	for (new_resource = update_resources; new_resource; new_resource = new_resource->next) {
-		if (!strcmp(new_resource->name, ctx.ctx_resource_name))
+		if (!strcmp(new_resource->name, ctx->ctx_resource_name))
 			break;
 	}
 	/* look for the resource in the master copy */
-	old_resource = find_resource(ctx.ctx_resource_name);
+	old_resource = find_resource((char *)ctx->ctx_resource_name);
 
 	if (is_resource_create) {
 		if (new_resource || old_resource)
 			return 0;
 
-		new_resource = new_resource_from_info(info);
+		new_resource = new_resource_from_event(ev);
 		store_update_resource(new_resource);
 	} else if (!new_resource) {
 		if (!old_resource)
@@ -1254,144 +1224,128 @@ static int apply_event(const char *prefix, struct genl_info *info)
 	switch (action) {
 	case NOTIFY_EXISTS:
 	case NOTIFY_CREATE:
-		switch(info->genlhdr->cmd) {
-		case DRBD_RESOURCE_STATE:
+		switch (ev->kind) {
+		case NL_OBJ_RESOURCE:
 			// resource already created
 			break;
-		case DRBD_DEVICE_STATE:
-			device = new_device_from_info(info);
-			store_device_check(new_resource, device);
+		case NL_OBJ_DEVICE:
+			device = new_device_from_event(ev);
+			if (device)
+				store_device_check(new_resource, device);
 			break;
-		case DRBD_CONNECTION_STATE:
-			connection = new_connection_from_info(info);
+		case NL_OBJ_CONNECTION:
+			connection = new_connection_from_event(ev);
 			store_connection_check(new_resource, connection);
 			break;
-		case DRBD_PEER_DEVICE_STATE:
-			peer_device = new_peer_device_from_info(info);
+		case NL_OBJ_PEER_DEVICE:
+			peer_device = new_peer_device_from_event(ev);
 			store_peer_device_check(new_resource, peer_device);
 			break;
-		case DRBD_PATH_STATE:
-			path = new_path_from_info(info);
+		case NL_OBJ_PATH:
+			path = new_path_from_event(ev);
 			store_path_check(new_resource, path);
 			break;
 		default:
-			dbg(1, "unknown exists/create notification %d\n", info->genlhdr->cmd);
+			dbg(1, "unknown exists/create notification %d\n", ev->kind);
 			goto out;
 		}
 		break;
 	case NOTIFY_CHANGE:
-		switch(info->genlhdr->cmd) {
-		case DRBD_RESOURCE_STATE:
-			resource_info_from_attrs(&new_resource->info, info);
-			memset(&new_resource->statistics, -1, sizeof(new_resource->statistics));
-			resource_statistics_from_attrs(&new_resource->statistics, info);
+		switch (ev->kind) {
+		case NL_OBJ_RESOURCE:
+			if (ev->have_info)
+				new_resource->info = ev->info.resource;
+			new_resource->statistics = ev->stats.resource;
 			break;
-		case DRBD_DEVICE_STATE:
-			device = find_device(new_resource, ctx.ctx_volume);
+		case NL_OBJ_DEVICE:
+			device = find_device(new_resource, ctx->ctx_volume);
 			if (!device)
 				break;
-			disk_conf_from_attrs(&device->disk_conf, info);
-			device->info.dev_disk_state = D_DISKLESS;
-			device->info.is_intentional_diskless = IS_INTENTIONAL_DEF;
-			device->info.dev_is_open = DEV_IS_OPEN_UNKNOWN;
-			device_info_from_attrs(&device->info, info);
-			memset(&device->statistics, -1, sizeof(device->statistics));
-			device_statistics_from_attrs(&device->statistics, info);
+			drbd_nl_disk_conf_from_nest(&device->disk_conf, ev->opts);
+			/* the event carries the old-kernel defaults for absent fields */
+			device->info = ev->info.device;
+			device->statistics = ev->stats.device;
 			break;
-		case DRBD_CONNECTION_STATE:
-			connection = find_connection(new_resource, ctx.ctx_conn_name);
+		case NL_OBJ_CONNECTION:
+			connection = find_connection(new_resource, (char *)ctx->ctx_conn_name);
 			if (!connection)
 				break;
-			connection_info_from_attrs(&connection->info, info);
-			memset(&connection->statistics, -1, sizeof(connection->statistics));
-			connection_statistics_from_attrs(&connection->statistics, info);
+			if (ev->have_info)
+				connection->info = ev->info.connection;
+			connection->statistics = ev->stats.connection;
 			break;
-		case DRBD_PEER_DEVICE_STATE:
-			peer_device = find_peer_device(new_resource, &ctx);
+		case NL_OBJ_PEER_DEVICE:
+			peer_device = find_peer_device(new_resource, (struct drbd_cfg_context *)ctx);
 			if (!peer_device)
 				break;
-			peer_device->info.peer_is_intentional_diskless = IS_INTENTIONAL_DEF;
-			peer_device_info_from_attrs(&peer_device->info, info);
-			memset(&peer_device->statistics, -1, sizeof(peer_device->statistics));
-			peer_device_statistics_from_attrs(&peer_device->statistics, info);
+			peer_device->info = ev->info.peer_device;
+			peer_device->statistics = ev->stats.peer_device;
 			break;
-		case DRBD_PATH_STATE:
+		case NL_OBJ_PATH:
 			/* DRBD does not send initial exists messages for paths
 			 * so we have to be prepared for changes to unknown
 			 * paths */
-			path = find_path(new_resource, &ctx);
+			path = find_path(new_resource, (struct drbd_cfg_context *)ctx);
 			if (path) {
-				drbd_path_info_from_attrs(&path->info, info);
+				if (ev->have_info)
+					path->info = ev->info.path;
 			} else {
-				path = new_path_from_info(info);
+				path = new_path_from_event(ev);
 				store_path_check(new_resource, path);
 			}
 			break;
 		default:
-			dbg(1, "unknown change notification %d\n", info->genlhdr->cmd);
+			dbg(1, "unknown change notification %d\n", ev->kind);
 			goto out;
 		}
-
 		break;
 	case NOTIFY_DESTROY:
-		switch(info->genlhdr->cmd) {
-		case DRBD_RESOURCE_STATE:
+		switch (ev->kind) {
+		case NL_OBJ_RESOURCE:
 			new_resource->destroyed = true;
 			break;
-		case DRBD_DEVICE_STATE:
-			delete_device(new_resource, ctx.ctx_volume);
+		case NL_OBJ_DEVICE:
+			delete_device(new_resource, ctx->ctx_volume);
 			break;
-		case DRBD_CONNECTION_STATE:
-			delete_connection(new_resource, ctx.ctx_conn_name);
+		case NL_OBJ_CONNECTION:
+			delete_connection(new_resource, (char *)ctx->ctx_conn_name);
 			break;
-		case DRBD_PEER_DEVICE_STATE:
-			delete_peer_device(new_resource, &ctx);
+		case NL_OBJ_PEER_DEVICE:
+			delete_peer_device(new_resource, (struct drbd_cfg_context *)ctx);
 			break;
-		case DRBD_PATH_STATE:
-			/* DRBD does not send initial exists messages for paths
-			 * so we have to be prepared for destroy messages for
-			 * unknown paths */
-			delete_path(new_resource, &ctx);
+		/* DRBD does not send initial exists messages for paths so we
+		 * have to be prepared for destroy messages for unknown paths */
+		case NL_OBJ_PATH:
+			delete_path(new_resource, (struct drbd_cfg_context *)ctx);
 			break;
 		default:
-			dbg(1, "unknown destroy notification %d\n", info->genlhdr->cmd);
+			dbg(1, "unknown destroy notification %d\n", ev->kind);
 			goto out;
 		}
 		break;
 	case NOTIFY_CALL:
-	case NOTIFY_RESPONSE: {
-		struct drbd_helper_info helper_info;
-
-		if (info->genlhdr->cmd != DRBD_HELPER)
-		{
-			dbg(1, "unknown call/response notification %d\n", info->genlhdr->cmd);
+	case NOTIFY_RESPONSE:
+		if (ev->kind != NL_OBJ_HELPER) {
+			dbg(1, "unknown call/response notification %d\n", ev->kind);
 			goto out;
 		}
-
-		err = drbd_helper_info_from_attrs(&helper_info, info);
-		if (err) {
+		if (!ev->have_info) {
 			dbg(1, "helper info missing\n");
 			goto out;
 		}
-
-		print_helper(prefix, &ctx,
-				((struct drbd_genlmsghdr*)(info->userhdr))->minor,
-				action == NOTIFY_RESPONSE, &helper_info);
+		print_helper(prefix, (struct drbd_cfg_context *)ctx, ev->minor,
+			     action == NOTIFY_RESPONSE, (struct drbd_helper_info *)&ev->helper);
 		break;
-	}
-        case NOTIFY_RENAME:
-		switch(info->genlhdr->cmd) {
-			case DRBD_RESOURCE_STATE:
-				rename_resource_info_from_attrs(&new_resource->rename_info, info);
-				break;
-                }
-                break;
+	case NOTIFY_RENAME:
+		if (ev->kind == NL_OBJ_RESOURCE)
+			new_resource->rename_info = ev->rename;
+		break;
 	default:
 		dbg(1, "unknown notification type %d\n", action);
 		goto out;
 	}
 
-	if (!(nh.nh_type & NOTIFY_CONTINUES)) {
+	if (!(ev->action & NOTIFY_CONTINUES)) {
 		struct resources_list *next_resource;
 
 		for (new_resource = update_resources; new_resource; new_resource = next_resource) {
