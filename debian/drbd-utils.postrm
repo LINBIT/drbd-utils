@@ -10,8 +10,10 @@ case $1 in purge|remove|deconfigure)
 	# remove man page links
 	for f in drbd drbdadm drbdmeta drbdsetup; do
 		rm -f /usr/share/man/man8/$f.8.gz
+		rm -f /usr/share/man/ja/man8/$f.8.gz
 	done
 	rm -f /usr/share/man/man5/drbd.conf.5.gz
+	rm -f /usr/share/man/ja/man5/drbd.conf.5.gz
 	db_purge
 	;;
 esac
