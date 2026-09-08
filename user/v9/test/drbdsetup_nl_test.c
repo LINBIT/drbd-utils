@@ -11,6 +11,10 @@
 
 #include "../drbdsetup_nl.h"
 #include "../drbdsetup.h"
+#ifndef WINDRBD
+#include <uapi/linux/drbd2.h>
+#include "linux/drbd2_genl_userspace.h"
+#endif
 
 const struct drbd_nl_dialect *nl;
 extern const struct drbd_nl_dialect legacy_dialect;
@@ -361,6 +365,206 @@ static void test_legacy_outcome_keeps_extack_text(void)
 	msg_free(m);
 }
 
+#ifndef WINDRBD
+/* The legacy attributes that are plain NLA_U8 booleans but are represented
+ * as NLA_FLAG on the drbd2 wire. Keyed by (set, legacy attribute id) so
+ * that check_set_mapping()'s NLA_U8/NLA_FLAG exception below only accepts
+ * these specific, deliberately-remapped fields (all FLAG() entries in
+ * config_flags.c) rather than any NLA_U8-vs-NLA_FLAG mismatch. */
+static const struct { enum drbd_nl_attr_set set; int legacy_id; } drbd2_flag_fields[] = {
+	{ NL_SET_SET_ROLE_PARMS, DRBD_A_SET_ROLE_PARMS_FORCE },
+	{ NL_SET_NEW_C_UUID_PARMS, DRBD_A_NEW_C_UUID_PARMS_CLEAR_BM },
+	{ NL_SET_NEW_C_UUID_PARMS, DRBD_A_NEW_C_UUID_PARMS_FORCE_RESYNC },
+	{ NL_SET_CONNECT_PARMS, DRBD_A_CONNECT_PARMS_TENTATIVE },
+	{ NL_SET_CONNECT_PARMS, DRBD_A_CONNECT_PARMS_DISCARD_MY_DATA },
+	{ NL_SET_DETACH_PARMS, DRBD_A_DETACH_PARMS_INTENTIONAL_DISKLESS_DETACH },
+	{ NL_SET_DETACH_PARMS, DRBD_A_DETACH_PARMS_FORCE_DETACH },
+	{ NL_SET_RESIZE_PARMS, DRBD_A_RESIZE_PARMS_RESIZE_FORCE },
+	{ NL_SET_RESIZE_PARMS, DRBD_A_RESIZE_PARMS_NO_RESYNC },
+	{ NL_SET_DISCONNECT_PARMS, DRBD_A_DISCONNECT_PARMS_FORCE_DISCONNECT },
+};
+
+static bool is_drbd2_flag_field(enum drbd_nl_attr_set set, int legacy_id)
+{
+	size_t k;
+
+	for (k = 0; k < ARRAY_SIZE(drbd2_flag_fields); k++)
+		if (drbd2_flag_fields[k].set == set && drbd2_flag_fields[k].legacy_id == legacy_id)
+			return true;
+	return false;
+}
+
+/* Every legacy attribute of a mapped set has a drbd2 counterpart with a
+ * compatible wire type, and no two legacy attributes share one. */
+static void check_set_mapping(enum drbd_nl_attr_set set, const struct nla_policy *legacy,
+			      int legacy_max, const char *name)
+{
+	const struct nla_policy *d2;
+	int d2_max = 0, i, j;
+
+	d2 = drbd2_dialect.policy(set, &d2_max);
+	CHECK(d2 != NULL);
+	for (i = 1; i <= legacy_max; i++) {
+		int id, lt = legacy[i].type, dt;
+
+		if (lt == NLA_UNSPEC)
+			continue;	/* an unused legacy number */
+		id = drbd2_dialect.attr_id(set, i);
+		if (id <= 0 || id > d2_max) {
+			fprintf(stderr, "%s: legacy attr %d unmapped\n", name, i);
+			failures++;
+			continue;
+		}
+		dt = d2[id].type;
+		/* identical, or one of the documented exceptions */
+		if (!(lt == dt ||
+		      (lt == NLA_U8 && dt == NLA_FLAG && is_drbd2_flag_field(set, i)) ||
+		      (lt == NLA_S32 && dt == NLA_U32) ||
+		      (lt == NLA_U32 && dt == NLA_S32) ||
+		      (lt == NLA_STRING && dt == NLA_NUL_STRING) ||
+		      (lt == NLA_NUL_STRING && dt == NLA_STRING))) {
+			fprintf(stderr, "%s: legacy attr %d type %d vs drbd2 attr %d type %d\n",
+				name, i, lt, id, dt);
+			failures++;
+		}
+		for (j = 1; j < i; j++)
+			if (legacy[j].type != NLA_UNSPEC && drbd2_dialect.attr_id(set, j) == id) {
+				fprintf(stderr, "%s: legacy attrs %d and %d both map to %d\n",
+					name, j, i, id);
+				failures++;
+			}
+	}
+}
+
+static void test_drbd2_attr_maps_complete(void)
+{
+#define CHECK_SET(set, p) check_set_mapping(set, drbd_ ## p ## _nl_policy, \
+					     ARRAY_SIZE(drbd_ ## p ## _nl_policy) - 1, #p)
+	CHECK_SET(NL_SET_DISK_CONF, disk_conf);
+	CHECK_SET(NL_SET_NET_CONF, net_conf);
+	CHECK_SET(NL_SET_RES_OPTS, res_opts);
+	CHECK_SET(NL_SET_PEER_DEVICE_CONF, peer_device_conf);
+	CHECK_SET(NL_SET_DEVICE_CONF, device_conf);
+	CHECK_SET(NL_SET_SET_ROLE_PARMS, set_role_parms);
+	CHECK_SET(NL_SET_RESIZE_PARMS, resize_parms);
+	CHECK_SET(NL_SET_START_OV_PARMS, start_ov_parms);
+	CHECK_SET(NL_SET_NEW_C_UUID_PARMS, new_c_uuid_parms);
+	CHECK_SET(NL_SET_DISCONNECT_PARMS, disconnect_parms);
+	CHECK_SET(NL_SET_DETACH_PARMS, detach_parms);
+	CHECK_SET(NL_SET_INVALIDATE_PARMS, invalidate_parms);
+	CHECK_SET(NL_SET_INVALIDATE_PEER_PARMS, invalidate_peer_parms);
+	CHECK_SET(NL_SET_CONNECT_PARMS, connect_parms);
+	CHECK_SET(NL_SET_RENAME_RESOURCE_PARMS, rename_resource_parms);
+	CHECK_SET(NL_SET_SUSPEND_IO_PARMS, suspend_io_parms);
+#undef CHECK_SET
+	/* carried by the context nest in drbd2 */
+	CHECK(drbd2_dialect.nest_start(NULL, NL_SET_PATH_PARMS) == NULL);
+	CHECK(drbd2_dialect.nest_start(NULL, NL_SET_FORGET_PEER_PARMS) == NULL);
+}
+
+static void test_drbd2_request_layout(void)
+{
+	struct msg_buff *m = msg_new(DEFAULT_MSG_SIZE);
+	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = 3 };
+	struct sockaddr_in sin = { .sin_family = AF_INET, .sin_port = htons(7789),
+				   .sin_addr = { .s_addr = htonl(0x0a000001) } };
+	struct nlattr *nest, *tb[DRBD2_A_MAX + 1], *ctb[DRBD2_A_CONTEXT_MAX + 1],
+		      *atb[DRBD2_A_ADDRESS_MAX + 1], *a;
+	struct nlmsghdr *nlh;
+	struct genlmsghdr *gh;
+
+	strcpy(ctx.ctx_resource_name, "r0");
+	memcpy(ctx.ctx_my_addr, &sin, sizeof(sin));
+	ctx.ctx_my_addr_len = sizeof(sin);
+
+	CHECK(drbd2_dialect.put_request(m, DRBD_NL_CMD_NET_OPTS, 0) == 0);
+	nest = drbd2_dialect.nest_start(m, NL_SET_NET_CONF);
+	CHECK(nest != NULL);
+	nla_put_u32(m, drbd2_dialect.attr_id(NL_SET_NET_CONF, DRBD_A_NET_CONF_PING_INT), 5);
+	nla_nest_end(m, nest);
+	drbd2_dialect.put_set_defaults(m);
+	CHECK(drbd2_dialect.put_context(m, &ctx, 9,
+					CTX_RESOURCE | CTX_PEER_NODE_ID | CTX_MINOR | CTX_MY_ADDR,
+					NL_SET_NET_CONF) == 0);
+	nlh = finish_msg(m);
+
+	gh = nlmsg_data(nlh);
+	CHECK(gh->cmd == DRBD2_CMD_CONNECTION_SET);
+	CHECK(nla_parse(tb, DRBD2_A_MAX, nlmsg_attrdata(nlh, GENL_HDRLEN),
+			nlmsg_attrlen(nlh, GENL_HDRLEN), drbd2_tla_nl_policy) == 0);
+	CHECK(tb[DRBD2_A_SET_DEFAULTS] != NULL);
+	CHECK(tb[DRBD2_A_NET_CONF] != NULL);
+	a = nla_find_nested(tb[DRBD2_A_NET_CONF], DRBD2_A_NET_CONF_PING_INT);
+	CHECK(a && nla_get_u32(a) == 5);
+	CHECK(tb[DRBD2_A_CONTEXT] != NULL);
+	CHECK(nla_parse_nested(ctb, DRBD2_A_CONTEXT_MAX, tb[DRBD2_A_CONTEXT],
+			       drbd2_context_nl_policy) == 0);
+	CHECK(ctb[DRBD2_A_CONTEXT_RESOURCE_NAME] &&
+	      !strcmp(nla_data(ctb[DRBD2_A_CONTEXT_RESOURCE_NAME]), "r0"));
+	CHECK(ctb[DRBD2_A_CONTEXT_MINOR] && nla_get_u32(ctb[DRBD2_A_CONTEXT_MINOR]) == 9);
+	CHECK(ctb[DRBD2_A_CONTEXT_PEER_NODE_ID] && nla_get_u32(ctb[DRBD2_A_CONTEXT_PEER_NODE_ID]) == 3);
+	CHECK(ctb[DRBD2_A_CONTEXT_VOLUME] == NULL);
+	CHECK(ctb[DRBD2_A_CONTEXT_MY_ADDRESS] != NULL && ctb[DRBD2_A_CONTEXT_PEER_ADDRESS] == NULL);
+	CHECK(nla_parse_nested(atb, DRBD2_A_ADDRESS_MAX, ctb[DRBD2_A_CONTEXT_MY_ADDRESS],
+			       drbd2_address_nl_policy) == 0);
+	CHECK(atb[DRBD2_A_ADDRESS_FAMILY] && nla_get_u16(atb[DRBD2_A_ADDRESS_FAMILY]) == AF_INET);
+	CHECK(atb[DRBD2_A_ADDRESS_PORT] && nla_get_be16(atb[DRBD2_A_ADDRESS_PORT]) == htons(7789));
+	CHECK(atb[DRBD2_A_ADDRESS_IPV4] && nla_get_be32(atb[DRBD2_A_ADDRESS_IPV4]) == htonl(0x0a000001));
+	CHECK(atb[DRBD2_A_ADDRESS_IPV6] == NULL);
+	msg_free(m);
+}
+
+/* A drbd2 reply and refusal, as the kernel sends them. */
+static void test_drbd2_outcome(void)
+{
+	struct msg_buff *m = msg_new(DEFAULT_MSG_SIZE);
+	struct drbd_nl_outcome out;
+	struct nlmsghdr *nlh;
+
+	genlmsg_put(m, drbd2_dialect.family, 0, DRBD2_CMD_RESOURCE_PRIMARY);
+	nla_put_u32(m, DRBD2_A_STATE_RESULT, DRBD2_STATE_RESULT_NO_UP_TO_DATE_DISK);
+	nla_put_string(m, DRBD2_A_MESSAGE, "first line\nsecond line");
+	nlh = finish_msg(m);
+	CHECK(drbd2_dialect.recv_outcome(nlh, &out) == 0);
+	CHECK(out.ret_code == SS_NO_UP_TO_DATE_DISK);
+	CHECK(out.info && out.info_len == (int)sizeof("first line\0second line"));
+	CHECK(!strcmp(out.info, "first line") && !strcmp(out.info + 11, "second line"));
+	CHECK(out.timeout_type == -1);
+	msg_free(m);
+
+	m = msg_new(DEFAULT_MSG_SIZE);
+	genlmsg_put(m, drbd2_dialect.family, 0, DRBD2_CMD_RESOURCE_PRIMARY);
+	nla_put_u32(m, DRBD2_A_STATE_RESULT, DRBD2_STATE_RESULT_SUCCESS);
+	nlh = finish_msg(m);
+	CHECK(drbd2_dialect.recv_outcome(nlh, &out) == 0);
+	CHECK(out.ret_code == NO_ERROR && out.info == NULL);
+	msg_free(m);
+
+	m = msg_new(DEFAULT_MSG_SIZE);
+	genlmsg_put(m, drbd2_dialect.family, 0, DRBD2_CMD_RESOURCE_PRIMARY);
+	nla_put_u32(m, DRBD2_A_STATE_RESULT, DRBD2_STATE_RESULT_NOTHING_TO_DO);
+	nlh = finish_msg(m);
+	CHECK(drbd2_dialect.recv_outcome(nlh, &out) == 0);
+	CHECK(out.ret_code == SS_NOTHING_TO_DO);
+	msg_free(m);
+
+	m = msg_new(DEFAULT_MSG_SIZE);
+	genlmsg_put(m, drbd2_dialect.family, 0, DRBD2_CMD_TIMEOUT_TYPE_GET);
+	nla_put_u32(m, DRBD2_A_TIMEOUT_TYPE, DRBD2_TIMEOUT_TYPE_PEER_OUTDATED);
+	nlh = finish_msg(m);
+	CHECK(drbd2_dialect.recv_outcome(nlh, &out) == 0);
+	CHECK(out.ret_code == NO_ERROR && out.timeout_type == UT_PEER_OUTDATED);
+	msg_free(m);
+
+	m = msg_new(DEFAULT_MSG_SIZE);
+	nlh = build_error_reply(m, -ENOENT, true, "unknown resource");
+	CHECK(drbd2_dialect.recv_outcome(nlh, &out) == 0);
+	CHECK(out.ret_code == ERR_EXTACK && out.errnum == ENOENT);
+	CHECK(out.desc && !strcmp(out.desc, "unknown resource"));
+	msg_free(m);
+}
+#endif /* !WINDRBD */
+
 int main(int argc, char **argv)
 {
 	test_event_init_defaults();
@@ -372,6 +576,11 @@ int main(int argc, char **argv)
 	test_legacy_parse_skips_without_identity();
 	test_extack_message();
 	test_legacy_outcome_keeps_extack_text();
+#ifndef WINDRBD
+	test_drbd2_attr_maps_complete();
+	test_drbd2_request_layout();
+	test_drbd2_outcome();
+#endif
 
 	if (failures)
 		fprintf(stderr, "%d check(s) failed\n", failures);

@@ -107,7 +107,7 @@ drbdsetup-core-obj += shared_windrbd.o libgenl_windrbd.o drbdtool_common_windrbd
 drbdmeta-obj += shared_windrbd.o drbdmeta_windrbd.o drbdtool_common_windrbd.o path_windrbd.o
 else
 drbdadm-obj += libgenl.o drbdadm_linux.o drbdtool_common_linux.o path_linux.o shared_linux.o
-drbdsetup-core-obj += libgenl.o drbdtool_common_linux.o drbdsetup_linux.o path_linux.o shared_linux.o drbd2_genl_userspace.o
+drbdsetup-core-obj += libgenl.o drbdtool_common_linux.o drbdsetup_linux.o path_linux.o shared_linux.o drbd2_genl_userspace.o drbdsetup_nl_drbd2.o
 drbdmeta-obj += drbdmeta_linux.o drbdtool_common_linux.o path_linux.o shared_linux.o
 endif
 
@@ -121,7 +121,7 @@ drbdsetup-nl-test-obj = libnla.o drbd_genl_userspace.o drbdsetup_nl.o \
 ifeq ($(WITH_WINDRBD),yes)
 drbdsetup-nl-test-obj += shared_windrbd.o libgenl_windrbd.o
 else
-drbdsetup-nl-test-obj += libgenl.o drbd2_genl_userspace.o
+drbdsetup-nl-test-obj += libgenl.o drbd2_genl_userspace.o drbdsetup_nl_drbd2.o
 endif
 
 all-obj := $(drbdadm-obj) $(drbdsetup-obj) $(drbdmeta-obj) \
