@@ -14,7 +14,7 @@ bool kernel_older_than(int version, int patchlevel, int sublevel)
 }
 
 int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
-		   struct drbd_genlmsghdr *dhdr, char* arg)
+		   enum drbd_nl_attr_set set, char* arg)
 {
 	/* we want to do simple conversions
 		as C: -> \\DosDevices\\C: and GUIDs to
@@ -36,7 +36,7 @@ int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 		fprintf(stderr, "Device name too long: %s (%zd), please report this.\n", arg, n);
 		return OTHER_ERROR;
 	}
-	nla_put_string(msg, ad->nla_type, device);
+	nla_put_string(msg, nl->attr_id(set, ad->nla_type), device);
 
 	return NO_ERROR;
 }

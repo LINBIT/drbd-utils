@@ -39,8 +39,6 @@
 
 int print_event(const struct drbd_cmd *cm, struct genl_info *info, struct reply_ctx *rctx);
 
-extern struct genl_family drbd_genl_family;
-
 static char *test_resource_name = "some-resource";
 static __u32 test_node_id = 4;
 static __u32 test_minor = 1000;
@@ -84,7 +82,7 @@ void test_msg_put(struct msg_buff *smsg, __u8 cmd, __u32 minor)
 {
 	struct drbd_genlmsghdr *dhdr;
 
-	dhdr = genlmsg_put(smsg, &drbd_genl_family, 0, cmd);
+	dhdr = genlmsg_put(smsg, legacy_dialect.family, 0, cmd);
 	dhdr->minor = minor;
 	/* set ret_code because this will be directly mapped to a kernel->user message */
 	dhdr->ret_code = NO_ERROR;
@@ -783,19 +781,19 @@ int generic_get_instrumented(const struct drbd_cmd *cm, int timeout_arg, struct 
 	input[strcspn(input, "\n")] = 0;
 
 	switch (cm->cmd_id) {
-		case DRBD_ADM_GET_RESOURCES:
+		case DRBD_NL_CMD_GET_RESOURCES:
 			cmd_id_name = "DRBD_ADM_GET_RESOURCES";
 			break;
-		case DRBD_ADM_GET_DEVICES:
+		case DRBD_NL_CMD_GET_DEVICES:
 			cmd_id_name = "DRBD_ADM_GET_DEVICES";
 			break;
-		case DRBD_ADM_GET_CONNECTIONS:
+		case DRBD_NL_CMD_GET_CONNECTIONS:
 			cmd_id_name = "DRBD_ADM_GET_CONNECTIONS";
 			break;
-		case DRBD_ADM_GET_PEER_DEVICES:
+		case DRBD_NL_CMD_GET_PEER_DEVICES:
 			cmd_id_name = "DRBD_ADM_GET_PEER_DEVICES";
 			break;
-		case DRBD_ADM_GET_INITIAL_STATE:
+		case DRBD_NL_CMD_GET_INITIAL_STATE:
 			cmd_id_name = "DRBD_ADM_GET_INITIAL_STATE";
 			break;
 		default:
@@ -881,6 +879,8 @@ int main_events2(int argc, char **argv)
 		{ }
 	};
 
+	nl = &legacy_dialect;
+
 	opt_color = NEVER_COLOR;
 	for(;;) {
 		int c;
@@ -931,6 +931,8 @@ int main_events2(int argc, char **argv)
 
 int main_generic_instrumented(int argc, char **argv)
 {
+	nl = &legacy_dialect;
+
 	/* Prevent reading of version from /proc/drbd */
 	setenv("DRBD_DRIVER_VERSION_OVERRIDE", "9.2.14", 1);
 
