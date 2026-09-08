@@ -325,6 +325,7 @@ enum {
 #define NLA_POLICY_NESTED(_policy)	{ .type = NLA_NESTED }
 #define NLA_POLICY_MAX(_type, _max)	{ .type = (_type) }
 #define NLA_POLICY_EXACT_LEN(_len)	{ .type = NLA_BINARY, .len = (_len) }
+#define NLA_POLICY_RANGE(_type, _min, _max)	{ .type = (_type) }
 
 /**
  * struct nla_policy - attribute validation policy
