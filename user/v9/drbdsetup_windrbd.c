@@ -166,3 +166,16 @@ int modprobe_drbd(void)
 	return 1;
 }
 
+/* Windrbd speaks the legacy family only. */
+struct genl_sock *drbd_nl_connect(struct genl_connect_options *opts)
+{
+	struct genl_sock *s = genl_connect_to_family(legacy_dialect.family, opts);
+
+	if (!s || !s->s_family) {
+		fprintf(stderr, "Could not connect to 'drbd' generic netlink family\n");
+		return NULL;
+	}
+	nl = &legacy_dialect;
+	return s;
+}
+

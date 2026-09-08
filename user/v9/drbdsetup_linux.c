@@ -1,6 +1,8 @@
 #include "drbdsetup.h"
 #include <linux/drbd.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -147,5 +149,54 @@ int modprobe_drbd(void)
 				"and can be loaded!\n");
 	}
 	return ret == 0;
+}
+
+/*
+ * Prefer the modern "drbd2" family, fall back to the legacy "drbd" one.
+ * DRBD_NETLINK_FAMILY=drbd|drbd2 in the environment forces a family, for
+ * tests and as an escape hatch.
+ *
+ * genl_connect_to_family() returns NULL both when the family is simply not
+ * registered (the common case for "drbd2" on any shipped kernel) and when
+ * no netlink socket could be created at all; either way, the right thing
+ * to do is try the next candidate on a fresh socket rather than giving up.
+ */
+struct genl_sock *drbd_nl_connect(struct genl_connect_options *opts)
+{
+	const struct drbd_nl_dialect *candidates[2];
+	const char *force = getenv("DRBD_NETLINK_FAMILY");
+	int n = 0, i;
+
+	if (!force) {
+		candidates[n++] = &drbd2_dialect;
+		candidates[n++] = &legacy_dialect;
+	} else if (!strcmp(force, "drbd2")) {
+		candidates[n++] = &drbd2_dialect;
+	} else if (!strcmp(force, "drbd")) {
+		candidates[n++] = &legacy_dialect;
+	} else {
+		fprintf(stderr, "DRBD_NETLINK_FAMILY: unknown family '%s', expected drbd or drbd2\n",
+			force);
+		return NULL;
+	}
+
+	for (i = 0; i < n; i++) {
+		struct genl_sock *s = genl_connect_to_family(candidates[i]->family, opts);
+
+		if (s && s->s_family) {
+			nl = candidates[i];
+			return s;
+		}
+		/* NULL: the family is not registered (or no socket at all);
+		 * a socket without a family: a reply we did not understand.
+		 * Either way, try the next candidate on a fresh socket. */
+		if (s) {
+			close(s->s_fd);
+			free(s);
+		}
+	}
+	fprintf(stderr, "Could not connect to '%s' generic netlink family\n",
+		candidates[n - 1]->family->name);
+	return NULL;
 }
 

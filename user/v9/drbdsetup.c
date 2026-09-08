@@ -4871,24 +4871,23 @@ int drbdsetup_main(int argc, char **argv)
 	/* All non-option arguments now are in argv[optind .. argc - 1]. */
 	first_optind = optind;
 
-	nl = &legacy_dialect;
-
 	if (cmd->continuous_poll && kernel_older_than(2, 6, 23)) {
 		/* with newer kernels, we need to use setsockopt NETLINK_ADD_MEMBERSHIP */
 		/* maybe more specific: (1 << GENL_ID_CTRL)? */
-		nl->family->nl_groups = -1;
+		legacy_dialect.family->nl_groups = -1;
 	}
 	/* Do not use DRBD if generic_get() is faked */
 	if (!fake_generic_get) {
-		drbd_sock = genl_connect_to_family(nl->family, &connect_options);
-		if (!drbd_sock) {
-			fprintf(stderr, "Could not connect to 'drbd' generic netlink family\n");
+		drbd_sock = drbd_nl_connect(&connect_options);
+		if (!drbd_sock)
 			return 20;
-		}
+	} else if (!nl) {
+		nl = &legacy_dialect;
 	}
 
-	if (nl->family->version != DRBD_FAMILY_VERSION ||
-	    nl->family->hdrsize != sizeof(struct drbd_genlmsghdr)) {
+	if (nl == &legacy_dialect &&
+	    (nl->family->version != DRBD_FAMILY_VERSION ||
+	     nl->family->hdrsize != sizeof(struct drbd_genlmsghdr))) {
 		fprintf(stderr, "API mismatch!\n\t"
 			"API version drbdsetup: %u kernel: %u\n\t"
 			"header size drbdsetup: %u kernel: %u\n",
