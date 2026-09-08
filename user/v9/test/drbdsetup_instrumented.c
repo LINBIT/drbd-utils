@@ -37,7 +37,7 @@
 
 #include "drbd_protocol.h"
 
-int print_event(const struct drbd_cmd *cm, struct genl_info *info, struct reply_ctx *rctx);
+int print_event(const struct drbd_cmd *cm, struct drbd_nl_event *ev, struct reply_ctx *rctx);
 
 static char *test_resource_name = "some-resource";
 static __u32 test_node_id = 4;
@@ -579,23 +579,14 @@ static void test_get_peer_device_sync(struct msg_buff *smsg, struct test_vars *v
  * ################# main() #################
  */
 
-static struct genl_info nlmsghdr_to_genl_info(struct nlmsghdr *nlh, struct nlattr **tla)
+static void nlmsghdr_to_event(struct nlmsghdr *nlh, enum drbd_nl_cmd cmd, struct drbd_nl_event *ev)
 {
-	int err;
-	struct genl_info info = {
-		.seq = nlh->nlmsg_seq,
-		.nlhdr = nlh,
-		.genlhdr = nlmsg_data(nlh),
-		.userhdr = genlmsg_data(nlmsg_data(nlh)),
-		.attrs = tla,
-	};
-	err = drbd_tla_parse(tla, nlh);
-	if (err) {
-		fprintf(stderr, "drbd_tla_parse() failed");
+	enum drbd_nl_msg r = nl->parse_msg(nlh, cmd, ev);
+
+	if (r != NL_MSG_EVENT) {
+		fprintf(stderr, "parse_msg() did not yield an event (%d)\n", r);
 		exit(1);
 	}
-
-	return info;
 }
 
 #define TEST_MSG(name) do { \
@@ -728,9 +719,8 @@ int test_events2()
 		struct msg_buff *smsg;
 		struct nlmsghdr *nlh;
 		int err;
-		struct drbd_cmd cm = { };
-		struct nlattr *tla[128];
-		struct genl_info info;
+		struct drbd_cmd cm = { .cmd_id = DRBD_NL_CMD_GET_INITIAL_STATE };
+		struct drbd_nl_event ev;
 
 		err = test_parse_vars(input, msg_name, &vars);
 		if (err)
@@ -754,9 +744,9 @@ int test_events2()
 		nlh->nlmsg_seq = next_msg_seq;
 
 		/* read message as if receiving */
-		info = nlmsghdr_to_genl_info(nlh, tla);
+		nlmsghdr_to_event(nlh, cm.cmd_id, &ev);
 
-		err = print_event(&cm, &info, NULL);
+		err = print_event(&cm, &ev, NULL);
 		if (err) {
 			msg_free(smsg);
 			return err;
@@ -812,9 +802,7 @@ int generic_get_instrumented(const struct drbd_cmd *cm, int timeout_arg, struct 
 		struct test_vars vars = test_init_vars();
 		struct msg_buff *smsg;
 		struct nlmsghdr *nlh;
-		struct drbd_genlmsghdr *dh;
-		struct nlattr *tla[128];
-		struct genl_info info;
+		struct drbd_nl_event ev;
 		int err;
 
 		err = test_parse_vars(input, msg_name, &vars);
@@ -841,19 +829,18 @@ int generic_get_instrumented(const struct drbd_cmd *cm, int timeout_arg, struct 
 		nlh->nlmsg_flags |= NLM_F_MULTI;
 
 		/* read message as if receiving */
-		info = nlmsghdr_to_genl_info(nlh, tla);
+		nlmsghdr_to_event(nlh, cm->cmd_id, &ev);
 
 		/* generic_recv() checks ret_code before invoking the
 		 * handle_reply callback; mirror that, so that the callbacks
 		 * do not need a check of their own. */
-		dh = genlmsg_data(nlmsg_data(nlh));
-		if (dh->ret_code != NO_ERROR &&
-		    !(dh->ret_code == ERR_MINOR_INVALID && cm->missing_ok)) {
-			fprintf(stderr, "ret_code %d\n", dh->ret_code);
+		if (ev.ret_code != NO_ERROR &&
+		    !(ev.ret_code == ERR_MINOR_INVALID && cm->missing_ok)) {
+			fprintf(stderr, "ret_code %d\n", ev.ret_code);
 			return 20;
 		}
 
-		err = cm->handle_reply(cm, &info, rctx);
+		err = cm->handle_reply(cm, &ev, rctx);
 		if (err) {
 			if (err < 0)
 				err = 0;
