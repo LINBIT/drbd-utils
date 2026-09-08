@@ -36,7 +36,7 @@ bool kernel_older_than(int version, int patchlevel, int sublevel)
 }
 
 int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
-		   struct drbd_genlmsghdr *dhdr, char* arg)
+		   enum drbd_nl_attr_set set, char* arg)
 {
 	struct stat sb;
 	int device_fd;
@@ -59,7 +59,7 @@ int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg,
 	}
 
 	close(device_fd);
-	nla_put_string(msg, ad->nla_type, arg);
+	nla_put_string(msg, nl->attr_id(set, ad->nla_type), arg);
 
 	return NO_ERROR;
 }

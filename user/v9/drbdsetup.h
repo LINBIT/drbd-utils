@@ -26,11 +26,12 @@
 
 struct drbd_argument {
 	const char* name;
-	__u16 nla_type;
+	__u16 nla_type;		/* neutral (legacy) attribute id */
 	int (*convert_function)(struct drbd_argument *,
 				struct msg_buff *,
-				struct drbd_genlmsghdr *dhdr,
+				enum drbd_nl_attr_set,
 				char *);
+	bool in_context;	/* goes into the object's identity, not the option nest */
 };
 
 /* Configuration requests typically need a context to operate on.
@@ -88,8 +89,8 @@ struct reply_ctx {
 struct drbd_cmd {
 	const char* cmd;
 	enum cfg_ctx_key ctx_key;
-	int cmd_id;
-	int tla_id; /* top level attribute id */
+	enum drbd_nl_cmd cmd_id;
+	enum drbd_nl_attr_set tla_id; /* the request's attribute set */
 	int (*function)(const struct drbd_cmd *, int, char **);
 	struct drbd_argument *drbd_args;
 	int (*handle_reply)(const struct drbd_cmd*, struct genl_info *, struct reply_ctx *);
@@ -201,7 +202,7 @@ void print_command_usage(const struct drbd_cmd *cm, enum usage_type);
 int sockaddr_from_str(struct sockaddr_storage *storage, const char *str);
 
 bool kernel_older_than(int version, int patchlevel, int sublevel);
-int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg, struct drbd_genlmsghdr *dhdr, char* arg);
+int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg, enum drbd_nl_attr_set set, char* arg);
 char *kernel_device_to_userland_device(char *kernel_dev);
 int genl_join_mc_group_and_ctrl(struct genl_sock *s, const char *name);
 int poll_hup(struct genl_sock *s, int timeout_ms, int extra_poll_fd);
