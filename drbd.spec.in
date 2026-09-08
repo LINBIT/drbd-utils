@@ -176,6 +176,7 @@ This packages includes the DRBD administration tools.
 %{_unitdir}/drbd@.target
 %{_unitdir}/drbd-configured.target
 %{_tmpfilesdir}/drbd.conf
+%dir %{_prefix}/lib/drbd/scripts
 %{_prefix}/lib/drbd/scripts/drbd
 %{_prefix}/lib/drbd/scripts/drbd-service-shim.sh
 %{_prefix}/lib/drbd/scripts/drbd-wait-promotable.sh
