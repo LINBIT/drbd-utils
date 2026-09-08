@@ -120,9 +120,14 @@ drbdsetup-nl-test-obj = libnla.o libgenl.o drbd_genl_userspace.o drbdsetup_nl.o 
 
 ifneq ($(WITH_WINDRBD),yes)
 drbdsetup-nl-test-obj += drbd2_genl_userspace.o drbdsetup_nl_drbd2.o
+drbdsetup-instrumented-test-obj += test/drbd2_test_encode.o
 endif
 
 all-obj := $(drbdadm-obj) $(drbdsetup-obj) $(drbdmeta-obj) test/drbdsetup_instrumented.o $(drbdsetup-nl-test-obj)
+
+ifneq ($(WITH_WINDRBD),yes)
+all-obj += test/drbd2_test_encode.o
+endif
 
 all: tools
 
@@ -154,6 +159,7 @@ ifeq ($(WITH_CLITEST),yes)
 test: drbdadm drbdmeta test/drbdsetup_instrumented test/drbdsetup_nl_test
 	cd ../../tests/v9 && ln -sf ../../user/v9/drbdadm . && ln -sf ../../user/v9/drbdmeta . && ln -sf ../../user/v9/test/drbdsetup_instrumented . && ln -sf ../../user/v9/test/drbdsetup_nl_test .
 	../../tests/run.sh ../../tests/v9/*.test
+	DRBD_NETLINK_FAMILY=drbd2 ../../tests/run.sh ../../tests/v9/*.test
 else
 test:
 endif
