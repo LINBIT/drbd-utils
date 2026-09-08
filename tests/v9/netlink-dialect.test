@@ -1,0 +1,3 @@
+## Unit checks of the netlink dialect layer (legacy and drbd2).
+$ drbdsetup_nl_test
+all checks passed

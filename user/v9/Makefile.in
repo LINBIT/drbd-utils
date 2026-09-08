@@ -92,7 +92,7 @@ drbdadm-obj = drbdadm_scanner.o drbdadm_parser.o drbdadm_postparse.o \
 drbdsetup-core-obj = libnla.o registry.o drbdsetup.o drbdtool_common.o \
 		     drbd_buildtag.o drbd_strings.o config_flags.o drbd_genl_userspace.o \
 		     wrap_printf.o drbdsetup_colors.o shared_tool.o \
-		     drbdsetup_events2.o
+		     drbdsetup_events2.o drbdsetup_nl.o
 
 drbdmeta-obj = drbdmeta.o drbdmeta_scanner.o drbdtool_common.o drbd_buildtag.o \
 	       drbd_strings.o shared_tool.o
@@ -115,7 +115,10 @@ drbdsetup-obj = $(drbdsetup-core-obj) drbdsetup_main.o
 
 drbdsetup-instrumented-test-obj = $(drbdsetup-core-obj) test/drbdsetup_instrumented.o
 
-all-obj := $(drbdadm-obj) $(drbdsetup-obj) $(drbdmeta-obj) test/drbdsetup_instrumented.o
+drbdsetup-nl-test-obj = libnla.o libgenl.o drbd_genl_userspace.o drbdsetup_nl.o \
+			test/drbdsetup_nl_test.o
+
+all-obj := $(drbdadm-obj) $(drbdsetup-obj) $(drbdmeta-obj) test/drbdsetup_instrumented.o $(drbdsetup-nl-test-obj)
 
 all: tools
 
@@ -139,10 +142,13 @@ drbdmeta: $(drbdmeta-obj)
 test/drbdsetup_instrumented: $(drbdsetup-instrumented-test-obj)
 	$(LINK.c) $(LDFLAGS) -o $@ $^ $(LIBS)
 
+test/drbdsetup_nl_test: $(drbdsetup-nl-test-obj)
+	$(LINK.c) $(LDFLAGS) -o $@ $^ $(LIBS)
+
 .PHONY: test
 ifeq ($(WITH_CLITEST),yes)
-test: drbdadm drbdmeta test/drbdsetup_instrumented
-	cd ../../tests/v9 && ln -sf ../../user/v9/drbdadm . && ln -sf ../../user/v9/drbdmeta . && ln -sf ../../user/v9/test/drbdsetup_instrumented .
+test: drbdadm drbdmeta test/drbdsetup_instrumented test/drbdsetup_nl_test
+	cd ../../tests/v9 && ln -sf ../../user/v9/drbdadm . && ln -sf ../../user/v9/drbdmeta . && ln -sf ../../user/v9/test/drbdsetup_instrumented . && ln -sf ../../user/v9/test/drbdsetup_nl_test .
 	../../tests/run.sh ../../tests/v9/*.test
 else
 test:
@@ -156,7 +162,7 @@ coverage:
 
 clean:
 	rm -f drbdadm_scanner.c
-	rm -f drbdsetup drbdadm drbdmeta test/drbdsetup_instrumented $(all-obj)
+	rm -f drbdsetup drbdadm drbdmeta test/drbdsetup_instrumented test/drbdsetup_nl_test $(all-obj)
 	rm -f drbd_strings.c drbd_strings.h
 	rm -f *~
 	rm -f *.gcno *.gcda *.gcov

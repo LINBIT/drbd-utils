@@ -7,22 +7,12 @@
 #include "libgenl.h"
 #include "linux/drbd_genl_userspace.h"
 #include <linux/types.h>
-
-
-#define OTHER_ERROR 900
-#define ERR_MODULE_UNLOADED 901
+#include "drbdsetup_nl.h"
 
 /* EXIT code to map ERR_MODULE_UNLOADED to */
 #define ERR_EXIT_MODULE_UNLOADED  121
 
 #define ADDRESS_STR_MAX 256
-
-/* is_intentional is a boolean value we get via nl from kernel. if we use new
- * utils and old kernel we don't get it, so we set this default, get kernel
- * info, and then decide from the value if the kernel was new enough */
-#define IS_INTENTIONAL_DEF 3
-/* same for DEV_IS_OPEN */
-#define DEV_IS_OPEN_UNKNOWN 3
 
 
 /* Used as base value, for getopt_long()'s options to express
