@@ -1,6 +1,8 @@
 #ifndef __DRBD_CONFIG_FLAGS_H
 #define __DRBD_CONFIG_FLAGS_H
 
+#include "drbdsetup_nl.h"
+
 struct msg_buff;
 struct nlattr;
 
@@ -72,9 +74,11 @@ struct field_def {
 };
 
 struct context_def {
+	/* the neutral (legacy) policy: stored option nests are parsed with it */
 	const struct nla_policy *nla_policy;
 	int nla_policy_size;
-	int nla_type;
+	/* which request attribute set the fields belong to */
+	enum drbd_nl_attr_set attr_set;
 	struct field_def fields[];
 };
 

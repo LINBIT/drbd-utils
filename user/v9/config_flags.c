@@ -27,6 +27,35 @@
 	.nla_policy = drbd_ ## p ## _nl_policy,							\
 	.nla_policy_size = ARRAY_SIZE(drbd_ ## p ## _nl_policy)
 
+/*
+ * The active netlink dialect. drbdsetup sets it before it marshals
+ * anything; drbdadm links this file too but never calls a put function,
+ * so it stays NULL there and the legacy identity mapping applies.
+ */
+const struct drbd_nl_dialect *nl;
+
+/* The attribute id "field" has on the wire of the active dialect. */
+static int wire_id(struct context_def *ctx, const struct field_def *field)
+{
+	return nl ? nl->attr_id(ctx->attr_set, field->nla_type) : field->nla_type;
+}
+
+/* The wire type of "field" in the active dialect; falls back to the neutral policy. */
+static int wire_type(struct context_def *ctx, const struct field_def *field)
+{
+	const struct nla_policy *policy = NULL;
+	int maxtype = 0, id;
+
+	if (nl)
+		policy = nl->policy(ctx->attr_set, &maxtype);
+	if (!policy)
+		return ctx->nla_policy[field->nla_type].type;
+	id = wire_id(ctx, field);
+	if (id <= 0 || id > maxtype)
+		return NLA_UNSPEC;
+	return policy[id].type;
+}
+
 
 struct en_map {
 	const char *name;
@@ -100,7 +129,7 @@ static bool put_enum(struct context_def *ctx, const struct field_def *field,
 	if (n == -1)
 		return false;
 	assert(type_of_field(ctx, field) == NLA_U32);
-	nla_put_u32(msg, field->nla_type, n);
+	nla_put_u32(msg, wire_id(ctx, field), n);
 	return true;
 }
 
@@ -148,7 +177,7 @@ static bool put_enum_nocase(struct context_def *ctx, const struct field_def *fie
 	if (n == -1)
 		return false;
 	assert(type_of_field(ctx, field) == NLA_U32);
-	nla_put_u32(msg, field->nla_type, n);
+	nla_put_u32(msg, wire_id(ctx, field), n);
 	return true;
 }
 
@@ -276,22 +305,23 @@ static bool put_numeric(struct context_def *ctx, const struct field_def *field,
 			struct msg_buff *msg, const char *value)
 {
 	long long l;
+	int id = wire_id(ctx, field);
 
 	/* FIXME: unsigned long long values are broken. */
 	l = m_strtoll(value, field->u.n.scale);
-	switch(type_of_field(ctx, field)) {
+	switch(wire_type(ctx, field)) {
 	case NLA_U8:
-		nla_put_u8(msg, field->nla_type, l);
+		nla_put_u8(msg, id, l);
 		break;
 	case NLA_U16:
-		nla_put_u16(msg, field->nla_type, l);
+		nla_put_u16(msg, id, l);
 		break;
 	case NLA_U32:
 	case NLA_S32:
-		nla_put_u32(msg, field->nla_type, l);
+		nla_put_u32(msg, id, l);
 		break;
 	case NLA_U64:
-		nla_put_u64(msg, field->nla_type, l);
+		nla_put_u64(msg, id, l);
 		break;
 	default:
 		return false;
@@ -433,7 +463,7 @@ static bool put_enum_num(struct context_def *ctx, const struct field_def *field,
 	if (n == -1)
 		return false;
 	assert(is_32bit_field(ctx, field));
-	nla_put_u32(msg, field->nla_type, n);
+	nla_put_u32(msg, wire_id(ctx, field), n);
 	return true;
 }
 
@@ -545,6 +575,21 @@ static const char *get_boolean(struct context_def *ctx, const struct field_def *
 	return i ? "yes" : "no";
 }
 
+/* A boolean is a u8 in the legacy family; drbd2 encodes some as flags. */
+static void put_yesno(struct context_def *ctx, const struct field_def *field,
+		      struct msg_buff *msg, int yesno)
+{
+	int id = wire_id(ctx, field);
+
+	if (wire_type(ctx, field) == NLA_FLAG) {
+		if (yesno)
+			nla_put_flag(msg, id);
+	} else {
+		assert(type_of_field(ctx, field) == NLA_U8);
+		nla_put_u8(msg, id, yesno);
+	}
+}
+
 static bool put_boolean(struct context_def *ctx, const struct field_def *field,
 			struct msg_buff *msg, const char *value)
 {
@@ -553,8 +598,7 @@ static bool put_boolean(struct context_def *ctx, const struct field_def *field,
 	yesno = boolean_string_to_int(value);
 	if (yesno == -1)
 		return false;
-	assert(type_of_field(ctx, field) == NLA_U8);
-	nla_put_u8(msg, field->nla_type, yesno);
+	put_yesno(ctx, field, msg, yesno);
 	return true;
 }
 
@@ -566,9 +610,8 @@ static bool put_flag(struct context_def *ctx, const struct field_def *field,
 	yesno = boolean_string_to_int(value);
 	if (yesno == -1)
 		return false;
-	assert(type_of_field(ctx, field) == NLA_U8);
 	if (yesno)
-		nla_put_u8(msg, field->nla_type, yesno);
+		put_yesno(ctx, field, msg, yesno);
 	return true;
 }
 
@@ -641,7 +684,7 @@ static bool put_string(struct context_def *ctx, const struct field_def *field,
 		       struct msg_buff *msg, const char *value)
 {
 	assert(type_of_field(ctx, field) == NLA_NUL_STRING);
-	nla_put_string(msg, field->nla_type, value);
+	nla_put_string(msg, wire_id(ctx, field), value);
 	return true;
 }
 
@@ -761,7 +804,7 @@ static bool put_key_serial(struct context_def *ctx, const struct field_def *fiel
 	if (key == -1)
 		return false;
 
-	nla_put_u32(msg, field->nla_type, key);
+	nla_put_u32(msg, wire_id(ctx, field), key);
 	return true;
 }
 
@@ -805,7 +848,7 @@ static const char *get_key_serial(struct context_def *ctx, const struct field_de
 static bool put_key_serial(struct context_def *ctx, const struct field_def *field,
                        struct msg_buff *msg, const char *value)
 {
-	nla_put_u32(msg, field->nla_type, 0);
+	nla_put_u32(msg, wire_id(ctx, field), 0);
 	return true;
 }
 
@@ -1077,7 +1120,7 @@ const struct en_map quorum_map[] = {
 
 struct context_def disk_options_ctx = {
 	NLA_POLICY(disk_conf),
-	.nla_type = DRBD_NLA_DISK_CONF,
+	.attr_set = NL_SET_DISK_CONF,
 	.fields = {
 		CHANGEABLE_DISK_OPTIONS,
 		{ } },
@@ -1085,7 +1128,7 @@ struct context_def disk_options_ctx = {
 
 struct context_def net_options_ctx = {
 	NLA_POLICY(net_conf),
-	.nla_type = DRBD_NLA_NET_CONF,
+	.attr_set = NL_SET_NET_CONF,
 	.fields = {
 		CHANGEABLE_NET_OPTIONS,
 		{ } },
@@ -1093,7 +1136,7 @@ struct context_def net_options_ctx = {
 
 struct context_def primary_cmd_ctx = {
 	NLA_POLICY(set_role_parms),
-	.nla_type = DRBD_NLA_SET_ROLE_PARMS,
+	.attr_set = NL_SET_SET_ROLE_PARMS,
 	.fields = {
 		{ "force", FLAG(DRBD_A_SET_ROLE_PARMS_FORCE) },
 		{ } },
@@ -1101,7 +1144,7 @@ struct context_def primary_cmd_ctx = {
 
 struct context_def secondary_cmd_ctx = {
 	NLA_POLICY(set_role_parms),
-	.nla_type = DRBD_NLA_SET_ROLE_PARMS,
+	.attr_set = NL_SET_SET_ROLE_PARMS,
 	.fields = {
 		{ "force", FLAG(DRBD_A_SET_ROLE_PARMS_FORCE) },
 		{ } },
@@ -1109,7 +1152,7 @@ struct context_def secondary_cmd_ctx = {
 
 struct context_def attach_cmd_ctx = {
 	NLA_POLICY(disk_conf),
-	.nla_type = DRBD_NLA_DISK_CONF,
+	.attr_set = NL_SET_DISK_CONF,
 	.fields = {
 		{ "size", NUMERIC(DRBD_A_DISK_CONF_DISK_SIZE, disk_size, DISK_SIZE),
 		  .unit = "bytes" },
@@ -1122,7 +1165,7 @@ struct context_def attach_cmd_ctx = {
 
 struct context_def detach_cmd_ctx = {
 	NLA_POLICY(detach_parms),
-	.nla_type = DRBD_NLA_DETACH_PARMS,
+	.attr_set = NL_SET_DETACH_PARMS,
 	.fields = {
 		{ "force", FLAG(DRBD_A_DETACH_PARMS_FORCE_DETACH) },
 		{ "diskless", FLAG(DRBD_A_DETACH_PARMS_INTENTIONAL_DISKLESS_DETACH) },
@@ -1132,7 +1175,7 @@ struct context_def detach_cmd_ctx = {
 
 struct context_def new_peer_cmd_ctx = {
 	NLA_POLICY(net_conf),
-	.nla_type = DRBD_NLA_NET_CONF,
+	.attr_set = NL_SET_NET_CONF,
 	.fields = {
 		IMMUTABLE_NET_OPTIONS,
 		CHANGEABLE_NET_OPTIONS,
@@ -1141,7 +1184,7 @@ struct context_def new_peer_cmd_ctx = {
 
 struct context_def path_cmd_ctx = {
 	NLA_POLICY(path_parms),
-	.nla_type = DRBD_NLA_PATH_PARMS,
+	.attr_set = NL_SET_PATH_PARMS,
 	.fields = { { } },
 };
 
@@ -1151,7 +1194,7 @@ struct context_def path_cmd_ctx = {
 
 struct context_def connect_cmd_ctx = {
 	NLA_POLICY(connect_parms),
-	.nla_type = DRBD_NLA_CONNECT_PARMS,
+	.attr_set = NL_SET_CONNECT_PARMS,
 	.fields = {
 		CONNECT_CMD_OPTIONS,
 		{ } },
@@ -1159,7 +1202,7 @@ struct context_def connect_cmd_ctx = {
 
 struct context_def show_net_options_ctx = {
 	NLA_POLICY(net_conf),
-	.nla_type = DRBD_NLA_NET_CONF,
+	.attr_set = NL_SET_NET_CONF,
 	.fields = {
 		IMMUTABLE_NET_OPTIONS,
 		CHANGEABLE_NET_OPTIONS,
@@ -1168,7 +1211,7 @@ struct context_def show_net_options_ctx = {
 
 struct context_def disconnect_cmd_ctx = {
 	NLA_POLICY(disconnect_parms),
-	.nla_type = DRBD_NLA_DISCONNECT_PARMS,
+	.attr_set = NL_SET_DISCONNECT_PARMS,
 	.fields = {
 		{ "force", FLAG(DRBD_A_DISCONNECT_PARMS_FORCE_DISCONNECT) },
 		{ } },
@@ -1176,7 +1219,7 @@ struct context_def disconnect_cmd_ctx = {
 
 struct context_def resize_cmd_ctx = {
 	NLA_POLICY(resize_parms),
-	.nla_type = DRBD_NLA_RESIZE_PARMS,
+	.attr_set = NL_SET_RESIZE_PARMS,
 	.fields = {
 		{ "size", NUMERIC(DRBD_A_RESIZE_PARMS_RESIZE_SIZE, resize_size, DISK_SIZE),
 		  .unit = "bytes" },
@@ -1189,7 +1232,7 @@ struct context_def resize_cmd_ctx = {
 
 struct context_def resource_options_ctx = {
 	NLA_POLICY(res_opts),
-	.nla_type = DRBD_NLA_RESOURCE_OPTS,
+	.attr_set = NL_SET_RES_OPTS,
 	.fields = {
 		{ "cpu-mask", STRING_MAX_LEN(DRBD_A_RES_OPTS_CPU_MASK, DRBD_CPU_MASK_SIZE) },
 		{ "on-no-data-accessible", ENUM(DRBD_A_RES_OPTS_ON_NO_DATA, on_no_data, ON_NO_DATA) },
@@ -1213,7 +1256,7 @@ struct context_def resource_options_ctx = {
 
 struct context_def new_current_uuid_cmd_ctx = {
 	NLA_POLICY(new_c_uuid_parms),
-	.nla_type = DRBD_NLA_NEW_C_UUID_PARMS,
+	.attr_set = NL_SET_NEW_C_UUID_PARMS,
 	.fields = {
 		{ "clear-bitmap", FLAG(DRBD_A_NEW_C_UUID_PARMS_CLEAR_BM) },
 		{ "force-resync", FLAG(DRBD_A_NEW_C_UUID_PARMS_FORCE_RESYNC) },
@@ -1222,7 +1265,7 @@ struct context_def new_current_uuid_cmd_ctx = {
 
 struct context_def verify_cmd_ctx = {
 	NLA_POLICY(start_ov_parms),
-	.nla_type = DRBD_NLA_START_OV_PARMS,
+	.attr_set = NL_SET_START_OV_PARMS,
 	.fields = {
 		{ "start", NUMERIC(DRBD_A_START_OV_PARMS_OV_START_SECTOR, ov_start_sector, DISK_SIZE),
 		  .unit = "bytes" },
@@ -1233,7 +1276,7 @@ struct context_def verify_cmd_ctx = {
 
 struct context_def device_options_ctx = {
 	NLA_POLICY(device_conf),
-	.nla_type = DRBD_NLA_DEVICE_CONF,
+	.attr_set = NL_SET_DEVICE_CONF,
 	.fields = {
 		{ "max-bio-size", NUMERIC(DRBD_A_DEVICE_CONF_MAX_BIO_SIZE, max_bio_size, MAX_BIO_SIZE) },
 		{ "diskless", FLAG(DRBD_A_DEVICE_CONF_INTENTIONAL_DISKLESS) },
@@ -1248,7 +1291,7 @@ struct context_def device_options_ctx = {
 
 struct context_def invalidate_ctx = {
 	NLA_POLICY(invalidate_parms),
-	.nla_type = DRBD_NLA_INVALIDATE_PARMS,
+	.attr_set = NL_SET_INVALIDATE_PARMS,
 	.fields = {
 		INVALIDATE_OPTIONS
 		{ } },
@@ -1256,7 +1299,7 @@ struct context_def invalidate_ctx = {
 
 struct context_def invalidate_adm_ctx = {
 	NLA_POLICY(invalidate_parms),
-	.nla_type = DRBD_NLA_INVALIDATE_PARMS,
+	.attr_set = NL_SET_INVALIDATE_PARMS,
 	.fields = {
 		{ "force", .argument_is_optional = true },
 		INVALIDATE_OPTIONS
@@ -1265,7 +1308,7 @@ struct context_def invalidate_adm_ctx = {
 
 struct context_def invalidate_peer_ctx = {
 	NLA_POLICY(invalidate_peer_parms),
-	.nla_type = DRBD_NLA_INVAL_PEER_PARAMS,
+	.attr_set = NL_SET_INVALIDATE_PEER_PARMS,
 	.fields = {
 		{ "reset-bitmap", BOOLEAN(DRBD_A_INVALIDATE_PEER_PARMS_P_RESET_BITMAP, INVALIDATE_RESET_BITMAP) },
 		{ } },
@@ -1273,7 +1316,7 @@ struct context_def invalidate_peer_ctx = {
 
 struct context_def suspend_io_ctx = {
 	NLA_POLICY(suspend_io_parms),
-	.nla_type = DRBD_NLA_SUSPEND_IO_PARAMS,
+	.attr_set = NL_SET_SUSPEND_IO_PARMS,
 	.fields = {
 		{ "bdev-freeze", BOOLEAN(DRBD_A_SUSPEND_IO_PARMS_BDEV_FREEZE, SUSPEND_IO_BDEV_FREEZE) },
 		{ } },
@@ -1281,7 +1324,7 @@ struct context_def suspend_io_ctx = {
 
 struct context_def peer_device_options_ctx = {
 	NLA_POLICY(peer_device_conf),
-	.nla_type = DRBD_NLA_PEER_DEVICE_OPTS,
+	.attr_set = NL_SET_PEER_DEVICE_CONF,
 	.fields = {
 		{ "resync-rate", NUMERIC(DRBD_A_PEER_DEVICE_CONF_RESYNC_RATE, resync_rate, RESYNC_RATE), .unit = "bytes/second" },
 		{ "c-plan-ahead", NUMERIC(DRBD_A_PEER_DEVICE_CONF_C_PLAN_AHEAD, c_plan_ahead, C_PLAN_AHEAD), .unit = "1/10 seconds" },
