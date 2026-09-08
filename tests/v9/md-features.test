@@ -1,0 +1,51 @@
+## Test the meta data features field. It names the features that the software
+## which last wrote the super block maintains. DRBD needs it because a version
+## that does not know a peer flag preserves that flag without updating its
+## value, which would make the stale value look current.
+##
+## drbdmeta claims the features it maintains itself where it writes the peer
+## entries -- create-md and the v08 -> v09 conversion -- and otherwise never
+## claims more than the meta data already claimed.
+##
+## Test layout: 256 MB image, flex-internal v09 meta data, three bitmap slots.
+##
+## The test walks through, in this order:
+##  - create-md claims the features drbdmeta maintains
+##  - the field takes one of the three reserved words, leaving two
+##  - dump-md and restore-md round-trip the field
+##  - a feature drbdmeta does not know is cleared, because drbdmeta does not
+##    maintain whatever flags that feature covers
+##  - a dump taken before drbdmeta knew the field has no "features" line;
+##    restoring it claims no features, so the flags it carries stay untrusted
+##  - the v08 -> v09 conversion builds the peer entries itself, so their flags
+##    are current and it claims the features
+$ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
+$ truncate -s 268435456 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md 3 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep '^features'
+features 0x0000000000000001;
+$ drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -c '[.features, (.reserved_u64 | length)]'
+["0x0000000000000001",2]
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null > "$tmpdir/dump.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md "$tmpdir/dump.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep '^features'
+features 0x0000000000000001;
+$ sed 's/^features .*/features 0x0000000000000003;/' "$tmpdir/dump.txt" > "$tmpdir/future.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md "$tmpdir/future.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep '^features'
+features 0x0000000000000001;
+$ grep -v '^features' "$tmpdir/dump.txt" > "$tmpdir/old.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md "$tmpdir/old.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep '^features'
+features 0x0000000000000000;
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v08 "$img" flex-internal create-md 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md 1 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep '^features'
+features 0x0000000000000001;
+$ rm -rf "$tmpdir" "$img"

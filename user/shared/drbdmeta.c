@@ -300,6 +300,11 @@ bool confirmed(const char *text)
 #define DRBD_MD_MAGIC_84_UNCLEAN   (DRBD_MAGIC+5)
 #define DRBD_MD_MAGIC_09   (DRBD_MAGIC+6)
 
+/* Meta data features which drbdmeta maintains correctly. Its own counterpart
+ * of the DRBD module's DRBD_MD_FEATURES.
+ */
+#define DRBD_MD_FEATURES (DRBD_MDFF_DIVERGENCE_BITMAP)
+
 /*
  * }
  * end of should-be-shared
@@ -704,6 +709,7 @@ void md_disk_09_to_cpu(struct md_cpu *cpu, const struct meta_data_on_disk_9 *dis
 	cpu->device_uuid = be64_to_cpu(disk->device_uuid.be);
 	cpu->flags = be32_to_cpu(disk->flags.be);
 	cpu->members = be64_to_cpu(disk->members.be);
+	cpu->features = be64_to_cpu(disk->features.be);
 	cpu->magic = be32_to_cpu(disk->magic.be);
 	cpu->md_size_sect = be32_to_cpu(disk->md_size_sect.be);
 	cpu->al_offset = be32_to_cpu(disk->al_offset.be);
@@ -744,6 +750,10 @@ void md_cpu_to_disk_09(struct meta_data_on_disk_9 *disk, const struct md_cpu *cp
 	disk->device_uuid.be = cpu_to_be64(cpu->device_uuid);
 	disk->flags.be = cpu_to_be32(cpu->flags);
 	disk->members.be = cpu_to_be64(cpu->members);
+	/* Retain only the features drbdmeta understands in case features are
+	 * added which require support from drbdmeta for correctness.
+	 */
+	disk->features.be = cpu_to_be64(cpu->features & DRBD_MD_FEATURES);
 	disk->magic.be = cpu_to_be32(cpu->magic);
 	disk->md_size_sect.be = cpu_to_be32(cpu->md_size_sect);
 	disk->al_offset.be = cpu_to_be32(cpu->al_offset);
@@ -3185,6 +3195,7 @@ int v09_md_initialize(struct format *cfg, int do_disk_writes, int max_peers)
 	cfg->md.flags = MDF_AL_CLEAN;
 	cfg->md.node_id = -1;
 	cfg->md.magic = DRBD_MD_MAGIC_09;
+	cfg->md.features = DRBD_MD_FEATURES;
 	cfg->md.al_stripes = option_al_stripes;
 	cfg->md.al_stripe_size_4k = option_al_stripe_size_4k;
 
@@ -3462,9 +3473,11 @@ int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc
 		printf("node-id %d;\n"
 		       "current-uuid 0x"X64(016)";\n"
 		       "flags 0x"X32(08)";\n"
-		       "members 0x"X64(016)";\n",
+		       "members 0x"X64(016)";\n"
+		       "features 0x"X64(016)";\n",
 		       cfg->md.node_id,
-		       cfg->md.current_uuid, cfg->md.flags, cfg->md.members);
+		       cfg->md.current_uuid, cfg->md.flags, cfg->md.members,
+		       cfg->md.features);
 		for (i = 0; i < DRBD_NODE_ID_MAX; i++) {
 			struct peer_md_cpu *peer = &cfg->md.peers[i];
 			char flag_buf[80];
@@ -3652,8 +3665,8 @@ void json_dump_buffer(
 		printf( "  \"bm_max_peers\": "U32",\n"
 			"  \"node_id\": "D32",\n"
 			"  \"members\": \"0x"X64(016)"\",\n"
+			"  \"features\": \"0x"X64(016)"\",\n"
 			"  \"reserved_u64\": [ "
-			    "\"0x"X64(016)"\", "
 			    "\"0x"X64(016)"\", "
 			    "\"0x"X64(016)"\" "
 			  "],\n"
@@ -3662,9 +3675,9 @@ void json_dump_buffer(
 			md.max_peers,
 			md.node_id,
 			md.members,
+			md.features,
 			be64_to_cpu(md_on_disk_9->reserved_u64[0].be),
 			be64_to_cpu(md_on_disk_9->reserved_u64[1].be),
-			be64_to_cpu(md_on_disk_9->reserved_u64[2].be),
 			be32_to_cpu(md_on_disk_9->reserved_u32[0].be),
 			be32_to_cpu(md_on_disk_9->reserved_u32[1].be));
 	}
@@ -4184,8 +4197,17 @@ int verify_dumpfile_or_restore(struct format *cfg, char **argv, int argc, int pa
 				EXP(TK_U64);
 				EXP(';');
 				cfg->md.members = yylval.u64;
+				token = yylex();
 			} else {
 				cfg->md.members = 0;
+			}
+			if (token == TK_FEATURES) {
+				EXP(TK_U64);
+				EXP(';');
+				cfg->md.features = yylval.u64;
+				token = yylex();
+			} else {
+				cfg->md.features = 0;
 			}
 			for (i = 0; i < DRBD_NODE_ID_MAX; i++) {
 				if (token != TK_PEER)
@@ -4442,6 +4464,8 @@ void md_convert_08_to_09(struct format *cfg)
 
 	cfg->md.node_id = -1;
 	cfg->md.magic = DRBD_MD_MAGIC_09;
+	/* The peer entries above are ours, so the flags in them are current. */
+	cfg->md.features = DRBD_MD_FEATURES;
 	re_initialize_md_offsets(cfg);
 
 	if (!is_valid_md(DRBD_V09, &cfg->md, cfg->md_index, cfg->bd_size)) {
