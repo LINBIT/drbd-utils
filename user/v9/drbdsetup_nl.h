@@ -192,6 +192,11 @@ extern const struct drbd_nl_dialect *nl;
 extern const struct drbd_nl_dialect legacy_dialect;
 #ifndef WINDRBD
 extern const struct drbd_nl_dialect drbd2_dialect;
+
+int drbd2_put_address(struct msg_buff *msg, int attrtype, const void *sockaddr, int len);
+struct nlattr *drbd2_renumber_to_wire(struct msg_buff *msg, int attrtype,
+				      const struct nlattr *legacy_nest,
+				      enum drbd_nl_attr_set set);
 #endif
 
 /* Common helpers, drbdsetup_nl.c */
