@@ -10,8 +10,10 @@
 #include <netinet/in.h>
 
 #include "../drbdsetup_nl.h"
+#include "../drbdsetup.h"
 
 const struct drbd_nl_dialect *nl;
+extern const struct drbd_nl_dialect legacy_dialect;
 
 static int failures;
 
@@ -88,11 +90,210 @@ static void test_disk_conf_from_nest(void)
 	msg_free(m);
 }
 
+static struct nlmsghdr *finish_msg(struct msg_buff *m)
+{
+	struct nlmsghdr *nlh = (struct nlmsghdr *)m->data;
+
+	nlh->nlmsg_len = m->tail - m->data;
+	return nlh;
+}
+
+static void test_legacy_request_layout(void)
+{
+	struct msg_buff *m = msg_new(DEFAULT_MSG_SIZE);
+	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = 3 };
+	struct nlattr *nest, *tla[DRBD_TLA_NL_POLICY_LEN], *a;
+	struct nlmsghdr *nlh;
+	struct genlmsghdr *gh;
+	struct drbd_genlmsghdr *dh;
+	int maxtype;
+
+	strcpy(ctx.ctx_resource_name, "r0");
+	CHECK(legacy_dialect.put_request(m, DRBD_NL_CMD_NET_OPTS, 0) == 0);
+	nest = legacy_dialect.nest_start(m, NL_SET_NET_CONF);
+	CHECK(nest != NULL);
+	CHECK(legacy_dialect.attr_id(NL_SET_NET_CONF, DRBD_A_NET_CONF_PING_INT) == DRBD_A_NET_CONF_PING_INT);
+	nla_put_u32(m, DRBD_A_NET_CONF_PING_INT, 5);
+	nla_nest_end(m, nest);
+	legacy_dialect.put_set_defaults(m);
+	CHECK(legacy_dialect.put_context(m, &ctx, 9, CTX_RESOURCE | CTX_PEER_NODE_ID | CTX_MINOR,
+					 NL_SET_NET_CONF) == 0);
+	nlh = finish_msg(m);
+
+	gh = nlmsg_data(nlh);
+	dh = genlmsg_data(gh);
+	CHECK(gh->cmd == DRBD_ADM_NET_OPTS);
+	CHECK(dh->minor == 9);
+	CHECK(dh->flags == DRBD_GENL_F_SET_DEFAULTS);
+	CHECK(nla_parse(tla, DRBD_TLA_NL_POLICY_LEN - 1,
+			nlmsg_attrdata(nlh, GENL_HDRLEN + sizeof(*dh)),
+			nlmsg_attrlen(nlh, GENL_HDRLEN + sizeof(*dh)), drbd_tla_nl_policy) == 0);
+	CHECK(tla[DRBD_NLA_NET_CONF] != NULL);
+	CHECK(tla[DRBD_NLA_CFG_CONTEXT] != NULL);
+	a = nla_find_nested(tla[DRBD_NLA_CFG_CONTEXT], DRBD_A_DRBD_CFG_CONTEXT_CTX_PEER_NODE_ID);
+	CHECK(a && nla_get_u32(a) == 3);
+	CHECK(legacy_dialect.policy(NL_SET_NET_CONF, &maxtype) == drbd_net_conf_nl_policy);
+	CHECK(maxtype == DRBD_A_NET_CONF_RDMA_CTRL_SNDBUF_SIZE);
+	msg_free(m);
+}
+
+static void test_legacy_path_and_forget_peer_context(void)
+{
+	struct msg_buff *m = msg_new(DEFAULT_MSG_SIZE);
+	struct drbd_cfg_context ctx = { .ctx_volume = -1U, .ctx_peer_node_id = 2 };
+	struct sockaddr_in sin = { .sin_family = AF_INET, .sin_port = htons(7789) };
+	struct nlattr *tla[DRBD_TLA_NL_POLICY_LEN], *a;
+	struct nlmsghdr *nlh;
+	int hdrlen = GENL_HDRLEN + sizeof(struct drbd_genlmsghdr);
+
+	strcpy(ctx.ctx_resource_name, "r0");
+	memcpy(ctx.ctx_my_addr, &sin, sizeof(sin));
+	ctx.ctx_my_addr_len = sizeof(sin);
+	sin.sin_port = htons(7790);
+	memcpy(ctx.ctx_peer_addr, &sin, sizeof(sin));
+	ctx.ctx_peer_addr_len = sizeof(sin);
+
+	legacy_dialect.put_request(m, DRBD_NL_CMD_NEW_PATH, 0);
+	legacy_dialect.put_context(m, &ctx, -1U,
+				   CTX_RESOURCE | CTX_PEER_NODE_ID | CTX_MY_ADDR | CTX_PEER_ADDR,
+				   NL_SET_PATH_PARMS);
+	nlh = finish_msg(m);
+	CHECK(nla_parse(tla, DRBD_TLA_NL_POLICY_LEN - 1, nlmsg_attrdata(nlh, hdrlen),
+			nlmsg_attrlen(nlh, hdrlen), drbd_tla_nl_policy) == 0);
+	CHECK(tla[DRBD_NLA_PATH_PARMS] != NULL);
+	a = nla_find_nested(tla[DRBD_NLA_PATH_PARMS], DRBD_A_PATH_PARMS_PEER_ADDR);
+	CHECK(a && nla_len(a) == sizeof(sin) &&
+	      ((struct sockaddr_in *)nla_data(a))->sin_port == htons(7790));
+	msg_free(m);
+
+	m = msg_new(DEFAULT_MSG_SIZE);
+	legacy_dialect.put_request(m, DRBD_NL_CMD_FORGET_PEER, 0);
+	legacy_dialect.put_context(m, &ctx, -1U, CTX_RESOURCE | CTX_PEER_NODE_ID,
+				   NL_SET_FORGET_PEER_PARMS);
+	nlh = finish_msg(m);
+	CHECK(nla_parse(tla, DRBD_TLA_NL_POLICY_LEN - 1, nlmsg_attrdata(nlh, hdrlen),
+			nlmsg_attrlen(nlh, hdrlen), drbd_tla_nl_policy) == 0);
+	CHECK(tla[DRBD_NLA_FORGET_PEER_PARMS] != NULL);
+	a = nla_find_nested(tla[DRBD_NLA_FORGET_PEER_PARMS], DRBD_A_FORGET_PEER_PARMS_FORGET_PEER_NODE_ID);
+	CHECK(a && nla_get_u32(a) == 2);
+	/* the peer node id is carried by the parms nest only, as before */
+	CHECK(nla_find_nested(tla[DRBD_NLA_CFG_CONTEXT], DRBD_A_DRBD_CFG_CONTEXT_CTX_PEER_NODE_ID) == NULL);
+	msg_free(m);
+}
+
+/* A device notification as the legacy kernel sends it. */
+static struct nlmsghdr *build_legacy_device_change(struct msg_buff *m)
+{
+	struct drbd_genlmsghdr *dh = genlmsg_put(m, legacy_dialect.family, 0, DRBD_DEVICE_STATE);
+	struct nlattr *nla;
+
+	dh->minor = 1000;
+	dh->ret_code = NO_ERROR;
+	nla = nla_nest_start(m, DRBD_NLA_CFG_CONTEXT);
+	nla_put_string(m, DRBD_A_DRBD_CFG_CONTEXT_CTX_RESOURCE_NAME, "r0");
+	nla_put_u32(m, DRBD_A_DRBD_CFG_CONTEXT_CTX_VOLUME, 0);
+	nla_nest_end(m, nla);
+	nla = nla_nest_start(m, DRBD_NLA_NOTIFICATION_HEADER);
+	nla_put_u32(m, DRBD_A_DRBD_NOTIFICATION_HEADER_NH_TYPE, NOTIFY_CHANGE | NOTIFY_CONTINUES);
+	nla_nest_end(m, nla);
+	nla = nla_nest_start(m, DRBD_NLA_DEVICE_INFO);
+	nla_put_u32(m, DRBD_A_DEVICE_INFO_DEV_DISK_STATE, D_UP_TO_DATE);
+	nla_put_string(m, DRBD_A_DEVICE_INFO_BACKING_DEV_PATH, "/dev/sda");
+	nla_nest_end(m, nla);
+	nla = nla_nest_start(m, DRBD_NLA_DEVICE_STATISTICS);
+	nla_put_u64(m, DRBD_A_DEVICE_STATISTICS_DEV_SIZE, 4096);
+	nla_nest_end(m, nla);
+	return finish_msg(m);
+}
+
+static void test_legacy_parse_device_change(void)
+{
+	struct msg_buff *m = msg_new(DEFAULT_MSG_SIZE);
+	struct nlmsghdr *nlh = build_legacy_device_change(m);
+	struct drbd_nl_event ev;
+
+	nlh->nlmsg_seq = 42;
+	CHECK(legacy_dialect.parse_msg(nlh, DRBD_NL_CMD_GET_INITIAL_STATE, &ev) == NL_MSG_EVENT);
+	CHECK(ev.kind == NL_OBJ_DEVICE);
+	CHECK(ev.action == (NOTIFY_CHANGE | NOTIFY_CONTINUES));
+	CHECK(ev.seq == 42);
+	CHECK(ev.minor == 1000);
+	CHECK(ev.ret_code == NO_ERROR);
+	CHECK(!strcmp(ev.ctx.ctx_resource_name, "r0"));
+	CHECK(ev.ctx.ctx_volume == 0);
+	CHECK(ev.have_info);
+	CHECK(ev.info.device.dev_disk_state == D_UP_TO_DATE);
+	CHECK(ev.info.device.dev_is_open == DEV_IS_OPEN_UNKNOWN);	/* default kept */
+	CHECK(!strcmp(ev.info.device.backing_dev_path, "/dev/sda"));
+	CHECK(ev.stats.device.dev_size == 4096);
+	CHECK(ev.stats.device.dev_read == -1ULL);			/* absent */
+	CHECK(ev.opts == NULL);
+	msg_free(m);
+
+	m = msg_new(DEFAULT_MSG_SIZE);
+	nlh = (struct nlmsghdr *)m->data;
+	memset(nlh, 0, sizeof(*nlh));
+	nlh->nlmsg_len = NLMSG_HDRLEN;
+	nlh->nlmsg_type = NLMSG_DONE;
+	CHECK(legacy_dialect.parse_msg(nlh, DRBD_NL_CMD_GET_INITIAL_STATE, &ev) == NL_MSG_DONE);
+	msg_free(m);
+}
+
+/* A message without the object's identity is skipped, unless it is an
+ * error reply, which carries none and is reported by its ret_code. */
+static void test_legacy_parse_skips_without_identity(void)
+{
+	struct msg_buff *m = msg_new(DEFAULT_MSG_SIZE);
+	struct drbd_genlmsghdr *dh;
+	struct nlmsghdr *nlh;
+	struct nlattr *nla;
+	struct drbd_nl_event ev;
+
+	/* notification header, no context */
+	dh = genlmsg_put(m, legacy_dialect.family, 0, DRBD_RESOURCE_STATE);
+	dh->minor = -1U;
+	dh->ret_code = NO_ERROR;
+	nla = nla_nest_start(m, DRBD_NLA_NOTIFICATION_HEADER);
+	nla_put_u32(m, DRBD_A_DRBD_NOTIFICATION_HEADER_NH_TYPE, NOTIFY_CREATE);
+	nla_nest_end(m, nla);
+	nlh = finish_msg(m);
+	CHECK(legacy_dialect.parse_msg(nlh, DRBD_NL_CMD_GET_INITIAL_STATE, &ev) == NL_MSG_SKIP);
+	msg_free(m);
+
+	/* context, no notification header: fine for a dump, not for events */
+	m = msg_new(DEFAULT_MSG_SIZE);
+	dh = genlmsg_put(m, legacy_dialect.family, 0, DRBD_ADM_GET_RESOURCES);
+	dh->minor = -1U;
+	dh->ret_code = NO_ERROR;
+	nla = nla_nest_start(m, DRBD_NLA_CFG_CONTEXT);
+	nla_put_string(m, DRBD_A_DRBD_CFG_CONTEXT_CTX_RESOURCE_NAME, "r0");
+	nla_nest_end(m, nla);
+	nlh = finish_msg(m);
+	CHECK(legacy_dialect.parse_msg(nlh, DRBD_NL_CMD_GET_RESOURCES, &ev) == NL_MSG_EVENT);
+	CHECK(ev.action == NOTIFY_EXISTS && !strcmp(ev.ctx.ctx_resource_name, "r0"));
+	CHECK(legacy_dialect.parse_msg(nlh, DRBD_NL_CMD_GET_INITIAL_STATE, &ev) == NL_MSG_SKIP);
+	msg_free(m);
+
+	/* an error reply has neither, and still gets through */
+	m = msg_new(DEFAULT_MSG_SIZE);
+	dh = genlmsg_put(m, legacy_dialect.family, 0, DRBD_ADM_GET_DEVICES);
+	dh->minor = 7;
+	dh->ret_code = ERR_MINOR_INVALID;
+	nlh = finish_msg(m);
+	CHECK(legacy_dialect.parse_msg(nlh, DRBD_NL_CMD_GET_DEVICES, &ev) == NL_MSG_EVENT);
+	CHECK(ev.kind == NL_OBJ_DEVICE && ev.ret_code == ERR_MINOR_INVALID && ev.minor == 7);
+	msg_free(m);
+}
+
 int main(int argc, char **argv)
 {
 	test_event_init_defaults();
 	test_event_copy_deep_copies_nests();
 	test_disk_conf_from_nest();
+	test_legacy_request_layout();
+	test_legacy_path_and_forget_peer_context();
+	test_legacy_parse_device_change();
+	test_legacy_parse_skips_without_identity();
 
 	if (failures)
 		fprintf(stderr, "%d check(s) failed\n", failures);
