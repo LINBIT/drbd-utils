@@ -2708,7 +2708,7 @@ static int show_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	else
 		show_resource_list(resources_list, old_objname);
 
-	free(resources_list);
+	free_resources(resources_list);
 	objname = old_objname;
 	return 0;
 }
