@@ -44,6 +44,9 @@ static struct genl_sock *genl_connect(__u32 nl_groups, struct genl_connect_optio
 	};
 	struct genl_sock *s = calloc(1, sizeof(*s));
 	socklen_t sock_len;
+	/* Without CAP_NET_ADMIN, SO_RCVBUFFORCE fails with EPERM and a buffer
+	 * capped by net.core.rmem_max is expected; do not warn about it then. */
+	bool may_force_rcvbuf = true;
 	int bsz;
 
 	if (!opts)
@@ -92,12 +95,16 @@ static struct genl_sock *genl_connect(__u32 nl_groups, struct genl_connect_optio
 	if (getsockopt(s->s_fd, SOL_SOCKET, SO_RCVBUF, &bsz, &sock_len) == 0) {
 		if ((bsz/2) < opts->rcvbuf_size) {
 			/* retry with FORCE */
-			setsockopt(s->s_fd, SOL_SOCKET, SO_RCVBUFFORCE, &opts->rcvbuf_size, sizeof(opts->rcvbuf_size));
+			if (setsockopt(s->s_fd, SOL_SOCKET, SO_RCVBUFFORCE,
+				       &opts->rcvbuf_size, sizeof(opts->rcvbuf_size)) != 0
+			&&  errno == EPERM)
+				may_force_rcvbuf = false;
 		}
 	}
 #endif
 	sock_len = sizeof(bsz);
-	if (getsockopt(s->s_fd, SOL_SOCKET, SO_RCVBUF, &bsz, &sock_len) == 0
+	if (may_force_rcvbuf
+	&&  getsockopt(s->s_fd, SOL_SOCKET, SO_RCVBUF, &bsz, &sock_len) == 0
 	&&  (bsz/2) < opts->rcvbuf_size) {
 		dbg(1, "tried to set SO_RCVBUF %d, got %d; you may need to adjust sysctl net.core.rmem_max;"
 			" or 'export DRBD_GENL_RCVBUF_SZ=%d' to silence this message\n",
