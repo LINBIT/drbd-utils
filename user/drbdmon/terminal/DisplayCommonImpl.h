@@ -30,6 +30,10 @@ class DisplayCommonImpl : public DisplayCommon
     virtual void display_connection_header(uint32_t& current_line) const override;
     virtual void display_resource_line(uint32_t& current_line) const override;
     virtual void display_connection_line(uint32_t& current_line) const override;
+    virtual void display_progress_bar(
+        const uint16_t  progress,
+        const uint16_t  bar_length
+    ) const override;
     virtual uint32_t calculate_page_count(const uint32_t lines, const uint32_t lines_per_page) const override;
     virtual void page_navigation_cursor() const override;
     virtual void display_selection_mode_label(const bool is_enabled) const;

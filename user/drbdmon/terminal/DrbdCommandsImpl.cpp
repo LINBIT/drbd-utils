@@ -5,6 +5,7 @@
 #include <subprocess/SubProcessQueue.h>
 #include <subprocess/CmdLine.h>
 #include <subprocess/DrbdCmdConsts.h>
+#include <environment_variables.h>
 #include <dsaext.h>
 #include <integerparse.h>
 
@@ -101,12 +102,16 @@ bool DrbdCommandsImpl::execute_command(const std::string& command, StringTokeniz
                     "Cannot execute command, insufficient queue capacity"
                 );
             }
-            catch (SubProcess::Exception&)
+            catch (SubProcess::Exception& exc)
             {
-                dsp_comp_hub.log->add_entry(
-                    MessageLog::log_level::ALERT,
-                    "Command failed: Sub-process execution error"
-                );
+                std::string log_msg("Command execution failed");
+                const std::string& exc_msg = exc.get_error_message();
+                if (!exc_msg.empty())
+                {
+                    log_msg += ": ";
+                    log_msg += exc_msg;
+                }
+                dsp_comp_hub.log->add_entry(MessageLog::log_level::ALERT, log_msg);
             }
         }
         else
@@ -162,8 +167,8 @@ bool DrbdCommandsImpl::exec_for_resources(
 
             cmd_valid = true;
 
-            ResourcesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
-            ResourcesMap::KeysIterator rsc_iter(selection_map);
+            ResourceSelectionMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
+            ResourceSelectionMap::KeysIterator rsc_iter(selection_map);
 
             while (rsc_iter.has_next())
             {
@@ -219,8 +224,8 @@ bool DrbdCommandsImpl::exec_for_connections(
 
             cmd_valid = true;
 
-            ResourcesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
-            ResourcesMap::KeysIterator rsc_iter(selection_map);
+            ResourceSelectionMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
+            ResourceSelectionMap::KeysIterator rsc_iter(selection_map);
 
             std::string empty_con_name;
             while (rsc_iter.has_next())
@@ -241,19 +246,24 @@ bool DrbdCommandsImpl::exec_for_connections(
                 if (!dsp_comp_hub.dsp_shared->ovrd_connection_selection &&
                     (active_page == DisplayId::display_page::CON_LIST ||
                     active_page == DisplayId::display_page::CON_ACTIONS) &&
-                    dsp_comp_hub.dsp_shared->have_connections_selection())
+                    dsp_comp_hub.dsp_shared->have_connections_selection(rsc_name))
                 {
                     // On connection list or connection details with a selection of multiple connections
 
                     dsp_comp_hub.dsp_common->application_working();
 
-                    ConnectionsMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_connections_map();
-                    ConnectionsMap::KeysIterator con_iter(selection_map);
-
-                    while (con_iter.has_next())
+                    ConnectionSelectionMap* const selection_map =
+                        dsp_comp_hub.dsp_shared->get_selected_connections_map(rsc_name);
+                    // selection_map should always be non-null, because have_connections_selection returned true
+                    if (selection_map != nullptr)
                     {
-                        const std::string& cur_con_name = *(con_iter.next());
-                        (this->*exec_func)(rsc_name, cur_con_name);
+                        ConnectionSelectionMap::KeysIterator con_iter(*selection_map);
+
+                        while (con_iter.has_next())
+                        {
+                            const std::string& cur_con_name = *(con_iter.next());
+                            (this->*exec_func)(rsc_name, cur_con_name);
+                        }
                     }
                 }
                 else
@@ -317,19 +327,23 @@ bool DrbdCommandsImpl::exec_for_volumes(
             if (!dsp_comp_hub.dsp_shared->ovrd_volume_selection &&
                 (active_page == DisplayId::display_page::VLM_LIST ||
                 active_page == DisplayId::display_page::VLM_ACTIONS) &&
-                dsp_comp_hub.dsp_shared->have_volumes_selection())
+                dsp_comp_hub.dsp_shared->have_volumes_selection(rsc_name))
             {
                 dsp_comp_hub.dsp_common->application_working();
 
                 cmd_valid = true;
 
-                VolumesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_volumes_map();
-                VolumesMap::KeysIterator vlm_iter(selection_map);
-
-                while (vlm_iter.has_next())
+                VolumeSelectionMap* const selection_map = dsp_comp_hub.dsp_shared->get_selected_volumes_map(rsc_name);
+                // selection_map should always be non-null, because have_volumes_selection returned true
+                if (selection_map != nullptr)
                 {
-                    const uint16_t cur_vlm_nr = *(vlm_iter.next());
-                    (this->*exec_func)(rsc_name, cur_vlm_nr);
+                    VolumeSelectionMap::KeysIterator vlm_iter(*selection_map);
+
+                    while (vlm_iter.has_next())
+                    {
+                        const uint16_t cur_vlm_nr = *(vlm_iter.next());
+                        (this->*exec_func)(rsc_name, cur_vlm_nr);
+                    }
                 }
             }
             else
@@ -388,19 +402,24 @@ bool DrbdCommandsImpl::exec_for_peer_volumes(
             if (!dsp_comp_hub.dsp_shared->ovrd_peer_volume_selection &&
                 (active_page == DisplayId::display_page::PEER_VLM_LIST ||
                 active_page == DisplayId::display_page::PEER_VLM_ACTIONS) &&
-                dsp_comp_hub.dsp_shared->have_peer_volumes_selection())
+                dsp_comp_hub.dsp_shared->have_peer_volumes_selection(rsc_name, con_name))
             {
                 dsp_comp_hub.dsp_common->application_working();
 
                 cmd_valid = true;
 
-                VolumesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_peer_volumes_map();
-                VolumesMap::KeysIterator vlm_iter(selection_map);
-
-                while (vlm_iter.has_next())
+                VolumeSelectionMap* const selection_map =
+                    dsp_comp_hub.dsp_shared->get_selected_peer_volumes_map(rsc_name, con_name);
+                // selection_map should always be non-null, because have_peer_volumes_selection returned true
+                if (selection_map != nullptr)
                 {
-                    const uint16_t cur_vlm_nr = *(vlm_iter.next());
-                    (this->*exec_func)(rsc_name, con_name, cur_vlm_nr);
+                    VolumeSelectionMap::KeysIterator vlm_iter(*selection_map);
+
+                    while (vlm_iter.has_next())
+                    {
+                        const uint16_t cur_vlm_nr = *(vlm_iter.next());
+                        (this->*exec_func)(rsc_name, con_name, cur_vlm_nr);
+                    }
                 }
             }
             else
@@ -557,6 +576,61 @@ void DrbdCommandsImpl::exec_adjust(const std::string& rsc_name)
     command->set_description(description);
     command->add_argument(drbdcmd::DRBDADM_CMD);
     command->add_argument(drbdcmd::ARG_ADJUST);
+    command->add_argument(rsc_name);
+
+    queue_command(command);
+}
+
+void DrbdCommandsImpl::exec_adjust_skip_disk(const std::string& rsc_name)
+{
+    std::string description;
+    description.reserve(STRING_PREALLOC_LENGTH);
+
+    description.append("Adjust resource ");
+    description.append(rsc_name);
+
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->set_description(description);
+    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::ARG_ADJUST);
+    command->add_argument(drbdcmd::ARG_SKIP_DISK);
+    command->add_argument(rsc_name);
+
+    queue_command(command);
+}
+
+void DrbdCommandsImpl::exec_adjust_skip_net(const std::string& rsc_name)
+{
+    std::string description;
+    description.reserve(STRING_PREALLOC_LENGTH);
+
+    description.append("Adjust resource ");
+    description.append(rsc_name);
+
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->set_description(description);
+    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::ARG_ADJUST);
+    command->add_argument(drbdcmd::ARG_SKIP_NET);
+    command->add_argument(rsc_name);
+
+    queue_command(command);
+}
+
+void DrbdCommandsImpl::exec_adjust_skip_disk_net(const std::string& rsc_name)
+{
+    std::string description;
+    description.reserve(STRING_PREALLOC_LENGTH);
+
+    description.append("Adjust resource ");
+    description.append(rsc_name);
+
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->set_description(description);
+    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::ARG_ADJUST);
+    command->add_argument(drbdcmd::ARG_SKIP_DISK);
+    command->add_argument(drbdcmd::ARG_SKIP_NET);
     command->add_argument(rsc_name);
 
     queue_command(command);
@@ -1066,6 +1140,160 @@ void DrbdCommandsImpl::exec_resume_sync(
     queue_command(command);
 }
 
+void DrbdCommandsImpl::exec_resource_program(
+    const std::string& program,
+    const std::string& rsc_name,
+    const DrbdResource* const rsc
+)
+{
+    std::string description;
+    description.reserve(STRING_PREALLOC_LENGTH);
+
+    description.append("Run program \"");
+    description.append(program);
+    description.append("\", resource ");
+    description.append(rsc_name);
+
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->add_argument(program);
+
+    add_env_var(command, env_var::drbd_resource, rsc_name);
+
+    if (rsc != nullptr)
+    {
+        add_rsc_env_vars(command, rsc);
+    }
+
+    command->set_description(description);
+
+    queue_command(command);
+}
+
+void DrbdCommandsImpl::exec_volume_program(
+    const std::string& program,
+    const std::string& rsc_name,
+    const DrbdResource* const rsc,
+    const uint16_t vlm_nr,
+    const DrbdVolume* const vlm
+)
+{
+    std::string description;
+    description.reserve(STRING_PREALLOC_LENGTH);
+
+    std::string vlm_nr_str(std::to_string(static_cast<unsigned int> (vlm_nr)));
+
+    description.append("Run program \"");
+    description.append(program);
+    description.append("\", resource ");
+    description.append(rsc_name);
+    description.append(", volume ");
+    description.append(vlm_nr_str);
+
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->add_argument(program);
+
+    add_env_var(command, env_var::drbd_resource, rsc_name);
+    add_env_var(command, env_var::drbd_volume_nr, vlm_nr_str);
+
+    if (rsc != nullptr)
+    {
+        add_rsc_env_vars(command, rsc);
+        if (vlm != nullptr)
+        {
+            add_vlm_env_vars(command, vlm);
+        }
+    }
+
+    command->set_description(description);
+
+    queue_command(command);
+}
+
+void DrbdCommandsImpl::exec_connection_program(
+    const std::string& program,
+    const std::string& rsc_name,
+    const DrbdResource* const rsc,
+    const std::string& con_name,
+    const DrbdConnection* const con
+)
+{
+    std::string description;
+    description.reserve(STRING_PREALLOC_LENGTH);
+
+    description.append("Run program \"");
+    description.append(program);
+    description.append("\", resource ");
+    description.append(rsc_name);
+    description.append(", connection ");
+    description.append(con_name);
+
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->add_argument(program);
+
+    add_env_var(command, env_var::drbd_resource, rsc_name);
+    add_env_var(command, env_var::drbd_connection, con_name);
+
+    if (rsc != nullptr)
+    {
+        add_rsc_env_vars(command, rsc);
+        if (con != nullptr)
+        {
+            add_con_env_vars(command, con);
+        }
+    }
+
+    command->set_description(description);
+
+    queue_command(command);
+}
+
+void DrbdCommandsImpl::exec_peer_volume_program(
+    const std::string& program,
+    const std::string& rsc_name,
+    const DrbdResource* const rsc,
+    const std::string& con_name,
+    const DrbdConnection* const con,
+    const uint16_t vlm_nr,
+    const DrbdVolume* const vlm
+)
+{
+    std::string description;
+    description.reserve(STRING_PREALLOC_LENGTH);
+
+    std::string vlm_nr_str(std::to_string(static_cast<unsigned int> (vlm_nr)));
+
+    description.append("Run program \"");
+    description.append(program);
+    description.append("\", resource ");
+    description.append(rsc_name);
+    description.append(", connection ");
+    description.append(con_name);
+
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->add_argument(program);
+
+    add_env_var(command, env_var::drbd_resource, rsc_name);
+    add_env_var(command, env_var::drbd_connection, con_name);
+    add_env_var(command, env_var::drbd_volume_nr, vlm_nr_str);
+
+    if (rsc != nullptr)
+    {
+        add_rsc_env_vars(command, rsc);
+        if (con != nullptr)
+        {
+            add_con_env_vars(command, con);
+            if (vlm != nullptr)
+            {
+                add_vlm_env_vars(command, vlm);
+            }
+        }
+    }
+
+    command->set_description(description);
+
+    queue_command(command);
+}
+
 void DrbdCommandsImpl::get_resource_name(const std::string& argument, std::string& rsc_name)
 {
     rsc_name.clear();
@@ -1192,4 +1420,85 @@ bool DrbdCommandsImpl::can_run_peer_volume_cmd()
 void DrbdCommandsImpl::queue_command(std::unique_ptr<CmdLine>& command)
 {
     dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+}
+
+void DrbdCommandsImpl::add_rsc_env_vars(std::unique_ptr<CmdLine>& command, const DrbdResource* const rsc)
+{
+    const uint8_t con_count = rsc->get_connection_count();
+    std::string con_count_str(std::to_string(con_count));
+    add_env_var(command, env_var::drbd_connection_count, con_count_str);
+
+    const uint16_t vlm_count = rsc->get_volume_count();
+    std::string vlm_count_str(std::to_string(vlm_count));
+    add_env_var(command, env_var::drbd_volume_count, vlm_count_str);
+
+    const std::string rsc_role(rsc->get_role_label());
+    add_env_var(command, env_var::drbd_resource_role, rsc_role);
+
+    const std::string quorum_str = (rsc->has_quorum_alert() ? "false" : "true");
+    add_env_var(command, env_var::drbd_resource_quorum, quorum_str);
+}
+
+void DrbdCommandsImpl::add_vlm_env_vars(std::unique_ptr<CmdLine>& command, const DrbdVolume* const vlm)
+{
+    DrbdVolume::client_state client = vlm->get_client_state();
+    if (client == DrbdVolume::client_state::ENABLED)
+    {
+        const std::string client_str("true");
+        add_env_var(command, env_var::drbd_volume_is_client, client_str);
+    }
+    else
+    if (client == DrbdVolume::client_state::DISABLED)
+    {
+        const std::string client_str("false");
+        add_env_var(command, env_var::drbd_volume_is_client, client_str);
+    }
+
+    const std::string quorum_str = vlm->has_quorum_alert() ? "false" : "true";
+    add_env_var(command, env_var::drbd_volume_quorum, quorum_str);
+
+    const uint32_t minor_nr = vlm->get_minor_nr();
+    const std::string minor_nr_str(std::to_string(minor_nr));
+    add_env_var(command, env_var::drbd_volume_minor_nr, minor_nr_str);
+
+    const std::string disk_state(vlm->get_disk_state_label());
+    add_env_var(command, env_var::drbd_volume_disk_state, disk_state);
+
+    const std::string repl_state(vlm->get_replication_state_label());
+    add_env_var(command, env_var::drbd_volume_repl_state, repl_state);
+
+    const uint16_t sync_perc = (vlm->get_sync_perc() / 100);
+    const std::string sync_perc_str(std::to_string(sync_perc));
+    add_env_var(command, env_var::drbd_volume_sync_perc, sync_perc_str);
+}
+
+void DrbdCommandsImpl::add_con_env_vars(std::unique_ptr<CmdLine>& command, const DrbdConnection* const con)
+{
+    const std::string con_role(con->get_role_label());
+    add_env_var(command, env_var::drbd_connection_role, con_role);
+
+    const std::string con_state(con->get_connection_state_label());
+    add_env_var(command, env_var::drbd_connection_state, con_state);
+
+    const std::string sync_state(con->get_sync_state_label());
+    add_env_var(command, env_var::drbd_connection_sync_state, sync_state);
+
+    const uint16_t peer_vlm_count = con->get_volume_count();
+    const std::string peer_vlm_count_str(std::to_string(peer_vlm_count));
+    add_env_var(command, env_var::drbd_peer_volume_count, peer_vlm_count_str);
+}
+
+void DrbdCommandsImpl::add_env_var(
+    std::unique_ptr<CmdLine>& command,
+    const std::string& key,
+    const std::string& value
+)
+{
+    std::string cmd_var;
+    cmd_var.reserve(key.length() + 1 + value.length());
+    cmd_var.append(key);
+    cmd_var.append(1, '=');
+    cmd_var.append(value);
+
+    command->add_environment_entry(cmd_var);
 }

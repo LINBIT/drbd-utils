@@ -227,8 +227,13 @@ DrbdVolume::disk_state DrbdVolume::get_disk_state() const
 
 const char* DrbdVolume::get_disk_state_label() const
 {
+    return label_for_disk_state(vol_disk_state);
+}
+
+const char* DrbdVolume::label_for_disk_state(const disk_state value) noexcept
+{
     const char* label = DS_LABEL_UNKNOWN;
-    switch (vol_disk_state)
+    switch (value)
     {
         case DrbdVolume::disk_state::ATTACHING:
             label = DS_LABEL_ATTACHING;
@@ -272,8 +277,13 @@ DrbdVolume::repl_state DrbdVolume::get_replication_state() const
 
 const char* DrbdVolume::get_replication_state_label() const
 {
+    return label_for_replication_state(vol_repl_state);
+}
+
+const char* DrbdVolume::label_for_replication_state(const repl_state value) noexcept
+{
     const char* label = RS_LABEL_UNKNOWN;
-    switch (vol_repl_state)
+    switch (value)
     {
         case DrbdVolume::repl_state::AHEAD:
             label = RS_LABEL_AHEAD;
@@ -328,27 +338,32 @@ const char* DrbdVolume::get_replication_state_label() const
     return label;
 }
 
+DrbdVolume::client_state DrbdVolume::get_client_state() const
+{
+    return vol_client_state;
+}
+
 void DrbdVolume::set_connection(DrbdConnection* conn)
 {
     connection = conn;
 }
 
-bool DrbdVolume::has_disk_alert()
+bool DrbdVolume::has_disk_alert() const
 {
     return disk_alert;
 }
 
-bool DrbdVolume::has_replication_warning()
+bool DrbdVolume::has_replication_warning() const
 {
     return repl_warn || repl_alert;
 }
 
-bool DrbdVolume::has_replication_alert()
+bool DrbdVolume::has_replication_alert() const
 {
     return repl_alert;
 }
 
-bool DrbdVolume::has_quorum_alert()
+bool DrbdVolume::has_quorum_alert() const
 {
     return quorum_alert;
 }

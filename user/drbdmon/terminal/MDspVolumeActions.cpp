@@ -36,49 +36,34 @@ MDspVolumeActions::MDspVolumeActions(const ComponentsHub& comp_hub):
             selection_action(&MDspVolumeActions::action_invalidate);
         };
 
-    uint16_t opt_line   = OPT_LIST_Y;
-    uint16_t start_col  = 5;
-    uint16_t end_col    = 45;
+    ClickableCommand::Builder bld;
+
+    bld.coords.row = OPT_LIST_Y;
+    bld.coords.start_col = 5;
+    bld.coords.end_col = 45;
+    bld.coords.page = 1;
+    bld.auto_nr = 1;
 
     cmd_attach = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "1", 1, opt_line, start_col, end_col,
-            cmd_fn_attach
-        )
+        bld.create_with_auto_nr(cmd_fn_attach)
     );
-    ++opt_line;
-
+    add_option(*cmd_attach);
     cmd_detach = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "2", 1, opt_line, start_col, end_col,
-            cmd_fn_detach
-        )
+        bld.create_with_auto_nr(cmd_fn_detach)
     );
-    ++opt_line;
-
+    add_option(*cmd_detach);
     cmd_resize = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "3", 1, opt_line, start_col, end_col,
-            cmd_fn_resize
-        )
+        bld.create_with_auto_nr(cmd_fn_resize)
     );
-    ++opt_line;
+    add_option(*cmd_resize);
 
-    opt_line = OPT_LIST_Y;
-    start_col = 50;
-    end_col = 90;
+    bld.coords.row = OPT_LIST_Y;
+    bld.coords.start_col = 50;
+    bld.coords.end_col = 90;
 
     cmd_invalidate = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "4", 1, opt_line, start_col, end_col,
-            cmd_fn_invalidate
-        )
+        bld.create_with_auto_nr(cmd_fn_invalidate)
     );
-    ++opt_line;
-
-    add_option(*cmd_attach);
-    add_option(*cmd_detach);
-    add_option(*cmd_resize);
     add_option(*cmd_invalidate);
 }
 
@@ -113,26 +98,32 @@ void MDspVolumeActions::show_actions()
         DrbdResource* const rsc = dsp_comp_hub.get_monitor_resource();
         if (rsc != nullptr)
         {
+            const std::string& rsc_name = rsc->get_name();
             dsp_comp_hub.dsp_io->write_text("Resource ");
             dsp_comp_hub.dsp_io->write_string_field(
-                dsp_comp_hub.dsp_shared->monitor_rsc,
+                rsc_name,
                 dsp_comp_hub.term_cols - 26,
                 false
             );
 
             dsp_comp_hub.dsp_io->cursor_xy(17, DisplayConsts::PAGE_NAV_Y + 2);
             if (!dsp_comp_hub.dsp_shared->ovrd_volume_selection &&
-                dsp_comp_hub.dsp_shared->have_volumes_selection())
+                dsp_comp_hub.dsp_shared->have_volumes_selection(rsc_name))
             {
-                VolumesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_volumes_map();
-                const size_t count = selection_map.get_size();
-                if (count > 1)
+                VolumeSelectionMap* const selection_map =
+                    dsp_comp_hub.dsp_shared->get_selected_volumes_map(rsc_name);
+                // Should always be non-null, because have_volumes_selection returned true
+                if (selection_map != nullptr)
                 {
-                    dsp_comp_hub.dsp_io->write_fmt("%lu selected volumes", static_cast<unsigned long> (count));
-                }
-                else
-                {
-                    dsp_comp_hub.dsp_io->write_fmt("%lu selected volume", static_cast<unsigned long> (count));
+                    const size_t count = selection_map->get_size();
+                    if (count > 1)
+                    {
+                        dsp_comp_hub.dsp_io->write_fmt("%lu selected volumes", static_cast<unsigned long> (count));
+                    }
+                    else
+                    {
+                        dsp_comp_hub.dsp_io->write_fmt("%lu selected volume", static_cast<unsigned long> (count));
+                    }
                 }
             }
             else
@@ -161,10 +152,10 @@ void MDspVolumeActions::show_actions()
     const std::string& std_color = dsp_comp_hub.active_color_table->option_text;
     const std::string& caution_color = dsp_comp_hub.active_color_table->caution_text;
 
-    display_option(" 1   ", "Attach", *cmd_attach, std_color);
-    display_option(" 2   ", "Detach", *cmd_detach, std_color);
-    display_option(" 3   ", "Resize", *cmd_resize, std_color);
-    display_option(" 4   ", "Invalidate", *cmd_invalidate, caution_color);
+    display_option(5, "Attach", *cmd_attach, std_color);
+    display_option(5, "Detach", *cmd_detach, std_color);
+    display_option(5, "Resize", *cmd_resize, std_color);
+    display_option(5, "Invalidate", *cmd_invalidate, caution_color);
 
     display_option_query(5, 10);
 }
@@ -174,26 +165,29 @@ void MDspVolumeActions::selection_action(const action_func_type action_func)
     try
     {
         dsp_comp_hub.dsp_common->application_working();
+        const std::string& rsc_name = dsp_comp_hub.dsp_shared->monitor_rsc;
         if (!dsp_comp_hub.dsp_shared->ovrd_volume_selection &&
-            dsp_comp_hub.dsp_shared->have_volumes_selection())
+            dsp_comp_hub.dsp_shared->have_volumes_selection(rsc_name))
         {
-            VolumesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_volumes_map();
-            VolumesMap::KeysIterator iter(selection_map);
-
-            const std::string& rsc_name = dsp_comp_hub.dsp_shared->monitor_rsc;
-            if (!rsc_name.empty())
+            VolumeSelectionMap* const selection_map =
+                dsp_comp_hub.dsp_shared->get_selected_volumes_map(rsc_name);
+            // Should always be non-null, because have_volumes_selection returned true
+            if (selection_map != nullptr)
             {
-                while (iter.has_next())
+                if (!rsc_name.empty())
                 {
-                    const uint16_t vlm_nr = *(iter.next());
-                    (this->*action_func)(rsc_name, vlm_nr);
+                    VolumeSelectionMap::KeysIterator iter(*selection_map);
+                    while (iter.has_next())
+                    {
+                        const uint16_t vlm_nr = *(iter.next());
+                        (this->*action_func)(rsc_name, vlm_nr);
+                    }
+                    dsp_comp_hub.dsp_selector->leave_display();
                 }
-                dsp_comp_hub.dsp_selector->leave_display();
             }
         }
         else
         {
-            const std::string& rsc_name = dsp_comp_hub.dsp_shared->monitor_rsc;
             const uint16_t vlm_nr = dsp_comp_hub.dsp_shared->monitor_vlm;
 
             if (!rsc_name.empty() && vlm_nr != DisplayConsts::VLM_NONE)

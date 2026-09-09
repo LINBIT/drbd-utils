@@ -6,6 +6,7 @@
 #include <terminal/navigation.h>
 #include <terminal/HelpText.h>
 #include <terminal/GlobalCommandConsts.h>
+#include <terminal/resync_progress.h>
 #include <objects/DrbdConnection.h>
 #include <comparators.h>
 #include <bounds.h>
@@ -57,7 +58,6 @@ void MDspVolumes::reset_display()
 {
     MDspStdListBase::reset_display();
     cursor_vlm = DisplayConsts::VLM_NONE;
-    clear_selection();
     set_page_nr(1);
 }
 
@@ -115,7 +115,9 @@ void MDspVolumes::display_at_cursor()
 
             if (page_first_vlm != nullptr)
             {
-                const bool selecting = dsp_comp_hub.dsp_shared->have_volumes_selection();
+                const std::string& rsc_name = rsc->get_name();
+                const VolumeSelectionMap* const selected_volumes =
+                    dsp_comp_hub.dsp_shared->get_selected_volumes_map(rsc_name);
                 DrbdResource::VolumesIterator dsp_vlm_iter =
                     rsc->volumes_iterator(page_first_vlm->get_volume_nr());
                 uint32_t current_line = VLM_LIST_Y;
@@ -125,7 +127,7 @@ void MDspVolumes::display_at_cursor()
                     if (problem_filter(vlm))
                     {
                         dsp_comp_hub.dsp_io->cursor_xy(1, VLM_LIST_Y + line_nr);
-                        write_volume_line(rsc, vlm, current_line, selecting);
+                        write_volume_line(rsc, vlm, current_line, selected_volumes);
                         ++line_nr;
                     }
                 }
@@ -150,7 +152,9 @@ void MDspVolumes::display_at_cursor()
 
             if (page_first_vlm != nullptr)
             {
-                const bool selecting = dsp_comp_hub.dsp_shared->have_volumes_selection();
+                const std::string& rsc_name = rsc->get_name();
+                const VolumeSelectionMap* const selected_volumes =
+                    dsp_comp_hub.dsp_shared->get_selected_volumes_map(rsc_name);
                 DrbdResource::VolumesIterator dsp_vlm_iter =
                     rsc->volumes_iterator(page_first_vlm->get_volume_nr());
                 uint32_t current_line = VLM_LIST_Y;
@@ -158,7 +162,7 @@ void MDspVolumes::display_at_cursor()
                 {
                     DrbdVolume* const vlm = dsp_vlm_iter.next();
                     dsp_comp_hub.dsp_io->cursor_xy(1, VLM_LIST_Y + line_nr);
-                    write_volume_line(rsc, vlm, current_line, selecting);
+                    write_volume_line(rsc, vlm, current_line, selected_volumes);
                     ++line_nr;
                 }
             }
@@ -201,7 +205,9 @@ void MDspVolumes::display_at_page()
             );
             if (page_first_vlm != nullptr)
             {
-                const bool selecting = dsp_comp_hub.dsp_shared->have_volumes_selection();
+                const std::string& rsc_name = dsp_rsc->get_name();
+                const VolumeSelectionMap* const selected_volumes =
+                    dsp_comp_hub.dsp_shared->get_selected_volumes_map(rsc_name);
                 DrbdResource::VolumesIterator dsp_vlm_iter =
                     dsp_rsc->volumes_iterator(page_first_vlm->get_volume_nr());
                 uint32_t current_line = VLM_LIST_Y;
@@ -211,7 +217,7 @@ void MDspVolumes::display_at_page()
                     if (problem_filter(dsp_vlm))
                     {
                         dsp_io->cursor_xy(1, VLM_LIST_Y + line_nr);
-                        write_volume_line(dsp_rsc, dsp_vlm, current_line, selecting);
+                        write_volume_line(dsp_rsc, dsp_vlm, current_line, selected_volumes);
                         ++line_nr;
                     }
                 }
@@ -219,7 +225,9 @@ void MDspVolumes::display_at_page()
         }
         else
         {
-            const bool selecting = dsp_comp_hub.dsp_shared->have_volumes_selection();
+            const std::string& rsc_name = dsp_rsc->get_name();
+            const VolumeSelectionMap* const selected_volumes =
+                dsp_comp_hub.dsp_shared->get_selected_volumes_map(rsc_name);
             // Display all volumes on the selected page, or the last page that shows any volumes
             DrbdResource::VolumesIterator vlm_iter = dsp_rsc->volumes_iterator();
             set_page_count(
@@ -235,7 +243,7 @@ void MDspVolumes::display_at_page()
             {
                 DrbdVolume* const vlm = vlm_iter.next();
                 dsp_io->cursor_xy(1, VLM_LIST_Y + line_nr);
-                write_volume_line(dsp_rsc, vlm, current_line, selecting);
+                write_volume_line(dsp_rsc, vlm, current_line, selected_volumes);
                 ++line_nr;
             }
         }
@@ -317,7 +325,8 @@ bool MDspVolumes::key_pressed(const uint32_t key)
             }
         }
 
-        if (!intercepted && (is_cursor_nav() || dsp_comp_hub.dsp_shared->have_volumes_selection()))
+        if (!intercepted && (is_cursor_nav() ||
+            dsp_comp_hub.dsp_shared->have_volumes_selection(dsp_comp_hub.dsp_shared->monitor_rsc)))
         {
             if (key == static_cast<uint32_t> ('A') || key == static_cast<uint32_t> ('a'))
             {
@@ -387,11 +396,11 @@ bool MDspVolumes::execute_custom_command(const std::string& command, StringToken
                 const uint16_t vlm_id = dsaext::parse_unsigned_int16(obj_id);
                 if (command == cmd_names::KEY_CMD_SELECT)
                 {
-                    dsp_comp_hub.dsp_shared->select_volume(vlm_id);
+                    dsp_comp_hub.dsp_shared->select_volume(dsp_comp_hub.dsp_shared->monitor_rsc, vlm_id);
                 }
                 else
                 {
-                    dsp_comp_hub.dsp_shared->deselect_volume(vlm_id);
+                    dsp_comp_hub.dsp_shared->deselect_volume(dsp_comp_hub.dsp_shared->monitor_rsc, vlm_id);
                 }
                 accepted = true;
             }
@@ -408,6 +417,10 @@ bool MDspVolumes::execute_custom_command(const std::string& command, StringToken
         DrbdResource* const rsc = dsp_comp_hub.get_monitor_resource();
         if (rsc != nullptr)
         {
+            const std::string& rsc_name = rsc->get_name();
+            ResourceSelectionMap::Node* const slct_rsc_node = dsp_comp_hub.dsp_shared->select_resource(rsc_name);
+            ResourceSubSelections& sub_selections = *(slct_rsc_node->get_value());
+
             dsp_comp_hub.dsp_common->application_working();
             const bool prb_mode = is_problem_mode(rsc);
             DrbdResource::VolumesIterator vlm_iter = rsc->volumes_iterator();
@@ -417,7 +430,7 @@ bool MDspVolumes::execute_custom_command(const std::string& command, StringToken
                 if (!prb_mode || problem_filter(vlm))
                 {
                     const uint16_t vlm_nr = vlm->get_volume_nr();
-                    dsp_comp_hub.dsp_shared->select_volume(vlm_nr);
+                    dsp_comp_hub.dsp_shared->select_volume(sub_selections, vlm_nr);
                 }
             }
         }
@@ -514,12 +527,12 @@ void MDspVolumes::clear_cursor()
 
 bool MDspVolumes::is_selecting()
 {
-    return dsp_comp_hub.dsp_shared->have_volumes_selection();
+    return dsp_comp_hub.dsp_shared->have_volumes_selection(dsp_comp_hub.dsp_shared->monitor_rsc);
 }
 
 void MDspVolumes::clear_selection()
 {
-    dsp_comp_hub.dsp_shared->clear_volumes_selection();
+    dsp_comp_hub.dsp_shared->clear_volumes_selection(dsp_comp_hub.dsp_shared->monitor_rsc);
 }
 
 // Toggle selection of the volume currently under the cursor,
@@ -528,13 +541,14 @@ void MDspVolumes::toggle_select_cursor_item()
 {
     if (dsp_comp_hub.dsp_shared->monitor_rsc.length() >= 1 && cursor_vlm != DisplayConsts::VLM_NONE)
     {
-        DrbdResource* const rsc = dsp_comp_hub.rsc_map->get(&(dsp_comp_hub.dsp_shared->monitor_rsc));
+        const std::string& rsc_name = dsp_comp_hub.dsp_shared->monitor_rsc;
+        DrbdResource* const rsc = dsp_comp_hub.rsc_map->get(&rsc_name);
         if (rsc != nullptr)
         {
             DrbdVolume* const vlm = rsc->get_volume(cursor_vlm);
             if (vlm != nullptr)
             {
-                dsp_comp_hub.dsp_shared->toggle_volume_selection(cursor_vlm);
+                dsp_comp_hub.dsp_shared->toggle_volume_selection(rsc_name, cursor_vlm);
                 dsp_comp_hub.dsp_selector->refresh_display();
             }
         }
@@ -635,10 +649,10 @@ void MDspVolumes::cursor_to_previous_item()
 }
 
 void MDspVolumes::write_volume_line(
-    DrbdResource* const rsc,
-    DrbdVolume* const   vlm,
-    uint32_t&           current_line,
-    const bool          selecting
+    DrbdResource* const                 rsc,
+    DrbdVolume* const                   vlm,
+    uint32_t&                           current_line,
+    const VolumeSelectionMap* const     selected_volumes
 )
 {
     DisplayIo* const dsp_io = dsp_comp_hub.dsp_io;
@@ -653,9 +667,9 @@ void MDspVolumes::write_volume_line(
     }
 
     bool is_selected = false;
-    if (selecting)
+    if (selected_volumes != nullptr)
     {
-        is_selected = dsp_comp_hub.dsp_shared->is_volume_selected(vlm_nr);
+        is_selected = selected_volumes->get_node(&vlm_nr) != nullptr;
     }
 
     const std::string& rst_bg = is_under_cursor ? dsp_comp_hub.active_color_table->bg_cursor :
@@ -740,22 +754,7 @@ void MDspVolumes::write_volume_line(
     {
         // Find the SyncTarget peer volume
 
-        uint16_t sync_perc = 10000;
-        DrbdResource::ConnectionsIterator con_iter = rsc->connections_iterator();
-        while (con_iter.has_next())
-        {
-            DrbdConnection* const con = con_iter.next();
-            DrbdVolume* const peer_vlm = con->get_volume(vlm_nr);
-            if (peer_vlm != nullptr)
-            {
-                const DrbdVolume::repl_state state = peer_vlm->get_replication_state();
-                if (state == DrbdVolume::repl_state::SYNC_TARGET)
-                {
-                    sync_perc = peer_vlm->get_sync_perc();
-                    break;
-                }
-            }
-        }
+        uint16_t sync_perc = resync_progress::percentage_for_volume(*rsc, vlm_nr);
 
         if (sync_perc < 10000)
         {
@@ -767,13 +766,7 @@ void MDspVolumes::write_volume_line(
             );
 
             const uint16_t sync_bar_length = dsp_comp_hub.term_cols - 57;
-            const uint16_t finished_length = static_cast<uint16_t> (
-                (static_cast<uint32_t> (sync_bar_length) * sync_perc) / 10000
-            );
-            const uint16_t remaining_length = sync_bar_length - finished_length;
-
-            dsp_io->write_fill_seq(dsp_comp_hub.active_character_table->sync_blk_fin, finished_length);
-            dsp_io->write_fill_seq(dsp_comp_hub.active_character_table->sync_blk_rmn, remaining_length);
+            dsp_comp_hub.dsp_common->display_progress_bar(sync_perc, sync_bar_length);
         }
     }
 

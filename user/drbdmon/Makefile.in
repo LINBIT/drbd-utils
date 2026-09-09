@@ -46,19 +46,22 @@ l-obj += terminal/MDspPeerVolumes.o terminal/MDspLogViewer.o terminal/MDspTaskQu
 l-obj += terminal/MDspResourceActions.o terminal/MDspConnectionActions.o terminal/MDspVolumeActions.o
 l-obj += terminal/MDspPeerVolumeActions.o
 l-obj += terminal/MDspResourceDetail.o terminal/MDspVolumeDetail.o terminal/MDspConnectionDetail.o
-l-obj += terminal/MDspPeerVolumeDetail.o
+l-obj += terminal/MDspPeerVolumeDetail.o terminal/resync_progress.o
 l-obj += terminal/MDspBase.o terminal/MDspStdListBase.o terminal/MDspMenuBase.o terminal/MDspMessage.o
 l-obj += terminal/InputField.o terminal/DisplayId.o terminal/DisplayIdMap.o terminal/MDspHelp.o
 l-obj += terminal/MDspPgmInfo.o terminal/MDspHelpIndex.o terminal/MDspConfiguration.o terminal/MDspWaitMsg.o
 l-obj += terminal/TextColumn.o terminal/HelpText.o terminal/DisplayUpdateEvent.o terminal/TerminalControl.o
+l-obj += terminal/MDspSelectionFilter.o terminal/selection_filter.o terminal/MDspBulkActions.o
+l-obj += terminal/MDspExportSelection.o terminal/MDspImportSelection.o terminal/MDspOverview.o
 l-obj += subprocess/SubProcessQueue.o subprocess/SubProcess.o subprocess/CmdLine.o subprocess/DrbdCmdConsts.o
 l-obj += subprocess/Linux/SubProcessLx.o terminal/Linux/TerminalControlImpl.o terminal/Linux/InputSequenceDecoder.o
+l-obj += subprocess/ThreadQueue.o
 l-obj += platform/Linux/SystemApiImpl.o platform/Linux/EventsIo.o
 l-obj += configuration/CfgEntryStore.o configuration/CfgEntryBoolean.o configuration/CfgEntryIntegerTypes.o
 l-obj += configuration/CfgEntry.o configuration/Configuration.o platform/IoException.o
 l-obj += persistent_configuration.o
-l-obj += StringTokenizer.o comparators.o utils.o exceptions.o integerfmt.o string_transformations.o
-l-obj += string_matching.o
+l-obj += StringTokenizer.o Once.o comparators.o utils.o exceptions.o integerfmt.o string_transformations.o
+l-obj += string_matching.o environment_variables.o
 
 ls-obj := drbdmon_main.o $(l-obj) $(dsaext-obj) $(integerparse-obj)
 

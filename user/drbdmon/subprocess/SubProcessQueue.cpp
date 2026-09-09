@@ -1,5 +1,8 @@
 #include <comparators.h>
 #include <subprocess/SubProcessQueue.h>
+#include <bounds.h>
+#include <exception>
+#include <system_error>
 
 extern "C"
 {
@@ -7,18 +10,31 @@ extern "C"
 }
 
 const uint64_t  SubProcessQueue::TASKQ_NONE         = UINT64_MAX;
-const size_t    SubProcessQueue::MAX_ENTRY_COUNT    = 1024;
-const size_t    SubProcessQueue::MAX_ACTIVE_COUNT   = 8;
+const size_t    SubProcessQueue::MAX_ENTRY_COUNT    = 4000;
 
-SubProcessQueue::SubProcessQueue()
+const size_t    SubProcessQueue::MIN_ACTIVE_COUNT_RANGE = 1;
+const size_t    SubProcessQueue::DFLT_ACTIVE_COUNT      = 8;
+const size_t    SubProcessQueue::MAX_ACTIVE_COUNT_RANGE = 40;
+
+SubProcessQueue::SubProcessQueue():
+    SubProcessQueue::SubProcessQueue(DFLT_ACTIVE_COUNT)
+{
+}
+
+SubProcessQueue::SubProcessQueue(const size_t concurrency)
 {
     sys_api = system_api::create_system_api();
     map = std::unique_ptr<EntryMapType>(new EntryMapType(&comparators::compare<uint64_t>));
-    worker_thread_mgr = std::unique_ptr<std::thread[]>(new std::thread[MAX_ACTIVE_COUNT]);
-    worker_slot_mgr = std::unique_ptr<size_t[]>(new size_t[MAX_ACTIVE_COUNT]);
-    for (size_t idx = 0; idx < MAX_ACTIVE_COUNT; ++idx)
+
+    const size_t safe_concurrency = bounds(MIN_ACTIVE_COUNT_RANGE, concurrency, MAX_ACTIVE_COUNT_RANGE);
+    crt_pool_size = safe_concurrency;
+    tgt_pool_size = safe_concurrency;
+    max_sub_proc = safe_concurrency;
+
+    for (size_t ctr = 0; ctr < crt_pool_size; ++ctr)
     {
-        worker_slot_mgr[idx] = idx;
+        ThreadQueue::Node* const q_node = new ThreadQueue::Node();
+        inactive_threads.link_node(q_node);
     }
 }
 
@@ -41,11 +57,11 @@ SubProcessQueue::~SubProcessQueue() noexcept
         }
     }
 
-    for (size_t slot_idx = 0; slot_idx < MAX_ACTIVE_COUNT; ++slot_idx)
+    for (ThreadQueue::Node* q_node = active_threads.head; q_node != nullptr; q_node = q_node->next)
     {
-        if (worker_thread_mgr[slot_idx].joinable())
+        if (q_node->worker_thread.joinable())
         {
-            worker_thread_mgr[slot_idx].join();
+            q_node->worker_thread.join();
         }
     }
 
@@ -63,7 +79,7 @@ std::mutex& SubProcessQueue::get_queue_lock() noexcept
     return queue_lock;
 }
 
-// @throws std::bad_alloc, dsaext::DuplicateInsertException
+// @throws std::bad_alloc, SubProcess::Exception, dsaext::DuplicateInsertException
 // The DuplicateInsertException is theoretical, because entry ids are unique
 uint64_t SubProcessQueue::add_entry(std::unique_ptr<CmdLine>& command_mgr, const bool activate)
 {
@@ -100,7 +116,14 @@ uint64_t SubProcessQueue::add_entry(std::unique_ptr<CmdLine>& command_mgr, const
 
     if (activate)
     {
-        schedule_threads();
+        try
+        {
+            schedule_threads();
+        }
+        catch (std::system_error&)
+        {
+            throw SubProcess::Exception("Thread creation failed. Check operating system limits.");
+        }
     }
     return entry_id;
 }
@@ -145,11 +168,13 @@ bool SubProcessQueue::remove_entry_impl(Entry* const queue_entry)
     return is_removed;
 }
 
+// Caller must hold queue_lock
 SubProcessQueue::Entry* SubProcessQueue::get_entry(const uint64_t entry_id)
 {
     return map->get(&entry_id);
 }
 
+// @throws SubProcess::Exception
 bool SubProcessQueue::activate_entry(const uint64_t entry_id)
 {
     bool is_activated = false;
@@ -162,7 +187,14 @@ bool SubProcessQueue::activate_entry(const uint64_t entry_id)
         if (queue_entry->owning_queue == &wait_queue)
         {
             is_activated = move_entry(queue_entry, ready_queue);
-            schedule_threads();
+            try
+            {
+                schedule_threads();
+            }
+            catch (std::system_error&)
+            {
+                throw SubProcess::Exception("Thread creation failed. Check operating system limits.");
+            }
 
             if (is_activated && observer != nullptr)
             {
@@ -227,41 +259,49 @@ void SubProcessQueue::set_discard_succeeded_tasks(const bool discard_flag)
     discard_succeeded_tasks = discard_flag;
 }
 
+// Caller must hold queue_lock
 uint64_t SubProcessQueue::get_active_queue_selected_id()
 {
     return active_queue.selected_id;
 }
 
+// Caller must hold queue_lock
 uint64_t SubProcessQueue::get_pending_queue_selected_id()
 {
     return ready_queue.selected_id;
 }
 
+// Caller must hold queue_lock
 uint64_t SubProcessQueue::get_suspended_queue_selected_id()
 {
     return wait_queue.selected_id;
 }
 
+// Caller must hold queue_lock
 uint64_t SubProcessQueue::get_finished_queue_selected_id()
 {
     return ended_queue.selected_id;
 }
 
+// Caller must hold queue_lock
 void SubProcessQueue::set_active_queue_selected_id(const uint64_t id)
 {
     active_queue.selected_id = id;
 }
 
+// Caller must hold queue_lock
 void SubProcessQueue::set_pending_queue_selected_id(const uint64_t id)
 {
     ready_queue.selected_id = id;
 }
 
+// Caller must hold queue_lock
 void SubProcessQueue::set_suspended_queue_selected_id(const uint64_t id)
 {
     wait_queue.selected_id = id;
 }
 
+// Caller must hold queue_lock
 void SubProcessQueue::set_finished_queue_selected_id(const uint64_t id)
 {
     ended_queue.selected_id = id;
@@ -314,6 +354,135 @@ void SubProcessQueue::set_observer(SubProcessObserver* const new_observer)
     observer = new_observer;
 }
 
+// @throws std::bad_alloc, SubProcess::Exception
+void SubProcessQueue::change_sub_proc_concurrency(const size_t concurrency)
+{
+    std::unique_lock<std::mutex> lock(queue_lock);
+
+    const size_t safe_concurrency = bounds(MIN_ACTIVE_COUNT_RANGE, concurrency, MAX_ACTIVE_COUNT_RANGE);
+    if (safe_concurrency != crt_pool_size)
+    {
+        change_pool = true;
+        tgt_pool_size = safe_concurrency;
+
+        if (tgt_pool_size > crt_pool_size)
+        {
+            increase_pool_size_impl(false);
+        }
+        else
+        {
+            max_sub_proc = tgt_pool_size;
+
+            decrease_pool_size_impl();
+        }
+    }
+}
+
+size_t SubProcessQueue::get_current_sub_proc_concurrency()
+{
+    size_t concurrency = 0;
+    {
+        std::unique_lock<std::mutex> lock(queue_lock);
+        concurrency = max_sub_proc;
+    }
+    return concurrency;
+}
+
+size_t SubProcessQueue::get_target_sub_proc_concurrency()
+{
+    size_t concurrency = 0;
+    {
+        std::unique_lock<std::mutex> lock(queue_lock);
+        concurrency = tgt_pool_size;
+    }
+    return concurrency;
+}
+
+// Caller must hold queue_lock
+void SubProcessQueue::decrease_pool_size_impl()
+{
+    if (active_count <= tgt_pool_size)
+    {
+        if (crt_pool_size > tgt_pool_size)
+        {
+            const size_t discard = crt_pool_size - tgt_pool_size;
+            size_t ctr = 0;
+            ThreadQueue::Node* q_node = inactive_threads.head;
+            while (q_node != nullptr && ctr < discard)
+            {
+                ThreadQueue::Node* const next = q_node->next;
+                if (q_node->worker_thread.joinable())
+                {
+                    try
+                    {
+                        q_node->worker_thread.join();
+                    }
+                    catch (std::system_error&)
+                    {
+                        // Cannot fix it anyway, handling is a no-op
+                    }
+                }
+                inactive_threads.unlink_node(q_node);
+                --crt_pool_size;
+                delete q_node;
+                q_node = next;
+                ++ctr;
+            }
+        }
+
+        if (crt_pool_size == tgt_pool_size)
+        {
+            change_pool = false;
+        }
+    }
+}
+
+// Caller must hold queue_lock
+void SubProcessQueue::increase_pool_size_impl(const bool defer_exc)
+{
+    std::unique_ptr<ThreadQueue::Node> q_node_mgr;
+    while (tgt_pool_size > crt_pool_size)
+    {
+        try
+        {
+            q_node_mgr = std::unique_ptr<ThreadQueue::Node>(new ThreadQueue::Node());
+        }
+        catch (std::bad_alloc&)
+        {
+            if (defer_exc)
+            {
+                observer->notify_out_of_memory();
+                break;
+            }
+            else
+            {
+                throw;
+            }
+        }
+        if (q_node_mgr != nullptr)
+        {
+            inactive_threads.link_node(q_node_mgr.get());
+            q_node_mgr.release();
+            ++crt_pool_size;
+            max_sub_proc = crt_pool_size;
+        }
+    }
+
+    try
+    {
+        schedule_threads();
+        change_pool = false;
+    }
+    catch (std::system_error&)
+    {
+        if (!defer_exc)
+        {
+            throw SubProcess::Exception("Thread creation failed. Check operating system limits.");
+        }
+        // else the exception is suppressed, retrying again later when called from a thread.
+    }
+}
+
 // Caller must hold queue_lock
 bool SubProcessQueue::move_entry(Entry* const queue_entry, Queue& dst_queue)
 {
@@ -329,36 +498,47 @@ bool SubProcessQueue::move_entry(Entry* const queue_entry, Queue& dst_queue)
 }
 
 // Caller must hold queue_lock
+// @throws std::system_error
 void SubProcessQueue::schedule_threads()
 {
     if (!shutdown)
     {
-        const size_t queue_count = std::min(ready_queue.size + active_queue.size, MAX_ACTIVE_COUNT);
+        const size_t queue_count = std::min(ready_queue.size + active_queue.size, max_sub_proc);
         while (queue_count > active_count)
         {
-            const size_t slot_idx = worker_slot_mgr[active_count];
-            // This is required to clean up a thread object that was previously used for another thread
-            if (worker_thread_mgr[slot_idx].joinable())
+            ThreadQueue::Node *q_node = inactive_threads.head;
+            if (q_node != nullptr)
             {
-                worker_thread_mgr[slot_idx].join();
+                // This is required to clean up a thread object that was previously used for another thread
+                if (q_node->worker_thread.joinable())
+                {
+                    q_node->worker_thread.join();
+                }
+            }
+            else
+            {
+                // Safeguard; can only happen if the queue sizes are incorrect
+                break;
             }
 
             sys_api->pre_thread_invocation();
-            worker_thread_mgr[slot_idx] = std::thread(&SubProcessQueue::invoke_thread, this, slot_idx);
+            q_node->worker_thread = std::thread(&SubProcessQueue::invoke_thread, this, q_node);
             sys_api->post_thread_invocation();
 
+            inactive_threads.unlink_node(q_node);
+            active_threads.link_node(q_node);
             ++active_count;
         }
     }
 }
 
-void SubProcessQueue::invoke_thread(const size_t slot_idx)
+void SubProcessQueue::invoke_thread(ThreadQueue::Node* const q_node)
 {
     std::unique_lock<std::mutex> lock(queue_lock);
     try
     {
-        WorkerGuard guard(*this, slot_idx);
-        while (!shutdown && ready_queue.head != nullptr)
+        WorkerGuard guard(*this, q_node);
+        while (!shutdown && active_count <= max_sub_proc && ready_queue.head != nullptr)
         {
             Entry* const selected_entry = ready_queue.head;
             move_entry(selected_entry, active_queue);
@@ -372,7 +552,7 @@ void SubProcessQueue::invoke_thread(const size_t slot_idx)
 
             try
             {
-                selected_entry->process_mgr = sys_api->create_subprocess_handler();
+                selected_entry->process_mgr = sys_api->create_subprocess_handler(observer);
             }
             catch (std::bad_alloc& exc)
             {
@@ -393,7 +573,14 @@ void SubProcessQueue::invoke_thread(const size_t slot_idx)
                 }
                 catch (SubProcess::Exception& exc)
                 {
-                    stored_exc = std::current_exception();
+                    try
+                    {
+                        selected_entry->process_mgr->set_error_message(exc.get_error_message());
+                    }
+                    catch (std::bad_alloc&)
+                    {
+                        stored_exc = std::current_exception();
+                    }
                 }
 
                 lock.lock();
@@ -425,6 +612,24 @@ void SubProcessQueue::invoke_thread(const size_t slot_idx)
             if (stored_exc != nullptr)
             {
                 std::rethrow_exception(stored_exc);
+            }
+
+            if (change_pool)
+            {
+                if (tgt_pool_size < crt_pool_size)
+                {
+                    decrease_pool_size_impl();
+                }
+                else
+                if (tgt_pool_size > crt_pool_size)
+                {
+                    // std::bad_alloc reported via SubProcessObserver
+                    increase_pool_size_impl(true);
+                }
+                else
+                {
+                    change_pool = false;
+                }
             }
         }
     }
@@ -606,11 +811,11 @@ SubProcessQueue::Entry* SubProcessQueue::Queue::pop_entry()
         {
             head->prev_entry = nullptr;
         }
+        queue_entry->next_entry = nullptr;
+        queue_entry->prev_entry = nullptr;
+        queue_entry->owning_queue = nullptr;
         --size;
     }
-    queue_entry->next_entry = nullptr;
-    queue_entry->prev_entry = nullptr;
-    queue_entry->owning_queue = nullptr;
     return queue_entry;
 }
 
@@ -671,14 +876,15 @@ SubProcessQueue::QueueCapacityException::~QueueCapacityException() noexcept
 {
 }
 
-SubProcessQueue::WorkerGuard::WorkerGuard(SubProcessQueue& instance, const size_t slot_idx):
+SubProcessQueue::WorkerGuard::WorkerGuard(SubProcessQueue& instance, ThreadQueue::Node* const q_node_ptr):
     container(instance),
-    worker_slot_idx(slot_idx)
+    q_node(q_node_ptr)
 {
 }
 
 SubProcessQueue::WorkerGuard::~WorkerGuard() noexcept
 {
     --container.active_count;
-    container.worker_slot_mgr[container.active_count] = worker_slot_idx;
+    container.active_threads.unlink_node(q_node);
+    container.inactive_threads.link_node(q_node);
 }

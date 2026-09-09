@@ -59,7 +59,11 @@ class MDspConnections : public MDspStdListBase
     void display_common_unfiltered_stats();
     void reset_cursor_connection();
     void list_item_clicked(MouseEvent& mouse);
-    void write_connection_line(DrbdConnection* const con, uint32_t& current_line, const bool selecting);
+    void write_connection_line(
+        DrbdConnection* const con,
+        uint32_t& current_line,
+        const ConnectionSelectionMap* const selected_connections
+    );
     void write_no_connections_line(const bool problem_mode_flag);
     void monitor_cursor_common_keys(const uint32_t key);
     bool is_problem_mode(DrbdResource* const rsc);

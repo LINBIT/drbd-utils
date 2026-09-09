@@ -19,7 +19,7 @@ class LinuxApi : public SystemApi
 
     virtual void post_thread_invocation() override;
 
-    virtual std::unique_ptr<SubProcess> create_subprocess_handler() override;
+    virtual std::unique_ptr<SubProcess> create_subprocess_handler(SubProcessObserver* const observer_ref) override;
     virtual std::unique_ptr<TerminalControl> create_terminal_control() override;
     virtual std::string get_config_file_path() override;
     virtual void prepare_save_config_file() override;

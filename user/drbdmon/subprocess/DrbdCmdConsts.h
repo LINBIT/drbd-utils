@@ -12,6 +12,8 @@ namespace drbdcmd
     extern const std::string    ARG_START;
     extern const std::string    ARG_STOP;
     extern const std::string    ARG_ADJUST;
+    extern const std::string    ARG_SKIP_DISK;
+    extern const std::string    ARG_SKIP_NET;
     extern const std::string    ARG_PRIMARY;
     extern const std::string    ARG_SECONDARY;
     extern const std::string    ARG_CONNECT;

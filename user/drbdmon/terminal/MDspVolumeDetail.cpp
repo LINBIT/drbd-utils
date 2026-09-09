@@ -3,6 +3,7 @@
 #include <terminal/DisplayConsts.h>
 #include <terminal/KeyCodes.h>
 #include <terminal/HelpText.h>
+#include <terminal/resync_progress.h>
 #include <objects/DrbdResource.h>
 #include <string>
 
@@ -136,6 +137,31 @@ void MDspVolumeDetail::display_content()
                 {
                     dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->norm.c_str());
                     dsp_comp_hub.dsp_io->write_text("Yes");
+                }
+
+                // Resync progress
+                if (vlm->get_disk_state() == DrbdVolume::disk_state::INCONSISTENT)
+                {
+                    uint16_t sync_perc = resync_progress::percentage_for_volume(*rsc, vlm_nr);
+
+                    if (sync_perc < 10000)
+                    {
+                        current_line += 2;
+
+                        dsp_comp_hub.dsp_io->cursor_xy(1, current_line);
+                        dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->warn.c_str());
+                        dsp_comp_hub.dsp_io->write_text("Resynchronization progress: ");
+                        dsp_comp_hub.dsp_io->write_fmt(
+                            "%2u.%02u ",
+                            static_cast<unsigned int> (sync_perc / 100),
+                            static_cast<unsigned int> (sync_perc % 100)
+                        );
+
+                        ++current_line;
+                        dsp_comp_hub.dsp_io->cursor_xy(1, current_line);
+                        dsp_comp_hub.dsp_common->display_progress_bar(sync_perc, dsp_comp_hub.term_cols);
+                        dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
+                    }
                 }
             }
             else

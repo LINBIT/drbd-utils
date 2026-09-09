@@ -102,7 +102,10 @@ bool MDspPeerVolumes::key_pressed(const uint32_t key)
             }
         }
 
-        if (!intercepted && (is_cursor_nav() || dsp_comp_hub.dsp_shared->have_peer_volumes_selection()))
+        if (!intercepted && (is_cursor_nav() ||
+            dsp_comp_hub.dsp_shared->have_peer_volumes_selection(
+                dsp_comp_hub.dsp_shared->monitor_rsc, dsp_comp_hub.dsp_shared->monitor_con
+            )))
         {
             if (key == static_cast<uint32_t> ('A') || key == static_cast<uint32_t> ('a'))
             {
@@ -241,12 +244,18 @@ bool MDspPeerVolumes::execute_custom_command(const std::string& command, StringT
 
 void MDspPeerVolumes::clear_selection()
 {
-    dsp_comp_hub.dsp_shared->clear_peer_volumes_selection();
+    dsp_comp_hub.dsp_shared->clear_peer_volumes_selection(
+        dsp_comp_hub.dsp_shared->monitor_rsc,
+        dsp_comp_hub.dsp_shared->monitor_con
+    );
 }
 
 bool MDspPeerVolumes::is_selecting()
 {
-    return dsp_comp_hub.dsp_shared->have_peer_volumes_selection();
+    return dsp_comp_hub.dsp_shared->have_peer_volumes_selection(
+        dsp_comp_hub.dsp_shared->monitor_rsc,
+        dsp_comp_hub.dsp_shared->monitor_con
+    );
 }
 
 void MDspPeerVolumes::toggle_select_cursor_item()
@@ -257,7 +266,7 @@ void MDspPeerVolumes::toggle_select_cursor_item()
         DrbdConnection* const con = dsp_comp_hub.get_monitor_connection();
         if (rsc != nullptr && con != nullptr)
         {
-            dsp_comp_hub.dsp_shared->toggle_peer_volume_selection(cursor_vlm);
+            dsp_comp_hub.dsp_shared->toggle_peer_volume_selection(rsc->get_name(), con->get_name(), cursor_vlm);
             dsp_comp_hub.dsp_selector->refresh_display();
         }
     }
@@ -368,12 +377,16 @@ void MDspPeerVolumes::clear_cursor()
 
 void MDspPeerVolumes::select_volume(const uint16_t vlm_nr)
 {
-    dsp_comp_hub.dsp_shared->select_peer_volume(vlm_nr);
+    const std::string& rsc_name = dsp_comp_hub.dsp_shared->monitor_rsc;
+    const std::string& con_name = dsp_comp_hub.dsp_shared->monitor_con;
+    dsp_comp_hub.dsp_shared->select_peer_volume(rsc_name, con_name, vlm_nr);
 }
 
 void MDspPeerVolumes::deselect_volume(const uint16_t vlm_nr)
 {
-    dsp_comp_hub.dsp_shared->deselect_peer_volume(vlm_nr);
+    const std::string& rsc_name = dsp_comp_hub.dsp_shared->monitor_rsc;
+    const std::string& con_name = dsp_comp_hub.dsp_shared->monitor_con;
+    dsp_comp_hub.dsp_shared->deselect_peer_volume(rsc_name, con_name, vlm_nr);
 }
 
 void MDspPeerVolumes::display_activated()
@@ -398,7 +411,6 @@ void MDspPeerVolumes::reset_display()
 {
     MDspStdListBase::reset_display();
     cursor_vlm = DisplayConsts::VLM_NONE;
-    clear_selection();
     set_page_nr(1);
 }
 
@@ -454,7 +466,8 @@ void MDspPeerVolumes::display_at_cursor()
     DrbdConnection* const con = dsp_comp_hub.get_monitor_connection();
     if (rsc != nullptr && con != nullptr)
     {
-        const bool selecting = dsp_comp_hub.dsp_shared->have_peer_volumes_selection();
+        VolumeSelectionMap* const selected_peer_volumes =
+            dsp_comp_hub.dsp_shared->get_selected_peer_volumes_map(rsc->get_name(), con->get_name());
         const uint16_t vlm_count = con->get_volume_count();
         const bool problem_mode_flag = is_problem_mode(rsc, con);
         dsp_comp_hub.dsp_common->display_problem_mode_label(problem_mode_flag);
@@ -493,7 +506,7 @@ void MDspPeerVolumes::display_at_cursor()
                     if (problem_filter(vlm))
                     {
                         dsp_comp_hub.dsp_io->cursor_xy(1, PEER_VLM_LIST_Y + line_nr);
-                        write_volume_line(vlm, current_line, selecting);
+                        write_volume_line(vlm, current_line, selected_peer_volumes);
                         ++line_nr;
                     }
                 }
@@ -526,7 +539,7 @@ void MDspPeerVolumes::display_at_cursor()
                 {
                     DrbdVolume* const vlm = dsp_vlm_iter.next();
                     dsp_comp_hub.dsp_io->cursor_xy(1, PEER_VLM_LIST_Y + line_nr);
-                    write_volume_line(vlm, current_line, selecting);
+                    write_volume_line(vlm, current_line, selected_peer_volumes);
                     ++line_nr;
                 }
             }
@@ -547,7 +560,8 @@ void MDspPeerVolumes::display_at_page()
     DrbdConnection* const con = dsp_comp_hub.get_monitor_connection();
     if (dsp_rsc != nullptr && con != nullptr)
     {
-        const bool selecting = dsp_comp_hub.dsp_shared->have_peer_volumes_selection();
+        VolumeSelectionMap* const selected_peer_volumes =
+            dsp_comp_hub.dsp_shared->get_selected_peer_volumes_map(dsp_rsc->get_name(), con->get_name());
         const uint32_t lines_per_page = get_lines_per_page();
         const bool problem_mode_flag = is_problem_mode(dsp_rsc, con);
         dsp_comp_hub.dsp_common->display_problem_mode_label(problem_mode_flag);
@@ -571,7 +585,7 @@ void MDspPeerVolumes::display_at_page()
                     if (problem_filter(dsp_vlm))
                     {
                         dsp_io->cursor_xy(1, PEER_VLM_LIST_Y + line_nr);
-                        write_volume_line(dsp_vlm, current_line, selecting);
+                        write_volume_line(dsp_vlm, current_line, selected_peer_volumes);
                         ++line_nr;
                     }
                 }
@@ -595,7 +609,7 @@ void MDspPeerVolumes::display_at_page()
             {
                 DrbdVolume* const vlm = vlm_iter.next();
                 dsp_io->cursor_xy(1, PEER_VLM_LIST_Y + line_nr);
-                write_volume_line(vlm, current_line, selecting);
+                write_volume_line(vlm, current_line, selected_peer_volumes);
                 ++line_nr;
             }
         }
@@ -668,7 +682,11 @@ void MDspPeerVolumes::list_item_clicked(MouseEvent& mouse)
     }
 }
 
-void MDspPeerVolumes::write_volume_line(DrbdVolume* const vlm, uint32_t& current_line, const bool selecting)
+void MDspPeerVolumes::write_volume_line(
+    DrbdVolume* const vlm,
+    uint32_t& current_line,
+    const VolumeSelectionMap* const selected_peer_volumes
+)
 {
     DisplayIo* const dsp_io = dsp_comp_hub.dsp_io;
     dsp_io->cursor_xy(1, current_line);
@@ -682,9 +700,9 @@ void MDspPeerVolumes::write_volume_line(DrbdVolume* const vlm, uint32_t& current
     }
 
     bool is_selected = false;
-    if (selecting)
+    if (selected_peer_volumes != nullptr)
     {
-        is_selected = dsp_comp_hub.dsp_shared->is_peer_volume_selected(vlm_nr);
+        is_selected = selected_peer_volumes->get_node(&vlm_nr) != nullptr;
     }
 
     const std::string& rst_bg = is_under_cursor ? dsp_comp_hub.active_color_table->bg_cursor :
@@ -794,13 +812,7 @@ void MDspPeerVolumes::write_volume_line(DrbdVolume* const vlm, uint32_t& current
         );
 
         const uint16_t sync_bar_length = dsp_comp_hub.term_cols - 66;
-        const uint16_t finished_length = static_cast<uint16_t> (
-            (static_cast<uint32_t> (sync_bar_length) * sync_perc) / 10000
-        );
-        const uint16_t remaining_length = sync_bar_length - finished_length;
-
-        dsp_io->write_fill_seq(dsp_comp_hub.active_character_table->sync_blk_fin, finished_length);
-        dsp_io->write_fill_seq(dsp_comp_hub.active_character_table->sync_blk_rmn, remaining_length);
+        dsp_comp_hub.dsp_common->display_progress_bar(sync_perc, sync_bar_length);
     }
 
     dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());

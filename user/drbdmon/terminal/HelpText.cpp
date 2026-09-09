@@ -1,5 +1,6 @@
 #include <terminal/HelpText.h>
 #include <terminal/DisplayId.h>
+#include <environment_variables.h>
 
 namespace helptext
 {
@@ -484,6 +485,14 @@ namespace helptext
         "    Stop the resource on the local node\n"
         "\x1B\x04" "Adjust resource" "\x1B\xFF" "\n"
         "    Adjust the resource on the local node, for example, after a DRBD resource configuration change\n"
+        "\x1B\x04" "Adjust resource, skip disk actions" "\x1B\xFF" "\n"
+        "    Adjust the resource on the local node, but skip disk operations (e.g., do not attach the disk)\n"
+        "\x1B\x04" "Adjust resource, skip network actions" "\x1B\xFF" "\n"
+        "    Adjust the resource on the local node, but skip network operations "
+        "(e.g., do not connect to peer nodes)\n"
+        "\x1B\x04" "Adjust resource, skip disk & network actions" "\x1B\xFF" "\n"
+        "    Adjust the resource on the local node, but skip disk operations and network operations "
+        "(e.g., do not attach the disk and do not connect to peer nodes)\n"
         "\x1B\x04" "Make primary" "\x1B\xFF" "\n"
         "    Make the local node primary for the resource\n"
         "\x1B\x04" "Make secondary" "\x1B\xFF" "\n"
@@ -643,6 +652,8 @@ namespace helptext
         "    Instead of starting new tasks immediately or moving the associated task entries into the pending tasks "
         "queue, places new task entries into the suspended tasks queue, from where they can either be manually moved "
         "to the pending tasks queue, or be manually discarded\n"
+        "\x1B\x04" "Active tasks concurrency" "\x1B\xFF" "\n"
+        "    Sets the number of tasks that can run concurrently\n"
         "\x1B\x04" "Color scheme" "\x1B\xFF" "\n"
         "    Sets the display color scheme\n"
         "\x1B\x04" "Character set" "\x1B\xFF" "\n"
@@ -1095,6 +1106,265 @@ namespace helptext
         "\x1B\x05" "/          " "\x1B\xFF" " Go to command line entry field\n"
         "            \x1B\x05" "F12" "\x1B\xFF" " cancels command line entry\n";
 
+    const char* const SFLT_HELP_1 =
+        "\x1B\x01" "Help - Selection filter" "\x1B\xFF" "\n"
+        "\n"
+        "\x1B\x01" "Contents" "\x1B\xFF" "\n"
+        "\n"
+        "Selection filter overview\n"
+        "Restrict selection page\n"
+        "Restrict filter matching page\n"
+        "State filter pages\n"
+        "Execute page\n"
+        "Selection statistics page\n"
+        "Navigation keys\n"
+        "\n"
+        "\n"
+        "\x1B\x01" "Selection filter overview" "\x1B\xFF" "\n"
+        "\n"
+        "Selection filters allow the automatic selection or deselection of resources, volumes, connections and "
+        "peer volumes based on various filter criteria, such as matching a specified name or number, being "
+        "fully operational vs. degraded, or matching specified DRBD states.\n"
+        "\n"
+        "Selection and deselection operations are hierarchical. Selecting a volume or connection also selects "
+        "the resource the volume or connection belong to, and selecting a peer volume also selects the connection "
+        "and resource the peer volume belongs to. Deselecting a resource also deselects all of the resource's "
+        "volumes, connections and peer volumes. Deselecting a connection also deselects all of the connection's "
+        "peer volumes. "
+        "For a resource to be selected, any selection criteria for subordinate objects like volumes, connections "
+        "or peer volumes must match at least one of the resource's subordinate objects, and for connections to be "
+        "selected, any selection criteria for peer volumes must match at least one of the connection's "
+        "peer volumes.\n"
+        "\n"
+        "\n"
+        "\x1B\x01" "Restrict selection page" "\x1B\xFF" "\n"
+        "\n"
+        "The criteria on this page allow to restrict applying selection filters to resources and connections"
+        "that match specified name patters, and to volumes and peer volumes that match a specified volume number.\n"
+        "\n"
+        "\n"
+        "\x1B\x01" "Restrict filter matching page" "\x1B\xFF" "\n"
+        "\n"
+        "The settings on this page allow refining an existing selection when selecting objects. Connections, "
+        "volumes or peer volumes can be selected based on applying filter criteria to already selected objects. "
+        "For example, peer volumes can be selected if a resource's already selected volumes match a "
+        "specified state.\n"
+        "\n"
+        "\n"
+        "\x1B\x01" "State filter pages" "\x1B\xFF" "\n"
+        "\n"
+        "Selection criteria can be defined for resources, volumes, connections and peer volumes. All of the "
+        "criteria must match, except for disk state, connection state, and the peer volume's disk state and "
+        "replication state fields.\n"
+        "For example, if " "\x1B\x02" "Primary resources" "\x1B\xFF" " and "
+        "\x1B\x02" "Resources with quorum" "\x1B\xFF" " are selected as filter criteria, a resource must have "
+        "the DRBD Primary role and must have quorum to match. If "
+        "\x1B\x02" "StandAlone" "\x1B\xFF" " and " "\x1B\x02" "Connecting" "\x1B\xFF" " are selected as "
+        "filter criteria for a connection's state, then a connection will match if its connection state is "
+        "any of those two states.\n"
+        "If an " "\x1B\x02" "Invert" "\x1B\xFF" " option is selected, the selection criteria is inverted, "
+        "for example, if disk states of " "\x1B\x02" "UpToDate" "\x1B\xFF" " and "
+        "\x1B\x02" "Consistent" "\x1B\xFF" " are selected in combination with the "
+        "\x1B\x02" "Invert disk state match" "\x1B\xFF" " option, a volume will match if its disk state is "
+        "neither UpToDate nor Consistent.\n"
+        "\n"
+        "\n"
+        "\x1B\x01" "Execute page" "\x1B\xFF" "\n"
+        "\n"
+        "This page contains the menu options for performing select and deselect operations, as well as for "
+        "resetting the filter criteria."
+        "\n"
+        "\n"
+        "\x1B\x01" "Selection statistics page" "\x1B\xFF" "\n"
+        "\n"
+        "This page shows statistics about currently selected objects as well as how the selection was affected"
+        "by a select or deselect operation. Successfully performing a select or deselect operation switches "
+        "to this page automatically. Information about how an operation affected the selection is discarded "
+        "when navigating away from this page.\n"
+        "\n";
+
+    const char* const BULKA_HELP_1 =
+        "\x1B\x01" "Help - Bulk actions" "\x1B\xFF" "\n"
+        "\n"
+        "\x1B\x01" "Contents" "\x1B\xFF" "\n"
+        "\n"
+        "Bulk actions overview\n"
+        "Execute action pages\n"
+        "Number of objects to skip/process\n"
+        "Navigation keys\n"
+        "\n"
+        "\n"
+        "\x1B\x01" "Bulk actions overview" "\x1B\xFF" "\n"
+        "\n"
+        "Bulk actions allow performing DRBD commands on selected resources, or on selected volumes, connection or "
+        "peer volumes of multiple selected resources. Bulk actions can also be performed in batches on a specified "
+        "range of selected objects. This can be useful, for example, if a resynchronization is to be performed "
+        "on all selected volumes, to limit the number of volumes that are resynchronizing concurrently.\n"
+        "\n"
+        "\x1B\x01" "Execute action pages" "\x1B\xFF" "\n"
+        "\n"
+        "The pages titled \"Execute action ...\" list options for executing actions on selected resources, "
+        "volumes, connections and peer volumes. All actions are subject to the settings for the number of "
+        "objects to skip and process (see Number of objects to skip/process)\n"
+        "\n"
+        "The text field for an action program takes a fully qualified path to an executable program "
+        "(typically a script) which will be called for each resource, volume, connection or peer volume, "
+        "respectively, and will be passed information about those DRBD objects in environment variables.\n"
+        "\n"
+        "The environment variables passed to those action programs are:\n"
+        "\n"
+        "\x1B\x05" "For resource, volume, connection and peer volume action programs:" "\x1B\xFF" "\n"
+        "\x1B\x02" "drbd_resource" "\x1B\xFF" "\n"
+        "    The name of the DRBD resource\n"
+        "\x1B\x02" "drbd_resource_role" "\x1B\xFF" "\n"
+        "    The role of the DRBD resource:\n"
+        "        Primary, Secondary or Unknown\n"
+        "\x1B\x02" "drbd_resource_quorum" "\x1B\xFF" "\n"
+        "    Whether or not the resource has quorum:\n"
+        "        true or false\n"
+        "\x1B\x05" "For volume and peer volume action programs:" "\x1B\xFF" "\n"
+        "\x1B\x02" "drbd_volume_nr" "\x1B\xFF" "\n"
+        "    The volume or peer volume number\n"
+        "\x1B\x02" "drbd_volume_count" "\x1B\xFF" "\n"
+        "    The DRBD resource's number of volumes, or the DRBD connection's number of peer volumes\n"
+        "\x1B\x02" "drbd_volume_is_client" "\x1B\xFF" "\n"
+        "    Whether or not the volume is a diskless client: true or false\n"
+        "    If DRBD does not indicate explicitly that the volume is or is not a diskless client, "
+        "the environment variable remains unset\n"
+        "\x1B\x02" "drbd_volume_quorum" "\x1B\xFF" "\n"
+        "    Whether or not the volume or peer volume has quorum:\n"
+        "        true or false\n"
+        "\x1B\x02" "drbd_volume_minor_nr" "\x1B\xFF" "\n"
+        "    The minor number of the volume or peer volume\n"
+        "\x1B\x02" "drbd_volume_disk_state" "\x1B\xFF" "\n"
+        "    The disk state of the volume or peer volume\n"
+        "\x1B\x02" "drbd_volume_repl_state" "\x1B\xFF" "\n"
+        "    The replication state of the volume or peer volume\n"
+        "    The replication state is typically only relevant for peer volumes.\n"
+        "\x1B\x02" "drbd_volume_sync_perc" "\x1B\xFF" "\n"
+        "    The completion percentage of a running resynchronization process:\n"
+        "        0 - 100\n"
+        "\x1B\x05" "For connection and peer volume action programs:" "\x1B\xFF" "\n"
+        "\x1B\x02" "drbd_connection" "\x1B\xFF" "\n"
+        "    The name of the DRBD connection's peer\n"
+        "\x1B\x02" "drbd_connection_count" "\x1B\xFF" "\n"
+        "    The number of peers the DRBD resource has configured connections to\n"
+        "\x1B\x02" "drbd_connection_role" "\x1B\xFF" "\n"
+        "    The DRBD resource role on the connection's peer\n"
+        "\x1B\x02" "drbd_connection_state" "\x1B\xFF" "\n"
+        "    The connection state of the DRBD connection\n"
+        "\x1B\x02" "drbd_connection_sync_state" "\x1B\xFF" "\n"
+        "    The synchronization state of the connection to the peer:\n"
+        "        Resyncable, SplitBrain, Unrelated or Unknown\n"
+        "\x1B\x02" "drbd_peer_volume_count" "\x1B\xFF" "\n"
+        "    The DRBD connection's number of peer volumes\n"
+        "\n"
+        "\n"
+        "\x1B\x01" "Number of objects to skip/process" "\x1B\xFF" "\n"
+        "\n"
+        "The settings titled \"Number of objects to skip\" and \"Number of objects to process\" allow performing "
+        "bulk actions on a specified range of selected objects. First, the specified number of selected objects "
+        "are skipped, meaning that no action is performed on those objects, and then the specified number of "
+        "objects is processed, meaning that actions are performed on those objects. No actions are performed on"
+        "the remaining selected objects.\n"
+        "If a skip count was specified, and there are selected objects remaining that have not been processed, "
+        "the skip count is automatically updated so that the next action will affect those objects that have not "
+        "been processed yet.\n"
+        "If no count is specified for the number of objects to process, an attempt will be made to perform actions "
+        "on all selected objects, except for the ones to skip in case a skip count was specified. If bulk actions "
+        "can not be performed on all objects, typically due to limitations on the queue size for external commands, "
+        "the skip count will be updated automatically so that only those objects that have not been processed yet "
+        "will be affected if the action is repeated later.\n"
+        "\n"
+        "Example:\n"
+        "    With a selection of a total of 220 volumes in 60 resources, a configuration that specifies the "
+        "number of objects to skip as 40 and the number of objects to process as 10 will cause a volume action "
+        "to be performed on volumes number 40 to 49. The skip count will be then be updated to 50 automatically.\n"
+        "\n";
+
+    const char* const EXPS_HELP_1 =
+        "\x1B\x01" "Help - Export selection" "\x1B\xFF" "\n"
+        "\n"
+        "\x1B\x01" "Contents" "\x1B\xFF" "\n"
+        "\n"
+        "Export selection overview\n"
+        "Navigation keys\n"
+        "\n"
+        "\n"
+        "\x1B\x01" "Export selection overview" "\x1B\xFF" "\n"
+        "\n"
+        "The export selection display allows exporting a list of currently selected objects to a text file. The"
+        "export file will list one object per line.\n"
+        "\n"
+        "The serialization format used for exporting objects is:\n"
+        "    for resources:\n"
+        "        " "\x1B\x05" "resource_name" "\x1B\xFF" "\n"
+        "    for volumes:\n"
+        "        " "\x1B\x05" "resource_name" "\x1B\xFF" "/" "\x1B\x05" "volume_number" "\x1B\xFF" "\n"
+        "    for connections:\n"
+        "        " "\x1B\x05" "resource_name" "\x1B\xFF" ":" "\x1B\x05" "connection_name" "\x1B\xFF" "\n"
+        "    for peer volumes:\n"
+        "        " "\x1B\x05" "resource_name" "\x1B\xFF" ":" "\x1B\x05" "connection_name" "\x1B\xFF" "/" "\x1B\x05"
+        "volume_number" "\x1B\xFF" "\n"
+        "\n"
+        "Only selected object types will be exported. Object types selected for export have to be part of the "
+        "current selection to be exported, and subordinate objects that are not part of the current selection "
+        "will not be exported (for example, to export a list of volumes, it is not sufficient to select "
+        "resources only, the volumes of selected resources have to be selected as well to be exported).\n"
+        "\n";
+
+    const char* const IMPS_HELP_1 =
+        "\x1B\x01" "Help - Import selection" "\x1B\xFF" "\n"
+        "\n"
+        "\x1B\x01" "Contents" "\x1B\xFF" "\n"
+        "\n"
+        "Import selection overview\n"
+        "Navigation keys\n"
+        "\n"
+        "\n"
+        "\x1B\x01" "Import selection overview" "\x1B\xFF" "\n"
+        "\n"
+        "The import selection display allows importing a text file containing a list of objects to select. The"
+        "import file has to list one object per line.\n"
+        "\n"
+        "The serialization format used for importing objects is:\n"
+        "    for resources:\n"
+        "        " "\x1B\x05" "resource_name" "\x1B\xFF" "\n"
+        "    for volumes:\n"
+        "        " "\x1B\x05" "resource_name" "\x1B\xFF" "/" "\x1B\x05" "volume_number" "\x1B\xFF" "\n"
+        "    for connections:\n"
+        "        " "\x1B\x05" "resource_name" "\x1B\xFF" ":" "\x1B\x05" "connection_name" "\x1B\xFF" "\n"
+        "    for peer volumes:\n"
+        "        " "\x1B\x05" "resource_name" "\x1B\xFF" ":" "\x1B\x05" "connection_name" "\x1B\xFF" "/" "\x1B\x05"
+        "volume_number" "\x1B\xFF" "\n"
+        "\n"
+        "Only selected object types will be imported.\n"
+        "\n";
+
+    const char* const OVRVW_HELP_1 =
+        "\x1B\x01" "Help - DRBD state overview" "\x1B\xFF" "\n"
+        "\n"
+        "\x1B\x01" "Contents" "\x1B\xFF" "\n"
+        "\n"
+        "Overview of the DRBD state overview display\n"
+        "Navigation keys\n"
+        "\n"
+        "\n"
+        "\x1B\x01" "Overview of the DRBD state overview display" "\x1B\xFF" "\n"
+        "\n"
+        "The DRBD state overview display shows a summary of the current state of resources, volumes, "
+        "connections and peer volumes. The prevalence and distribution of certain states in the system can "
+        "provide hints on associated problem sources, for example, a high number of connections in the "
+        "\x1B\x02" "Connecting" "\x1B\xFF" " state can indicate a network problem that prevents the "
+        "DRBD replication link from connecting to peer nodes.\n"
+        "\n"
+        "Additionally, the DRBD state overview display provides a statistics page that lists the number "
+        "of resources, volumes and connections configured on the local node.\n"
+        "\n";
+
+    const char* const OVRVW_HELP_2 =
+        "\x1B\x05" "R          " "\x1B\xFF" " Refresh DRBD state analysis & statistics\n";
+
     void open_help_page(const id_type help_id, const ComponentsHub& dsp_comp_hub)
     {
         std::string& help_text = dsp_comp_hub.dsp_shared->help_text;
@@ -1266,6 +1536,35 @@ namespace helptext
                 help_text = helptext::CONF_HELP_1;
                 break;
             }
+            case id_type::SFLT_HELP:
+            {
+                help_text = helptext::SFLT_HELP_1;
+                help_text += helptext::INSERT_NAV_HELP_1;
+                break;
+            }
+            case id_type::BULKA_HELP:
+            {
+                help_text = helptext::BULKA_HELP_1;
+                help_text += helptext::INSERT_NAV_HELP_1;
+                break;
+            }
+            case id_type::EXPS_HELP:
+            {
+                help_text = helptext::EXPS_HELP_1;
+                help_text += helptext::INSERT_NAV_HELP_1;
+                break;
+            }
+            case id_type::IMPS_HELP:
+            {
+                help_text = helptext::IMPS_HELP_1;
+                help_text += helptext::INSERT_NAV_HELP_1;
+                break;
+            }
+            case id_type::OVRVW_HELP:
+                help_text = helptext::OVRVW_HELP_1;
+                help_text += helptext::INSERT_NAV_HELP_1;
+                help_text += helptext::OVRVW_HELP_2;
+                break;
             default:
             {
                 break;

@@ -29,6 +29,11 @@ class MDspHelpIndex : public MDspMenuBase
     std::unique_ptr<ClickableCommand>   cmd_global_cmd;
     std::unique_ptr<ClickableCommand>   cmd_drbd_cmd;
     std::unique_ptr<ClickableCommand>   cmd_conf;
+    std::unique_ptr<ClickableCommand>   cmd_sflt;
+    std::unique_ptr<ClickableCommand>   cmd_bulka;
+    std::unique_ptr<ClickableCommand>   cmd_exps;
+    std::unique_ptr<ClickableCommand>   cmd_imps;
+    std::unique_ptr<ClickableCommand>   cmd_ovrvw;
 
 
     MDspHelpIndex(const ComponentsHub& comp_hub);
@@ -59,6 +64,11 @@ class MDspHelpIndex : public MDspMenuBase
     std::function<void()>     cmd_fn_global_cmd;
     std::function<void()>     cmd_fn_drbd_cmd;
     std::function<void()>     cmd_fn_conf;
+    std::function<void()>     cmd_fn_sflt;
+    std::function<void()>     cmd_fn_bulka;
+    std::function<void()>     cmd_fn_exps;
+    std::function<void()>     cmd_fn_imps;
+    std::function<void()>     cmd_fn_ovrvw;
 };
 
 #endif /* MDSPHELPINDEX_H */

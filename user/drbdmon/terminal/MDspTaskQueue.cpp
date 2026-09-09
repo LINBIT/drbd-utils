@@ -275,7 +275,14 @@ bool MDspTaskQueue::key_pressed(const uint32_t key)
                     while (task_iter.has_next())
                     {
                         const uint64_t* const entry_id_ptr = task_iter.next();
-                        subproc_queue.activate_entry(*entry_id_ptr);
+                        try
+                        {
+                            subproc_queue.activate_entry(*entry_id_ptr);
+                        }
+                        catch (SubProcess::Exception& exc)
+                        {
+                            log_sub_proc_exception(exc);
+                        }
                     }
                     dsp_comp_hub.dsp_shared->clear_task_selection(selection_map);
                 }
@@ -283,7 +290,14 @@ bool MDspTaskQueue::key_pressed(const uint32_t key)
                 if (is_cursor_nav())
                 {
                     const uint64_t entry_id = (subproc_queue.*get_cursor_func)();
-                    subproc_queue.activate_entry(entry_id);
+                    try
+                    {
+                        subproc_queue.activate_entry(entry_id);
+                    }
+                    catch (SubProcess::Exception& exc)
+                    {
+                        log_sub_proc_exception(exc);
+                    }
                 }
             }
             intercepted = true;
@@ -296,6 +310,18 @@ bool MDspTaskQueue::key_pressed(const uint32_t key)
         }
     }
     return intercepted;
+}
+
+void MDspTaskQueue::log_sub_proc_exception(const SubProcess::Exception& exc)
+{
+    std::string log_msg("Command failed");
+    const std::string& exc_msg = exc.get_error_message();
+    if (!exc_msg.empty())
+    {
+        log_msg += ": ";
+        log_msg += exc_msg;
+    }
+    dsp_comp_hub.log->add_entry(MessageLog::log_level::ALERT, log_msg);
 }
 
 bool MDspTaskQueue::mouse_action(MouseEvent& mouse)
@@ -468,6 +494,9 @@ void MDspTaskQueue::reset_cursor_position()
 
 void MDspTaskQueue::clear_cursor()
 {
+    std::mutex& queue_lock = subproc_queue.get_queue_lock();
+    std::unique_lock<std::mutex> lock(queue_lock);
+
     (subproc_queue.*set_cursor_func)(SubProcessQueue::TASKQ_NONE);
 }
 
@@ -542,6 +571,9 @@ void MDspTaskQueue::reset_display()
 
 void MDspTaskQueue::synchronize_data()
 {
+    std::mutex& queue_lock = subproc_queue.get_queue_lock();
+    std::unique_lock<std::mutex> lock(queue_lock);
+
     dsp_comp_hub.dsp_shared->task_id = (subproc_queue.*get_cursor_func)();
 }
 

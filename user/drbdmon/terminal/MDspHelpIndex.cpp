@@ -104,6 +104,31 @@ MDspHelpIndex::MDspHelpIndex(const ComponentsHub& comp_hub):
         {
             helptext::open_help_page(helptext::id_type::CONF_HELP, dsp_comp_hub);
         };
+    cmd_fn_sflt =
+        [this]() -> void
+        {
+            helptext::open_help_page(helptext::id_type::SFLT_HELP, dsp_comp_hub);
+        };
+    cmd_fn_bulka =
+        [this]() -> void
+        {
+            helptext::open_help_page(helptext::id_type::BULKA_HELP, dsp_comp_hub);
+        };
+    cmd_fn_exps =
+        [this]() -> void
+        {
+            helptext::open_help_page(helptext::id_type::EXPS_HELP, dsp_comp_hub);
+        };
+    cmd_fn_imps =
+        [this]() -> void
+        {
+            helptext::open_help_page(helptext::id_type::IMPS_HELP, dsp_comp_hub);
+        };
+    cmd_fn_ovrvw =
+        [this]() -> void
+        {
+            helptext::open_help_page(helptext::id_type::OVRVW_HELP, dsp_comp_hub);
+        };
 
     ClickableCommand::Builder cmd_builder;
     cmd_builder.coords.page = 1;
@@ -178,6 +203,27 @@ MDspHelpIndex::MDspHelpIndex(const ComponentsHub& comp_hub):
         cmd_builder.create_with_auto_nr(cmd_fn_conf)
     );
 
+    cmd_builder.coords.page = 2;
+    cmd_builder.coords.row = 6;
+    cmd_builder.coords.start_col = 5;
+    cmd_builder.coords.end_col = 45;
+
+    cmd_sflt = std::unique_ptr<ClickableCommand>(
+        cmd_builder.create_with_auto_nr(cmd_fn_sflt)
+    );
+    cmd_bulka = std::unique_ptr<ClickableCommand>(
+        cmd_builder.create_with_auto_nr(cmd_fn_bulka)
+    );
+    cmd_exps = std::unique_ptr<ClickableCommand>(
+        cmd_builder.create_with_auto_nr(cmd_fn_exps)
+    );
+    cmd_imps = std::unique_ptr<ClickableCommand>(
+        cmd_builder.create_with_auto_nr(cmd_fn_imps)
+    );
+    cmd_ovrvw = std::unique_ptr<ClickableCommand>(
+        cmd_builder.create_with_auto_nr(cmd_fn_ovrvw)
+    );
+
     add_option(*cmd_general_help);
     add_option(*cmd_rsc_list);
     add_option(*cmd_rsc_detail);
@@ -198,6 +244,13 @@ MDspHelpIndex::MDspHelpIndex(const ComponentsHub& comp_hub):
     add_option(*cmd_global_cmd);
     add_option(*cmd_drbd_cmd);
     add_option(*cmd_conf);
+    add_option(*cmd_sflt);
+    add_option(*cmd_bulka);
+    add_option(*cmd_exps);
+    add_option(*cmd_imps);
+    add_option(*cmd_ovrvw);
+
+    set_page_count(cmd_builder.coords.page);
 
     InputField& option_field = get_option_field();
     option_field.set_position(15, 17);
@@ -217,27 +270,41 @@ void MDspHelpIndex::display_content()
 
     const std::string& std_color = dsp_comp_hub.active_color_table->option_text;
 
-    display_option(" 1   ", "General help", *cmd_general_help, std_color);
-    display_option(" 2   ", "Resource list", *cmd_rsc_list, std_color);
-    display_option(" 3   ", "Resource details", *cmd_rsc_detail, std_color);
-    display_option(" 4   ", "Resource actions", *cmd_rsc_actions, std_color);
-    display_option(" 5   ", "Volume list", *cmd_vlm_list, std_color);
-    display_option(" 6   ", "Volume details", *cmd_vlm_detail, std_color);
-    display_option(" 7   ", "Volume actions", *cmd_vlm_actions, std_color);
-    display_option(" 8   ", "Connection list", *cmd_con_list, std_color);
-    display_option(" 9   ", "Connection details", *cmd_con_detail, std_color);
+    const uint32_t page = get_page_nr();
 
-    display_option("10   ", "Connection actions", *cmd_con_actions, std_color);
-    display_option("11   ", "Peer volume list", *cmd_pvlm_list, std_color);
-    display_option("12   ", "Peer volume details", *cmd_pvlm_detail, std_color);
-    display_option("13   ", "Peer volume actions", *cmd_pvlm_actions, std_color);
-    display_option("14   ", "Message log", *cmd_msg_log, std_color);
-    display_option("15   ", "Message details", *cmd_msg_detail, std_color);
-    display_option("16   ", "Task queues", *cmd_taskq, std_color);
-    display_option("17   ", "Task details", *cmd_task_detail, std_color);
-    display_option("18   ", "DRBDmon commands", *cmd_global_cmd, std_color);
-    display_option("19   ", "DRBD commands", *cmd_drbd_cmd, std_color);
-    display_option("20   ", "DRBDmon configuration", *cmd_conf, std_color);
+    if (page == 1)
+    {
+        display_option(5, "General help", *cmd_general_help, std_color);
+        display_option(5, "Resource list", *cmd_rsc_list, std_color);
+        display_option(5, "Resource details", *cmd_rsc_detail, std_color);
+        display_option(5, "Resource actions", *cmd_rsc_actions, std_color);
+        display_option(5, "Volume list", *cmd_vlm_list, std_color);
+        display_option(5, "Volume details", *cmd_vlm_detail, std_color);
+        display_option(5, "Volume actions", *cmd_vlm_actions, std_color);
+        display_option(5, "Connection list", *cmd_con_list, std_color);
+        display_option(5, "Connection details", *cmd_con_detail, std_color);
+        display_option(5, "Connection actions", *cmd_con_actions, std_color);
+
+        display_option(5, "Peer volume list", *cmd_pvlm_list, std_color);
+        display_option(5, "Peer volume details", *cmd_pvlm_detail, std_color);
+        display_option(5, "Peer volume actions", *cmd_pvlm_actions, std_color);
+        display_option(5, "Message log", *cmd_msg_log, std_color);
+        display_option(5, "Message details", *cmd_msg_detail, std_color);
+        display_option(5, "Task queues", *cmd_taskq, std_color);
+        display_option(5, "Task details", *cmd_task_detail, std_color);
+        display_option(5, "DRBDmon commands", *cmd_global_cmd, std_color);
+        display_option(5, "DRBD commands", *cmd_drbd_cmd, std_color);
+        display_option(5, "DRBDmon configuration", *cmd_conf, std_color);
+    }
+    else
+    if (page == 2)
+    {
+        display_option(5, "Selection filters", *cmd_sflt, std_color);
+        display_option(5, "Bulk actions", *cmd_bulka, std_color);
+        display_option(5, "Export selection", *cmd_exps, std_color);
+        display_option(5, "Import selection", *cmd_imps, std_color);
+        display_option(5, "DRBD state overview", *cmd_ovrvw, std_color);
+    }
 
     display_option_query(5, 17);
 }

@@ -26,6 +26,11 @@ const std::string   DisplayId::MDSP_PEER_VLM_ACT    = {"PVLMA"};
 const std::string   DisplayId::MDSP_PGM_INFO        = {"INFO"};
 const std::string   DisplayId::MDSP_TASK_DETAIL     = {"TASK"};
 const std::string   DisplayId::MDSP_CONFIGURATION   = {"CONF"};
+const std::string   DisplayId::MDSP_SLCT_FILTER     = {"SFLT"};
+const std::string   DisplayId::MDSP_BULK_ACT        = {"BULKA"};
+const std::string   DisplayId::MDSP_EXPORT_SLCT     = {"EXPS"};
+const std::string   DisplayId::MDSP_IMPORT_SLCT     = {"IMPS"};
+const std::string   DisplayId::MDSP_OVERVIEW        = {"OVRVW"};
 
 DisplayId::DisplayId(const std::string* const name_ptr, const display_page id):
     name(name_ptr),

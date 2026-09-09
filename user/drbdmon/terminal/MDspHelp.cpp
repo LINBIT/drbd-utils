@@ -61,6 +61,12 @@ void MDspHelp::display_content()
             ++page_ctr;
         }
     }
+    uint32_t line_ctr = 0;
+    const uint32_t offset = get_line_offset();
+    while (line_ctr < offset && format_text.skip_line())
+    {
+        ++line_ctr;
+    }
 
     std::string line;
     page_line_ctr = 0;
@@ -131,12 +137,16 @@ uint32_t MDspHelp::get_lines_per_page() noexcept
 
 void MDspHelp::cursor_to_next_item()
 {
-    // no-op
+    const uint32_t lines = get_lines_per_page();
+    line_offset_increment(lines);
+    dsp_comp_hub.dsp_selector->refresh_display();
 }
 
 void MDspHelp::cursor_to_previous_item()
 {
-    // no-op
+    const uint32_t lines = get_lines_per_page();
+    line_offset_decrement(lines);
+    dsp_comp_hub.dsp_selector->refresh_display();
 }
 
 bool MDspHelp::key_pressed(const uint32_t key)

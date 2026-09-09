@@ -18,6 +18,8 @@ const char* DrbdConnection::CS_LABEL_TEAR_DOWN              = "TearDown";
 const char* DrbdConnection::CS_LABEL_CONNECTED              = "Connected";
 const char* DrbdConnection::CS_LABEL_UNKNOWN                = "Unknown";
 
+const char* DrbdConnection::SS_LABEL_UNKNOWN                = "Unknown";
+const char* DrbdConnection::SS_LABEL_RESYNCABLE             = "Resyncable";
 const char* DrbdConnection::SS_LABEL_SPLIT                  = "SplitBrain";
 const char* DrbdConnection::SS_LABEL_UNRELATED              = "Unrelated";
 
@@ -73,8 +75,13 @@ DrbdConnection::state DrbdConnection::get_connection_state() const
 
 const char* DrbdConnection::get_connection_state_label() const
 {
+    return label_for_connection_state(conn_state);
+}
+
+const char* DrbdConnection::label_for_connection_state(const state value) noexcept
+{
     const char* label = CS_LABEL_UNKNOWN;
-    switch (conn_state)
+    switch (value)
     {
         case DrbdConnection::state::BROKEN_PIPE:
             label = CS_LABEL_BROKEN_PIPE;
@@ -114,17 +121,42 @@ const char* DrbdConnection::get_connection_state_label() const
     return label;
 }
 
+const char* DrbdConnection::label_for_sync_state(const sync_state_type value) noexcept
+{
+    const char* label = SS_LABEL_UNKNOWN;
+    switch (value)
+    {
+        case DrbdConnection::sync_state_type::RESYNCABLE:
+            label = SS_LABEL_RESYNCABLE;
+            break;
+        case DrbdConnection::sync_state_type::SPLIT:
+            label = SS_LABEL_SPLIT;
+            break;
+        case DrbdConnection::sync_state_type::UNRELATED:
+            label = SS_LABEL_UNRELATED;
+            break;
+        default:
+            break;
+    }
+    return label;
+}
+
 DrbdConnection::sync_state_type DrbdConnection::get_sync_state() const
 {
     return sync_state;
 }
 
-bool DrbdConnection::has_connection_alert()
+const char* DrbdConnection::get_sync_state_label() const
+{
+    return label_for_sync_state(sync_state);
+}
+
+bool DrbdConnection::has_connection_alert() const
 {
     return conn_alert;
 }
 
-bool DrbdConnection::has_role_alert()
+bool DrbdConnection::has_role_alert() const
 {
     return role_alert;
 }

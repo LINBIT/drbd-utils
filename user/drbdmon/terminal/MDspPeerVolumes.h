@@ -64,7 +64,11 @@ class MDspPeerVolumes : public MDspStdListBase
     void display_at_cursor();
     void display_at_page();
     void list_item_clicked(MouseEvent& mouse);
-    void write_volume_line(DrbdVolume* const vlm, uint32_t& current_line, const bool selecting);
+    void write_volume_line(
+        DrbdVolume* const vlm,
+        uint32_t& current_line,
+        const VolumeSelectionMap* const selected_peer_volumes
+    );
     bool is_problem_mode(DrbdResource* const rsc, DrbdConnection* const con);
 
     uint32_t get_lines_per_page();

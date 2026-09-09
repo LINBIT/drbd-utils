@@ -39,6 +39,7 @@ class InputField
     virtual uint16_t get_offset();
     virtual void set_offset(const uint16_t new_offset);
     virtual void set_field_length(const uint16_t field_length);
+    virtual void set_max_length(const uint16_t length);
     virtual void display();
     virtual void cursor();
     virtual bool mouse_action(MouseEvent& mouse);

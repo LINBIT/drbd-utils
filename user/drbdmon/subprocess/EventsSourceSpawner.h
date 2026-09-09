@@ -5,6 +5,7 @@
 #include <new>
 #include <string>
 #include <stdexcept>
+#include <chrono>
 
 #include <MessageLog.h>
 #include <exceptions.h>
@@ -20,6 +21,9 @@ class EventsSourceSpawner
     static const char* const EVENTS_PROGRAM;
     static const char* const EVENTS_PROGRAM_ARGS[];
     static const char* const SAVED_EVENTS_PROGRAM;
+
+    static const unsigned int               WAITPID_REPEAT;
+    static const std::chrono::milliseconds  WAITPID_WAIT;
 
     EventsSourceSpawner(MessageLog& logRef);
     virtual ~EventsSourceSpawner();

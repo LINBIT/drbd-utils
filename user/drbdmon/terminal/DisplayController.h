@@ -137,6 +137,11 @@ class DisplayController : public GenericDisplay, public DisplaySelector
     std::unique_ptr<ModularDisplay>     debug_msg_view_mgr;
     std::unique_ptr<ModularDisplay>     pgm_info_mgr;
     std::unique_ptr<ModularDisplay>     config_mgr;
+    std::unique_ptr<ModularDisplay>     slct_filter_mgr;
+    std::unique_ptr<ModularDisplay>     bulk_actions_mgr;
+    std::unique_ptr<ModularDisplay>     export_slct_mgr;
+    std::unique_ptr<ModularDisplay>     import_slct_mgr;
+    std::unique_ptr<ModularDisplay>     overview_mgr;
 
     std::unique_ptr<MDspWaitMsg>        wait_msg_mgr;
 

@@ -19,18 +19,6 @@ class SubProcess
     static const int        EXIT_STATUS_NONE;
     static const int        EXIT_STATUS_FAILED;
 
-    SubProcess();
-    virtual ~SubProcess() noexcept;
-
-    virtual int get_exit_status() const;
-    virtual const std::string& get_stdout_output() const noexcept;
-    virtual const std::string& get_stderr_output() const noexcept;
-
-    // @throws SubProcess::Exception
-    virtual uint64_t get_pid() const noexcept = 0;
-    virtual void execute(const CmdLine& cmd) = 0;
-    virtual void terminate(const bool force) = 0;
-
     class Exception : public std::exception
     {
       public:
@@ -42,15 +30,32 @@ class SubProcess
         Exception(const std::string& error_msg);
         virtual ~Exception() noexcept;
         virtual const char* what() const noexcept override;
+        virtual const std::string& get_error_message() const noexcept;
       private:
         std::string saved_error_msg;
     };
+
+    SubProcess();
+    virtual ~SubProcess() noexcept;
+
+    virtual int get_exit_status() const;
+    virtual const std::string& get_stdout_output() const noexcept;
+    virtual const std::string& get_stderr_output() const noexcept;
+    virtual void set_error_message(const std::string& msg);
+    virtual const std::string& get_error_message() const noexcept;
+
+    // @throws SubProcess::Exception
+    virtual uint64_t get_pid() const noexcept = 0;
+    virtual void execute(const CmdLine& cmd) = 0;
+    virtual void terminate(const bool force) = 0;
 
   protected:
     std::atomic<int> exit_status;
 
     std::string subproc_out;
     std::string subproc_err;
+
+    std::string exc_msg;
 };
 
 #endif /* SUBPROCESS_H */

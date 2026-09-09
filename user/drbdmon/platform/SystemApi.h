@@ -8,6 +8,7 @@
 #include <MessageLog.h>
 #include <subprocess/SubProcess.h>
 #include <terminal/TerminalControl.h>
+#include <subprocess/SubProcessObserver.h>
 
 class SystemApi
 {
@@ -24,7 +25,7 @@ class SystemApi
     {
     }
 
-    virtual std::unique_ptr<SubProcess> create_subprocess_handler() = 0;
+    virtual std::unique_ptr<SubProcess> create_subprocess_handler(SubProcessObserver* const observer_ref) = 0;
     virtual std::unique_ptr<TerminalControl> create_terminal_control() = 0;
     virtual std::string get_config_file_path() = 0;
     virtual void prepare_save_config_file() = 0;

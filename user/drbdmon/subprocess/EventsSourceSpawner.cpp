@@ -1,6 +1,7 @@
 #include <subprocess/EventsSourceSpawner.h>
 #include <memory>
 #include <cstring>
+#include <thread>
 #include <utils.h>
 
 extern "C"
@@ -22,6 +23,9 @@ const char* const EventsSourceSpawner::EVENTS_PROGRAM_ARGS[] =
     nullptr
 };
 const char* const EventsSourceSpawner::SAVED_EVENTS_PROGRAM = "drbd-events-log-supplier";
+
+const unsigned int                  EventsSourceSpawner::WAITPID_REPEAT     = 5;
+const std::chrono::milliseconds     EventsSourceSpawner::WAITPID_WAIT(375);
 
 EventsSourceSpawner::EventsSourceSpawner(MessageLog& logRef):
     log(logRef)
@@ -45,13 +49,22 @@ EventsSourceSpawner::~EventsSourceSpawner()
     {
         terminate_child_process();
 
+        unsigned int repeat = 0;
         pid_t child_pid {0};
         int local_exit_status = -1;
         do
         {
+            if (repeat > 0)
+            {
+                std::this_thread::sleep_for(WAITPID_WAIT);
+            }
             child_pid = waitpid(spawned_pid, &local_exit_status, WNOHANG);
+            ++repeat;
         }
-        while (child_pid > 0 && WIFEXITED(local_exit_status) == 0 && WIFSIGNALED(local_exit_status) == 0);
+        while (
+            (child_pid > 0 && WIFEXITED(local_exit_status) == 0 && WIFSIGNALED(local_exit_status) == 0) ||
+            (child_pid == 0 && repeat < WAITPID_REPEAT)
+        );
     }
 
     int io_flags = fcntl(STDIN_FILENO, F_GETFL, 0);

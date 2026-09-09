@@ -10,8 +10,16 @@ const DWORD     SubProcessNt::IN_BUFFER_SIZE    = 8192;
 const size_t    SubProcessNt::BUFFER_CAP[]      = {1UL << 14, 1UL << 16};
 const size_t    SubProcessNt::BUFFER_CAP_SIZE   = sizeof (SubProcessNt::BUFFER_CAP) / sizeof (size_t);
 
-SubProcessNt::SubProcessNt():
-    SubProcess::SubProcess()
+std::unique_ptr<char[]>     SubProcessNt::env_base;
+size_t                      SubProcessNt::env_base_size         {0};
+Once                        SubProcessNt::env_init;
+
+const std::function<void()> SubProcessNt::env_init_func = &SubProcessNt::env_init_impl;
+
+
+SubProcessNt::SubProcessNt(SubProcessObserver* const observer_ref):
+    SubProcess::SubProcess(),
+    observer(observer_ref)
 {
 }
 
@@ -146,6 +154,60 @@ HANDLE SubProcessNt::create_pipe_writer(const std::string& pipe_name)
 
 HANDLE SubProcessNt::spawn_process(const CmdLine& cmd, HANDLE events_writer, HANDLE errors_writer)
 {
+    // Set up a custom environment with additional entries
+    std::unique_ptr<char[]> env_custom;
+    const size_t env_additional_entry_count = cmd.get_environment_entry_count();
+    if (env_additional_entry_count >= 1)
+    {
+        // Static initialization of the base environment for all threads
+        // FIXME: Handle exceptions
+        env_init.executeOnce(env_init_func);
+
+        size_t env_additional_size = 0;
+        {
+            CmdLine::StringList::ValuesIterator env_iter(cmd.get_environment_entry_iterator());
+            while (env_iter.has_next())
+            {
+                const std::string* env_entry = env_iter.next();
+                env_additional_size += env_entry->length() + 1; // includes trailing null byte
+            }
+        }
+
+        // Space for the additional trailing null byte that terminates a Windows environment block
+        ++env_additional_size;
+
+        std::string env_additional_str;
+        env_additional_str.reserve(env_additional_size);
+        {
+            CmdLine::StringList::ValuesIterator env_iter(cmd.get_environment_entry_iterator());
+            while (env_iter.has_next())
+            {
+                const std::string* env_entry = env_iter.next();
+                env_additional_str.append(*env_entry);
+                env_additional_str.append(1, '\0');
+            }
+        }
+        env_additional_str.append(1, '\0');
+        env_additional_size = env_additional_str.length();
+
+        const size_t env_custom_size = env_base_size + env_additional_size;
+        env_custom = std::unique_ptr<char[]> (new char[env_custom_size]);
+        char* const ptr_to_env_custom = env_custom.get();
+        if (env_base_size > 0 && env_base != nullptr)
+        {
+            std::memcpy(
+                static_cast<void*> (ptr_to_env_custom),
+                static_cast<const void*> (env_base.get()),
+                env_base_size
+            );
+        }
+        std::memcpy(
+            static_cast<void*> (&(ptr_to_env_custom[env_base_size])),
+            static_cast<const void*> (env_additional_str.c_str()),
+            env_additional_size
+        );
+    }
+
     std::unique_ptr<PROCESS_INFORMATION> cmd_proc_info_mgr(new PROCESS_INFORMATION);
     PROCESS_INFORMATION* const cmd_proc_info = cmd_proc_info_mgr.get();
     ZeroMemory(cmd_proc_info, sizeof (*cmd_proc_info));
@@ -192,7 +254,7 @@ HANDLE SubProcessNt::spawn_process(const CmdLine& cmd, HANDLE events_writer, HAN
             nullptr, // thread SECURITY_ATTRIBUTES: default
             TRUE, // inherit handles
             0, // creation flags
-            nullptr, // environment: inherited
+            env_custom.get(), // environment: inherited if nullptr
             nullptr, // default directory: inherited
             cmd_startup_info,
             cmd_proc_info
@@ -210,6 +272,10 @@ HANDLE SubProcessNt::spawn_process(const CmdLine& cmd, HANDLE events_writer, HAN
         proc_id = cmd_proc_info->dwProcessId;
     }
     proc_lock.unlock();
+    if (observer != nullptr)
+    {
+        observer->notify_queue_changed();
+    }
 
     return proc_handle;
 }
@@ -281,13 +347,19 @@ void SubProcessNt::read_subproc_output()
                 // Failed I/O operation result dequeued
                 if (op_key == events_key)
                 {
-                    CancelIoEx(events_pipe, NULL);
+                    if (events_pipe != INVALID_HANDLE_VALUE)
+                    {
+                        CancelIoEx(events_pipe, NULL);
+                    }
                     safe_close_handle(&events_pipe);
                 }
                 else
                 if (op_key == errors_key)
                 {
-                    CancelIoEx(errors_pipe, NULL);
+                    if (errors_pipe != INVALID_HANDLE_VALUE)
+                    {
+                        CancelIoEx(errors_pipe, NULL);
+                    }
                     safe_close_handle(&errors_pipe);
                 }
             }
@@ -333,29 +405,36 @@ void SubProcessNt::read_completion_handler(
     const size_t    max_length
 )
 {
-    const size_t current_length = op_data->length();
-    if (current_length < max_length)
+    if (bytes_read >= 1)
     {
-        const size_t copy_length = std::min(
-            static_cast<size_t> (max_length - current_length),
-            static_cast<size_t> (bytes_read)
-        );
-        const size_t result_length = current_length + copy_length;
-        if (result_length > op_data->capacity())
+        const size_t current_length = op_data->length();
+        if (current_length < max_length)
         {
-            if (dst_buffer_cap_idx < BUFFER_CAP_SIZE)
+            const size_t copy_length = std::min(
+                static_cast<size_t> (max_length - current_length),
+                static_cast<size_t> (bytes_read)
+            );
+            const size_t result_length = current_length + copy_length;
+            if (result_length > op_data->capacity())
             {
-                op_data->reserve(std::min(BUFFER_CAP[dst_buffer_cap_idx], max_length));
-                ++dst_buffer_cap_idx;
+                if (dst_buffer_cap_idx < BUFFER_CAP_SIZE)
+                {
+                    op_data->reserve(std::min(BUFFER_CAP[dst_buffer_cap_idx], max_length));
+                    ++dst_buffer_cap_idx;
+                }
+                else
+                {
+                    op_data->reserve(max_length);
+                }
             }
-            else
-            {
-                op_data->reserve(max_length);
-            }
+            op_data->append(op_read_buffer, copy_length);
         }
-        op_data->append(op_read_buffer, copy_length);
+        submit_read_op(op_handle_ptr, op_io_state, op_read_buffer);
     }
-    submit_read_op(op_handle_ptr, op_io_state, op_read_buffer);
+    else
+    {
+        safe_close_handle(op_handle_ptr);
+    }
 }
 
 void SubProcessNt::await_subproc_exit()
@@ -410,5 +489,45 @@ void SubProcessNt::safe_close_handle(HANDLE* handle_ptr) noexcept
     {
         CloseHandle(*handle_ptr);
         *handle_ptr = INVALID_HANDLE_VALUE;
+    }
+}
+
+void SubProcessNt::env_init_impl()
+{
+    LPCH sys_env_block = GetEnvironmentStrings();
+    if (sys_env_block != nullptr)
+    {
+        try
+        {
+            size_t null_pos = ~static_cast<size_t> (0);
+            size_t idx = 1;
+            while (sys_env_block[idx - 1] != '\0' || sys_env_block[idx] != '\0')
+            {
+                ++idx;
+            }
+
+            if (idx > 1)
+            {
+                // This is the length WITHOUT the second null byte at the end of the environment strings,
+                // which is not needed anyway for the purpose of appending environment variables
+                env_base_size = idx;
+                env_base = std::unique_ptr<char[]> (new char[env_base_size]);
+                std::memcpy(
+                    static_cast<void*> (env_base),
+                    static_cast<const void*> (sys_env_block),
+                    env_base_size
+                );
+            }
+        }
+        catch (std::exception&)
+        {
+            env_base_size = 0;
+            env_base = nullptr;
+
+            FreeEnvironmentStringsA(sys_env_block);
+
+            throw;
+        }
+        FreeEnvironmentStringsA(sys_env_block);
     }
 }

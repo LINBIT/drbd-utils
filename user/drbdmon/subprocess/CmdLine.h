@@ -18,6 +18,9 @@ class CmdLine
     virtual size_t get_argument_count() const;
     virtual StringList::ValuesIterator get_argument_iterator() const;
 
+    virtual size_t get_environment_entry_count() const;
+    virtual StringList::ValuesIterator get_environment_entry_iterator() const;
+
     virtual const std::string& get_description() const;
 
     // @throws std::bad_alloc
@@ -26,9 +29,14 @@ class CmdLine
     // @throws std::bad_alloc
     virtual void add_argument(const std::string& arg);
 
+    // @throws std::bad_alloc
+    virtual void add_environment_entry(const std::string& entry);
+
   private:
-    std::unique_ptr<StringList> arg_list;
-    std::string                 cmd_description;
+    std::unique_ptr<StringList>             arg_list;
+    mutable std::unique_ptr<StringList>     env_list;
+
+    std::string cmd_description;
 };
 
 #endif /* CMDLINE_H */

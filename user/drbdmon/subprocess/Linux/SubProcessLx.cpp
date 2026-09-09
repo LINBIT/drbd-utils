@@ -25,8 +25,18 @@ const size_t    SubProcessLx::FIRED_EVENTS_COUNT        = 3;
 const size_t    SubProcessLx::BUFFER_CAP[]              = {1UL << 14, 1UL << 16};
 const size_t    SubProcessLx::BUFFER_CAP_SIZE           = sizeof (SubProcessLx::BUFFER_CAP) / sizeof (size_t);
 
-SubProcessLx::SubProcessLx():
-    SubProcess::SubProcess()
+std::unique_ptr<const char*[]>  SubProcessLx::env_base_ptr;
+size_t                          SubProcessLx::env_base_ptr_count    {0};
+std::unique_ptr<char[]>         SubProcessLx::env_base;
+size_t                          SubProcessLx::env_base_size         {0};
+Once                            SubProcessLx::env_init;
+
+const std::function<void()>     SubProcessLx::env_init_func = &SubProcessLx::env_init_impl;
+
+
+SubProcessLx::SubProcessLx(SubProcessObserver* const observer_ref):
+    SubProcess::SubProcess(),
+    observer(observer_ref)
 {
     subproc_stdout_pipe[PIPE_READ]  = -1;
     subproc_stdout_pipe[PIPE_WRITE] = -1;
@@ -50,7 +60,7 @@ SubProcessLx::~SubProcessLx() noexcept
 uint64_t SubProcessLx::get_pid() const noexcept
 {
     proc_lock.lock();
-    const uint64_t generic_pid = static_cast<uint64_t> (subproc_id);
+    const uint64_t generic_pid = subproc_id > 0 ? static_cast<uint64_t> (subproc_id) : 0;
     proc_lock.unlock();
     return generic_pid;
 }
@@ -59,6 +69,33 @@ uint64_t SubProcessLx::get_pid() const noexcept
 void SubProcessLx::execute(const CmdLine& cmd)
 {
     std::unique_ptr<SubProcessLx::SysExecArgs> sys_cmd_line(new SubProcessLx::SysExecArgs(cmd));
+
+    // Set up a custom environment with additional entries
+    std::unique_ptr<const char*[]> env_custom_ptr;
+    const size_t env_additional_entry_count = cmd.get_environment_entry_count();
+    if (env_additional_entry_count >= 1)
+    {
+        // Static initialization of the base environment for all threads
+        // FIXME: Handle exceptions
+        env_init.executeOnce(env_init_func);
+
+        const size_t env_custom_ptr_count = env_base_ptr_count + env_additional_entry_count;
+        env_custom_ptr = std::unique_ptr<const char*[]> (new const char*[env_custom_ptr_count + 1]);
+        for (size_t env_idx = 0; env_idx < env_base_ptr_count; ++env_idx)
+        {
+            env_custom_ptr[env_idx] = env_base_ptr[env_idx];
+        }
+        CmdLine::StringList::ValuesIterator env_additional_iter(cmd.get_environment_entry_iterator());
+        for (size_t env_idx = env_base_ptr_count;
+            env_idx < env_custom_ptr_count && env_additional_iter.has_next();
+            ++env_idx)
+        {
+            std::string* const env_string = env_additional_iter.next();
+            const char* const env_data = env_string->c_str();
+            env_custom_ptr[env_idx] = env_data;
+        }
+        env_custom_ptr[env_custom_ptr_count] = nullptr;
+    }
 
     std::unique_ptr<posix_spawn_file_actions_t> file_actions_mgr(new posix_spawn_file_actions_t);
     std::unique_ptr<posix_spawnattr_t> spawn_attr_mgr(new posix_spawnattr_t);
@@ -161,16 +198,26 @@ void SubProcessLx::execute(const CmdLine& cmd)
 
         char** exec_args = sys_cmd_line->get_exec_args();
         int spawn_rc = 1;
+
+        // POSIX states that the environment is in fact effectively const in posix_spawn, and it's only passed
+        // as char** rather than const char** for historic reasons
+        char** proc_environ = env_custom_ptr == nullptr ? environ : const_cast<char**> (env_custom_ptr.get());
+
         proc_lock.lock();
         if (enable_spawn)
         {
-            spawn_rc = posix_spawn(&subproc_id, exec_args[0], file_actions, spawn_attr, exec_args, environ);
+            spawn_rc = posix_spawn(&subproc_id, exec_args[0], file_actions, spawn_attr, exec_args, proc_environ);
         }
         proc_lock.unlock();
         if (spawn_rc == 0)
         {
             close_fd(subproc_stdout_pipe[PIPE_WRITE]);
             close_fd(subproc_stderr_pipe[PIPE_WRITE]);
+
+            if (observer != nullptr)
+            {
+                observer->notify_queue_changed();
+            }
 
             read_subproc_output();
 
@@ -312,12 +359,13 @@ void SubProcessLx::read_subproc_output()
                 {
                     if (fired_events_ptr[idx].data.fd == subproc_stdout_pipe[PIPE_READ])
                     {
-                        if ((fired_events_ptr[idx].events & (EPOLLERR | EPOLLHUP)) == 0)
+                        if ((fired_events_ptr[idx].events & EPOLLIN) != 0)
                         {
                             read_subproc_fd(subproc_stdout_pipe[PIPE_READ], read_buffer_ptr,
                                             subproc_out, out_buffer_cap_idx, SUBPROC_OUT_MAX_SIZE);
                         }
-                        else
+
+                        if ((fired_events_ptr[idx].events & (EPOLLERR | EPOLLHUP)) != 0)
                         {
                             epoll_ctl(poll_fd, EPOLL_CTL_DEL, subproc_stdout_pipe[PIPE_READ], nullptr);
                             close_fd(subproc_stdout_pipe[PIPE_READ]);
@@ -326,12 +374,13 @@ void SubProcessLx::read_subproc_output()
                     else
                     if (fired_events_ptr[idx].data.fd == subproc_stderr_pipe[PIPE_READ])
                     {
-                        if ((fired_events_ptr[idx].events & (EPOLLERR | EPOLLHUP)) == 0)
+                        if ((fired_events_ptr[idx].events & EPOLLIN) != 0)
                         {
                             read_subproc_fd(subproc_stderr_pipe[PIPE_READ], read_buffer_ptr,
                                             subproc_err, err_buffer_cap_idx, SUBPROC_ERR_MAX_SIZE);
                         }
-                        else
+
+                        if ((fired_events_ptr[idx].events & (EPOLLERR | EPOLLHUP)) != 0)
                         {
                             epoll_ctl(poll_fd, EPOLL_CTL_DEL, subproc_stderr_pipe[PIPE_READ], nullptr);
                             close_fd(subproc_stderr_pipe[PIPE_READ]);
@@ -340,7 +389,7 @@ void SubProcessLx::read_subproc_output()
                     else
                     if (fired_events_ptr[idx].data.fd == wakeup_pipe[PIPE_READ])
                     {
-                        if ((fired_events_ptr[idx].events & (EPOLLERR | EPOLLHUP)) == 0)
+                        if ((fired_events_ptr[idx].events & EPOLLIN) != 0)
                         {
                             ssize_t read_count = 0;
                             do
@@ -482,5 +531,97 @@ void SubProcessLx::SysExecArgs::cleanup() noexcept
             delete[] cur_arg;
             cur_arg = nullptr;
         }
+    }
+}
+
+// FIXME: Max range, numbers of entries in the environment?
+// FIXME: Max size of the environment?
+void SubProcessLx::env_init_impl()
+{
+    try
+    {
+        env_base_ptr_count = 0;
+        env_base_size = 0;
+
+        if (environ != nullptr)
+        {
+            // Count environment entries and measure size of the environment data
+            {
+                size_t env_idx = 0;
+                while (environ[env_idx] != nullptr)
+                {
+                    ++env_base_ptr_count;
+                    const char* const entry = environ[env_idx];
+                    const size_t entry_size = std::strlen(entry);
+                    env_base_size += entry_size;
+                    // Trailing null byte
+                    ++env_base_size;
+                    ++env_idx;
+                }
+            }
+
+            // Create a copy of the environment data
+            {
+                std::string contents;
+                contents.reserve(env_base_size);
+                for (size_t env_idx = 0; env_idx < env_base_ptr_count; ++env_idx)
+                {
+                    if (env_idx > 0)
+                    {
+                        contents += '\0';
+                    }
+                    const char* const entry = environ[env_idx];
+                    contents += entry;
+                }
+                env_base_size = contents.length() + 1; // Includes trailing null byte
+                env_base = std::unique_ptr<char[]> (new char[env_base_size]);
+                {
+                    const char* const contents_data = contents.c_str();
+                    std::memcpy(
+                        static_cast<void*> (env_base.get()),
+                        static_cast<const void*> (contents_data),
+                        env_base_size
+                    );
+                }
+            }
+
+            // Create the list of pointers with a pointer to each environment entry
+            env_base_ptr = std::unique_ptr<const char*[]> (new const char*[env_base_ptr_count + 1]);
+            {
+                const char* const ptr_to_env_base = env_base.get();
+                size_t offset = 0;
+                for (size_t env_idx = 0; env_idx < env_base_ptr_count && offset < env_base_size; ++env_idx)
+                {
+                    const char* const entry_ptr = &ptr_to_env_base[offset];
+                    env_base_ptr[env_idx] = entry_ptr;
+
+                    while (offset < env_base_size && ptr_to_env_base[offset] != '\0')
+                    {
+                        ++offset;
+                    }
+                    if (offset < env_base_size)
+                    {
+                        ++offset;
+                    }
+                }
+            }
+            env_base_ptr[env_base_ptr_count] = nullptr;
+        }
+
+        if (env_base_ptr == nullptr)
+        {
+            env_base_ptr = std::unique_ptr<const char*[]> (new const char*[1]);
+            env_base_ptr[0] = nullptr;
+        }
+    }
+    catch (std::exception&)
+    {
+        env_base_ptr = nullptr;
+        env_base = nullptr;
+
+        env_base_ptr_count = 0;
+        env_base_size = 0;
+
+        throw;
     }
 }

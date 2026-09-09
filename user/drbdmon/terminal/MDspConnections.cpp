@@ -56,7 +56,6 @@ void MDspConnections::reset_display()
 {
     MDspStdListBase::reset_display();
     cursor_con.clear();
-    clear_selection();
     set_page_nr(1);
 }
 
@@ -80,7 +79,11 @@ void MDspConnections::display_list()
     }
 }
 
-void MDspConnections::write_connection_line(DrbdConnection* const con, uint32_t& current_line, const bool selecting)
+void MDspConnections::write_connection_line(
+    DrbdConnection* const con,
+    uint32_t& current_line,
+    const ConnectionSelectionMap* const selected_connections
+)
 {
     DisplayIo* const dsp_io = dsp_comp_hub.dsp_io;
 
@@ -96,9 +99,9 @@ void MDspConnections::write_connection_line(DrbdConnection* const con, uint32_t&
     }
 
     bool is_selected = false;
-    if (selecting)
+    if (selected_connections != nullptr)
     {
-        is_selected = dsp_comp_hub.dsp_shared->is_connection_selected(con_name);
+        is_selected = selected_connections->get_node(&con_name) != nullptr;
     }
 
     const std::string& rst_bg = is_under_cursor ? dsp_comp_hub.active_color_table->bg_cursor :
@@ -307,7 +310,9 @@ void MDspConnections::display_at_cursor()
 
             if (page_first_con != nullptr)
             {
-                const bool selecting = dsp_comp_hub.dsp_shared->have_connections_selection();
+                const std::string& rsc_name = rsc->get_name();
+                const ConnectionSelectionMap* const selected_connections =
+                    dsp_comp_hub.dsp_shared->get_selected_connections_map(rsc_name);
                 DrbdResource::ConnectionsIterator dsp_con_iter =
                     rsc->connections_iterator(page_first_con->get_name());
                 uint32_t current_line = CON_LIST_Y;
@@ -317,7 +322,7 @@ void MDspConnections::display_at_cursor()
                     if (problem_filter(con))
                     {
                         dsp_comp_hub.dsp_io->cursor_xy(1, CON_LIST_Y + line_nr);
-                        write_connection_line(con, current_line, selecting);
+                        write_connection_line(con, current_line, selected_connections);
                         ++line_nr;
                     }
                 }
@@ -343,7 +348,9 @@ void MDspConnections::display_at_cursor()
 
             if (page_first_con != nullptr)
             {
-                const bool selecting = dsp_comp_hub.dsp_shared->have_connections_selection();
+                const std::string& rsc_name = rsc->get_name();
+                const ConnectionSelectionMap* const selected_connections =
+                    dsp_comp_hub.dsp_shared->get_selected_connections_map(rsc_name);
                 DrbdResource::ConnectionsIterator dsp_con_iter =
                     rsc->connections_iterator(page_first_con->get_name());
                 uint32_t current_line = CON_LIST_Y;
@@ -351,7 +358,7 @@ void MDspConnections::display_at_cursor()
                 {
                     DrbdConnection* const con = dsp_con_iter.next();
                     dsp_comp_hub.dsp_io->cursor_xy(1, CON_LIST_Y + line_nr);
-                    write_connection_line(con, current_line, selecting);
+                    write_connection_line(con, current_line, selected_connections);
                     ++line_nr;
                 }
             }
@@ -392,7 +399,9 @@ void MDspConnections::display_at_page()
             );
             if (page_first_con != nullptr)
             {
-                const bool selecting = dsp_comp_hub.dsp_shared->have_connections_selection();
+                const std::string& rsc_name = dsp_rsc->get_name();
+                const ConnectionSelectionMap* const selected_connections =
+                    dsp_comp_hub.dsp_shared->get_selected_connections_map(rsc_name);
                 DrbdResource::ConnectionsIterator dsp_con_iter =
                     dsp_rsc->connections_iterator(page_first_con->get_name());
                 uint32_t current_line = CON_LIST_Y;
@@ -402,7 +411,7 @@ void MDspConnections::display_at_page()
                     if (problem_filter(dsp_con))
                     {
                         dsp_io->cursor_xy(1, CON_LIST_Y + line_nr);
-                        write_connection_line(dsp_con, current_line, selecting);
+                        write_connection_line(dsp_con, current_line, selected_connections);
                         ++line_nr;
                     }
                 }
@@ -410,7 +419,9 @@ void MDspConnections::display_at_page()
         }
         else
         {
-            const bool selecting = dsp_comp_hub.dsp_shared->have_connections_selection();
+            const std::string& rsc_name = dsp_rsc->get_name();
+            const ConnectionSelectionMap* const selected_connections =
+                dsp_comp_hub.dsp_shared->get_selected_connections_map(rsc_name);
             DrbdResource::ConnectionsIterator con_iter = dsp_rsc->connections_iterator();
             set_page_count(
                 dsp_comp_hub.dsp_common->calculate_page_count(
@@ -425,7 +436,7 @@ void MDspConnections::display_at_page()
             {
                 DrbdConnection* const con = con_iter.next();
                 dsp_io->cursor_xy(1, CON_LIST_Y + line_nr);
-                write_connection_line(con, current_line, selecting);
+                write_connection_line(con, current_line, selected_connections);
                 ++line_nr;
             }
         }
@@ -455,6 +466,7 @@ bool MDspConnections::change_selection(const std::string& pattern_text, const bo
         std::unique_ptr<string_matching::PatternItem> pattern;
         string_matching::process_pattern(pattern_text, pattern);
 
+        const std::string& rsc_name = rsc->get_name();
         DrbdResource::ConnectionsIterator con_iter = rsc->connections_iterator();
         if (is_problem_mode(rsc))
         {
@@ -469,11 +481,11 @@ bool MDspConnections::change_selection(const std::string& pattern_text, const bo
                         matched = true;
                         if (select_flag)
                         {
-                            dsp_comp_hub.dsp_shared->select_connection(con_name);
+                            dsp_comp_hub.dsp_shared->select_connection(rsc_name, con_name);
                         }
                         else
                         {
-                            dsp_comp_hub.dsp_shared->deselect_connection(con_name);
+                            dsp_comp_hub.dsp_shared->deselect_connection(rsc_name, con_name);
                         }
                     }
                 }
@@ -490,11 +502,11 @@ bool MDspConnections::change_selection(const std::string& pattern_text, const bo
                     matched = true;
                     if (select_flag)
                     {
-                        dsp_comp_hub.dsp_shared->select_connection(con_name);
+                        dsp_comp_hub.dsp_shared->select_connection(rsc_name, con_name);
                     }
                     else
                     {
-                        dsp_comp_hub.dsp_shared->deselect_connection(con_name);
+                        dsp_comp_hub.dsp_shared->deselect_connection(rsc_name, con_name);
                     }
                 }
             }
@@ -505,7 +517,8 @@ bool MDspConnections::change_selection(const std::string& pattern_text, const bo
 
 void MDspConnections::clear_selection()
 {
-    dsp_comp_hub.dsp_shared->clear_connections_selection();
+    const std::string& rsc_name = dsp_comp_hub.dsp_shared->monitor_rsc;
+    dsp_comp_hub.dsp_shared->clear_connections_selection(rsc_name);
 }
 
 bool MDspConnections::is_cursor_nav()
@@ -561,20 +574,22 @@ void MDspConnections::clear_cursor()
 
 bool MDspConnections::is_selecting()
 {
-    return dsp_comp_hub.dsp_shared->have_connections_selection();
+    const std::string& rsc_name = dsp_comp_hub.dsp_shared->monitor_rsc;
+    return dsp_comp_hub.dsp_shared->have_connections_selection(rsc_name);
 }
 
 void MDspConnections::toggle_select_cursor_item()
 {
     if (!dsp_comp_hub.dsp_shared->monitor_rsc.empty() && !cursor_con.empty())
     {
-        DrbdResource* const rsc = dsp_comp_hub.rsc_map->get(&(dsp_comp_hub.dsp_shared->monitor_rsc));
+        const std::string& rsc_name = dsp_comp_hub.dsp_shared->monitor_rsc;
+        DrbdResource* const rsc = dsp_comp_hub.rsc_map->get(&rsc_name);
         if (rsc != nullptr)
         {
             DrbdConnection* const con = rsc->get_connection(cursor_con);
             if (con != nullptr)
             {
-                dsp_comp_hub.dsp_shared->toggle_connection_selection(cursor_con);
+                dsp_comp_hub.dsp_shared->toggle_connection_selection(rsc_name, cursor_con);
                 dsp_comp_hub.dsp_selector->refresh_display();
             }
         }
@@ -627,7 +642,8 @@ bool MDspConnections::key_pressed(const uint32_t key)
             }
         }
 
-        if (!intercepted && (is_cursor_nav() || dsp_comp_hub.dsp_shared->have_connections_selection()))
+        if (!intercepted && (is_cursor_nav() ||
+            dsp_comp_hub.dsp_shared->have_connections_selection(dsp_comp_hub.dsp_shared->monitor_rsc)))
         {
             if (key == static_cast<uint32_t> ('A') || key == static_cast<uint32_t> ('a'))
             {
@@ -764,11 +780,11 @@ bool MDspConnections::execute_custom_command(const std::string& command, StringT
             {
                 if (command == cmd_names::KEY_CMD_SELECT)
                 {
-                    dsp_comp_hub.dsp_shared->select_connection(cmd_arg);
+                    dsp_comp_hub.dsp_shared->select_connection(dsp_comp_hub.dsp_shared->monitor_rsc, cmd_arg);
                 }
                 else
                 {
-                    dsp_comp_hub.dsp_shared->deselect_connection(cmd_arg);
+                    dsp_comp_hub.dsp_shared->deselect_connection(dsp_comp_hub.dsp_shared->monitor_rsc, cmd_arg);
                 }
                 accepted = true;
             }
@@ -781,6 +797,10 @@ bool MDspConnections::execute_custom_command(const std::string& command, StringT
         DrbdResource* const rsc = dsp_comp_hub.get_monitor_resource();
         if (rsc != nullptr)
         {
+            const std::string& rsc_name = rsc->get_name();
+            ResourceSelectionMap::Node* const slct_rsc_node = dsp_comp_hub.dsp_shared->select_resource(rsc_name);
+            ResourceSubSelections& sub_selections = *(slct_rsc_node->get_value());
+
             dsp_comp_hub.dsp_common->application_working();
             const bool prb_mode = is_problem_mode(rsc);
             DrbdResource::ConnectionsIterator con_iter = rsc->connections_iterator();
@@ -790,7 +810,7 @@ bool MDspConnections::execute_custom_command(const std::string& command, StringT
                 if (!prb_mode || problem_filter(con))
                 {
                     const std::string& con_name = con->get_name();
-                    dsp_comp_hub.dsp_shared->select_connection(con_name);
+                    dsp_comp_hub.dsp_shared->select_connection(sub_selections, con_name);
                 }
             }
         }

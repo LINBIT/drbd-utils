@@ -96,6 +96,23 @@ ClickableCommand* ClickableCommand::Builder::create_with_auto_nr(std::function<v
     return cmd;
 }
 
+ClickableCommand* ClickableCommand::Builder::create_with_page_dot_auto_nr(std::function<void()>& handler_ref)
+{
+    std::string cmd_key;
+    cmd_key.reserve(5);
+    cmd_key += std::to_string(static_cast<unsigned long> (coords.page));
+    cmd_key += '.';
+    cmd_key += std::to_string(static_cast<unsigned int> (auto_nr));
+    ClickableCommand* const cmd = new ClickableCommand(
+        cmd_key,
+        coords.page, coords.row, coords.start_col, coords.end_col,
+        handler_ref
+    );
+    ++auto_nr;
+    ++coords.row;
+    return cmd;
+}
+
 ClickableCommand* ClickableCommand::Builder::create_with_id(const std::string& id, std::function<void()>& handler_ref)
 {
     ClickableCommand* const cmd = new ClickableCommand(

@@ -6,6 +6,7 @@
 #include <platform/IoException.h>
 #include <integerparse.h>
 #include <dsaext.h>
+#include <bounds.h>
 
 const uint16_t  MDspConfiguration::DSP_INTERVAL_FIELD_ROW   = 7;
 
@@ -13,7 +14,8 @@ MDspConfiguration::MDspConfiguration(ComponentsHub& comp_hub, Configuration& con
     MDspMenuBase::MDspMenuBase(comp_hub),
     dsp_comp_hub_mutable(&comp_hub),
     config(&config_ref),
-    input_display_interval(comp_hub, 5)
+    input_display_interval(comp_hub, 5),
+    input_taskq_concurrency(comp_hub, 5)
 {
     saved_config = std::unique_ptr<Configuration>(new Configuration());
 
@@ -97,122 +99,104 @@ MDspConfiguration::MDspConfiguration(ComponentsHub& comp_hub, Configuration& con
             opt_default_config();
         };
 
+    ClickableCommand::Builder bld;
+
+    bld.auto_nr = 1;
+
+    bld.coords.start_col = 5;
+    bld.coords.end_col = 45;
+
     // Page 1
+
+    bld.coords.page = 1;
+    bld.coords.row = 6;
+
     cmd_mouse_nav = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "1", 1, 6, 5, 45,
-            cmd_fn_mouse_nav
-        )
+        bld.create_with_auto_nr(cmd_fn_mouse_nav)
     );
+    add_option(*cmd_mouse_nav);
+
     input_display_interval.set_field_length(5);
     input_display_interval.set_position(30, DSP_INTERVAL_FIELD_ROW);
 
     // Page 2
+
+    bld.coords.page = 2;
+    bld.coords.row = 6;
+
     cmd_discard_ok_tasks = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "2", 2, 6, 5, 45,
-            cmd_fn_discard_ok_tasks
-        )
+        bld.create_with_auto_nr(cmd_fn_discard_ok_tasks)
     );
+    add_option(*cmd_discard_ok_tasks);
     cmd_discard_failed_tasks = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "3", 2, 7, 5, 45,
-            cmd_fn_discard_failed_tasks
-        )
+        bld.create_with_auto_nr(cmd_fn_discard_failed_tasks)
     );
+    add_option(*cmd_discard_failed_tasks);
     cmd_suspend_new_tasks = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "4", 2, 8, 5, 45,
-            cmd_fn_suspend_new_tasks
-        )
+        bld.create_with_auto_nr(cmd_fn_suspend_new_tasks)
     );
+    add_option(*cmd_suspend_new_tasks);
+
+    ++bld.coords.row;
+    taskq_conc_field_row = bld.coords.row;
+
+    input_taskq_concurrency.set_field_length(5);
+    input_taskq_concurrency.set_position(32, taskq_conc_field_row);
 
     // Page 3
+
+    bld.coords.page = 3;
+    bld.coords.row = 8;
+
     cmd_colors_dflt = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "5", 3, 8, 5, 45,
-            cmd_fn_colors_dflt
-        )
+        bld.create_with_auto_nr(cmd_fn_colors_dflt)
     );
+    add_option(*cmd_colors_dflt);
     cmd_colors_dark256 = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "6", 3, 9, 5, 45,
-            cmd_fn_colors_dark256
-        )
+        bld.create_with_auto_nr(cmd_fn_colors_dark256)
     );
+    add_option(*cmd_colors_dark256);
     cmd_colors_dark16 = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "7", 3, 10, 5, 45,
-            cmd_fn_colors_dark16
-        )
+        bld.create_with_auto_nr(cmd_fn_colors_dark16)
     );
+    add_option(*cmd_colors_dark16);
     cmd_colors_light256 = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "8", 3, 11, 5, 45,
-            cmd_fn_colors_light256
-        )
+        bld.create_with_auto_nr(cmd_fn_colors_light256)
     );
+    add_option(*cmd_colors_light256);
     cmd_colors_light16 = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "9", 3, 12, 5, 45,
-            cmd_fn_colors_light16
-        )
+        bld.create_with_auto_nr(cmd_fn_colors_light16)
     );
+    add_option(*cmd_colors_light16);
 
     // Page 4
+
+    bld.coords.page = 4;
+    bld.coords.row = 8;
+
     cmd_charset_dflt = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "10", 4, 8, 5, 45,
-            cmd_fn_charset_dflt
-        )
+        bld.create_with_auto_nr(cmd_fn_charset_dflt)
     );
-    cmd_charset_unicode = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "11", 4, 9, 5, 45,
-            cmd_fn_charset_unicode
-        )
-    );
-    cmd_charset_ascii = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "12", 4, 10, 5, 45,
-            cmd_fn_charset_ascii
-        )
-    );
-
-    cmd_save_config = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "S", 1, 14, 5, 45,
-            cmd_fn_save_config
-        )
-    );
-    cmd_load_config = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "L", 1, 14, 45, 90,
-            cmd_fn_load_config
-        )
-    );
-    cmd_default_config = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "R", 1, 15, 5, 45,
-            cmd_fn_default_config
-        )
-    );
-
-
-    add_option(*cmd_mouse_nav);
-    add_option(*cmd_discard_ok_tasks);
-    add_option(*cmd_discard_failed_tasks);
-    add_option(*cmd_suspend_new_tasks);
-    add_option(*cmd_colors_dflt);
-    add_option(*cmd_colors_dark256);
-    add_option(*cmd_colors_dark16);
-    add_option(*cmd_colors_light256);
-    add_option(*cmd_colors_light16);
     add_option(*cmd_charset_dflt);
+    cmd_charset_unicode = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_charset_unicode)
+    );
     add_option(*cmd_charset_unicode);
+    cmd_charset_ascii = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_charset_ascii)
+    );
     add_option(*cmd_charset_ascii);
+    cmd_save_config = std::unique_ptr<ClickableCommand>(
+        bld.create_with_id("S", cmd_fn_save_config)
+    );
     add_option(*cmd_save_config);
+    cmd_load_config = std::unique_ptr<ClickableCommand>(
+        bld.create_with_id("L", cmd_fn_load_config)
+    );
     add_option(*cmd_load_config);
+    cmd_default_config = std::unique_ptr<ClickableCommand>(
+        bld.create_with_id("R", cmd_fn_default_config)
+    );
     add_option(*cmd_default_config);
 
     InputField& option_field = get_option_field();
@@ -317,11 +301,11 @@ void MDspConfiguration::display_page_01()
     option_text = (config->enable_mouse_nav ? checked : unchecked);
     option_text += " ";
     option_text += "Mouse navigation";
-    display_option(" 1   ", option_text.c_str(), *cmd_mouse_nav, option_color);
+    display_option(5, option_text.c_str(), *cmd_mouse_nav, option_color);
 
-    display_option(" S   ", "Save configuration", *cmd_save_config, option_color);
-    display_option(" L   ", "Load configuration", *cmd_load_config, option_color);
-    display_option(" R   ", "Reset to defaults", *cmd_default_config, option_color);
+    display_option(5, "Save configuration", *cmd_save_config, option_color);
+    display_option(5, "Load configuration", *cmd_load_config, option_color);
+    display_option(5, "Reset to defaults", *cmd_default_config, option_color);
 
     dsp_comp_hub.dsp_io->cursor_xy(6, DSP_INTERVAL_FIELD_ROW);
     dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->option_text.c_str());
@@ -347,17 +331,23 @@ void MDspConfiguration::display_page_02()
     option_text = (config->discard_succ_tasks ? checked : unchecked);
     option_text += " ";
     option_text += "Discard successfully completed tasks";
-    display_option(" 2   ", option_text.c_str(), *cmd_discard_ok_tasks, option_color);
+    display_option(5, option_text.c_str(), *cmd_discard_ok_tasks, option_color);
 
     option_text = (config->discard_fail_tasks ? checked : unchecked);
     option_text += " ";
     option_text += "Discard all completed tasks";
-    display_option(" 3   ", option_text.c_str(), *cmd_discard_failed_tasks, option_color);
+    display_option(5, option_text.c_str(), *cmd_discard_failed_tasks, option_color);
 
     option_text = (config->suspend_new_tasks ? checked : unchecked);
     option_text += " ";
     option_text += "Suspend new tasks";
-    display_option(" 4   ", option_text.c_str(), *cmd_suspend_new_tasks, option_color);
+    display_option(5, option_text.c_str(), *cmd_suspend_new_tasks, option_color);
+
+    dsp_comp_hub.dsp_io->cursor_xy(6, taskq_conc_field_row);
+    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->option_text.c_str());
+    dsp_comp_hub.dsp_io->write_text("Active tasks concurrency:");
+    dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.active_color_table->rst.c_str());
+    input_taskq_concurrency.display();
 }
 
 void MDspConfiguration::display_page_03()
@@ -392,11 +382,11 @@ void MDspConfiguration::display_page_03()
            dsp_comp_hub.dsp_io->write_text("Default");
     }
 
-    display_option(" 5   ", "Default", *cmd_colors_dflt, option_color);
-    display_option(" 6   ", "256 colors on dark background", *cmd_colors_dark256, option_color);
-    display_option(" 7   ", "16 colors on dark background", *cmd_colors_dark16, option_color);
-    display_option(" 8   ", "256 colors on light background", *cmd_colors_light256, option_color);
-    display_option(" 9   ", "16 colors on light background", *cmd_colors_light16, option_color);
+    display_option(5, "Default", *cmd_colors_dflt, option_color);
+    display_option(5, "256 colors on dark background", *cmd_colors_dark256, option_color);
+    display_option(5, "16 colors on dark background", *cmd_colors_dark16, option_color);
+    display_option(5, "256 colors on light background", *cmd_colors_light256, option_color);
+    display_option(5, "16 colors on light background", *cmd_colors_light16, option_color);
 }
 
 void MDspConfiguration::display_page_04()
@@ -425,9 +415,9 @@ void MDspConfiguration::display_page_04()
            dsp_comp_hub.dsp_io->write_text("Default");
     }
 
-    display_option("10   ", "Default", *cmd_charset_dflt, option_color);
-    display_option("11   ", "Unicode (UTF-8)", *cmd_charset_unicode, option_color);
-    display_option("12   ", "ASCII (extended)", *cmd_charset_ascii, option_color);
+    display_option(5, "Default", *cmd_charset_dflt, option_color);
+    display_option(5, "Unicode (UTF-8)", *cmd_charset_unicode, option_color);
+    display_option(5, "ASCII (extended)", *cmd_charset_ascii, option_color);
 }
 
 uint64_t MDspConfiguration::get_update_mask() noexcept
@@ -441,6 +431,11 @@ void MDspConfiguration::text_cursor_ops()
     if (page_nr == 1 && MDspMenuBase::is_focus_delegated())
     {
         input_display_interval.cursor();
+    }
+    else
+    if (page_nr == 2 && MDspMenuBase::is_focus_delegated())
+    {
+        input_taskq_concurrency.cursor();
     }
     else
     {
@@ -468,6 +463,22 @@ bool MDspConfiguration::key_pressed(const uint32_t key)
                 intercepted = true;
             }
         }
+        else
+        if (page_nr == 2)
+        {
+            if (MDspMenuBase::is_focus_delegated())
+            {
+                opt_taskq_concurrency();
+                intercepted = true;
+            }
+            else
+            if (key == KeyCodes::TAB)
+            {
+                toggle_focus_delegation();
+                intercepted = true;
+            }
+        }
+
     }
     if (!intercepted)
     {
@@ -482,8 +493,22 @@ bool MDspConfiguration::key_pressed(const uint32_t key)
             else
             if (MDspMenuBase::is_focus_delegated())
             {
-                input_display_interval.key_pressed(key);
-                intercepted = true;
+                const uint32_t page_nr = get_page_nr();
+                if (page_nr == 1)
+                {
+                    input_display_interval.key_pressed(key);
+                    intercepted = true;
+                }
+                else
+                if (page_nr == 2)
+                {
+                    input_taskq_concurrency.key_pressed(key);
+                    intercepted = true;
+                }
+                else
+                {
+                    toggle_focus_delegation();
+                }
             }
         }
     }
@@ -515,6 +540,24 @@ bool MDspConfiguration::mouse_action(MouseEvent& mouse)
                     intercepted = true;
                 }
             }
+            else
+            if (page_nr == 2)
+            {
+                if (mouse.coord_row == taskq_conc_field_row)
+                {
+                    MDspMenuBase::delegate_focus(true);
+                    input_taskq_concurrency.mouse_action(mouse);
+                    dsp_comp_hub.dsp_selector->refresh_display();
+                    intercepted = true;
+                }
+                else
+                if (MDspMenuBase::is_focus_delegated())
+                {
+                    opt_taskq_concurrency();
+                    dsp_comp_hub.dsp_selector->refresh_display();
+                    intercepted = true;
+                }
+            }
         }
     }
     return intercepted;
@@ -529,6 +572,13 @@ void MDspConfiguration::display_activated()
     {
         const std::string interval_str = std::to_string(static_cast<unsigned int> (config->dsp_interval));
         input_display_interval.set_text(interval_str);
+    }
+    const std::string& taskq_concurrency_text = input_taskq_concurrency.get_text();
+    if (taskq_concurrency_text.empty())
+    {
+        const std::string taskq_concurrency_str =
+            std::to_string(static_cast<unsigned int> (config->taskq_concurrency));
+        input_taskq_concurrency.set_text(taskq_concurrency_str);
     }
 
     saved_page_nr = 0;
@@ -546,12 +596,13 @@ void MDspConfiguration::display_closed()
     }
 
     input_display_interval.clear_text();
+    input_taskq_concurrency.clear_text();
 }
 
 void MDspConfiguration::cursor_to_previous_item()
 {
     const uint32_t page_nr = get_page_nr();
-    if (page_nr == 1)
+    if (page_nr == 1 || page_nr == 2)
     {
         toggle_focus_delegation();
     }
@@ -560,7 +611,7 @@ void MDspConfiguration::cursor_to_previous_item()
 void MDspConfiguration::cursor_to_next_item()
 {
     const uint32_t page_nr = get_page_nr();
-    if (page_nr == 1)
+    if (page_nr == 1 || page_nr == 2)
     {
         toggle_focus_delegation();
     }
@@ -637,7 +688,7 @@ void MDspConfiguration::opt_display_interval()
         const std::string dsp_interval_text = input_display_interval.get_text();
         const uint16_t dsp_interval = dsaext::parse_unsigned_int16(dsp_interval_text);
         config->dsp_interval = dsp_interval;
-        // TODO: Set the new display interval
+        // Interval change through notify_config_changed
     }
     catch (dsaext::NumberFormatException&)
     {
@@ -653,6 +704,66 @@ void MDspConfiguration::opt_display_interval()
     {
         option_change_performed();
         dsp_comp_hub.core_instance->notify_config_changed();
+    }
+    else
+    {
+        dsp_comp_hub.dsp_selector->refresh_display();
+    }
+}
+
+void MDspConfiguration::opt_taskq_concurrency()
+{
+    SubProcessQueue* const sub_proc_queue = dsp_comp_hub.sub_proc_queue;
+
+    const uint16_t min_taskq_concurrency = static_cast<uint16_t> (sub_proc_queue->MIN_ACTIVE_COUNT_RANGE);
+    const uint16_t max_taskq_concurrency =
+        sub_proc_queue->MAX_ACTIVE_COUNT_RANGE < UINT16_MAX ? sub_proc_queue->MAX_ACTIVE_COUNT_RANGE : UINT16_MAX;
+
+    const uint16_t prev_taskq_concurrency =
+        bounds(min_taskq_concurrency, config->taskq_concurrency, max_taskq_concurrency);
+    uint16_t bounded_taskq_concurrency =
+        bounds(min_taskq_concurrency, prev_taskq_concurrency, max_taskq_concurrency);
+    try
+    {
+        const std::string taskq_concurrency_text = input_taskq_concurrency.get_text();
+        const uint16_t taskq_concurrency = dsaext::parse_unsigned_int16(taskq_concurrency_text);
+        bounded_taskq_concurrency =
+            bounds(min_taskq_concurrency, taskq_concurrency, max_taskq_concurrency);
+        config->taskq_concurrency = bounded_taskq_concurrency;
+
+        if (taskq_concurrency != bounded_taskq_concurrency)
+        {
+            // Out of range value, set bounded value
+            input_taskq_concurrency.clear_text();
+            const std::string new_taskq_concurrency_text =
+                std::to_string(static_cast<unsigned int> (bounded_taskq_concurrency));
+            input_taskq_concurrency.set_text(new_taskq_concurrency_text);
+        }
+    }
+    catch (dsaext::NumberFormatException&)
+    {
+        // Unparsable input, set previous value
+        input_taskq_concurrency.clear_text();
+        const std::string taskq_concurrency_text = std::to_string(static_cast<unsigned int> (prev_taskq_concurrency));
+        input_taskq_concurrency.set_text(taskq_concurrency_text);
+    }
+    MDspMenuBase::delegate_focus(false);
+
+    if (prev_taskq_concurrency != bounded_taskq_concurrency)
+    {
+        option_change_performed();
+        try
+        {
+            sub_proc_queue->change_sub_proc_concurrency(bounded_taskq_concurrency);
+        }
+        catch (SubProcess::Exception&)
+        {
+            dsp_comp_hub.log->add_entry(
+                MessageLog::log_level::WARN,
+                "Thread creation failed while trying to change the active tasks concurrency. "
+                "Check operating system limits."
+            );
+        }
     }
     else
     {
@@ -724,6 +835,18 @@ void MDspConfiguration::opt_load_config()
         const std::string interval_str = std::to_string(static_cast<unsigned int> (config->dsp_interval));
         input_display_interval.set_text(interval_str);
 
+        SubProcessQueue* const sub_proc_queue = dsp_comp_hub.sub_proc_queue;
+        const uint16_t min_taskq_concurrency = static_cast<uint16_t> (sub_proc_queue->MIN_ACTIVE_COUNT_RANGE);
+        const uint16_t max_taskq_concurrency =
+            sub_proc_queue->MAX_ACTIVE_COUNT_RANGE < UINT16_MAX ?
+            sub_proc_queue->MAX_ACTIVE_COUNT_RANGE : UINT16_MAX;
+
+        const uint16_t bounded_taskq_concurrency =
+            bounds(min_taskq_concurrency, config->taskq_concurrency, max_taskq_concurrency);
+        const std::string taskq_concurrency_str =
+            std::to_string(static_cast<unsigned int> (bounded_taskq_concurrency));
+        input_taskq_concurrency.set_text(taskq_concurrency_str);
+
         action_message = action_message_type::MSG_CONFIG_LOADED;
         dsp_comp_hub.dsp_selector->refresh_display();
     }
@@ -766,6 +889,10 @@ void MDspConfiguration::opt_default_config()
     InputField& config_option_field = get_option_field();
     config_option_field.clear_text();
 
+    const std::string taskq_concurrency_str =
+        std::to_string(static_cast<unsigned int> (config->taskq_concurrency));
+    input_taskq_concurrency.set_text(taskq_concurrency_str);
+
     dsp_comp_hub.dsp_selector->refresh_display();
 }
 
@@ -792,6 +919,19 @@ void MDspConfiguration::apply_config()
     else
     {
         dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.ansi_ctl->ANSI_MOUSE_OFF.c_str());
+    }
+
+    try
+    {
+        dsp_comp_hub.sub_proc_queue->change_sub_proc_concurrency(config->taskq_concurrency);
+    }
+    catch (SubProcess::Exception&)
+    {
+        dsp_comp_hub.log->add_entry(
+            MessageLog::log_level::WARN,
+            "Thread creation failed while trying to change the active tasks concurrency. "
+            "Check operating system limits."
+        );
     }
 
     dsp_comp_hub.core_instance->notify_config_changed();

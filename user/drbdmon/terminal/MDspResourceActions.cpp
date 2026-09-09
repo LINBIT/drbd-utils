@@ -84,145 +84,109 @@ MDspResourceActions::MDspResourceActions(const ComponentsHub& comp_hub):
         {
             selection_action(&MDspResourceActions::action_invalidate);
         };
+    cmd_fn_adjust_skip_disk =
+        [this]() -> void
+        {
+            selection_action(&MDspResourceActions::action_adjust_skip_disk);
+        };
+    cmd_fn_adjust_skip_net =
+        [this]() -> void
+        {
+            selection_action(&MDspResourceActions::action_adjust_skip_net);
+        };
+    cmd_fn_adjust_skip_disk_net =
+        [this]() -> void
+        {
+            selection_action(&MDspResourceActions::action_adjust_skip_disk_net);
+        };
 
     // Left column
 
-    uint16_t opt_line   = OPT_LIST_Y;
-    uint16_t start_col  = 5;
-    uint16_t end_col    = 45;
+    ClickableCommand::Builder bld;
+    bld.auto_nr = 1;
+    bld.coords.page = 1;
+    bld.coords.row = OPT_LIST_Y;
+    bld.coords.start_col = 5;
+    bld.coords.end_col = 45;
 
     cmd_start = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "1", 1, opt_line, start_col, end_col,
-            cmd_fn_start
-        )
+        bld.create_with_auto_nr(cmd_fn_start)
     );
-    ++opt_line;
-
+    add_option(*cmd_start);
     cmd_stop = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "2", 1, opt_line, start_col, end_col,
-            cmd_fn_stop
-        )
+        bld.create_with_auto_nr(cmd_fn_stop)
     );
-    ++opt_line;
-
+    add_option(*cmd_stop);
     cmd_adjust = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "3", 1, opt_line, start_col, end_col,
-            cmd_fn_adjust
-        )
+        bld.create_with_auto_nr(cmd_fn_adjust)
     );
-    ++opt_line;
-
+    add_option(*cmd_adjust);
     cmd_primary = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "4", 1, opt_line, start_col, end_col,
-            cmd_fn_primary
-        )
+        bld.create_with_auto_nr(cmd_fn_primary)
     );
-    ++opt_line;
-
+    add_option(*cmd_primary);
     cmd_secondary = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "5", 1, opt_line, start_col, end_col,
-            cmd_fn_secondary
-        )
+        bld.create_with_auto_nr(cmd_fn_secondary)
     );
-    ++opt_line;
-
+    add_option(*cmd_secondary);
     cmd_connect = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "6", 1, opt_line, start_col, end_col,
-            cmd_fn_connect
-        )
+        bld.create_with_auto_nr(cmd_fn_connect)
     );
-    ++opt_line;
-
+    add_option(*cmd_connect);
     cmd_disconnect = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "7", 1, opt_line, start_col, end_col,
-            cmd_fn_disconnect
-        )
+        bld.create_with_auto_nr(cmd_fn_disconnect)
     );
-    ++opt_line;
-
+    add_option(*cmd_disconnect);
     cmd_verify = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "8", 1, opt_line, start_col, end_col,
-            cmd_fn_verify
-        )
+        bld.create_with_auto_nr(cmd_fn_verify)
     );
-    ++opt_line;
-
+    add_option(*cmd_verify);
     cmd_pause_sync = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "9", 1, opt_line, start_col, end_col,
-            cmd_fn_pause_sync
-        )
+        bld.create_with_auto_nr(cmd_fn_pause_sync)
     );
-    ++opt_line;
-
+    add_option(*cmd_pause_sync);
     cmd_resume_sync = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "10", 1, opt_line, start_col, end_col,
-            cmd_fn_resume_sync
-        )
+        bld.create_with_auto_nr(cmd_fn_resume_sync)
     );
-    ++opt_line;
+    add_option(*cmd_resume_sync);
 
     // Right column
 
-    opt_line    = OPT_LIST_Y;
-    start_col   = 45;
-    end_col     = 90;
+    bld.coords.row = OPT_LIST_Y;
+    bld.coords.start_col = 50;
+    bld.coords.end_col = 95;
 
     cmd_force_primary = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "11", 1, opt_line, start_col, end_col,
-            cmd_fn_force_primary
-        )
+        bld.create_with_auto_nr(cmd_fn_force_primary)
     );
-    ++opt_line;
-
-    cmd_force_secondary = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "12", 1, opt_line, start_col, end_col,
-            cmd_fn_force_secondary
-        )
-    );
-    ++opt_line;
-
-    cmd_connect_discard = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "13", 1, opt_line, start_col, end_col,
-            cmd_fn_connect_discard
-        )
-    );
-    ++opt_line;
-
-    cmd_invalidate = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "14", 1, opt_line, start_col, end_col,
-            cmd_fn_invalidate
-        )
-    );
-    ++opt_line;
-
-    add_option(*cmd_start);
-    add_option(*cmd_stop);
-    add_option(*cmd_adjust);
-    add_option(*cmd_primary);
     add_option(*cmd_force_primary);
-    add_option(*cmd_secondary);
+    cmd_force_secondary = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_force_secondary)
+    );
     add_option(*cmd_force_secondary);
-    add_option(*cmd_connect);
-    add_option(*cmd_disconnect);
-    add_option(*cmd_verify);
-    add_option(*cmd_pause_sync);
-    add_option(*cmd_resume_sync);
+    cmd_connect_discard = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_connect_discard)
+    );
     add_option(*cmd_connect_discard);
+    cmd_invalidate = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_invalidate)
+    );
     add_option(*cmd_invalidate);
+
+    ++bld.coords.row;
+
+    cmd_adjust_skip_disk = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_adjust_skip_disk)
+    );
+    add_option(*cmd_adjust_skip_disk);
+    cmd_adjust_skip_net = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_adjust_skip_net)
+    );
+    add_option(*cmd_adjust_skip_net);
+    cmd_adjust_skip_disk_net = std::unique_ptr<ClickableCommand>(
+        bld.create_with_auto_nr(cmd_fn_adjust_skip_disk_net)
+    );
+    add_option(*cmd_adjust_skip_disk_net);
 }
 
 MDspResourceActions::~MDspResourceActions() noexcept
@@ -252,7 +216,7 @@ void MDspResourceActions::show_actions()
     dsp_comp_hub.dsp_io->write_text("Resource actions: ");
     if (!dsp_comp_hub.dsp_shared->ovrd_resource_selection && dsp_comp_hub.dsp_shared->have_resources_selection())
     {
-        ResourcesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
+        ResourceSelectionMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
         const size_t count = selection_map.get_size();
         if (count > 1)
         {
@@ -281,20 +245,23 @@ void MDspResourceActions::show_actions()
     const std::string& std_color = dsp_comp_hub.active_color_table->option_text;
     const std::string& caution_color = dsp_comp_hub.active_color_table->caution_text;
 
-    display_option(" 1   ", "Start resource", *cmd_start, std_color);
-    display_option(" 2   ", "Stop resource", *cmd_stop, std_color);
-    display_option(" 3   ", "Adjust resource", *cmd_adjust, std_color);
-    display_option(" 4   ", "Make primary", *cmd_primary, std_color);
-    display_option(" 5   ", "Make secondary", *cmd_secondary, std_color);
-    display_option(" 6   ", "Connect", *cmd_connect, std_color);
-    display_option(" 7   ", "Disconnect", *cmd_disconnect, std_color);
-    display_option(" 8   ", "Run verification", *cmd_verify, std_color);
-    display_option(" 9   ", "Pause resynchronization", *cmd_pause_sync, std_color);
-    display_option("10   ", "Resume resynchronization", *cmd_resume_sync, std_color);
-    display_option("11   ", "Force make primary", *cmd_force_primary, caution_color);
-    display_option("12   ", "Force make secondary", *cmd_force_secondary, caution_color);
-    display_option("13   ", "Discard & resolve split-brain", *cmd_connect_discard, caution_color);
-    display_option("14   ", "Invalidate & resynchronize", *cmd_invalidate, caution_color);
+    display_option(5, "Start resource", *cmd_start, std_color);
+    display_option(5, "Stop resource", *cmd_stop, std_color);
+    display_option(5, "Adjust resource", *cmd_adjust, std_color);
+    display_option(5, "Make primary", *cmd_primary, std_color);
+    display_option(5, "Make secondary", *cmd_secondary, std_color);
+    display_option(5, "Connect", *cmd_connect, std_color);
+    display_option(5, "Disconnect", *cmd_disconnect, std_color);
+    display_option(5, "Run verification", *cmd_verify, std_color);
+    display_option(5, "Pause resynchronization", *cmd_pause_sync, std_color);
+    display_option(5, "Resume resynchronization", *cmd_resume_sync, std_color);
+    display_option(5, "Force make primary", *cmd_force_primary, caution_color);
+    display_option(5, "Force make secondary", *cmd_force_secondary, caution_color);
+    display_option(5, "Discard & resolve split-brain", *cmd_connect_discard, caution_color);
+    display_option(5, "Invalidate & resynchronize", *cmd_invalidate, caution_color);
+    display_option(5, "Adjust resource, skip disk actions", *cmd_adjust_skip_disk, std_color);
+    display_option(5, "Adjust resource, skip network actions", *cmd_adjust_skip_net, std_color);
+    display_option(5, "Adjust resource, skip disk & network actions", *cmd_adjust_skip_disk_net, std_color);
 
     display_option_query(5, 16);
 }
@@ -306,8 +273,8 @@ void MDspResourceActions::selection_action(const action_func_type action_func)
         dsp_comp_hub.dsp_common->application_working();
         if (!dsp_comp_hub.dsp_shared->ovrd_resource_selection && dsp_comp_hub.dsp_shared->have_resources_selection())
         {
-            ResourcesMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
-            ResourcesMap::KeysIterator iter(selection_map);
+            ResourceSelectionMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_resources_map();
+            ResourceSelectionMap::KeysIterator iter(selection_map);
             while (iter.has_next())
             {
                 const std::string* const rsc_name_ptr = iter.next();
@@ -460,6 +427,64 @@ void MDspResourceActions::action_adjust(const std::string& rsc_name)
     text.reserve(DisplayConsts::ACTION_DESC_PREALLOC);
     text.append("Adjust resource ");
     text.append(rsc_name);
+
+    command->set_description(text);
+
+    dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+}
+
+void MDspResourceActions::action_adjust_skip_disk(const std::string& rsc_name)
+{
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::ARG_ADJUST);
+    command->add_argument(drbdcmd::ARG_SKIP_DISK);
+    command->add_argument(rsc_name);
+
+    std::string text;
+    text.reserve(DisplayConsts::ACTION_DESC_PREALLOC);
+    text.append("Adjust resource ");
+    text.append(rsc_name);
+    text.append(", skip disk actions");
+
+    command->set_description(text);
+
+    dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+}
+
+void MDspResourceActions::action_adjust_skip_net(const std::string& rsc_name)
+{
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::ARG_ADJUST);
+    command->add_argument(drbdcmd::ARG_SKIP_NET);
+    command->add_argument(rsc_name);
+
+    std::string text;
+    text.reserve(DisplayConsts::ACTION_DESC_PREALLOC);
+    text.append("Adjust resource ");
+    text.append(rsc_name);
+    text.append(", skip network actions");
+
+    command->set_description(text);
+
+    dsp_comp_hub.sub_proc_queue->add_entry(command, dsp_comp_hub.dsp_shared->activate_tasks);
+}
+
+void MDspResourceActions::action_adjust_skip_disk_net(const std::string& rsc_name)
+{
+    std::unique_ptr<CmdLine> command(new CmdLine());
+    command->add_argument(drbdcmd::DRBDADM_CMD);
+    command->add_argument(drbdcmd::ARG_ADJUST);
+    command->add_argument(drbdcmd::ARG_SKIP_DISK);
+    command->add_argument(drbdcmd::ARG_SKIP_NET);
+    command->add_argument(rsc_name);
+
+    std::string text;
+    text.reserve(DisplayConsts::ACTION_DESC_PREALLOC);
+    text.append("Adjust resource ");
+    text.append(rsc_name);
+    text.append(", skip disk & network actions");
 
     command->set_description(text);
 

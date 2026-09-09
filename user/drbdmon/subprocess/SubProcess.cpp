@@ -32,6 +32,16 @@ const std::string& SubProcess::get_stderr_output() const noexcept
     return subproc_err;
 }
 
+void SubProcess::set_error_message(const std::string& msg)
+{
+    exc_msg = msg;
+}
+
+const std::string& SubProcess::get_error_message() const noexcept
+{
+    return exc_msg;
+}
+
 // @throws std::bad_alloc
 SubProcess::Exception::Exception()
 {
@@ -61,4 +71,9 @@ SubProcess::Exception::~Exception() noexcept
 const char* SubProcess::Exception::what() const noexcept
 {
     return saved_error_msg.c_str();
+}
+
+const std::string& SubProcess::Exception::get_error_message() const noexcept
+{
+    return saved_error_msg;
 }

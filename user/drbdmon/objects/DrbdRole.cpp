@@ -13,8 +13,13 @@ DrbdRole::resource_role DrbdRole::get_role() const
 
 const char* DrbdRole::get_role_label() const
 {
+    return label_for_role(role);
+}
+
+const char* DrbdRole::label_for_role(const resource_role value) noexcept
+{
     const char* label = ROLE_LABEL_UNKNOWN;
-    switch (role)
+    switch (value)
     {
         case DrbdRole::resource_role::PRIMARY:
             label = ROLE_LABEL_PRIMARY;

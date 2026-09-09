@@ -30,7 +30,12 @@ namespace helptext
         DRBDMON_COMMANDS,
         DRBD_COMMANDS,
         GENERAL_HELP,
-        CONF_HELP
+        CONF_HELP,
+        SFLT_HELP,
+        BULKA_HELP,
+        EXPS_HELP,
+        IMPS_HELP,
+        OVRVW_HELP
     };
 
     extern const char* const RSC_LIST_HELP_1;
@@ -67,6 +72,12 @@ namespace helptext
     extern const char* const DRBDMON_CMD_HELP_1;
     extern const char* const DRBD_CMD_HELP_1;
     extern const char* const MAIN_MENU_HELP_1;
+    extern const char* const SFLT_HELP_1;
+    extern const char* const BULKA_HELP_1;
+    extern const char* const EXPS_HELP_1;
+    extern const char* const IMPS_HELP_1;
+    extern const char* const OVRVW_HELP_1;
+    extern const char* const OVRVW_HELP_2;
 
     extern const char* const INSERT_NAV_HELP_1;
     extern const char* const INSERT_NAV_LIST_HELP_1;

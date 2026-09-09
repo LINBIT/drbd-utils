@@ -619,6 +619,31 @@ void DisplayCommonImpl::display_connection_line(uint32_t& current_line) const
     }
 }
 
+// Displays a progress bar
+// The 'progress' argument is a percentage with two decimal places expressed as the percentage * 100,
+// so, for example, 7035 is 70.35% progress.
+// Accordingly, the minimum value is 0 and the maximum value is 10000.
+void DisplayCommonImpl::display_progress_bar(
+    const uint16_t  progress,
+    const uint16_t  bar_length
+) const
+{
+    const uint16_t safe_progress = std::min(progress, static_cast<uint16_t> (10000));
+    const uint16_t finished_length = static_cast<uint16_t> (
+        (static_cast<uint32_t> (bar_length) * safe_progress) / 10000
+    );
+    const uint16_t remaining_length = bar_length - finished_length;
+
+    dsp_comp_hub.dsp_io->write_fill_seq(
+        dsp_comp_hub.active_character_table->sync_blk_fin,
+        finished_length
+    );
+    dsp_comp_hub.dsp_io->write_fill_seq(
+        dsp_comp_hub.active_character_table->sync_blk_rmn,
+        remaining_length
+    );
+}
+
 void DisplayCommonImpl::page_navigation_cursor() const
 {
     // Page navigation cursor

@@ -373,11 +373,50 @@ void MDspBase::set_page_nr(const uint32_t new_page_nr)
         new_page_nr,
         (autoscroll ? DisplayConsts::MAX_PAGE_NR : base_page_count)
     );
+    base_line_offset = 0;
 }
 
 void MDspBase::set_line_offset(const uint32_t new_line_offset)
 {
     base_line_offset = new_line_offset;
+}
+
+// Increases the line offset, or switches to the next page if the line offset exceeds the number of lines
+// on the current page.
+//
+// Parameter: lines_this_page: Number of available display lines on the current page
+void MDspBase::line_offset_increment(const uint32_t lines_this_page)
+{
+    if (base_page_nr < base_page_count)
+    {
+        ++base_line_offset;
+        if (base_line_offset >= lines_this_page)
+        {
+            next_page();
+        }
+    }
+}
+
+// Decreases the line offset, or, if the line offset would become
+// less than zero, switches to the previous page and sets the line offset to one less than the number of lines on
+// the previous page.
+//
+// Parameter: lines_previous_page: Number of available display lines on the previous page;
+//                                 Can be zero if the current page is the first page
+void MDspBase::line_offset_decrement(const uint32_t lines_previous_page)
+{
+    if (base_line_offset > 0)
+    {
+        --base_line_offset;
+    }
+    else
+    {
+        if (base_page_nr > 1)
+        {
+            previous_page();
+            base_line_offset = lines_previous_page > 0 ? lines_previous_page - 1 : 0;
+        }
+    }
 }
 
 void MDspBase::set_page_count(const uint32_t new_page_count)
@@ -388,24 +427,35 @@ void MDspBase::set_page_count(const uint32_t new_page_count)
 void MDspBase::first_page()
 {
     set_page_nr(1);
+    base_line_offset = 0;
     dsp_comp_hub.dsp_selector->refresh_display();
 }
 
 void MDspBase::next_page()
 {
     set_page_nr(base_page_nr >= base_page_count ? DisplayConsts::MAX_PAGE_NR : base_page_nr + 1);
+    base_line_offset = 0;
     dsp_comp_hub.dsp_selector->refresh_display();
 }
 
 void MDspBase::previous_page()
 {
-    set_page_nr(std::min(base_page_nr - 1, base_page_count));
+    if (base_line_offset == 0)
+    {
+        set_page_nr(std::min(base_page_nr - 1, base_page_count));
+    }
+    else
+    {
+        base_line_offset = 0;
+    }
+
     dsp_comp_hub.dsp_selector->refresh_display();
 }
 
 void MDspBase::last_page()
 {
     set_page_nr(autoscroll ? DisplayConsts::MAX_PAGE_NR : base_page_count);
+    base_line_offset = 0;
     dsp_comp_hub.dsp_selector->refresh_display();
 }
 

@@ -30,36 +30,30 @@ MDspConnectionActions::MDspConnectionActions(const ComponentsHub& comp_hub):
             selection_action(&MDspConnectionActions::action_connect_discard);
         };
 
-    uint16_t opt_line   = OPT_LIST_Y;
-    uint16_t start_col  = 5;
-    uint16_t end_col    = 45;
+    ClickableCommand::Builder bld;
+
+    bld.auto_nr = 1;
+    bld.coords.page = 1;
+    bld.coords.row = OPT_LIST_Y;
+    bld.coords.start_col = 5;
+    bld.coords.end_col = 45;
 
     cmd_connect = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "1", 1, opt_line, start_col, end_col,
-            cmd_fn_connect
-        )
+        bld.create_with_auto_nr(cmd_fn_connect)
     );
-    ++opt_line;
-
+    add_option(*cmd_connect);
     cmd_disconnect = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "2", 1, opt_line, start_col, end_col,
-            cmd_fn_disconnect
-        )
+        bld.create_with_auto_nr(cmd_fn_disconnect)
     );
-    ++opt_line;
+    add_option(*cmd_disconnect);
+
+    bld.coords.row = OPT_LIST_Y;
+    bld.coords.start_col = 50;
+    bld.coords.end_col = 90;
 
     cmd_discard = std::unique_ptr<ClickableCommand>(
-        new ClickableCommand(
-            "3", 1, opt_line, start_col, end_col,
-            cmd_fn_discard
-        )
+        bld.create_with_auto_nr(cmd_fn_discard)
     );
-    ++opt_line;
-
-    add_option(*cmd_connect);
-    add_option(*cmd_disconnect);
     add_option(*cmd_discard);
 }
 
@@ -94,20 +88,26 @@ void MDspConnectionActions::show_actions()
         DrbdResource* const rsc = dsp_comp_hub.get_monitor_resource();
         if (rsc != nullptr)
         {
+            const std::string& rsc_name = rsc->get_name();
             dsp_comp_hub.dsp_io->write_text("Resource ");
             dsp_comp_hub.dsp_io->write_string_field(
-                dsp_comp_hub.dsp_shared->monitor_rsc,
+                rsc_name,
                 dsp_comp_hub.term_cols - 30,
                 false
             );
 
             dsp_comp_hub.dsp_io->cursor_xy(21, DisplayConsts::PAGE_NAV_Y + 2);
             if (!dsp_comp_hub.dsp_shared->ovrd_connection_selection &&
-                dsp_comp_hub.dsp_shared->have_connections_selection())
+                dsp_comp_hub.dsp_shared->have_connections_selection(rsc_name))
             {
-                ConnectionsMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_connections_map();
-                const size_t count = selection_map.get_size();
-                dsp_comp_hub.dsp_io->write_fmt("%lu selected connections", static_cast<unsigned long> (count));
+                ConnectionSelectionMap* const selection_map =
+                    dsp_comp_hub.dsp_shared->get_selected_connections_map(rsc_name);
+                // Should always be non-null, because have_connections_selection returned true
+                if (selection_map != nullptr)
+                {
+                    const size_t count = selection_map->get_size();
+                    dsp_comp_hub.dsp_io->write_fmt("%lu selected connections", static_cast<unsigned long> (count));
+                }
             }
             else
             if (!dsp_comp_hub.dsp_shared->monitor_con.empty())
@@ -139,9 +139,9 @@ void MDspConnectionActions::show_actions()
     const std::string& std_color = dsp_comp_hub.active_color_table->option_text;
     const std::string& caution_color = dsp_comp_hub.active_color_table->caution_text;
 
-    display_option(" 1   ", "Connect", *cmd_connect, std_color);
-    display_option(" 2   ", "Disconnect", *cmd_disconnect, std_color);
-    display_option(" 3   ", "Connect & resolve split-brain", *cmd_discard, caution_color);
+    display_option(5, "Connect", *cmd_connect, std_color);
+    display_option(5, "Disconnect", *cmd_disconnect, std_color);
+    display_option(5, "Connect & resolve split-brain", *cmd_discard, caution_color);
 
     display_option_query(5, 10);
 }
@@ -151,26 +151,30 @@ void MDspConnectionActions::selection_action(const action_func_type action_func)
     try
     {
         dsp_comp_hub.dsp_common->application_working();
+        const std::string& rsc_name = dsp_comp_hub.dsp_shared->monitor_rsc;
         if (!dsp_comp_hub.dsp_shared->ovrd_connection_selection &&
-            dsp_comp_hub.dsp_shared->have_connections_selection())
+            dsp_comp_hub.dsp_shared->have_connections_selection(rsc_name))
         {
-            ConnectionsMap& selection_map = dsp_comp_hub.dsp_shared->get_selected_connections_map();
-            ConnectionsMap::KeysIterator iter(selection_map);
-
-            const std::string& rsc_name = dsp_comp_hub.dsp_shared->monitor_rsc;
-            if (!rsc_name.empty())
+            ConnectionSelectionMap* const selection_map =
+                dsp_comp_hub.dsp_shared->get_selected_connections_map(rsc_name);
+            // Should always be non-null, because have_connections_selection returned true
+            if (selection_map != nullptr)
             {
-                while (iter.has_next())
+                ConnectionSelectionMap::KeysIterator iter(*selection_map);
+
+                if (!rsc_name.empty())
                 {
-                    const std::string* const con_name_ptr = iter.next();
-                    (this->*action_func)(rsc_name, *con_name_ptr);
+                    while (iter.has_next())
+                    {
+                        const std::string* const con_name_ptr = iter.next();
+                        (this->*action_func)(rsc_name, *con_name_ptr);
+                    }
+                    dsp_comp_hub.dsp_selector->leave_display();
                 }
-                dsp_comp_hub.dsp_selector->leave_display();
             }
         }
         else
         {
-            const std::string& rsc_name = dsp_comp_hub.dsp_shared->monitor_rsc;
             const std::string& con_name = dsp_comp_hub.dsp_shared->monitor_con;
 
             if (!rsc_name.empty() && !con_name.empty())

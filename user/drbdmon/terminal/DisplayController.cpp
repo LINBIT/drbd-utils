@@ -23,6 +23,11 @@
 #include <terminal/MDspMessage.h>
 #include <terminal/MDspPgmInfo.h>
 #include <terminal/MDspConfiguration.h>
+#include <terminal/MDspSelectionFilter.h>
+#include <terminal/MDspBulkActions.h>
+#include <terminal/MDspExportSelection.h>
+#include <terminal/MDspImportSelection.h>
+#include <terminal/MDspOverview.h>
 #include <terminal/InputField.h>
 #include <terminal/DisplayConsts.h>
 #include <terminal/DisplayUpdateEvent.h>
@@ -61,7 +66,12 @@ DisplayController::DisplayController(
     term_size_mgr = std::unique_ptr<PosixTermSize>(new PosixTermSize());
     dsp_styles_mgr = std::unique_ptr<DisplayStyleCollection>(new DisplayStyleCollection());
     ansi_ctl_mgr = std::unique_ptr<AnsiControl>(new AnsiControl());
-    sub_proc_queue_mgr = std::unique_ptr<SubProcessQueue>(new SubProcessQueue());
+    {
+        const uint16_t taskq_concurrency = mon_env.config->taskq_concurrency;
+        sub_proc_queue_mgr = std::unique_ptr<SubProcessQueue>(
+            new SubProcessQueue(taskq_concurrency)
+        );
+    }
 
     // Enable DRBD actions/commands if tracking live events, and not an events log file
     dsp_comp_hub_mgr->enable_drbd_actions   = events_file.empty();
@@ -247,6 +257,21 @@ DisplayController::DisplayController(
         // Pass a mutable components hub to the configuration display
         config_mgr = std::unique_ptr<ModularDisplay>(
             dynamic_cast<ModularDisplay*> (new MDspConfiguration(*dsp_comp_hub_mgr, *(mon_env.config)))
+        );
+        slct_filter_mgr = std::unique_ptr<ModularDisplay>(
+            dynamic_cast<ModularDisplay*> (new MDspSelectionFilter(*dsp_comp_hub_mgr))
+        );
+        bulk_actions_mgr = std::unique_ptr<ModularDisplay>(
+            dynamic_cast<ModularDisplay*> (new MDspBulkActions(*dsp_comp_hub_mgr))
+        );
+        export_slct_mgr = std::unique_ptr<ModularDisplay>(
+            dynamic_cast<ModularDisplay*> (new MDspExportSelection(*dsp_comp_hub_mgr))
+        );
+        import_slct_mgr = std::unique_ptr<ModularDisplay>(
+            dynamic_cast<ModularDisplay*> (new MDspImportSelection(*dsp_comp_hub_mgr))
+        );
+        overview_mgr = std::unique_ptr<ModularDisplay>(
+            dynamic_cast<ModularDisplay*> (new MDspOverview(*dsp_comp_hub_mgr))
         );
 
         wait_msg_mgr = std::unique_ptr<MDspWaitMsg>(new MDspWaitMsg(dsp_comp_hub));
@@ -772,6 +797,21 @@ void DisplayController::get_display(
             break;
         case DisplayId::display_page::CONFIGURATION:
             dsp_obj = config_mgr.get();
+            break;
+        case DisplayId::display_page::SLCT_FILTER:
+            dsp_obj = slct_filter_mgr.get();
+            break;
+        case DisplayId::display_page::BULK_ACT:
+            dsp_obj = bulk_actions_mgr.get();
+            break;
+        case DisplayId::display_page::EXPORT_SLCT:
+            dsp_obj = export_slct_mgr.get();
+            break;
+        case DisplayId::display_page::IMPORT_SLCT:
+            dsp_obj = import_slct_mgr.get();
+            break;
+        case DisplayId::display_page::OVERVIEW:
+            dsp_obj = overview_mgr.get();
             break;
         default:
             break;

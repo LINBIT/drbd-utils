@@ -9,8 +9,10 @@
 #include <stdexcept>
 #include <thread>
 #include <VList.h>
+#include <Once.h>
 #include <subprocess/CmdLine.h>
 #include <subprocess/SubProcess.h>
+#include <subprocess/SubProcessObserver.h>
 
 extern "C"
 {
@@ -18,6 +20,7 @@ extern "C"
     #include <windows.h>
     #include <processthreadsapi.h>
     #include <synchapi.h>
+    #include <processenv.h>
 }
 
 class SubProcessNt : public SubProcess
@@ -29,7 +32,14 @@ class SubProcessNt : public SubProcess
     static const size_t BUFFER_CAP[];
     static const size_t BUFFER_CAP_SIZE;
 
-    SubProcessNt();
+    static std::unique_ptr<char[]>      env_base;
+    static size_t                       env_base_size;
+    static Once                         env_init;
+
+    static void env_init_impl();
+    static const std::function<void()>  env_init_func;
+
+    SubProcessNt(SubProcessObserver* const observer_ref);
     virtual ~SubProcessNt() noexcept;
 
     // @throws SubProcess::Exception
@@ -39,7 +49,8 @@ class SubProcessNt : public SubProcess
 
   private:
     mutable std::mutex  proc_lock;
-    bool                enable_spawn    {true};
+
+    SubProcessObserver* const observer {nullptr};
 
     static std::atomic<uint64_t>    instance_id;
 
@@ -51,6 +62,7 @@ class SubProcessNt : public SubProcess
     HANDLE io_port          {INVALID_HANDLE_VALUE};
 
     DWORD proc_id           {0};
+    bool  enable_spawn      {true};
 
     ULONG_PTR events_key    {1};
     ULONG_PTR errors_key    {2};
