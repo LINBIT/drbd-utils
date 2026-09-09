@@ -3615,6 +3615,7 @@ static int status_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		free_connections(connections);
 		free_devices(devices);
 		free_peer_devices(peer_devices);
+		free_paths(paths);
 		found = true;
 	}
 
