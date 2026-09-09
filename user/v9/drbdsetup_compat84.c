@@ -42,7 +42,22 @@ enum c84_ctx_key {
 	CCTX_PEER_DEVICE,
 };
 
-static bool load_opts(int *argc, char **argv, const struct drbd_cmd *cmd, enum c84_ctx_key key);
+/*
+ * Upper bound on the argv entries the two collectors below produce.
+ * make_longoptions() accepts at most ARRAY_SIZE(buffer) - 1 options for one
+ * command, and each option contributes at most a "--name" and a "value"
+ * entry; the fixed arguments of "attach" fit on top.
+ */
+#define MAX_COMPAT_84_ARGS 100
+
+static bool load_opts(int *argc, char **argv, int max_args,
+		      const struct drbd_cmd *cmd, enum c84_ctx_key key);
+
+static void too_many_args(const struct drbd_cmd *cmd)
+{
+	fprintf(stderr, "%s: too many options for the drbd-8 compatibility mode\n", cmd->cmd);
+	exit(20);
+}
 
 /*
  * This heuristic needs to be in sync with generate_implicit_node_id()
@@ -65,7 +80,7 @@ static int compare_addr(const char *my_addr, const char *peer_addr)
 }
 
 static void drbd8_compat_relevant_opts(const struct drbd_cmd *cm, char **argv_in,
-				       int argc_in, char **args_out, int *argc)
+				       int argc_in, char **args_out, int *argc, int max_args)
 {
 	struct option *options;
 	char *arg;
@@ -80,6 +95,8 @@ static void drbd8_compat_relevant_opts(const struct drbd_cmd *cm, char **argv_in
 		if (c == -1)
 			break;
 		if ((c >= OPT_ALT_BASE && c != OPT_COMPAT84) || c == 0) {
+			if (*argc + 2 > max_args)
+				too_many_args(cm);
 			if (optarg == argv_in[optind - 1]) {
 				/* If it is "--opt val", copy the "--opt" first */
 				arg = argv_in[optind - 2];
@@ -97,7 +114,7 @@ static void drbd8_compat_relevant_opts(const struct drbd_cmd *cm, char **argv_in
 static void drbd8_compat_set_peer_device_options(void)
 {
 	const char *resname = global_ctx.ctx_resource_name;
-	char path[200], *pd_args[40];
+	char path[200], *pd_args[MAX_COMPAT_84_ARGS];
 	struct dirent *dirent;
 	int i, vol, argc;
 	bool loaded;
@@ -120,8 +137,8 @@ static void drbd8_compat_set_peer_device_options(void)
 		if (sscanf(dirent->d_name, "vol-%d", &vol) == 1) {
 			argc = 1;
 			global_ctx.ctx_volume = vol;
-			loaded = load_opts(&argc, pd_args, &peer_device_options_cmd,
-					   CCTX_PEER_DEVICE);
+			loaded = load_opts(&argc, pd_args, ARRAY_SIZE(pd_args),
+					   &peer_device_options_cmd, CCTX_PEER_DEVICE);
 			if (loaded) {
 				_generic_config_cmd(&peer_device_options_cmd, argc, pd_args);
 				for (i = 1; i < argc; i++)
@@ -134,7 +151,7 @@ static void drbd8_compat_set_peer_device_options(void)
 
 static int drbd8_compat_fake_new_peer(int peer_node_id, int argc_in, char **argv_in)
 {
-	char *new_peer_args[40];
+	char *new_peer_args[MAX_COMPAT_84_ARGS];
 	int rv, i, argc_dyn_start, argc = 0;
 
 	context = CTX_PEER_NODE;
@@ -143,9 +160,10 @@ static int drbd8_compat_fake_new_peer(int peer_node_id, int argc_in, char **argv
 	new_peer_args[argc++] = (char *)new_peer_cmd.cmd;
 	new_peer_args[argc++] = "--_name=remote";
 
-	drbd8_compat_relevant_opts(&new_peer_cmd, argv_in, argc_in, new_peer_args, &argc);
+	drbd8_compat_relevant_opts(&new_peer_cmd, argv_in, argc_in, new_peer_args, &argc,
+				   ARRAY_SIZE(new_peer_args));
 	argc_dyn_start = argc;
-	load_opts(&argc, new_peer_args, &new_peer_cmd, CCTX_RESOURCE);
+	load_opts(&argc, new_peer_args, ARRAY_SIZE(new_peer_args), &new_peer_cmd, CCTX_RESOURCE);
 
 	rv = _generic_config_cmd(&new_peer_cmd, argc, new_peer_args);
 	for (i = argc_dyn_start; i < argc; i++)
@@ -369,7 +387,8 @@ static void cctx_key_to_path(enum c84_ctx_key key, char *path, int p_len, const 
 	}
 }
 
-static bool load_opts(int *argc, char **argv, const struct drbd_cmd *cmd, enum c84_ctx_key key)
+static bool load_opts(int *argc, char **argv, int max_args,
+		      const struct drbd_cmd *cmd, enum c84_ctx_key key)
 {
 	ssize_t nread;
 	size_t alloced_size;
@@ -388,6 +407,8 @@ static bool load_opts(int *argc, char **argv, const struct drbd_cmd *cmd, enum c
 			break;
 		if (str[nread - 1] == '\n')
 			str[nread - 1] = 0;
+		if (*argc + 1 > max_args)
+			too_many_args(cmd);
 		argv[(*argc)++] = str;
 	}
 
@@ -398,11 +419,11 @@ static bool load_opts(int *argc, char **argv, const struct drbd_cmd *cmd, enum c
 
 static void store_opts(int argc, char **argv, const struct drbd_cmd *cmd, enum c84_ctx_key key)
 {
-	char *opts[7], fname[100];
+	char *opts[MAX_COMPAT_84_ARGS], fname[100];
 	int i, nr_opts = 0;
 	FILE *f;
 
-	drbd8_compat_relevant_opts(cmd, argv, argc, opts, &nr_opts);
+	drbd8_compat_relevant_opts(cmd, argv, argc, opts, &nr_opts, ARRAY_SIZE(opts));
 	if (nr_opts == 0)
 		return;
 
@@ -427,7 +448,7 @@ int drbd8_compat_attach(int argc_in, char **argv_in)
 {
 	static struct drbd_cmd attach_cmd_no_recursion;
 	static bool initialized = false;
-	char *attach_args[20];
+	char *attach_args[MAX_COMPAT_84_ARGS];
 	int argc = 4; /* placing the options behind the fixed position args */
 
 	if (!initialized) {
@@ -438,7 +459,8 @@ int drbd8_compat_attach(int argc_in, char **argv_in)
 	store_opts(argc_in, argv_in, &peer_device_options_cmd, CCTX_MINOR);
 	store_opts(argc_in, argv_in, &new_peer_cmd, CCTX_RES_VIA_MINOR);
 
-	drbd8_compat_relevant_opts(&attach_cmd, argv_in, argc_in, attach_args, &argc);
+	drbd8_compat_relevant_opts(&attach_cmd, argv_in, argc_in, attach_args, &argc,
+				   ARRAY_SIZE(attach_args));
 
 	attach_args[0] = (char *)attach_cmd.cmd;
 	attach_args[1] = (char *)argv_in[optind + 0]; /* lower_dev */
