@@ -2551,27 +2551,85 @@ static struct context_def *resource_options_compat_84()
 #endif
 
 
-static void show_resource_list(struct resources_list *resources_list, char* old_objname)
+/*
+ * Everything a printer needs about one resource. drbdsetup gives up and exits
+ * when a dump keeps racing structural changes (see dump_should_retry()), so
+ * every dump a printer needs is collected up front: once the first line is
+ * written, giving up would leave truncated output behind.
+ */
+struct resource_children {
+	struct devices_list *devices;
+	struct connections_list *connections;
+	struct peer_devices_list *peer_devices;
+	struct paths_list *paths;
+};
+
+/* Indexed like the resources list it is collected from. */
+static struct resource_children *collect_resource_children(struct resources_list *resources,
+							   const char *objname, bool with_paths)
+{
+	struct resource_children *children;
+	struct resources_list *resource;
+	int n = 0, i;
+
+	for (resource = resources; resource; resource = resource->next)
+		n++;
+
+	children = calloc(n + 1, sizeof(*children));
+	if (!children) {
+		fprintf(stderr, "could not allocate resource list\n");
+		exit(20);
+	}
+
+	for (resource = resources, i = 0; resource; resource = resource->next, i++) {
+		if (strcmp(objname, "all") && strcmp(objname, resource->name))
+			continue;
+
+		children[i].devices = list_devices(resource->name);
+		children[i].connections = sort_connections(list_connections(resource->name));
+		if (children[i].devices && children[i].connections)
+			children[i].peer_devices = list_peer_devices(resource->name);
+		if (with_paths && children[i].connections &&
+		    genl_op_known(drbd_sock->s_family, DRBD_ADM_GET_PATHS))
+			children[i].paths = list_paths(resource->name);
+	}
+
+	return children;
+}
+
+static void free_resource_children(struct resources_list *resources,
+				   struct resource_children *children)
 {
 	struct resources_list *resource;
+	int i;
+
+	for (resource = resources, i = 0; resource; resource = resource->next, i++) {
+		free_connections(children[i].connections);
+		free_devices(children[i].devices);
+		free_peer_devices(children[i].peer_devices);
+		free_paths(children[i].paths);
+	}
+	free(children);
+}
+
+static void show_resource_list(struct resources_list *resources_list, char* old_objname)
+{
+	struct resource_children *children = collect_resource_children(resources_list, old_objname, false);
+	struct resources_list *resource;
+	int i;
 
 	if (resources_list == NULL && !strcmp(old_objname, "all"))
 		printf("# No currently configured DRBD found.\n");
 
-	for (resource = resources_list; resource; resource = resource->next) {
-		struct devices_list *devices, *device;
-		struct connections_list *connections, *connection;
-		struct peer_devices_list *peer_devices = NULL;
+	for (resource = resources_list, i = 0; resource; resource = resource->next, i++) {
+		struct devices_list *devices = children[i].devices, *device;
+		struct connections_list *connections = children[i].connections, *connection;
+		struct peer_devices_list *peer_devices = children[i].peer_devices;
 		struct context_def *res_opts_def = &resource_options_ctx;
 		struct nlattr *nla;
 
 		if (strcmp(old_objname, "all") && strcmp(old_objname, resource->name))
 			continue;
-
-		devices = list_devices(resource->name);
-		connections = sort_connections(list_connections(resource->name));
-		if (devices && connections)
-			peer_devices = list_peer_devices(resource->name);
 
 		printI("resource \"%s\" {\n", resource->name);
 		++indent;
@@ -2606,11 +2664,9 @@ static void show_resource_list(struct resources_list *resources_list, char* old_
 
 		--indent;
 		printI("}\n\n");
-
-		free_connections(connections);
-		free_devices(devices);
-		free_peer_devices(peer_devices);
 	}
+
+	free_resource_children(resources_list, children);
 }
 
 static bool will_resource_list_json(struct resources_list *resource, char* old_objname)
@@ -2626,25 +2682,22 @@ static bool will_resource_list_json(struct resources_list *resource, char* old_o
 
 static void show_resource_list_json(struct resources_list *resources_list, char* old_objname)
 {
+	struct resource_children *children = collect_resource_children(resources_list, old_objname, false);
 	struct resources_list *resource;
+	int i;
 
 	printI("[\n");
 	++indent;
 
-	for (resource = resources_list; resource; resource = resource->next) {
-		struct devices_list *devices, *device;
-		struct connections_list *connections, *connection;
-		struct peer_devices_list *peer_devices = NULL;
+	for (resource = resources_list, i = 0; resource; resource = resource->next, i++) {
+		struct devices_list *devices = children[i].devices, *device;
+		struct connections_list *connections = children[i].connections, *connection;
+		struct peer_devices_list *peer_devices = children[i].peer_devices;
 
 		struct nlattr *nla;
 
 		if (!will_resource_list_json(resource, old_objname))
 			continue;
-
-		devices = list_devices(resource->name);
-		connections = sort_connections(list_connections(resource->name));
-		if (devices && connections)
-			peer_devices = list_peer_devices(resource->name);
 
 		printI("{\n");
 		++indent;
@@ -2696,14 +2749,12 @@ static void show_resource_list_json(struct resources_list *resources_list, char*
 
 		--indent;
 		printI("}%s\n", will_resource_list_json(resource->next, old_objname) ? "," :"");
-
-		free_connections(connections);
-		free_devices(devices);
-		free_peer_devices(peer_devices);
 	}
 
 	indent--;
 	printI("]\n");
+
+	free_resource_children(resources_list, children);
 }
 
 static int show_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
@@ -3550,13 +3601,14 @@ static void link_peer_devices_to_devices(struct peer_devices_list *peer_devices,
 static int status_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx, int argc, char **argv)
 {
 	struct resources_list *resources, *resource;
+	struct resource_children *children;
 	struct sigaction sa = {
 		.sa_handler = stop_colors,
 		.sa_flags = SA_RESETHAND,
 	};
 	bool found = false;
 	bool json = false;
-	int c;
+	int c, i;
 
 	optind = 0;  /* reset getopt_long() */
 	for (;;) {
@@ -3584,6 +3636,7 @@ static int status_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx,
 	}
 
 	resources = sort_resources(list_resources(ctx->objname));
+	children = collect_resource_children(resources, ctx->objname, true);
 
 	if (resources == NULL && !json && !strcmp(ctx->objname, "all"))
 		printf("# No currently configured DRBD found.\n");
@@ -3596,11 +3649,11 @@ static int status_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx,
 	if (json)
 		puts("[");
 
-	for (resource = resources; resource; resource = resource->next) {
-		struct devices_list *devices, *device;
-		struct connections_list *connections, *connection;
-		struct peer_devices_list *peer_devices = NULL;
-		struct paths_list *paths = NULL;
+	for (resource = resources, i = 0; resource; resource = resource->next, i++) {
+		struct devices_list *devices = children[i].devices, *device;
+		struct connections_list *connections = children[i].connections, *connection;
+		struct peer_devices_list *peer_devices = children[i].peer_devices;
+		struct paths_list *paths = children[i].paths;
 		bool single_device;
 		static bool jsonisfirst = true;
 
@@ -3608,13 +3661,6 @@ static int status_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx,
 			continue;
 		if (json)
 			jsonisfirst ? jsonisfirst = false : puts(",");
-
-		devices = list_devices(resource->name);
-		connections = sort_connections(list_connections(resource->name));
-		if (devices && connections)
-			peer_devices = list_peer_devices(resource->name);
-		if (connections && genl_op_known(drbd_sock->s_family, DRBD_ADM_GET_PATHS))
-			paths = list_paths(resource->name);
 
 		link_peer_devices_to_devices(peer_devices, devices);
 
@@ -3643,15 +3689,13 @@ static int status_cmd(const struct drbd_cmd *cm, const struct drbd_cmd_ctx *ctx,
 			wrap_printf(0, "\n");
 		}
 
-		free_connections(connections);
-		free_devices(devices);
-		free_peer_devices(peer_devices);
 		found = true;
 	}
 
 	if (json)
 		puts("]\n");
 
+	free_resource_children(resources, children);
 	free_resources(resources);
 	if (!found && strcmp(ctx->objname, "all")) {
 		fprintf(stderr, "%s: No such resource\n", ctx->objname);
