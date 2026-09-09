@@ -239,7 +239,7 @@ static int drbd8_compat_get_my_node_id(int argc, char **argv, const char **my_ad
 	/* parse peer_addr */
 	*peer_addr = argv[optind];
 	if (strncmp(*peer_addr, "peer:", 5) == 0)
-		peer_addr += 5;
+		*peer_addr += 5;
 	assert(sizeof(global_ctx.ctx_peer_addr) >= sizeof(*x));
 	x = (struct sockaddr_storage *) &global_ctx.ctx_peer_addr;
 	global_ctx.ctx_peer_addr_len = sockaddr_from_str(x, *peer_addr);
