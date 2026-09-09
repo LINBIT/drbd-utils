@@ -44,13 +44,21 @@ override_dh_installinit:
 		--no-stop-on-upgrade --no-start
 
 # systemd: do not enable drbd.service (users opt in, or use per-resource drbd@.target)
-# do not start/restart any service on install/upgrade
-# (drbd-graceful-down and drbd-graceful-disconnect are triggered by udev)
+# do not start/restart/stop any service on install/upgrade
+# (drbd-graceful-down and drbd-graceful-disconnect are triggered by udev;
+# stopping them would take DRBD resources down)
+# drbd-configured.target is enabled but not started.
+# Note: --no-start alone is not enough. With debhelper 13 the units are
+# still stopped on upgrade (in preinst) unless --no-stop-on-upgrade is given;
+# with debhelper 12 (focal) they are still restarted after the upgrade (in
+# postinst) unless --no-restart-after-upgrade is given as well. Units are
+# named explicitly; the template units have nothing to enable or start.
+dh_installsystemd_opts = --no-start --no-stop-on-upgrade --no-restart-after-upgrade
 override_dh_installsystemd:
-	dh_installsystemd -p drbd-utils --name=drbd --no-enable --no-start
-	dh_installsystemd -p drbd-utils --name=drbd-graceful-down --no-start
-	dh_installsystemd -p drbd-utils --name=drbd-graceful-disconnect --no-start
-	dh_installsystemd -p drbd-utils --remaining --no-start
+	dh_installsystemd -p drbd-utils $(dh_installsystemd_opts) --no-enable drbd.service
+	dh_installsystemd -p drbd-utils $(dh_installsystemd_opts) \
+		drbd-graceful-down.service drbd-graceful-disconnect.service
+	dh_installsystemd -p drbd-utils $(dh_installsystemd_opts) drbd-configured.target
 
 override_dh_gencontrol:
 	dh_gencontrol -Ndrbd8-utils
