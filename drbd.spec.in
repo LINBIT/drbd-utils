@@ -416,7 +416,7 @@ mkdir -m 0700 -p %{buildroot}%{_var}/run/drbd/lock
 rm -rf %{buildroot}
 
 %post utils
-%systemd_post drbd.service
+%systemd_post drbd.service drbd-configured.target
 %if %{with manual}
 _v=9.0
 for f in drbd drbdadm drbdmeta drbdsetup; do
@@ -439,10 +439,10 @@ for f in drbd drbdadm drbdmeta drbdsetup; do
 done
 rm -f %{_mandir}/man5/drbd.conf.5.gz
 fi
-%systemd_preun drbd.service
+%systemd_preun drbd.service drbd-configured.target
 
 %postun utils
-%systemd_postun drbd.service
+%systemd_postun drbd.service drbd-configured.target
 
 
 %changelog
