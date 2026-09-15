@@ -1004,7 +1004,10 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	    <option>after-sb-0pri</option> algorithm.  If the decision is to
 	    discard the data on the primary node, call the
 	    <option xml:id="pri-lost-after-sb">pri-lost-after-sb</option> handler on the primary
-	    node.</para>
+	    node.  DRBD then makes that node secondary, failing IO to any
+	    process that has the device open for writing, and retries the
+	    connection.  The retried handshake sees no primary node, so
+	    <option>after-sb-0pri</option> decides it.</para>
 	  </listitem>
 	</varlistentry>
       </variablelist>
@@ -1050,10 +1053,18 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 
     <listitem>
       <para>Call the <option>pri-lost-after-sb</option> helper program on one
-        of the machines unless that machine can demote to secondary. The helper
-        program is expected to reboot the machine, which brings the node into
-        a secondary role. Which machine runs the helper program is determined
-        by the <option>after-sb-0pri</option> strategy.</para>
+        of the machines.  The helper program is expected to reboot the machine,
+        which brings the node into a secondary role.  If it returns instead,
+        DRBD makes that node secondary itself, failing IO to any process that
+        has the device open for writing, and retries the connection.  Which
+        machine runs the helper program is determined by the
+        <option>after-sb-0pri</option> strategy.</para>
+
+      <para>The retried handshake sees one primary node, so
+        <option>after-sb-1pri</option> decides it.  Leaving
+        <option>after-sb-1pri</option> at its default of
+        <option>disconnect</option> stops the recovery there, with the split
+        brain unresolved.</para>
     </listitem>
   </varlistentry>
       </variablelist>
