@@ -781,7 +781,9 @@ resource
                 <secondary>pri-lost-after-sb</secondary>
               </indexterm> The local node is currently primary, but it has lost
               the after-split-brain auto recovery procedure. The node should be
-              abandoned. <!-- FIXME: What is "abandon a node" supposed to mean? --></para>
+              abandoned. <!-- FIXME: What is "abandon a node" supposed to mean? -->
+              Current DRBD versions no longer call this handler; see
+              <option>after-sb-2pri call-pri-lost-after-sb</option>.</para>
           </listitem>
         </varlistentry>
 

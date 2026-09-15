@@ -1002,9 +1002,13 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	  <listitem>
 	    <para>Always take the decision of the
 	    <option>after-sb-0pri</option> algorithm.  If the decision is to
-	    discard the data on the primary node, call the
-	    <option xml:id="pri-lost-after-sb">pri-lost-after-sb</option> handler on the primary
-	    node.</para>
+	    discard the data on the primary node, DRBD makes that node
+	    secondary, as <command>drbdsetup secondary --force</command> does:
+	    IO of processes that have the device open fails.  DRBD then retries
+	    the connection.  The retried handshake sees no primary node, so
+	    <option>after-sb-0pri</option> decides it.  Earlier DRBD versions
+	    call the <option xml:id="pri-lost-after-sb">pri-lost-after-sb</option>
+	    handler on the primary node instead.</para>
 	  </listitem>
 	</varlistentry>
       </variablelist>
@@ -1049,11 +1053,40 @@ SYMLINK_BY_DISK=drbd/by-disk/<backing-disk-name>
 	  <term><option>call-pri-lost-after-sb</option></term>
 
     <listitem>
-      <para>Call the <option>pri-lost-after-sb</option> helper program on one
-        of the machines unless that machine can demote to secondary. The helper
-        program is expected to reboot the machine, which brings the node into
-        a secondary role. Which machine runs the helper program is determined
-        by the <option>after-sb-0pri</option> strategy.</para>
+      <para>Make one of the machines secondary, as
+        <command>drbdsetup secondary --force</command> does: IO of processes
+        that have the device open fails.  DRBD then retries the connection.
+        Which machine gives up the primary role is determined by the
+        <option>after-sb-0pri</option> strategy.  Earlier DRBD versions call
+        the <option>pri-lost-after-sb</option> helper program on that machine
+        instead, which is expected to reboot it.</para>
+
+      <para>The retried handshake sees one primary node, so
+        <option>after-sb-1pri</option> decides it.  A configuration that
+        recovers from a split brain with two primaries without manual
+        intervention, and discards what the node that lost wrote since the
+        split brain:</para>
+
+      <programlisting><![CDATA[
+net {
+	after-sb-0pri discard-least-changes;	# or another discard-* policy
+	after-sb-1pri consensus;
+	after-sb-2pri call-pri-lost-after-sb;
+}
+]]></programlisting>
+
+      <para><option>after-sb-0pri</option> has to choose a node, or no node
+        gives up the primary role and DRBD disconnects:
+        <option>disconnect</option> never chooses, and
+        <option>discard-zero-changes</option> does not choose when both
+        primaries wrote.  Which of the other <option>discard-*</option>
+        policies fits depends on the application: the node with fewer changes
+        may hold the more important ones, and the same holds for the younger
+        or the older primary.  <option>consensus</option> applies the same
+        <option>after-sb-0pri</option> decision on the retried handshake;
+        <option>discard-secondary</option> would discard the secondary in any
+        split brain with one primary, also in one that
+        <option>after-sb-0pri</option> decides the other way.</para>
     </listitem>
   </varlistentry>
       </variablelist>
