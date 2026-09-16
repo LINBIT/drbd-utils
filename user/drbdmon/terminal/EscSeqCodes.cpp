@@ -9,6 +9,8 @@ const char  EscSeqCodes::CURSOR_UP      = 0x41;
 const char  EscSeqCodes::CURSOR_DOWN    = 0x42;
 const char  EscSeqCodes::CURSOR_RIGHT   = 0x43;
 const char  EscSeqCodes::CURSOR_LEFT    = 0x44;
+const char  EscSeqCodes::CURSOR_HOME    = 0x48;
+const char  EscSeqCodes::CURSOR_END     = 0x46;
 
 const char  EscSeqCodes::FUNC_01        = 0x50;
 const char  EscSeqCodes::FUNC_02        = 0x51;

@@ -43,6 +43,11 @@ class InputSequenceDecoder
     uint32_t            saved_key_code  {0};
     std::string         saved_seq;
 
+    // Decodes the cursor movement keys, which terminals send with a CSI introducer while the
+    // cursor keys are in normal mode, and with an SS3 introducer while they are in application
+    // mode. Returns KeyCodes::NONE if in_char does not end a cursor key sequence.
+    static uint32_t decode_cursor_key(const char in_char) noexcept;
+
     uint32_t update_mouse_event(const char in_char, MouseEvent& mouse);
 
     void reset_state();

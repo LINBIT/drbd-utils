@@ -19,6 +19,41 @@ InputSequenceDecoder::~InputSequenceDecoder() noexcept
 {
 }
 
+uint32_t InputSequenceDecoder::decode_cursor_key(const char in_char) noexcept
+{
+    uint32_t key_code = KeyCodes::NONE;
+    if (in_char == EscSeqCodes::CURSOR_UP)
+    {
+        key_code = KeyCodes::ARROW_UP;
+    }
+    else
+    if (in_char == EscSeqCodes::CURSOR_DOWN)
+    {
+        key_code = KeyCodes::ARROW_DOWN;
+    }
+    else
+    if (in_char == EscSeqCodes::CURSOR_LEFT)
+    {
+        key_code = KeyCodes::ARROW_LEFT;
+    }
+    else
+    if (in_char == EscSeqCodes::CURSOR_RIGHT)
+    {
+        key_code = KeyCodes::ARROW_RIGHT;
+    }
+    else
+    if (in_char == EscSeqCodes::CURSOR_HOME)
+    {
+        key_code = KeyCodes::HOME;
+    }
+    else
+    if (in_char == EscSeqCodes::CURSOR_END)
+    {
+        key_code = KeyCodes::END;
+    }
+    return key_code;
+}
+
 // @throws std::bad_alloc
 uint32_t InputSequenceDecoder::input_char(const char in_char, MouseEvent& mouse)
 {
@@ -84,25 +119,7 @@ uint32_t InputSequenceDecoder::input_char(const char in_char, MouseEvent& mouse)
                 }
                 else
                 {
-                    if (in_char == EscSeqCodes::CURSOR_UP)
-                    {
-                        key_code = KeyCodes::ARROW_UP;
-                    }
-                    else
-                    if (in_char == EscSeqCodes::CURSOR_DOWN)
-                    {
-                        key_code = KeyCodes::ARROW_DOWN;
-                    }
-                    else
-                    if (in_char == EscSeqCodes::CURSOR_LEFT)
-                    {
-                        key_code = KeyCodes::ARROW_LEFT;
-                    }
-                    else
-                    if (in_char == EscSeqCodes::CURSOR_RIGHT)
-                    {
-                        key_code = KeyCodes::ARROW_RIGHT;
-                    }
+                    key_code = decode_cursor_key(in_char);
                     reset_state();
                 }
             }
@@ -214,6 +231,12 @@ uint32_t InputSequenceDecoder::input_char(const char in_char, MouseEvent& mouse)
             if (in_char == EscSeqCodes::FUNC_04)
             {
                 key_code = KeyCodes::FUNC_04;
+            }
+            else
+            {
+                // While the terminal has the cursor keys in application mode, it introduces them
+                // with SS3 rather than with CSI
+                key_code = decode_cursor_key(in_char);
             }
             reset_state();
             break;

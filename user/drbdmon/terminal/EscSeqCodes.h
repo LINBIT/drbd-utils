@@ -17,6 +17,9 @@ class EscSeqCodes
     static const char   CURSOR_DOWN;
     static const char   CURSOR_RIGHT;
     static const char   CURSOR_LEFT;
+    // Home and End, as sent by xterm style terminals with a CSI or an SS3 introducer
+    static const char   CURSOR_HOME;
+    static const char   CURSOR_END;
 
     static const char   FUNC_01;
     static const char   FUNC_02;
