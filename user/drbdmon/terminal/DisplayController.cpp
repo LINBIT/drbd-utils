@@ -288,6 +288,7 @@ DisplayController::DisplayController(
             dsp_io->write_text(ansi_ctl->ANSI_MOUSE_ON.c_str());
         }
         dsp_io->write_text(ansi_ctl->ANSI_CLEAR_SCREEN.c_str());
+        dsp_io->flush();
     }
 
     dsp_comp_hub_mgr->verify();
@@ -312,6 +313,7 @@ DisplayController::~DisplayController() noexcept
     dsp_io->write_text(ansi_ctl->ANSI_ALTBFR_OFF.c_str());
 
     dsp_io->write_text(ansi_ctl->ANSI_CLEAR_SCREEN.c_str());
+    dsp_io->flush();
 
     DisplayStack::ValuesIterator iter(*dsp_stack);
     while (iter.has_next())
@@ -349,8 +351,10 @@ DisplayController::~DisplayController() noexcept
     }
 
     dsp_io->write_text("Waiting for the external processes to exit: ");
+    dsp_io->flush();
     sub_proc_queue_mgr = nullptr;
     dsp_io->write_text("done.\n");
+    dsp_io->flush();
 }
 
 void DisplayController::initialize()
@@ -382,6 +386,7 @@ void DisplayController::exit_initial_display()
     {
         switch_active_display(resource_view_mgr.get(), DisplayId::display_page::RSC_LIST, true);
     }
+    dsp_comp_hub_mgr->dsp_io->flush();
 }
 
 bool DisplayController::notify_drbd_changed()
@@ -459,6 +464,7 @@ void DisplayController::key_pressed(const uint32_t key)
         active_display->key_pressed(key);
         cond_refresh_display();
     }
+    dsp_comp_hub_mgr->dsp_io->flush();
 }
 
 void DisplayController::mouse_action(MouseEvent& mouse)
@@ -468,6 +474,7 @@ void DisplayController::mouse_action(MouseEvent& mouse)
         active_display->mouse_action(mouse);
         cond_refresh_display();
     }
+    dsp_comp_hub_mgr->dsp_io->flush();
 }
 
 void DisplayController::display()
@@ -489,6 +496,7 @@ void DisplayController::display()
     {
         terminal_size_error();
     }
+    dsp_comp_hub.dsp_io->flush();
 }
 
 void DisplayController::terminal_size_error()

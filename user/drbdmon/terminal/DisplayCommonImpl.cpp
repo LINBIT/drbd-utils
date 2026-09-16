@@ -915,6 +915,8 @@ void DisplayCommonImpl::application_working() const
     dsp_io.write_text(dsp_comp_hub.active_color_table->rst.c_str());
     dsp_io.write_text(dsp_comp_hub.active_character_table->sym_working.c_str());
     dsp_io.write_text(" Working");
+    // The indicator must become visible before the long running operation starts
+    dsp_io.flush();
 }
 
 void DisplayCommonImpl::write_hotkey(const ColorTable& clr, const char* const key, const char* const label) const
