@@ -107,6 +107,21 @@ void DisplayIo::flush() const noexcept
     }
     if (!output_buffer.empty())
     {
+        try
+        {
+            // Ask the terminal not to present any of the intermediate states of the update.
+            // The update is transferred by a single write() call either way, but a terminal that
+            // supports synchronized output then also refrains from rendering a frame in the middle
+            // of processing it.
+            const std::string& sync_begin = AnsiControl::ANSI_SYNC_BEGIN;
+            const std::string& sync_end = AnsiControl::ANSI_SYNC_END;
+            output_buffer.insert(output_buffer.begin(), sync_begin.begin(), sync_begin.end());
+            output_buffer.insert(output_buffer.end(), sync_end.begin(), sync_end.end());
+        }
+        catch (std::bad_alloc&)
+        {
+            // Out of memory, transfer the update without the synchronized output sequences
+        }
         write_fd(output_buffer.data(), output_buffer.size());
         output_buffer.clear();
     }

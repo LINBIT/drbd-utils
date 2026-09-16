@@ -8,6 +8,8 @@ const std::string AnsiControl::ANSI_ALTBFR_ON       = "\x1B[?1049h";
 const std::string AnsiControl::ANSI_ALTBFR_OFF      = "\x1B[?1049l";
 const std::string AnsiControl::ANSI_MOUSE_ON        = "\x1B[?1000h\x1B[?1006h";
 const std::string AnsiControl::ANSI_MOUSE_OFF       = "\x1B[?1000l";
+const std::string AnsiControl::ANSI_SYNC_BEGIN      = "\x1B[?2026h";
+const std::string AnsiControl::ANSI_SYNC_END        = "\x1B[?2026l";
 
 const std::string AnsiControl::ANSI_FMT_CURSOR_POS  = "\x1B[%u;%uf";
 
