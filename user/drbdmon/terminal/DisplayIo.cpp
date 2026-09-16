@@ -48,6 +48,13 @@ void DisplayIo::write_buffer(const char* const buffer, const size_t write_length
 {
     if (write_length >= 1)
     {
+        ScreenBuffer* const screen_buffer = screen_buffer_mgr.get();
+        if (screen_buffer != nullptr)
+        {
+            screen_buffer->apply(buffer, write_length);
+            return;
+        }
+
         try
         {
             output_buffer.insert(output_buffer.end(), buffer, buffer + write_length);
@@ -76,10 +83,78 @@ void DisplayIo::write_buffer(const char* const buffer, const size_t write_length
  */
 void DisplayIo::flush() const noexcept
 {
+    if (frame_level >= 1)
+    {
+        // A display update is still being generated, transferring it now would show
+        // a partially updated screen
+        return;
+    }
+
+    ScreenBuffer* const screen_buffer = screen_buffer_mgr.get();
+    if (screen_buffer != nullptr)
+    {
+        try
+        {
+            screen_buffer->render(output_buffer);
+        }
+        catch (std::bad_alloc&)
+        {
+            // Out of memory, the update sequence is incomplete. Discard it and update the entire
+            // terminal on the next flush() call.
+            output_buffer.clear();
+            screen_buffer->invalidate();
+        }
+    }
     if (!output_buffer.empty())
     {
         write_fd(output_buffer.data(), output_buffer.size());
         output_buffer.clear();
+    }
+}
+
+void DisplayIo::enable_screen_buffer(const uint16_t cols, const uint16_t rows)
+{
+    if (screen_buffer_mgr == nullptr)
+    {
+        screen_buffer_mgr = std::unique_ptr<ScreenBuffer>(new ScreenBuffer(cols, rows));
+    }
+    else
+    {
+        screen_buffer_mgr->set_dimensions(cols, rows);
+    }
+}
+
+void DisplayIo::disable_screen_buffer() noexcept
+{
+    screen_buffer_mgr = nullptr;
+}
+
+void DisplayIo::set_screen_dimensions(const uint16_t cols, const uint16_t rows)
+{
+    if (screen_buffer_mgr != nullptr)
+    {
+        screen_buffer_mgr->set_dimensions(cols, rows);
+    }
+}
+
+void DisplayIo::invalidate_screen() noexcept
+{
+    if (screen_buffer_mgr != nullptr)
+    {
+        screen_buffer_mgr->invalidate();
+    }
+}
+
+void DisplayIo::begin_frame() noexcept
+{
+    ++frame_level;
+}
+
+void DisplayIo::end_frame() noexcept
+{
+    if (frame_level >= 1)
+    {
+        --frame_level;
     }
 }
 
@@ -209,33 +284,17 @@ void DisplayIo::write_fill_char(const char fill_char, const size_t fill_length) 
 {
     if (fill_length >= 1)
     {
-        try
+        const size_t chunk_length = std::min(fill_length, FORMAT_BUFFER_SIZE);
+        for (size_t idx = 0; idx < chunk_length; ++idx)
         {
-            output_buffer.insert(output_buffer.end(), fill_length, fill_char);
+            format_buffer[idx] = fill_char;
         }
-        catch (std::bad_alloc&)
+        size_t remain_length = fill_length;
+        while (remain_length > 0)
         {
-            // Out of memory, fall back to writing the fill characters in small chunks
-            const size_t chunk_length = std::min(fill_length, FORMAT_BUFFER_SIZE);
-            for (size_t idx = 0; idx < chunk_length; ++idx)
-            {
-                format_buffer[idx] = fill_char;
-            }
-            size_t remain_length = fill_length;
-            while (remain_length > 0)
-            {
-                const size_t write_length = std::min(chunk_length, remain_length);
-                write_fd(format_buffer, write_length);
-                remain_length -= write_length;
-            }
-            return;
-        }
-
-        if (output_buffer.size() >= MAX_OUTPUT_BUFFER_SIZE)
-        {
-            // Guard against unbounded growth of the output buffer
-            write_fd(output_buffer.data(), output_buffer.size());
-            output_buffer.clear();
+            const size_t write_length = std::min(chunk_length, remain_length);
+            write_buffer(format_buffer, write_length);
+            remain_length -= write_length;
         }
     }
 }

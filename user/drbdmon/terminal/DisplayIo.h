@@ -2,6 +2,7 @@
 #define DISPLAYIO_H
 
 #include <default_types.h>
+#include <terminal/ScreenBuffer.h>
 #include <string>
 #include <cstring>
 #include <memory>
@@ -39,6 +40,27 @@ class DisplayIo
     // partially updated screens.
     virtual void flush() const noexcept;
 
+    // Routes the output of the write_* methods through a ScreenBuffer, so that flush() only updates
+    // those parts of the terminal that actually changed. Must be disabled while sequences that the
+    // ScreenBuffer does not interpret are written, which is the case while the terminal is set up
+    // and while it is reset.
+    // @throws std::bad_alloc
+    virtual void enable_screen_buffer(const uint16_t cols, const uint16_t rows);
+    virtual void disable_screen_buffer() noexcept;
+
+    // @throws std::bad_alloc
+    virtual void set_screen_dimensions(const uint16_t cols, const uint16_t rows);
+
+    // Forces the next flush() call to update the entire terminal
+    virtual void invalidate_screen() noexcept;
+
+    // Marks the beginning and the end of the generation of a display update.
+    // flush() does nothing while a display update is being generated, so that a flush() call from
+    // within the code that generates the update cannot transfer a partially generated screen
+    // to the terminal.
+    virtual void begin_frame() noexcept;
+    virtual void end_frame() noexcept;
+
   private:
     const int output_fd;
 
@@ -49,6 +71,14 @@ class DisplayIo
     // Mutable, because the write_* and flush methods are const, as they do not modify the state of the
     // display, they merely collect and transfer output.
     mutable std::vector<char> output_buffer;
+
+    // If present, the output of the write_* methods is painted into this buffer instead of being
+    // collected for a verbatim transfer to the terminal
+    std::unique_ptr<ScreenBuffer> screen_buffer_mgr;
+
+    // Nesting level of begin_frame()/end_frame(), nonzero while a display update is being generated.
+    // Mutable for the same reason as output_buffer.
+    mutable uint32_t frame_level {0};
 
     // 20 ms delay
     struct timespec write_retry_delay {0, 20000000};

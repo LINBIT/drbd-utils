@@ -289,6 +289,10 @@ DisplayController::DisplayController(
         }
         dsp_io->write_text(ansi_ctl->ANSI_CLEAR_SCREEN.c_str());
         dsp_io->flush();
+
+        // From here on, all display output is painted into the screen buffer, so that only
+        // the parts of the terminal that actually change are updated
+        dsp_io->enable_screen_buffer(dsp_comp_hub_mgr->term_cols, dsp_comp_hub_mgr->term_rows);
     }
 
     dsp_comp_hub_mgr->verify();
@@ -307,6 +311,9 @@ DisplayController::~DisplayController() noexcept
 {
     AnsiControl* ansi_ctl = dsp_comp_hub_mgr->ansi_ctl;
     DisplayIo* dsp_io = dsp_comp_hub_mgr->dsp_io;
+
+    dsp_io->flush();
+    dsp_io->disable_screen_buffer();
 
     dsp_io->write_text(ansi_ctl->ANSI_CURSOR_ON.c_str());
     dsp_io->write_text(ansi_ctl->ANSI_MOUSE_OFF.c_str());
@@ -444,6 +451,15 @@ void DisplayController::terminal_size_changed_impl() noexcept
             dsp_comp_hub.term_rows - DisplayConsts::CMD_LINE_Y
         );
         dsp_comp_hub.command_line->set_field_length(dsp_comp_hub.term_cols - DisplayConsts::CMD_LINE_X + 1);
+
+        try
+        {
+            dsp_comp_hub.dsp_io->set_screen_dimensions(dsp_comp_hub.term_cols, dsp_comp_hub.term_rows);
+        }
+        catch (std::bad_alloc&)
+        {
+            // Out of memory, continue with the screen buffer's previous dimensions
+        }
     }
 }
 
@@ -456,6 +472,8 @@ void DisplayController::key_pressed(const uint32_t key)
     else
     if (key == KeyCodes::FUNC_05)
     {
+        // The contents of the terminal may have been damaged by another program
+        dsp_comp_hub_mgr->dsp_io->invalidate_screen();
         display();
     }
     else
@@ -480,6 +498,7 @@ void DisplayController::mouse_action(MouseEvent& mouse)
 void DisplayController::display()
 {
     ComponentsHub& dsp_comp_hub = *dsp_comp_hub_mgr;
+    dsp_comp_hub.dsp_io->begin_frame();
     dsp_comp_hub.dsp_io->write_text(dsp_comp_hub.ansi_ctl->ANSI_CURSOR_OFF.c_str());
     if (dsp_comp_hub.have_term_size)
     {
@@ -496,6 +515,7 @@ void DisplayController::display()
     {
         terminal_size_error();
     }
+    dsp_comp_hub.dsp_io->end_frame();
     dsp_comp_hub.dsp_io->flush();
 }
 
