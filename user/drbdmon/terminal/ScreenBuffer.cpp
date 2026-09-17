@@ -767,54 +767,54 @@ void ScreenBuffer::render(std::vector<char>& out_data)
             if (equal_cells(back_buffer[row_start + col_idx], front_buffer[row_start + col_idx]))
             {
                 ++col_idx;
-                continue;
             }
-
-            // Collect a run of changed cells. Runs that are separated by no more than MAX_SKIP_LENGTH
-            // unchanged cells are combined, because rewriting a few unchanged cells costs less than
-            // the cursor positioning sequence that would be required to skip them.
-            uint16_t run_end = col_idx;
-            uint16_t skip_count = 0;
-            for (uint16_t scan_idx = col_idx; scan_idx < cols; ++scan_idx)
+            else
             {
-                if (!equal_cells(back_buffer[row_start + scan_idx], front_buffer[row_start + scan_idx]))
+                // Collect a run of changed cells. Runs that are separated by no more than MAX_SKIP_LENGTH
+                // unchanged cells are combined, because rewriting a few unchanged cells costs less than
+                // the cursor positioning sequence that would be required to skip them.
+                uint16_t run_end = col_idx;
+                uint16_t skip_count = 0;
+                for (uint16_t scan_idx = col_idx; scan_idx < cols; ++scan_idx)
                 {
-                    run_end = static_cast<uint16_t> (scan_idx + 1);
-                    skip_count = 0;
-                }
-                else
-                {
-                    ++skip_count;
-                    if (skip_count > MAX_SKIP_LENGTH)
+                    if (!equal_cells(back_buffer[row_start + scan_idx], front_buffer[row_start + scan_idx]))
                     {
-                        break;
+                        run_end = static_cast<uint16_t> (scan_idx + 1);
+                        skip_count = 0;
+                    }
+                    else
+                    {
+                        ++skip_count;
+                        if (skip_count > MAX_SKIP_LENGTH)
+                        {
+                            break;
+                        }
                     }
                 }
-            }
-
-            // A run must start at the left half of a double width character, otherwise the terminal
-            // would display the character's left half only partially overwritten
-            if (back_buffer[row_start + col_idx].text_length == 0 && col_idx >= 1)
-            {
-                --col_idx;
-            }
-
-            append_cursor_pos(out_data, col_idx, row_idx);
-            have_update = true;
-            for (uint16_t write_idx = col_idx; write_idx < run_end; ++write_idx)
-            {
-                const Cell& cell = back_buffer[row_start + write_idx];
-                if (cell.text_length == 0)
+    
+                // A run must start at the left half of a double width character, otherwise the terminal
+                // would display the character's left half only partially overwritten
+                if (back_buffer[row_start + col_idx].text_length == 0 && col_idx >= 1)
                 {
-                    // The preceding double width character already advanced the terminal's cursor
-                    // across this cell
-                    continue;
+                    --col_idx;
                 }
-                append_attributes(out_data, cell);
-                out_data.insert(out_data.end(), cell.text, cell.text + cell.text_length);
+    
+                append_cursor_pos(out_data, col_idx, row_idx);
+                have_update = true;
+                for (uint16_t write_idx = col_idx; write_idx < run_end; ++write_idx)
+                {
+                    const Cell& cell = back_buffer[row_start + write_idx];
+                    // Append only if there was no preceding double width character
+                    // that already advanced the terminal's cursor across this cell
+                    if (cell.text_length != 0)
+                    {
+                        append_attributes(out_data, cell);
+                        out_data.insert(out_data.end(), cell.text, cell.text + cell.text_length);
+                    }
+                }
+    
+                col_idx = run_end;
             }
-
-            col_idx = run_end;
         }
     }
 
@@ -824,20 +824,22 @@ void ScreenBuffer::render(std::vector<char>& out_data)
     {
         // Nothing changed, do not send anything to the terminal at all
         out_data.resize(start_size);
-        return;
     }
-
-    append_text(out_data, "\x1B[0m");
-    append_cursor_pos(out_data, cursor_col, cursor_row);
-    if (cursor_visible)
+    else
     {
-        append_text(out_data, "\x1B[?25h");
+        append_text(out_data, "\x1B[0m");
+        append_cursor_pos(out_data, cursor_col, cursor_row);
+        if (cursor_visible)
+        {
+            append_text(out_data, "\x1B[?25h");
+        }
+    
+        out_cursor_col = cursor_col;
+        out_cursor_row = cursor_row;
+        out_cursor_visible = cursor_visible;
+    
+        front_buffer = back_buffer;
+        full_update = false;
     }
-
-    out_cursor_col = cursor_col;
-    out_cursor_row = cursor_row;
-    out_cursor_visible = cursor_visible;
-
-    front_buffer = back_buffer;
-    full_update = false;
 }
+
