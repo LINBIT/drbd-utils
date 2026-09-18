@@ -52,28 +52,28 @@ void DisplayIo::write_buffer(const char* const buffer, const size_t write_length
         if (screen_buffer != nullptr)
         {
             screen_buffer->apply(buffer, write_length);
-            return;
         }
-
-        try
+        else
         {
-            output_buffer.insert(output_buffer.end(), buffer, buffer + write_length);
-        }
-        catch (std::bad_alloc&)
-        {
-            // Out of memory, write whatever had been collected so far, then write the current data
-            // directly, so that the display keeps working, although it may flicker
-            write_fd(output_buffer.data(), output_buffer.size());
-            output_buffer.clear();
-            write_fd(buffer, write_length);
-            return;
-        }
-
-        if (output_buffer.size() >= MAX_OUTPUT_BUFFER_SIZE)
-        {
-            // Guard against unbounded growth of the output buffer
-            write_fd(output_buffer.data(), output_buffer.size());
-            output_buffer.clear();
+            try
+            {
+                output_buffer.insert(output_buffer.end(), buffer, buffer + write_length);
+            }
+            catch (std::bad_alloc&)
+            {
+                // Out of memory, write whatever had been collected so far, then write the current data
+                // directly, so that the display keeps working, although it may flicker
+                write_fd(output_buffer.data(), output_buffer.size());
+                output_buffer.clear();
+                write_fd(buffer, write_length);
+            }
+    
+            if (output_buffer.size() >= MAX_OUTPUT_BUFFER_SIZE)
+            {
+                // Guard against unbounded growth of the output buffer
+                write_fd(output_buffer.data(), output_buffer.size());
+                output_buffer.clear();
+            }
         }
     }
 }
@@ -107,22 +107,13 @@ void DisplayIo::flush() const noexcept
     }
     if (!output_buffer.empty())
     {
-        try
-        {
-            // Ask the terminal not to present any of the intermediate states of the update.
-            // The update is transferred by a single write() call either way, but a terminal that
-            // supports synchronized output then also refrains from rendering a frame in the middle
-            // of processing it.
-            const std::string& sync_begin = AnsiControl::ANSI_SYNC_BEGIN;
-            const std::string& sync_end = AnsiControl::ANSI_SYNC_END;
-            output_buffer.insert(output_buffer.begin(), sync_begin.begin(), sync_begin.end());
-            output_buffer.insert(output_buffer.end(), sync_end.begin(), sync_end.end());
-        }
-        catch (std::bad_alloc&)
-        {
-            // Out of memory, transfer the update without the synchronized output sequences
-        }
+        // Ask the terminal not to present any of the intermediate states of the update.
+        // The actual update is transferred by a single write() call, but a terminal that
+        // supports synchronized output then also refrains from rendering a frame in the middle
+        // of processing it.
+        write_fd(AnsiControl::ANSI_SYNC_BEGIN.c_str(), AnsiControl::ANSI_SYNC_BEGIN.length());
         write_fd(output_buffer.data(), output_buffer.size());
+        write_fd(AnsiControl::ANSI_SYNC_END.c_str(), AnsiControl::ANSI_SYNC_END.length());
         output_buffer.clear();
     }
 }
