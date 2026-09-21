@@ -2,9 +2,56 @@
 
 #include <algorithm>
 #include <cstring>
+#include <new>
 #include <bounds.h>
+#include <comparators.h>
+
+namespace unicode_tables
+{
+    // Combining characters are displayed as part of the preceding character
+    static const uint32_t ZERO_WIDTH[][2] =
+    {
+        {0x0300, 0x036F}, {0x0483, 0x0489}, {0x0591, 0x05BD}, {0x0610, 0x061A},
+        {0x064B, 0x065F}, {0x0670, 0x0670}, {0x06D6, 0x06DC}, {0x0730, 0x074A},
+        {0x07EB, 0x07F3}, {0x0E31, 0x0E31}, {0x0E34, 0x0E3A}, {0x0EB1, 0x0EB1},
+        {0x1AB0, 0x1AFF}, {0x1DC0, 0x1DFF}, {0x200B, 0x200F}, {0x20D0, 0x20F0},
+        {0xFE00, 0xFE0F}, {0xFE20, 0xFE2F}
+    };
+
+    // Characters that the terminal displays in two columns
+    static const uint32_t DOUBLE_WIDTH[][2] =
+    {
+        {0x1100, 0x115F}, {0x231A, 0x231B}, {0x2329, 0x232A}, {0x23E9, 0x23EC},
+        {0x23F0, 0x23F0}, {0x23F3, 0x23F3}, {0x25FD, 0x25FE}, {0x2614, 0x2615},
+        {0x2648, 0x2653}, {0x267F, 0x267F}, {0x2693, 0x2693}, {0x26A1, 0x26A1},
+        {0x26AA, 0x26AB}, {0x26BD, 0x26BE}, {0x26C4, 0x26C5}, {0x26CE, 0x26CE},
+        {0x26D4, 0x26D4}, {0x26EA, 0x26EA}, {0x26F2, 0x26F3}, {0x26F5, 0x26F5},
+        {0x26FA, 0x26FA}, {0x26FD, 0x26FD}, {0x2705, 0x2705}, {0x270A, 0x270B},
+        {0x2728, 0x2728}, {0x274C, 0x274C}, {0x274E, 0x274E}, {0x2753, 0x2755},
+        {0x2757, 0x2757}, {0x2795, 0x2797}, {0x27B0, 0x27B0}, {0x27BF, 0x27BF},
+        {0x2B1B, 0x2B1C}, {0x2B50, 0x2B50}, {0x2B55, 0x2B55}, {0x2E80, 0x303E},
+        {0x3041, 0x33FF}, {0x3400, 0x4DBF}, {0x4E00, 0x9FFF}, {0xA000, 0xA4CF},
+        {0xA960, 0xA97F}, {0xAC00, 0xD7A3}, {0xF900, 0xFAFF}, {0xFE10, 0xFE19},
+        {0xFE30, 0xFE6F}, {0xFF00, 0xFF60}, {0xFFE0, 0xFFE6},
+        {0x16FE0, 0x16FE4}, {0x17000, 0x18AFF}, {0x1B000, 0x1B2FF},
+        {0x1F004, 0x1F004}, {0x1F0CF, 0x1F0CF}, {0x1F18E, 0x1F18E},
+        {0x1F191, 0x1F19A}, {0x1F200, 0x1F320}, {0x1F32D, 0x1F335},
+        {0x1F337, 0x1F37C}, {0x1F37E, 0x1F393}, {0x1F3A0, 0x1F3CA},
+        {0x1F3CF, 0x1F3D3}, {0x1F3E0, 0x1F3F0}, {0x1F3F4, 0x1F3F4},
+        {0x1F3F8, 0x1F43E}, {0x1F440, 0x1F440}, {0x1F442, 0x1F4FC},
+        {0x1F4FF, 0x1F53D}, {0x1F54B, 0x1F54E}, {0x1F550, 0x1F567},
+        {0x1F57A, 0x1F57A}, {0x1F595, 0x1F596}, {0x1F5A4, 0x1F5A4},
+        {0x1F5FB, 0x1F64F}, {0x1F680, 0x1F6C5}, {0x1F6CC, 0x1F6CC},
+        {0x1F6D0, 0x1F6D2}, {0x1F6EB, 0x1F6EC}, {0x1F6F4, 0x1F6FA},
+        {0x1F7E0, 0x1F7EB}, {0x1F90D, 0x1F971}, {0x1F973, 0x1F976},
+        {0x1F97A, 0x1F9A2}, {0x1F9A5, 0x1F9AA}, {0x1F9AE, 0x1F9CA},
+        {0x1F9CD, 0x1F9FF}, {0x20000, 0x2FFFD}, {0x30000, 0x3FFFD}
+    };
+}
 
 ScreenBuffer::ScreenBuffer(const uint16_t init_cols, const uint16_t init_rows):
+    unicode_zero(new UnicodeLengthMap(&comparators::compare<uint32_t>)),
+    unicode_double(new UnicodeLengthMap(&comparators::compare<uint32_t>)),
     cols(bounds(MIN_DIMENSION, init_cols, MAX_DIMENSION)),
     rows(bounds(MIN_DIMENSION, init_rows, MAX_DIMENSION))
 {
@@ -12,10 +59,81 @@ ScreenBuffer::ScreenBuffer(const uint16_t init_cols, const uint16_t init_rows):
     back_buffer.resize(cell_count);
     front_buffer.resize(cell_count);
     csi_seq.reserve(MAX_CSI_LENGTH);
+
+    try
+    {
+        // Combining characters are displayed as part of the preceding character
+        for (const uint32_t* const range : unicode_tables::ZERO_WIDTH)
+        {
+            add_code_point_range(*unicode_zero, range[0], range[1]);
+        }
+
+        // Characters that the terminal displays in two columns
+        for (const uint32_t* const range : unicode_tables::DOUBLE_WIDTH)
+        {
+            add_code_point_range(*unicode_double, range[0], range[1]);
+        }
+    }
+    catch (...)
+    {
+        cleanup();
+        throw;
+    }
 }
 
 ScreenBuffer::~ScreenBuffer() noexcept
 {
+    cleanup();
+}
+
+void ScreenBuffer::cleanup() noexcept
+{
+    cleanup_map(unicode_zero.get());
+    cleanup_map(unicode_double.get());
+}
+
+void ScreenBuffer::cleanup_map(UnicodeLengthMap* const map) noexcept
+{
+    if (map != nullptr)
+    {
+        UnicodeLengthMap::NodesIterator iter(*map);
+        while (iter.has_next())
+        {
+            UnicodeLengthMap::Node* const map_node = iter.next();
+            const uint32_t* const key = map_node->get_key();
+            const uint32_t* const value = map_node->get_value();
+            delete key;
+            delete value;
+        }
+        map->clear();
+    }
+}
+
+// @throws std::bad_alloc
+void ScreenBuffer::add_code_point_range(UnicodeLengthMap& map, const uint32_t range_begin, const uint32_t range_end)
+{
+    std::unique_ptr<uint32_t> key_mgr(new uint32_t);
+    std::unique_ptr<uint32_t> value_mgr(new uint32_t);
+    uint32_t* const key = key_mgr.get();
+    uint32_t* const value = value_mgr.get();
+    *key = range_begin;
+    *value = range_end;
+
+    map.insert(key, value);
+    key_mgr.release();
+    value_mgr.release();
+}
+
+bool ScreenBuffer::is_unicode_length(UnicodeLengthMap& map, const uint32_t code_point) noexcept
+{
+    bool result = false;
+    const uint32_t* const map_value = map.get_floor_value(&code_point);
+    if (map_value != nullptr)
+    {
+        const uint32_t range_end = *map_value;
+        result = code_point <= range_end;
+    }
+    return result;
 }
 
 void ScreenBuffer::set_dimensions(const uint16_t new_cols, const uint16_t new_rows)
@@ -205,91 +323,45 @@ void ScreenBuffer::apply_byte(const char byte) noexcept
 
 uint8_t ScreenBuffer::char_width(const char* const text, const uint8_t text_length) noexcept
 {
-    // Decode the UTF-8 sequence
-    uint32_t code_point = 0;
-    if (text_length == 1)
-    {
-        return 1;
-    }
-    else
-    if (text_length == 2)
-    {
-        code_point = static_cast<uint32_t> (text[0] & 0x1F) << 6;
-    }
-    else
-    if (text_length == 3)
-    {
-        code_point = static_cast<uint32_t> (text[0] & 0x0F) << 12;
-    }
-    else
-    if (text_length == 4)
-    {
-        code_point = static_cast<uint32_t> (text[0] & 0x07) << 18;
-    }
-    else
-    {
-        return 1;
-    }
-    for (uint8_t idx = 1; idx < text_length; ++idx)
-    {
-        code_point |= static_cast<uint32_t> (text[idx] & 0x3F) << ((text_length - idx - 1) * 6);
-    }
+    uint8_t length = 1;
 
-    // Combining characters are displayed as part of the preceding character
-    static const uint32_t ZERO_WIDTH[][2] =
+    if (text_length >= 2 && text_length <= 4)
     {
-        {0x0300, 0x036F}, {0x0483, 0x0489}, {0x0591, 0x05BD}, {0x0610, 0x061A},
-        {0x064B, 0x065F}, {0x0670, 0x0670}, {0x06D6, 0x06DC}, {0x0730, 0x074A},
-        {0x07EB, 0x07F3}, {0x0E31, 0x0E31}, {0x0E34, 0x0E3A}, {0x0EB1, 0x0EB1},
-        {0x1AB0, 0x1AFF}, {0x1DC0, 0x1DFF}, {0x200B, 0x200F}, {0x20D0, 0x20F0},
-        {0xFE00, 0xFE0F}, {0xFE20, 0xFE2F}
-    };
-    for (const uint32_t* const range : ZERO_WIDTH)
-    {
-        if (code_point >= range[0] && code_point <= range[1])
+        // Decode the UTF-8 sequence
+        uint32_t code_point = 0;
+        if (text_length == 2)
         {
-            return 0;
+            code_point = static_cast<uint32_t> (text[0] & 0x1F) << 6;
+        }
+        else
+        if (text_length == 3)
+        {
+            code_point = static_cast<uint32_t> (text[0] & 0x0F) << 12;
+        }
+        else
+        if (text_length == 4)
+        {
+            code_point = static_cast<uint32_t> (text[0] & 0x07) << 18;
+        }
+        for (uint8_t idx = 1; idx < text_length; ++idx)
+        {
+            code_point |= static_cast<uint32_t> (text[idx] & 0x3F) << ((text_length - idx - 1) * 6);
+        }
+
+        // Combining characters are displayed as part of the preceding character
+        if (is_unicode_length(*unicode_zero, code_point))
+        {
+            length = 0;
+        }
+
+        // Characters that the terminal displays in two columns
+        if (is_unicode_length(*unicode_double, code_point))
+        {
+            length = 2;
         }
     }
 
-    // Characters that the terminal displays in two columns
-    static const uint32_t DOUBLE_WIDTH[][2] =
-    {
-        {0x1100, 0x115F}, {0x231A, 0x231B}, {0x2329, 0x232A}, {0x23E9, 0x23EC},
-        {0x23F0, 0x23F0}, {0x23F3, 0x23F3}, {0x25FD, 0x25FE}, {0x2614, 0x2615},
-        {0x2648, 0x2653}, {0x267F, 0x267F}, {0x2693, 0x2693}, {0x26A1, 0x26A1},
-        {0x26AA, 0x26AB}, {0x26BD, 0x26BE}, {0x26C4, 0x26C5}, {0x26CE, 0x26CE},
-        {0x26D4, 0x26D4}, {0x26EA, 0x26EA}, {0x26F2, 0x26F3}, {0x26F5, 0x26F5},
-        {0x26FA, 0x26FA}, {0x26FD, 0x26FD}, {0x2705, 0x2705}, {0x270A, 0x270B},
-        {0x2728, 0x2728}, {0x274C, 0x274C}, {0x274E, 0x274E}, {0x2753, 0x2755},
-        {0x2757, 0x2757}, {0x2795, 0x2797}, {0x27B0, 0x27B0}, {0x27BF, 0x27BF},
-        {0x2B1B, 0x2B1C}, {0x2B50, 0x2B50}, {0x2B55, 0x2B55}, {0x2E80, 0x303E},
-        {0x3041, 0x33FF}, {0x3400, 0x4DBF}, {0x4E00, 0x9FFF}, {0xA000, 0xA4CF},
-        {0xA960, 0xA97F}, {0xAC00, 0xD7A3}, {0xF900, 0xFAFF}, {0xFE10, 0xFE19},
-        {0xFE30, 0xFE6F}, {0xFF00, 0xFF60}, {0xFFE0, 0xFFE6},
-        {0x16FE0, 0x16FE4}, {0x17000, 0x18AFF}, {0x1B000, 0x1B2FF},
-        {0x1F004, 0x1F004}, {0x1F0CF, 0x1F0CF}, {0x1F18E, 0x1F18E},
-        {0x1F191, 0x1F19A}, {0x1F200, 0x1F320}, {0x1F32D, 0x1F335},
-        {0x1F337, 0x1F37C}, {0x1F37E, 0x1F393}, {0x1F3A0, 0x1F3CA},
-        {0x1F3CF, 0x1F3D3}, {0x1F3E0, 0x1F3F0}, {0x1F3F4, 0x1F3F4},
-        {0x1F3F8, 0x1F43E}, {0x1F440, 0x1F440}, {0x1F442, 0x1F4FC},
-        {0x1F4FF, 0x1F53D}, {0x1F54B, 0x1F54E}, {0x1F550, 0x1F567},
-        {0x1F57A, 0x1F57A}, {0x1F595, 0x1F596}, {0x1F5A4, 0x1F5A4},
-        {0x1F5FB, 0x1F64F}, {0x1F680, 0x1F6C5}, {0x1F6CC, 0x1F6CC},
-        {0x1F6D0, 0x1F6D2}, {0x1F6EB, 0x1F6EC}, {0x1F6F4, 0x1F6FA},
-        {0x1F7E0, 0x1F7EB}, {0x1F90D, 0x1F971}, {0x1F973, 0x1F976},
-        {0x1F97A, 0x1F9A2}, {0x1F9A5, 0x1F9AA}, {0x1F9AE, 0x1F9CA},
-        {0x1F9CD, 0x1F9FF}, {0x20000, 0x2FFFD}, {0x30000, 0x3FFFD}
-    };
-    for (const uint32_t* const range : DOUBLE_WIDTH)
-    {
-        if (code_point >= range[0] && code_point <= range[1])
-        {
-            return 2;
-        }
-    }
-
-    return 1;
+    return length;
 }
 
 void ScreenBuffer::apply_char(const char* const text, const uint8_t text_length) noexcept
@@ -791,14 +863,14 @@ void ScreenBuffer::render(std::vector<char>& out_data)
                         }
                     }
                 }
-    
+
                 // A run must start at the left half of a double width character, otherwise the terminal
                 // would display the character's left half only partially overwritten
                 if (back_buffer[row_start + col_idx].text_length == 0 && col_idx >= 1)
                 {
                     --col_idx;
                 }
-    
+
                 append_cursor_pos(out_data, col_idx, row_idx);
                 have_update = true;
                 for (uint16_t write_idx = col_idx; write_idx < run_end; ++write_idx)
@@ -812,7 +884,7 @@ void ScreenBuffer::render(std::vector<char>& out_data)
                         out_data.insert(out_data.end(), cell.text, cell.text + cell.text_length);
                     }
                 }
-    
+
                 col_idx = run_end;
             }
         }
@@ -833,11 +905,11 @@ void ScreenBuffer::render(std::vector<char>& out_data)
         {
             append_text(out_data, "\x1B[?25h");
         }
-    
+
         out_cursor_col = cursor_col;
         out_cursor_row = cursor_row;
         out_cursor_visible = cursor_visible;
-    
+
         front_buffer = back_buffer;
         full_update = false;
     }

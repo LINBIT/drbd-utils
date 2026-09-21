@@ -4,6 +4,8 @@
 #include <default_types.h>
 #include <string>
 #include <vector>
+#include <memory>
+#include <cppdsaext/src/QTree.h>
 
 /**
  * Off-screen representation of the contents of the terminal
@@ -117,8 +119,12 @@ class ScreenBuffer
         OSC_ESCAPE
     };
 
-    uint16_t cols;
-    uint16_t rows;
+    using UnicodeLengthMap = QTree<const uint32_t, const uint32_t>;
+    std::unique_ptr<UnicodeLengthMap> unicode_zero;
+    std::unique_ptr<UnicodeLengthMap> unicode_double;
+
+    uint16_t cols       {0};
+    uint16_t rows       {0};
 
     std::vector<Cell> back_buffer;
     std::vector<Cell> front_buffer;
@@ -143,6 +149,11 @@ class ScreenBuffer
     uint16_t        out_cursor_row      {0};
     bool            out_cursor_visible  {true};
 
+    void cleanup() noexcept;
+    void cleanup_map(UnicodeLengthMap* const map) noexcept;
+    // @throws std::bad_alloc
+    void add_code_point_range(UnicodeLengthMap& map, const uint32_t range_begin, const uint32_t range_end);
+    bool is_unicode_length(UnicodeLengthMap& map, const uint32_t code_point) noexcept;
     void clear_buffers() noexcept;
     void apply_byte(const char byte) noexcept;
     void apply_char(const char* const text, const uint8_t text_length) noexcept;
@@ -155,7 +166,7 @@ class ScreenBuffer
 
     // Number of columns that the terminal advances the cursor by when it displays the character.
     // Zero for combining characters, two for double width characters, otherwise one.
-    static uint8_t char_width(const char* const text, const uint8_t text_length) noexcept;
+    uint8_t char_width(const char* const text, const uint8_t text_length) noexcept;
 
     static void append_text(std::vector<char>& out_data, const char* const text);
     static void append_number(std::vector<char>& out_data, const uint32_t number);
