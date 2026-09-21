@@ -3,6 +3,54 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
+9.35.0-rc.1
+-----------
+ * drbdadm,adjust: fix ordering to run del-peer after connect;
+   avoids quorum-deadlocked resources when swapping a tiebreaker
+ * drbdadm: fix segfaults and buffer overflows (config parser,
+   adjust with proxy without path, "_unknown" options)
+ * drbdadm,adjust: support dedicated proxy nodes; name proxy
+   connections after DRBD node names
+ * drbdadm: add dump-superblock command
+ * drbdadm: skip diskless volumes when iterating "all"
+ * drbdmeta: metadata conversion improvements: add convert-dump,
+   re-create the bitmap on v09 to v08 conversion, refuse v07,
+   restore-md handles changed bitmap slots/granularity and
+   activity log geometry
+ * drbdmeta: create-md: add UUID control options (v09);
+   report by how much a file system is in the way
+ * drbdmeta: resize: fix bitmap copy offset, fsync new metadata
+   and zero the old region
+ * drbdmeta: mark all out of sync when the AL was disabled at
+   a crash; initialize the AL on restore-md
+ * drbdmeta: add --quiet and --var-lib-drbd options
+ * drbdmeta: various fixes: out-of-bounds read in apply-al,
+   memory leaks, 64 bit shift, reject foreign bitmap granularity
+ * drbdsetup: fix events2 --now blocking forever
+ * drbdsetup: fix "sequence mismatch in netlink reply" race in
+   wait-* commands
+ * drbdsetup: handle ERR_PATH_COLLISION; hint at
+   DRBD_GENL_RCVBUF_SZ on rcvbuf errors
+ * drbdsetup: show resync suspension by parallel-resync limit
+ * userspace: switch from genl_magic macros to YNL-generated
+   netlink headers
+ * libgenl: fix setsockopt sizes and unchecked realloc; no
+   SO_RCVBUF warning without CAP_NET_ADMIN
+ * SELinux: allow usermode helper transition to drbd_t, module
+   loading on Oracle UEK, setpgid for Pacemaker; auto-label
+   /var/lib/linstor.d/
+ * drbdmon: major update: selection filters, bulk actions,
+   export/import
+ * scripts: add drbd-fence-peer.sh fence-peer handler and
+   find-resources-with-unrotated-uuids.sh
+ * drbd-verify.py: report which files are affected by
+   out-of-sync blocks; new JSON schema and --report modes
+ * systemd: split drbd-graceful-shutdown into disconnect and
+   down services
+ * debian,spec: do not stop or restart units on upgrade; handle
+   drbd-configured.target; debian compat 9 to 12
+ * doc: new mailing list address; fix disk shipping procedure
+
 9.34.0
 -----------
  * drbdadm: fix adjust for a v8 config with a v9 drbd kernel driver
