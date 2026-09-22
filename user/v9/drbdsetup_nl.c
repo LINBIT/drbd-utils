@@ -9,6 +9,26 @@
 
 #include "drbdsetup_nl.h"
 
+/*
+ * An NLMSG_ERROR reply as an outcome: errnum, and the extended ACK text
+ * or strerror() as desc. Returns false for a positive ACK, which leaves
+ * ret_code at NO_ERROR; the dialect picks the ret_code of a failure.
+ */
+bool drbd_nl_recv_error(const struct nlmsghdr *nlh, struct drbd_nl_outcome *out)
+{
+	static char extack[256];
+	const struct nlmsgerr *e = nlmsg_data(nlh);
+
+	out->errnum = -e->error;
+	if (!e->error) {
+		out->ret_code = NO_ERROR;
+		return false;
+	}
+	out->desc = nlmsg_extack_msg(nlh, extack, sizeof(extack)) ?
+		extack : strerror(out->errnum);
+	return true;
+}
+
 void drbd_nl_event_init(struct drbd_nl_event *ev, enum drbd_nl_obj kind)
 {
 	memset(ev, 0, sizeof(*ev));

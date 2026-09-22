@@ -77,6 +77,13 @@ static struct genl_sock *genl_connect(__u32 nl_groups, struct genl_connect_optio
 	if (s->s_fd == -1)
 		goto fail;
 
+	{
+		/* Ask for extended ACKs; an old kernel just does not know the option. */
+		int one = 1;
+
+		setsockopt(s->s_fd, SOL_NETLINK, NETLINK_EXT_ACK, &one, sizeof(one));
+	}
+
 	sock_len = sizeof(s->s_local);
 	DO_OR_LOG_AND_FAIL(setsockopt(s->s_fd, SOL_SOCKET, SO_SNDBUF, &opts->sndbuf_size, sizeof(opts->sndbuf_size)));
 	DO_OR_LOG_AND_FAIL(setsockopt(s->s_fd, SOL_SOCKET, SO_RCVBUF, &opts->rcvbuf_size, sizeof(opts->rcvbuf_size)));
@@ -305,8 +312,9 @@ int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int 
 		else {
 			dbg(3, "got a NACK message for seq:%u, error:%d",
 					s->s_seq_expect, e->error);
+			nlmsg_extack_msg(nlh, s->s_extack_msg, sizeof(s->s_extack_msg));
 			if (err_desc)
-				*err_desc = strerror(errno);
+				*err_desc = s->s_extack_msg[0] ? s->s_extack_msg : strerror(errno);
 		}
 		return -E_RCV_ERROR_REPLY;
 	}

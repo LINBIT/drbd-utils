@@ -264,15 +264,8 @@ static int legacy_recv_outcome(struct nlmsghdr *nlh, struct drbd_nl_outcome *out
 	out->timeout_type = -1;
 
 	if (nlh->nlmsg_type == NLMSG_ERROR) {
-		struct nlmsgerr *e = nlmsg_data(nlh);
-
-		if (e->error == 0) {
-			out->ret_code = NO_ERROR;
-			return 0;
-		}
-		out->ret_code = OTHER_ERROR;
-		out->errnum = -e->error;
-		out->desc = strerror(out->errnum);
+		if (drbd_nl_recv_error(nlh, out))
+			out->ret_code = OTHER_ERROR;
 		return 0;
 	}
 	if (nlh->nlmsg_type != legacy_family.id)

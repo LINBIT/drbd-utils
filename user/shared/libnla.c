@@ -627,3 +627,29 @@ int nla_append(struct msg_buff *msg, int attrlen, const void *data)
 	return 0;
 }
 
+
+/* The NLMSGERR_ATTR_MSG text of an NLMSG_ERROR, if any. buf is always NUL
+ * terminated; returns 1 when a text was found. */
+int nlmsg_extack_msg(const struct nlmsghdr *nlh, char *buf, size_t size)
+{
+	const struct nlmsgerr *e = nlmsg_data(nlh);
+	struct nlattr *nla;
+	int hdrlen = sizeof(*e), rem;
+
+	if (size)
+		buf[0] = '\0';
+	if (nlh->nlmsg_type != NLMSG_ERROR || !(nlh->nlmsg_flags & NLM_F_ACK_TLVS))
+		return 0;
+	if (nlh->nlmsg_len < NLMSG_HDRLEN + sizeof(*e))
+		return 0;
+	/* Unless capped, the ACK echoes the whole offending request. */
+	if (!(nlh->nlmsg_flags & NLM_F_CAPPED))
+		hdrlen += e->msg.nlmsg_len - NLMSG_HDRLEN;
+	nla_for_each_attr(nla, nlmsg_attrdata((struct nlmsghdr *)nlh, hdrlen), nlmsg_attrlen((struct nlmsghdr *)nlh, hdrlen), rem) {
+		if (nla_type(nla) == NLMSGERR_ATTR_MSG) {
+			nla_strlcpy(buf, nla, size);
+			return 1;
+		}
+	}
+	return 0;
+}

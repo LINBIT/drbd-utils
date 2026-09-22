@@ -199,6 +199,7 @@ extern const struct drbd_nl_dialect drbd2_dialect;
 #endif
 
 /* Common helpers, drbdsetup_nl.c */
+bool drbd_nl_recv_error(const struct nlmsghdr *nlh, struct drbd_nl_outcome *out);
 void drbd_nl_event_init(struct drbd_nl_event *ev, enum drbd_nl_obj kind);
 struct drbd_nl_event *drbd_nl_event_copy(const struct drbd_nl_event *ev);
 /* A malloc()ed copy of an attribute, NULL for NULL or when out of memory. */
