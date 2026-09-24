@@ -20,6 +20,8 @@ Unreleased
    it a crashed primary, so DRBD 9 resyncs its activity log extents
  * drbdadm,adjust: fix a recreated proxied peer stuck in Connecting;
    rebuild its proxy connection when a peer or path is new
+ * drbdadm: fix require-drbd-module-version-{lt,le,gt,ge}; for example,
+   requiring 9.2.0 or later accepted a 9.1.0 or 8.4.11 module
  * libgenl: report the kernel's extended ACK text on netlink errors
  * spec: enable SELinux on SLES 16+; require bash-completion only
    conditionally; no rich pacemaker dependency on SLES 12

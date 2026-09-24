@@ -2166,7 +2166,7 @@ static void validate_kmod(int token)
 
 #define MOD_CMP(opr) do { \
 		op = #opr; \
-		kmod_valid = ((have->version_code - expected.version_code) opr 0); \
+		kmod_valid = have->version_code opr expected.version_code; \
 } while(0)
 	if (token == TK_MODULE_EQ) MOD_CMP(==);
 	else if (token == TK_MODULE_NE) MOD_CMP(!=);
