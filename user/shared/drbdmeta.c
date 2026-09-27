@@ -38,6 +38,7 @@
 #include <sys/stat.h>
 #include <sys/utsname.h>
 #include <sys/time.h>
+#include <sys/wait.h>
 
 #include <stddef.h>
 #include <stdlib.h>
