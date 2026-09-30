@@ -3,7 +3,7 @@ Latest:
  For even more detail, use "git log" or visit
  https://github.com/linbit/drbd-utils
 
-9.35.0-rc.1
+9.35.0
 -----------
  * drbdadm,adjust: fix ordering to run del-peer after connect;
    avoids quorum-deadlocked resources when swapping a tiebreaker
@@ -41,6 +41,10 @@ Latest:
    /var/lib/linstor.d/
  * drbdmon: major update: selection filters, bulk actions,
    export/import
+ * drbdmon: faster, flicker-free display: only redraw changed
+   screen regions, single write() per update, use the
+   terminal's synchronized output; decode cursor keys in
+   application cursor key mode
  * scripts: add drbd-fence-peer.sh fence-peer handler and
    find-resources-with-unrotated-uuids.sh
  * drbd-verify.py: report which files are affected by
