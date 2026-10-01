@@ -122,11 +122,6 @@ extern struct context_def proxy_options_ctx;
 extern struct context_def startup_options_ctx;
 extern struct context_def wildcard_ctx;
 
-#ifdef WITH_84_SUPPORT
-extern struct field_def attach_compat_84_fields[];
-extern struct field_def connect_compat_84_fields[];
-#endif
-
 extern const char *double_quote_string(const char *str);
 
 #endif  /* __DRBD_CONFIG_FLAGS_H */

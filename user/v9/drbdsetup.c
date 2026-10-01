@@ -74,7 +74,6 @@
 #include "config_flags.h"
 #include "wrap_printf.h"
 #include "drbdsetup_colors.h"
-#include "drbdsetup_compat84.h"
 
 #define EXIT_NOMEM 20
 #define EXIT_NO_FAMILY 20
@@ -158,6 +157,7 @@ const char *ctx_arg_string(enum cfg_ctx_key key, enum usage_type ut)
 // other functions
 static int get_af_ssocks(int warn);
 static char *af_to_str(int af);
+static void print_command_usage(const struct drbd_cmd *cm, enum usage_type);
 static void print_usage_and_exit(const char *addinfo)
 		__attribute__ ((noreturn));
 static void address_json(void *address, int addr_len, char *indent);
@@ -253,6 +253,57 @@ const struct drbd_cmd primary_cmd = {
 	.ctx = &primary_cmd_ctx,
 	.summary = "Change the role of a node in a resource to primary." };
 
+#ifdef DRBD_LEGACY_84
+/*
+ * Options of the 8.4 drbdsetup that this one does not take. They are only
+ * recognized to hand the command line over to drbdsetup-84.
+ */
+#define OPT_84(name, has_arg) { name, has_arg, NULL, OPT_COMPAT84 }
+
+static struct option attach_84_options[] = {
+	OPT_84("fencing", required_argument),
+	OPT_84("resync-rate", required_argument),
+	OPT_84("c-plan-ahead", required_argument),
+	OPT_84("c-delay-target", required_argument),
+	OPT_84("c-fill-target", required_argument),
+	OPT_84("c-max-rate", required_argument),
+	OPT_84("c-min-rate", required_argument),
+	{ }
+};
+
+static struct option connect_84_options[] = {
+	OPT_84("protocol", required_argument),
+	OPT_84("timeout", required_argument),
+	OPT_84("max-epoch-size", required_argument),
+	OPT_84("max-buffers", required_argument),
+	OPT_84("connect-int", required_argument),
+	OPT_84("ping-int", required_argument),
+	OPT_84("sndbuf-size", required_argument),
+	OPT_84("rcvbuf-size", required_argument),
+	OPT_84("ko-count", required_argument),
+	OPT_84("allow-two-primaries", optional_argument),
+	OPT_84("cram-hmac-alg", required_argument),
+	OPT_84("shared-secret", required_argument),
+	OPT_84("after-sb-0pri", required_argument),
+	OPT_84("after-sb-1pri", required_argument),
+	OPT_84("after-sb-2pri", required_argument),
+	OPT_84("always-asbp", optional_argument),
+	OPT_84("rr-conflict", required_argument),
+	OPT_84("ping-timeout", required_argument),
+	OPT_84("data-integrity-alg", required_argument),
+	OPT_84("tcp-cork", optional_argument),
+	OPT_84("on-congestion", required_argument),
+	OPT_84("congestion-fill", required_argument),
+	OPT_84("congestion-extents", required_argument),
+	OPT_84("csums-alg", required_argument),
+	OPT_84("csums-after-crash-only", optional_argument),
+	OPT_84("verify-alg", required_argument),
+	OPT_84("use-rle", optional_argument),
+	OPT_84("socket-check-timeout", required_argument),
+	{ }
+};
+#endif
+
 const struct drbd_cmd attach_cmd = {
 	"attach", CTX_MINOR, DRBD_NL_CMD_ATTACH, NL_SET_DISK_CONF, F_CONFIG_CMD,
 	.drbd_args = (struct drbd_argument[]) {
@@ -262,8 +313,8 @@ const struct drbd_cmd attach_cmd = {
 		{ } },
 	.ctx = &attach_cmd_ctx,
 	.summary = "Attach a lower-level device to an existing replicated device.",
-#ifdef WITH_84_SUPPORT
-	.compat_84_fields = attach_compat_84_fields,
+#ifdef DRBD_LEGACY_84
+	.compat_84_options = attach_84_options,
 #endif
 	};
 
@@ -272,8 +323,8 @@ const struct drbd_cmd connect_cmd = {"connect", CTX_PEER_NODE,
 				     F_CONFIG_CMD,
 	.ctx = &connect_cmd_ctx,
 	.summary = "Attempt to (re)establish a replication link to a peer host.",
-#ifdef WITH_84_SUPPORT
-	.compat_84_fields = connect_compat_84_fields,
+#ifdef DRBD_LEGACY_84
+	.compat_84_options = connect_84_options,
 #endif
 };
 
@@ -788,7 +839,7 @@ static void split_address(int *af, char** address, int* port)
 		*port = 7788;
 }
 
-int sockaddr_from_str(struct sockaddr_storage *storage, const char *str)
+static int sockaddr_from_str(struct sockaddr_storage *storage, const char *str)
 {
 	int af, port;
 	char *address = strdupa(str);
@@ -893,7 +944,7 @@ static int get_af_ssocks(int warn_and_use_default)
 	return af;
 }
 
-struct option *make_longoptions(const struct drbd_cmd *cm, bool accept_84_compat)
+static struct option *make_longoptions(const struct drbd_cmd *cm, bool accept_84_compat)
 {
 	static struct option buffer[47];
 	int i = 0;
@@ -923,21 +974,15 @@ struct option *make_longoptions(const struct drbd_cmd *cm, bool accept_84_compat
 		assert(field - cm->ctx->fields == i);
 	}
 
-#ifdef WITH_84_SUPPORT
-	if (accept_84_compat && cm->compat_84_fields) {
-		struct field_def *field;
+	if (accept_84_compat && cm->compat_84_options) {
+		struct option *option;
 
-		for (field = cm->compat_84_fields; field->name; field++) {
+		for (option = cm->compat_84_options; option->name; option++) {
 			assert(i < ARRAY_SIZE(buffer));
-			buffer[i].name = field->name;
-			buffer[i].has_arg = field->argument_is_optional ?
-				optional_argument : required_argument;
-			buffer[i].flag = NULL;
-			buffer[i].val = OPT_COMPAT84;
+			buffer[i] = *option;
 			i++;
 		}
 	}
-#endif
 
 	if (cm->options) {
 		struct option *option;
@@ -1099,7 +1144,7 @@ static bool outcome_is_missing(const struct drbd_nl_outcome *out, int legacy_cod
 	       (out->ret_code == ERR_EXTACK && out->errnum == ENOENT);
 }
 
-int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
+static int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 {
 	struct drbd_argument *ad;
 	struct nlattr *nla;
@@ -1135,14 +1180,6 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 
 	nla = NULL;
 
-#ifdef WITH_84_SUPPORT
-	if (cm == &attach_cmd) {
-		msg_free(smsg);
-		free(iov.iov_base);
-		return drbd8_compat_attach(argc, argv);
-	}
-#endif
-
 	options = make_longoptions(cm, false);
 	optind = 0;  /* reset getopt_long() */
 	for (;;) {
@@ -1151,7 +1188,7 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		c = getopt_long(argc, argv, "(", options, &idx);
 		if (c == -1)
 			break;
-		if (c >= OPT_ALT_BASE && c != OPT_COMPAT84) {
+		if (c >= OPT_ALT_BASE) {
 			/* This is a field alias. */
 			idx = c - OPT_ALT_BASE;
 			c = 0;
@@ -1178,21 +1215,17 @@ int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		}
 	}
 
-#ifdef WITH_84_SUPPORT
-	if (cm == &new_minor_cmd)
-		drbd8_compat_new_minor(argv[optind + 0], argv[optind + 1], argv[optind + 2]);
-#endif
-
 	for (i = optind, ad = cm->drbd_args; ad && ad->name; i++) {
 		if (argc < i + 1) {
-#ifdef WITH_84_SUPPORT
+#ifdef DRBD_LEGACY_84
 			if (cm == &new_resource_cmd && strcmp(ad->name, "node_id") == 0) {
-				/* This is the "new-resource" command, and we are missing the node_id argument.
-				 * This might be the user trying to use the old drbd8-style command line syntax.
-				 * Set the node ID to the magic value (u32)-1 for now and tell the kernel that
-				 * we are using the drbd8 compatibility mode.
-				 * The node ID will later be overwritten to the correct value (arbitrated by the IP address)
-				 * when the "connect" command is called.
+				/* "new-resource" without a node id, from drbdadm for a drbd-8.4
+				 * style configuration (or from a user), on a kernel without the
+				 * drbd-8.4 netlink family; drbdsetup_main() hands it to
+				 * drbdsetup-84 otherwise.
+				 * Set the node ID to the magic value (u32)-1 and tell the kernel
+				 * to use the drbd8 compatibility mode. The kernel sets the node IDs
+				 * from the peer node ID of the first path.
 				 */
 				fprintf(stderr, "new-resource called without node-id: enabling drbd8 compat mode\n");
 				nla = nl->nest_start(smsg, cm->tla_id);
@@ -2476,7 +2509,7 @@ static void show_volume(struct devices_list *device)
 	printI("}\n"); /* close volume */
 }
 
-#ifdef WITH_84_SUPPORT
+#ifdef DRBD_LEGACY_84
 static struct context_def *resource_options_compat_84()
 {
 	static struct context_def *res_opt_84_ctx = NULL;
@@ -2532,7 +2565,7 @@ static void show_resource_list(struct resources_list *resources_list, char* old_
 		printI("resource \"%s\" {\n", resource->name);
 		++indent;
 
-#ifdef WITH_84_SUPPORT
+#ifdef DRBD_LEGACY_84
 		nla = nla_find_nested(resource->res_opts, DRBD_A_RES_OPTS_DRBD8_COMPAT_MODE);
 		if (nla && *(uint8_t *)nla_data(nla)) {
 			printI("# This resource is in drbd-8.4 compatibility mode!\n");
@@ -4576,7 +4609,7 @@ static bool power_of_two(int i)
 	return i && !(i & (i - 1));
 }
 
-void print_command_usage(const struct drbd_cmd *cm, enum usage_type ut)
+static void print_command_usage(const struct drbd_cmd *cm, enum usage_type ut)
 {
 	struct drbd_argument *args;
 
@@ -4728,6 +4761,28 @@ static void print_usage_and_exit(const char *addinfo)
 }
 
 /*
+ * The module serves "drbd" at version 1 next to drbd2: it says 8.4 in
+ * /proc/drbd, names its "core:" release, and this drbdsetup drives it.
+ */
+static bool kernel_serves_84_family;
+
+static void exec_drbdsetup_84(char **argv, const struct version *driver_version)
+		__attribute__ ((noreturn));
+static void exec_drbdsetup_84(char **argv, const struct version *driver_version)
+{
+#ifdef DRBD_LEGACY_84
+	static const char * const drbdsetup_84 = "drbdsetup-84";
+
+	add_lib_drbd_to_path();
+	execvp(drbdsetup_84, argv);
+	fprintf(stderr, "execvp() failed to exec %s: %m\n", drbdsetup_84);
+#else
+	config_help_legacy("drbdsetup", driver_version);
+#endif
+	exit(20);
+}
+
+/*
  * A genuine DRBD 8.4 needs drbdsetup-84. A DRBD 9 module that says 8.4 in
  * /proc/drbd and names its "core:" release serves "drbd" at version 1 next
  * to drbd2, and this drbdsetup drives it over drbd2; with
@@ -4749,19 +4804,50 @@ static void maybe_exec_legacy_drbdsetup(char **argv)
 {
 	const struct version *driver_version = drbd_driver_version(FALLBACK_TO_UTILS);
 
-	if (needs_drbdsetup_84(driver_version)) {
-#ifdef DRBD_LEGACY_84
-		static const char * const drbdsetup_84 = "drbdsetup-84";
+	if (needs_drbdsetup_84(driver_version))
+		exec_drbdsetup_84(argv, driver_version);
 
-		add_lib_drbd_to_path();
-		execvp(drbdsetup_84, argv);
-		fprintf(stderr, "execvp() failed to exec %s: %m\n", drbdsetup_84);
-#else
-		config_help_legacy("drbdsetup", driver_version);
-#endif
-		exit(20);
-	}
+	kernel_serves_84_family = driver_version->version.major == 8 &&
+				  driver_version->version.minor == 4;
 }
+
+#ifdef DRBD_LEGACY_84
+/*
+ * A module that serves the "drbd" family at version 1 next to drbd2 is
+ * driven by this drbdsetup, but 8.4 command lines still need drbdsetup-84.
+ * Hand those over, and with must_exec fail where drbdsetup-84 has nothing
+ * to talk to.
+ */
+static void exec_drbdsetup_84_for_84_syntax(char **argv, bool must_exec)
+{
+	if (kernel_serves_84_family)
+		exec_drbdsetup_84(argv, NULL);
+	if (!must_exec)
+		return;
+	fprintf(stderr, "%s: this is drbd-8.4 command line syntax, but the DRBD kernel module "
+		"does not serve the drbd-8.4 netlink family\n", cmdname);
+	exit(20);
+}
+
+/*
+ * In 8.4, the commands that now take a peer node id took the local and the
+ * peer address instead.
+ */
+static bool has_84_address_args(const struct drbd_cmd *cmd, int argc, char **argv)
+{
+	enum cfg_ctx_key ctx_key = cmd->ctx_key, next_arg;
+	unsigned long long r;
+	int i = optind;
+
+	for (next_arg = ctx_next_arg(&ctx_key);
+	     next_arg && i < argc;
+	     next_arg = ctx_next_arg(&ctx_key), i++) {
+		if (next_arg == CTX_PEER_NODE_ID)
+			return new_strtoll(argv[i], 1, &r) != MSE_OK;
+	}
+	return false;
+}
+#endif
 
 int drbdsetup_main(int argc, char **argv)
 {
@@ -4774,6 +4860,10 @@ int drbdsetup_main(int argc, char **argv)
 	const char *opts;
 	int c, rv = 0;
 	int longindex, first_optind;
+#ifdef DRBD_LEGACY_84
+	char **orig_argv;
+	bool opts_84 = false;
+#endif
 
 	if (argv == NULL || argc < 1) {
 		fputs("drbdsetup: Nonexistent or empty arguments array, aborting.\n", stderr);
@@ -4815,18 +4905,6 @@ int drbdsetup_main(int argc, char **argv)
 			print_usage_and_exit(NULL);
 	}
 
-#ifdef WITH_84_SUPPORT
-	/*
-	 * drbdsetup previously took the object to operate on as its first argument,
-	 * followed by the command.  For backwards compatibility, still support his.
-	 */
-	if (argc >= 3 && !find_cmd_by_name(argv[1]) && find_cmd_by_name(argv[2])) {
-		char *swap = argv[1];
-		argv[1] = argv[2];
-		argv[2] = swap;
-	}
-#endif
-
 	if (argc < 2)
 		print_usage_and_exit(NULL);
 
@@ -4845,11 +4923,19 @@ int drbdsetup_main(int argc, char **argv)
 	maybe_exec_legacy_drbdsetup(argv);
 
 	cmd = find_cmd_by_name(argv[1]);
-	if (!cmd)
+	if (!cmd) {
+#ifdef DRBD_LEGACY_84
+		/* A command only 8.4 had, or the 8.4 "{object} {command}" order */
+		exec_drbdsetup_84_for_84_syntax(argv, false);
+#endif
 		print_usage_and_exit("invalid command");
+	}
 
 	/* Make argv[0] the command name so that getopt_long() will leave it in
 	 * the first position. */
+#ifdef DRBD_LEGACY_84
+	orig_argv = argv;
+#endif
 	argv++;
 	argc--;
 
@@ -4874,7 +4960,19 @@ int drbdsetup_main(int argc, char **argv)
 			connect_options.rcvbuf_size = m_strtoll(optarg,1);
 			continue;
 		}
+#ifdef DRBD_LEGACY_84
+		if (c == OPT_COMPAT84)
+			opts_84 = true;
+#endif
 	}
+
+#ifdef DRBD_LEGACY_84
+	if (opts_84 || has_84_address_args(cmd, argc, argv))
+		exec_drbdsetup_84_for_84_syntax(orig_argv, true);
+	/* Without the 8.4 family, _generic_config_cmd() handles this one. */
+	if (cmd == &new_resource_cmd && argc - optind == 1)
+		exec_drbdsetup_84_for_84_syntax(orig_argv, false);
+#endif
 	/* still clamp to "sensible" values */
 	if (connect_options.rcvbuf_size < 100*1024)
 		connect_options.rcvbuf_size = 100*1024;
@@ -4976,18 +5074,6 @@ int drbdsetup_main(int argc, char **argv)
 			} else if (next_arg == CTX_VOLUME) {
 				global_ctx.ctx_volume = m_strtoll(argv[optind], 1);
 			} else if (next_arg == CTX_PEER_NODE_ID) {
-				enum new_strtoll_errs err;
-				unsigned long long r;
-				const char def_unit = 1;
-
-				err = new_strtoll(argv[optind], def_unit, &r);
-				if (err != MSE_OK) {
-					int e = drbd8_compat_connect_or_disconnect(argc, argv, cmd);
-					if (!e)
-						return 0;
-
-					print_strtoll_error_and_exit(err, argv[optind], def_unit);
-				}
 				global_ctx.ctx_peer_node_id = m_strtoll(argv[optind], 1);
 			} else
 				assert(0);

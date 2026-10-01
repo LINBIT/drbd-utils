@@ -20,7 +20,7 @@
  */
 #define OPT_ALT_BASE 1000
 
-/* In the 8.4 time the command understood this option. */
+/* getopt_long()'s value for an option only the 8.4 drbdsetup knows. */
 #define OPT_COMPAT84 2000
 
 
@@ -101,9 +101,7 @@ struct drbd_cmd {
 	bool lockless;
 	struct context_def *ctx;
 	const char *summary;
-#ifdef WITH_84_SUPPORT
-	struct field_def *compat_84_fields;
-#endif
+	struct option *compat_84_options; /* to recognize 8.4 syntax */
 };
 
 enum {
@@ -182,24 +180,6 @@ extern bool opt_statistics;
 extern bool opt_timestamps;
 extern bool opt_diff;
 extern bool opt_fullch;
-extern struct drbd_cfg_context global_ctx;
-extern enum cfg_ctx_key context;
-extern unsigned int minor;
-extern const struct drbd_cmd new_resource_cmd;
-extern const struct drbd_cmd new_minor_cmd;
-extern const struct drbd_cmd attach_cmd;
-extern const struct drbd_cmd connect_cmd;
-extern const struct drbd_cmd new_peer_cmd;
-extern const struct drbd_cmd del_peer_cmd;
-extern const struct drbd_cmd new_path_cmd;
-extern const struct drbd_cmd del_path_cmd;
-extern const struct drbd_cmd disconnect_cmd;
-extern const struct drbd_cmd peer_device_options_cmd;
-
-struct option *make_longoptions(const struct drbd_cmd *cm, bool accept_84_compat);
-int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv);
-void print_command_usage(const struct drbd_cmd *cm, enum usage_type);
-int sockaddr_from_str(struct sockaddr_storage *storage, const char *str);
 
 bool kernel_older_than(int version, int patchlevel, int sublevel);
 int conv_block_dev(struct drbd_argument *ad, struct msg_buff *msg, enum drbd_nl_attr_set set, char* arg);
