@@ -24,14 +24,14 @@ $ truncate -s 268435456 "$img"
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md 3 2>/dev/null | tail -1
 New drbd meta data block successfully created.
 $ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep '^features'
-features 0x0000000000000001;
+features 0x0000000000000005;
 $ drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -c '[.features, (.reserved_u64 | length)]'
-["0x0000000000000001",2]
+["0x0000000000000005",2]
 $ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null > "$tmpdir/dump.txt"
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md "$tmpdir/dump.txt" 2>/dev/null | tail -1
 Successfully restored meta data
 $ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep '^features'
-features 0x0000000000000001;
+features 0x0000000000000005;
 $ sed 's/^features .*/features 0x0000000000000003;/' "$tmpdir/dump.txt" > "$tmpdir/future.txt"
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md "$tmpdir/future.txt" 2>/dev/null | tail -1
 Successfully restored meta data
@@ -47,5 +47,5 @@ New drbd meta data block successfully created.
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md 1 2>/dev/null | tail -1
 New drbd meta data block successfully created.
 $ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep '^features'
-features 0x0000000000000001;
+features 0x0000000000000005;
 $ rm -rf "$tmpdir" "$img"

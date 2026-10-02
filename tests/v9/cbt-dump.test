@@ -1,0 +1,47 @@
+## Test the changed block tracking bookmark in the v09 super block and
+## "drbdmeta cbt-dump", which prints the tracking slot as byte extents.
+##
+## Test layout: 64 MB image, internal v09 meta data, three bitmap slots,
+## 32 MB effective size at 4 KiB per bit. A dump gets a bookmark for slot 2
+## and some bits in that slot; restore-md writes it.
+$ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
+$ truncate -s 67108864 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" internal create-md --effective-size 32M 3 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force - v09 "$img" internal cbt-dump 2>&1 >/dev/null | grep -v ioctl; echo "${PIPESTATUS[0]}"
+No changed block tracking in this meta data
+50
+$ drbdmeta --force - v09 "$img" internal dump-md 2>/dev/null > "$tmpdir/dump.txt"
+$ awk '/^history-uuids/ { h = 1 } { if (!skip) print } h && /^}/ { h = 0; print "cbt-bookmark {\n    id 0x6B8F3C2A91D04E17;\n    bitmap-uuid 0x1111111111111111;\n    bitmap-dagtag 0x0000000000000042;\n    since 1759419567;\n    flags 0x00000005;\n    bitmap-index 2;\n}" } /^bitmap\[2\]/ { skip = 1; print "    0x00000000000000FF; 9 times 0x0000000000000000; 0x8000000000000001; 0xFFFFFFFFFFFFFFFF; 0x0000000000000003; 157 times 0x0000000000000000;" } skip && /^}/ { skip = 0; print }' "$tmpdir/dump.txt" > "$tmpdir/cbt.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" internal restore-md "$tmpdir/cbt.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v09 "$img" internal dump-md 2>/dev/null | sed -n '/^cbt-bookmark/,/^}/p'
+cbt-bookmark {
+    id 0x6B8F3C2A91D04E17;
+    bitmap-uuid 0x1111111111111111;
+    bitmap-dagtag 0x0000000000000042;
+    since 1759419567;
+    flags 0x00000005;
+    bitmap-index 2;
+}
+$ drbdmeta --force - v09 "$img" internal dump-superblock --output json 2>/dev/null | jq -c '.cbt_bookmark'
+{"id":"0x6B8F3C2A91D04E17","bitmap_uuid":"0x1111111111111111","bitmap_dagtag":66,"since":1759419567,"flags":"0x00000005","bitmap_index":2}
+$ drbdmeta --force - v09 "$img" internal cbt-dump 2>/dev/null | jq -c '[.id, .since, ."volume-size", .extents, ."next-offset"]'
+["6B8F3C2A91D04E17","2025-10-02T15:39:27Z",33554432,[{"offset":0,"length":32768},{"offset":2621440,"length":4096},{"offset":2879488,"length":274432}],null]
+$ drbdmeta --force - v09 "$img" internal cbt-dump --max-extents 2 2>/dev/null | jq -c '[.extents, ."next-offset"]'
+[[{"offset":0,"length":32768},{"offset":2621440,"length":4096}],2879488]
+$ drbdmeta --force - v09 "$img" internal cbt-dump --start-offset 2879488 --max-extents 2 2>/dev/null | jq -c '[.extents, ."next-offset"]'
+[[{"offset":2879488,"length":274432}],null]
+$ drbdmeta --force - v09 "$img" internal cbt-dump --start-offset 3000000 2>/dev/null | jq -c '.extents'
+[{"offset":3000000,"length":153920}]
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" internal restore-md --max-peers 4 "$tmpdir/cbt.txt" 2>&1 | grep -A2 '^This dump has a changed block tracking slot'
+This dump has a changed block tracking slot (2), which
+--max-peers cannot move. Stop the tracking first
+("drbdsetup cbt-stop").
+$ sed 's/^    flags 0x00000005;/    flags 0x00000007;/' "$tmpdir/cbt.txt" > "$tmpdir/invalid.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" internal restore-md "$tmpdir/invalid.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v09 "$img" internal cbt-dump 2>&1 >/dev/null | grep -v ioctl; echo "${PIPESTATUS[0]}"
+The changed block tracking is invalid
+50
+$ rm -rf "$tmpdir" "$img"

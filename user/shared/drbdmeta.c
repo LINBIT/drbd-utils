@@ -96,6 +96,8 @@ bool option_consistent = false;
 bool option_uptodate = false;
 bool option_peers_outdated = false;
 bool option_rotate_uuids = false;
+uint64_t option_start_offset = 0;
+uint64_t option_max_extents = 0;
 
 static uint64_t generate_random_uuid(void)
 {
@@ -150,6 +152,8 @@ enum metaopt_long_only {
 	OPT_PEERS,
 	OPT_BITMAP_SLOTS,
 	OPT_MAX_PEERS,
+	OPT_START_OFFSET,
+	OPT_MAX_EXTENTS,
 };
 
 struct option metaopt[] = {
@@ -177,6 +181,8 @@ struct option metaopt[] = {
     { "peers", required_argument, NULL, OPT_PEERS },
     { "bitmap-slots", required_argument, NULL, OPT_BITMAP_SLOTS },
     { "max-peers", required_argument, NULL, OPT_MAX_PEERS },
+    { "start-offset", required_argument, NULL, OPT_START_OFFSET },
+    { "max-extents", required_argument, NULL, OPT_MAX_EXTENTS },
     { NULL,     0,              0, 0 },
 };
 
@@ -307,7 +313,7 @@ bool confirmed(const char *text)
 /* Meta data features which drbdmeta maintains correctly. Its own counterpart
  * of the DRBD module's DRBD_MD_FEATURES.
  */
-#define DRBD_MD_FEATURES (DRBD_MDFF_DIVERGENCE_BITMAP)
+#define DRBD_MD_FEATURES (DRBD_MDFF_DIVERGENCE_BITMAP | DRBD_MDFF_CBT)
 
 /*
  * }
@@ -743,6 +749,16 @@ void md_disk_09_to_cpu(struct md_cpu *cpu, const struct meta_data_on_disk_9 *dis
 	BUILD_BUG_ON(ARRAY_SIZE(cpu->history_uuids) != ARRAY_SIZE(disk->history_uuids));
 	for (i = 0; i < ARRAY_SIZE(cpu->history_uuids); i++)
 		cpu->history_uuids[i] = be64_to_cpu(disk->history_uuids[i].be);
+
+	cpu->cbt.bitmap_index = -1;
+	if (cpu->features & DRBD_MDFF_CBT) {
+		cpu->cbt.id = be64_to_cpu(disk->cbt_bookmark.id.be);
+		cpu->cbt.bitmap_uuid = be64_to_cpu(disk->cbt_bookmark.bitmap_uuid.be);
+		cpu->cbt.bitmap_dagtag = be64_to_cpu(disk->cbt_bookmark.bitmap_dagtag.be);
+		cpu->cbt.since = be64_to_cpu(disk->cbt_bookmark.since.be);
+		cpu->cbt.flags = be32_to_cpu(disk->cbt_bookmark.flags.be);
+		cpu->cbt.bitmap_index = be32_to_cpu(disk->cbt_bookmark.bitmap_index.be);
+	}
 }
 
 void md_cpu_to_disk_09(struct meta_data_on_disk_9 *disk, const struct md_cpu *cpu)
@@ -783,6 +799,13 @@ void md_cpu_to_disk_09(struct meta_data_on_disk_9 *disk, const struct md_cpu *cp
 	BUILD_BUG_ON(ARRAY_SIZE(disk->history_uuids) != ARRAY_SIZE(cpu->history_uuids));
 	for (i = 0; i < ARRAY_SIZE(disk->history_uuids); i++)
 		disk->history_uuids[i].be = cpu_to_be64(cpu->history_uuids[i]);
+
+	disk->cbt_bookmark.id.be = cpu_to_be64(cpu->cbt.id);
+	disk->cbt_bookmark.bitmap_uuid.be = cpu_to_be64(cpu->cbt.bitmap_uuid);
+	disk->cbt_bookmark.bitmap_dagtag.be = cpu_to_be64(cpu->cbt.bitmap_dagtag);
+	disk->cbt_bookmark.since.be = cpu_to_be64(cpu->cbt.since);
+	disk->cbt_bookmark.flags.be = cpu_to_be32(cpu->cbt.flags);
+	disk->cbt_bookmark.bitmap_index.be = cpu_to_be32(cpu->cbt.bitmap_index);
 }
 
 /*
@@ -934,6 +957,7 @@ static struct meta_cmd *command;
 int meta_get_gi(struct format *cfg, char **argv, int argc);
 int meta_show_gi(struct format *cfg, char **argv, int argc);
 int meta_dump_md(struct format *cfg, char **argv, int argc);
+int meta_cbt_dump(struct format *cfg, char **argv, int argc);
 int meta_dump_superblock(struct format *cfg, char **argv, int argc);
 int meta_hex_dump_superblock(struct format *cfg, char **argv, int argc);
 int meta_apply_al(struct format *cfg, char **argv, int argc);
@@ -956,6 +980,10 @@ struct meta_cmd cmds[] = {
 	{"get-gi", 0, meta_get_gi, 1, 1, 0},
 	{"show-gi", 0, meta_show_gi, 1, 1, 0},
 	{"dump-md", 0, meta_dump_md, 1, 0, 0},
+	{"cbt-dump",
+		"[--start-offset {val}] "
+		"[--max-extents {val}]",
+		meta_cbt_dump, 1, 0, 0},
 	{"dump-superblock",
 		"[--output-format={binary,hex,json}]",
 		meta_dump_superblock, 1, 0, 0},
@@ -3644,6 +3672,17 @@ static void print_dump_gi(FILE *f, const struct md_cpu *md, enum md_format v)
 				i % 4 ? " " : "\n        ",
 				md->history_uuids[i]);
 		fprintf(f, "\n}\n");
+		if (md->cbt.flags & CBT_BOOKMARK_IN_USE)
+			fprintf(f, "cbt-bookmark {\n"
+				   "    id 0x"X64(016)";\n"
+				   "    bitmap-uuid 0x"X64(016)";\n"
+				   "    bitmap-dagtag 0x"X64(016)";\n"
+				   "    since %lld;\n"
+				   "    flags 0x"X32(08)";\n"
+				   "    bitmap-index %d;\n"
+				   "}\n",
+				md->cbt.id, md->cbt.bitmap_uuid, md->cbt.bitmap_dagtag,
+				(long long)md->cbt.since, md->cbt.flags, md->cbt.bitmap_index);
 		break;
 	case DRBD_UNKNOWN:
 		fprintf(stderr, "BUG in %s().\n", __FUNCTION__);
@@ -3748,6 +3787,153 @@ int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc
 		if (verbose >= 10)
 			printf_al(cfg);
 	}
+
+	return cfg->ops->close(cfg);
+}
+
+/* cbt-dump finds no changed block tracking it can trust: back up everything */
+#define CBT_DUMP_NO_TRACKING 50
+
+struct cbt_extents {
+	uint64_t bm_bytes_per_bit;
+	uint64_t volume_size;
+	uint64_t emitted;
+	bool full;		/* --max-extents reached */
+};
+
+/* Print the extent of bits [start, end), unless --max-extents is reached;
+ * then print where the next page starts instead. */
+static void cbt_put_extent(struct cbt_extents *x, uint64_t start, uint64_t end)
+{
+	uint64_t offset = start * x->bm_bytes_per_bit;
+	uint64_t last = end * x->bm_bytes_per_bit;
+
+	if (x->full)
+		return;
+	if (last > x->volume_size)
+		last = x->volume_size;
+	if (offset < option_start_offset)
+		offset = option_start_offset;
+	if (offset >= last)
+		return;
+	if (option_max_extents && x->emitted == option_max_extents) {
+		printf("\n  ],\n  \"next-offset\": "U64"\n", offset);
+		x->full = true;
+		return;
+	}
+	printf("%s\n    { \"offset\": "U64", \"length\": "U64" }",
+	       x->emitted ? "," : "", offset, last - offset);
+	x->emitted++;
+}
+
+/* Print the changed block tracking slot of the meta data as extents of the
+ * volume. Meant for the meta data in a snapshot that was taken while I/O was
+ * suspended, after "drbdsetup cbt-flush".
+ */
+int meta_cbt_dump(struct format *cfg, char **argv __attribute((unused)), int argc)
+{
+	const struct cbt_md_cpu *cbt = &cfg->md.cbt;
+	le_u32 const *bm = on_disk_buffer;
+	struct cbt_extents x = { };
+	unsigned int max_peers;
+	uint64_t bits, words, k, run_start = 0;
+	off_t bm_off;
+	size_t max_chunk, n_buffer = 0, i = 0;
+	bool in_run = false;
+	char since[sizeof("YYYY-MM-DDTHH:MM:SSZ")];
+	time_t since_t;
+	struct tm tm;
+
+	if (argc > 0)
+		fprintf(stderr, "Ignoring additional arguments\n");
+
+	if (cfg->ops->open(cfg) == NO_VALID_MD_FOUND) {
+		fprintf(stderr, "No valid meta data found\n");
+		return -1;
+	}
+	if (!is_v09(cfg)) {
+		fprintf(stderr, "Changed block tracking needs v09 meta data\n");
+		exit(CBT_DUMP_NO_TRACKING);
+	}
+	if (!(cfg->md.features & DRBD_MDFF_CBT) || !(cbt->flags & CBT_BOOKMARK_IN_USE)) {
+		fprintf(stderr, "No changed block tracking in this meta data\n");
+		exit(CBT_DUMP_NO_TRACKING);
+	}
+	if (cbt->flags & CBT_BOOKMARK_INVALID) {
+		fprintf(stderr, "The changed block tracking is invalid\n");
+		exit(CBT_DUMP_NO_TRACKING);
+	}
+	if (!(cfg->md.flags & MDF_AL_CLEAN) && !(cbt->flags & CBT_BOOKMARK_FLUSHED)) {
+		fprintf(stderr, "The bitmap was not flushed: take the snapshot while I/O is\n"
+			"suspended, after \"drbdsetup cbt-flush\"\n");
+		exit(CBT_DUMP_NO_TRACKING);
+	}
+	max_peers = cfg->md.max_peers;
+	if (cbt->bitmap_index < 0 || cbt->bitmap_index >= max_peers) {
+		fprintf(stderr, "Bitmap index %d of the changed block tracking exceeds "
+			"%u bitmap slots\n", cbt->bitmap_index, max_peers);
+		exit(CBT_DUMP_NO_TRACKING);
+	}
+
+	x.bm_bytes_per_bit = cfg->md.bm_bytes_per_bit;
+	x.volume_size = cfg->md.effective_size * 512;
+	bits = (x.volume_size + x.bm_bytes_per_bit - 1) / x.bm_bytes_per_bit;
+	words = (bits + 31) / 32;
+
+	since_t = cbt->since;
+	gmtime_r(&since_t, &tm);
+	if (strftime(since, sizeof(since), "%Y-%m-%dT%H:%M:%SZ", &tm) == 0)
+		since[0] = '\0';
+	printf("{\n"
+	       "  \"id\": \""X64(016)"\",\n"
+	       "  \"since\": \"%s\",\n"
+	       "  \"volume-size\": "U64",\n"
+	       "  \"extents\": [",
+	       cbt->id, since, x.volume_size);
+
+	/* The slots interleave word by word: word k of our slot is the 32 bit
+	 * word k * max_peers + bitmap_index of the bitmap area. Read the area
+	 * in chunks of whole rows of all slots. */
+	max_chunk = round_down(buffer_size, 4096 * max_peers);
+	bm_off = cfg->bm_offset;
+	k = option_start_offset / x.bm_bytes_per_bit / 32;
+	bm_off += round_down(k * max_peers * sizeof(*bm), 4096 * max_peers);
+	k = (bm_off - cfg->bm_offset) / sizeof(*bm) / max_peers;
+	for (; k < words && !x.full; k++, i += max_peers) {
+		uint32_t w;
+		unsigned int b;
+
+		if (i >= n_buffer) {
+			size_t chunk = max_chunk;
+			uint64_t left = cfg->bm_bytes - (bm_off - cfg->bm_offset);
+
+			if (chunk > left)
+				chunk = ALIGN(left, cfg->md_hard_sect_size);
+			pread_or_die(cfg, on_disk_buffer, chunk, bm_off, "cbt_dump");
+			bm_off += chunk;
+			n_buffer = chunk / sizeof(*bm);
+			i = cbt->bitmap_index;
+		}
+		w = le32_to_cpu(bm[i].le);
+		if (w == (in_run ? ~0U : 0U))
+			continue;
+		for (b = 0; b < 32; b++) {
+			bool set = w & (1U << b);
+
+			if (set && !in_run) {
+				run_start = k * 32 + b;
+				in_run = true;
+			} else if (!set && in_run) {
+				cbt_put_extent(&x, run_start, k * 32 + b);
+				in_run = false;
+			}
+		}
+	}
+	if (in_run)
+		cbt_put_extent(&x, run_start, bits);
+	if (!x.full)
+		printf("%s]\n", x.emitted ? "\n  " : " ");
+	printf("}\n");
 
 	return cfg->ops->close(cfg);
 }
@@ -3924,6 +4110,15 @@ void json_dump_buffer(
 			md.history_uuids[20], md.history_uuids[21], md.history_uuids[22], md.history_uuids[23],
 			md.history_uuids[24], md.history_uuids[25], md.history_uuids[26], md.history_uuids[27],
 			md.history_uuids[28], md.history_uuids[29], md.history_uuids[30], md.history_uuids[31]);
+		printf( "  \"cbt_bookmark\": { "
+			"\"id\": \"0x"X64(016)"\", "
+			"\"bitmap_uuid\": \"0x"X64(016)"\", "
+			"\"bitmap_dagtag\": "U64", "
+			"\"since\": %lld, "
+			"\"flags\": \"0x"X32(08)"\", "
+			"\"bitmap_index\": "D32" },\n",
+			md.cbt.id, md.cbt.bitmap_uuid, md.cbt.bitmap_dagtag,
+			(long long)md.cbt.since, md.cbt.flags, md.cbt.bitmap_index);
 	}
 
 	/* just double check that padding is all zero, if it is not, spit it out */
@@ -3934,7 +4129,8 @@ void json_dump_buffer(
 		start = offsetof(typeof(*md_on_disk_8),reserved);
 		end = start + sizeof(md_on_disk_8->reserved);
 	} else {
-		BUILD_BUG_ON(offsetof(typeof(*md_on_disk_9),padding_start) != offsetof(typeof(*md_on_disk_9),history_uuids[HISTORY_UUIDS]));
+		BUILD_BUG_ON(offsetof(typeof(*md_on_disk_9),padding_start) !=
+			     offsetof(typeof(*md_on_disk_9),cbt_bookmark) + sizeof(md_on_disk_9->cbt_bookmark));
 		start = offsetof(typeof(*md_on_disk_9),padding_start);
 		end = offsetof(typeof(*md_on_disk_9),padding_end);
 	}
@@ -4389,6 +4585,13 @@ static void map_bitmap_slots(struct format *cfg)
 	if (!is_v09(cfg))
 		return;
 
+	if ((cfg->md.cbt.flags & CBT_BOOKMARK_IN_USE) && max_peers != dump_max) {
+		fprintf(stderr, "This dump has a changed block tracking slot (%d), which\n"
+			"--max-peers cannot move. Stop the tracking first\n"
+			"(\"drbdsetup cbt-stop\").\n", cfg->md.cbt.bitmap_index);
+		exit(10);
+	}
+
 	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
 		s = cfg->md.peers[p].bitmap_index;
 		if (s < 0)
@@ -4618,9 +4821,32 @@ static void parse_dump_md(struct md_cpu *md, enum md_format v)
 			md->history_uuids[i] = yylval.u64;
 		}
 		EXP('}');
+		token = yylex();
+		md->cbt.bitmap_index = -1;
+		if (token == TK_CBT_BOOKMARK) {
+			EXP('{');
+			EXP(TK_ID); EXP(TK_U64); EXP(';');
+			md->cbt.id = yylval.u64;
+			EXP(TK_BITMAP_UUID); EXP(TK_U64); EXP(';');
+			md->cbt.bitmap_uuid = yylval.u64;
+			EXP(TK_BITMAP_DAGTAG); EXP(TK_U64); EXP(';');
+			md->cbt.bitmap_dagtag = yylval.u64;
+			EXP(TK_SINCE); EXP(TK_NUM); EXP(';');
+			md->cbt.since = yylval.u64;
+			EXP(TK_FLAGS); EXP(TK_U32); EXP(';');
+			md->cbt.flags = (uint32_t)yylval.u64;
+			EXP(TK_BITMAP_INDEX); EXP(TK_NUM); EXP(';');
+			md->cbt.bitmap_index = yylval.u64;
+			EXP('}');
+			token = yylex();
+		}
+		if (token != TK_LA_SIZE)
+			md_parse_error(TK_LA_SIZE, token, NULL);
 	}
 
-	EXP(TK_LA_SIZE); EXP(TK_NUM); EXP(';');
+	if (v < DRBD_V09)
+		EXP(TK_LA_SIZE);
+	EXP(TK_NUM); EXP(';');
 	md->effective_size = yylval.u64;
 	if (v < DRBD_V08) {
 		md->bm_bytes_per_bit = BM_BLOCK_SIZE_4k;
@@ -7124,6 +7350,12 @@ int main(int argc, char **argv)
 				DRBD_PEERS_MAX);
 			exit(20);
 		}
+		break;
+	    case OPT_START_OFFSET:
+		option_start_offset = m_strtoll(optarg, 1);
+		break;
+	    case OPT_MAX_EXTENTS:
+		option_max_extents = m_strtoll(optarg, 1);
 		break;
 	    default:
 		print_usage_and_exit();

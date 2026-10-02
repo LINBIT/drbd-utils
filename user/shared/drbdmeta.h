@@ -46,6 +46,16 @@ struct peer_md_cpu {
 	int32_t bitmap_index;
 };
 
+/* The changed block tracking bookmark; flags are CBT_BOOKMARK_* */
+struct cbt_md_cpu {
+	uint64_t id;
+	uint64_t bitmap_uuid;
+	uint64_t bitmap_dagtag;
+	int64_t since;
+	uint32_t flags;
+	int32_t bitmap_index;
+};
+
 struct md_cpu {
 	/* present since drbd 0.6 */
 	uint32_t gc[GEN_CNT_SIZE];	/* generation counter */
@@ -73,6 +83,7 @@ struct md_cpu {
 	uint32_t al_stripe_size_4k;
 	uint64_t members;
 	uint64_t features;
+	struct cbt_md_cpu cbt;
 };
 
 /*
