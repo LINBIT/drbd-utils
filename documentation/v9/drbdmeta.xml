@@ -357,6 +357,43 @@
         </listitem>
       </varlistentry>
       <varlistentry>
+        <term><option>cbt-dump</option>
+          <arg choice="opt" rep="norepeat"><option>--start-offset</option> <replaceable>bytes</replaceable></arg>
+          <arg choice="opt" rep="norepeat"><option>--max-extents</option> <replaceable>count</replaceable></arg>
+        </term>
+        <listitem>
+	  <para><indexterm
+	      significance="normal"><primary>drbdmeta</primary><secondary>cbt-dump</secondary></indexterm>
+	    Print the changed block tracking slot of the metadata as JSON: the
+	    bookmark <literal>id</literal> it tracks from, the time of that
+	    <option>cbt-start</option> as <literal>since</literal>, the
+	    <literal>volume-size</literal> in bytes, and the
+	    <literal>extents</literal> that changed, as byte
+	    <literal>offset</literal> and <literal>length</literal>.
+	    Meant for the metadata in a snapshot of the backing device
+	    (or of external metadata) that was taken after
+	    <option>drbdsetup cbt-flush</option>, while I/O was suspended
+	    on all nodes: then the extents are the writes between that
+	    bookmark and the snapshot. Use <quote>-</quote>
+	    as <replaceable>device</replaceable>; the snapshot belongs to
+	    no drbd device.
+	  </para>
+	  <para>
+	    <option>--start-offset</option> skips the extents that end
+	    before the byte offset, and <option>--max-extents</option>
+	    limits how many are printed. When more follow,
+	    <literal>next-offset</literal> names the start offset of the
+	    next page.
+	  </para>
+	  <para>
+	    The exit code is 50 when the metadata holds no changed block
+	    tracking that can be trusted: none, invalid, or a bitmap that
+	    was not flushed while the activity log is not clean. The
+	    backup has to copy the whole volume then.
+	  </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
         <term><option>outdate</option></term>
         <listitem>
 	  <para>

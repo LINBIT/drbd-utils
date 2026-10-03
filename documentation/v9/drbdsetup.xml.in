@@ -143,6 +143,123 @@
       </varlistentry>
 
       <varlistentry>
+	<xi:include href="drbdsetup_cbt-flush.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<!-- Write the bitmap out for changed block tracking while I/O is suspended. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>cbt-flush</secondary>
+	  </indexterm>
+
+	  <para>Changed block tracking records every write to the backing
+	  device of a volume, local or replicated or by a resync, in a bitmap
+	  slot that no peer owns. A backup tool uses it for incremental
+	  backups from snapshots of the backing devices, which include the
+	  meta data. Tracking is reset only inside a suspension of I/O on
+	  all nodes of the resource, diskless nodes included: once the
+	  Primary is suspended and drained, no write reaches a Secondary
+	  either, and the snapshots of all nodes show the same point in the
+	  stream of writes. Each snapshot is taken like this, every step
+	  after the previous one completed on all nodes:</para>
+
+	  <programlisting>
+<replaceable>on all nodes:</replaceable>             drbdsetup suspend-io <replaceable>minor</replaceable>
+<replaceable>on all nodes with a disk:</replaceable> drbdsetup cbt-flush <replaceable>minor</replaceable>
+<replaceable>on all nodes with a disk:</replaceable> <replaceable>take the snapshot of the backing device (and of external meta data)</replaceable>
+<replaceable>on all nodes with a disk:</replaceable> drbdsetup cbt-start <replaceable>minor</replaceable> <replaceable>id</replaceable>
+<replaceable>on all nodes:</replaceable>             drbdsetup resume-io <replaceable>minor</replaceable></programlisting>
+
+	  <para><command>cbt-flush</command> writes the bitmap and the meta
+	  data super block to stable storage and marks the super block, so
+	  that <command>drbdmeta cbt-dump</command> trusts the bitmap in a
+	  snapshot taken before <command>resume-io</command>, although the
+	  activity log is not clean. It must follow the
+	  <command>suspend-io</command> of all nodes, not only of the local
+	  one: a Secondary still receives writes while the Primary is not
+	  suspended.</para>
+
+	  <para>The command fails if I/O is not suspended and drained, if
+	  peer writes still execute on this node, if a resync runs, or if the
+	  local disk is worse than <literal>Outdated</literal> or has no
+	  bitmap. Do not use a snapshot taken after a failed
+	  <command>cbt-flush</command> for an incremental backup.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_cbt-start.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<!-- Start a new changed block tracking interval at a bookmark. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>cbt-start</secondary>
+	  </indexterm>
+
+	  <para><command>cbt-start</command>, after the snapshot (see
+	  <command>cbt-flush</command>), clears the tracking slot and records
+	  <replaceable>id</replaceable>, up to 16 hex digits chosen by the
+	  caller, as the bookmark the slot tracks from. The snapshot keeps
+	  the changes up to itself; <command>drbdmeta cbt-dump</command>
+	  prints them. The first <command>cbt-start</command> allocates the
+	  slot. Use the same <replaceable>id</replaceable> on all
+	  nodes.</para>
+
+	  <para>The command fails if there was no <command>cbt-flush</command>
+	  since <command>suspend-io</command>, if the backing device was
+	  written to since the <command>cbt-flush</command>, if the local disk
+	  is worse than <literal>Outdated</literal> or has no bitmap, or if no
+	  bitmap slot is free. Tracking then goes on from the previous
+	  bookmark; do not use the snapshot for an incremental backup. A
+	  tracking slot counts against <option>--max-peers</option> of the
+	  meta data, like a peer.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_cbt-status.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<!-- Show the changed block tracking state as JSON. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>cbt-status</secondary>
+	  </indexterm>
+
+	  <para>Print the changed block tracking state of a volume as JSON:
+	  <literal>"state": "stopped"</literal>, or the bookmark
+	  <literal>id</literal> the slot tracks from, the time of its
+	  <command>cbt-start</command> as <literal>since</literal>, the
+	  <literal>dagtag</literal> of the Primary at that time (on a
+	  Secondary the last one it received from the Primary), and the
+	  <literal>state</literal> <literal>valid</literal> or
+	  <literal>invalid</literal>. Invalid tracking (for example after an
+	  attach without a bitmap) starts over with the next
+	  <command>cbt-start</command>.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<xi:include href="drbdsetup_cbt-stop.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
+	<!-- Stop changed block tracking and free its bitmap slot. -->
+
+	<listitem>
+	  <indexterm significance="normal">
+	    <primary>drbdsetup</primary>
+
+	    <secondary>cbt-stop</secondary>
+	  </indexterm>
+
+	  <para>Stop changed block tracking on a volume and free its bitmap
+	  slot.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
 	<xi:include href="drbdsetup_check-resize.xml" xmlns:xi="http://www.w3.org/2001/XInclude" />
 	<!-- Remember the current size of a lower-level device. -->
 
@@ -1311,6 +1428,13 @@ drbd0 node-id:1 role:Primary suspended:no
 	  command is to enable the user to take snapshots of the backing device
 	  across multiple nodes consistently.</para>
 
+	  <para>The command returns when the writes in flight have completed
+	  and, with <option>--flush-to-peers=yes</option>, the peers have
+	  acknowledged the barrier of the last epoch, so that also with
+	  protocols A and B the writes are on the stable storage of the
+	  peers. Only <command>resume-io</command> lifts the
+	  suspension.</para>
+
 	  <variablelist>
 	    <varlistentry>
 	      <term>
@@ -1327,6 +1451,30 @@ drbd0 node-id:1 role:Primary suspended:no
 		  DRBD device into a consistent state using the kernel function
 		  bdev_freeze(). Passing <option>--bdev-freeze=no</option>
 		  suppresses that.
+		</para>
+	      </listitem>
+	    </varlistentry>
+	    <varlistentry>
+	      <term>
+		<option>--flush-to-peers=<group choice="req" rep="norepeat">
+		  <arg choice="plain" rep="norepeat">yes</arg>
+		  <arg choice="plain" rep="norepeat">no</arg>
+		  </group>
+		</option>
+	      </term>
+
+	      <listitem>
+		<para>
+		  By default, DRBD closes the current epoch and waits until
+		  the peers have acknowledged its barrier, so that the writes
+		  before the suspension are on their stable storage also with
+		  protocols A and B. Passing
+		  <option>--flush-to-peers=no</option> returns as soon as the
+		  writes in flight have completed locally. Note that
+		  <command>cbt-flush</command> requires the writes to be
+		  acknowledged by the peers, so it may be refused after a
+		  <command>suspend-io</command> with
+		  <option>--flush-to-peers=no</option>.
 		</para>
 	      </listitem>
 	    </varlistentry>

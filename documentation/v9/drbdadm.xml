@@ -289,6 +289,104 @@
       </varlistentry>
 
       <varlistentry>
+        <term>cbt-dump
+	  <arg choice="req" rep="norepeat">--md-snapshot=<replaceable>snapshot</replaceable></arg>
+	  <arg choice="opt" rep="norepeat">--start-offset=<replaceable>bytes</replaceable></arg>
+	  <arg choice="opt" rep="norepeat">--max-extents=<replaceable>count</replaceable></arg>
+	  <arg choice="req" rep="norepeat"><replaceable>device</replaceable></arg>
+	</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>cbt-dump</secondary>
+	    </indexterm> Print the blocks that changed in the
+	    changed block tracking interval which ends at a snapshot, from the
+	    meta data in that snapshot. <replaceable>snapshot</replaceable> is
+	    the snapshot of the device that holds the meta data: of the backing
+	    device for internal meta data. Calls the <option>cbt-dump</option>
+	    drbdmeta command with the meta data index of the configuration.
+	    See <citerefentry> <refentrytitle>drbdmeta</refentrytitle>
+	      <manvolnum>8</manvolnum> </citerefentry> for details.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>cbt-flush
+	  <arg choice="req" rep="norepeat"><replaceable>device</replaceable></arg>
+	</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>cbt-flush</secondary>
+	    </indexterm> Write the bitmap and the meta data super
+	    block out for changed block tracking, before the snapshot. Run it
+	    on every node with a disk after <option>suspend-io</option>
+	    completed on all nodes of the resource, diskless ones included;
+	    the reset of tracking belongs inside that suspension:
+	    <option>suspend-io</option> on all nodes,
+	    <option>cbt-flush</option> on the nodes with a disk, the
+	    snapshots, <option>cbt-start</option> on the nodes with a disk,
+	    <option>resume-io</option> on all nodes. See <citerefentry> <refentrytitle>drbdsetup</refentrytitle>
+	      <manvolnum>8</manvolnum> </citerefentry> for details.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>cbt-start
+	  <arg choice="req" rep="norepeat">--id=<replaceable>id</replaceable></arg>
+	  <arg choice="req" rep="norepeat"><replaceable>device</replaceable></arg>
+	</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>cbt-start</secondary>
+	    </indexterm> Start a new changed block tracking
+	    interval at the bookmark <replaceable>id</replaceable>, after a
+	    snapshot taken after <option>cbt-flush</option>, while I/O is
+	    still suspended on all nodes. See <citerefentry> <refentrytitle>drbdsetup</refentrytitle>
+	      <manvolnum>8</manvolnum> </citerefentry> for details.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>cbt-status
+	  <arg choice="req" rep="norepeat"><replaceable>device</replaceable></arg>
+	</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>cbt-status</secondary>
+	    </indexterm> Print the changed block tracking state
+	    of a device as JSON. See <citerefentry> <refentrytitle>drbdsetup</refentrytitle>
+	      <manvolnum>8</manvolnum> </citerefentry> for details.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term>cbt-stop
+	  <arg choice="req" rep="norepeat"><replaceable>device</replaceable></arg>
+	</term>
+
+        <listitem>
+          <para><indexterm significance="normal">
+              <primary>drbdadm</primary>
+
+              <secondary>cbt-stop</secondary>
+	    </indexterm> Stop changed block tracking on a device
+	    and free its bitmap slot. See <citerefentry> <refentrytitle>drbdsetup</refentrytitle>
+	      <manvolnum>8</manvolnum> </citerefentry> for details.</para>
+        </listitem>
+      </varlistentry>
+
+      <varlistentry>
         <term>check-resize
 	  <arg choice="req" rep="norepeat"><replaceable>device</replaceable></arg>
 	</term>

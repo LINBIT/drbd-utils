@@ -69,6 +69,7 @@ DRBDSETUP_CMDS += status suspend-io resume-io new-current-uuid
 DRBDSETUP_CMDS += wait-connect-volume wait-connect-connection wait-connect-resource
 DRBDSETUP_CMDS += wait-sync-volume wait-sync-connection wait-sync-resource
 DRBDSETUP_CMDS += forget-peer rename-resource
+DRBDSETUP_CMDS += cbt-flush cbt-start cbt-stop cbt-status
 
 make_doc := $(shell $(XSLTPROC)				\
 	$(XSLTPROC_MANPAGES_OPTIONS)			\
