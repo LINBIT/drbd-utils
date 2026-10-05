@@ -1,4 +1,4 @@
-%if %{?rhel}%{!?rhel:0} >= 8
+%if %{?rhel}%{!?rhel:0} >= 8 || %{?suse_version}%{!?suse_version:0} >= 1600
 %global _with_selinux --with-selinux
 %endif
 
