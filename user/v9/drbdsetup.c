@@ -4727,12 +4727,29 @@ static void print_usage_and_exit(const char *addinfo)
 	exit(20);
 }
 
+/*
+ * A genuine DRBD 8.4 needs drbdsetup-84. A DRBD 9 module that says 8.4 in
+ * /proc/drbd and names its "core:" release serves "drbd" at version 1 next
+ * to drbd2, and this drbdsetup drives it over drbd2; with
+ * DRBD_NETLINK_FAMILY=drbd it gets the version 1 family, which only
+ * drbdsetup-84 speaks.
+ */
+static bool needs_drbdsetup_84(const struct version *driver_version)
+{
+	const char *force = getenv("DRBD_NETLINK_FAMILY");
+
+	if (drbd_driver_needs_84_tools(driver_version))
+		return true;
+	return driver_version->version.major == 8 &&
+	       driver_version->version.minor == 4 &&
+	       force && !strcmp(force, "drbd");
+}
+
 static void maybe_exec_legacy_drbdsetup(char **argv)
 {
 	const struct version *driver_version = drbd_driver_version(FALLBACK_TO_UTILS);
 
-	if (driver_version->version.major == 8 &&
-	    driver_version->version.minor == 4) {
+	if (needs_drbdsetup_84(driver_version)) {
 #ifdef DRBD_LEGACY_84
 		static const char * const drbdsetup_84 = "drbdsetup-84";
 
