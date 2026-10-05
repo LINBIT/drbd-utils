@@ -231,6 +231,39 @@ void parse_version(struct version *rel, const char *text)
 	}
 }
 
+/*
+ * A DRBD 9 module serving the 8.4 netlink API advertises itself as 8.4 in
+ * the "version:" token, for released drbd-utils, and names the release it
+ * is built from in a "core:" field on the same line:
+ *
+ *   version: 8.4.11 (api:1/proto:86-122) core: 9.3.4
+ *
+ * Only the version line is searched. Returns false if it has no "core:"
+ * field.
+ */
+bool parse_core_version(struct version *core, const char *text)
+{
+	const char *eol = strchr(text, '\n');
+	char *line = eol ? strndup(text, eol - text) : strdup(text);
+	const char *p = line;
+	char token[80];
+	bool next_is_core = false;
+
+	memset(core, 0, sizeof(*core));
+	if (!line)
+		return false;
+
+	while (sget_token(token, sizeof(token), &p) != EOF) {
+		if (next_is_core) {
+			version_from_str(core, token);
+			break;
+		}
+		next_is_core = !strcmp(token, "core:");
+	}
+	free(line);
+	return core->version_code != 0;
+}
+
 const struct version *drbd_driver_version(enum driver_version_policy fallback)
 {
 	char *drbd_driver_version_override;
@@ -254,6 +287,26 @@ const struct version *drbd_driver_version(enum driver_version_policy fallback)
 		return drbd_utils_version();
 
 	return NULL;
+}
+
+/*
+ * Whether the 8.4 tools, drbdadm-84 and drbdsetup-84, drive a module of this
+ * version: a genuine DRBD 8.4 only. A DRBD 9 module that serves the "drbd"
+ * family at version 1 says 8.4 as well, for released drbd-utils, but names
+ * its release in a "core:" field. It always registers the drbd2 family too,
+ * which these tools speak. DRBD_DRIVER_VERSION_OVERRIDE wins over "core:".
+ *
+ * This reads /proc/drbd only, and never asks the kernel over netlink: an
+ * 8.4 module holds the genl_lock while it runs a usermode helper.
+ */
+bool drbd_driver_needs_84_tools(const struct version *driver_version)
+{
+	struct version core;
+
+	if (!driver_version ||
+	    driver_version->version.major != 8 || driver_version->version.minor != 4)
+		return false;
+	return getenv("DRBD_DRIVER_VERSION_OVERRIDE") || !get_drbd_core_version(&core);
 }
 
 const struct version *drbd_utils_version(void)

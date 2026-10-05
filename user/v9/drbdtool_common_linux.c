@@ -36,6 +36,18 @@ fail:
 	return buffer;
 }
 
+bool get_drbd_core_version(struct version *core)
+{
+	char *version_txt = slurp_proc_drbd();
+	bool found;
+
+	if (!version_txt)
+		return false;
+	found = parse_core_version(core, version_txt);
+	free(version_txt);
+	return found;
+}
+
 const struct version *get_drbd_driver_version(void)
 {
 	char *version_txt;

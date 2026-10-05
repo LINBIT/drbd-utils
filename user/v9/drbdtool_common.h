@@ -95,6 +95,7 @@ enum driver_version_policy {
 	FALLBACK_TO_UTILS
 };
 extern const struct version *drbd_driver_version(enum driver_version_policy fallback);
+extern bool drbd_driver_needs_84_tools(const struct version *driver_version);
 extern const struct version *drbd_utils_version(void);
 extern const char *escaped_version_code_kernel(void);
 extern int version_code_kernel(void);
@@ -107,8 +108,10 @@ extern uint32_t crc32c(uint32_t crc, const uint8_t *data, unsigned int length);
 
 extern void parse_version(struct version *rel, const char *text);
 extern void version_from_str(struct version *rel, const char *token);
+extern bool parse_core_version(struct version *core, const char *text);
 
 /* This is platform-specific */
 extern const struct version *get_drbd_driver_version(void);
+extern bool get_drbd_core_version(struct version *core);
 
 #endif
