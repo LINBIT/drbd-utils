@@ -71,6 +71,10 @@ enum drbd_nl_cmd {
 	DRBD_NL_CMD_GET_PEER_DEVICES,
 	DRBD_NL_CMD_GET_PATHS,
 	DRBD_NL_CMD_GET_INITIAL_STATE,
+	DRBD_NL_CMD_CBT_FLUSH,
+	DRBD_NL_CMD_CBT_START,
+	DRBD_NL_CMD_CBT_STOP,
+	DRBD_NL_CMD_CBT_STATUS,
 	__DRBD_NL_CMD_MAX,
 };
 
@@ -95,7 +99,21 @@ enum drbd_nl_attr_set {
 	NL_SET_PATH_PARMS,
 	NL_SET_RENAME_RESOURCE_PARMS,
 	NL_SET_SUSPEND_IO_PARMS,
+	NL_SET_CBT_START_PARMS,
 	__NL_SET_MAX,
+};
+
+/* Fields of sets only the drbd2 family carries */
+#define NL_F_CBT_START_PARMS_BOOKMARK_ID	1
+
+/* The changed block tracking state of a device (cbt-status). */
+struct drbd_nl_cbt_info {
+	bool active;
+	bool valid;
+	__u64 bookmark_id;
+	__u64 since;		/* seconds since the epoch */
+	__u64 bitmap_uuid;
+	__u64 bitmap_dagtag;
 };
 
 /* What one received message describes. */
@@ -117,6 +135,8 @@ struct drbd_nl_outcome {
 	const char *info;	/* NUL separated info texts from the kernel */
 	int info_len;		/* bytes in info including the final NUL */
 	int timeout_type;	/* UT_* for get-timeout-type, else -1 */
+	bool have_cbt;		/* cbt holds the reply of cbt-status */
+	struct drbd_nl_cbt_info cbt;
 };
 
 /*

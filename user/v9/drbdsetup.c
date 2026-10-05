@@ -178,6 +178,7 @@ static int dstate_cmd(const struct drbd_cmd *cm, int argc, char **argv);
 static int check_resize_cmd(const struct drbd_cmd *cm, int argc, char **argv);
 static int show_or_get_gi_cmd(const struct drbd_cmd *cm, int argc, char **argv);
 static int udev_cmd(const struct drbd_cmd *cm, int argc, char **argv);
+static int cbt_status_cmd(const struct drbd_cmd *cm, int argc, char **argv);
 
 // sub commands for generic_get_cmd
        int print_event(const struct drbd_cmd *, struct drbd_nl_event *, struct reply_ctx *); /* is in drbdsetup_events2.c */
@@ -196,6 +197,7 @@ static int conv_u32(struct drbd_argument *, struct msg_buff *, enum drbd_nl_attr
 static int conv_peer_node_id(struct drbd_argument *ad, struct msg_buff *msg, enum drbd_nl_attr_set set, char* arg);
 static int conv_addr(struct drbd_argument *ad, struct msg_buff *msg, enum drbd_nl_attr_set set, char* arg);
 static int conv_str(struct drbd_argument *ad, struct msg_buff *msg, enum drbd_nl_attr_set set, char* arg);
+static int conv_hex_u64(struct drbd_argument *ad, struct msg_buff *msg, enum drbd_nl_attr_set set, char *arg);
 
 static struct resources_list *list_resources(void);
 static struct resources_list *sort_resources(struct resources_list *);
@@ -460,6 +462,18 @@ const struct drbd_cmd *commands[] = {
 	 .summary = "Suspend I/O on a replicated device." },
 	&(struct drbd_cmd){"resume-io", CTX_MINOR, DRBD_NL_CMD_RESUME_IO, NO_PAYLOAD, F_CONFIG_CMD,
 	 .summary = "Resume I/O on a replicated device." },
+	&(struct drbd_cmd){"cbt-flush", CTX_MINOR, DRBD_NL_CMD_CBT_FLUSH, NO_PAYLOAD, F_CONFIG_CMD,
+	 .summary = "Write the bitmap out for changed block tracking while I/O is suspended." },
+	&(struct drbd_cmd){"cbt-start", CTX_MINOR, DRBD_NL_CMD_CBT_START, NL_SET_CBT_START_PARMS, F_CONFIG_CMD,
+	 .drbd_args = (struct drbd_argument[]) {
+		{ "id", NL_F_CBT_START_PARMS_BOOKMARK_ID, conv_hex_u64 },
+		{ } },
+	 .summary = "Start a new changed block tracking interval at a bookmark." },
+	&(struct drbd_cmd){"cbt-stop", CTX_MINOR, DRBD_NL_CMD_CBT_STOP, NO_PAYLOAD, F_CONFIG_CMD,
+	 .summary = "Stop changed block tracking and free its bitmap slot." },
+	&(struct drbd_cmd){"cbt-status", CTX_MINOR, DRBD_NL_CMD_CBT_STATUS, NO_PAYLOAD, cbt_status_cmd,
+	 .lockless = true,
+	 .summary = "Show the changed block tracking state as JSON." },
 	&(struct drbd_cmd){"outdate", CTX_MINOR, DRBD_NL_CMD_OUTDATE, NO_PAYLOAD, F_CONFIG_CMD,
 	 .summary = "Mark the data on a lower-level device as outdated." },
 	&(struct drbd_cmd){"verify", CTX_PEER_DEVICE, DRBD_NL_CMD_START_OV, NL_SET_START_OV_PARMS, F_CONFIG_CMD,
@@ -721,6 +735,24 @@ static int conv_str(struct drbd_argument *ad, struct msg_buff *msg,
 		    enum drbd_nl_attr_set set, char *arg)
 {
 	nla_put_string(msg, nl->attr_id(set, ad->nla_type), arg);
+
+	return NO_ERROR;
+}
+
+/* 1 to 16 hex digits, like the UUIDs of show-gi */
+static int conv_hex_u64(struct drbd_argument *ad, struct msg_buff *msg,
+			enum drbd_nl_attr_set set, char *arg)
+{
+	unsigned long long val;
+	char *end;
+
+	errno = 0;
+	val = strtoull(arg, &end, 16);
+	if (errno || end == arg || *end || strlen(arg) > 16) {
+		fprintf(stderr, "%s: expected up to 16 hex digits, not '%s'\n", ad->name, arg);
+		return OTHER_ERROR;
+	}
+	nla_put_u64(msg, nl->attr_id(set, ad->nla_type), val);
 
 	return NO_ERROR;
 }
@@ -3758,6 +3790,84 @@ static int dstate_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		return 10;
 	}
 	return 0;
+}
+
+static int cbt_status_cmd(const struct drbd_cmd *cm, int argc, char **argv)
+{
+	char since[sizeof("YYYY-MM-DDTHH:MM:SSZ")] = "";
+	struct drbd_nl_outcome out = { .ret_code = NO_ERROR, .timeout_type = -1 };
+	const char *desc = NULL;
+	struct msg_buff *smsg;
+	struct iovec iov;
+	time_t since_t;
+	struct tm tm;
+	int rv = OTHER_ERROR;
+
+	iov.iov_len = DEFAULT_MSG_SIZE;
+	iov.iov_base = malloc(iov.iov_len);
+	smsg = msg_new(DEFAULT_MSG_SIZE);
+	if (!smsg || !iov.iov_base) {
+		desc = "could not allocate netlink messages";
+		goto out;
+	}
+	if (nl->put_request(smsg, cm->cmd_id, 0)) {
+		desc = "command not supported by this netlink family";
+		goto out;
+	}
+	if (nl->put_context(smsg, &global_ctx, minor, CTX_MINOR, NL_SET_NONE)) {
+		desc = "request does not fit into a netlink message";
+		goto out;
+	}
+	if (genl_send(drbd_sock, smsg)) {
+		desc = "error sending config command";
+		goto out;
+	}
+	rv = genl_recv_msgs(drbd_sock, &iov, (char **)&desc, 120000);
+	if (rv <= 0 && rv != -E_RCV_ERROR_REPLY) {
+		if (!desc)
+			desc = "error receiving netlink reply";
+		rv = OTHER_ERROR;
+		goto out;
+	}
+	if (nl->recv_outcome(iov.iov_base, &out)) {
+		desc = "reply did not validate - do you need to upgrade your userland tools?";
+		rv = OTHER_ERROR;
+		goto out;
+	}
+	rv = out.ret_code;
+	if (rv == ERR_EXTACK || rv == OTHER_ERROR) {
+		desc = out.desc;
+		goto out;
+	}
+	if (rv != NO_ERROR)
+		goto out;
+	if (!out.have_cbt) {
+		desc = "reply has no cbt-info - do you need to upgrade your userland tools?";
+		rv = OTHER_ERROR;
+		goto out;
+	}
+	if (!out.cbt.active) {
+		printf("{\n  \"state\": \"stopped\"\n}\n");
+		goto out;
+	}
+	since_t = out.cbt.since;
+	if (gmtime_r(&since_t, &tm))
+		strftime(since, sizeof(since), "%Y-%m-%dT%H:%M:%SZ", &tm);
+	printf("{\n"
+	       "  \"id\": \"%016llX\",\n"
+	       "  \"since\": \"%s\",\n"
+	       "  \"state\": \"%s\",\n"
+	       "  \"bitmap-uuid\": \"%016llX\",\n"
+	       "  \"dagtag\": %llu\n"
+	       "}\n",
+	       (unsigned long long)out.cbt.bookmark_id, since,
+	       out.cbt.valid ? "valid" : "invalid",
+	       (unsigned long long)out.cbt.bitmap_uuid,
+	       (unsigned long long)out.cbt.bitmap_dagtag);
+out:
+	msg_free(smsg);
+	free(iov.iov_base);
+	return check_error(rv, desc, &out);
 }
 
 static int udev_cmd(const struct drbd_cmd *cm, int argc, char **argv)

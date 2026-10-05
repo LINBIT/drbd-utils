@@ -1319,6 +1319,7 @@ struct context_def suspend_io_ctx = {
 	.attr_set = NL_SET_SUSPEND_IO_PARMS,
 	.fields = {
 		{ "bdev-freeze", BOOLEAN(DRBD_A_SUSPEND_IO_PARMS_BDEV_FREEZE, SUSPEND_IO_BDEV_FREEZE) },
+		{ "flush-to-peers", BOOLEAN(DRBD_A_SUSPEND_IO_PARMS_FLUSH_TO_PEERS, SUSPEND_IO_FLUSH_TO_PEERS) },
 		{ } },
 };
 
@@ -1356,6 +1357,20 @@ struct context_def create_md_ctx = {
 		{ .name = "uptodate", .argument_is_optional = true },
 		{ .name = "peers-outdated", .argument_is_optional = true },
 		{ .name = "rotate-uuids", .argument_is_optional = true },
+		{ } },
+};
+
+struct context_def cbt_start_adm_ctx = {
+	.fields = {
+		{ .name = "id", .argument_is_optional = false },
+		{ } },
+};
+
+struct context_def cbt_dump_adm_ctx = {
+	.fields = {
+		{ .name = "md-snapshot", .argument_is_optional = false },
+		{ .name = "start-offset", .argument_is_optional = false },
+		{ .name = "max-extents", .argument_is_optional = false },
 		{ } },
 };
 

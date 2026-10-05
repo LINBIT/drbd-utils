@@ -96,6 +96,8 @@ extern FILE *yyin;
 static int adm_adjust(const struct cfg_ctx *ctx);
 static int adm_new_minor(const struct cfg_ctx *ctx);
 static int adm_resource(const struct cfg_ctx *);
+static int adm_cbt_start(const struct cfg_ctx *);
+static int adm_cbt_dump(const struct cfg_ctx *);
 static int adm_attach(const struct cfg_ctx *);
 static int adm_connect(const struct cfg_ctx *);
 static int adm_new_peer(const struct cfg_ctx *);
@@ -479,6 +481,11 @@ static struct adm_cmd khelper14_cmd = {"disconnected", adm_khelper, ACF3_RES_HAN
 
 static struct adm_cmd suspend_io_cmd = {"suspend-io", adm_drbdsetup, &suspend_io_ctx, ACF4_ADVANCED  .backend_res_name = 0 };
 static struct adm_cmd resume_io_cmd = {"resume-io", adm_drbdsetup, ACF4_ADVANCED  .backend_res_name = 0 };
+static struct adm_cmd cbt_flush_cmd = {"cbt-flush", adm_drbdsetup, ACF4_ADVANCED_NEED_VOL .backend_res_name = 0};
+static struct adm_cmd cbt_start_cmd = {"cbt-start", adm_cbt_start, &cbt_start_adm_ctx, ACF4_ADVANCED_NEED_VOL .backend_res_name = 0};
+static struct adm_cmd cbt_stop_cmd = {"cbt-stop", adm_drbdsetup, ACF4_ADVANCED_NEED_VOL .backend_res_name = 0};
+static struct adm_cmd cbt_status_cmd = {"cbt-status", adm_drbdsetup, ACF4_ADVANCED_NEED_VOL .backend_res_name = 0};
+static struct adm_cmd cbt_dump_cmd = {"cbt-dump", adm_cbt_dump, &cbt_dump_adm_ctx, ACF4_ADVANCED_NEED_VOL .disk_required = 1};
 static struct adm_cmd set_gi_cmd = {"set-gi", adm_drbdmeta, &wildcard_ctx, .disk_required = 1, .need_peer = 1, ACF4_ADVANCED_NEED_VOL};
 static struct adm_cmd new_current_uuid_cmd = {"new-current-uuid", adm_drbdsetup, &new_current_uuid_cmd_ctx, ACF4_ADVANCED_NEED_VOL .backend_res_name = 0};
 static struct adm_cmd check_resize_cmd = {"check-resize", adm_chk_resize, ACF4_ADVANCED};
@@ -579,6 +586,11 @@ struct adm_cmd *cmds[] = {
 
 	&suspend_io_cmd,
 	&resume_io_cmd,
+	&cbt_flush_cmd,
+	&cbt_start_cmd,
+	&cbt_stop_cmd,
+	&cbt_status_cmd,
+	&cbt_dump_cmd,
 	&set_gi_cmd,
 	&new_current_uuid_cmd,
 	&check_resize_cmd,
@@ -1682,6 +1694,66 @@ int _adm_drbdmeta(const struct cfg_ctx *ctx, int flags, char *argument)
 static int adm_drbdmeta(const struct cfg_ctx *ctx)
 {
 	return _adm_drbdmeta(ctx, SLEEPS_VERY_LONG, NULL);
+}
+
+/* The value of a "--name=value" option of the command line, or NULL. */
+static const char *backend_option_value(const char *name_eq)
+{
+	struct d_name *opt = find_backend_option(name_eq);
+
+	return opt ? opt->name + strlen(name_eq) : NULL;
+}
+
+static int adm_cbt_start(const struct cfg_ctx *ctx)
+{
+	const char *id = backend_option_value("--id=");
+	const char *argv[MAX_ARGS];
+	int argc = 0;
+
+	if (!id) {
+		fprintf(stderr, "%s: cbt-start needs --id={bookmark id}\n", ctx->res->name);
+		return 20;
+	}
+	argv[NA(argc)] = drbdsetup;
+	argv[NA(argc)] = ctx->cmd->name;
+	argv[NA(argc)] = ssprintf("%d", ctx->vol->device_minor);
+	argv[NA(argc)] = id;
+	argv[NA(argc)] = 0;
+
+	return m_system_ex(argv, SLEEPS_SHORT, ctx->res->name);
+}
+
+/* drbdmeta cbt-dump on the snapshot of the meta data of this volume */
+static int adm_cbt_dump(const struct cfg_ctx *ctx)
+{
+	const char *md_snapshot = backend_option_value("--md-snapshot=");
+	struct d_volume *vol = ctx->vol;
+	const char *argv[MAX_ARGS];
+	struct d_name *opt;
+	int argc = 0;
+
+	if (!md_snapshot) {
+		fprintf(stderr, "%s: cbt-dump needs --md-snapshot={device}\n", ctx->res->name);
+		return 20;
+	}
+	argv[NA(argc)] = drbdmeta;
+	argv[NA(argc)] = "-";
+	argv[NA(argc)] = "v09";
+	argv[NA(argc)] = md_snapshot;
+	if (!strcmp(vol->meta_index, "flexible"))
+		argv[NA(argc)] = strcmp(vol->meta_disk, "internal") ? "flex-external" : "flex-internal";
+	else
+		argv[NA(argc)] = vol->meta_index;
+	argv[NA(argc)] = ctx->cmd->name;
+	opt = find_backend_option("--start-offset=");
+	if (opt)
+		argv[NA(argc)] = opt->name;
+	opt = find_backend_option("--max-extents=");
+	if (opt)
+		argv[NA(argc)] = opt->name;
+	argv[NA(argc)] = 0;
+
+	return m_system_ex(argv, SLEEPS_LONG, ctx->res->name);
 }
 
 static void __adm_drbdsetup(const struct cfg_ctx *ctx, int flags, pid_t *pid, int *fd, int *ex)

@@ -64,6 +64,10 @@ static const int drbd2_cmd[__DRBD_NL_CMD_MAX] = {
 	[DRBD_NL_CMD_GET_PEER_DEVICES]	= DRBD2_CMD_PEER_DEVICE_GET,
 	[DRBD_NL_CMD_GET_PATHS]		= DRBD2_CMD_PATH_GET,
 	[DRBD_NL_CMD_GET_INITIAL_STATE]	= DRBD2_CMD_STATE_GET,
+	[DRBD_NL_CMD_CBT_FLUSH]		= DRBD2_CMD_DEVICE_CBT_FLUSH,
+	[DRBD_NL_CMD_CBT_START]		= DRBD2_CMD_DEVICE_CBT_START,
+	[DRBD_NL_CMD_CBT_STOP]		= DRBD2_CMD_DEVICE_CBT_STOP,
+	[DRBD_NL_CMD_CBT_STATUS]	= DRBD2_CMD_DEVICE_CBT_STATUS,
 };
 
 /* The top level attribute of each set; 0 for the two sets drbd2 carries in the context. */
@@ -84,6 +88,7 @@ static const int drbd2_set[__NL_SET_MAX] = {
 	[NL_SET_CONNECT_PARMS]		= DRBD2_A_CONNECT_PARMS,
 	[NL_SET_RENAME_RESOURCE_PARMS]	= DRBD2_A_RENAME_PARMS,
 	[NL_SET_SUSPEND_IO_PARMS]	= DRBD2_A_SUSPEND_IO_PARMS,
+	[NL_SET_CBT_START_PARMS]	= DRBD2_A_CBT_START_PARMS,
 };
 
 /*
@@ -243,8 +248,13 @@ static const __u16 rename_resource_parms_map[DRBD_A_RENAME_RESOURCE_PARMS_NEW_RE
 	MAP(RENAME_RESOURCE_PARMS_NEW_RESOURCE_NAME, RENAME_PARMS_NEW_NAME),
 };
 
-static const __u16 suspend_io_parms_map[DRBD_A_SUSPEND_IO_PARMS_BDEV_FREEZE + 1] = {
+static const __u16 suspend_io_parms_map[DRBD_A_SUSPEND_IO_PARMS_FLUSH_TO_PEERS + 1] = {
 	MAP(SUSPEND_IO_PARMS_BDEV_FREEZE, SUSPEND_IO_PARMS_BDEV_FREEZE),
+	MAP(SUSPEND_IO_PARMS_FLUSH_TO_PEERS, SUSPEND_IO_PARMS_FLUSH_TO_PEERS),
+};
+
+static const __u16 cbt_start_parms_map[NL_F_CBT_START_PARMS_BOOKMARK_ID + 1] = {
+	[NL_F_CBT_START_PARMS_BOOKMARK_ID] = DRBD2_A_CBT_START_PARMS_BOOKMARK_ID,
 };
 #undef MAP
 
@@ -286,6 +296,7 @@ static struct drbd2_attr_map attr_maps[__NL_SET_MAX] = {
 					    (__u16 [DRBD2_A_RENAME_PARMS_MAX + 1]){},
 					    drbd2_rename_parms_nl_policy, DRBD2_A_RENAME_PARMS_MAX },
 	[NL_SET_SUSPEND_IO_PARMS]	= ATTR_MAP(suspend_io_parms, SUSPEND_IO_PARMS),
+	[NL_SET_CBT_START_PARMS]	= ATTR_MAP(cbt_start_parms, CBT_START_PARMS),
 };
 #undef ATTR_MAP
 
@@ -470,6 +481,28 @@ static int drbd2_state_result_to_rv(__u32 v)
 	return -(int)v;
 }
 
+static int drbd2_get_cbt_info(const struct nlattr *nest, struct drbd_nl_cbt_info *ci)
+{
+	struct nlattr *tb[DRBD2_A_CBT_INFO_MAX + 1];
+
+	if (nla_parse_nested(tb, DRBD2_A_CBT_INFO_MAX, nest, drbd2_cbt_info_nl_policy))
+		return -EINVAL;
+	memset(ci, 0, sizeof(*ci));
+	if (tb[DRBD2_A_CBT_INFO_ACTIVE])
+		ci->active = nla_get_u8(tb[DRBD2_A_CBT_INFO_ACTIVE]);
+	if (tb[DRBD2_A_CBT_INFO_VALID])
+		ci->valid = nla_get_u8(tb[DRBD2_A_CBT_INFO_VALID]);
+	if (tb[DRBD2_A_CBT_INFO_BOOKMARK_ID])
+		ci->bookmark_id = nla_get_u64(tb[DRBD2_A_CBT_INFO_BOOKMARK_ID]);
+	if (tb[DRBD2_A_CBT_INFO_SINCE])
+		ci->since = nla_get_u64(tb[DRBD2_A_CBT_INFO_SINCE]);
+	if (tb[DRBD2_A_CBT_INFO_BITMAP_UUID])
+		ci->bitmap_uuid = nla_get_u64(tb[DRBD2_A_CBT_INFO_BITMAP_UUID]);
+	if (tb[DRBD2_A_CBT_INFO_BITMAP_DAGTAG])
+		ci->bitmap_dagtag = nla_get_u64(tb[DRBD2_A_CBT_INFO_BITMAP_DAGTAG]);
+	return 0;
+}
+
 static char drbd2_info_buf[DEFAULT_MSG_SIZE];
 
 static int drbd2_recv_outcome(struct nlmsghdr *nlh, struct drbd_nl_outcome *out)
@@ -506,6 +539,8 @@ static int drbd2_recv_outcome(struct nlmsghdr *nlh, struct drbd_nl_outcome *out)
 		out->info = drbd2_info_buf;
 		out->info_len = len + 1;
 	}
+	if (tb[DRBD2_A_CBT_INFO] && drbd2_get_cbt_info(tb[DRBD2_A_CBT_INFO], &out->cbt) == 0)
+		out->have_cbt = true;
 	if (tb[DRBD2_A_TIMEOUT_TYPE]) {
 		switch (nla_get_u32(tb[DRBD2_A_TIMEOUT_TYPE])) {
 		case DRBD2_TIMEOUT_TYPE_DEGRADED:

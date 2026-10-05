@@ -112,6 +112,8 @@ extern struct context_def invalidate_peer_ctx;
 extern struct context_def suspend_io_ctx;
 extern struct context_def create_md_ctx;
 extern struct context_def forceable_ctx;
+extern struct context_def cbt_start_adm_ctx;
+extern struct context_def cbt_dump_adm_ctx;
 extern struct context_def adjust_ctx;
 extern struct context_def status_ctx;
 extern struct context_def repair_md_ctx;
