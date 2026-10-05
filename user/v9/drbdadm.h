@@ -347,6 +347,9 @@ struct adm_cmd {
 	unsigned int test_config:1; /* Allow -t option */
 	unsigned int disk_required:1; /* cmd needs vol->disk or vol->meta_[disk|index] */
 	unsigned int iterate_paths:1; /* cmd needs path set, eventually iterate over all */
+	/* never talks to the kernel: choosing between drbdadm and drbdadm-84
+	 * for it must not load the module */
+	unsigned int no_kernel:1;
 };
 
 struct cfg_ctx {
@@ -587,6 +590,7 @@ extern enum cfg_version config_version;
  */
 
 void maybe_add_bin_dir_to_path(void);
+bool load_drbd_module(void);
 int before_attach(const struct cfg_ctx *ctx);
 int after_new_minor(const struct cfg_ctx *ctx);
 int after_primary(const struct cfg_ctx *ctx);

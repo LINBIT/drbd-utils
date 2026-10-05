@@ -319,15 +319,32 @@ const struct version *drbd_utils_version(void)
 	return &__drbd_utils_version;
 }
 
+/*
+ * The DRBD release the kernel module is built from: the "core:" field of a
+ * module that advertises 8.4 for released drbd-utils, otherwise its
+ * version. DRBD_DRIVER_VERSION_OVERRIDE wins. NULL if unknown.
+ *
+ * For reporting and for config conditionals; the choice between the 9 and
+ * the 8.4 tools goes by drbd_driver_needs_84_tools().
+ */
+const struct version *drbd_kernel_release(void)
+{
+	static struct version core;
+
+	if (!getenv("DRBD_DRIVER_VERSION_OVERRIDE") && get_drbd_core_version(&core))
+		return &core;
+	return drbd_driver_version(STRICT);
+}
+
 int version_code_kernel(void)
 {
-	const struct version *driver_version = drbd_driver_version(STRICT);
+	const struct version *driver_version = drbd_kernel_release();
 	return driver_version ? driver_version->version_code : 0;
 }
 
 const char *escaped_version_code_kernel(void)
 {
-	const struct version *driver_version = drbd_driver_version(STRICT);
+	const struct version *driver_version = drbd_kernel_release();
 	char buf[32];
 
 	if (!driver_version)

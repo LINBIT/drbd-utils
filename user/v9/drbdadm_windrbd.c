@@ -178,6 +178,12 @@ void maybe_add_bin_dir_to_path(void)
         add_component_to_path(drbd_bin_dir());
 }
 
+/* WinDRBD never says 8.4, so drbdadm never needs to load it to find out. */
+bool load_drbd_module(void)
+{
+	return false;
+}
+
 void print_platform_specific_versions(void)
 {
 	char *windrbd_version = windrbd_get_windrbd_version();

@@ -2155,7 +2155,7 @@ static void validate_kmod(int token)
 	const char *op = "";
 	char *buf;
 
-	have = drbd_driver_version(STRICT);
+	have = drbd_kernel_release();
 	if (!have) {
 		fprintf(stderr, "Could not get drbd-module-version, Module not loaded?\n");
 		exit(E_CONFIG_INVALID);

@@ -5,6 +5,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 /* This file contains hooks for things that do something with
  * WinDRBD. Most of them are empty for Linux.
@@ -46,6 +47,19 @@ char *khelper_argv[] = { "/bin/sh", "-c", NULL, NULL };
 
 void maybe_add_bin_dir_to_path(void)
 {
+}
+
+/*
+ * Load the DRBD module if /proc/drbd does not exist yet. Returns true if it
+ * was loaded now; failures are reported later, by drbdsetup.
+ */
+bool load_drbd_module(void)
+{
+	if (access("/proc/drbd", F_OK) == 0)
+		return false;
+	if (system("/sbin/modprobe -q drbd") != 0)
+		return false;
+	return access("/proc/drbd", F_OK) == 0;
 }
 
 int before_attach(const struct cfg_ctx *ctx)

@@ -109,6 +109,7 @@ extern uint32_t crc32c(uint32_t crc, const uint8_t *data, unsigned int length);
 extern void parse_version(struct version *rel, const char *text);
 extern void version_from_str(struct version *rel, const char *token);
 extern bool parse_core_version(struct version *core, const char *text);
+extern const struct version *drbd_kernel_release(void);
 
 /* This is platform-specific */
 extern const struct version *get_drbd_driver_version(void);

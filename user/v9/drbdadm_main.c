@@ -351,6 +351,7 @@ int adm_adjust_wp(const struct cfg_ctx *ctx)
 	.verify_ips = 1,		\
 	.uc_dialog = 1,			\
 	.test_config = 1,		\
+	.no_kernel = 1,			\
 
 #define ACF2_SHELL			\
 	.show_in_usage = 2,		\
@@ -358,6 +359,7 @@ int adm_adjust_wp(const struct cfg_ctx *ctx)
 	.res_name_required = 1,		\
 	.backend_res_name = 1,		\
 	.verify_ips = 0,		\
+	.no_kernel = 1,			\
 
 #define ACF2_SH_RESNAME			\
 	.show_in_usage = 2,		\
@@ -373,6 +375,7 @@ int adm_adjust_wp(const struct cfg_ctx *ctx)
 	.verify_ips = 0,		\
 	.need_peer = 1,			\
 	.is_proxy_cmd = 1,		\
+	.no_kernel = 1,			\
 
 #define ACF2_HOOK			\
 	.show_in_usage = 2,		\
@@ -385,6 +388,7 @@ int adm_adjust_wp(const struct cfg_ctx *ctx)
 	.show_in_usage = 2,		\
 	.res_name_required = 0,		\
 	.verify_ips = 0,		\
+	.no_kernel = 1,			\
 
 /*  */ struct adm_cmd attach_cmd = {"attach", adm_attach, &attach_cmd_ctx, CFG_DISK, ACF1_MINOR_ONLY };
 /*  */ struct adm_cmd disk_options_cmd = {"disk-options", adm_attach, &attach_cmd_ctx, CFG_DISK, ACF1_MINOR_ONLY };
@@ -434,21 +438,21 @@ static struct adm_cmd apply_al_cmd = {"apply-al", adm_drbdmeta, &forceable_ctx, 
 static struct adm_cmd forget_peer_cmd = {"forget-peer", adm_forget_peer, &forceable_ctx, ACF1_DISCONNECT };
 static struct adm_cmd repair_md_cmd = {"repair-md", adm_drbdmeta, &repair_md_ctx, ACF1_MINOR_ONLY };
 
-static struct adm_cmd hidden_cmd = {"hidden-commands", hidden_cmds,.show_in_usage = 1,};
+static struct adm_cmd hidden_cmd = {"hidden-commands", hidden_cmds,.show_in_usage = 1, .no_kernel = 1,};
 
 static struct adm_cmd sh_nop_cmd = {"sh-nop", sh_nop, ACF2_GEN_SHELL .uc_dialog = 1, .test_config = 1};
 static struct adm_cmd sh_resources_cmd = {"sh-resources", sh_resources, ACF2_GEN_SHELL};
-static struct adm_cmd sh_resource_cmd = {"sh-resource", sh_resource, ACF2_SH_RESNAME .vol_id_optional = 1};
+static struct adm_cmd sh_resource_cmd = {"sh-resource", sh_resource, ACF2_SH_RESNAME .vol_id_optional = 1, .no_kernel = 1};
 static struct adm_cmd sh_mod_parms_cmd = {"sh-mod-parms", sh_mod_parms, ACF2_GEN_SHELL};
 static struct adm_cmd sh_dev_cmd = {"sh-dev", sh_dev, ACF2_SHELL};
-static struct adm_cmd sh_udev_cmd = {"sh-udev", sh_udev, .vol_id_required = 1, ACF2_HOOK};
+static struct adm_cmd sh_udev_cmd = {"sh-udev", sh_udev, .vol_id_required = 1, ACF2_HOOK .no_kernel = 1};
 static struct adm_cmd sh_minor_cmd = {"sh-minor", sh_minor, ACF2_SHELL};
 static struct adm_cmd sh_ll_dev_cmd = {"sh-ll-dev", sh_ll_dev, ACF2_SHELL .disk_required = 0};
 static struct adm_cmd sh_md_dev_cmd = {"sh-md-dev", sh_md_dev, ACF2_SHELL .disk_required = 1};
 static struct adm_cmd sh_md_idx_cmd = {"sh-md-idx", sh_md_idx, ACF2_SHELL .disk_required = 1};
 static struct adm_cmd sh_ip_cmd = {"sh-ip", sh_ip, ACF2_SHELL .need_peer = 1, .iterate_paths = 1};
 static struct adm_cmd sh_lr_of_cmd = {"sh-lr-of", sh_lres, ACF2_SHELL};
-static struct adm_cmd sh_lcf_cmd = {"sh-list-config-file", sh_lcf, ACF2_SH_RESNAME .vol_id_optional = 1};
+static struct adm_cmd sh_lcf_cmd = {"sh-list-config-file", sh_lcf, ACF2_SH_RESNAME .vol_id_optional = 1, .no_kernel = 1};
 
 static struct adm_cmd proxy_up_cmd = {"proxy-up", adm_proxy_up, ACF2_PROXY};
 static struct adm_cmd proxy_down_cmd = {"proxy-down", adm_proxy_down, ACF2_PROXY};
@@ -3598,6 +3602,97 @@ struct adm_cmd *find_cmd(char *cmdname)
 	return cmd;
 }
 
+/*
+ * The command on the command line, found before parse_options() runs:
+ * the first word that names one. Unlike find_cmd(), no side effects.
+ * NULL for commands only drbdadm-84 knows.
+ */
+static const struct adm_cmd *peek_cmd(int argc, char **argv)
+{
+	unsigned int i;
+	int a;
+
+	for (a = 1; a < argc; a++) {
+		if (argv[a][0] == '-')
+			continue;
+		for (i = 0; i < ARRAY_SIZE(cmds); i++)
+			if (!strcmp(cmds[i]->name, argv[a]))
+				return cmds[i];
+	}
+	return NULL;
+}
+
+static bool short_opt_takes_arg(char c)
+{
+	const struct option *opt;
+
+	for (opt = general_admopt; opt->name; opt++)
+		if (opt->val == c)
+			return opt->has_arg != no_argument;
+	return false;
+}
+
+/*
+ * Whether -d/--dry-run is on the command line, found before parse_options()
+ * runs: also within a group of short options, up to one that takes an
+ * argument, and as an abbreviation of --dry-run that getopt_long() accepts.
+ */
+static bool peek_dry_run(int argc, char **argv)
+{
+	const char *arg, *c;
+	int a;
+
+	for (a = 1; a < argc; a++) {
+		arg = argv[a];
+		if (!strcmp(arg, "--"))
+			break;
+		if (arg[0] != '-')
+			continue;
+		if (arg[1] == '-') {
+			/* "--dr" could also be --drbdsetup, --drbdmeta, ... */
+			if (strlen(arg) >= strlen("--dry") &&
+			    !strncmp(arg, "--dry-run", strlen(arg)))
+				return true;
+			continue;
+		}
+		for (c = arg + 1; *c; c++) {
+			if (*c == 'd')
+				return true;
+			if (short_opt_takes_arg(*c))
+				break; /* the rest is its argument */
+		}
+	}
+	return false;
+}
+
+/*
+ * Whether drbdadm-84 drives the kernel: a genuine DRBD 8.4 only, as
+ * drbd_driver_needs_84_tools() reads it from /proc/drbd. Never ask the
+ * kernel over netlink here: drbdadm is the usermode helper, and an 8.4
+ * module holds the genl_lock while it runs one.
+ *
+ * Without /proc/drbd, the version comes from modinfo, which also says 8.4
+ * for a DRBD 9 module that serves "drbd" at version 1 next to drbd2. Load
+ * the module then and read /proc/drbd, unless the command never talks to
+ * the kernel, is one only drbdadm-84 knows, or this is a dry run. Otherwise
+ * the first "drbdadm up" after boot would go by modinfo's version.
+ */
+static bool use_drbdadm_84(int argc, char **argv)
+{
+	const struct adm_cmd *cmd;
+
+	if (!drbd_driver_needs_84_tools(driver_version))
+		return false;
+
+	cmd = peek_cmd(argc, argv);
+	if (!getenv("DRBD_DRIVER_VERSION_OVERRIDE") &&
+	    cmd && !cmd->no_kernel && !peek_dry_run(argc, argv) &&
+	    load_drbd_module())
+		driver_version = get_drbd_driver_version();
+
+	return drbd_driver_needs_84_tools(driver_version);
+}
+
 char *config_file_from_arg(char *arg)
 {
 	char *f;
@@ -3736,8 +3831,7 @@ int main(int argc, char **argv)
 		exit(E_EXEC_ERROR);
 	}
 
-	if (driver_version &&
-	    driver_version->version.major == 8 && driver_version->version.minor == 4)
+	if (use_drbdadm_84(argc, argv))
 		exec_legacy_drbdadm(argv);
 
 	recognize_all_drbdsetup_options();
