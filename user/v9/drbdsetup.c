@@ -4437,6 +4437,9 @@ static int down_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 			continue;
 
 		objname = resource->name;
+		global_ctx.ctx_resource_name_len =
+			snprintf(global_ctx.ctx_resource_name,
+				 sizeof(global_ctx.ctx_resource_name), "%s", objname);
 		devices = list_devices(objname);
 		rv2 = _generic_config_cmd(cm, argc, argv);
 		if (!rv2) {
