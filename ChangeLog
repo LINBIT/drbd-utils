@@ -18,6 +18,8 @@ Unreleased
    superblock rewrites, add cbt-dump
  * drbdmeta: converting v08 meta data of a crashed primary to v09 keeps
    it a crashed primary, so DRBD 9 resyncs its activity log extents
+ * drbdadm,adjust: fix a recreated proxied peer stuck in Connecting;
+   rebuild its proxy connection when a peer or path is new
  * libgenl: report the kernel's extended ACK text on netlink errors
  * spec: enable SELinux on SLES 16+; require bash-completion only
    conditionally; no rich pacemaker dependency on SLES 12

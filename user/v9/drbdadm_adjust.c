@@ -253,6 +253,7 @@ static bool adjust_paths(const struct cfg_ctx *ctx, struct connection *running_c
 			continue;
 		running_path = find_path_by_addrs(running_conn, configured_path);
 		if (!running_path) {
+			configured_conn->adj_proxy_redo = 1;
 			tmp_ctx.path = configured_path;
 			adj_schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, depends_on, 0);
 		} else {
@@ -411,7 +412,7 @@ bool _is_plugin_in_list(char *string,
 
 
 static int proxy_reconf(const struct cfg_ctx *ctx, struct d_proxy_info *running_proxy,
-			bool proxy_conn_is_up, char *conn_name)
+			bool proxy_conn_is_up, char *conn_name, bool force_redo)
 {
 	struct deferred_cmd *dcmd = NULL;
 	int reconn = 0;
@@ -433,6 +434,10 @@ static int proxy_reconf(const struct cfg_ctx *ctx, struct d_proxy_info *running_
 
 	if (!proxy_conn_is_up)
 		goto up_whole_conn;
+
+	/* the running connection may still forward the ports of an earlier peer or path */
+	if (force_redo)
+		goto redo_whole_conn;
 
 	res_o = find_opt(&path->my_proxy->options, "memlimit");
 	run_o = find_opt(&running_proxy->options, "memlimit");
@@ -781,6 +786,7 @@ static struct deferred_cmd *adjust_conn(const struct cfg_ctx *ctx, struct d_reso
 		if (running)
 			running_conn = matching_conn(conn, &running->connections, false);
 		if (!running_conn) {
+			conn->adj_proxy_redo = 1;
 			dcmd = adj_schedule_deferred_cmd(&new_peer_cmd, &tmp_ctx, dcmd, 0);
 			adj_schedule_deferred_cmd(&new_path_cmd, &tmp_ctx, dcmd, 0);
 			schedule_peer_device_options(&tmp_ctx, dcmd);
@@ -1085,7 +1091,7 @@ static void adjust_proxy(const struct cfg_ctx *ctx)
 				conn_name = old_conn_name;
 		}
 
-		proxy_reconf(&tmp_ctx, running_proxy, proxy_conn_is_up, conn_name);
+		proxy_reconf(&tmp_ctx, running_proxy, proxy_conn_is_up, conn_name, conn->adj_proxy_redo);
 	}
 }
 

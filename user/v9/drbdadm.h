@@ -208,6 +208,8 @@ struct connection
 	   Not set if only found by iterating over all connextions in resource */
 	unsigned int on_cmdline:1;
 	unsigned int adj_seen:1;
+	/* adjust creates the peer or a path, so a running proxy connection with this name may be stale */
+	unsigned int adj_proxy_redo:1;
 	enum drbd_conn_state cstate; /* from drbdsetup show for adjust */
 	STAILQ_ENTRY(connection) link;
 };

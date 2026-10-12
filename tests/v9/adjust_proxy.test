@@ -1,4 +1,4 @@
-## Proxy adjust tests: match, memlimit change, plugin change, proxy down
+## Proxy adjust tests: match, memlimit change, plugin change, proxy down, new path, new peer, direct path switched to proxy
 $ FAKE_DRBDSETUP_SHOW=drbdsetup_show_adjust_proxy.txt FAKE_DRBD_PROXY_CTL=proxy_settings_adjust_proxy_match.txt drbdadm -c ./adjust_proxy.res adjust -d r0 2>/dev/null
 $ FAKE_DRBDSETUP_SHOW=drbdsetup_show_adjust_proxy.txt FAKE_DRBD_PROXY_CTL=proxy_settings_adjust_proxy_memlimit.txt drbdadm -c ./adjust_proxy.res adjust -d r0 2>/dev/null
 drbd-proxy-ctl -c del\ connection\ r0-peer-undertest
@@ -12,6 +12,24 @@ drbd-proxy-ctl -c set\ memlimit\ r0-peer-undertest\ 128M -c set\ plugin\ r0-peer
 $ FAKE_DRBDSETUP_SHOW=drbdsetup_show_adjust_proxy.txt FAKE_DRBD_PROXY_CTL=proxy_settings_adjust_proxy_down.txt FAKE_DRBD_PROXY_CTL_OLD=proxy_settings_adjust_proxy_plugin.txt drbdadm -c ./adjust_proxy.res adjust -d r0 2>/dev/null
 drbd-proxy-ctl -c set\ plugin\ r0-peer-undertest\ 0\ zstd\ level\ 4
 $ FAKE_DRBDSETUP_SHOW=drbdsetup_show_adjust_proxy_no_path.txt FAKE_DRBD_PROXY_CTL=proxy_settings_adjust_proxy_match.txt drbdadm -c ./adjust_proxy.res adjust -d r0 2>/dev/null
+drbd-proxy-ctl -c del\ connection\ r0-peer-undertest
+drbd-proxy-ctl -c add\ connection\ r0-peer-undertest\ 10.0.1.1:7789\ 10.0.2.2:7789\ 10.0.2.1:7789\ 10.0.0.1:7789\ --memlimit=128M
+drbd-proxy-ctl -c set\ memlimit\ r0-peer-undertest\ 128M -c set\ plugin\ r0-peer-undertest\ 0\ zstd\ level\ 4 -c set\ plugin\ r0-peer-undertest\ 1\ END
 drbdsetup new-path r0 1 ipv4:10.0.0.1:7789 ipv4:10.0.1.1:7789
 drbdsetup peer-device-options r0 1 0 --set-defaults
+drbdsetup connect r0 1
+$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_adjust_proxy_no_peer.txt FAKE_DRBD_PROXY_CTL=proxy_settings_adjust_proxy_match.txt drbdadm -c ./adjust_proxy.res adjust -d r0 2>/dev/null
+drbd-proxy-ctl -c del\ connection\ r0-peer-undertest
+drbdsetup new-peer r0 1 --_name=peer --protocol=A
+drbd-proxy-ctl -c add\ connection\ r0-peer-undertest\ 10.0.1.1:7789\ 10.0.2.2:7789\ 10.0.2.1:7789\ 10.0.0.1:7789\ --memlimit=128M
+drbd-proxy-ctl -c set\ memlimit\ r0-peer-undertest\ 128M -c set\ plugin\ r0-peer-undertest\ 0\ zstd\ level\ 4 -c set\ plugin\ r0-peer-undertest\ 1\ END
+drbdsetup new-path r0 1 ipv4:10.0.0.1:7789 ipv4:10.0.1.1:7789
+drbdsetup connect r0 1
+$ FAKE_DRBDSETUP_SHOW=drbdsetup_show_adjust_proxy_direct_path.txt FAKE_DRBD_PROXY_CTL=proxy_settings_adjust_proxy_match.txt drbdadm -c ./adjust_proxy.res adjust -d r0 2>/dev/null
+drbdsetup disconnect r0 1
+drbdsetup del-path r0 1 ipv4:10.0.0.1:7789 ipv4:10.0.0.2:7789
+drbd-proxy-ctl -c del\ connection\ r0-peer-undertest
+drbd-proxy-ctl -c add\ connection\ r0-peer-undertest\ 10.0.1.1:7789\ 10.0.2.2:7789\ 10.0.2.1:7789\ 10.0.0.1:7789\ --memlimit=128M
+drbd-proxy-ctl -c set\ memlimit\ r0-peer-undertest\ 128M -c set\ plugin\ r0-peer-undertest\ 0\ zstd\ level\ 4 -c set\ plugin\ r0-peer-undertest\ 1\ END
+drbdsetup new-path r0 1 ipv4:10.0.0.1:7789 ipv4:10.0.1.1:7789
 drbdsetup connect r0 1
