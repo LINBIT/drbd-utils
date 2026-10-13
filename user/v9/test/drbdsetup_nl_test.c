@@ -791,7 +791,14 @@ static void test_genl_connect_to_family_unregistered(void)
 	/* GENL_NAMSIZ (16, including the terminating NUL) caps how long this
 	 * name can be. */
 	struct genl_family family = { .name = "no-such-family" };
-	struct genl_sock *s = genl_connect_to_family(&family, NULL);
+	/* Below the kernel's default net.core.{r,w}mem_max: with the 1 MiB
+	 * defaults, libgenl warns on stderr on a host that does not raise
+	 * them, and the output comparison of the test fails. */
+	struct genl_connect_options opts = {
+		.rcvbuf_size = 64 << 10,
+		.sndbuf_size = 64 << 10,
+	};
+	struct genl_sock *s = genl_connect_to_family(&family, &opts);
 
 	CHECK(!s || !s->s_family);
 	if (s) {
