@@ -21,6 +21,9 @@
 %bcond_with coverage
 %bcond_with selinux
 
+# Rich (boolean) dependencies are available on all supported distros except for RHEL7 and SLES12.
+%global richdeps 0%{?rhel}%{!?rhel:8} > 7 && 0%{?sle_version}%{!?sle_version:150000} >= 0150000
+
 Name: drbd
 Summary: DRBD driver for Linux
 %global upstream_version @PACKAGE_VERSION@
@@ -48,7 +51,11 @@ Requires: drbd-pacemaker = %{version}-%{release}
 BuildRequires: gcc-c++
 %endif
 %if %{with bashcompletion}
+%if %{richdeps}
+Requires: (drbd-bash-completion = %{version}-%{release} if bash-completion)
+%else
 Requires: drbd-bash-completion = %{version}-%{release}
+%endif
 %endif
 
 %description
@@ -99,8 +106,7 @@ Requires: (drbd-selinux if selinux-policy-targeted)
 %if %{with udev}
 Recommends: drbd-udev
 %endif
-# Conditional dependencies are available on all supported distros except for SLES12SP5.
-%if 0%{?sle_version}%{!?sle_version:150000} >= 0150000
+%if %{richdeps}
 %if %{with bashcompletion}
 Recommends: (drbd-bash-completion if bash-completion)
 %endif
