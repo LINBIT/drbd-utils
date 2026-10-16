@@ -41,7 +41,7 @@ Requires: drbd-utils = %{version}-%{release}
 Requires: drbd-udev = %{version}-%{release}
 %endif
 %if %{with pacemaker}
-%if 0%{?rhel}%{!?rhel:8} > 7
+%if %{richdeps}
 Requires: (drbd-pacemaker = %{version}-%{release} if pacemaker)
 %else
 Requires: drbd-pacemaker = %{version}-%{release}
