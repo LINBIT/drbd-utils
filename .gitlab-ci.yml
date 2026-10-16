@@ -93,15 +93,20 @@ check-changelog:
     entrypoint: [""]  # the image's entrypoint is git itself
   needs: []
   variables:
-    GIT_DEPTH: 1
     GIT_SUBMODULE_STRATEGY: none
   script:
-    - git fetch -q --depth 1 origin "$CI_MERGE_REQUEST_DIFF_BASE_SHA"
+    # CI_MERGE_REQUEST_DIFF_BASE_SHA is empty when the pipeline starts
+    # before GitLab has computed the MR diff, so determine the base ourselves.
+    - git fetch -q origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+    - base=$(git merge-base FETCH_HEAD HEAD)
+    - echo "Comparing ChangeLog between $base and HEAD"
     - |
-      if ! git diff --quiet "$CI_MERGE_REQUEST_DIFF_BASE_SHA" HEAD -- ChangeLog; then
-        echo "ChangeLog changed, good."
-        exit 0
-      fi
+      git diff --quiet "$base" HEAD -- ChangeLog && rc=0 || rc=$?
+      case $rc in
+        0) ;;
+        1) echo "ChangeLog changed, good."; exit 0 ;;
+        *) echo "git diff failed with exit code $rc"; exit 1 ;;
+      esac
       if printf '%s\n' "$CI_MERGE_REQUEST_DESCRIPTION" | grep -Eiq '^[[:space:]]*[-*] \[x\] This change does not need a ChangeLog entry'; then
         echo "The merge request description says it does not need a ChangeLog entry, good."
         exit 0
