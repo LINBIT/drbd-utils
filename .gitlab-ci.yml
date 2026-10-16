@@ -81,6 +81,46 @@ build:
     - fi
     - drbd_utils_build $DRBD_UTILS_VERSION $DRBD_UTILS_RELEASE
 
+# Every merge request either changes ChangeLog or says in its description
+# that it does not need an entry, by ticking the checkbox of the MR
+# template (.gitlab/merge_request_templates/Default.md).
+check-changelog:
+  stage: build
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  image:
+    name: alpine/git
+    entrypoint: [""]  # the image's entrypoint is git itself
+  needs: []
+  variables:
+    GIT_DEPTH: 1
+    GIT_SUBMODULE_STRATEGY: none
+  script:
+    - git fetch -q --depth 1 origin "$CI_MERGE_REQUEST_DIFF_BASE_SHA"
+    - |
+      if ! git diff --quiet "$CI_MERGE_REQUEST_DIFF_BASE_SHA" HEAD -- ChangeLog; then
+        echo "ChangeLog changed, good."
+        exit 0
+      fi
+      if printf '%s\n' "$CI_MERGE_REQUEST_DESCRIPTION" | grep -Eiq '^[[:space:]]*[-*] \[x\] This change does not need a ChangeLog entry'; then
+        echo "The merge request description says it does not need a ChangeLog entry, good."
+        exit 0
+      fi
+      echo
+      echo "=========================================================================="
+      echo " This merge request does not change ChangeLog."
+      echo
+      echo " Either add an entry to the \"Unreleased\" section of ChangeLog, or, if the"
+      echo " change is not worth mentioning there (minor fix, documentation, CI, ...),"
+      echo " tick this box in the merge request description:"
+      echo
+      echo "   - [x] This change does not need a ChangeLog entry"
+      echo
+      echo " Ticking the box does not start a new pipeline. Retry this job afterwards."
+      echo "=========================================================================="
+      echo
+      exit 1
+
 drbd-utils-tests:
   stage: test
   rules:
