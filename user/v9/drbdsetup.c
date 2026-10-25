@@ -307,7 +307,7 @@ static struct option connect_84_options[] = {
 #endif
 
 static struct option attach_extra_options[] = {
-	{ "discard-my-data", no_argument, NULL, OPT_ATTACH_DISCARD_MY_DATA },
+	{ "discard-my-data", optional_argument, NULL, OPT_ATTACH_DISCARD_MY_DATA },
 	{ }
 };
 
@@ -1192,6 +1192,7 @@ static int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	const char *desc = NULL; /* error description from kernel reply message */
 	bool set_defaults = false;
 	bool attach_discard_my_data = false;
+	const char *attach_discard_my_data_arg = NULL;
 	struct drbd_nl_outcome outcome = { .ret_code = NO_ERROR, .timeout_type = -1 };
 	struct msg_buff *smsg;
 	struct iovec iov;
@@ -1248,8 +1249,10 @@ static int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 			}
 		} else if (c == '(')
 			set_defaults = true;
-		else if (c == OPT_ATTACH_DISCARD_MY_DATA)
+		else if (c == OPT_ATTACH_DISCARD_MY_DATA) {
 			attach_discard_my_data = true;
+			attach_discard_my_data_arg = optarg;
+		}
 		else {
 			rv = OTHER_ERROR;
 			goto error;
@@ -1297,7 +1300,13 @@ static int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		struct field_def *field = &attach_parms_ctx.fields[0];
 
 		nla = nl->nest_start(smsg, NL_SET_ATTACH_PARMS);
-		field->ops->put(&attach_parms_ctx, field, smsg, "yes");
+		if (!field->ops->put(&attach_parms_ctx, field, smsg,
+				     attach_discard_my_data_arg)) {
+			fprintf(stderr, "Option --%s: invalid argument '%s'\n",
+				field->name, attach_discard_my_data_arg);
+			rv = OTHER_ERROR;
+			goto error;
+		}
 		nla_nest_end(smsg, nla);
 	}
 	if (set_defaults)

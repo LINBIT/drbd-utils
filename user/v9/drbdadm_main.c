@@ -392,7 +392,7 @@ int adm_adjust_wp(const struct cfg_ctx *ctx)
 	.verify_ips = 0,		\
 	.no_kernel = 1,			\
 
-/*  */ struct adm_cmd attach_cmd = {"attach", adm_attach, &attach_cmd_ctx, CFG_DISK, ACF1_MINOR_ONLY };
+/*  */ struct adm_cmd attach_cmd = {"attach", adm_attach, &attach_adm_ctx, CFG_DISK, ACF1_MINOR_ONLY };
 /*  */ struct adm_cmd disk_options_cmd = {"disk-options", adm_attach, &attach_cmd_ctx, CFG_DISK, ACF1_MINOR_ONLY };
 /*  */ struct adm_cmd detach_cmd = {"detach", adm_drbdsetup, &detach_cmd_ctx, CFG_DISK_PREP_DOWN, .takes_long = 1, ACF1_MINOR_ONLY };
 /*  */ struct adm_cmd new_peer_cmd = {"new-peer", adm_new_peer, &new_peer_cmd_ctx, CFG_NET_PREP_UP, ACF1_CONNECT};

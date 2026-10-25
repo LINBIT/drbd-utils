@@ -1163,6 +1163,18 @@ struct context_def attach_cmd_ctx = {
 		{ } },
 };
 
+/* drbdadm's attach: the disk options plus those of attach_parms_ctx */
+struct context_def attach_adm_ctx = {
+	NLA_POLICY(disk_conf),
+	.attr_set = NL_SET_DISK_CONF,
+	.fields = {
+		{ "size", NUMERIC(DRBD_A_DISK_CONF_DISK_SIZE, disk_size, DISK_SIZE),
+		  .unit = "bytes" },
+		CHANGEABLE_DISK_OPTIONS,
+		{ .name = "discard-my-data", .argument_is_optional = true },
+		{ } },
+};
+
 struct context_def attach_parms_ctx = {
 	NLA_POLICY(attach_parms),
 	.attr_set = NL_SET_ATTACH_PARMS,
