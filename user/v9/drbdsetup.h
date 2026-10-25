@@ -20,6 +20,11 @@
  */
 #define OPT_ALT_BASE 1000
 
+/* getopt_long()'s value for attach --discard-my-data; below OPT_ALT_BASE,
+ * which the config commands interpret as a field alias.
+ */
+#define OPT_ATTACH_DISCARD_MY_DATA (OPT_ALT_BASE - 1)
+
 /* getopt_long()'s value for an option only the 8.4 drbdsetup knows. */
 #define OPT_COMPAT84 2000
 

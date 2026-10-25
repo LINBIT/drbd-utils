@@ -1163,6 +1163,15 @@ struct context_def attach_cmd_ctx = {
 		{ } },
 };
 
+struct context_def attach_parms_ctx = {
+	NLA_POLICY(attach_parms),
+	.attr_set = NL_SET_ATTACH_PARMS,
+	.fields = {
+		{ "discard-my-data", FLAG(DRBD_A_ATTACH_PARMS_ATTACH_DISCARD_MY_DATA) },
+		{ }
+	},
+};
+
 struct context_def detach_cmd_ctx = {
 	NLA_POLICY(detach_parms),
 	.attr_set = NL_SET_DETACH_PARMS,

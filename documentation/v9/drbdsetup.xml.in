@@ -109,6 +109,7 @@
 	    <pick_drbdsetup_option name="disable-write-same"/>
 	    <pick_drbdsetup_option name="rs-discard-granularity"/>
 	    <pick_drbdsetup_option name="bitmap"/>
+	    <pick_drbdsetup_option name="discard-my-data"/> <!-- only for attach -->
 	  </variablelist>
         </listitem>
       </varlistentry>

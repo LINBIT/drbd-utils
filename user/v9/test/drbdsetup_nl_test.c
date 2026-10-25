@@ -383,6 +383,7 @@ static const struct { enum drbd_nl_attr_set set; int legacy_id; } drbd2_flag_fie
 	{ NL_SET_RESIZE_PARMS, DRBD_A_RESIZE_PARMS_RESIZE_FORCE },
 	{ NL_SET_RESIZE_PARMS, DRBD_A_RESIZE_PARMS_NO_RESYNC },
 	{ NL_SET_DISCONNECT_PARMS, DRBD_A_DISCONNECT_PARMS_FORCE_DISCONNECT },
+	{ NL_SET_ATTACH_PARMS, DRBD_A_ATTACH_PARMS_ATTACH_DISCARD_MY_DATA },
 };
 
 static bool is_drbd2_flag_field(enum drbd_nl_attr_set set, int legacy_id)
@@ -457,6 +458,7 @@ static void test_drbd2_attr_maps_complete(void)
 	CHECK_SET(NL_SET_CONNECT_PARMS, connect_parms);
 	CHECK_SET(NL_SET_RENAME_RESOURCE_PARMS, rename_resource_parms);
 	CHECK_SET(NL_SET_SUSPEND_IO_PARMS, suspend_io_parms);
+	CHECK_SET(NL_SET_ATTACH_PARMS, attach_parms);
 #undef CHECK_SET
 	/* carried by the context nest in drbd2 */
 	CHECK(drbd2_dialect.nest_start(NULL, NL_SET_PATH_PARMS) == NULL);

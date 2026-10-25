@@ -80,6 +80,7 @@ static const int legacy_set[__NL_SET_MAX] = {
 	[NL_SET_PATH_PARMS]		= DRBD_NLA_PATH_PARMS,
 	[NL_SET_RENAME_RESOURCE_PARMS]	= DRBD_NLA_RENAME_RESOURCE_PARMS,
 	[NL_SET_SUSPEND_IO_PARMS]	= DRBD_NLA_SUSPEND_IO_PARAMS,
+	[NL_SET_ATTACH_PARMS]		= DRBD_NLA_ATTACH_PARMS,
 };
 
 struct legacy_policy {
@@ -108,6 +109,7 @@ static const struct legacy_policy legacy_policy[__NL_SET_MAX] = {
 	[NL_SET_PATH_PARMS]		= LEGACY_POLICY(path_parms),
 	[NL_SET_RENAME_RESOURCE_PARMS]	= LEGACY_POLICY(rename_resource_parms),
 	[NL_SET_SUSPEND_IO_PARMS]	= LEGACY_POLICY(suspend_io_parms),
+	[NL_SET_ATTACH_PARMS]		= LEGACY_POLICY(attach_parms),
 };
 
 static struct drbd_genlmsghdr *legacy_hdr(struct msg_buff *msg)
