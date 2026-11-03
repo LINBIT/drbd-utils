@@ -5,6 +5,9 @@ Latest:
 
 Unreleased
 -----------
+
+9.36.0-rc.1
+-----------
  * drbdsetup: use the "drbd2" netlink family when the kernel offers
    it, fall back to "drbd"; DRBD_NETLINK_FAMILY forces one
  * drbdsetup,drbdadm: drive a DRBD 9 module that advertises 8.4 over
