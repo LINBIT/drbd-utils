@@ -1,0 +1,5 @@
+#!/bin/sh
+# drbdsetup stand-in: wait-connect-* takes 2 seconds, everything else returns at once
+echo "$1 $2 $3"
+case "$1" in wait-connect-*) sleep 2;; esac
+exit 0

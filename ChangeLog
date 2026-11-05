@@ -8,6 +8,8 @@ Unreleased
  * drbdadm: raise the default cmd-timeout-short from 5 to 10 seconds;
    keep the medium and long defaults that were in effect (600, none)
  * drbdadm: show changed cmd-timeout-* settings in the v9 dump
+ * drbdadm: fix adjust failing silently when a wait-connect lasted
+   longer than the remaining cmd-timeout of the preceding connect
 
 9.36.0-rc.1
 -----------

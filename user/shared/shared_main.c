@@ -378,8 +378,6 @@ void m__system(const char **argv, int flags, const char *res_name, pid_t *kid, i
 			if (errno != EINTR)
 				break;
 			if (alarm_raised) {
-				alarm(0);
-				sigaction(SIGALRM, &so, NULL);
 				rv = 0x100;
 				break;
 			} else {
@@ -399,6 +397,8 @@ void m__system(const char **argv, int flags, const char *res_name, pid_t *kid, i
 	close(pipe_fds[0]);
 
 	if (flags & SLEEPS_FINITE) {
+		alarm(0);
+		sigaction(SIGALRM, &so, NULL);
 		if (rv >= 10
 		    && !(flags & (DONT_REPORT_FAILED | SUPRESS_STDERR))) {
 			fprintf(stderr, "Command '");
