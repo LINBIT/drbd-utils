@@ -114,6 +114,9 @@ void dump_global_info()
 	    && !global_options.disable_ip_verification
 	    && global_options.dialog_refresh == 1
 	    && global_options.usage_count == UC_ASK
+	    && global_options.cmd_timeout_short == CMD_TIMEOUT_SHORT_DEF
+	    && global_options.cmd_timeout_medium == CMD_TIMEOUT_MEDIUM_DEF
+	    && global_options.cmd_timeout_long == CMD_TIMEOUT_LONG_DEF
 	    && !verbose)
 		return;
 	printI("global {\n");
@@ -126,6 +129,12 @@ void dump_global_info()
 		printI("dialog-refresh %i;\n", global_options.dialog_refresh);
 	if (global_options.usage_count != UC_ASK)
 		printI("usage-count %s;\n", yes_no_ask[global_options.usage_count]);
+	if (global_options.cmd_timeout_short != CMD_TIMEOUT_SHORT_DEF)
+		printI("cmd-timeout-short %u;\n", global_options.cmd_timeout_short);
+	if (global_options.cmd_timeout_medium != CMD_TIMEOUT_MEDIUM_DEF)
+		printI("cmd-timeout-medium %u;\n", global_options.cmd_timeout_medium);
+	if (global_options.cmd_timeout_long != CMD_TIMEOUT_LONG_DEF)
+		printI("cmd-timeout-long %u;\n", global_options.cmd_timeout_long);
 	--indent;
 	printI("}\n\n");
 }

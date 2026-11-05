@@ -1,0 +1,12 @@
+## drbdadm dump prints each cmd-timeout-* that differs from its default
+## (short 10, medium 600, long 0), and the dump parses back to itself.
+$ drbdadm -c ./cmd-timeout.res dump 2>/dev/null | sed -n '/^global/,/^}/p'
+global {
+    cmd-timeout-short 7;
+    cmd-timeout-medium 77;
+    cmd-timeout-long 777;
+}
+$ tmp=$(mktemp) && drbdadm -c ./cmd-timeout.res dump 2>/dev/null | grep -v '^#' > "$tmp" && drbdadm -c "$tmp" dump 2>/dev/null | grep -v '^#' | diff - "$tmp"; echo $?; rm -f "$tmp"
+0
+$ drbdadm -c ./cmd-timeout-defaults.res dump 2>/dev/null | grep -c '^global'
+0
