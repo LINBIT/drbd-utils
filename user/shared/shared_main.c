@@ -63,7 +63,7 @@ struct d_globals global_options = {
 
 	.cmd_timeout_short = CMD_TIMEOUT_SHORT_DEF,
 	.cmd_timeout_medium = CMD_TIMEOUT_MEDIUM_DEF,
-	.cmd_timeout_medium = CMD_TIMEOUT_LONG_DEF,
+	.cmd_timeout_long = CMD_TIMEOUT_LONG_DEF,
 
 	.dialog_refresh = 1,
 	.usage_count = UC_ASK,

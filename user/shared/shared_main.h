@@ -34,11 +34,11 @@
 	 */
 #define CMD_TIMEOUT_SHORT_DEF 30
 #else
-#define CMD_TIMEOUT_SHORT_DEF 5
+#define CMD_TIMEOUT_SHORT_DEF 10
 #endif
 
-#define CMD_TIMEOUT_MEDIUM_DEF 121
-#define CMD_TIMEOUT_LONG_DEF 600
+#define CMD_TIMEOUT_MEDIUM_DEF 600
+#define CMD_TIMEOUT_LONG_DEF 0
 extern struct d_globals global_options;
 
 void alarm_handler(int __attribute((unused)) signo);
