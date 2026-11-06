@@ -3829,6 +3829,36 @@ static void cbt_put_extent(struct cbt_extents *x, uint64_t start, uint64_t end)
 	x->emitted++;
 }
 
+/* The bitmap slot that the changed block tracking holds, or -1 */
+static int cbt_bitmap_slot(const struct md_cpu *md)
+{
+	if (!(md->features & DRBD_MDFF_CBT) || !(md->cbt.flags & CBT_BOOKMARK_IN_USE))
+		return -1;
+	return md->cbt.bitmap_index;
+}
+
+/* The bitmap slots that hold the day0 bitmap: all that neither a peer nor the
+ * changed block tracking holds.  They have a bit set for every write since the
+ * meta data was created.  When a peer or the tracking frees a slot, the kernel
+ * (since drbd-9.0.15) and forget-peer copy one of them into it, or set all its
+ * bits when there is none.  So a slot that was freed when all were in use
+ * claims that all was written; ANDing all of them gives what was not. */
+static uint64_t day0_bitmap_slots(const struct md_cpu *md)
+{
+	uint64_t slots = (1ULL << md->max_peers) - 1;
+	int p, s;
+
+	for (p = 0; p < DRBD_NODE_ID_MAX; p++) {
+		s = md->peers[p].bitmap_index;
+		if (s >= 0 && s < DRBD_PEERS_MAX)
+			slots &= ~(1ULL << s);
+	}
+	s = cbt_bitmap_slot(md);
+	if (s >= 0 && s < DRBD_PEERS_MAX)
+		slots &= ~(1ULL << s);
+	return slots;
+}
+
 /* Print the changed block tracking slot of the meta data as extents of the
  * volume. Meant for the meta data in a snapshot that was taken while I/O was
  * suspended, after "drbdsetup cbt-flush".
@@ -7006,11 +7036,36 @@ static int day0_peer_id(struct format *cfg)
 	return -1;
 }
 
+/* Copy bitmap slot "from" of the on-disk bitmap to slot "to", or set all bits
+ * of "to" when "from" is negative. */
+static void copy_bitmap_slot_pwrite(struct format *cfg, int from, int to)
+{
+	const unsigned int max_peers = cfg->md.max_peers;
+	const size_t max_chunk = round_down(buffer_size, 4096 * max_peers);
+	const size_t bitmap_bytes = ALIGN(cfg->bm_bytes, cfg->md_hard_sect_size);
+	le_u32 *bm = on_disk_buffer;
+	off_t bm_off = cfg->bm_offset;
+	size_t bytes_left = bitmap_bytes;
+	size_t chunk, i;
+
+	/* The slots interleave word by word, see meta_cbt_dump(). */
+	while (bytes_left) {
+		chunk = max_chunk < bytes_left ? max_chunk : bytes_left;
+		pread_or_die(cfg, on_disk_buffer, chunk, bm_off, "copy_bitmap_slot");
+		for (i = 0; i + max_peers <= chunk / sizeof(*bm); i += max_peers)
+			bm[i + to].le = from < 0 ? ~0U : bm[i + from].le;
+		pwrite_or_die(cfg, on_disk_buffer, chunk, bm_off, "copy_bitmap_slot");
+		bm_off += chunk;
+		bytes_left -= chunk;
+	}
+}
+
 int meta_forget_peer(struct format *cfg, char **argv, int argc)
 {
+	uint64_t day0_slots;
 	int day0_p;
 	int err;
-	int to_index;
+	int to_index, from_index = -1, s;
 
 	err = cfg->ops->open(cfg);
 	if (err)
@@ -7018,21 +7073,36 @@ int meta_forget_peer(struct format *cfg, char **argv, int argc)
 
 	day0_p = day0_peer_id(cfg);
 
+	/* Like clear_peer_slot() in the kernel: the freed bitmap slot becomes
+	 * a day0 slot, so it has to track all writes since day0.  Copy a slot
+	 * that does, found while the freed one is still taken, or set all bits
+	 * when there is none. */
 	to_index = cfg->md.peers[option_node_id].bitmap_index;
+	if (is_v09(cfg) && to_index >= 0 && (unsigned int)to_index < cfg->md.max_peers) {
+		day0_slots = day0_bitmap_slots(&cfg->md);
+		for (s = 0; s < (int)cfg->md.max_peers; s++) {
+			if (day0_slots & (1ULL << s)) {
+				from_index = s;
+				break;
+			}
+		}
+		if (from_index >= 0)
+			fprintf(stderr, "Copying day0 bitmap slot %d to the freed slot %d\n",
+				from_index, to_index);
+		else
+			fprintf(stderr, "No day0 bitmap slot to copy: setting all bits "
+				"of the freed slot %d\n", to_index);
+		copy_bitmap_slot_pwrite(cfg, from_index, to_index);
+	}
+
 	cfg->md.peers[option_node_id].bitmap_index = -1;
 	cfg->md.peers[option_node_id].flags = 0;
 	if (day0_p > -1) {
-		int from_index;
 		cfg->md.peers[option_node_id].bitmap_uuid = cfg->md.peers[day0_p].bitmap_uuid;
 		cfg->md.peers[option_node_id].bitmap_dagtag = cfg->md.peers[day0_p].bitmap_dagtag;
-		from_index = cfg->md.peers[day0_p].bitmap_index;
-		fprintf(stderr, "Copying bitmap slot %d to %d not implemented.\n"
-			"Do it with dump-md, edit, restore-md\n", from_index, to_index);
 	} else {
 		cfg->md.peers[option_node_id].bitmap_uuid = 0;
 		cfg->md.peers[option_node_id].bitmap_dagtag = 0;
-		fprintf(stderr, "Setting all bits in slot %d not implemented.\n"
-			"Do it with dump-md, edit, restore-md\n", to_index);
 	}
 
 	cfg->ops->md_cpu_to_disk(cfg);
