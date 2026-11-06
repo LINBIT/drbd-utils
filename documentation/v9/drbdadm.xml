@@ -291,6 +291,7 @@
       <varlistentry>
         <term>cbt-dump
 	  <arg choice="req" rep="norepeat">--md-snapshot=<replaceable>snapshot</replaceable></arg>
+	  <arg choice="opt" rep="norepeat">--mode=<group choice="req" rep="norepeat"><arg choice="plain" rep="norepeat">dirty</arg><arg choice="plain" rep="norepeat">zero</arg></group></arg>
 	  <arg choice="opt" rep="norepeat">--start-offset=<replaceable>bytes</replaceable></arg>
 	  <arg choice="opt" rep="norepeat">--max-extents=<replaceable>count</replaceable></arg>
 	  <arg choice="req" rep="norepeat"><replaceable>device</replaceable></arg>
@@ -302,8 +303,9 @@
 
               <secondary>cbt-dump</secondary>
 	    </indexterm> Print the blocks that changed in the
-	    changed block tracking interval which ends at a snapshot, from the
-	    meta data in that snapshot. <replaceable>snapshot</replaceable> is
+	    changed block tracking interval which ends at a snapshot, and the
+	    blocks that were never written, from the meta data in that
+	    snapshot. <replaceable>snapshot</replaceable> is
 	    the snapshot of the device that holds the meta data: of the backing
 	    device for internal meta data. Calls the <option>cbt-dump</option>
 	    drbdmeta command with the meta data index of the configuration.

@@ -16,6 +16,8 @@ Unreleased
    blocks its peers lack
  * drbdmeta: forget-peer makes the freed bitmap slot a day0 slot, a
    copy of one or all bits set, as the kernel does
+ * drbdmeta: cbt-dump --mode=dirty|zero also reports the extents never
+   written since create-md, from the day0 bitmap; "format": 1
 
 9.36.0-rc.1
 -----------

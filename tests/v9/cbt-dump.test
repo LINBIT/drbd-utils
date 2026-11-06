@@ -2,8 +2,17 @@
 ## "drbdmeta cbt-dump", which prints the tracking slot as byte extents.
 ##
 ## Test layout: 64 MB image, internal v09 meta data, three bitmap slots,
-## 32 MB effective size at 4 KiB per bit. A dump gets a bookmark for slot 2
-## and some bits in that slot; restore-md writes it.
+## 32 MB effective size at 4 KiB per bit, so one 64 bit word of a slot is
+## 256 KiB. A dump gets a bookmark for slot 2 and some bits in that slot.
+## Slots 0 and 1 are the day0 bitmap: slot 0 has all bits set, as a slot
+## freed while all were in use; slot 1 has what was written since day0, which
+## covers what the tracking has. restore-md writes it.
+##
+## Then: the zero mode; meta data that was not flushed, where the zero mode
+## takes what the activity log names as written (nothing here), unless the
+## activity log is disabled; a slot that a peer owns, which is not day0;
+## forget-peer, which turns the freed slot into a copy of a day0 slot, or sets
+## all its bits when all slots are in use and there is no day0 bitmap.
 $ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
 $ truncate -s 67108864 "$img"
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" internal create-md --effective-size 32M 3 2>/dev/null | tail -1
@@ -12,7 +21,7 @@ $ drbdmeta --force - v09 "$img" internal cbt-dump 2>&1 >/dev/null | grep -v ioct
 No changed block tracking in this meta data
 50
 $ drbdmeta --force - v09 "$img" internal dump-md 2>/dev/null > "$tmpdir/dump.txt"
-$ awk '/^history-uuids/ { h = 1 } { if (!skip) print } h && /^}/ { h = 0; print "cbt-bookmark {\n    id 0x6B8F3C2A91D04E17;\n    bitmap-uuid 0x1111111111111111;\n    bitmap-dagtag 0x0000000000000042;\n    since 1759419567;\n    flags 0x00000005;\n    bitmap-index 2;\n}" } /^bitmap\[2\]/ { skip = 1; print "    0x00000000000000FF; 9 times 0x0000000000000000; 0x8000000000000001; 0xFFFFFFFFFFFFFFFF; 0x0000000000000003; 157 times 0x0000000000000000;" } skip && /^}/ { skip = 0; print }' "$tmpdir/dump.txt" > "$tmpdir/cbt.txt"
+$ awk '/^history-uuids/ { h = 1 } { if (!skip) print } h && /^}/ { h = 0; print "cbt-bookmark {\n    id 0x6B8F3C2A91D04E17;\n    bitmap-uuid 0x1111111111111111;\n    bitmap-dagtag 0x0000000000000042;\n    since 1759419567;\n    flags 0x00000005;\n    bitmap-index 2;\n}" } /^bitmap\[0\]/ { skip = 1; print "    170 times 0xFFFFFFFFFFFFFFFF;" } /^bitmap\[1\]/ { skip = 1; print "    0xFFFFFFFFFFFFFFFF; 9 times 0x0000000000000000; 0x8000000000000001; 0xFFFFFFFFFFFFFFFF; 0x00000000000000FF; 0xFFFFFFFFFFFFFFFF; 156 times 0x0000000000000000;" } /^bitmap\[2\]/ { skip = 1; print "    0x00000000000000FF; 9 times 0x0000000000000000; 0x8000000000000001; 0xFFFFFFFFFFFFFFFF; 0x0000000000000003; 157 times 0x0000000000000000;" } skip && /^}/ { skip = 0; print }' "$tmpdir/dump.txt" > "$tmpdir/cbt.txt"
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" internal restore-md "$tmpdir/cbt.txt" 2>/dev/null | tail -1
 Successfully restored meta data
 $ drbdmeta --force - v09 "$img" internal dump-md 2>/dev/null | sed -n '/^cbt-bookmark/,/^}/p'
@@ -26,14 +35,73 @@ cbt-bookmark {
 }
 $ drbdmeta --force - v09 "$img" internal dump-superblock --output json 2>/dev/null | jq -c '.cbt_bookmark'
 {"id":"0x6B8F3C2A91D04E17","bitmap_uuid":"0x1111111111111111","bitmap_dagtag":66,"since":1759419567,"flags":"0x00000005","bitmap_index":2}
-$ drbdmeta --force - v09 "$img" internal cbt-dump 2>/dev/null | jq -c '[.id, .since, ."volume-size", .extents, ."next-offset"]'
-["6B8F3C2A91D04E17","2025-10-02T15:39:27Z",33554432,[{"offset":0,"length":32768},{"offset":2621440,"length":4096},{"offset":2879488,"length":274432}],null]
-$ drbdmeta --force - v09 "$img" internal cbt-dump --max-extents 2 2>/dev/null | jq -c '[.extents, ."next-offset"]'
-[[{"offset":0,"length":32768},{"offset":2621440,"length":4096}],2879488]
+$ drbdmeta --force - v09 "$img" internal cbt-dump 2>/dev/null | jq -c '[.format, .id, .since, ."volume-size", ."next-offset"]'
+[1,"6B8F3C2A91D04E17","2025-10-02T15:39:27Z",33554432,null]
+$ drbdmeta --force - v09 "$img" internal cbt-dump 2>/dev/null | jq -c '.extents[]'
+{"offset":0,"length":32768,"dirty":true,"zero":false}
+{"offset":262144,"length":2359296,"dirty":false,"zero":true}
+{"offset":2621440,"length":4096,"dirty":true,"zero":false}
+{"offset":2625536,"length":253952,"dirty":false,"zero":true}
+{"offset":2879488,"length":274432,"dirty":true,"zero":false}
+{"offset":3178496,"length":229376,"dirty":false,"zero":true}
+{"offset":3670016,"length":29884416,"dirty":false,"zero":true}
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=dirty --max-extents 2 2>/dev/null | jq -c '[.extents, ."next-offset"]'
+[[{"offset":0,"length":32768,"dirty":true,"zero":false},{"offset":262144,"length":2359296,"dirty":false,"zero":true}],2621440]
 $ drbdmeta --force - v09 "$img" internal cbt-dump --start-offset 2879488 --max-extents 2 2>/dev/null | jq -c '[.extents, ."next-offset"]'
-[[{"offset":2879488,"length":274432}],null]
+[[{"offset":2879488,"length":274432,"dirty":true,"zero":false},{"offset":3178496,"length":229376,"dirty":false,"zero":true}],3670016]
 $ drbdmeta --force - v09 "$img" internal cbt-dump --start-offset 3000000 2>/dev/null | jq -c '.extents'
-[{"offset":3000000,"length":153920}]
+[{"offset":3000000,"length":153920,"dirty":true,"zero":false},{"offset":3178496,"length":229376,"dirty":false,"zero":true},{"offset":3670016,"length":29884416,"dirty":false,"zero":true}]
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero 2>/dev/null | jq -c '[.format, .id, .since, ."volume-size"]'
+[1,null,null,33554432]
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero 2>/dev/null | jq -c '.extents' | tee "$tmpdir/zero.json"
+[{"offset":262144,"length":2359296,"zero":true},{"offset":2625536,"length":253952,"zero":true},{"offset":3178496,"length":229376,"zero":true},{"offset":3670016,"length":29884416,"zero":true}]
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero --start-offset 300000 --max-extents 2 2>/dev/null | jq -c '[.extents, ."next-offset"]'
+[[{"offset":300000,"length":2321440,"zero":true},{"offset":2625536,"length":253952,"zero":true}],3178496]
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=all 2>&1 | grep -v ioctl; echo "${PIPESTATUS[0]}"
+--mode: dirty or zero, not "all"
+20
+$ sed -e 's/^flags 0x00000080;/flags 0x00000000;/' -e 's/^    flags 0x00000005;/    flags 0x00000001;/' "$tmpdir/cbt.txt" > "$tmpdir/unflushed.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" internal restore-md "$tmpdir/unflushed.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v09 "$img" internal cbt-dump 2>&1 >/dev/null | grep -v ioctl; echo "${PIPESTATUS[0]}"
+The bitmap was not flushed: take the snapshot while I/O is
+suspended, after "drbdsetup cbt-flush"
+50
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero 2>/dev/null | jq -c '.extents' | cmp - "$tmpdir/zero.json" && echo same
+same
+$ sed 's/^flags 0x00000000;/flags 0x00000100;/' "$tmpdir/unflushed.txt" > "$tmpdir/al-disabled.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" internal restore-md "$tmpdir/al-disabled.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero 2>&1 >/dev/null | grep -v ioctl; echo "${PIPESTATUS[0]}"
+The bitmap was not flushed, and the activity log cannot
+tell what is missing from it
+50
+$ sed -e '/^peer\[1\] {/,/^}/{s/bitmap-index -1;/bitmap-index 0;/;s/flags 0x00000000;/flags 0x00010000;/}' -e '/^bitmap\[0\] {/,/^}/s/170 times 0xFFFFFFFFFFFFFFFF;/170 times 0x0000000000000000;/' "$tmpdir/cbt.txt" > "$tmpdir/peer.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" internal restore-md "$tmpdir/peer.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero 2>/dev/null | jq -c '.extents' | cmp - "$tmpdir/zero.json" && echo same
+same
+$ drbdmeta --force --var-lib-drbd "$tmpdir" --node-id=1 - v09 "$img" internal forget-peer 2>&1 | grep -v ioctl
+Copying day0 bitmap slot 1 to the freed slot 0
+$ drbdmeta --force - v09 "$img" internal dump-md 2>/dev/null | sed -n -e '/^bitmap\[0\] {/,/^}/p' | sed -n 3p
+    0xFFFFFFFFFFFFFFFF; 0x0000000000000000; 0x0000000000000000; 0x0000000000000000;
+$ drbdmeta --force - v09 "$img" internal dump-md 2>/dev/null | sed -n -e '/^bitmap\[0\] {/,/^}/p' | sed -n 5p
+    0x0000000000000000; 0x0000000000000000; 0x8000000000000001; 0xFFFFFFFFFFFFFFFF;
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero 2>/dev/null | jq -c '.extents' | cmp - "$tmpdir/zero.json" && echo same
+same
+$ sed '/^peer\[2\] {/,/^}/{s/bitmap-index -1;/bitmap-index 1;/;s/flags 0x00000000;/flags 0x00010000;/}' "$tmpdir/peer.txt" > "$tmpdir/full.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" internal restore-md "$tmpdir/full.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero 2>&1 >/dev/null | grep -v ioctl
+No bitmap slot holds the day0 bitmap: no extent is known to be zero
+$ drbdmeta --force - v09 "$img" internal cbt-dump 2>/dev/null | jq -c '[.extents[] | select(.zero)] | length'
+0
+$ drbdmeta --force --var-lib-drbd "$tmpdir" --node-id=2 - v09 "$img" internal forget-peer 2>&1 | grep -v ioctl
+No day0 bitmap slot to copy: setting all bits of the freed slot 1
+$ drbdmeta --force - v09 "$img" internal dump-md 2>/dev/null | sed -n -e '/^bitmap\[1\] {/,/^}/p' | sed -n 3p
+    168 times 0xFFFFFFFFFFFFFFFF;
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero 2>/dev/null | jq -c '.extents'
+[]
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" internal restore-md --max-peers 4 "$tmpdir/cbt.txt" 2>&1 | grep -A2 '^This dump has a changed block tracking slot'
 This dump has a changed block tracking slot (2), which
 --max-peers cannot move. Stop the tracking first
@@ -44,4 +112,6 @@ Successfully restored meta data
 $ drbdmeta --force - v09 "$img" internal cbt-dump 2>&1 >/dev/null | grep -v ioctl; echo "${PIPESTATUS[0]}"
 The changed block tracking is invalid
 50
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero 2>/dev/null | jq -c '.extents' | cmp - "$tmpdir/zero.json" && echo same
+same
 $ rm -rf "$tmpdir" "$img"

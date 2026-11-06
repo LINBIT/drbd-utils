@@ -1751,6 +1751,9 @@ static int adm_cbt_dump(const struct cfg_ctx *ctx)
 	opt = find_backend_option("--max-extents=");
 	if (opt)
 		argv[NA(argc)] = opt->name;
+	opt = find_backend_option("--mode=");
+	if (opt)
+		argv[NA(argc)] = opt->name;
 	argv[NA(argc)] = 0;
 
 	return m_system_ex(argv, SLEEPS_LONG, ctx->res->name);

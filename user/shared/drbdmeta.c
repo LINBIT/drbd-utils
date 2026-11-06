@@ -98,6 +98,10 @@ bool option_peers_outdated = false;
 bool option_rotate_uuids = false;
 uint64_t option_start_offset = 0;
 uint64_t option_max_extents = 0;
+enum cbt_dump_mode {
+	CBT_DUMP_MODE_DIRTY,
+	CBT_DUMP_MODE_ZERO,
+} option_cbt_dump_mode = CBT_DUMP_MODE_DIRTY;
 
 static uint64_t generate_random_uuid(void)
 {
@@ -154,6 +158,7 @@ enum metaopt_long_only {
 	OPT_MAX_PEERS,
 	OPT_START_OFFSET,
 	OPT_MAX_EXTENTS,
+	OPT_MODE,
 };
 
 struct option metaopt[] = {
@@ -183,6 +188,7 @@ struct option metaopt[] = {
     { "max-peers", required_argument, NULL, OPT_MAX_PEERS },
     { "start-offset", required_argument, NULL, OPT_START_OFFSET },
     { "max-extents", required_argument, NULL, OPT_MAX_EXTENTS },
+    { "mode", required_argument, NULL, OPT_MODE },
     { NULL,     0,              0, 0 },
 };
 
@@ -982,6 +988,7 @@ struct meta_cmd cmds[] = {
 	{"show-gi", 0, meta_show_gi, 1, 1, 0},
 	{"dump-md", 0, meta_dump_md, 1, 0, 0},
 	{"cbt-dump",
+		"[--mode={dirty,zero}] "
 		"[--start-offset {val}] "
 		"[--max-extents {val}]",
 		meta_cbt_dump, 1, 0, 0},
@@ -2610,12 +2617,61 @@ int need_to_apply_al(struct format *cfg)
 	return 0;
 }
 
+/* Read the activity log and replay it into hot_extent[AL_EXTENTS_MAX]: the
+ * numbers of its active extents, -1U for unused entries.  Returns what the
+ * replay_al_*() functions return: negative for a log that cannot be
+ * interpreted, 0 for nothing to apply, positive otherwise.  Sets *re_initialize
+ * when the log has to be written in the current format. */
+static int read_al(struct format *cfg, uint32_t *hot_extent, int *re_initialize)
+{
+	struct al_transaction_on_disk *al_4k_disk = on_disk_buffer;
+	struct al_on_pmem *al_on_pmem = on_disk_buffer;
+	off_t al_size;
+	int err;
+
+	al_size = cfg->md.al_stripes * cfg->md.al_stripe_size_4k * 4096;
+
+	/* read in first chunk (which is actually the whole AL
+	 * for old fixed size 32k activity log */
+	pread_or_die(cfg, on_disk_buffer,
+		al_size < buffer_size ? al_size : buffer_size,
+		cfg->al_offset, "apply_al");
+
+	/* init all extent numbers to -1U aka "unused" */
+	memset(hot_extent, 0xff, AL_EXTENTS_MAX * sizeof(*hot_extent));
+
+	/* replay al */
+	if (is_v07(cfg))
+		err = replay_al_07(cfg, hot_extent);
+
+	/* FIXME
+	 * we should introduce a new meta data "super block" magic, so we won't
+	 * have the same super block with two different activity log
+	 * transaction layouts */
+	else if (DRBD_MD_MAGIC_84_UNCLEAN == cfg->md.magic ||
+		 DRBD_MD_MAGIC_09 == cfg->md.magic ||
+		 DRBD_AL_MAGIC == be32_to_cpu(al_4k_disk[0].magic.be) ||
+		 DRBD_AL_MAGIC == be32_to_cpu(al_4k_disk[1].magic.be) ||
+		 cfg->md.al_stripes != 1 || cfg->md.al_stripe_size_4k != 8) {
+		if (DRBD_AL_PMEM_MAGIC == be32_to_cpu(al_on_pmem->magic.be)) {
+			err = replay_al_pmem(cfg, hot_extent);
+		} else {
+			err = replay_al_84(cfg, hot_extent);
+		}
+	} else {
+		/* try the old al format anyways, this may be the first time we
+		* run after upgrading from < 8.4 to 8.4, and we need to
+		* transparently "convert" the activity log format. */
+		err = replay_al_07(cfg, hot_extent);
+		*re_initialize = 1;
+	}
+
+	return err;
+}
+
 int v08_move_internal_md_after_resize(struct format *cfg);
 int meta_apply_al(struct format *cfg, char **argv __attribute((unused)), int argc)
 {
-	off_t al_size;
-	struct al_transaction_on_disk *al_4k_disk = on_disk_buffer;
-	struct al_on_pmem *al_on_pmem = on_disk_buffer;
 	uint32_t hot_extent[AL_EXTENTS_MAX];
 	int need_to_update_md_flags = 0;
 	int re_initialize_anyways = 0;
@@ -2652,42 +2708,7 @@ int meta_apply_al(struct format *cfg, char **argv __attribute((unused)), int arg
 		goto initialize_al_and_update_md_flags;
 	}
 
-	al_size = cfg->md.al_stripes * cfg->md.al_stripe_size_4k * 4096;
-
-	/* read in first chunk (which is actually the whole AL
-	 * for old fixed size 32k activity log */
-	pread_or_die(cfg, on_disk_buffer,
-		al_size < buffer_size ? al_size : buffer_size,
-		cfg->al_offset, "apply_al");
-
-	/* init all extent numbers to -1U aka "unused" */
-	memset(hot_extent, 0xff, sizeof(hot_extent));
-
-	/* replay al */
-	if (is_v07(cfg))
-		err = replay_al_07(cfg, hot_extent);
-
-	/* FIXME
-	 * we should introduce a new meta data "super block" magic, so we won't
-	 * have the same super block with two different activity log
-	 * transaction layouts */
-	else if (DRBD_MD_MAGIC_84_UNCLEAN == cfg->md.magic ||
-		 DRBD_MD_MAGIC_09 == cfg->md.magic ||
-		 DRBD_AL_MAGIC == be32_to_cpu(al_4k_disk[0].magic.be) ||
-		 DRBD_AL_MAGIC == be32_to_cpu(al_4k_disk[1].magic.be) ||
-		 cfg->md.al_stripes != 1 || cfg->md.al_stripe_size_4k != 8) {
-		if (DRBD_AL_PMEM_MAGIC == be32_to_cpu(al_on_pmem->magic.be)) {
-			err = replay_al_pmem(cfg, hot_extent);
-		} else {
-			err = replay_al_84(cfg, hot_extent);
-		}
-	} else {
-		/* try the old al format anyways, this may be the first time we
-		* run after upgrading from < 8.4 to 8.4, and we need to
-		* transparently "convert" the activity log format. */
-		err = replay_al_07(cfg, hot_extent);
-		re_initialize_anyways = 1;
-	}
+	err = read_al(cfg, hot_extent, &re_initialize_anyways);
 
 	if (err < 0) {
 		/* ENODATA:
@@ -3797,6 +3818,13 @@ int meta_dump_md(struct format *cfg, char **argv __attribute((unused)), int argc
 /* cbt-dump finds no changed block tracking it can trust: back up everything */
 #define CBT_DUMP_NO_TRACKING 50
 
+/* The version of the JSON that cbt-dump prints */
+#define CBT_DUMP_FORMAT 1
+
+/* What a bit of the volume is to cbt-dump */
+#define CBT_STATE_DIRTY 1	/* set in the changed block tracking slot */
+#define CBT_STATE_ZERO 2	/* clear in the day0 bitmap: never written */
+
 struct cbt_extents {
 	uint64_t bm_bytes_per_bit;
 	uint64_t volume_size;
@@ -3804,14 +3832,15 @@ struct cbt_extents {
 	bool full;		/* --max-extents reached */
 };
 
-/* Print the extent of bits [start, end), unless --max-extents is reached;
- * then print where the next page starts instead. */
-static void cbt_put_extent(struct cbt_extents *x, uint64_t start, uint64_t end)
+/* Print the extent of bits [start, end) in "state", unless --max-extents is
+ * reached; then print where the next page starts instead. */
+static void cbt_put_extent(struct cbt_extents *x, uint64_t start, uint64_t end,
+			   unsigned int state)
 {
 	uint64_t offset = start * x->bm_bytes_per_bit;
 	uint64_t last = end * x->bm_bytes_per_bit;
 
-	if (x->full)
+	if (x->full || !state)
 		return;
 	if (last > x->volume_size)
 		last = x->volume_size;
@@ -3824,8 +3853,14 @@ static void cbt_put_extent(struct cbt_extents *x, uint64_t start, uint64_t end)
 		x->full = true;
 		return;
 	}
-	printf("%s\n    { \"offset\": "U64", \"length\": "U64" }",
+	printf("%s\n    { \"offset\": "U64", \"length\": "U64,
 	       x->emitted ? "," : "", offset, last - offset);
+	if (option_cbt_dump_mode == CBT_DUMP_MODE_DIRTY)
+		printf(", \"dirty\": %s, \"zero\": %s }",
+		       state & CBT_STATE_DIRTY ? "true" : "false",
+		       state & CBT_STATE_ZERO ? "true" : "false");
+	else
+		printf(", \"zero\": true }");
 	x->emitted++;
 }
 
@@ -3859,20 +3894,102 @@ static uint64_t day0_bitmap_slots(const struct md_cpu *md)
 	return slots;
 }
 
-/* Print the changed block tracking slot of the meta data as extents of the
- * volume. Meant for the meta data in a snapshot that was taken while I/O was
- * suspended, after "drbdsetup cbt-flush".
+/* The bits of the latest writes may not be on disk yet: a write sets them in
+ * memory, and the kernel writes them out before their activity log extent
+ * leaves the log.  The AL extents the activity log names, sorted, without
+ * duplicates.  cbt_al_written() moves "pos" forward, so it must be called for
+ * the bitmap words in ascending order. */
+struct cbt_hot_al {
+	uint32_t *ext;
+	unsigned int n, pos;
+};
+
+/* Returns false when the activity log cannot tell. */
+static bool cbt_hot_al_extents(struct format *cfg, uint64_t n_extents,
+			       struct cbt_hot_al *hot)
+{
+	uint32_t *hot_extent;
+	int re_initialize = 0;
+	unsigned int n = 0;
+	int i, err;
+
+	if (cfg->md.flags & MDF_AL_DISABLED)
+		return false;
+	hot_extent = malloc(AL_EXTENTS_MAX * sizeof(*hot_extent));
+	if (!hot_extent) {
+		fprintf(stderr, "Out of memory\n");
+		exit(20);
+	}
+	err = read_al(cfg, hot_extent, &re_initialize);
+	if (err < 0) {
+		free(hot_extent);
+		return false;
+	}
+	for (i = 0; i < AL_EXTENTS_MAX; i++) {
+		if (hot_extent[i] < n_extents)
+			hot_extent[n++] = hot_extent[i];
+	}
+	qsort(hot_extent, n, sizeof(*hot_extent), cmp_u32);
+	hot->n = 0;
+	for (i = 0; i < (int)n; i++) {
+		if (!hot->n || hot_extent[i] != hot_extent[hot->n - 1])
+			hot_extent[hot->n++] = hot_extent[i];
+	}
+	hot->ext = hot_extent;
+	hot->pos = 0;
+	return true;
+}
+
+/* Is an AL extent in "hot" between first and last, both included? */
+static bool cbt_al_hit(struct cbt_hot_al *hot, uint64_t first, uint64_t last)
+{
+	while (hot->pos < hot->n && hot->ext[hot->pos] < first)
+		hot->pos++;
+	return hot->pos < hot->n && hot->ext[hot->pos] <= last;
+}
+
+/* The bits of word k that lie in an AL extent of "hot" */
+static uint32_t cbt_al_written(struct cbt_hot_al *hot,
+			       uint64_t bm_bytes_per_bit, uint64_t k)
+{
+	uint64_t bit = k * 32;
+	uint64_t first = (bit * bm_bytes_per_bit) >> AL_EXTENT_SHIFT;
+	uint64_t last = ((bit + 32) * bm_bytes_per_bit - 1) >> AL_EXTENT_SHIFT;
+	uint32_t written = 0;
+	unsigned int b;
+
+	if (!cbt_al_hit(hot, first, last))
+		return 0;
+	if (first == last)
+		return ~0U;
+	for (b = 0; b < 32; b++, bit++) {
+		first = (bit * bm_bytes_per_bit) >> AL_EXTENT_SHIFT;
+		last = ((bit + 1) * bm_bytes_per_bit - 1) >> AL_EXTENT_SHIFT;
+		if (cbt_al_hit(hot, first, last))
+			written |= 1U << b;
+	}
+	return written;
+}
+
+/* Print extents of the volume as JSON.  --mode=dirty: what the changed block
+ * tracking slot of the meta data has set, and what the day0 bitmap has clear.
+ * Meant for the meta data in a snapshot that was taken while I/O was
+ * suspended, after "drbdsetup cbt-flush".  --mode=zero: only what the day0
+ * bitmap has clear, which needs no changed block tracking.
  */
 int meta_cbt_dump(struct format *cfg, char **argv __attribute((unused)), int argc)
 {
 	const struct cbt_md_cpu *cbt = &cfg->md.cbt;
+	const bool dirty_mode = option_cbt_dump_mode == CBT_DUMP_MODE_DIRTY;
 	le_u32 const *bm = on_disk_buffer;
 	struct cbt_extents x = { };
-	unsigned int max_peers;
-	uint64_t bits, words, k, run_start = 0;
+	unsigned int max_peers, n_day0 = 0, state = 0, nb, b, s;
+	unsigned int day0[DRBD_PEERS_MAX];
+	uint64_t bits, words, k, run_start = 0, n_al_extents = 0;
+	uint64_t day0_slots;
+	struct cbt_hot_al hot = { };
 	off_t bm_off;
 	size_t max_chunk, n_buffer = 0, i = 0;
-	bool in_run = false;
 	char since[sizeof("YYYY-MM-DDTHH:MM:SSZ")];
 	time_t since_t;
 	struct tm tm;
@@ -3885,56 +4002,80 @@ int meta_cbt_dump(struct format *cfg, char **argv __attribute((unused)), int arg
 		return -1;
 	}
 	if (!is_v09(cfg)) {
-		fprintf(stderr, "Changed block tracking needs v09 meta data\n");
-		exit(CBT_DUMP_NO_TRACKING);
-	}
-	if (!(cfg->md.features & DRBD_MDFF_CBT) || !(cbt->flags & CBT_BOOKMARK_IN_USE)) {
-		fprintf(stderr, "No changed block tracking in this meta data\n");
-		exit(CBT_DUMP_NO_TRACKING);
-	}
-	if (cbt->flags & CBT_BOOKMARK_INVALID) {
-		fprintf(stderr, "The changed block tracking is invalid\n");
-		exit(CBT_DUMP_NO_TRACKING);
-	}
-	if (!(cfg->md.flags & MDF_AL_CLEAN) && !(cbt->flags & CBT_BOOKMARK_FLUSHED)) {
-		fprintf(stderr, "The bitmap was not flushed: take the snapshot while I/O is\n"
-			"suspended, after \"drbdsetup cbt-flush\"\n");
+		fprintf(stderr, "%s needs v09 meta data\n",
+			dirty_mode ? "Changed block tracking" : "The day0 bitmap");
 		exit(CBT_DUMP_NO_TRACKING);
 	}
 	max_peers = cfg->md.max_peers;
-	if (cbt->bitmap_index < 0 || cbt->bitmap_index >= max_peers) {
-		fprintf(stderr, "Bitmap index %d of the changed block tracking exceeds "
-			"%u bitmap slots\n", cbt->bitmap_index, max_peers);
-		exit(CBT_DUMP_NO_TRACKING);
-	}
-
 	x.bm_bytes_per_bit = cfg->md.bm_bytes_per_bit;
 	x.volume_size = cfg->md.effective_size * 512;
 	bits = (x.volume_size + x.bm_bytes_per_bit - 1) / x.bm_bytes_per_bit;
 	words = (bits + 31) / 32;
 
-	since_t = cbt->since;
-	gmtime_r(&since_t, &tm);
-	if (strftime(since, sizeof(since), "%Y-%m-%dT%H:%M:%SZ", &tm) == 0)
-		since[0] = '\0';
-	printf("{\n"
-	       "  \"id\": \""X64(016)"\",\n"
-	       "  \"since\": \"%s\",\n"
-	       "  \"volume-size\": "U64",\n"
-	       "  \"extents\": [",
-	       cbt->id, since, x.volume_size);
+	if (dirty_mode) {
+		if (!(cfg->md.features & DRBD_MDFF_CBT) || !(cbt->flags & CBT_BOOKMARK_IN_USE)) {
+			fprintf(stderr, "No changed block tracking in this meta data\n");
+			exit(CBT_DUMP_NO_TRACKING);
+		}
+		if (cbt->flags & CBT_BOOKMARK_INVALID) {
+			fprintf(stderr, "The changed block tracking is invalid\n");
+			exit(CBT_DUMP_NO_TRACKING);
+		}
+		if (!(cfg->md.flags & MDF_AL_CLEAN) && !(cbt->flags & CBT_BOOKMARK_FLUSHED)) {
+			fprintf(stderr, "The bitmap was not flushed: take the snapshot while I/O is\n"
+				"suspended, after \"drbdsetup cbt-flush\"\n");
+			exit(CBT_DUMP_NO_TRACKING);
+		}
+		if (cbt->bitmap_index < 0 || (unsigned int)cbt->bitmap_index >= max_peers) {
+			fprintf(stderr, "Bitmap index %d of the changed block tracking exceeds "
+				"%u bitmap slots\n", cbt->bitmap_index, max_peers);
+			exit(CBT_DUMP_NO_TRACKING);
+		}
+	} else if (!(cfg->md.flags & MDF_AL_CLEAN) &&
+		   !(cbt_bitmap_slot(&cfg->md) >= 0 && (cbt->flags & CBT_BOOKMARK_FLUSHED))) {
+		/* Without a flush, count what the activity log names as written. */
+		n_al_extents = (x.volume_size + (1ULL << AL_EXTENT_SHIFT) - 1) >> AL_EXTENT_SHIFT;
+		if (!cbt_hot_al_extents(cfg, n_al_extents, &hot)) {
+			fprintf(stderr, "The bitmap was not flushed, and the activity log cannot\n"
+				"tell what is missing from it\n");
+			exit(CBT_DUMP_NO_TRACKING);
+		}
+	}
 
-	/* The slots interleave word by word: word k of our slot is the 32 bit
-	 * word k * max_peers + bitmap_index of the bitmap area. Read the area
-	 * in chunks of whole rows of all slots. */
+	day0_slots = day0_bitmap_slots(&cfg->md);
+	for (s = 0; s < max_peers; s++) {
+		if (day0_slots & (1ULL << s))
+			day0[n_day0++] = s;
+	}
+	if (!n_day0)
+		fprintf(stderr, "No bitmap slot holds the day0 bitmap: "
+			"no extent is known to be zero\n");
+
+	printf("{\n"
+	       "  \"format\": %d,\n", CBT_DUMP_FORMAT);
+	if (dirty_mode) {
+		since_t = cbt->since;
+		gmtime_r(&since_t, &tm);
+		if (strftime(since, sizeof(since), "%Y-%m-%dT%H:%M:%SZ", &tm) == 0)
+			since[0] = '\0';
+		printf("  \"id\": \""X64(016)"\",\n"
+		       "  \"since\": \"%s\",\n",
+		       cbt->id, since);
+	}
+	printf("  \"volume-size\": "U64",\n"
+	       "  \"extents\": [",
+	       x.volume_size);
+
+	/* The slots interleave word by word: word k of slot s is the 32 bit
+	 * word k * max_peers + s of the bitmap area. Read the area in chunks
+	 * of whole rows of all slots. */
 	max_chunk = round_down(buffer_size, 4096 * max_peers);
 	bm_off = cfg->bm_offset;
 	k = option_start_offset / x.bm_bytes_per_bit / 32;
 	bm_off += round_down(k * max_peers * sizeof(*bm), 4096 * max_peers);
 	k = (bm_off - cfg->bm_offset) / sizeof(*bm) / max_peers;
 	for (; k < words && !x.full; k++, i += max_peers) {
-		uint32_t w;
-		unsigned int b;
+		uint32_t dirty = 0, written = 0, zero;
 
 		if (i >= n_buffer) {
 			size_t chunk = max_chunk;
@@ -3945,28 +4086,38 @@ int meta_cbt_dump(struct format *cfg, char **argv __attribute((unused)), int arg
 			pread_or_die(cfg, on_disk_buffer, chunk, bm_off, "cbt_dump");
 			bm_off += chunk;
 			n_buffer = chunk / sizeof(*bm);
-			i = cbt->bitmap_index;
+			i = 0;
 		}
-		w = le32_to_cpu(bm[i].le);
-		if (w == (in_run ? ~0U : 0U))
-			continue;
-		for (b = 0; b < 32; b++) {
-			bool set = w & (1U << b);
+		if (dirty_mode)
+			dirty = le32_to_cpu(bm[i + cbt->bitmap_index].le);
+		if (n_day0) {
+			written = ~0U;
+			for (s = 0; s < n_day0 && written; s++)
+				written &= le32_to_cpu(bm[i + day0[s]].le);
+			written |= cbt_al_written(&hot, x.bm_bytes_per_bit, k);
+		}
+		zero = n_day0 ? ~written : 0;
 
-			if (set && !in_run) {
-				run_start = k * 32 + b;
-				in_run = true;
-			} else if (!set && in_run) {
-				cbt_put_extent(&x, run_start, k * 32 + b);
-				in_run = false;
-			}
+		if (dirty == (state & CBT_STATE_DIRTY ? ~0U : 0U) &&
+		    zero == (state & CBT_STATE_ZERO ? ~0U : 0U))
+			continue;
+		nb = bits - k * 32 < 32 ? bits - k * 32 : 32;
+		for (b = 0; b < nb; b++) {
+			unsigned int st = (dirty >> b & 1 ? CBT_STATE_DIRTY : 0) |
+					  (zero >> b & 1 ? CBT_STATE_ZERO : 0);
+
+			if (st == state)
+				continue;
+			cbt_put_extent(&x, run_start, k * 32 + b, state);
+			run_start = k * 32 + b;
+			state = st;
 		}
 	}
-	if (in_run)
-		cbt_put_extent(&x, run_start, bits);
+	cbt_put_extent(&x, run_start, bits, state);
 	if (!x.full)
 		printf("%s]\n", x.emitted ? "\n  " : " ");
 	printf("}\n");
+	free(hot.ext);
 
 	return cfg->ops->close(cfg);
 }
@@ -7436,6 +7587,16 @@ int main(int argc, char **argv)
 		break;
 	    case OPT_MAX_EXTENTS:
 		option_max_extents = m_strtoll(optarg, 1);
+		break;
+	    case OPT_MODE:
+		if (!strcmp(optarg, "dirty"))
+			option_cbt_dump_mode = CBT_DUMP_MODE_DIRTY;
+		else if (!strcmp(optarg, "zero"))
+			option_cbt_dump_mode = CBT_DUMP_MODE_ZERO;
+		else {
+			fprintf(stderr, "--mode: dirty or zero, not \"%s\"\n", optarg);
+			exit(20);
+		}
 		break;
 	    default:
 		print_usage_and_exit();

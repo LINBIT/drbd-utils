@@ -358,25 +358,66 @@
       </varlistentry>
       <varlistentry>
         <term><option>cbt-dump</option>
+          <arg choice="opt" rep="norepeat"><option>--mode</option>=<group choice="req" rep="norepeat"><arg choice="plain" rep="norepeat">dirty</arg><arg choice="plain" rep="norepeat">zero</arg></group></arg>
           <arg choice="opt" rep="norepeat"><option>--start-offset</option> <replaceable>bytes</replaceable></arg>
           <arg choice="opt" rep="norepeat"><option>--max-extents</option> <replaceable>count</replaceable></arg>
         </term>
         <listitem>
 	  <para><indexterm
 	      significance="normal"><primary>drbdmeta</primary><secondary>cbt-dump</secondary></indexterm>
-	    Print the changed block tracking slot of the metadata as JSON: the
-	    bookmark <literal>id</literal> it tracks from, the time of that
-	    <option>cbt-start</option> as <literal>since</literal>, the
+	    Print extents of the volume as JSON, from the changed block
+	    tracking slot and the day0 bitmap of the metadata. The JSON object
+	    has the <literal>format</literal> of the output, which is 1, the
 	    <literal>volume-size</literal> in bytes, and the
-	    <literal>extents</literal> that changed, as byte
-	    <literal>offset</literal> and <literal>length</literal>.
+	    <literal>extents</literal>, each as a byte <literal>offset</literal>
+	    and <literal>length</literal> with flags.
 	    Meant for the metadata in a snapshot of the backing device
 	    (or of external metadata) that was taken after
 	    <option>drbdsetup cbt-flush</option>, while I/O was suspended
-	    on all nodes: then the extents are the writes between that
-	    bookmark and the snapshot. Use <quote>-</quote>
-	    as <replaceable>device</replaceable>; the snapshot belongs to
+	    on all nodes. Use <quote>-</quote>
+	    as <replaceable>device</replaceable>. The snapshot belongs to
 	    no drbd device.
+	  </para>
+	  <para>
+	    With <option>--mode=dirty</option>, the default, the object also
+	    has the bookmark <literal>id</literal> that the tracking starts
+	    from, and the time of that <option>cbt-start</option> as
+	    <literal>since</literal>. Each extent has the flags
+	    <literal>dirty</literal> and <literal>zero</literal>.
+	    <literal>dirty</literal> extents were written between that bookmark
+	    and the snapshot. <literal>zero</literal> extents were never written
+	    since the metadata was created. Extents with neither flag are not
+	    printed.
+	  </para>
+	  <para>
+	    With <option>--mode=zero</option>, the extents are the
+	    <literal>zero</literal> extents only, and each has the flag
+	    <literal>"zero": true</literal>. This mode does not use the changed
+	    block tracking, and works without a bookmark, for the first full
+	    backup.
+	  </para>
+	  <para>
+	    The day0 bitmap is made of the bitmap slots that neither a peer nor
+	    the changed block tracking holds. Every write since the metadata was
+	    created sets a bit in each of them. When a peer or the tracking
+	    frees a slot, DRBD (since 9.0.15) and <option>forget-peer</option>
+	    copy a day0 slot into it, or set all its bits if there is no day0
+	    slot. <option>cbt-dump</option> takes as zero what is clear in all
+	    day0 slots. If all slots are in use, nothing is zero.
+	    A <literal>zero</literal> extent reads as zeros only if the backing
+	    device read as zeros where it was not written when the metadata was
+	    created, as a new thin volume does. Data that was on the backing
+	    device before <option>create-md</option> is not in the day0 bitmap.
+	  </para>
+	  <para>
+	    If the activity log is not clean and the bitmap was not flushed,
+	    <option>--mode=zero</option> takes the extents of the activity log
+	    as written.
+	    Resync writes do not go through the activity log. On a sync target
+	    without a flush, <option>--mode=zero</option> can report blocks
+	    as zero that the resync wrote in the last seconds before the
+	    snapshot. Such a snapshot is Inconsistent. Take the snapshot on
+	    an UpToDate node.
 	  </para>
 	  <para>
 	    <option>--start-offset</option> skips the extents that end
@@ -386,10 +427,13 @@
 	    next page.
 	  </para>
 	  <para>
-	    The exit code is 50 when the metadata holds no changed block
-	    tracking that can be trusted: none, invalid, or a bitmap that
-	    was not flushed while the activity log is not clean. The
-	    backup has to copy the whole volume then.
+	    The exit code is 50 when the metadata holds nothing that can be
+	    trusted for the mode. For <option>--mode=dirty</option>, that is no
+	    changed block tracking, an invalid one, or a bitmap that was not
+	    flushed while the activity log is not clean. For
+	    <option>--mode=zero</option>, that is a bitmap that was not flushed
+	    and an activity log that is disabled or that cannot be read. The
+	    backup copies the whole volume then.
 	  </para>
         </listitem>
       </varlistentry>
