@@ -382,6 +382,10 @@ struct genl_sock *genl_connect_to_family(struct genl_family *family, struct genl
 			break;
 		case CTRL_ATTR_FAMILY_NAME:
 			break;
+		case CTRL_ATTR_MAXATTR:
+			family->maxattr = nla_get_u32(nla);
+			dbg(2, "'%s' genl family maxattr: %d", family->name, family->maxattr);
+			break;
 #ifdef HAVE_CTRL_ATTR_VERSION
 		case CTRL_ATTR_VERSION:
 			family->version = nla_get_u32(nla);

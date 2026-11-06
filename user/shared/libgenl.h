@@ -49,6 +49,9 @@
 #ifndef NLMSGERR_ATTR_MSG
 #define NLMSGERR_ATTR_MSG 1
 #endif
+#ifndef NLMSGERR_ATTR_OFFS
+#define NLMSGERR_ATTR_OFFS 2
+#endif
 
 #define GENL_MAX_OPS 128
 
@@ -1136,6 +1139,8 @@ enum {
 extern int genl_recv_msgs(struct genl_sock *s, struct iovec *iov, char **err_desc, int timeout_ms);
 /* The NLMSGERR_ATTR_MSG text of an NLMSG_ERROR, if any; buf is always NUL terminated. */
 extern int nlmsg_extack_msg(const struct nlmsghdr *nlh, char *buf, size_t size);
+/* The NLMSGERR_ATTR_OFFS of an NLMSG_ERROR: the offending attribute's offset in the request. */
+extern bool nlmsg_extack_offs(const struct nlmsghdr *nlh, __u32 *offs);
 extern bool genl_op_known(struct genl_family *family, int id);
 
 static inline __s32 nla_get_s32(const struct nlattr *nla)

@@ -338,6 +338,26 @@ static void test_extack_message(void)
 	msg_free(m);
 }
 
+static void test_extack_offset(void)
+{
+	struct msg_buff *m;
+	struct nlmsghdr *nlh;
+	__u32 offs = 0;
+
+	m = msg_new(DEFAULT_MSG_SIZE);
+	nlh = build_error_reply(m, -EINVAL, false, "Unknown attribute type");
+	nla_put_u32(m, NLMSGERR_ATTR_OFFS, 52);
+	nlh->nlmsg_len = m->tail - (unsigned char *)nlh;
+	CHECK(nlmsg_extack_offs(nlh, &offs));
+	CHECK(offs == 52);
+	msg_free(m);
+
+	m = msg_new(DEFAULT_MSG_SIZE);
+	nlh = build_error_reply(m, -EINVAL, true, "no offset");
+	CHECK(!nlmsg_extack_offs(nlh, &offs));
+	msg_free(m);
+}
+
 /* The legacy family also gets extended ACKs from a modern kernel; the
  * text beats strerror(). A positive ACK is not an error. */
 static void test_legacy_outcome_keeps_extack_text(void)
@@ -931,6 +951,7 @@ int main(int argc, char **argv)
 	test_legacy_parse_device_change();
 	test_legacy_parse_skips_without_identity();
 	test_extack_message();
+	test_extack_offset();
 	test_legacy_outcome_keeps_extack_text();
 #ifndef WINDRBD
 	test_drbd2_attr_maps_complete();

@@ -306,6 +306,9 @@ static struct option connect_84_options[] = {
 };
 #endif
 
+static const char attach_discard_my_data_unsupported[] =
+	"attach --discard-my-data: not supported by this DRBD kernel module";
+
 static struct option attach_extra_options[] = {
 	{ "discard-my-data", optional_argument, NULL, OPT_ATTACH_DISCARD_MY_DATA },
 	{ }
@@ -1193,6 +1196,8 @@ static int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	bool set_defaults = false;
 	bool attach_discard_my_data = false;
 	const char *attach_discard_my_data_arg = NULL;
+	long attach_parms_offs = -1;
+	__u32 bad_attr_offs;
 	struct drbd_nl_outcome outcome = { .ret_code = NO_ERROR, .timeout_type = -1 };
 	struct msg_buff *smsg;
 	struct iovec iov;
@@ -1300,6 +1305,14 @@ static int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 		struct field_def *field = &attach_parms_ctx.fields[0];
 
 		nla = nl->nest_start(smsg, NL_SET_ATTACH_PARMS);
+		/* Without strict netlink validation, an older module would
+		 * ignore the attribute instead of rejecting it. */
+		if (nl->family->maxattr && nla_type(nla) > nl->family->maxattr) {
+			desc = attach_discard_my_data_unsupported;
+			rv = OTHER_ERROR;
+			goto error;
+		}
+		attach_parms_offs = (unsigned char *)nla - smsg->data;
 		if (!field->ops->put(&attach_parms_ctx, field, smsg,
 				     attach_discard_my_data_arg)) {
 			fprintf(stderr, "Option --%s: invalid argument '%s'\n",
@@ -1394,6 +1407,11 @@ static int _generic_config_cmd(const struct drbd_cmd *cm, int argc, char **argv)
 	}
 	if (cm->missing_ok && outcome_is_missing(&outcome, ERR_RES_NOT_KNOWN))
 		rv = NO_ERROR;
+	if (rv != NO_ERROR && attach_parms_offs >= 0 &&
+	    nlmsg_extack_offs(nlh, &bad_attr_offs) && bad_attr_offs == attach_parms_offs) {
+		desc = attach_discard_my_data_unsupported;
+		rv = OTHER_ERROR;
+	}
 
 error:
 	msg_free(smsg);
