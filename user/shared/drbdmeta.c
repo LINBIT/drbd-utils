@@ -3833,14 +3833,15 @@ struct cbt_extents {
 };
 
 /* Print the extent of bits [start, end) in "state", unless --max-extents is
- * reached; then print where the next page starts instead. */
+ * reached; then print where the next page starts instead.  The extents cover
+ * the volume without gaps, as the extents of ovirt-imageio do. */
 static void cbt_put_extent(struct cbt_extents *x, uint64_t start, uint64_t end,
 			   unsigned int state)
 {
 	uint64_t offset = start * x->bm_bytes_per_bit;
 	uint64_t last = end * x->bm_bytes_per_bit;
 
-	if (x->full || !state)
+	if (x->full)
 		return;
 	if (last > x->volume_size)
 		last = x->volume_size;
@@ -3853,14 +3854,14 @@ static void cbt_put_extent(struct cbt_extents *x, uint64_t start, uint64_t end,
 		x->full = true;
 		return;
 	}
-	printf("%s\n    { \"offset\": "U64", \"length\": "U64,
+	printf("%s\n    { \"start\": "U64", \"length\": "U64,
 	       x->emitted ? "," : "", offset, last - offset);
 	if (option_cbt_dump_mode == CBT_DUMP_MODE_DIRTY)
 		printf(", \"dirty\": %s, \"zero\": %s }",
 		       state & CBT_STATE_DIRTY ? "true" : "false",
 		       state & CBT_STATE_ZERO ? "true" : "false");
 	else
-		printf(", \"zero\": true }");
+		printf(", \"zero\": %s }", state & CBT_STATE_ZERO ? "true" : "false");
 	x->emitted++;
 }
 
@@ -3971,11 +3972,11 @@ static uint32_t cbt_al_written(struct cbt_hot_al *hot,
 	return written;
 }
 
-/* Print extents of the volume as JSON.  --mode=dirty: what the changed block
- * tracking slot of the meta data has set, and what the day0 bitmap has clear.
- * Meant for the meta data in a snapshot that was taken while I/O was
- * suspended, after "drbdsetup cbt-flush".  --mode=zero: only what the day0
- * bitmap has clear, which needs no changed block tracking.
+/* Print the volume as JSON extents.  --mode=dirty: each extent is "dirty" if
+ * the changed block tracking slot of the meta data has it set, and "zero" if
+ * the day0 bitmap has it clear.  Meant for the meta data in a snapshot that was
+ * taken while I/O was suspended, after "drbdsetup cbt-flush".  --mode=zero:
+ * only the "zero" flag, which needs no changed block tracking.
  */
 int meta_cbt_dump(struct format *cfg, char **argv __attribute((unused)), int argc)
 {
@@ -4074,6 +4075,7 @@ int meta_cbt_dump(struct format *cfg, char **argv __attribute((unused)), int arg
 	k = option_start_offset / x.bm_bytes_per_bit / 32;
 	bm_off += round_down(k * max_peers * sizeof(*bm), 4096 * max_peers);
 	k = (bm_off - cfg->bm_offset) / sizeof(*bm) / max_peers;
+	run_start = k * 32;
 	for (; k < words && !x.full; k++, i += max_peers) {
 		uint32_t dirty = 0, written = 0, zero;
 

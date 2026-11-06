@@ -369,8 +369,10 @@
 	    tracking slot and the day0 bitmap of the metadata. The JSON object
 	    has the <literal>format</literal> of the output, which is 1, the
 	    <literal>volume-size</literal> in bytes, and the
-	    <literal>extents</literal>, each as a byte <literal>offset</literal>
-	    and <literal>length</literal> with flags.
+	    <literal>extents</literal>, each as a byte <literal>start</literal>
+	    and <literal>length</literal> with flags. The extents cover the
+	    volume without gaps, and neighboring extents differ in their flags,
+	    as the extents of ovirt-imageio do.
 	    Meant for the metadata in a snapshot of the backing device
 	    (or of external metadata) that was taken after
 	    <option>drbdsetup cbt-flush</option>, while I/O was suspended
@@ -386,13 +388,12 @@
 	    <literal>dirty</literal> and <literal>zero</literal>.
 	    <literal>dirty</literal> extents were written between that bookmark
 	    and the snapshot. <literal>zero</literal> extents were never written
-	    since the metadata was created. Extents with neither flag are not
-	    printed.
+	    since the metadata was created. An extent can have both flags, or
+	    neither.
 	  </para>
 	  <para>
-	    With <option>--mode=zero</option>, the extents are the
-	    <literal>zero</literal> extents only, and each has the flag
-	    <literal>"zero": true</literal>. This mode does not use the changed
+	    With <option>--mode=zero</option>, each extent has the flag
+	    <literal>zero</literal> only. This mode does not use the changed
 	    block tracking, and works without a bookmark, for the first full
 	    backup.
 	  </para>
@@ -403,7 +404,7 @@
 	    frees a slot, DRBD (since 9.0.15) and <option>forget-peer</option>
 	    copy a day0 slot into it, or set all its bits if there is no day0
 	    slot. <option>cbt-dump</option> takes as zero what is clear in all
-	    day0 slots. If all slots are in use, nothing is zero.
+	    day0 slots. If all slots are in use, no extent is zero.
 	    A <literal>zero</literal> extent reads as zeros only if the backing
 	    device read as zeros where it was not written when the metadata was
 	    created, as a new thin volume does. Data that was on the backing
@@ -421,7 +422,8 @@
 	  </para>
 	  <para>
 	    <option>--start-offset</option> skips the extents that end
-	    before the byte offset, and <option>--max-extents</option>
+	    before the byte offset, and the first extent starts at that offset.
+	    <option>--max-extents</option>
 	    limits how many are printed. When more follow,
 	    <literal>next-offset</literal> names the start offset of the
 	    next page.

@@ -38,25 +38,31 @@ $ drbdmeta --force - v09 "$img" internal dump-superblock --output json 2>/dev/nu
 $ drbdmeta --force - v09 "$img" internal cbt-dump 2>/dev/null | jq -c '[.format, .id, .since, ."volume-size", ."next-offset"]'
 [1,"6B8F3C2A91D04E17","2025-10-02T15:39:27Z",33554432,null]
 $ drbdmeta --force - v09 "$img" internal cbt-dump 2>/dev/null | jq -c '.extents[]'
-{"offset":0,"length":32768,"dirty":true,"zero":false}
-{"offset":262144,"length":2359296,"dirty":false,"zero":true}
-{"offset":2621440,"length":4096,"dirty":true,"zero":false}
-{"offset":2625536,"length":253952,"dirty":false,"zero":true}
-{"offset":2879488,"length":274432,"dirty":true,"zero":false}
-{"offset":3178496,"length":229376,"dirty":false,"zero":true}
-{"offset":3670016,"length":29884416,"dirty":false,"zero":true}
+{"start":0,"length":32768,"dirty":true,"zero":false}
+{"start":32768,"length":229376,"dirty":false,"zero":false}
+{"start":262144,"length":2359296,"dirty":false,"zero":true}
+{"start":2621440,"length":4096,"dirty":true,"zero":false}
+{"start":2625536,"length":253952,"dirty":false,"zero":true}
+{"start":2879488,"length":274432,"dirty":true,"zero":false}
+{"start":3153920,"length":24576,"dirty":false,"zero":false}
+{"start":3178496,"length":229376,"dirty":false,"zero":true}
+{"start":3407872,"length":262144,"dirty":false,"zero":false}
+{"start":3670016,"length":29884416,"dirty":false,"zero":true}
+$ for m in dirty zero; do drbdmeta --force - v09 "$img" internal cbt-dump --mode=$m 2>/dev/null | jq 'reduce .extents[] as $e (0; if $e.start == . then . + $e.length else -1 end) == ."volume-size"'; done
+true
+true
 $ drbdmeta --force - v09 "$img" internal cbt-dump --mode=dirty --max-extents 2 2>/dev/null | jq -c '[.extents, ."next-offset"]'
-[[{"offset":0,"length":32768,"dirty":true,"zero":false},{"offset":262144,"length":2359296,"dirty":false,"zero":true}],2621440]
+[[{"start":0,"length":32768,"dirty":true,"zero":false},{"start":32768,"length":229376,"dirty":false,"zero":false}],262144]
 $ drbdmeta --force - v09 "$img" internal cbt-dump --start-offset 2879488 --max-extents 2 2>/dev/null | jq -c '[.extents, ."next-offset"]'
-[[{"offset":2879488,"length":274432,"dirty":true,"zero":false},{"offset":3178496,"length":229376,"dirty":false,"zero":true}],3670016]
+[[{"start":2879488,"length":274432,"dirty":true,"zero":false},{"start":3153920,"length":24576,"dirty":false,"zero":false}],3178496]
 $ drbdmeta --force - v09 "$img" internal cbt-dump --start-offset 3000000 2>/dev/null | jq -c '.extents'
-[{"offset":3000000,"length":153920,"dirty":true,"zero":false},{"offset":3178496,"length":229376,"dirty":false,"zero":true},{"offset":3670016,"length":29884416,"dirty":false,"zero":true}]
+[{"start":3000000,"length":153920,"dirty":true,"zero":false},{"start":3153920,"length":24576,"dirty":false,"zero":false},{"start":3178496,"length":229376,"dirty":false,"zero":true},{"start":3407872,"length":262144,"dirty":false,"zero":false},{"start":3670016,"length":29884416,"dirty":false,"zero":true}]
 $ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero 2>/dev/null | jq -c '[.format, .id, .since, ."volume-size"]'
 [1,null,null,33554432]
 $ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero 2>/dev/null | jq -c '.extents' | tee "$tmpdir/zero.json"
-[{"offset":262144,"length":2359296,"zero":true},{"offset":2625536,"length":253952,"zero":true},{"offset":3178496,"length":229376,"zero":true},{"offset":3670016,"length":29884416,"zero":true}]
+[{"start":0,"length":262144,"zero":false},{"start":262144,"length":2359296,"zero":true},{"start":2621440,"length":4096,"zero":false},{"start":2625536,"length":253952,"zero":true},{"start":2879488,"length":299008,"zero":false},{"start":3178496,"length":229376,"zero":true},{"start":3407872,"length":262144,"zero":false},{"start":3670016,"length":29884416,"zero":true}]
 $ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero --start-offset 300000 --max-extents 2 2>/dev/null | jq -c '[.extents, ."next-offset"]'
-[[{"offset":300000,"length":2321440,"zero":true},{"offset":2625536,"length":253952,"zero":true}],3178496]
+[[{"start":300000,"length":2321440,"zero":true},{"start":2621440,"length":4096,"zero":false}],2625536]
 $ drbdmeta --force - v09 "$img" internal cbt-dump --mode=all 2>&1 | grep -v ioctl; echo "${PIPESTATUS[0]}"
 --mode: dirty or zero, not "all"
 20
@@ -101,7 +107,7 @@ No day0 bitmap slot to copy: setting all bits of the freed slot 1
 $ drbdmeta --force - v09 "$img" internal dump-md 2>/dev/null | sed -n -e '/^bitmap\[1\] {/,/^}/p' | sed -n 3p
     168 times 0xFFFFFFFFFFFFFFFF;
 $ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero 2>/dev/null | jq -c '.extents'
-[]
+[{"start":0,"length":33554432,"zero":false}]
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" internal restore-md --max-peers 4 "$tmpdir/cbt.txt" 2>&1 | grep -A2 '^This dump has a changed block tracking slot'
 This dump has a changed block tracking slot (2), which
 --max-peers cannot move. Stop the tracking first
