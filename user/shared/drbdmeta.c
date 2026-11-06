@@ -313,7 +313,8 @@ bool confirmed(const char *text)
 /* Meta data features which drbdmeta maintains correctly. Its own counterpart
  * of the DRBD module's DRBD_MD_FEATURES.
  */
-#define DRBD_MD_FEATURES (DRBD_MDFF_DIVERGENCE_BITMAP | DRBD_MDFF_CBT)
+#define DRBD_MD_FEATURES (DRBD_MDFF_DIVERGENCE_BITMAP | DRBD_MDFF_BITMAP_AUTHORITATIVE | \
+			  DRBD_MDFF_CBT)
 
 /*
  * }
@@ -1300,6 +1301,7 @@ void m_set_v9_uuid(struct md_cpu *md, int node_id, char **argv, int argc __attri
 		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_FULL_SYNC)) break;
 		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_DEVICE_SEEN)) break;
 		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_DIVERGENCE_BITMAP)) break;
+		if (!m_strsep_bit(str, &md->peers[node_id].flags, MDF_PEER_BITMAP_AUTHORITATIVE)) break;
 	} while (0);
 }
 
@@ -3589,6 +3591,7 @@ char *pretty_peer_md_flags(char *inbuf, unsigned int buf_size, unsigned int flag
 	/* MDF_PEER_FULL_SYNC   */ [3] = "full-sync",
 	/* MDF_PEER_DEVICE_SEEN */ [4] = "seen",
 	/* MDF_PEER_DIVERGENCE_BITMAP */ [5] = "divergence",
+	/* MDF_PEER_BITMAP_AUTHORITATIVE */ [6] = "authoritative",
 	/* MDF_NODE_EXISTS      */ [16] = "exists",
 	};
 

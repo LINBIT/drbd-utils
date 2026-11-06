@@ -13,6 +13,9 @@
 ##  - create-md claims the features drbdmeta maintains
 ##  - the field takes one of the three reserved words, leaving two
 ##  - dump-md and restore-md round-trip the field
+##  - apply-al rewrites the super block and keeps the field and the
+##    MDF_PEER_BITMAP_AUTHORITATIVE peer flag it covers; without the feature,
+##    DRBD counts every out-of-sync bit as set for blocks the peer lacks
 ##  - a feature drbdmeta does not know is cleared, because drbdmeta does not
 ##    maintain whatever flags that feature covers
 ##  - a dump taken before drbdmeta knew the field has no "features" line;
@@ -24,15 +27,22 @@ $ truncate -s 268435456 "$img"
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md 3 2>/dev/null | tail -1
 New drbd meta data block successfully created.
 $ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep '^features'
-features 0x0000000000000005;
+features 0x0000000000000007;
 $ drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -c '[.features, (.reserved_u64 | length)]'
-["0x0000000000000005",2]
+["0x0000000000000007",2]
 $ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null > "$tmpdir/dump.txt"
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md "$tmpdir/dump.txt" 2>/dev/null | tail -1
 Successfully restored meta data
 $ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep '^features'
-features 0x0000000000000005;
-$ sed 's/^features .*/features 0x0000000000000003;/' "$tmpdir/dump.txt" > "$tmpdir/future.txt"
+features 0x0000000000000007;
+$ awk '/^peer\[1\] \{/{p=1} /^\}/{p=0} p && /flags/{sub(/0x00000000/, "0x00000040")} {print}' "$tmpdir/dump.txt" > "$tmpdir/authoritative.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md "$tmpdir/authoritative.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v09 "$img" flex-internal apply-al 2>/dev/null
+$ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep -e '^features' -e 'flags 0x00000040'
+features 0x0000000000000007;
+    flags 0x00000040; # authoritative
+$ sed 's/^features .*/features 0x0000000000000009;/' "$tmpdir/dump.txt" > "$tmpdir/future.txt"
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md "$tmpdir/future.txt" 2>/dev/null | tail -1
 Successfully restored meta data
 $ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep '^features'
@@ -47,5 +57,5 @@ New drbd meta data block successfully created.
 $ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md 1 2>/dev/null | tail -1
 New drbd meta data block successfully created.
 $ drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | grep '^features'
-features 0x0000000000000005;
+features 0x0000000000000007;
 $ rm -rf "$tmpdir" "$img"
