@@ -1027,6 +1027,12 @@ struct meta_cmd cmds[] = {
 		"[--bitmap-block-size {val}] "
 		"[--peers {val}] "
 		"[--bitmap-slots {val}] "
+		"[--initialize-bitmap={automatic,zeroout,pwrite,set-all,skip}] "
+		"[--initial-current-uuid={generate,val}] "
+		"[--consistent] "
+		"[--uptodate] "
+		"[--peers-outdated] "
+		"[--rotate-uuids] "
 		"{max_peers}",
 		meta_create_md, 1, 0, 1},
 	{"forget-peer", 0, meta_forget_peer, 1, 1, 1},
