@@ -1370,6 +1370,7 @@ struct context_def create_md_ctx = {
 		{ .name = "force", .argument_is_optional = true },
 		{ .name = "effective-size", .argument_is_optional = false },
 		{ .name = "bitmap-block-size", .argument_is_optional = false },
+		{ .name = "initialize-bitmap", .argument_is_optional = false },
 		{ .name = "diskful-peers", .argument_is_optional = false },
 		{ .name = "peers", .argument_is_optional = false },
 		{ .name = "bitmap-slots", .argument_is_optional = false },

@@ -1,0 +1,9 @@
+## drbdadm create-md accepts only the options listed in create_md_ctx
+## (user/v9/config_flags.c) and passes them on to drbdmeta create-md, which
+## lists the options it takes in its usage text.  Both lists must match, so
+## that a new drbdmeta create-md option cannot be forgotten in drbdadm.
+## Exceptions: drbdadm turns --max-peers into drbdmeta's max_peers argument,
+## and --force is a global drbdmeta option.
+
+$ diff <(drbdadm create-md --help 2>&1 | sed -n '/^OPTIONS FOR create-md:/,$p' | grep -o -- '--[a-zA-Z0-9-]*' | grep -vxe --max-peers -e --force | sort) <(drbdmeta 2>/dev/null | grep '^  create-md ' | grep -o -- '--[a-zA-Z0-9-]*' | sort); echo $?
+0
