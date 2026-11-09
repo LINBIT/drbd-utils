@@ -1,0 +1,89 @@
+## Test "drbdmeta cbt-dump" on a dm-thin volume: the zero extents come from
+## the mappings of the thin pool instead of the day0 bitmap. The hidden option
+## --thin-dump takes the output of "thin_dump -m --dev-id" from a file, as
+## drbdmeta gets it from the pool of a thin volume.
+##
+## Test layout as in cbt-dump.test: 64 MB image, internal v09 meta data, three
+## bitmap slots, 32 MB effective size at 4 KiB per bit, a bookmark for slot 2.
+## The day0 bitmap (slots 0 and 1) differs from the thin mappings.
+##
+## The thin pool has 64 KiB blocks. Mapped are blocks 0-3 (0-256 KiB), block
+## 10 (640-704 KiB), blocks 48-49 (3-3.125 MiB) and block 600, beyond the
+## volume. Block 40 (2.5 MiB) is unmapped but dirty: a discard since the
+## bookmark. So is the part of the dirty range 2879488-3153920 before block 48.
+##
+## Then: paging; no mappings, where all of the volume is zero; meta data that
+## was not flushed, with the activity log disabled, where the day0 bitmap
+## cannot be trusted and the thin mappings can; mappings out of order; a
+## missing file; pool metadata that needs a check (flags="1"); shared
+## mappings as <def>/<ref> of thin_dump >= 1.0, which it writes only when it
+## dumps more than one device. --thin-dump fails on all of them; for a device,
+## cbt-dump falls back to the day0 bitmap instead.
+##
+## --data-device names the data of the volume, for external meta data. A
+## device that is not a dm device leaves the zero extents to the day0 bitmap;
+## a missing one is an error. drbdadm passes --data-snapshot on as
+## --data-device.
+$ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
+$ truncate -s 67108864 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" internal create-md --effective-size 32M 3 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ drbdmeta --force - v09 "$img" internal dump-md 2>/dev/null > "$tmpdir/dump.txt"
+$ awk '/^history-uuids/ { h = 1 } { if (!skip) print } h && /^}/ { h = 0; print "cbt-bookmark {\n    id 0x6B8F3C2A91D04E17;\n    bitmap-uuid 0x1111111111111111;\n    bitmap-dagtag 0x0000000000000042;\n    since 1759419567;\n    flags 0x00000005;\n    bitmap-index 2;\n}" } /^bitmap\[0\]/ { skip = 1; print "    170 times 0xFFFFFFFFFFFFFFFF;" } /^bitmap\[1\]/ { skip = 1; print "    0xFFFFFFFFFFFFFFFF; 9 times 0x0000000000000000; 0x8000000000000001; 0xFFFFFFFFFFFFFFFF; 0x00000000000000FF; 0xFFFFFFFFFFFFFFFF; 156 times 0x0000000000000000;" } /^bitmap\[2\]/ { skip = 1; print "    0x00000000000000FF; 9 times 0x0000000000000000; 0x8000000000000001; 0xFFFFFFFFFFFFFFFF; 0x0000000000000003; 157 times 0x0000000000000000;" } skip && /^}/ { skip = 0; print }' "$tmpdir/dump.txt" > "$tmpdir/cbt.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" internal restore-md "$tmpdir/cbt.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ printf '%s\n' '<superblock uuid="" time="1" transaction="2" flags="0" version="2" data_block_size="128" nr_data_blocks="16384">' '  <device dev_id="1" mapped_blocks="8" transaction="0" creation_time="0" snap_time="1">' '    <range_mapping origin_begin="0" data_begin="7" length="4" time="0"/>' '    <single_mapping origin_block="10" data_block="3" time="1"/>' '    <range_mapping origin_begin="48" data_begin="20" length="2" time="0"/>' '    <single_mapping origin_block="600" data_block="30" time="1"/>' '  </device>' '</superblock>' > "$tmpdir/thin.xml"
+$ drbdmeta --force - v09 "$img" internal cbt-dump --thin-dump "$tmpdir/thin.xml" 2>/dev/null | jq -c '.extents[]'
+{"start":0,"length":32768,"dirty":true,"zero":false}
+{"start":32768,"length":229376,"dirty":false,"zero":false}
+{"start":262144,"length":393216,"dirty":false,"zero":true}
+{"start":655360,"length":65536,"dirty":false,"zero":false}
+{"start":720896,"length":1900544,"dirty":false,"zero":true}
+{"start":2621440,"length":4096,"dirty":true,"zero":true}
+{"start":2625536,"length":253952,"dirty":false,"zero":true}
+{"start":2879488,"length":266240,"dirty":true,"zero":true}
+{"start":3145728,"length":8192,"dirty":true,"zero":false}
+{"start":3153920,"length":122880,"dirty":false,"zero":false}
+{"start":3276800,"length":30277632,"dirty":false,"zero":true}
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero --thin-dump "$tmpdir/thin.xml" 2>/dev/null | jq -c '.extents' | tee "$tmpdir/zero.json"
+[{"start":0,"length":262144,"zero":false},{"start":262144,"length":393216,"zero":true},{"start":655360,"length":65536,"zero":false},{"start":720896,"length":2424832,"zero":true},{"start":3145728,"length":131072,"zero":false},{"start":3276800,"length":30277632,"zero":true}]
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero --thin-dump "$tmpdir/thin.xml" --start-offset 700000 --max-extents 2 2>/dev/null | jq -c '[.extents, ."next-offset"]'
+[[{"start":700000,"length":20896,"zero":false},{"start":720896,"length":2424832,"zero":true}],3145728]
+$ head -2 "$tmpdir/thin.xml" > "$tmpdir/empty.xml" && tail -2 "$tmpdir/thin.xml" >> "$tmpdir/empty.xml"
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero --thin-dump "$tmpdir/empty.xml" 2>/dev/null | jq -c '.extents'
+[{"start":0,"length":33554432,"zero":true}]
+$ sed -e 's/^flags 0x00000080;/flags 0x00000100;/' -e 's/^    flags 0x00000005;/    flags 0x00000001;/' "$tmpdir/cbt.txt" > "$tmpdir/al-disabled.txt"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" internal restore-md "$tmpdir/al-disabled.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero 2>&1 >/dev/null | grep -v ioctl; echo "${PIPESTATUS[0]}"
+The bitmap was not flushed, and the activity log cannot
+tell what is missing from it
+50
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero --thin-dump "$tmpdir/thin.xml" 2>/dev/null | jq -c '.extents' | cmp - "$tmpdir/zero.json" && echo same
+same
+$ { sed -n '1,2p;5p' "$tmpdir/thin.xml"; sed -n '3,4p;6,$p' "$tmpdir/thin.xml"; } > "$tmpdir/unsorted.xml"
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero --thin-dump "$tmpdir/unsorted.xml" 2>&1 >/dev/null | grep -v ioctl; echo "${PIPESTATUS[0]}"
+Unexpected thin_dump output:     <range_mapping origin_begin="0" data_begin="7" length="4" time="0"/>
+20
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero --thin-dump "$tmpdir/missing.xml" 2>&1 >/dev/null | grep -v ioctl | sed "s|$tmpdir/||"; echo "${PIPESTATUS[0]}"
+missing.xml: No such file or directory
+20
+$ sed -e '1s/ flags="0"/ flags="1"/' "$tmpdir/thin.xml" > "$tmpdir/needs-check.xml"
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero --thin-dump "$tmpdir/needs-check.xml" 2>&1 >/dev/null | grep -v ioctl; echo "${PIPESTATUS[0]}"
+The metadata of the thin pool needs a check
+20
+$ sed -e '3i\    <ref name="7"/>' "$tmpdir/thin.xml" > "$tmpdir/ref.xml"
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero --thin-dump "$tmpdir/ref.xml" 2>&1 >/dev/null | grep -v ioctl; echo "${PIPESTATUS[0]}"
+Unexpected thin_dump output:     <ref name="7"/>
+20
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" internal restore-md "$tmpdir/cbt.txt" 2>/dev/null | tail -1
+Successfully restored meta data
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero 2>/dev/null | jq -c '.extents' > "$tmpdir/day0.json"
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero --data-device "$tmpdir/thin.xml" 2>/dev/null | jq -c '.extents' | cmp - "$tmpdir/day0.json" && echo same
+same
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero --data-device "$tmpdir/missing" 2>&1 >/dev/null | grep -v ioctl | sed "s|$tmpdir/||"; echo "${PIPESTATUS[0]}"
+--data-device missing: No such file or directory
+20
+$ __DRBD_NODE__=ADDRLeft drbdadm -c ./top-level-meta-disk.res -d cbt-dump --md-snapshot=/dev/mqmvg/MD-snap --data-snapshot=/dev/mqmvg/QM-snap --mode=zero drbd_testqm 2>/dev/null
+drbdmeta - v09 /dev/mqmvg/MD-snap flex-external cbt-dump --mode=zero --data-device /dev/mqmvg/QM-snap
+$ rm -rf "$tmpdir" "$img"

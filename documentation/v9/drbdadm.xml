@@ -294,6 +294,7 @@
 	  <arg choice="opt" rep="norepeat">--mode=<group choice="req" rep="norepeat"><arg choice="plain" rep="norepeat">dirty</arg><arg choice="plain" rep="norepeat">zero</arg></group></arg>
 	  <arg choice="opt" rep="norepeat">--start-offset=<replaceable>bytes</replaceable></arg>
 	  <arg choice="opt" rep="norepeat">--max-extents=<replaceable>count</replaceable></arg>
+	  <arg choice="opt" rep="norepeat">--data-snapshot=<replaceable>snapshot</replaceable></arg>
 	  <arg choice="req" rep="norepeat"><replaceable>device</replaceable></arg>
 	</term>
 
@@ -307,8 +308,13 @@
 	    blocks that were never written, from the meta data in that
 	    snapshot. <replaceable>snapshot</replaceable> is
 	    the snapshot of the device that holds the meta data: of the backing
-	    device for internal meta data. Calls the <option>cbt-dump</option>
-	    drbdmeta command with the meta data index of the configuration.
+	    device for internal meta data. With external meta data on a dm-thin
+	    backing device, <option>--data-snapshot</option> names the snapshot
+	    of the backing device, taken together with the snapshot of the meta
+	    data. The pool of that snapshot tells which blocks are zero. Calls the
+	    <option>cbt-dump</option> drbdmeta command with the meta data index
+	    of the configuration, and passes <option>--data-snapshot</option>
+	    on as <option>--data-device</option>.
 	    See <citerefentry> <refentrytitle>drbdmeta</refentrytitle>
 	      <manvolnum>8</manvolnum> </citerefentry> for details.</para>
         </listitem>

@@ -102,6 +102,10 @@ enum cbt_dump_mode {
 	CBT_DUMP_MODE_DIRTY,
 	CBT_DUMP_MODE_ZERO,
 } option_cbt_dump_mode = CBT_DUMP_MODE_DIRTY;
+/* thin_dump output to take the zero extents from, for the tests */
+const char *option_thin_dump;
+/* the data of the volume, for the zero extents of a dm-thin volume */
+const char *option_data_device;
 
 static uint64_t generate_random_uuid(void)
 {
@@ -159,6 +163,8 @@ enum metaopt_long_only {
 	OPT_START_OFFSET,
 	OPT_MAX_EXTENTS,
 	OPT_MODE,
+	OPT_THIN_DUMP,
+	OPT_DATA_DEVICE,
 };
 
 struct option metaopt[] = {
@@ -189,6 +195,8 @@ struct option metaopt[] = {
     { "start-offset", required_argument, NULL, OPT_START_OFFSET },
     { "max-extents", required_argument, NULL, OPT_MAX_EXTENTS },
     { "mode", required_argument, NULL, OPT_MODE },
+    { "thin-dump", required_argument, NULL, OPT_THIN_DUMP },
+    { "data-device", required_argument, NULL, OPT_DATA_DEVICE },
     { NULL,     0,              0, 0 },
 };
 
@@ -990,7 +998,8 @@ struct meta_cmd cmds[] = {
 	{"cbt-dump",
 		"[--mode={dirty,zero}] "
 		"[--start-offset {val}] "
-		"[--max-extents {val}]",
+		"[--max-extents {val}] "
+		"[--data-device {device}]",
 		meta_cbt_dump, 1, 0, 0},
 	{"dump-superblock",
 		"[--output-format={binary,hex,json}]",
@@ -3995,6 +4004,7 @@ int meta_cbt_dump(struct format *cfg, char **argv __attribute((unused)), int arg
 	uint64_t bits, words, k, run_start = 0, n_al_extents = 0;
 	uint64_t day0_slots;
 	struct cbt_hot_al hot = { };
+	struct cbt_thin *thin = NULL;
 	off_t bm_off;
 	size_t max_chunk, n_buffer = 0, i = 0;
 	char since[sizeof("YYYY-MM-DDTHH:MM:SSZ")];
@@ -4038,7 +4048,25 @@ int meta_cbt_dump(struct format *cfg, char **argv __attribute((unused)), int arg
 				"%u bitmap slots\n", cbt->bitmap_index, max_peers);
 			exit(CBT_DUMP_NO_TRACKING);
 		}
-	} else if (!(cfg->md.flags & MDF_AL_CLEAN) &&
+	}
+
+	/* The thin mappings must belong to the data of the volume.  With
+	 * internal meta data, that is the meta data device; with external
+	 * meta data, only --data-device names it. */
+	if (option_data_device && access(option_data_device, F_OK)) {
+		fprintf(stderr, "--data-device %s: %m\n", option_data_device);
+		exit(20);
+	}
+	if (option_thin_dump)
+		thin = cbt_thin_open_file(option_thin_dump);
+	else if (option_data_device)
+		thin = cbt_thin_open_device(option_data_device);
+	else if (cfg->md_index == DRBD_MD_INDEX_FLEX_INT)
+		thin = cbt_thin_open_device(cfg->md_device_name);
+
+	if (thin) {
+		/* The thin pool knows what is zero, the bitmap is not needed */
+	} else if (!dirty_mode && !(cfg->md.flags & MDF_AL_CLEAN) &&
 		   !(cbt_bitmap_slot(&cfg->md) >= 0 && (cbt->flags & CBT_BOOKMARK_FLUSHED))) {
 		/* Without a flush, count what the activity log names as written. */
 		n_al_extents = (x.volume_size + (1ULL << AL_EXTENT_SHIFT) - 1) >> AL_EXTENT_SHIFT;
@@ -4054,7 +4082,9 @@ int meta_cbt_dump(struct format *cfg, char **argv __attribute((unused)), int arg
 		if (day0_slots & (1ULL << s))
 			day0[n_day0++] = s;
 	}
-	if (!n_day0)
+	if (thin)
+		n_day0 = 0;
+	else if (!n_day0)
 		fprintf(stderr, "No bitmap slot holds the day0 bitmap: "
 			"no extent is known to be zero\n");
 
@@ -4104,7 +4134,10 @@ int meta_cbt_dump(struct format *cfg, char **argv __attribute((unused)), int arg
 				written &= le32_to_cpu(bm[i + day0[s]].le);
 			written |= cbt_al_written(&hot, x.bm_bytes_per_bit, k);
 		}
-		zero = n_day0 ? ~written : 0;
+		if (thin)
+			zero = cbt_thin_zero(thin, x.bm_bytes_per_bit, k);
+		else
+			zero = n_day0 ? ~written : 0;
 
 		if (dirty == (state & CBT_STATE_DIRTY ? ~0U : 0U) &&
 		    zero == (state & CBT_STATE_ZERO ? ~0U : 0U))
@@ -4126,6 +4159,7 @@ int meta_cbt_dump(struct format *cfg, char **argv __attribute((unused)), int arg
 		printf("%s]\n", x.emitted ? "\n  " : " ");
 	printf("}\n");
 	free(hot.ext);
+	cbt_thin_close(thin);
 
 	return cfg->ops->close(cfg);
 }
@@ -7605,6 +7639,12 @@ int main(int argc, char **argv)
 			fprintf(stderr, "--mode: dirty or zero, not \"%s\"\n", optarg);
 			exit(20);
 		}
+		break;
+	    case OPT_THIN_DUMP:
+		option_thin_dump = optarg;
+		break;
+	    case OPT_DATA_DEVICE:
+		option_data_device = optarg;
 		break;
 	    default:
 		print_usage_and_exit();

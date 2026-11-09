@@ -19,6 +19,10 @@ Unreleased
  * drbdmeta: cbt-dump --mode=dirty|zero also reports the extents never
    written since create-md, from the day0 bitmap; "format": 1; the
    extents are start and length and cover the volume, as in ovirt-imageio
+ * drbdmeta: cbt-dump on a dm-thin volume takes the zero extents from
+   the mappings of the thin pool, which, unlike the day0 bitmap, know
+   about discards; with external meta data, --data-device (drbdadm:
+   --data-snapshot) names the snapshot of the backing device
 
 9.36.0-rc.1
 -----------

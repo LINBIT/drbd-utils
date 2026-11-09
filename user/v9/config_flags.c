@@ -1394,6 +1394,7 @@ struct context_def cbt_dump_adm_ctx = {
 		{ .name = "start-offset", .argument_is_optional = false },
 		{ .name = "max-extents", .argument_is_optional = false },
 		{ .name = "mode", .argument_is_optional = false },
+		{ .name = "data-snapshot", .argument_is_optional = false },
 		{ } },
 };
 

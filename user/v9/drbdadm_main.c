@@ -1727,6 +1727,7 @@ static int adm_cbt_start(const struct cfg_ctx *ctx)
 static int adm_cbt_dump(const struct cfg_ctx *ctx)
 {
 	const char *md_snapshot = backend_option_value("--md-snapshot=");
+	const char *data_snapshot = backend_option_value("--data-snapshot=");
 	struct d_volume *vol = ctx->vol;
 	const char *argv[MAX_ARGS];
 	struct d_name *opt;
@@ -1754,6 +1755,12 @@ static int adm_cbt_dump(const struct cfg_ctx *ctx)
 	opt = find_backend_option("--mode=");
 	if (opt)
 		argv[NA(argc)] = opt->name;
+	/* Not the disk of the configuration: its thin mappings change after
+	 * the snapshot, a discard would turn data of the snapshot into zeros. */
+	if (data_snapshot) {
+		argv[NA(argc)] = "--data-device";
+		argv[NA(argc)] = data_snapshot;
+	}
 	argv[NA(argc)] = 0;
 
 	return m_system_ex(argv, SLEEPS_LONG, ctx->res->name);

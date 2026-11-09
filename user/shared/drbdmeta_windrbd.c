@@ -258,3 +258,25 @@ int v07_style_md_open_device(struct format *cfg)
 
 	return 0;
 }
+
+/* There is no dm-thin on Windows: cbt-dump takes the zero extents from the
+ * day0 bitmap. */
+struct cbt_thin *cbt_thin_open_device(const char *dev)
+{
+	return NULL;
+}
+
+struct cbt_thin *cbt_thin_open_file(const char *path)
+{
+	fprintf(stderr, "--thin-dump: there is no dm-thin on WinDRBD\n");
+	exit(20);
+}
+
+uint32_t cbt_thin_zero(struct cbt_thin *thin, uint64_t bm_bytes_per_bit, uint64_t k)
+{
+	return 0;
+}
+
+void cbt_thin_close(struct cbt_thin *thin)
+{
+}

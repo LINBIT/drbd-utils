@@ -361,6 +361,7 @@
           <arg choice="opt" rep="norepeat"><option>--mode</option>=<group choice="req" rep="norepeat"><arg choice="plain" rep="norepeat">dirty</arg><arg choice="plain" rep="norepeat">zero</arg></group></arg>
           <arg choice="opt" rep="norepeat"><option>--start-offset</option> <replaceable>bytes</replaceable></arg>
           <arg choice="opt" rep="norepeat"><option>--max-extents</option> <replaceable>count</replaceable></arg>
+          <arg choice="opt" rep="norepeat"><option>--data-device</option> <replaceable>device</replaceable></arg>
         </term>
         <listitem>
 	  <para><indexterm
@@ -409,6 +410,30 @@
 	    device read as zeros where it was not written when the metadata was
 	    created, as a new thin volume does. Data that was on the backing
 	    device before <option>create-md</option> is not in the day0 bitmap.
+	  </para>
+	  <para>
+	    The day0 bitmap counts a discard as a write. If the data of the
+	    volume is on a dm-thin volume, such as an LVM thin volume or thin
+	    snapshot, <option>cbt-dump</option> takes the
+	    <literal>zero</literal> flag from the thin pool instead. With
+	    internal metadata, the data is on the metadata device. With
+	    external metadata, <option>--data-device</option> names the
+	    snapshot of the backing device, taken together with the snapshot of
+	    the metadata. Without it, <option>cbt-dump</option> uses the day0
+	    bitmap for external metadata. An extent
+	    is zero where the pool has no block mapped for the volume. A discard
+	    of whole chunks unmaps them. Data that was on the volume before
+	    <option>create-md</option> is mapped, and not zero. The granularity is
+	    the chunk size of the pool. <option>cbt-dump</option> reserves the
+	    metadata snapshot of the pool, runs <command>thin_dump</command>
+	    from thin-provisioning-tools on it, and releases it, under the lock
+	    file <filename>/var/run/thin-send-recv.lock</filename> that
+	    <command>thin_send</command> uses as well. It reads all the output
+	    of <command>thin_dump</command> before it prints anything. It falls
+	    back to the day0 bitmap if a step fails, if the output is not as
+	    expected, if the metadata of the pool needs a check, or if the thin
+	    volume has an external origin. <option>--verbose</option> names the pool and the thin
+	    device it takes the mappings from.
 	  </para>
 	  <para>
 	    If the activity log is not clean and the bitmap was not flushed,
