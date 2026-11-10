@@ -88,13 +88,14 @@ check-changelog:
   stage: build
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-  image:
-    name: alpine/git
-    entrypoint: [""]  # the image's entrypoint is git itself
+  # Not alpine/git: its entrypoint is git, and the OpenShift runner, which
+  # sets FF_KUBERNETES_HONOR_ENTRYPOINT, ignores "entrypoint:" of the job.
+  image: alpine:3
   needs: []
   variables:
     GIT_SUBMODULE_STRATEGY: none
   script:
+    - apk add -q git
     # CI_MERGE_REQUEST_DIFF_BASE_SHA is empty when the pipeline starts
     # before GitLab has computed the MR diff, so determine the base ourselves.
     - git fetch -q origin "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
