@@ -478,6 +478,7 @@ static void test_drbd2_attr_maps_complete(void)
 	CHECK_SET(NL_SET_CONNECT_PARMS, connect_parms);
 	CHECK_SET(NL_SET_RENAME_RESOURCE_PARMS, rename_resource_parms);
 	CHECK_SET(NL_SET_SUSPEND_IO_PARMS, suspend_io_parms);
+	CHECK_SET(NL_SET_CBT_START_PARMS, cbt_start_parms);
 	CHECK_SET(NL_SET_ATTACH_PARMS, attach_parms);
 #undef CHECK_SET
 	/* carried by the context nest in drbd2 */

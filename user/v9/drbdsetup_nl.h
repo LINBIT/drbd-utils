@@ -104,7 +104,7 @@ enum drbd_nl_attr_set {
 	__NL_SET_MAX,
 };
 
-/* Fields of sets only the drbd2 family carries */
+/* Field ids of cbt-start-parms; the same in both families */
 #define NL_F_CBT_START_PARMS_BOOKMARK_ID	1
 
 /* The changed block tracking state of a device (cbt-status). */

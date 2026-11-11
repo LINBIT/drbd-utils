@@ -59,6 +59,10 @@ static const int legacy_cmd[__DRBD_NL_CMD_MAX] = {
 	[DRBD_NL_CMD_GET_PEER_DEVICES]	= DRBD_ADM_GET_PEER_DEVICES,
 	[DRBD_NL_CMD_GET_PATHS]		= DRBD_ADM_GET_PATHS,
 	[DRBD_NL_CMD_GET_INITIAL_STATE]	= DRBD_ADM_GET_INITIAL_STATE,
+	[DRBD_NL_CMD_CBT_FLUSH]		= DRBD_ADM_CBT_FLUSH,
+	[DRBD_NL_CMD_CBT_START]		= DRBD_ADM_CBT_START,
+	[DRBD_NL_CMD_CBT_STOP]		= DRBD_ADM_CBT_STOP,
+	[DRBD_NL_CMD_CBT_STATUS]	= DRBD_ADM_CBT_STATUS,
 };
 
 static const int legacy_set[__NL_SET_MAX] = {
@@ -80,6 +84,7 @@ static const int legacy_set[__NL_SET_MAX] = {
 	[NL_SET_PATH_PARMS]		= DRBD_NLA_PATH_PARMS,
 	[NL_SET_RENAME_RESOURCE_PARMS]	= DRBD_NLA_RENAME_RESOURCE_PARMS,
 	[NL_SET_SUSPEND_IO_PARMS]	= DRBD_NLA_SUSPEND_IO_PARAMS,
+	[NL_SET_CBT_START_PARMS]	= DRBD_NLA_CBT_START_PARMS,
 	[NL_SET_ATTACH_PARMS]		= DRBD_NLA_ATTACH_PARMS,
 };
 
@@ -109,6 +114,7 @@ static const struct legacy_policy legacy_policy[__NL_SET_MAX] = {
 	[NL_SET_PATH_PARMS]		= LEGACY_POLICY(path_parms),
 	[NL_SET_RENAME_RESOURCE_PARMS]	= LEGACY_POLICY(rename_resource_parms),
 	[NL_SET_SUSPEND_IO_PARMS]	= LEGACY_POLICY(suspend_io_parms),
+	[NL_SET_CBT_START_PARMS]	= LEGACY_POLICY(cbt_start_parms),
 	[NL_SET_ATTACH_PARMS]		= LEGACY_POLICY(attach_parms),
 };
 
@@ -276,12 +282,28 @@ static int legacy_recv_outcome(struct nlmsghdr *nlh, struct drbd_nl_outcome *out
 	dh = genlmsg_data(nlmsg_data(nlh));
 	out->ret_code = dh->ret_code;
 	legacy_collect_info(nlh, out);
-	if (legacy_tla_parse(tla, nlh) == 0 && tla[DRBD_NLA_TIMEOUT_PARMS]) {
+	if (legacy_tla_parse(tla, nlh))
+		return 0;
+	if (tla[DRBD_NLA_TIMEOUT_PARMS]) {
 		struct genl_info info = { .attrs = tla };
 		struct timeout_parms parms;
 
 		if (timeout_parms_from_attrs(&parms, &info) == 0)
 			out->timeout_type = parms.timeout_type;
+	}
+	if (tla[DRBD_NLA_CBT_INFO]) {
+		struct genl_info info = { .attrs = tla };
+		struct cbt_info ci = { };
+
+		if (cbt_info_from_attrs(&ci, &info) == 0) {
+			out->cbt.active = ci.cbt_active;
+			out->cbt.valid = ci.cbt_valid;
+			out->cbt.bookmark_id = ci.cbt_bookmark_id;
+			out->cbt.since = ci.cbt_since;
+			out->cbt.bitmap_uuid = ci.cbt_bitmap_uuid;
+			out->cbt.bitmap_dagtag = ci.cbt_bitmap_dagtag;
+			out->have_cbt = true;
+		}
 	}
 	return 0;
 }
