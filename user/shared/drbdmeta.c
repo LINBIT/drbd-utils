@@ -2541,11 +2541,9 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 					tmp_ex.on_disk_word32_pos_e,
 					tmp_ex.aligned_4k_x_max_peers_on_disk_pos,
 					max_peers, bits_per_extent, bm_bytes);
-			if (tmp_ex.on_disk_word32_pos_s >= bm_bytes) {
-				fprintf(stderr, "extent %u beyond end of bitmap! (%zd >= %zd)\n",
-					hot_extent[j+1], tmp_ex.on_disk_word32_pos_s, bm_bytes);
+			/* the outer loop reports and skips it */
+			if (tmp_ex.on_disk_word32_pos_s >= bm_bytes)
 				break;
-			}
 			if (tmp_ex.on_disk_word32_pos_e >= first_ex.aligned_4k_x_max_peers_on_disk_pos + buffer_size)
 				break;
 		}
