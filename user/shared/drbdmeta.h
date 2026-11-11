@@ -192,7 +192,7 @@ struct format_ops {
 		##__VA_ARGS__);					\
 	abort(); }						\
 	} while (0)
-#define ASSERT(x) ASSERT_MSG((x), "");
+#define ASSERT(x) ASSERT_MSG((x), "")
 #define d_expect(x) ({						\
 	int _x = (x);						\
 	if (!_x)						\
