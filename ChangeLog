@@ -5,6 +5,9 @@ Latest:
 
 Unreleased
 -----------
+
+9.36.0-rc.2
+-----------
  * drbdadm: raise the default cmd-timeout-short from 5 to 10 seconds;
    keep the medium and long defaults that were in effect (600, none)
  * drbdadm: show changed cmd-timeout-* settings in the v9 dump
