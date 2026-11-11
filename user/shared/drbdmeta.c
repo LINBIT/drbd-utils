@@ -2407,18 +2407,10 @@ static int ilog2(unsigned long word)
  * Our bitmap granularity is a power of two multiple of 4k,
  * 4k to 1M, [4, 8, 16, 32, 64, 128, 256, 512, 1024]k.
  *
- * As long as our bitmap granularity is <= 128k,
- * we can set multiples of 32bit, which makes this much easier:
- * we could just calculate the byte offset and length,
- * multiply with max_peers, then memset().
- *
- * At 4k, we set 128 bytes * max_peers for each extent.
- * At 128k, we set 4 bytes * max_peers for each extent.
- *
- * For 256k and above, we only set partial 32bit words.
- * Now we have to calculate a 32bit mask,
- * and apply it to max_peers 32bit words.
- *
+ * apply_al() sets the bits of an extent one 32bit word at a time:
+ * it calculates a 32bit mask and applies it to the max_peers words.
+ * At 4k an extent covers 32 full words per slot, at 128k one full word,
+ * and for 256k and above a part of one word.
  */
 
 struct extent_bit_range {
@@ -2459,6 +2451,16 @@ static void enr_to_bit_range(struct extent_bit_range *br, const uint64_t enr,
 		round_down(br->on_disk_word32_pos_s, 4096 * max_peers);
 }
 
+/* Mask of the bits of the 32 bit word starting at bit that lie on the device. */
+static uint32_t in_range_mask(uint64_t bit, uint64_t bm_bits)
+{
+	if (bit >= bm_bits)
+		return 0;
+	if (bm_bits - bit >= 32)
+		return ~(uint32_t)0;
+	return ~(uint32_t)0 >> (32 - (bm_bits - bit));
+}
+
 void apply_al(struct format *cfg, uint32_t *hot_extent)
 {
 	const size_t bm_bytes = ALIGN(cfg->bm_bytes, cfg->md_hard_sect_size);
@@ -2476,6 +2478,8 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 	/* how may bits will be affected by applying one extent */
 	size_t bits_per_extent = 1UL << (AL_EXTENT_SHIFT - ilog2(cfg->md.bm_bytes_per_bit));
 	unsigned int max_peers = cfg->md.max_peers;
+	const uint64_t bm_bits = (cfg->md.effective_size + (cfg->md.bm_bytes_per_bit >> 9) - 1)
+		/ (cfg->md.bm_bytes_per_bit >> 9);
 
 	ASSERT_MSG(4 <= bits_per_extent && bits_per_extent <= 1024 && is_power_of_2(bits_per_extent),
 		" bits_per_extent: %zd", bits_per_extent);
@@ -2497,7 +2501,6 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 	 */
 	for (i = 0; i < AL_EXTENTS_MAX; i++) {
 		struct extent_bit_range first_ex, last_ex, tmp_ex;
-		unsigned bits_set = 0;
 
 
 		/* hot_extent is sorted.
@@ -2564,48 +2567,25 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 			ASSERT(tmp_ex.on_disk_word32_pos_s - bm_on_disk_pos < chunk);
 			ASSERT(tmp_ex.on_disk_word32_pos_e - bm_on_disk_pos <= chunk);
 
-			if (bits_per_extent >= 32) {
-				size_t num_bytes = tmp_ex.on_disk_word32_pos_e - tmp_ex.on_disk_word32_pos_s;
+			if (verbose >= 3)
+				fprintf(stderr, "       !: %4d: %5d: (char*)bm+[%zd..[%zd\n",
+					k, hot_extent[k],
+					tmp_ex.on_disk_word32_pos_s, tmp_ex.on_disk_word32_pos_e);
 
-				if (verbose >= 3)
-					fprintf(stderr, "       !: %4d: %5d: memset(((char*)bm)+%zd, 0xff, %zd)\n",
-						k, hot_extent[k], tmp_ex.on_disk_word32_pos_s, num_bytes);
+			uint32_t *word32 = (uint32_t *)((char *)on_disk_buffer +
+					(tmp_ex.on_disk_word32_pos_s - bm_on_disk_pos));
+			size_t pos;
 
-				/* we set full words, endianness does not make a difference */
-				memset((char*)on_disk_buffer + (tmp_ex.on_disk_word32_pos_s - bm_on_disk_pos),
-					0xff, num_bytes);
-				continue;
-			}
+			for (pos = tmp_ex.on_disk_word32_pos_s; pos < tmp_ex.on_disk_word32_pos_e; pos += 4, word32++) {
+				const uint64_t word_bit = pos / 4 / max_peers * 32;
+				const unsigned lo = tmp_ex.bit_s > word_bit ? tmp_ex.bit_s - word_bit : 0;
+				const unsigned hi = tmp_ex.bit_e < word_bit + 32 ? tmp_ex.bit_e - word_bit : 32;
+				/* The buffer is little endian; hweight and |= do not care. */
+				const uint32_t mask = cpu_to_le32(~(uint32_t)0 >> (32 - (hi - lo)) << lo);
+				const uint32_t in_range = cpu_to_le32(in_range_mask(word_bit, bm_bits));
 
-			/* only 16, 8, or 4 bits to be set,
-			 * once for each 32bit word of each slot */
-
-			uint32_t *word32;
-			uint32_t mask;
-			int l;
-
-			word32 = (uint32_t*)on_disk_buffer;
-			word32 += (tmp_ex.on_disk_word32_pos_s - bm_on_disk_pos)/sizeof(*word32);
-
-			mask = ~(uint32_t)0 << (tmp_ex.bit_s & 31);
-			mask &= ~(uint32_t)0 >> ((32 - (tmp_ex.bit_e & 31)) & 31);
-
-			/* On disk buffer is is little endian.
-			 * *word32 = cpu_to_le32(le32_to_cpu(*word32)|mask) is equivalent to
-			 * *word32 |= cpu_to_le32(mask).
-			 */
-			mask = cpu_to_le32(mask);
-
-			for (l = 0; l < max_peers; l++) {
-				if (verbose >= 3)
-					fprintf(stderr, "       !: %4d: %5d: (uint32_t*)bm+%zd |= %08x\n",
-						k, hot_extent[k],
-						word32 - (uint32_t*)on_disk_buffer,
-						mask);
-				bits_set = generic_hweight32(*word32);
+				additional_bits_set += generic_hweight32(mask & in_range & ~*word32);
 				*word32 |= mask;
-				additional_bits_set += generic_hweight32(*word32) - bits_set;
-				++word32;
 			}
 		}
 
@@ -2615,7 +2595,7 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 	}
 	if (i != 0) {
 		fprintf(stderr, "Marked additional %s as out-of-sync based on AL.\n",
-		     ppsize(ppb, additional_bits_set * (cfg->md.bm_bytes_per_bit / 1024)));
+		     ppsize(ppb, (unsigned long long)additional_bits_set * (cfg->md.bm_bytes_per_bit / 1024)));
 	} else
 		fprintf(stderr, "Nothing to do.\n");
 }

@@ -26,6 +26,9 @@ Unreleased
  * drbdmeta: fix apply-al skipping the last activity log extent of the
    device as beyond the end of the bitmap, so that extent was not
    resynced after a crash of the Primary; since 9.33.0
+ * drbdmeta: apply-al reports the amount it marked out of sync
+   correctly; it reported 0 KB with up to 128 KB per bitmap bit, and
+   counted bits past the end of the device
 
 9.36.0-rc.1
 -----------

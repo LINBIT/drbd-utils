@@ -4,12 +4,15 @@
 ## Each case sets la-size-sect to the largest data area, sets MDF_PRIMARY_IND
 ## (0x2) to mark a crashed primary, writes one activity log transaction that
 ## holds only the last extent, runs apply-al and reads that extent's part of
-## the on-disk bitmap.
+## the on-disk bitmap. apply-al reports only the in-range bits it set.
 ##
 ## 10 GB, max-peers 1: extent 2559 ends exactly at the end of the bitmap,
-## bytes 327552 to 327680.
+## bytes 327552 to 327680; 935 of its 1024 bits lie on the device, 3740 KB.
 ## 16822272 bytes, max-peers 7: extent 4 is partial. Its in-range words start
 ## at byte 3584 of the 4096 byte bitmap; its surplus words would reach to 4480.
+## Only bit 4096 lies on the device, once per slot: 7 bits, 28 KB.
+## 256 MB, 1 MB per bit, max-peers 3: the 4 bits of extent 63 are bits 28 to 31
+## of word 7 of each slot, at byte 84. Bits 252 and 253 lie on the device: 6 MB.
 ##
 ## The activity log block is constant except for the extent number and its
 ## CRC32C: transaction number 1, AL_TR_UPDATE, one update to slot 0, context
@@ -17,20 +20,26 @@
 $ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
 $ ff() { head -c "$1" /dev/zero | tr '\0' '\377'; }
 $ al_block() { printf '\x69\xcb\x65\xa2\0\0\0\1'"$2"'\0\0\0\1\1\1\0\0'; head -c 16 /dev/zero; printf '\0\0'; ff 126; printf "$1"; ff 3928; }
-$ crashed_primary_with_al() { drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md "$1" >/dev/null 2>&1 && drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | sed -e 's/^flags 0x00000080;/flags 0x00000082;/' -e "s/^la-size-sect 0;/la-size-sect $2;/" > "$tmpdir/dump.txt" && drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md "$tmpdir/dump.txt" >/dev/null 2>&1 && al_abs=$(drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .al_offset * 512)') && al_block "$3" "$4" | dd of="$img" bs=4096 seek=$((al_abs / 4096)) conv=notrunc status=none; }
-$ bm_bytes_at() { bm_abs=$(drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)') && od -An -tx4 -j $((bm_abs + $1)) -N "$2" "$img"; }
+$ crashed_primary_with_al() { drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal create-md $1 >/dev/null 2>&1 && drbdmeta --force - v09 "$img" flex-internal dump-md 2>/dev/null | sed -e 's/^flags 0x00000080;/flags 0x00000082;/' -e "s/^la-size-sect 0;/la-size-sect $2;/" > "$tmpdir/dump.txt" && drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal restore-md "$tmpdir/dump.txt" >/dev/null 2>&1 && al_abs=$(drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .al_offset * 512)') && al_block "$3" "$4" | dd of="$img" bs=4096 seek=$((al_abs / 4096)) conv=notrunc status=none; }
+$ bm_bytes_at() { bm_abs=$(drbdmeta --force - v09 "$img" flex-internal dump-superblock --output json 2>/dev/null | jq -r '(.["#meta"].dump_offset + .bm_offset * 512)') && od -An -tx1 -j $((bm_abs + $1)) -N "$2" "$img"; }
 $ truncate -s 10G "$img"
 $ crashed_primary_with_al 1 20970808 '\0\0\x09\xff' '\x44\x97\x93\x4f'
-$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal apply-al 2>&1 | grep -c 'beyond end of bitmap'
-0
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal apply-al 2>&1 | grep -e 'beyond end of bitmap' -e '^Marked additional'
+Marked additional 3740 KB as out-of-sync based on AL.
 $ bm_bytes_at 327552 128
- ffffffff ffffffff ffffffff ffffffff
+ ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
 *
 $ rm -f "$img" && truncate -s 16822272 "$img"
 $ crashed_primary_with_al 7 32776 '\0\0\0\x04' '\x84\x31\x22\xfc'
-$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal apply-al 2>&1 | grep -c 'beyond end of bitmap'
-0
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal apply-al 2>&1 | grep -e 'beyond end of bitmap' -e '^Marked additional'
+Marked additional 28 KB as out-of-sync based on AL.
 $ bm_bytes_at 3584 512
- ffffffff ffffffff ffffffff ffffffff
+ ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
 *
+$ rm -f "$img" && truncate -s 268435456 "$img"
+$ crashed_primary_with_al '--bitmap-block-size 1M 3' 520112 '\0\0\0\x3f' '\x70\xc7\xa5\xfc'
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" flex-internal apply-al 2>&1 | grep -e 'beyond end of bitmap' -e '^Marked additional'
+Marked additional 6144 KB as out-of-sync based on AL.
+$ bm_bytes_at 84 12
+ 00 00 00 f0 00 00 00 f0 00 00 00 f0
 $ rm -rf "$tmpdir" "$img"
