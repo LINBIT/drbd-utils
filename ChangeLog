@@ -23,6 +23,9 @@ Unreleased
    the mappings of the thin pool, which, unlike the day0 bitmap, know
    about discards; with external meta data, --data-device (drbdadm:
    --data-snapshot) names the snapshot of the backing device
+ * drbdmeta: fix apply-al skipping the last activity log extent of the
+   device as beyond the end of the bitmap, so that extent was not
+   resynced after a crash of the Primary; since 9.33.0
 
 9.36.0-rc.1
 -----------

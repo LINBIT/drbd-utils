@@ -2443,13 +2443,17 @@ static size_t round_down(size_t i, size_t  g)
 }
 
 static void enr_to_bit_range(struct extent_bit_range *br, const uint64_t enr,
-		const size_t bits_per_extent, const unsigned int max_peers)
+		const size_t bits_per_extent, const unsigned int max_peers,
+		const size_t bm_bytes)
 {
 	br->bit_s = enr * bits_per_extent;
 	br->bit_e = br->bit_s + bits_per_extent;
 
 	br->on_disk_word32_pos_s = br->bit_s / 32 * max_peers * 4;
 	br->on_disk_word32_pos_e = (br->bit_e  + 31)/ 32 * max_peers * 4;
+	/* The last extent may end past the bitmap; that part holds only surplus bits. */
+	if (br->on_disk_word32_pos_e > bm_bytes)
+		br->on_disk_word32_pos_e = bm_bytes;
 
 	br->aligned_4k_x_max_peers_on_disk_pos =
 		round_down(br->on_disk_word32_pos_s, 4096 * max_peers);
@@ -2503,7 +2507,7 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 			break;
 
 		/* find range of hot extents we can cover with one "buffer_size" bitmap IO */
-		enr_to_bit_range(&first_ex, hot_extent[i], bits_per_extent, max_peers);
+		enr_to_bit_range(&first_ex, hot_extent[i], bits_per_extent, max_peers, bm_bytes);
 		if (verbose >= 3)
 			fprintf(stderr, "apply-al: %4d: %5d: [%zd..[%zd; [%zd..[%zd; %zd; peers %d; bits pe: %zd; bm_bytes: %zd\n",
 				i, hot_extent[i],
@@ -2514,9 +2518,9 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 				first_ex.aligned_4k_x_max_peers_on_disk_pos,
 				max_peers, bits_per_extent, bm_bytes);
 
-		if (first_ex.on_disk_word32_pos_e >= bm_bytes) {
+		if (first_ex.on_disk_word32_pos_s >= bm_bytes) {
 			fprintf(stderr, "extent %u beyond end of bitmap! (%zd >= %zd)\n",
-				hot_extent[i], first_ex.on_disk_word32_pos_e, bm_bytes);
+				hot_extent[i], first_ex.on_disk_word32_pos_s, bm_bytes);
 			/* They are sorted. It won't get better.
 			 * Could break or return error here,
 			 * but I'll just print a warning, and skip, each of them. */
@@ -2524,7 +2528,7 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 		}
 
 		for (j = i; j + 1 < AL_EXTENTS_MAX && hot_extent[j+1] != ~0U; j++) {
-			enr_to_bit_range(&tmp_ex, hot_extent[j+1], bits_per_extent, max_peers);
+			enr_to_bit_range(&tmp_ex, hot_extent[j+1], bits_per_extent, max_peers, bm_bytes);
 			if (verbose >= 3)
 				fprintf(stderr, "       ?: %4d: %5d: [%zd..[%zd; [%zd..[%zd; %zd; peers %d; bits pe: %zd; bm_bytes: %zd\n",
 					j+1, hot_extent[j+1],
@@ -2534,15 +2538,15 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 					tmp_ex.on_disk_word32_pos_e,
 					tmp_ex.aligned_4k_x_max_peers_on_disk_pos,
 					max_peers, bits_per_extent, bm_bytes);
-			if (tmp_ex.on_disk_word32_pos_e >= bm_bytes) {
+			if (tmp_ex.on_disk_word32_pos_s >= bm_bytes) {
 				fprintf(stderr, "extent %u beyond end of bitmap! (%zd >= %zd)\n",
-					hot_extent[j+1], tmp_ex.on_disk_word32_pos_e, bm_bytes);
+					hot_extent[j+1], tmp_ex.on_disk_word32_pos_s, bm_bytes);
 				break;
 			}
 			if (tmp_ex.on_disk_word32_pos_e >= first_ex.aligned_4k_x_max_peers_on_disk_pos + buffer_size)
 				break;
 		}
-		enr_to_bit_range(&last_ex, hot_extent[j], bits_per_extent, max_peers);
+		enr_to_bit_range(&last_ex, hot_extent[j], bits_per_extent, max_peers, bm_bytes);
 
 		/* aligning end of buffer to 4k is good enough. */
 		chunk =   ALIGN(last_ex.on_disk_word32_pos_e, 4096)
@@ -2555,7 +2559,7 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 
 		/* change the bits */
 		for (k = i; k <= j; k++) {
-			enr_to_bit_range(&tmp_ex, hot_extent[k], bits_per_extent, max_peers);
+			enr_to_bit_range(&tmp_ex, hot_extent[k], bits_per_extent, max_peers, bm_bytes);
 
 			ASSERT(tmp_ex.on_disk_word32_pos_s - bm_on_disk_pos < chunk);
 			ASSERT(tmp_ex.on_disk_word32_pos_e - bm_on_disk_pos <= chunk);
