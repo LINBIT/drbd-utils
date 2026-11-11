@@ -2469,9 +2469,8 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 	size_t chunk = 0;
 	int i, j, k;
 
-	/* can only be AL_EXTENTS_MAX * BM_BYTES_PER_AL_EXT * 8,
-	 * which currently is 65534 * 128 * 8 == 67106816
-	 * fits easily into 32bit. */
+	/* at most AL_EXTENTS_MAX * 1024 bits * DRBD_PEERS_MAX slots,
+	 * 65534 * 1024 * 32 == 2147418112, fits into 32bit. */
 	unsigned additional_bits_set = 0;
 	char ppb[10];
 
@@ -2486,14 +2485,14 @@ void apply_al(struct format *cfg, uint32_t *hot_extent)
 	ASSERT_MSG(1 <= max_peers && max_peers <= DRBD_PEERS_MAX, " max_peers: %u", max_peers);
 
 	/* Now, actually apply this stuff to the on-disk bitmap.
-	 * Since one AL extent corresponds to 128 bytes of bitmap,
-	 * we need to do some read/modify/write cycles here.
+	 * One AL extent covers at most 128 bytes of bitmap per slot,
+	 * so we need to do some read/modify/write cycles here.
 	 *
 	 * Note that this can be slow due to the use of O_DIRECT,
 	 * worst case it does 65534 (AL_EXTENTS_MAX) cycles of
-	 *  - read buffer_size
-	 *  - set a few bits (equivalent to one activity log extent),
-	 *  - write buffer size
+	 *  - read up to buffer_size
+	 *  - set the bits of one activity log extent
+	 *  - write it back
 	 * This implementation could optimized in various ways:
 	 *  - don't use direct IO; has other drawbacks
 	 *  - use aio with multiple buffers
