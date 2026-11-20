@@ -1,0 +1,30 @@
+## Test that the drbdmeta commands which only read the meta data work on a
+## device that cannot be opened for writing, such as a read-only snapshot of
+## the backing device (a ZFS snapshot with snapdev=visible), and that they
+## leave it alone.
+##
+## The image file is made read-only with chmod, which does not keep root
+## from opening it for writing: the checksum tells in that case, too.
+$ tmpdir=$(mktemp -d) && img=$(mktemp --suffix=.img)
+$ truncate -s 67108864 "$img"
+$ drbdmeta --force --var-lib-drbd "$tmpdir" - v09 "$img" internal create-md --effective-size 32M 3 2>/dev/null | tail -1
+New drbd meta data block successfully created.
+$ chmod a-w "$img" && sum=$(sha256sum < "$img")
+$ drbdmeta --force - v09 "$img" internal cbt-dump --mode=zero 2>/dev/null | jq -c '[."volume-size", .extents]'
+[33554432,[{"start":0,"length":33554432,"zero":true}]]
+$ drbdmeta --force - v09 "$img" internal cbt-dump 2>&1 >/dev/null | grep -v ioctl; echo "${PIPESTATUS[0]}"
+No changed block tracking in this meta data
+50
+$ drbdmeta --force - v09 "$img" internal dump-md 2>/dev/null | grep -c '^max-peers 3;'
+1
+$ drbdmeta --force - v09 "$img" internal dump-superblock --output json 2>/dev/null | jq -c '.bm_offset != null'
+true
+$ drbdmeta --force - v09 "$img" internal dstate 2>/dev/null
+Inconsistent
+$ drbdmeta --force --node-id 0 - v09 "$img" internal get-gi 2>/dev/null | grep -c ':'
+1
+$ drbdmeta --force - v09 "$img" internal repair-md --tentative 2>/dev/null; echo $?
+0
+$ [ "$sum" = "$(sha256sum < "$img")" ] && echo unchanged
+unchanged
+$ rm -rf "$tmpdir" "$img"

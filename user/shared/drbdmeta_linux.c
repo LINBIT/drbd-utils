@@ -147,7 +147,7 @@ int v06_md_open(struct format *cfg)
 {
 	struct stat sb;
 
-	cfg->md_fd = open(cfg->md_device_name, O_RDWR);
+	cfg->md_fd = open(cfg->md_device_name, is_read_only_cmd() ? O_RDONLY : O_RDWR);
 
 	if (cfg->md_fd == -1) {
 		PERROR("open(%s) failed", cfg->md_device_name);
@@ -243,7 +243,8 @@ int v07_style_md_open_device(struct format *cfg)
 	struct stat sb;
 	unsigned int hard_sect_size = 0;
 	int ioctl_err;
-	int open_flags = O_RDWR | O_DIRECT;
+	bool read_only = is_read_only_cmd();
+	int open_flags = (read_only ? O_RDONLY : O_RDWR) | O_DIRECT;
 
 	/* For old-style fixed size indexed external meta data,
 	 * we cannot really use O_EXCL, we have to trust the given minor.
@@ -251,8 +252,11 @@ int v07_style_md_open_device(struct format *cfg)
 	 * For internal, or "flexible" external meta data, we open O_EXCL to
 	 * avoid accidentally damaging otherwise in-use data, just because
 	 * someone had a typo in the command line.
-	 */
-	if (cfg->md_index < 0)
+	 *
+	 * Read-only operations don't need O_EXCL; skipping it avoids a
+	 * spurious EBUSY (and the resulting prompt) when DRBD already has
+	 * the device attached. */
+	if (cfg->md_index < 0 && !read_only)
 		open_flags |= O_EXCL;
 
  retry:

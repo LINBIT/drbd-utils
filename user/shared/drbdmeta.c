@@ -3005,6 +3005,13 @@ int is_apply_al_cmd(void)
 	return command->function == &meta_apply_al;
 }
 
+/* A command that does not modify the meta data must not need write access to
+ * the device: it may be a read-only snapshot. */
+int is_read_only_cmd(void)
+{
+	return command && !command->modifies_md;
+}
+
 int v07_style_md_open(struct format *cfg)
 {
 	if (v07_style_md_open_device(cfg) < 0)
@@ -7661,6 +7668,13 @@ int main(int argc, char **argv)
 	}
 	ai++;
 
+	/*
+	 * Command "repair-md" does not modify the metadata if
+	 * --tentative/--dry-run is given.
+	 */
+	if (command->function == &meta_repair_md && dry_run)
+		command->modifies_md = 0;
+
 	/* does exit() unless we acquired the lock.
 	 * unlock happens implicitly when the process dies,
 	 * but may be requested implicitly
@@ -7674,13 +7688,6 @@ int main(int argc, char **argv)
 			exit(20);
 		}
 		cfg->lock_fd = dt_lock_drbd(cfg->minor);
-
-		/*
-		 * Command "repair-md" does not modify the metadata if
-		 * --tentative/--dry-run is given.
-		 */
-		if (command->function == &meta_repair_md && dry_run)
-			command->modifies_md = 0;
 
 		/* check whether this is in use */
 		minor_attached = is_attached(cfg->minor);

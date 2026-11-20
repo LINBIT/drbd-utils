@@ -5,6 +5,8 @@ Latest:
 
 Unreleased
 -----------
+ * drbdmeta: commands that only read the meta data (cbt-dump, dump-md,
+   ...) now work on read-only devices
 
 9.36.0
 -----------

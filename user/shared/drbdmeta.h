@@ -216,6 +216,7 @@ int v07_style_md_open_device(struct format *cfg);
 	/* Symbols in drbdmeta.c used by drivers */
 void validate_offsets_or_die(struct format *cfg, size_t count, off_t offset, const char* tag);
 int is_apply_al_cmd(void);
+int is_read_only_cmd(void);
 bool confirmed(const char *text);
 unsigned long bm_bytes(const struct md_cpu * const md, uint64_t sectors);
 enum md_format format_version(const struct format *cfg);
